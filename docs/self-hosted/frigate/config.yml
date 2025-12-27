@@ -1,0 +1,72 @@
+mqtt:
+  host: 127.0.0.1
+  port: 1883
+  user: vantahome
+  password: change-me
+  topic_prefix: frigate
+
+detectors:
+  coral:
+    type: edgetpu
+    device: usb
+
+ffmpeg:
+  hwaccel_args: preset-vaapi
+
+objects:
+  track:
+    - person
+
+go2rtc:
+  streams:
+    front_door:
+      - rtsp://127.0.0.1:8554/front_door
+    living_room:
+      - rtsp://127.0.0.1:8554/living_room
+
+cameras:
+  front_door:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/front_door
+          roles:
+            - detect
+            - record
+    mqtt:
+      timestamp: false
+      bounding_box: false
+      crop: true
+      quality: 90
+      height: 500
+    detect:
+      width: 1280
+      height: 720
+      fps: 5
+  living_room:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/living_room
+          roles:
+            - detect
+            - record
+    mqtt:
+      timestamp: false
+      bounding_box: false
+      crop: true
+      quality: 90
+      height: 500
+    detect:
+      width: 1280
+      height: 720
+      fps: 5
+
+record:
+  enabled: true
+  retain:
+    days: 7
+    mode: motion
+
+snapshots:
+  enabled: true
+  retain:
+    default: 7

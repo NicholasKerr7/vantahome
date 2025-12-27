@@ -1,0 +1,14 @@
+api:
+  listen: ":1984"
+
+rtsp:
+  listen: ":8554"
+
+webrtc:
+  listen: ":8555"
+
+streams:
+  front_door:
+    - rtsp://user:pass@192.168.1.10:554/stream1
+  living_room:
+    - rtsp://user:pass@192.168.1.11:554/stream1

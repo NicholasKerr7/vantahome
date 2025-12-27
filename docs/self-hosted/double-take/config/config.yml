@@ -1,0 +1,30 @@
+mqtt:
+  host: 127.0.0.1
+  port: 1883
+  username: vantahome
+  password: change-me
+  topics:
+    frigate: frigate/events
+    homeassistant: homeassistant
+    matches: vantahome/face/matches
+    cameras: vantahome/face/cameras
+
+frigate:
+  url: http://127.0.0.1:5000
+  update_sub_labels: true
+
+detect:
+  match:
+    confidence: 60
+  unknown:
+    confidence: 40
+
+detectors:
+  compreface:
+    url: http://127.0.0.1:8000
+    key: change-me
+    timeout: 15
+    det_prob_threshold: 0.8
+
+logs:
+  level: info

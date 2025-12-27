@@ -1,0 +1,395 @@
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Switch, Animated, Easing } from 'react-native';
+import Pressable from '../components/Pressable';
+import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import BackgroundLines from '../components/BackgroundLines';
+import { theme } from '../theme/theme';
+import { type IntegrationProvider, useHomeStore } from '../store/useHomeStore';
+import { useResponsive } from '../theme/layout';
+
+type IntegrationRowProps = {
+  provider: IntegrationProvider;
+  label: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+};
+
+export default function SettingsScreen() {
+  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } = useResponsive(900);
+  const isWide = isTablet && isLandscape;
+  const titleSize = Math.round((isTablet ? 30 : 26) * scale);
+  const cardPad = Math.round((isTablet ? 20 : 16) * scale);
+  const cardRadius = Math.round((isTablet ? 30 : 28) * scale);
+  const sectionTitleSize = Math.round((isTablet ? 16 : 14) * scale);
+  const rowLabelSize = Math.round((isTablet ? 14 : 13) * scale);
+  const rowValueSize = Math.round((isTablet ? 14 : 13) * scale);
+  const gridGap = Math.round((isTablet ? 18 : 12) * scale);
+  const integrationPad = Math.round((isTablet ? 14 : 12) * scale);
+  const integrationRadius = Math.round((isTablet ? 20 : 18) * scale);
+  const integrationIconSize = Math.round((isTablet ? 22 : 18) * scale);
+  const integrationIconWrap = Math.round((isTablet ? 40 : 34) * scale);
+  const statusHeight = Math.round((isTablet ? 28 : 24) * scale);
+  const statusRadius = Math.round(statusHeight / 2);
+  const buttonSize = Math.round((isTablet ? 36 : 32) * scale);
+  const primaryBtnHeight = Math.round((isTablet ? 36 : 32) * scale);
+  const primaryBtnRadius = Math.round(primaryBtnHeight / 2);
+  const wideBtnHeight = Math.round((isTablet ? 44 : 40) * scale);
+  const wideBtnRadius = Math.round(wideBtnHeight * 0.4);
+  const roomsCount = useHomeStore((s) => s.rooms.length);
+  const devicesCount = useHomeStore((s) => s.devices.length);
+  const integrations = useHomeStore((s) => s.integrations);
+  const prefs = useHomeStore((s) => s.preferences);
+  const linkIntegration = useHomeStore((s) => s.linkIntegration);
+  const setIntegrationStatus = useHomeStore((s) => s.setIntegrationStatus);
+  const unlinkIntegration = useHomeStore((s) => s.unlinkIntegration);
+  const resyncIntegration = useHomeStore((s) => s.resyncIntegration);
+  const setPreferences = useHomeStore((s) => s.setPreferences);
+  const userName = useHomeStore((s) => s.userName);
+  const navigation = useNavigation<any>();
+
+  const homeTitle = useMemo(() => `${userName}'s Home`, [userName]);
+
+  const renderIntegration = ({ provider, label, description, icon }: IntegrationRowProps) => {
+    const state = integrations[provider];
+    const linked = state?.status === 'linked';
+    const linking = state?.status === 'linking';
+
+    const pulse = useRef(new Animated.Value(1)).current;
+    useEffect(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 0.5, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        ])
+      ).start();
+    }, [pulse]);
+
+    return (
+      <View style={[styles.integrationRow, { paddingVertical: integrationPad, borderRadius: integrationRadius }]} key={provider}>
+        <View style={styles.integrationLeft}>
+          <View
+            style={[
+              styles.integrationIcon,
+              { width: integrationIconWrap, height: integrationIconWrap, borderRadius: Math.round(integrationIconWrap * 0.35) },
+            ]}
+          >
+            <Ionicons name={icon} size={integrationIconSize} color="rgba(60,60,80,0.9)" />
+          </View>
+          <View>
+            <Text style={[styles.integrationLabel, { fontSize: rowLabelSize }]}>{label}</Text>
+            <Text style={[styles.integrationSub, { fontSize: rowValueSize }]}>{description}</Text>
+          </View>
+        </View>
+
+        <View style={styles.integrationActions}>
+          <Animated.View
+            style={[
+              styles.statusPill,
+              { height: statusHeight, borderRadius: statusRadius },
+              linked ? styles.statusOn : linking ? styles.statusLinking : styles.statusOff,
+              linking && { opacity: pulse },
+            ]}
+          >
+            <Text style={[styles.statusText, { fontSize: rowValueSize }, linked ? styles.statusTextOn : styles.statusTextOff]}>
+              {linked ? 'Linked' : linking ? 'Linking…' : 'Not linked'}
+            </Text>
+          </Animated.View>
+
+          <View style={styles.integrationButtons}>
+            {linked ? (
+              <>
+                <Pressable
+                  onPress={() => resyncIntegration(provider)}
+                  style={[styles.secondaryBtn, { width: buttonSize, height: buttonSize, borderRadius: Math.round(buttonSize * 0.35) }]}
+                  hitSlop={10}
+                >
+                  <Ionicons name="refresh" size={Math.round(16 * scale)} color="rgba(60,60,80,0.9)" />
+                </Pressable>
+                <Pressable
+                  onPress={() => unlinkIntegration(provider)}
+                  style={[styles.secondaryBtn, { width: buttonSize, height: buttonSize, borderRadius: Math.round(buttonSize * 0.35) }]}
+                  hitSlop={10}
+                >
+                  <Ionicons name="close" size={Math.round(16 * scale)} color="rgba(60,60,80,0.9)" />
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  if (linking) return;
+                  setIntegrationStatus(provider, 'linking');
+                  setTimeout(() => linkIntegration(provider, 'Demo Account'), 900);
+                }}
+                style={[
+                  styles.primaryBtn,
+                  { height: primaryBtnHeight, borderRadius: primaryBtnRadius },
+                  linking && styles.primaryBtnDisabled,
+                ]}
+                hitSlop={10}
+              >
+                <Text style={[styles.primaryBtnText, { fontSize: rowValueSize }]}>
+                  {linking ? 'Linking…' : 'Mock link'}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={styles.root}>
+      <BackgroundLines />
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: gutter,
+            paddingTop: topPad,
+            paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 120) * scale),
+          },
+        ]}
+      >
+        <View style={{ width: contentWidth }}>
+          <Text style={[styles.h1, { fontSize: titleSize }]}>Settings</Text>
+
+          <View style={[styles.cardsGrid, isWide && { flexDirection: 'row', flexWrap: 'wrap', gap: gridGap }]}>
+            <View
+              style={[
+                styles.card,
+                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Voice & Integrations</Text>
+            {renderIntegration({
+              provider: 'alexa',
+              label: 'Amazon Alexa',
+              description: 'Control devices with Alexa voice routines.',
+              icon: 'logo-amazon',
+            })}
+            {renderIntegration({
+              provider: 'google',
+              label: 'Google Home',
+              description: 'Use Assistant to trigger scenes & devices.',
+              icon: 'logo-google',
+            })}
+            {renderIntegration({
+              provider: 'homekit',
+              label: 'Apple HomeKit',
+              description: 'Expose devices to Home via a bridge (stub).',
+              icon: 'logo-apple',
+            })}
+            {renderIntegration({
+              provider: 'matter',
+              label: 'Matter Bridge',
+              description: 'Multi-ecosystem bridge (stub).',
+              icon: 'link-outline',
+            })}
+            </View>
+
+            <View
+              style={[
+                styles.card,
+                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Home Profile</Text>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Home</Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>{homeTitle}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Rooms</Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>{roomsCount}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Devices</Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>{devicesCount}</Text>
+              </View>
+              <Pressable
+                style={[
+                  styles.secondaryWideBtn,
+                  { marginTop: 12, height: wideBtnHeight, borderRadius: wideBtnRadius },
+                ]}
+                onPress={() => navigation.navigate('Profile')}
+              >
+                <Ionicons name="person" size={Math.round(16 * scale)} color="rgba(60,60,80,0.9)" />
+                <Text style={[styles.secondaryWideBtnText, { fontSize: rowValueSize }]}>Edit profile</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.primaryBtn, { marginTop: 12, height: wideBtnHeight, borderRadius: wideBtnRadius }]}
+                onPress={() => resyncIntegration('alexa')}
+              >
+                <Text style={[styles.primaryBtnText, { fontSize: rowValueSize }]}>Resync to cloud (stub)</Text>
+              </Pressable>
+            </View>
+
+            <View
+              style={[
+                styles.card,
+                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Preferences</Text>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Haptics</Text>
+              <Switch
+                value={prefs.haptics}
+                onValueChange={(v) => setPreferences({ haptics: v })}
+                thumbColor={prefs.haptics ? theme.colors.accent : 'rgba(255,255,255,0.8)'}
+                trackColor={{ true: 'rgba(180,107,255,0.45)', false: 'rgba(255,255,255,0.24)' }}
+                style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
+              />
+            </View>
+            <View style={styles.row}>
+              <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Notifications</Text>
+              <Switch
+                value={prefs.notifications}
+                onValueChange={(v) => setPreferences({ notifications: v })}
+                thumbColor={prefs.notifications ? theme.colors.accent : 'rgba(255,255,255,0.8)'}
+                trackColor={{ true: 'rgba(180,107,255,0.45)', false: 'rgba(255,255,255,0.24)' }}
+                style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
+              />
+            </View>
+            <View style={styles.row}>
+              <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Appearance</Text>
+              <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>Purple</Text>
+            </View>
+            </View>
+
+            <View
+              style={[
+                styles.card,
+                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Support</Text>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>App Version</Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>1.0.0 (stub)</Text>
+              </View>
+              <Pressable
+                style={[
+                  styles.secondaryWideBtn,
+                  { marginTop: 12, height: wideBtnHeight, borderRadius: wideBtnRadius },
+                ]}
+                onPress={() => {}}
+              >
+                <Ionicons name="mail" size={Math.round(16 * scale)} color="rgba(60,60,80,0.9)" />
+                <Text style={[styles.secondaryWideBtnText, { fontSize: rowValueSize }]}>Send feedback</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </LinearGradient>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  content: { alignItems: 'center' },
+  h1: { color: theme.colors.text, fontSize: 28, fontWeight: '900', marginBottom: 12 },
+  cardsGrid: { gap: 12 },
+
+  card: {
+    borderRadius: 28,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  sectionTitle: { color: theme.colors.text, fontWeight: '900', marginBottom: 12 },
+
+  integrationRow: {
+    paddingVertical: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  integrationLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  integrationIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  integrationLabel: { color: 'rgba(255,255,255,0.95)', fontWeight: '900' },
+  integrationSub: { color: theme.colors.subtext, fontWeight: '700', marginTop: 2 },
+
+  integrationActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  statusPill: {
+    paddingHorizontal: 12,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusOn: {
+    backgroundColor: 'rgba(180,107,255,0.22)',
+    borderColor: 'rgba(180,107,255,0.35)',
+  },
+  statusOff: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  statusLinking: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.20)',
+  },
+  statusText: { fontWeight: '900', fontSize: 12 },
+  statusTextOn: { color: theme.colors.text },
+  statusTextOff: { color: theme.colors.subtext },
+
+  integrationButtons: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  primaryBtn: {
+    height: 40,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(180,107,255,0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.30)',
+  },
+  primaryBtnDisabled: { opacity: 0.7 },
+  primaryBtnText: { color: '#fff', fontWeight: '900', fontSize: 13 },
+  secondaryBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+  rowLabel: { color: theme.colors.text, fontWeight: '800' },
+  rowValue: { color: theme.colors.subtext, fontWeight: '800' },
+
+  secondaryWideBtn: {
+    height: 44,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  secondaryWideBtnText: { color: 'rgba(255,255,255,0.92)', fontWeight: '900' },
+});

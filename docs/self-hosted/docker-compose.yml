@@ -1,0 +1,137 @@
+name: vantahome-stack
+
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    volumes:
+      - ./homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  go2rtc:
+    image: ghcr.io/alexxit/go2rtc:latest
+    container_name: go2rtc
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./go2rtc:/config
+
+  frigate:
+    image: ghcr.io/blakeblackshear/frigate:stable
+    container_name: frigate
+    restart: unless-stopped
+    network_mode: host
+    shm_size: "512mb"
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+      - /dev/dri:/dev/dri
+    volumes:
+      - ./frigate:/config
+      - ./frigate/media:/media/frigate
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - FRIGATE_RTSP_PASSWORD=change-me
+      - LIBVA_DRIVER_NAME=iHD
+
+  double-take:
+    image: jakowenko/double-take:latest
+    container_name: double-take
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./double-take:/.storage
+    depends_on:
+      - frigate
+      - mosquitto
+
+  compreface-postgres-db:
+    image: exadel/compreface-postgres-db:1.2.0
+    container_name: compreface-postgres-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=frs
+    volumes:
+      - compreface-db:/var/lib/postgresql/data
+
+  compreface-core:
+    image: exadel/compreface-core:1.2.0
+    container_name: compreface-core
+    restart: unless-stopped
+    environment:
+      - ML_PORT=3000
+      - IMG_LENGTH_LIMIT=640
+      - UWSGI_PROCESSES=2
+      - UWSGI_THREADS=1
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthcheck || exit 1
+      interval: 10s
+      timeout: 1s
+      retries: 0
+
+  compreface-api:
+    image: exadel/compreface-api:1.2.0
+    container_name: compreface-api
+    restart: unless-stopped
+    depends_on:
+      - compreface-postgres-db
+      - compreface-core
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_URL=jdbc:postgresql://compreface-postgres-db:5432/frs
+      - SPRING_PROFILES_ACTIVE=dev
+      - API_JAVA_OPTS=-Xmx4g
+      - SAVE_IMAGES_TO_DB=true
+      - MAX_FILE_SIZE=5MB
+      - MAX_REQUEST_SIZE=10M
+      - CONNECTION_TIMEOUT=10000
+      - READ_TIMEOUT=60000
+
+  compreface-admin:
+    image: exadel/compreface-admin:1.2.0
+    container_name: compreface-admin
+    restart: unless-stopped
+    depends_on:
+      - compreface-postgres-db
+      - compreface-api
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_URL=jdbc:postgresql://compreface-postgres-db:5432/frs
+      - SPRING_PROFILES_ACTIVE=dev
+      - ADMIN_JAVA_OPTS=-Xmx1g
+      - ENABLE_EMAIL_SERVER=false
+      - MAX_FILE_SIZE=5MB
+      - MAX_REQUEST_SIZE=10M
+
+  compreface-fe:
+    image: exadel/compreface-fe:1.2.0
+    container_name: compreface-ui
+    restart: unless-stopped
+    depends_on:
+      - compreface-api
+      - compreface-admin
+    ports:
+      - "8000:80"
+    environment:
+      - CLIENT_MAX_BODY_SIZE=10M
+      - PROXY_READ_TIMEOUT=60000ms
+      - PROXY_CONNECT_TIMEOUT=10000ms
+
+volumes:
+  compreface-db:
