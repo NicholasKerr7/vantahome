@@ -125,13 +125,13 @@ export default function ProfileScreen({ navigation }: Props) {
         contentContainerStyle={[
           styles.content,
           {
-            paddingHorizontal: gutter,
+            paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: topPad,
             paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 120) * scale),
           },
         ]}
       >
-        <View style={{ width: contentWidth }}>
+        <View style={{ width: contentWidth, paddingHorizontal: isTablet ? 0 : gutter }}>
           <View style={styles.top}>
             <Pressable
               style={[styles.iconBtn, { width: iconSize, height: iconSize, borderRadius: iconRadius }]}

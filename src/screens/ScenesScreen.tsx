@@ -17,6 +17,7 @@ import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../theme/theme';
 import BackgroundLines from '../components/BackgroundLines';
+import DeviceIcon from '../components/DeviceIcon';
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
@@ -140,13 +141,13 @@ export default function ScenesScreen() {
         contentContainerStyle={[
           styles.content,
           {
-            paddingHorizontal: gutter,
+            paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: topPad,
             paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 120) * scale),
           },
         ]}
       >
-        <View style={{ width: contentWidth }}>
+        <View style={{ width: contentWidth, paddingHorizontal: isTablet ? 0 : gutter }}>
           <View style={styles.header}>
             <View>
               <Text style={[styles.h1, { fontSize: titleSize }]}>Scenes</Text>
@@ -298,8 +299,8 @@ export default function ScenesScreen() {
                           onPress={() => toggleDeviceSelection(device)}
                         >
                           <View style={[styles.deviceIcon, active && styles.deviceIconActive]}>
-                            <Ionicons
-                              name={iconFor(device.kind)}
+                            <DeviceIcon
+                              kind={device.kind}
                               size={Math.round(14 * scale)}
                               color={active ? '#fff' : '#2B0A73'}
                             />
@@ -468,6 +469,14 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconChipOn: {
+    backgroundColor: 'rgba(180,107,255,0.32)',
+    borderColor: 'rgba(180,107,255,0.65)',
+    shadowColor: theme.colors.glow,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
   },
   moreChip: {
     height: 36,
@@ -1058,7 +1067,7 @@ function DeviceControlCard({
     <View style={[styles.deviceControlCard, { padding: cardPad, borderRadius: cardRadius }]}>
       <View style={styles.deviceControlHeader}>
         <View style={[styles.deviceControlIcon, { width: iconWrap, height: iconWrap, borderRadius: iconRadius }]}>
-          <Ionicons name={iconFor(device.kind)} size={iconSize} color="#6B3CFF" />
+          <DeviceIcon kind={device.kind} size={iconSize} color="#6B3CFF" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.deviceControlTitle, { fontSize: titleSize }]}>{device.name}</Text>
@@ -1174,9 +1183,13 @@ function SceneCard({
           {devices.slice(0, 4).map((device) => (
             <View
               key={device.id}
-              style={[styles.iconChip, { width: iconChipSize, height: iconChipSize, borderRadius: iconChipRadius }]}
+              style={[
+                styles.iconChip,
+                { width: iconChipSize, height: iconChipSize, borderRadius: iconChipRadius },
+                device.isOn && styles.iconChipOn,
+              ]}
             >
-              <Ionicons name={iconFor(device.kind)} size={iconSize} color={theme.colors.text} />
+              <DeviceIcon kind={device.kind} size={iconSize} color={theme.colors.text} />
             </View>
           ))}
           {devices.length > 4 && (
@@ -1217,57 +1230,6 @@ function SceneCard({
       </Pressable>
     </Animated.View>
   );
-}
-
-function iconFor(kind: Device['kind']): keyof typeof Ionicons.glyphMap {
-  switch (kind) {
-    case 'ac':
-      return 'snow';
-    case 'light':
-      return 'bulb';
-    case 'tv':
-      return 'tv';
-    case 'coffee':
-      return 'cafe';
-    case 'fridge':
-      return 'cube';
-    case 'gate':
-      return 'exit';
-    case 'garage':
-      return 'car';
-    case 'fan':
-      return 'aperture';
-    case 'door':
-      return 'log-in';
-    case 'vacuum':
-      return 'radio-button-on';
-    case 'camera':
-      return 'camera';
-    case 'window':
-      return 'square-outline';
-    case 'stove':
-      return 'flame';
-    case 'washer':
-      return 'refresh';
-    case 'dryer':
-      return 'repeat';
-    case 'microwave':
-      return 'flash';
-    case 'energy':
-      return 'stats-chart';
-    case 'water':
-      return 'water';
-    case 'air':
-      return 'leaf';
-    case 'sprinkler':
-      return 'rainy';
-    case 'speaker':
-      return 'volume-high';
-    case 'smoke':
-      return 'alert-circle';
-    default:
-      return 'cube';
-  }
 }
 
 function labelForKind(kind: Device['kind']) {

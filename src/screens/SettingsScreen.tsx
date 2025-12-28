@@ -1,5 +1,5 @@
-import React, { useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, Animated, Easing } from 'react-native';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Switch, Animated, Easing, TextInput } from 'react-native';
 import Pressable from '../components/Pressable';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,6 +8,7 @@ import BackgroundLines from '../components/BackgroundLines';
 import { theme } from '../theme/theme';
 import { type IntegrationProvider, useHomeStore } from '../store/useHomeStore';
 import { useResponsive } from '../theme/layout';
+import { deviceClient, type ConnectionStatus } from '../services/deviceClient';
 
 type IntegrationRowProps = {
   provider: IntegrationProvider;
@@ -32,6 +33,8 @@ export default function SettingsScreen() {
   const integrationIconWrap = Math.round((isTablet ? 40 : 34) * scale);
   const statusHeight = Math.round((isTablet ? 28 : 24) * scale);
   const statusRadius = Math.round(statusHeight / 2);
+  const inputHeight = Math.round((isTablet ? 46 : 42) * scale);
+  const inputRadius = Math.round(inputHeight * 0.28);
   const buttonSize = Math.round((isTablet ? 36 : 32) * scale);
   const primaryBtnHeight = Math.round((isTablet ? 36 : 32) * scale);
   const primaryBtnRadius = Math.round(primaryBtnHeight / 2);
@@ -41,30 +44,66 @@ export default function SettingsScreen() {
   const devicesCount = useHomeStore((s) => s.devices.length);
   const integrations = useHomeStore((s) => s.integrations);
   const prefs = useHomeStore((s) => s.preferences);
+  const realtime = useHomeStore((s) => s.realtime);
   const linkIntegration = useHomeStore((s) => s.linkIntegration);
   const setIntegrationStatus = useHomeStore((s) => s.setIntegrationStatus);
   const unlinkIntegration = useHomeStore((s) => s.unlinkIntegration);
   const resyncIntegration = useHomeStore((s) => s.resyncIntegration);
   const setPreferences = useHomeStore((s) => s.setPreferences);
+  const setRealtime = useHomeStore((s) => s.setRealtime);
   const userName = useHomeStore((s) => s.userName);
   const navigation = useNavigation<any>();
 
   const homeTitle = useMemo(() => `${userName}'s Home`, [userName]);
+  const [connection, setConnection] = useState<{ status: ConnectionStatus; error?: string }>({
+    status: 'disconnected',
+  });
+  const isLinking = useMemo(
+    () => Object.values(integrations).some((integration) => integration.status === 'linking'),
+    [integrations]
+  );
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!isLinking) {
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.5, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isLinking, pulse]);
+
+  useEffect(
+    () => deviceClient.subscribeConnection((evt) => setConnection({ status: evt.status, error: evt.error })),
+    []
+  );
+
+  const realtimeActive = realtime.enabled && realtime.wsUrl.trim().length > 0;
+  const realtimeStatus = useMemo(() => {
+    if (!realtime.enabled) return { label: 'Disabled', status: 'disabled' as const };
+    if (!realtimeActive) return { label: 'Add URL', status: 'offline' as const };
+    switch (connection.status) {
+      case 'connected':
+        return { label: 'Connected', status: 'connected' as const };
+      case 'connecting':
+        return { label: 'Connecting', status: 'connecting' as const };
+      case 'error':
+        return { label: 'Error', status: 'error' as const };
+      default:
+        return { label: 'Offline', status: 'offline' as const };
+    }
+  }, [connection.status, realtime.enabled, realtimeActive]);
 
   const renderIntegration = ({ provider, label, description, icon }: IntegrationRowProps) => {
     const state = integrations[provider];
     const linked = state?.status === 'linked';
     const linking = state?.status === 'linking';
-
-    const pulse = useRef(new Animated.Value(1)).current;
-    useEffect(() => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulse, { toValue: 0.5, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-          Animated.timing(pulse, { toValue: 1, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        ])
-      ).start();
-    }, [pulse]);
 
     return (
       <View style={[styles.integrationRow, { paddingVertical: integrationPad, borderRadius: integrationRadius }]} key={provider}>
@@ -148,13 +187,13 @@ export default function SettingsScreen() {
         contentContainerStyle={[
           styles.content,
           {
-            paddingHorizontal: gutter,
+            paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: topPad,
             paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 120) * scale),
           },
         ]}
       >
-        <View style={{ width: contentWidth }}>
+        <View style={{ width: contentWidth, paddingHorizontal: isTablet ? 0 : gutter }}>
           <Text style={[styles.h1, { fontSize: titleSize }]}>Settings</Text>
 
           <View style={[styles.cardsGrid, isWide && { flexDirection: 'row', flexWrap: 'wrap', gap: gridGap }]}>
@@ -255,10 +294,66 @@ export default function SettingsScreen() {
                 style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
               />
             </View>
-            <View style={styles.row}>
-              <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Appearance</Text>
-              <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>Purple</Text>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Appearance</Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>Purple</Text>
+              </View>
             </View>
+
+            <View
+              style={[
+                styles.card,
+                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Realtime (Dev)</Text>
+              <Text style={[styles.sectionSub, { fontSize: rowValueSize }]}>Connect to a local WebSocket bridge.</Text>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Enable realtime</Text>
+                <Switch
+                  value={realtime.enabled}
+                  onValueChange={(v) => setRealtime({ enabled: v })}
+                  thumbColor={realtime.enabled ? theme.colors.accent : 'rgba(255,255,255,0.8)'}
+                  trackColor={{ true: 'rgba(180,107,255,0.45)', false: 'rgba(255,255,255,0.24)' }}
+                  style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
+                />
+              </View>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Status</Text>
+                <View
+                  style={[
+                    styles.statusPill,
+                    { height: statusHeight, borderRadius: statusRadius },
+                    realtimeStatus.status === 'connected'
+                      ? styles.statusOn
+                      : realtimeStatus.status === 'connecting'
+                        ? styles.statusLinking
+                        : realtimeStatus.status === 'error'
+                          ? styles.statusError
+                          : styles.statusOff,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { fontSize: rowValueSize },
+                      realtimeStatus.status === 'connected' ? styles.statusTextOn : styles.statusTextOff,
+                    ]}
+                  >
+                    {realtimeStatus.label}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>WebSocket endpoint</Text>
+              <TextInput
+                value={realtime.wsUrl}
+                onChangeText={(value) => setRealtime({ wsUrl: value })}
+                placeholder="ws://localhost:8088"
+                placeholderTextColor="rgba(255,255,255,0.45)"
+                style={[styles.realtimeInput, { height: inputHeight, borderRadius: inputRadius }]}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
             </View>
 
             <View
@@ -348,9 +443,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)',
     borderColor: 'rgba(255,255,255,0.20)',
   },
+  statusError: {
+    backgroundColor: 'rgba(255,120,140,0.18)',
+    borderColor: 'rgba(255,120,140,0.35)',
+  },
   statusText: { fontWeight: '900', fontSize: 12 },
   statusTextOn: { color: theme.colors.text },
   statusTextOff: { color: theme.colors.subtext },
+  realtimeInput: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    color: theme.colors.text,
+    fontWeight: '700',
+  },
 
   integrationButtons: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   primaryBtn: {

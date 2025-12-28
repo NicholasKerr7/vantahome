@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import Pressable from '../components/Pressable';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,36 +23,12 @@ import BackgroundLines from '../components/BackgroundLines';
 import ModeTiles from '../components/ModeTiles';
 import DeviceCapabilityControls from '../components/DeviceCapabilityControls';
 import AvatarChip from '../components/AvatarChip';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deviceClient } from '../services/deviceClient';
 import { useResponsive } from '../theme/layout';
+import DeviceIcon from '../components/DeviceIcon';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DeviceDetail'>;
-
-function genericIconFor(kind: string): keyof typeof Ionicons.glyphMap {
-  if (kind === 'light') return 'bulb';
-  if (kind === 'tv') return 'tv';
-  if (kind === 'coffee') return 'cafe';
-  if (kind === 'fan') return 'aperture';
-  if (kind === 'fridge') return 'thermometer';
-  if (kind === 'garage') return 'car-sport';
-  if (kind === 'gate') return 'exit';
-  if (kind === 'door') return 'home';
-  if (kind === 'vacuum') return 'sparkles';
-  if (kind === 'camera') return 'videocam';
-  if (kind === 'window') return 'copy';
-  if (kind === 'stove') return 'flame';
-  if (kind === 'washer') return 'sync';
-  if (kind === 'dryer') return 'sync';
-  if (kind === 'microwave') return 'timer';
-  if (kind === 'energy') return 'stats-chart';
-  if (kind === 'water') return 'water';
-  if (kind === 'air') return 'leaf';
-  if (kind === 'sprinkler') return 'rainy';
-  if (kind === 'speaker') return 'volume-high';
-  if (kind === 'smoke') return 'alert-circle';
-  return 'cube';
-}
 
 function hexToRgb(hex: string) {
   const cleaned = hex.trim().replace('#', '');
@@ -93,7 +70,9 @@ const LIGHT_EFFECTS: Array<{
 const LIGHT_AUTO_OFF = [0, 15, 30, 60];
 
 export default function DeviceDetailScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const { gutter, isTablet, isLandscape, scale, contentWidth, height } = useResponsive(960);
+  const safeBottom = insets.bottom;
   // Scale all measurements together so layouts stay balanced across device sizes.
   const panelPad = Math.round((isTablet ? 22 : 18) * scale);
   const panelRadius = Math.round((isTablet ? 44 : 42) * scale);
@@ -103,36 +82,40 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const headerTitleSize = Math.round((isTablet ? 18 : 16) * scale);
   const moodLabelSize = Math.round((isTablet ? 13 : 12) * scale);
   const moodValueSize = Math.round((isTablet ? 24 : 22) * scale);
+  const powerDockHeight = Math.round((isTablet ? 120 : 104) * scale);
+  const powerDockInset = Math.round((isTablet ? 18 : 12) * scale);
+  const powerDockOffset = Math.round((isTablet ? 12 : 8) * scale) + safeBottom;
   const dialSize = Math.round((isTablet ? (isLandscape ? 320 : 340) : 280) * scale);
   const compactDialSize = Math.round((isTablet ? 280 : 240) * scale);
   const controlCardPad = Math.round((isTablet ? 16 : 12) * scale);
   const controlCardRadius = Math.round((isTablet ? 20 : 18) * scale);
   const controlCardRowGap = Math.round((isTablet ? 12 : 10) * scale);
   const isLightCompact = !isTablet;
+  const isLightMobile = !isTablet && !isLandscape;
   const lightDialSize = Math.round(
     Math.min(
-      dialSize * (isLightCompact ? 0.86 : 1),
+      dialSize * (isLightMobile ? 0.78 : isLightCompact ? 0.86 : 1),
       contentWidth - panelPad * 2,
-      height * (isLandscape ? 0.58 : isTablet ? 0.48 : 0.36)
+      height * (isLandscape ? 0.58 : isTablet ? 0.48 : 0.32)
     )
   );
   const lightCenterSize = Math.min(
-    260,
-    Math.max(130, Math.round(lightDialSize * (isLightCompact ? 0.84 : 0.88)))
+    240,
+    Math.max(120, Math.round(lightDialSize * (isLightMobile ? 0.86 : isLightCompact ? 0.84 : 0.88)))
   );
   const lightCenterIcon = Math.max(22, Math.round(lightCenterSize * 0.2));
   const lightCenterValueSize = Math.max(18, Math.round(lightCenterSize * 0.11));
   const lightCenterRoomSize = Math.max(11, Math.round(lightCenterSize * 0.068));
   const lightCenterValueMargin = Math.max(6, Math.round(lightCenterSize * 0.05));
   const lightCenterRoomMargin = Math.max(2, Math.round(lightCenterSize * 0.025));
-  const lightSwatchSize = Math.round((isTablet ? 36 : 28) * scale);
+  const lightSwatchSize = Math.round((isTablet ? 36 : 26) * scale);
   const lightSwatchRadius = Math.round(lightSwatchSize * 0.35);
-  const lightSceneItemHeight = Math.round((isTablet ? 54 : 44) * scale);
+  const lightSceneItemHeight = Math.round((isTablet ? 54 : 40) * scale);
   const lightSceneItemRadius = Math.round(lightSceneItemHeight * 0.28);
-  const lightSceneIconSize = Math.round((isTablet ? 16 : 13) * scale);
-  const lightCardGap = Math.round((isTablet ? 14 : 8) * scale);
-  const lightSubLabelSize = Math.round((isTablet ? 12 : 10) * scale);
-  const lightCardPad = Math.round((isTablet ? 16 : 9) * scale);
+  const lightSceneIconSize = Math.round((isTablet ? 16 : 12) * scale);
+  const lightCardGap = Math.round((isTablet ? 14 : 6) * scale);
+  const lightSubLabelSize = Math.round((isTablet ? 12 : 9) * scale);
+  const lightCardPad = Math.round((isTablet ? 16 : 8) * scale);
   const lightCardRadius = Math.round((isTablet ? 20 : 16) * scale);
   const editPad = Math.round((isTablet ? 20 : 16) * scale);
   const editRadius = Math.round((isTablet ? 24 : 22) * scale);
@@ -159,6 +142,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightControlsColumnStyle = [styles.lightControlsColumn, { gap: lightCardGap }];
   const lightSwatchStyle = { width: lightSwatchSize, height: lightSwatchSize, borderRadius: lightSwatchRadius };
   const lightSceneItemStyle = { height: lightSceneItemHeight, borderRadius: lightSceneItemRadius };
+  const lightSceneMinWidth = Math.round((isTablet ? 92 : 78) * scale);
+  const lightControlsCompact = isLightMobile;
   const { deviceId } = route.params;
   const device = useHomeStore((s) => s.devices.find((d) => d.id === deviceId));
   const roomName = useHomeStore((s) => s.rooms.find((r) => r.id === device?.roomId)?.name ?? '');
@@ -399,552 +384,646 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             },
           ]}
         >
-          <View
-            style={[
-              styles.headerPill,
-              {
-                height: headerHeight,
-                borderRadius: Math.round(headerHeight / 2),
-                paddingHorizontal: Math.round(10 * scale),
-              },
-            ]}
-          >
-            <Pressable
-              onPress={() => navigation.goBack()}
-              style={[styles.headerBtn, { width: headerBtnSize, height: headerBtnSize, borderRadius: headerBtnRadius }]}
-              hitSlop={10}
+          <View style={styles.panelBody}>
+            <View
+              style={[
+                styles.headerPill,
+                {
+                  height: headerHeight,
+                  borderRadius: Math.round(headerHeight / 2),
+                  paddingHorizontal: Math.round(10 * scale),
+                },
+              ]}
             >
-              <Ionicons name="chevron-back" size={Math.round(20 * scale)} color={stylesVars.ink} />
-            </Pressable>
+              <Pressable
+                onPress={() => navigation.goBack()}
+                style={[styles.headerBtn, { width: headerBtnSize, height: headerBtnSize, borderRadius: headerBtnRadius }]}
+                hitSlop={10}
+              >
+                <Ionicons name="chevron-back" size={Math.round(20 * scale)} color={stylesVars.ink} />
+              </Pressable>
 
-            <Text style={[styles.headerTitle, { fontSize: headerTitleSize }]} numberOfLines={1} pointerEvents="none">
-              {device.name}
-            </Text>
-
-            <Pressable
-              style={[styles.headerBtn, { width: headerBtnSize, height: headerBtnSize, borderRadius: headerBtnRadius }]}
-              hitSlop={10}
-              onPress={() => setShowEdit(true)}
-              testID="device-options-button"
-            >
-              <Ionicons name="options-outline" size={Math.round(20 * scale)} color={stylesVars.ink} />
-            </Pressable>
-          </View>
-
-          {showCapabilities ? (
-            <View style={{ marginTop: 28 }}>
-              <View style={styles.genericHero}>
-                <View style={styles.genericIcon}>
-                  <Ionicons name={genericIconFor(device.kind)} size={32} color={stylesVars.ink} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.heroTitle}>{device.name}</Text>
-                  <Text style={styles.heroSub}>
-                    {device.isOn ? 'Running' : 'Off'}
-                    {roomName ? ` • ${roomName}` : ''}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.capabilitiesWrap}>
-                <DeviceCapabilityControls device={device} context="detail" variant="light" layout="cards" />
-              </View>
-            </View>
-          ) : isAC ? (
-            <>
-              <RadialDial
-                size={dialSize}
-                value={temp}
-                min={AC_TEMP_MIN_C}
-                max={AC_TEMP_MAX_C}
-                tickValues={[AC_TEMP_MIN_C, AC_TEMP_MIN_C + 2, AC_TEMP_MIN_C + 4, AC_TEMP_MAX_C - 5]}
-                centerValue={roomTemp}
-                centerLabel="Room Temperature"
-                dimmed={!device.isOn}
-                onChange={(v) => sendPatch({ tempC: v, isOn: true })}
-              />
-
-              <Text style={[styles.moodLabel, { fontSize: moodLabelSize }]}>Mood</Text>
-              <Text style={[styles.moodValue, { fontSize: moodValueSize }]}>
-                {mode[0].toUpperCase() + mode.slice(1)}
+              <Text style={[styles.headerTitle, { fontSize: headerTitleSize }]} numberOfLines={1} pointerEvents="none">
+                {device.name}
               </Text>
 
-              <ModeTiles value={mode} onChange={(m) => sendPatch({ mode: m, isOn: true })} />
-            </>
-          ) : (
-            <View style={{ marginTop: 28 }}>
-              {!hasCustom && (
-                <View style={styles.genericHero}>
-                  <View style={styles.genericIcon}>
-                    <Ionicons name={genericIconFor(device.kind)} size={32} color={stylesVars.ink} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.heroTitle}>{device.name}</Text>
-                    <Text style={styles.heroSub}>{device.isOn ? 'Running' : 'Off'}</Text>
-                  </View>
-                </View>
-              )}
+              <Pressable
+                style={[styles.headerBtn, { width: headerBtnSize, height: headerBtnSize, borderRadius: headerBtnRadius }]}
+                hitSlop={10}
+                onPress={() => setShowEdit(true)}
+                testID="device-options-button"
+              >
+                <Ionicons name="options-outline" size={Math.round(20 * scale)} color={stylesVars.ink} />
+              </Pressable>
+            </View>
 
-              {device.kind === 'light' && (
-                <View style={[styles.lightLayout, lightLayoutRow && styles.lightLayoutRow, { gap: lightCardGap }]}>
-                  <View style={styles.lightDialColumn}>
-                    <View style={lightDialCardStyle}>
-                      <RadialDial
-                        size={lightDialSize}
-                        value={brightness}
-                        min={0}
-                        max={100}
-                        tickValues={[0, 25, 50, 75, 100]}
-                        centerContent={
-                          <Animated.View
-                            style={[
-                              styles.lightCenterOrb,
-                              { width: lightCenterSize, height: lightCenterSize, borderRadius: lightCenterSize / 2 },
-                              bulbIsLight && styles.lightCenterOrbLight,
-                              { transform: [{ scale: bulbScale }] },
-                            ]}
-                          >
-                            <LinearGradient
-                              colors={bulbGradient}
-                              start={{ x: 0.2, y: 0.1 }}
-                              end={{ x: 0.9, y: 1 }}
-                              style={[
-                                styles.lightCenterInner,
-                                bulbIsLight && styles.lightCenterInnerLight,
-                                { borderColor: bulbInnerBorder, borderRadius: lightCenterSize / 2 },
-                              ]}
-                            >
-                              <Ionicons name="bulb" size={lightCenterIcon} color={bulbIconColor} />
-                              <Text
-                                style={[
-                                  styles.lightCenterValue,
-                                  { color: bulbTextColor, fontSize: lightCenterValueSize, marginTop: lightCenterValueMargin },
-                                ]}
-                              >
-                                {device.brightness ?? 60}%
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.lightCenterRoom,
-                                  { color: bulbSubColor, fontSize: lightCenterRoomSize, marginTop: lightCenterRoomMargin },
-                                ]}
-                              >
-                                {roomName || 'Light'}
-                              </Text>
-                            </LinearGradient>
-                          </Animated.View>
-                        }
-                        formatTick={(v) => `${v}`}
-                        formatValue={(v) => `${v}%`}
-                        formatCenterValue={(v) => `${v}%`}
-                        dimmed={!device.isOn}
-                        onChange={(v) => {
-                          animateBulb();
-                          sendPatch({ brightness: clamp(v, 0, 100), isOn: v > 0 });
-                        }}
-                      />
-
-                      <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>Color</Text>
-                      <View style={[styles.colorRow, { gap: lightCardGap }]}>
-                        {['#FFD166', '#A0E9FF', '#FF9AA2', '#B69CFF', '#A5FF9B', '#FFFFFF'].map((c) => (
-                          <Pressable
-                            key={c}
-                            onPress={() => sendPatch({ color: c, isOn: true })}
-                            style={[
-                              styles.swatch,
-                              lightSwatchStyle,
-                              { backgroundColor: c },
-                              device.color === c && styles.swatchActive,
-                            ]}
-                          />
-                        ))}
-                      </View>
-
-                      <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>Scenes</Text>
-                      <View style={[styles.sceneRow, { gap: lightCardGap }]}>
-                        {[
-                          { label: 'Warm', brightness: 60, color: '#FFD166', icon: 'sunny' as const },
-                          { label: 'Cool', brightness: 70, color: '#A0E9FF', icon: 'snow' as const },
-                          { label: 'Focus', brightness: 80, color: '#FFFFFF', icon: 'flash' as const },
-                        ].map((scene) => (
-                          <Pressable
-                            key={scene.label}
-                            style={[styles.sceneCardItem, lightSceneItemStyle]}
-                            onPress={() => {
-                              animateBulb();
-                              sendPatch({
-                                brightness: scene.brightness,
-                                color: scene.color,
-                                isOn: true,
-                              });
-                            }}
-                          >
-                            <View
-                              style={[
-                                styles.sceneIconWrap,
-                                {
-                                  width: lightSceneIconSize + 18,
-                                  height: lightSceneIconSize + 18,
-                                  borderRadius: Math.round((lightSceneIconSize + 18) / 2),
-                                },
-                              ]}
-                            >
-                              <Ionicons name={scene.icon} size={lightSceneIconSize} color={stylesVars.ink} />
-                            </View>
-                            <Text style={[styles.sceneText, { fontSize: lightSubLabelSize }]}>{scene.label}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={lightControlsColumnStyle}>
-                    {isTablet ? (
-                      <>
-                        <View style={lightControlCardStyle}>
-                          <Text style={styles.cardLabel}>Temperature</Text>
-                          <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>{colorTempK}K</Text>
-                          <View style={styles.chipRow}>
-                            {LIGHT_TEMP_PRESETS.map((preset) => {
-                              const active = Math.abs(colorTempK - preset.value) <= 200;
-                              return (
-                                <Pressable
-                                  key={preset.label}
-                                  style={[styles.chip, active && styles.chipActive]}
-                                  onPress={() => sendPatch({ colorTempK: preset.value, isOn: true })}
-                                >
-                                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{preset.label}</Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-
-                          <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Effects</Text>
-                          <View style={[styles.chipRow, { marginTop: 6 }]}>
-                            {LIGHT_EFFECTS.map((effect) => {
-                              const active = lightEffect === effect.value;
-                              return (
-                                <Pressable
-                                  key={effect.value}
-                                  style={[styles.chip, styles.chipRowItem, active && styles.chipActive]}
-                                  onPress={() => sendPatch({ lightEffect: effect.value, isOn: true })}
-                                >
-                                  <Ionicons
-                                    name={effect.icon}
-                                    size={lightSceneIconSize}
-                                    color={active ? stylesVars.ink : stylesVars.subtext}
-                                  />
-                                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{effect.label}</Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-                        </View>
-
-                        <View style={lightControlCardStyle}>
-                          <Text style={styles.cardLabel}>Automation</Text>
-                          <View style={styles.chipRow}>
-                            <Pressable
-                              style={[styles.chip, adaptiveLighting && styles.chipActive]}
-                              onPress={() => sendPatch({ adaptiveLighting: !adaptiveLighting })}
-                            >
-                              <Text style={[styles.chipText, adaptiveLighting && styles.chipTextActive]}>Adaptive</Text>
-                            </Pressable>
-                            <Pressable
-                              style={[styles.chip, motionBoost && styles.chipActive]}
-                              onPress={() => sendPatch({ motionBoost: !motionBoost })}
-                            >
-                              <Text style={[styles.chipText, motionBoost && styles.chipTextActive]}>Motion</Text>
-                            </Pressable>
-                            <Pressable
-                              style={[styles.chip, nightShift && styles.chipActive]}
-                              onPress={() => sendPatch({ nightShift: !nightShift })}
-                            >
-                              <Text style={[styles.chipText, nightShift && styles.chipTextActive]}>Night Shift</Text>
-                            </Pressable>
-                          </View>
-
-                          <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Auto-off</Text>
-                          <View style={[styles.chipRow, { marginTop: 6 }]}>
-                            {LIGHT_AUTO_OFF.map((minutes) => {
-                              const active = autoOffMin === minutes;
-                              return (
-                                <Pressable
-                                  key={minutes}
-                                  style={[styles.chip, active && styles.chipActive]}
-                                  onPress={() => sendPatch({ autoOffMin: minutes })}
-                                >
-                                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                                    {minutes === 0 ? 'Off' : `${minutes}m`}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-                        </View>
-                      </>
-                    ) : (
-                      <View style={lightControlCardStyle}>
-                        <Text style={styles.cardLabel}>Temperature</Text>
-                        <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>{colorTempK}K</Text>
-                        <View style={styles.chipRow}>
-                          {LIGHT_TEMP_PRESETS.map((preset) => {
-                            const active = Math.abs(colorTempK - preset.value) <= 200;
-                            return (
-                              <Pressable
-                                key={preset.label}
-                                style={[styles.chip, active && styles.chipActive]}
-                                onPress={() => sendPatch({ colorTempK: preset.value, isOn: true })}
-                              >
-                                <Text style={[styles.chipText, active && styles.chipTextActive]}>{preset.label}</Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-
-                        <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Effects</Text>
-                        <View style={[styles.chipRow, { marginTop: 6 }]}>
-                          {LIGHT_EFFECTS.map((effect) => {
-                            const active = lightEffect === effect.value;
-                            return (
-                              <Pressable
-                                key={effect.value}
-                                style={[styles.chip, styles.chipRowItem, active && styles.chipActive]}
-                                onPress={() => sendPatch({ lightEffect: effect.value, isOn: true })}
-                              >
-                                <Ionicons
-                                  name={effect.icon}
-                                  size={lightSceneIconSize}
-                                  color={active ? stylesVars.ink : stylesVars.subtext}
-                                />
-                                <Text style={[styles.chipText, active && styles.chipTextActive]}>{effect.label}</Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-
-                        <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Automation</Text>
-                        <View style={styles.chipRow}>
-                          <Pressable
-                            style={[styles.chip, adaptiveLighting && styles.chipActive]}
-                            onPress={() => sendPatch({ adaptiveLighting: !adaptiveLighting })}
-                          >
-                            <Text style={[styles.chipText, adaptiveLighting && styles.chipTextActive]}>Adaptive</Text>
-                          </Pressable>
-                          <Pressable
-                            style={[styles.chip, motionBoost && styles.chipActive]}
-                            onPress={() => sendPatch({ motionBoost: !motionBoost })}
-                          >
-                            <Text style={[styles.chipText, motionBoost && styles.chipTextActive]}>Motion</Text>
-                          </Pressable>
-                          <Pressable
-                            style={[styles.chip, nightShift && styles.chipActive]}
-                            onPress={() => sendPatch({ nightShift: !nightShift })}
-                          >
-                            <Text style={[styles.chipText, nightShift && styles.chipTextActive]}>Night Shift</Text>
-                          </Pressable>
-                        </View>
-
-                        <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Auto-off</Text>
-                        <View style={[styles.chipRow, { marginTop: 6 }]}>
-                          {LIGHT_AUTO_OFF.map((minutes) => {
-                            const active = autoOffMin === minutes;
-                            return (
-                              <Pressable
-                                key={minutes}
-                                style={[styles.chip, active && styles.chipActive]}
-                                onPress={() => sendPatch({ autoOffMin: minutes })}
-                              >
-                                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                                  {minutes === 0 ? 'Off' : `${minutes}m`}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              )}
-
-              {device.kind === 'garage' && (
-                <>
-                  <View style={styles.garageHero}>
-                    <View style={styles.garageIcon}>
-                      <Ionicons name="car-sport" size={32} color={stylesVars.ink} />
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.panelScroll,
+                { paddingBottom: powerDockHeight + powerDockOffset + Math.round(12 * scale) },
+              ]}
+            >
+              {showCapabilities ? (
+                <View style={{ marginTop: 28 }}>
+                  <View style={styles.genericHero}>
+                    <View style={styles.genericIcon}>
+                      <DeviceIcon kind={device.kind} size={32} color={stylesVars.ink} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.heroTitle}>{device.name}</Text>
-                      <Text style={styles.heroSub}>{device.isOn ? 'Open' : 'Closed'}</Text>
+                      <Text style={styles.heroSub}>
+                        {device.isOn ? 'Running' : 'Off'}
+                        {roomName ? ` • ${roomName}` : ''}
+                      </Text>
                     </View>
                   </View>
 
-                  <View style={styles.actionRow}>
-                    <Pressable
-                      style={[styles.modeTile, device.isOn && styles.modeTileActive]}
-                      onPress={() => sendPatch({ isOn: true })}
-                    >
-                      {device.isOn ? (
-                        <LinearGradient
-                          colors={[theme.colors.accent2, theme.colors.accent]}
-                          start={{ x: 0.1, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.modeIconBubbleActive}
-                        >
-                          <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
-                        </LinearGradient>
-                      ) : (
-                        <View style={styles.modeIconBubble}>
-                          <Ionicons name="arrow-up" size={18} color="rgba(12,12,18,0.65)" />
-                        </View>
-                      )}
-                      <Text style={[styles.modeText, device.isOn && styles.modeTextActive]}>Open</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.modeTile, !device.isOn && styles.modeTileActive]}
-                      onPress={() => sendPatch({ isOn: false })}
-                    >
-                      {!device.isOn ? (
-                        <LinearGradient
-                          colors={[theme.colors.accent2, theme.colors.accent]}
-                          start={{ x: 0.1, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.modeIconBubbleActive}
-                        >
-                          <Ionicons name="arrow-down" size={18} color="#FFFFFF" />
-                        </LinearGradient>
-                      ) : (
-                        <View style={styles.modeIconBubble}>
-                          <Ionicons name="arrow-down" size={18} color="rgba(12,12,18,0.65)" />
-                        </View>
-                      )}
-                      <Text style={[styles.modeText, !device.isOn && styles.modeTextActive]}>Close</Text>
-                    </Pressable>
+                  <View style={styles.capabilitiesWrap}>
+                    <DeviceCapabilityControls device={device} context="detail" variant="light" layout="cards" />
                   </View>
-                </>
-              )}
-
-              {device.kind === 'door' && (
+                </View>
+              ) : isAC ? (
                 <>
-                  <View style={styles.doorWrap}>
-                    <View style={styles.doorFrame}>
-                      <Animated.View
-                        style={[
-                          styles.doorPanel,
-                          {
-                            transform: [
-                              { perspective: 800 },
+                  <RadialDial
+                    size={dialSize}
+                    value={temp}
+                    min={AC_TEMP_MIN_C}
+                    max={AC_TEMP_MAX_C}
+                    tickValues={[AC_TEMP_MIN_C, AC_TEMP_MIN_C + 2, AC_TEMP_MIN_C + 4, AC_TEMP_MAX_C - 5]}
+                    centerValue={roomTemp}
+                    centerLabel="Room Temperature"
+                    dimmed={!device.isOn}
+                    onChange={(v) => sendPatch({ tempC: v, isOn: true })}
+                  />
+
+                  <Text style={[styles.moodLabel, { fontSize: moodLabelSize }]}>Mood</Text>
+                  <Text style={[styles.moodValue, { fontSize: moodValueSize }]}>
+                    {mode[0].toUpperCase() + mode.slice(1)}
+                  </Text>
+
+                  <ModeTiles value={mode} onChange={(m) => sendPatch({ mode: m, isOn: true })} />
+                </>
+              ) : (
+                <View style={{ marginTop: 28 }}>
+                  {!hasCustom && (
+                    <View style={styles.genericHero}>
+                      <View style={styles.genericIcon}>
+                        <DeviceIcon kind={device.kind} size={32} color={stylesVars.ink} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.heroTitle}>{device.name}</Text>
+                        <Text style={styles.heroSub}>{device.isOn ? 'Running' : 'Off'}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {device.kind === 'light' && (
+                    <View style={[styles.lightLayout, lightLayoutRow && styles.lightLayoutRow, { gap: lightCardGap }]}>
+                      <View style={styles.lightDialColumn}>
+                        <View style={lightDialCardStyle}>
+                          <RadialDial
+                            size={lightDialSize}
+                            value={brightness}
+                            min={0}
+                            max={100}
+                            tickValues={[0, 25, 50, 75, 100]}
+                            centerContent={
+                              <Animated.View
+                                style={[
+                                  styles.lightCenterOrb,
+                                  { width: lightCenterSize, height: lightCenterSize, borderRadius: lightCenterSize / 2 },
+                                  bulbIsLight && styles.lightCenterOrbLight,
+                                  { transform: [{ scale: bulbScale }] },
+                                ]}
+                              >
+                                <LinearGradient
+                                  colors={bulbGradient}
+                                  start={{ x: 0.2, y: 0.1 }}
+                                  end={{ x: 0.9, y: 1 }}
+                                  style={[
+                                    styles.lightCenterInner,
+                                    bulbIsLight && styles.lightCenterInnerLight,
+                                    { borderColor: bulbInnerBorder, borderRadius: lightCenterSize / 2 },
+                                  ]}
+                                >
+                                  <Ionicons name="bulb" size={lightCenterIcon} color={bulbIconColor} />
+                                  <Text
+                                    style={[
+                                      styles.lightCenterValue,
+                                      { color: bulbTextColor, fontSize: lightCenterValueSize, marginTop: lightCenterValueMargin },
+                                    ]}
+                                  >
+                                    {device.brightness ?? 60}%
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.lightCenterRoom,
+                                      { color: bulbSubColor, fontSize: lightCenterRoomSize, marginTop: lightCenterRoomMargin },
+                                    ]}
+                                  >
+                                    {roomName || 'Light'}
+                                  </Text>
+                                </LinearGradient>
+                              </Animated.View>
+                            }
+                            formatTick={(v) => `${v}`}
+                            formatValue={(v) => `${v}%`}
+                            formatCenterValue={(v) => `${v}%`}
+                            dimmed={!device.isOn}
+                            onChange={(v) => {
+                              animateBulb();
+                              sendPatch({ brightness: clamp(v, 0, 100), isOn: v > 0 });
+                            }}
+                          />
+
+                          <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>Color</Text>
+                          <View style={[styles.colorRow, { gap: lightCardGap }]}>
+                            {['#FFD166', '#A0E9FF', '#FF9AA2', '#B69CFF', '#A5FF9B', '#FFFFFF'].map((c) => (
+                              <Pressable
+                                key={c}
+                                onPress={() => sendPatch({ color: c, isOn: true })}
+                                style={[
+                                  styles.swatch,
+                                  lightSwatchStyle,
+                                  { backgroundColor: c },
+                                  device.color === c && styles.swatchActive,
+                                ]}
+                              />
+                            ))}
+                          </View>
+
+                          <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>Scenes</Text>
+                          <View style={[styles.sceneRow, { gap: lightCardGap }]}>
+                            {[
+                              { label: 'Warm', brightness: 60, color: '#FFD166', icon: 'sunny' as const },
+                              { label: 'Cool', brightness: 70, color: '#A0E9FF', icon: 'snow' as const },
+                              { label: 'Focus', brightness: 80, color: '#FFFFFF', icon: 'flash' as const },
+                            ].map((scene) => (
+                              <Pressable
+                                key={scene.label}
+                                style={[styles.sceneCardItem, lightSceneItemStyle, { minWidth: lightSceneMinWidth }]}
+                                onPress={() => {
+                                  animateBulb();
+                                  sendPatch({
+                                    brightness: scene.brightness,
+                                    color: scene.color,
+                                    isOn: true,
+                                  });
+                                }}
+                              >
+                                <View
+                                  style={[
+                                    styles.sceneIconWrap,
+                                    {
+                                      width: lightSceneIconSize + 16,
+                                      height: lightSceneIconSize + 16,
+                                      borderRadius: Math.round((lightSceneIconSize + 16) / 2),
+                                    },
+                                  ]}
+                                >
+                                  <Ionicons name={scene.icon} size={lightSceneIconSize} color={stylesVars.ink} />
+                                </View>
+                                <Text style={[styles.sceneText, { fontSize: lightSubLabelSize }]}>{scene.label}</Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={lightControlsColumnStyle}>
+                        {isTablet ? (
+                          <>
+                            <View style={lightControlCardStyle}>
+                              <Text style={styles.cardLabel}>Temperature</Text>
+                              <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>{colorTempK}K</Text>
+                              <View style={styles.chipRow}>
+                                {LIGHT_TEMP_PRESETS.map((preset) => {
+                                  const active = Math.abs(colorTempK - preset.value) <= 200;
+                                  return (
+                                    <Pressable
+                                      key={preset.label}
+                                      style={[styles.chip, active && styles.chipActive]}
+                                      onPress={() => sendPatch({ colorTempK: preset.value, isOn: true })}
+                                    >
+                                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{preset.label}</Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+
+                              <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Effects</Text>
+                              <View style={[styles.chipRow, { marginTop: 6 }]}>
+                                {LIGHT_EFFECTS.map((effect) => {
+                                  const active = lightEffect === effect.value;
+                                  return (
+                                    <Pressable
+                                      key={effect.value}
+                                      style={[styles.chip, styles.chipRowItem, active && styles.chipActive]}
+                                      onPress={() => sendPatch({ lightEffect: effect.value, isOn: true })}
+                                    >
+                                      <Ionicons
+                                        name={effect.icon}
+                                        size={lightSceneIconSize}
+                                        color={active ? stylesVars.ink : stylesVars.subtext}
+                                      />
+                                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{effect.label}</Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                            </View>
+
+                            <View style={lightControlCardStyle}>
+                              <Text style={styles.cardLabel}>Automation</Text>
+                              <View style={styles.chipRow}>
+                                <Pressable
+                                  style={[styles.chip, adaptiveLighting && styles.chipActive]}
+                                  onPress={() => sendPatch({ adaptiveLighting: !adaptiveLighting })}
+                                >
+                                  <Text style={[styles.chipText, adaptiveLighting && styles.chipTextActive]}>Adaptive</Text>
+                                </Pressable>
+                                <Pressable
+                                  style={[styles.chip, motionBoost && styles.chipActive]}
+                                  onPress={() => sendPatch({ motionBoost: !motionBoost })}
+                                >
+                                  <Text style={[styles.chipText, motionBoost && styles.chipTextActive]}>Motion</Text>
+                                </Pressable>
+                                <Pressable
+                                  style={[styles.chip, nightShift && styles.chipActive]}
+                                  onPress={() => sendPatch({ nightShift: !nightShift })}
+                                >
+                                  <Text style={[styles.chipText, nightShift && styles.chipTextActive]}>Night Shift</Text>
+                                </Pressable>
+                              </View>
+
+                              <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Auto-off</Text>
+                              <View style={[styles.chipRow, { marginTop: 6 }]}>
+                                {LIGHT_AUTO_OFF.map((minutes) => {
+                                  const active = autoOffMin === minutes;
+                                  return (
+                                    <Pressable
+                                      key={minutes}
+                                      style={[styles.chip, active && styles.chipActive]}
+                                      onPress={() => sendPatch({ autoOffMin: minutes })}
+                                    >
+                                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                                        {minutes === 0 ? 'Off' : `${minutes}m`}
+                                      </Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                            </View>
+                          </>
+                        ) : lightControlsCompact ? (
+                          <View style={[styles.lightControlsGrid, { gap: lightCardGap }]}>
+                            <View style={[lightControlCardStyle, styles.lightControlCompact]}>
+                              <View style={styles.lightControlHeaderRow}>
+                                <Text style={styles.cardLabel}>Temperature</Text>
+                                <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>{colorTempK}K</Text>
+                              </View>
+                              <View style={styles.chipRow}>
+                                {LIGHT_TEMP_PRESETS.map((preset) => {
+                                  const active = Math.abs(colorTempK - preset.value) <= 200;
+                                  return (
+                                    <Pressable
+                                      key={preset.label}
+                                      style={[styles.chip, active && styles.chipActive]}
+                                      onPress={() => sendPatch({ colorTempK: preset.value, isOn: true })}
+                                    >
+                                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{preset.label}</Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+
+                              <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Effects</Text>
+                              <View style={[styles.chipRow, { marginTop: 6 }]}>
+                                {LIGHT_EFFECTS.map((effect) => {
+                                  const active = lightEffect === effect.value;
+                                  return (
+                                    <Pressable
+                                      key={effect.value}
+                                      style={[styles.chip, styles.chipRowItem, active && styles.chipActive]}
+                                      onPress={() => sendPatch({ lightEffect: effect.value, isOn: true })}
+                                    >
+                                      <Ionicons
+                                        name={effect.icon}
+                                        size={lightSceneIconSize}
+                                        color={active ? stylesVars.ink : stylesVars.subtext}
+                                      />
+                                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{effect.label}</Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                            </View>
+
+                            <View style={[lightControlCardStyle, styles.lightControlCompact]}>
+                              <Text style={styles.cardLabel}>Automation</Text>
+                              <View style={styles.chipRow}>
+                                <Pressable
+                                  style={[styles.chip, adaptiveLighting && styles.chipActive]}
+                                  onPress={() => sendPatch({ adaptiveLighting: !adaptiveLighting })}
+                                >
+                                  <Text style={[styles.chipText, adaptiveLighting && styles.chipTextActive]}>Adaptive</Text>
+                                </Pressable>
+                                <Pressable
+                                  style={[styles.chip, motionBoost && styles.chipActive]}
+                                  onPress={() => sendPatch({ motionBoost: !motionBoost })}
+                                >
+                                  <Text style={[styles.chipText, motionBoost && styles.chipTextActive]}>Motion</Text>
+                                </Pressable>
+                                <Pressable
+                                  style={[styles.chip, nightShift && styles.chipActive]}
+                                  onPress={() => sendPatch({ nightShift: !nightShift })}
+                                >
+                                  <Text style={[styles.chipText, nightShift && styles.chipTextActive]}>Night Shift</Text>
+                                </Pressable>
+                              </View>
+
+                              <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Auto-off</Text>
+                              <View style={[styles.chipRow, { marginTop: 6 }]}>
+                                {LIGHT_AUTO_OFF.map((minutes) => {
+                                  const active = autoOffMin === minutes;
+                                  return (
+                                    <Pressable
+                                      key={minutes}
+                                      style={[styles.chip, active && styles.chipActive]}
+                                      onPress={() => sendPatch({ autoOffMin: minutes })}
+                                    >
+                                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                                        {minutes === 0 ? 'Off' : `${minutes}m`}
+                                      </Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                            </View>
+                          </View>
+                        ) : (
+                          <View style={lightControlCardStyle}>
+                            <Text style={styles.cardLabel}>Temperature</Text>
+                            <Text style={[styles.cardHint, { fontSize: lightSubLabelSize }]}>{colorTempK}K</Text>
+                            <View style={styles.chipRow}>
+                              {LIGHT_TEMP_PRESETS.map((preset) => {
+                                const active = Math.abs(colorTempK - preset.value) <= 200;
+                                return (
+                                  <Pressable
+                                    key={preset.label}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                    onPress={() => sendPatch({ colorTempK: preset.value, isOn: true })}
+                                  >
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{preset.label}</Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+
+                            <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Effects</Text>
+                            <View style={[styles.chipRow, { marginTop: 6 }]}>
+                              {LIGHT_EFFECTS.map((effect) => {
+                                const active = lightEffect === effect.value;
+                                return (
+                                  <Pressable
+                                    key={effect.value}
+                                    style={[styles.chip, styles.chipRowItem, active && styles.chipActive]}
+                                    onPress={() => sendPatch({ lightEffect: effect.value, isOn: true })}
+                                  >
+                                    <Ionicons
+                                      name={effect.icon}
+                                      size={lightSceneIconSize}
+                                      color={active ? stylesVars.ink : stylesVars.subtext}
+                                    />
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{effect.label}</Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+
+                            <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Automation</Text>
+                            <View style={styles.chipRow}>
+                              <Pressable
+                                style={[styles.chip, adaptiveLighting && styles.chipActive]}
+                                onPress={() => sendPatch({ adaptiveLighting: !adaptiveLighting })}
+                              >
+                                <Text style={[styles.chipText, adaptiveLighting && styles.chipTextActive]}>Adaptive</Text>
+                              </Pressable>
+                              <Pressable
+                                style={[styles.chip, motionBoost && styles.chipActive]}
+                                onPress={() => sendPatch({ motionBoost: !motionBoost })}
+                              >
+                                <Text style={[styles.chipText, motionBoost && styles.chipTextActive]}>Motion</Text>
+                              </Pressable>
+                              <Pressable
+                                style={[styles.chip, nightShift && styles.chipActive]}
+                                onPress={() => sendPatch({ nightShift: !nightShift })}
+                              >
+                                <Text style={[styles.chipText, nightShift && styles.chipTextActive]}>Night Shift</Text>
+                              </Pressable>
+                            </View>
+
+                            <Text style={[styles.cardHint, { fontSize: lightSubLabelSize, marginTop: 6 }]}>Auto-off</Text>
+                            <View style={[styles.chipRow, { marginTop: 6 }]}>
+                              {LIGHT_AUTO_OFF.map((minutes) => {
+                                const active = autoOffMin === minutes;
+                                return (
+                                  <Pressable
+                                    key={minutes}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                    onPress={() => sendPatch({ autoOffMin: minutes })}
+                                  >
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                                      {minutes === 0 ? 'Off' : `${minutes}m`}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  )}
+
+                  {device.kind === 'garage' && (
+                    <>
+                      <View style={styles.garageHero}>
+                        <View style={styles.garageIcon}>
+                          <Ionicons name="car-sport" size={32} color={stylesVars.ink} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.heroTitle}>{device.name}</Text>
+                          <Text style={styles.heroSub}>{device.isOn ? 'Open' : 'Closed'}</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.actionRow}>
+                        <Pressable
+                          style={[styles.modeTile, device.isOn && styles.modeTileActive]}
+                          onPress={() => sendPatch({ isOn: true })}
+                        >
+                          {device.isOn ? (
+                            <LinearGradient
+                              colors={[theme.colors.accent2, theme.colors.accent]}
+                              start={{ x: 0.1, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.modeIconBubbleActive}
+                            >
+                              <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
+                            </LinearGradient>
+                          ) : (
+                            <View style={styles.modeIconBubble}>
+                              <Ionicons name="arrow-up" size={18} color="rgba(12,12,18,0.65)" />
+                            </View>
+                          )}
+                          <Text style={[styles.modeText, device.isOn && styles.modeTextActive]}>Open</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.modeTile, !device.isOn && styles.modeTileActive]}
+                          onPress={() => sendPatch({ isOn: false })}
+                        >
+                          {!device.isOn ? (
+                            <LinearGradient
+                              colors={[theme.colors.accent2, theme.colors.accent]}
+                              start={{ x: 0.1, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.modeIconBubbleActive}
+                            >
+                              <Ionicons name="arrow-down" size={18} color="#FFFFFF" />
+                            </LinearGradient>
+                          ) : (
+                            <View style={styles.modeIconBubble}>
+                              <Ionicons name="arrow-down" size={18} color="rgba(12,12,18,0.65)" />
+                            </View>
+                          )}
+                          <Text style={[styles.modeText, !device.isOn && styles.modeTextActive]}>Close</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  )}
+
+                  {device.kind === 'door' && (
+                    <>
+                      <View style={styles.doorWrap}>
+                        <View style={styles.doorFrame}>
+                          <Animated.View
+                            style={[
+                              styles.doorPanel,
                               {
-                                rotateY: doorSwing.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: ['0deg', '-62deg'],
-                                }),
+                                transform: [
+                                  { perspective: 800 },
+                                  {
+                                    rotateY: doorSwing.interpolate({
+                                      inputRange: [0, 1],
+                                      outputRange: ['0deg', '-62deg'],
+                                    }),
+                                  },
+                                ],
                               },
-                            ],
-                          },
-                        ]}
-                      >
-                        <View style={styles.doorHandle} />
-                      </Animated.View>
-                    </View>
-                    <Text style={styles.doorTitle}>{device.name}</Text>
-                    <Text style={styles.doorStatus}>{device.isOn ? 'Open' : 'Closed'}</Text>
-                  </View>
-
-                  <View style={styles.actionRow}>
-                    <Pressable
-                      style={[styles.modeTile, device.isOn && styles.modeTileActive]}
-                      onPress={() => sendPatch({ isOn: true })}
-                    >
-                      {device.isOn ? (
-                        <LinearGradient
-                          colors={[theme.colors.accent2, theme.colors.accent]}
-                          start={{ x: 0.1, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.modeIconBubbleActive}
-                        >
-                          <Ionicons name="lock-open" size={18} color="#FFFFFF" />
-                        </LinearGradient>
-                      ) : (
-                        <View style={styles.modeIconBubble}>
-                          <Ionicons name="lock-open" size={18} color="rgba(12,12,18,0.65)" />
+                            ]}
+                          >
+                            <View style={styles.doorHandle} />
+                          </Animated.View>
                         </View>
-                      )}
-                      <Text style={[styles.modeText, device.isOn && styles.modeTextActive]}>Open</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.modeTile, !device.isOn && styles.modeTileActive]}
-                      onPress={() => sendPatch({ isOn: false })}
-                    >
-                      {!device.isOn ? (
-                        <LinearGradient
-                          colors={[theme.colors.accent2, theme.colors.accent]}
-                          start={{ x: 0.1, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.modeIconBubbleActive}
+                        <Text style={styles.doorTitle}>{device.name}</Text>
+                        <Text style={styles.doorStatus}>{device.isOn ? 'Open' : 'Closed'}</Text>
+                      </View>
+
+                      <View style={styles.actionRow}>
+                        <Pressable
+                          style={[styles.modeTile, device.isOn && styles.modeTileActive]}
+                          onPress={() => sendPatch({ isOn: true })}
                         >
-                          <Ionicons name="lock-closed" size={18} color="#FFFFFF" />
+                          {device.isOn ? (
+                            <LinearGradient
+                              colors={[theme.colors.accent2, theme.colors.accent]}
+                              start={{ x: 0.1, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.modeIconBubbleActive}
+                            >
+                              <Ionicons name="lock-open" size={18} color="#FFFFFF" />
+                            </LinearGradient>
+                          ) : (
+                            <View style={styles.modeIconBubble}>
+                              <Ionicons name="lock-open" size={18} color="rgba(12,12,18,0.65)" />
+                            </View>
+                          )}
+                          <Text style={[styles.modeText, device.isOn && styles.modeTextActive]}>Open</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.modeTile, !device.isOn && styles.modeTileActive]}
+                          onPress={() => sendPatch({ isOn: false })}
+                        >
+                          {!device.isOn ? (
+                            <LinearGradient
+                              colors={[theme.colors.accent2, theme.colors.accent]}
+                              start={{ x: 0.1, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.modeIconBubbleActive}
+                            >
+                              <Ionicons name="lock-closed" size={18} color="#FFFFFF" />
+                            </LinearGradient>
+                          ) : (
+                            <View style={styles.modeIconBubble}>
+                              <Ionicons name="lock-closed" size={18} color="rgba(12,12,18,0.65)" />
+                            </View>
+                          )}
+                          <Text style={[styles.modeText, !device.isOn && styles.modeTextActive]}>Close</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  )}
+
+                  {device.kind === 'gate' && (
+                    <>
+                      <View style={styles.infoOrb}>
+                        <LinearGradient
+                          colors={['#D9F0FF', '#7A5CFF']}
+                          start={{ x: 0.2, y: 0.1 }}
+                          end={{ x: 0.9, y: 1 }}
+                          style={styles.infoOrbInner}
+                        >
+                          <Ionicons name="exit" size={32} color="#fff" />
+                          <Text style={styles.infoValue}>{gateOpen > 20 ? 'OPEN' : 'CLOSED'}</Text>
+                          <Text style={styles.infoSub}>Front Gate</Text>
                         </LinearGradient>
-                      ) : (
-                        <View style={styles.modeIconBubble}>
-                          <Ionicons name="lock-closed" size={18} color="rgba(12,12,18,0.65)" />
+                      </View>
+
+                      <View style={styles.actionRow}>
+                        <Pressable style={styles.modeTile} onPress={openGate}>
+                          <View style={styles.modeIconBubble}>
+                            <Ionicons name="lock-open" size={18} color="rgba(12,12,18,0.65)" />
+                          </View>
+                          <Text style={styles.modeText}>Open</Text>
+                        </Pressable>
+                        <Pressable style={styles.modeTile} onPress={closeGate}>
+                          <View style={styles.modeIconBubble}>
+                            <Ionicons name="lock-closed" size={18} color="rgba(12,12,18,0.65)" />
+                          </View>
+                          <Text style={styles.modeText}>Close</Text>
+                        </Pressable>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Auto-open</Text>
+                        <Text style={styles.cardHint}>Use recognition + proximity to unlock for known faces.</Text>
+                        <View style={styles.chipRow}>
+                          <Pressable
+                            style={[styles.chip, gateAutoOpen && styles.chipActive]}
+                            onPress={() =>
+                              sendPatch({ autoOpenEnabled: !gateAutoOpen })
+                            }
+                          >
+                            <Text style={[styles.chipText, gateAutoOpen && styles.chipTextActive]}>
+                              {gateAutoOpen ? 'Enabled' : 'Disabled'}
+                            </Text>
+                          </Pressable>
                         </View>
-                      )}
-                      <Text style={[styles.modeText, !device.isOn && styles.modeTextActive]}>Close</Text>
-                    </Pressable>
-                  </View>
-                </>
-              )}
-
-              {device.kind === 'gate' && (
-                <>
-                  <View style={styles.infoOrb}>
-                    <LinearGradient
-                      colors={['#D9F0FF', '#7A5CFF']}
-                      start={{ x: 0.2, y: 0.1 }}
-                      end={{ x: 0.9, y: 1 }}
-                      style={styles.infoOrbInner}
-                    >
-                      <Ionicons name="exit" size={32} color="#fff" />
-                      <Text style={styles.infoValue}>{gateOpen > 20 ? 'OPEN' : 'CLOSED'}</Text>
-                      <Text style={styles.infoSub}>Front Gate</Text>
-                    </LinearGradient>
-                  </View>
-
-                  <View style={styles.actionRow}>
-                    <Pressable style={styles.modeTile} onPress={openGate}>
-                      <View style={styles.modeIconBubble}>
-                        <Ionicons name="lock-open" size={18} color="rgba(12,12,18,0.65)" />
                       </View>
-                      <Text style={styles.modeText}>Open</Text>
-                    </Pressable>
-                    <Pressable style={styles.modeTile} onPress={closeGate}>
-                      <View style={styles.modeIconBubble}>
-                        <Ionicons name="lock-closed" size={18} color="rgba(12,12,18,0.65)" />
-                      </View>
-                      <Text style={styles.modeText}>Close</Text>
-                    </Pressable>
-                  </View>
-
-                  <View style={controlCardStyle}>
-                    <Text style={styles.cardLabel}>Auto-open</Text>
-                    <Text style={styles.cardHint}>Use recognition + proximity to unlock for known faces.</Text>
-                    <View style={styles.chipRow}>
-                      <Pressable
-                        style={[styles.chip, gateAutoOpen && styles.chipActive]}
-                        onPress={() =>
-                          sendPatch({ autoOpenEnabled: !gateAutoOpen })
-                        }
-                      >
-                        <Text style={[styles.chipText, gateAutoOpen && styles.chipTextActive]}>
-                          {gateAutoOpen ? 'Enabled' : 'Disabled'}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                </>
-              )}
+                    </>
+                  )}
 
               {device.kind === 'fridge' && (
                 <>
@@ -1047,7 +1126,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     centerLabel="Open"
                     centerIcon={
                       <View style={{ marginBottom: 6 }}>
-                        <Ionicons name="copy" size={26} color={stylesVars.ink} />
+                        <DeviceIcon kind="window" size={26} color={stylesVars.ink} />
                       </View>
                     }
                     formatTick={(v) => `${v}`}
@@ -1094,7 +1173,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       end={{ x: 0.9, y: 1 }}
                       style={styles.infoOrbInner}
                     >
-                      <Ionicons name="sparkles" size={32} color="#fff" />
+                      <DeviceIcon kind="vacuum" size={32} color="#fff" />
                       <Text style={styles.infoValue}>{(device.status ?? 'docked').toUpperCase()}</Text>
                       <Text style={styles.infoSub}>Battery {device.battery ?? 0}%</Text>
                     </LinearGradient>
@@ -1439,7 +1518,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     centerLabel="Cycle"
                     centerIcon={
                       <View style={{ marginBottom: 6 }}>
-                        <Ionicons name="sync" size={28} color={stylesVars.ink} />
+                        <DeviceIcon kind={device.kind} size={28} color={stylesVars.ink} />
                       </View>
                     }
                     formatTick={(v) => `${v}`}
@@ -1525,7 +1604,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     centerLabel="Time"
                     centerIcon={
                       <View style={{ marginBottom: 6 }}>
-                        <Ionicons name="timer" size={28} color={stylesVars.ink} />
+                        <DeviceIcon kind="microwave" size={28} color={stylesVars.ink} />
                       </View>
                     }
                     formatTick={(v) => `${Math.round(v / 60)}`}
@@ -2241,29 +2320,44 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             </View>
           )}
 
-          <View style={{ flex: 1 }} />
+            </ScrollView>
+          </View>
 
-          <Pressable
-            style={styles.powerWrap}
-            onPress={() =>
-              deviceClient
-                .sendCommand({ op: 'patch', deviceId: device.id, patch: { isOn: !device.isOn } })
-                .catch(() => {})
-            }
+          <View
+            style={[
+              styles.powerDock,
+              {
+                left: 0,
+                right: 0,
+                bottom: powerDockOffset,
+                height: powerDockHeight,
+                borderRadius: Math.round(powerDockHeight / 2),
+                paddingVertical: powerDockInset,
+              },
+            ]}
           >
-            <View style={[styles.powerRing, device.isOn && styles.powerRingOn]}>
-              <LinearGradient
-                colors={
-                  device.isOn ? [theme.colors.accent2, theme.colors.accent] : ['rgba(255,255,255,0.88)', 'rgba(255,255,255,0.88)']
-                }
-                start={{ x: 0.1, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.powerInner}
-              >
-                <Ionicons name="power" size={24} color={device.isOn ? '#FFFFFF' : 'rgba(12,12,18,0.45)'} />
-              </LinearGradient>
-            </View>
-          </Pressable>
+            <Pressable
+              style={styles.powerWrap}
+              onPress={() =>
+                deviceClient
+                  .sendCommand({ op: 'patch', deviceId: device.id, patch: { isOn: !device.isOn } })
+                  .catch(() => {})
+              }
+            >
+              <View style={[styles.powerRing, device.isOn && styles.powerRingOn]}>
+                <LinearGradient
+                  colors={
+                    device.isOn ? [theme.colors.accent2, theme.colors.accent] : ['rgba(255,255,255,0.88)', 'rgba(255,255,255,0.88)']
+                  }
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.powerInner}
+                >
+                  <Ionicons name="power" size={24} color={device.isOn ? '#FFFFFF' : 'rgba(12,12,18,0.45)'} />
+                </LinearGradient>
+              </View>
+            </Pressable>
+          </View>
         </LinearGradient>
       </SafeAreaView>
 
@@ -2510,6 +2604,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.16)',
     overflow: 'hidden',
   },
+  panelBody: { flex: 1 },
+  panelScroll: { paddingTop: 12 },
   panelTablet: { maxWidth: 860, width: '100%', alignSelf: 'center' },
 
   headerPill: {
@@ -2546,7 +2642,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  powerWrap: { alignSelf: 'center', marginTop: 26, marginBottom: 18 },
+  powerDock: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  powerWrap: { alignSelf: 'center' },
   powerRing: {
     width: 88,
     height: 88,
@@ -2887,6 +2989,9 @@ const styles = StyleSheet.create({
   lightDialColumn: { flex: 1 },
   lightDialCard: { alignItems: 'center' },
   lightControlsColumn: { flex: 1, minWidth: 0 },
+  lightControlsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  lightControlCompact: { flex: 1, minWidth: 160 },
+  lightControlHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   lightControlCard: { alignItems: 'stretch' },
   lightCenterOrb: {
     alignSelf: 'center',

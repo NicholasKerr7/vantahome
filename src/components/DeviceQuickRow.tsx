@@ -1,60 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Pressable from './Pressable';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { theme } from '../theme/theme';
 import type { Device } from '../store/useHomeStore';
 import { useResponsive } from '../theme/layout';
-
-function iconFor(kind: Device['kind']): keyof typeof Ionicons.glyphMap {
-  switch (kind) {
-    case 'ac':
-      return 'snow';
-    case 'light':
-      return 'bulb';
-    case 'tv':
-      return 'tv';
-    case 'coffee':
-      return 'cafe';
-    case 'fan':
-      return 'aperture';
-    case 'fridge':
-      return 'thermometer';
-    case 'gate':
-      return 'exit';
-    case 'garage':
-      return 'car-sport';
-    case 'door':
-      return 'home';
-    case 'vacuum':
-      return 'sparkles';
-    case 'camera':
-      return 'videocam';
-    case 'window':
-      return 'copy';
-    case 'stove':
-      return 'flame';
-    case 'washer':
-    case 'dryer':
-      return 'sync';
-    case 'microwave':
-      return 'timer';
-    case 'energy':
-      return 'stats-chart';
-    case 'water':
-      return 'water';
-    case 'air':
-      return 'leaf';
-    case 'sprinkler':
-      return 'rainy';
-    case 'speaker':
-      return 'volume-high';
-    case 'smoke':
-      return 'alert-circle';
-    default:
-      return 'cube';
-  }
-}
+import DeviceIcon from './DeviceIcon';
 
 export default function DeviceQuickRow({
   devices,
@@ -80,7 +30,7 @@ export default function DeviceQuickRow({
               d.isOn && styles.iconWrapOn,
             ]}
           >
-            <Ionicons name={iconFor(d.kind)} size={iconSize} color={theme.colors.text} />
+            <DeviceIcon kind={d.kind} size={iconSize} color={theme.colors.text} />
           </View>
           <Text style={[styles.label, { fontSize: labelSize }]}>{d.kind.toUpperCase()}</Text>
         </Pressable>

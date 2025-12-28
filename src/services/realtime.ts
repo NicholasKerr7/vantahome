@@ -5,7 +5,8 @@ import { supabase } from './supabaseClient';
 import { startSupabaseDeviceRealtime } from './supabaseRealtime';
 
 type RealtimeOptions = {
-  wsUrl?: string;
+  wsUrl?: string | null;
+  enabled?: boolean;
   enableMockTelemetry?: boolean;
   telemetryIntervalMs?: number;
   useSupabase?: boolean;
@@ -18,12 +19,17 @@ type RealtimeOptions = {
 };
 
 export function startDeviceRealtime(options: RealtimeOptions = {}) {
-  const wsUrl = options.wsUrl ?? process.env.EXPO_PUBLIC_DEVICE_WS_URL;
+  const enabled = options.enabled ?? true;
+  const wsUrl =
+    options.wsUrl === null ? null : options.wsUrl ?? process.env.EXPO_PUBLIC_DEVICE_WS_URL;
   const mqttUrl = options.mqttUrl ?? process.env.EXPO_PUBLIC_MQTT_URL;
-  const useMqtt = options.useMqtt ?? !!mqttUrl;
-  const useSupabase = options.useSupabase ?? (!!supabase && !useMqtt);
+  const wantsMqtt = options.useMqtt ?? !!mqttUrl;
+  const useMqtt = enabled && wantsMqtt;
+  const wantsSupabase = options.useSupabase ?? (!!supabase && !useMqtt);
+  const useSupabase = enabled && wantsSupabase;
   // Priority order: MQTT (local), then Supabase, then direct WS, then mock telemetry.
-  const enableMockTelemetry = options.enableMockTelemetry ?? (!wsUrl && !useSupabase && !useMqtt);
+  const enableMockTelemetry =
+    options.enableMockTelemetry ?? (!wsUrl && !useSupabase && !useMqtt);
 
   const unsubscribe = deviceClient.subscribeState((evt) => {
     useHomeStore.getState().setDevice(evt.deviceId, evt.patch);
@@ -39,7 +45,8 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
     : undefined;
   const stopSupabase =
     !useMqtt && useSupabase ? startSupabaseDeviceRealtime({ channel: options.supabaseChannel }) : undefined;
-  const disconnect = !useMqtt && !useSupabase && wsUrl ? deviceClient.connect(wsUrl) : undefined;
+  const disconnect =
+    !useMqtt && !useSupabase && wsUrl ? deviceClient.connect(wsUrl) : undefined;
   const stopTelemetry = enableMockTelemetry ? startMockTelemetry(options.telemetryIntervalMs) : undefined;
 
   return () => {

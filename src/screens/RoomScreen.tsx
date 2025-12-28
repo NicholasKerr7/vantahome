@@ -20,6 +20,7 @@ import BackgroundLines from '../components/BackgroundLines';
 import RoomScenesRow from '../components/RoomScenesRow';
 import DeviceTile from '../components/DeviceTile';
 import DeviceBottomSheet from '../components/DeviceBottomSheet';
+import DeviceIcon from '../components/DeviceIcon';
 import { theme } from '../theme/theme';
 import { deviceClient } from '../services/deviceClient';
 import { useHomeStore, type Device } from '../store/useHomeStore';
@@ -28,31 +29,30 @@ import { useResponsive } from '../theme/layout';
 const DEVICE_OPTIONS: Array<{
   kind: Device['kind'];
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
   defaultName: string;
 }> = [
-  { kind: 'light', label: 'Light', icon: 'bulb', defaultName: 'New Light' },
-  { kind: 'ac', label: 'AC', icon: 'snow', defaultName: 'Air Conditioner' },
-  { kind: 'tv', label: 'TV', icon: 'tv', defaultName: 'Smart TV' },
-  { kind: 'coffee', label: 'Coffee', icon: 'cafe', defaultName: 'Coffee Maker' },
-  { kind: 'fan', label: 'Fan', icon: 'aperture', defaultName: 'Ceiling Fan' },
-  { kind: 'fridge', label: 'Fridge', icon: 'thermometer', defaultName: 'Refrigerator' },
-  { kind: 'gate', label: 'Gate', icon: 'exit', defaultName: 'Front Gate' },
-  { kind: 'garage', label: 'Garage', icon: 'car-sport', defaultName: 'Garage Door' },
-  { kind: 'door', label: 'Door', icon: 'home', defaultName: 'Front Door' },
-  { kind: 'window', label: 'Window', icon: 'copy', defaultName: 'Window' },
-  { kind: 'vacuum', label: 'Vacuum', icon: 'sparkles', defaultName: 'Robot Vacuum' },
-  { kind: 'camera', label: 'Camera', icon: 'videocam', defaultName: 'Security Cam' },
-  { kind: 'stove', label: 'Stove', icon: 'flame', defaultName: 'Smart Stove' },
-  { kind: 'washer', label: 'Washer', icon: 'sync', defaultName: 'Washer' },
-  { kind: 'dryer', label: 'Dryer', icon: 'sync', defaultName: 'Dryer' },
-  { kind: 'microwave', label: 'Microwave', icon: 'timer', defaultName: 'Microwave' },
-  { kind: 'energy', label: 'Energy', icon: 'stats-chart', defaultName: 'Energy Monitor' },
-  { kind: 'water', label: 'Water', icon: 'water', defaultName: 'Water Meter' },
-  { kind: 'air', label: 'Air', icon: 'leaf', defaultName: 'Air Quality' },
-  { kind: 'sprinkler', label: 'Sprinkler', icon: 'rainy', defaultName: 'Sprinkler' },
-  { kind: 'speaker', label: 'Speaker', icon: 'volume-high', defaultName: 'Smart Speaker' },
-  { kind: 'smoke', label: 'Smoke/CO', icon: 'alert-circle', defaultName: 'Smoke Alarm' },
+  { kind: 'light', label: 'Light', defaultName: 'New Light' },
+  { kind: 'ac', label: 'AC', defaultName: 'Air Conditioner' },
+  { kind: 'tv', label: 'TV', defaultName: 'Smart TV' },
+  { kind: 'coffee', label: 'Coffee', defaultName: 'Coffee Maker' },
+  { kind: 'fan', label: 'Fan', defaultName: 'Ceiling Fan' },
+  { kind: 'fridge', label: 'Fridge', defaultName: 'Refrigerator' },
+  { kind: 'gate', label: 'Gate', defaultName: 'Front Gate' },
+  { kind: 'garage', label: 'Garage', defaultName: 'Garage Door' },
+  { kind: 'door', label: 'Door', defaultName: 'Front Door' },
+  { kind: 'window', label: 'Window', defaultName: 'Window' },
+  { kind: 'vacuum', label: 'Vacuum', defaultName: 'Robot Vacuum' },
+  { kind: 'camera', label: 'Camera', defaultName: 'Security Cam' },
+  { kind: 'stove', label: 'Stove', defaultName: 'Smart Stove' },
+  { kind: 'washer', label: 'Washer', defaultName: 'Washer' },
+  { kind: 'dryer', label: 'Dryer', defaultName: 'Dryer' },
+  { kind: 'microwave', label: 'Microwave', defaultName: 'Microwave' },
+  { kind: 'energy', label: 'Energy', defaultName: 'Energy Monitor' },
+  { kind: 'water', label: 'Water', defaultName: 'Water Meter' },
+  { kind: 'air', label: 'Air', defaultName: 'Air Quality' },
+  { kind: 'sprinkler', label: 'Sprinkler', defaultName: 'Sprinkler' },
+  { kind: 'speaker', label: 'Speaker', defaultName: 'Smart Speaker' },
+  { kind: 'smoke', label: 'Smoke/CO', defaultName: 'Smoke Alarm' },
 ];
 
 const buildDeviceDefaults = (kind: Device['kind']): Partial<Device> => {
@@ -271,6 +271,7 @@ export default function RoomScreen({ route, navigation }: Props) {
         contentContainerStyle={{
           gap: listGap,
           paddingTop: blockGap,
+          paddingHorizontal: columns > 1 ? 0 : gutter,
           paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 120) * scale),
         }}
         style={{ width: contentWidth, alignSelf: 'center' }}
@@ -382,11 +383,7 @@ export default function RoomScreen({ route, navigation }: Props) {
                         if (!nameTouched) setNewName(option.defaultName);
                       }}
                     >
-                      <Ionicons
-                        name={option.icon}
-                        size={16}
-                        color={active ? '#fff' : 'rgba(12,12,18,0.7)'}
-                      />
+                      <DeviceIcon kind={option.kind} size={16} color={active ? '#fff' : 'rgba(12,12,18,0.7)'} />
                       <Text
                         style={[
                           styles.deviceTypeText,

@@ -9,6 +9,7 @@ import { theme } from '../theme/theme';
 import { type Device } from '../store/useHomeStore';
 import DeviceCapabilityControls from './DeviceCapabilityControls';
 import { useResponsive } from '../theme/layout';
+import DeviceIcon from './DeviceIcon';
 
 /**
  * Long-press device sheet:
@@ -20,56 +21,6 @@ import { useResponsive } from '../theme/layout';
  * - Bottom sheet background is transparent
  * - Content is a blurred “glass” container with a purple tint overlay
  */
-
-function iconFor(kind: Device['kind']): keyof typeof Ionicons.glyphMap {
-  switch (kind) {
-    case 'ac':
-      return 'snow';
-    case 'light':
-      return 'bulb';
-    case 'tv':
-      return 'tv';
-    case 'coffee':
-      return 'cafe';
-    case 'fan':
-      return 'aperture';
-    case 'fridge':
-      return 'thermometer';
-    case 'gate':
-      return 'exit';
-    case 'garage':
-      return 'car-sport';
-    case 'door':
-      return 'home';
-    case 'vacuum':
-      return 'sparkles';
-    case 'camera':
-      return 'videocam';
-    case 'window':
-      return 'copy';
-    case 'stove':
-      return 'flame';
-    case 'washer':
-    case 'dryer':
-      return 'sync';
-    case 'microwave':
-      return 'timer';
-    case 'energy':
-      return 'stats-chart';
-    case 'water':
-      return 'water';
-    case 'air':
-      return 'leaf';
-    case 'sprinkler':
-      return 'rainy';
-    case 'speaker':
-      return 'volume-high';
-    case 'smoke':
-      return 'alert-circle';
-    default:
-      return 'cube';
-  }
-}
 
 type Props = {
   device?: Device;
@@ -145,7 +96,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(function DeviceBot
                       device.isOn && styles.iconWrapOn,
                     ]}
                   >
-                    <Ionicons name={iconFor(device.kind)} size={iconSize} color={theme.colors.text} />
+                    <DeviceIcon kind={device.kind} size={iconSize} color={theme.colors.text} />
                   </View>
 
                   <View style={{ flex: 1 }}>

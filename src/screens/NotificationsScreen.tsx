@@ -53,31 +53,38 @@ export default function NotificationsScreen() {
         <Text style={[styles.h1, { fontSize: titleSize }]}>Notifications</Text>
         <View style={{ width: iconBtnSize }} />
       </View>
-      <FlatList
-        data={MOCK_NOTIFICATIONS}
-        keyExtractor={(item) => item.id}
-        numColumns={isWide ? 2 : 1}
-        columnWrapperStyle={isWide ? { gap } : undefined}
-        contentContainerStyle={{
-          paddingTop: 12,
-          paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 24) * scale),
-          gap,
-          paddingHorizontal: gutter,
-        }}
-        style={{ width: contentWidth, alignSelf: 'center' }}
-        renderItem={({ item }) => (
-          <View style={[styles.card, { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gap) / 2 : '100%' }]}>
-            <View style={[styles.iconWrap, { width: iconWrapSize, height: iconWrapSize, borderRadius: iconWrapRadius }]}>
-              <Ionicons name="notifications" size={iconSize} color={theme.colors.text} />
+      <View style={{ width: contentWidth, alignSelf: 'center', paddingHorizontal: isTablet ? 0 : gutter }}>
+        <FlatList
+          data={MOCK_NOTIFICATIONS}
+          keyExtractor={(item) => item.id}
+          numColumns={isWide ? 2 : 1}
+          columnWrapperStyle={isWide ? { gap } : undefined}
+          contentContainerStyle={{
+            paddingTop: 12,
+            paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 24) * scale),
+            gap,
+            paddingHorizontal: isTablet ? gutter : 0,
+          }}
+          style={{ width: '100%' }}
+          renderItem={({ item }) => (
+            <View
+              style={[
+                styles.card,
+                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gap) / 2 : '100%' },
+              ]}
+            >
+              <View style={[styles.iconWrap, { width: iconWrapSize, height: iconWrapSize, borderRadius: iconWrapRadius }]}>
+                <Ionicons name="notifications" size={iconSize} color={theme.colors.text} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.title, { fontSize: textSize }]}>{item.title}</Text>
+                <Text style={[styles.body, { fontSize: bodySize }]}>{item.body}</Text>
+              </View>
+              <Text style={[styles.time, { fontSize: bodySize }]}>{item.time}</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { fontSize: textSize }]}>{item.title}</Text>
-              <Text style={[styles.body, { fontSize: bodySize }]}>{item.body}</Text>
-            </View>
-            <Text style={[styles.time, { fontSize: bodySize }]}>{item.time}</Text>
-          </View>
-        )}
-      />
+          )}
+        />
+      </View>
     </LinearGradient>
   );
 }

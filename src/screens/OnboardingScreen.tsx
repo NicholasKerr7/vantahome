@@ -14,16 +14,21 @@ import { useResponsive } from '../theme/layout';
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 export default function OnboardingScreen({ navigation }: Props) {
-  const { contentWidth, gutter, isTablet, isLandscape, scale } = useResponsive(900);
+  const { contentWidth, gutter, isTablet, isLandscape, scale, height } = useResponsive(900);
   const isWide = isTablet && isLandscape;
   const isPortraitTablet = isTablet && !isLandscape;
+  const isCompact = !isTablet && height < 720;
   const cardWidth = Math.min(
     contentWidth - gutter * 2,
     isTablet ? (isLandscape ? 560 : isPortraitTablet ? 620 : 520) : 420
   );
-  const cardHeight = Math.round((isTablet ? (isLandscape ? 280 : isPortraitTablet ? 320 : 280) : 228) * scale);
-  const contentPadTop = Math.round((isTablet ? (isLandscape ? 64 : isPortraitTablet ? 70 : 86) : 78) * scale);
-  const contentPadBottom = Math.round((isTablet ? 64 : 48) * scale);
+  const cardHeight = Math.round(
+    (isTablet ? (isLandscape ? 280 : isPortraitTablet ? 320 : 280) : isCompact ? 200 : 216) * scale
+  );
+  const contentPadTop = Math.round(
+    (isTablet ? (isLandscape ? 64 : isPortraitTablet ? 70 : 86) : isCompact ? 58 : 64) * scale
+  );
+  const contentPadBottom = Math.round((isTablet ? 64 : isCompact ? 36 : 42) * scale);
   const brandSize = Math.round((isTablet ? 24 : 22) * scale);
   const statusSize = Math.round((isTablet ? 13 : 12) * scale);
   const kickerSize = Math.round((isTablet ? 13 : 12) * scale);
@@ -35,7 +40,15 @@ export default function OnboardingScreen({ navigation }: Props) {
   const sceneTextSize = Math.round((isTablet ? 13 : 12) * scale);
   const ctaHeight = Math.round((isTablet ? 60 : 56) * scale);
   const ctaTextSize = Math.round((isTablet ? 16 : 15) * scale);
-  const heroGap = Math.round((isTablet ? (isPortraitTablet ? 32 : 28) : 20) * scale);
+  const heroGap = Math.round((isTablet ? (isPortraitTablet ? 32 : 28) : isCompact ? 14 : 18) * scale);
+  const mainGap = Math.round((isTablet ? 26 : isCompact ? 18 : 20) * scale);
+  const heroRowGap = Math.round((isTablet ? 22 : isCompact ? 14 : 16) * scale);
+  const heroStackGap = Math.round((isTablet ? 8 : isCompact ? 6 : 7) * scale);
+  const heroSubheadTop = Math.round((isTablet ? 8 : isCompact ? 4 : 6) * scale);
+  const previewPad = Math.round((isTablet ? 18 : isCompact ? 14 : 16) * scale);
+  const deviceRowGap = Math.round((isTablet ? 10 : isCompact ? 8 : 10) * scale);
+  const deviceRowTop = Math.round((isTablet ? 16 : isCompact ? 12 : 14) * scale);
+  const sceneRowTop = Math.round((isTablet ? 14 : isCompact ? 10 : 12) * scale);
   return (
     <LinearGradient
       colors={['#190A3A', theme.colors.bg0, theme.colors.bg1]}
@@ -51,14 +64,15 @@ export default function OnboardingScreen({ navigation }: Props) {
         contentContainerStyle={[
           styles.content,
           {
-            paddingHorizontal: gutter,
+            paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: contentPadTop,
             paddingBottom: contentPadBottom,
+            justifyContent: 'space-between',
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.main, { width: contentWidth }]}>
+        <View style={[styles.main, { width: contentWidth, gap: mainGap, paddingHorizontal: isTablet ? 0 : gutter }]}>
           <View style={[styles.brandRow, isPortraitTablet && styles.brandRowPortrait]}>
             <View
               style={[
@@ -84,11 +98,19 @@ export default function OnboardingScreen({ navigation }: Props) {
           <View
             style={[
               styles.heroRow,
+              { gap: heroRowGap },
               isWide && { flexDirection: 'row', alignItems: 'center', gap: heroGap },
               isPortraitTablet && styles.heroRowPortrait,
             ]}
           >
-            <View style={[styles.hero, isWide && { flex: 1 }, isPortraitTablet && styles.heroPortrait]}>
+            <View
+              style={[
+                styles.hero,
+                { gap: heroStackGap },
+                isWide && { flex: 1 },
+                isPortraitTablet && styles.heroPortrait,
+              ]}
+            >
               <Text style={[styles.kicker, { fontSize: kickerSize }, isPortraitTablet && styles.textCenter]}>
                 Smart living, orchestrated
               </Text>
@@ -103,7 +125,7 @@ export default function OnboardingScreen({ navigation }: Props) {
               <Text
                 style={[
                   styles.subhead,
-                  { fontSize: subheadSize },
+                  { fontSize: subheadSize, marginTop: heroSubheadTop },
                   isPortraitTablet && styles.subheadPortrait,
                 ]}
               >
@@ -124,7 +146,7 @@ export default function OnboardingScreen({ navigation }: Props) {
                 end={{ x: 0.9, y: 1 }}
                 style={[
                   styles.previewCard,
-                  { width: cardWidth, minHeight: cardHeight },
+                  { width: cardWidth, minHeight: cardHeight, padding: previewPad },
                   isPortraitTablet && styles.previewCardPortrait,
                 ]}
               >
@@ -143,7 +165,7 @@ export default function OnboardingScreen({ navigation }: Props) {
                   </View>
                 </View>
 
-                <View style={styles.deviceRow}>
+                <View style={[styles.deviceRow, { gap: deviceRowGap, marginTop: deviceRowTop }]}>
                   <View style={styles.devicePill}>
                     <Ionicons name="bulb" size={Math.round(16 * scale)} color="#FFD36E" />
                     <Text style={[styles.deviceText, { fontSize: deviceTextSize }]}>Lights 40%</Text>
@@ -158,7 +180,7 @@ export default function OnboardingScreen({ navigation }: Props) {
                   </View>
                 </View>
 
-                <View style={styles.sceneRow}>
+                <View style={[styles.sceneRow, { gap: deviceRowGap, marginTop: sceneRowTop }]}>
                   <View style={styles.sceneChip}>
                     <Ionicons name="sparkles" size={Math.round(14 * scale)} color="#FFFFFF" />
                     <Text style={[styles.sceneChipText, { fontSize: sceneTextSize }]}>6 Scenes</Text>
@@ -177,7 +199,7 @@ export default function OnboardingScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <View style={{ width: contentWidth }}>
+        <View style={{ width: contentWidth, paddingHorizontal: isTablet ? 0 : gutter }}>
           <View style={styles.ctaBlock}>
             <Pressable
               style={styles.ctaWrap}

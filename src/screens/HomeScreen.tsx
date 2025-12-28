@@ -291,7 +291,6 @@ const styles = StyleSheet.create({
   roomsSection: { alignSelf: 'center' },
   roomsCarouselWrap: { alignItems: 'center' },
   roomsHeader: {
-    paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

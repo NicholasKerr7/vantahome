@@ -96,13 +96,13 @@ export default function ManageRoomsScreen({ navigation }: Props) {
         contentContainerStyle={[
           styles.content,
           {
-            paddingHorizontal: gutter,
+            paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: 12,
             paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 120) * scale),
           },
         ]}
       >
-        <View style={{ width: contentWidth }}>
+        <View style={{ width: contentWidth, paddingHorizontal: isTablet ? 0 : gutter }}>
           <View style={[styles.cardsGrid, isWide && { flexDirection: 'row', flexWrap: 'wrap', gap: gridGap }]}>
           {rooms.map((room, idx) => {
             const draft = drafts[room.id] ?? room.name;

@@ -23,6 +23,15 @@ export type DeviceStateEvent = {
   ts: number;
 };
 
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+type ConnectionEvent = {
+  status: ConnectionStatus;
+  ts: number;
+  url?: string;
+  error?: string;
+};
+
 type DeviceStateMessage = {
   type: 'state';
   deviceId: string;
@@ -42,6 +51,7 @@ type DeviceSnapshotMessage = {
 };
 
 type Listener = (evt: DeviceStateEvent) => void;
+type ConnectionListener = (evt: ConnectionEvent) => void;
 
 type ConnectOptions = {
   protocols?: string | string[];
@@ -65,15 +75,27 @@ type CommandTransport = (cmd: DeviceCommand, patch: Partial<Device> | null) => P
  */
 class DeviceClient {
   private listeners = new Set<Listener>();
+  private connectionListeners = new Set<ConnectionListener>();
   private socket: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
   private connection: { url: string; options: Required<ConnectOptions> } | null = null;
   private commandTransport: CommandTransport | null = null;
+  private connectionStatus: ConnectionStatus = 'disconnected';
 
   subscribeState(fn: Listener) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
+  }
+
+  subscribeConnection(fn: ConnectionListener) {
+    this.connectionListeners.add(fn);
+    fn({ status: this.connectionStatus, ts: Date.now(), url: this.connection?.url });
+    return () => this.connectionListeners.delete(fn);
+  }
+
+  getConnectionStatus() {
+    return this.connectionStatus;
   }
 
   connect(url: string, options: ConnectOptions = {}) {
@@ -85,6 +107,7 @@ class DeviceClient {
     };
 
     this.connection = { url, options: merged };
+    this.emitConnection('connecting');
     this.openSocket();
 
     return () => {
@@ -99,6 +122,7 @@ class DeviceClient {
       this.socket.close();
       this.socket = null;
     }
+    this.emitConnection('disconnected');
   }
 
   setCommandTransport(fn: CommandTransport | null) {
@@ -154,16 +178,29 @@ class DeviceClient {
     this.listeners.forEach((fn) => fn(evt));
   }
 
+  private emitConnection(status: ConnectionStatus, error?: string) {
+    this.connectionStatus = status;
+    const event: ConnectionEvent = {
+      status,
+      ts: Date.now(),
+      url: this.connection?.url,
+      error,
+    };
+    this.connectionListeners.forEach((fn) => fn(event));
+  }
+
   private openSocket() {
     if (!this.connection) return;
     const { url, options } = this.connection;
     this.clearReconnect();
 
+    this.emitConnection('connecting');
     const socket = options.protocols ? new WebSocket(url, options.protocols) : new WebSocket(url);
     this.socket = socket;
 
     socket.onopen = () => {
       this.reconnectAttempts = 0;
+      this.emitConnection('connected');
     };
 
     socket.onmessage = (event) => {
@@ -174,10 +211,13 @@ class DeviceClient {
       if (this.socket === socket) this.socket = null;
       if (options.autoReconnect) {
         this.scheduleReconnect();
+      } else {
+        this.emitConnection('disconnected');
       }
     };
 
     socket.onerror = () => {
+      this.emitConnection('error', 'Socket error');
       if (options.autoReconnect) {
         this.scheduleReconnect();
       }
@@ -189,6 +229,7 @@ class DeviceClient {
     const { options } = this.connection;
     const delay = Math.min(options.reconnectDelayMs * 2 ** this.reconnectAttempts, options.maxReconnectDelayMs);
     this.reconnectAttempts += 1;
+    this.emitConnection('connecting');
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.openSocket();

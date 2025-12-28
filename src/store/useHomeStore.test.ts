@@ -1,4 +1,11 @@
-import { useHomeStore, type AutomationRule, type Device, type Scene, type Room } from './useHomeStore';
+import {
+  useHomeStore,
+  type AutomationFlow,
+  type AutomationRule,
+  type Device,
+  type Scene,
+  type Room,
+} from './useHomeStore';
 
 function cloneRooms(rooms: Room[]) {
   return rooms.map((r) => ({ ...r }));
@@ -13,6 +20,15 @@ function cloneRules(rules: AutomationRule[]) {
     ...r,
     trigger: { ...r.trigger },
     action: { ...(r.action as any) },
+  }));
+}
+
+function cloneFlows(flows: AutomationFlow[]) {
+  return flows.map((f) => ({
+    ...f,
+    triggers: f.triggers.map((t) => ({ ...t })),
+    conditions: f.conditions.map((c) => ({ ...c })),
+    actions: f.actions.map((a) => ({ ...a })),
   }));
 }
 
@@ -46,9 +62,13 @@ beforeEach(() => {
     rooms: cloneRooms(seed.rooms),
     devices: cloneDevices(seed.devices),
     rules: cloneRules(seed.rules),
+    flows: cloneFlows(seed.flows),
     scenes: cloneScenes(seed.scenes),
+    activeSceneId: seed.activeSceneId,
+    lastSceneRun: seed.lastSceneRun,
     integrations: cloneIntegrations(seed.integrations),
     preferences: { ...seed.preferences },
+    realtime: { ...seed.realtime },
     household: seed.household.map((m) => ({ ...m })),
   });
 });

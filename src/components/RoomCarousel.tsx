@@ -15,11 +15,11 @@ import Animated, {
   Extrapolation,
   type SharedValue,
 } from 'react-native-reanimated';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../theme/theme';
 import type { Device, Room } from '../store/useHomeStore';
 import { useResponsive } from '../theme/layout';
+import DeviceIcon from './DeviceIcon';
 
 // Optional: whole-home card (kept from your version)
 const WHOLE_HOME_ID = 'whole-home';
@@ -29,56 +29,6 @@ const ACTIVE_GRADIENT = ['#FFFFFF', 'rgba(248,240,255,0.98)', 'rgba(242,233,255,
 const ACTIVE_GRADIENT_TABLET = ['#FFFFFF', 'rgba(236,247,255,0.98)', 'rgba(228,234,255,0.94)'];
 const STACKED_GRADIENT = ['rgba(255,255,255,0.86)', 'rgba(248,240,255,0.78)', 'rgba(242,233,255,0.7)'];
 const STACKED_GRADIENT_TABLET = ['rgba(255,255,255,0.74)', 'rgba(244,238,255,0.65)', 'rgba(236,230,255,0.58)'];
-
-function iconFor(kind: Device['kind']) {
-  switch (kind) {
-    case 'ac':
-      return 'snow';
-    case 'light':
-      return 'bulb';
-    case 'tv':
-      return 'tv';
-    case 'coffee':
-      return 'cafe';
-    case 'fan':
-      return 'aperture';
-    case 'fridge':
-      return 'thermometer';
-    case 'gate':
-      return 'exit';
-    case 'garage':
-      return 'car-sport';
-    case 'door':
-      return 'home';
-    case 'vacuum':
-      return 'sparkles';
-    case 'camera':
-      return 'videocam';
-    case 'window':
-      return 'copy';
-    case 'stove':
-      return 'flame';
-    case 'washer':
-    case 'dryer':
-      return 'sync';
-    case 'microwave':
-      return 'timer';
-    case 'energy':
-      return 'stats-chart';
-    case 'water':
-      return 'water';
-    case 'air':
-      return 'leaf';
-    case 'sprinkler':
-      return 'rainy';
-    case 'speaker':
-      return 'volume-high';
-    case 'smoke':
-      return 'alert-circle';
-    default:
-      return 'cube';
-  }
-}
 
 function labelFor(kind: Device['kind']) {
   switch (kind) {
@@ -366,7 +316,7 @@ function RoomCard({
                       },
                     ]}
                   >
-                    <Ionicons name={iconFor(d.kind)} size={layout.iconSize} color={colorFor(d.kind)} />
+                    <DeviceIcon kind={d.kind} size={layout.iconSize} color={colorFor(d.kind)} />
                   </View>
                   <Text style={[styles.iconLabel, { fontSize: layout.iconLabelSize }]}>{labelFor(d.kind)}</Text>
                 </Pressable>
@@ -417,9 +367,9 @@ export default function RoomCarousel({
     [rooms, showWholeHome]
   );
 
-  const { width, isTablet, isLandscape, scale } = useResponsive();
+  const { width, isTablet, isLandscape, scale, gutter } = useResponsive();
   const listWidth = Math.min(width, isTablet ? (isLandscape ? 980 : 880) : width);
-  const sidePad = isTablet ? (isLandscape ? 56 : 40) : 18;
+  const sidePad = isTablet ? (isLandscape ? 56 : 40) : gutter;
   const gap = 0;
   const cardPad = Math.round((isTablet ? (isLandscape ? 28 : 26) : 18) * scale);
   const cardHeight = Math.round((isTablet ? (isLandscape ? 240 : 248) : 180) * scale);
@@ -539,7 +489,7 @@ const styles = StyleSheet.create({
   wrap: { marginTop: 10, overflow: 'visible' },
 
   listContent: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 0,
     paddingTop: 14,
     paddingBottom: 12, // ✅ avoids bottom cut-off
   },

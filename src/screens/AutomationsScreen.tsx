@@ -18,11 +18,17 @@ import { AC_TEMP_MAX_C, AC_TEMP_MIN_C, useHomeStore } from '../store/useHomeStor
 import BackgroundLines from '../components/BackgroundLines';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useResponsive } from '../theme/layout';
+import { useNavigation } from '@react-navigation/native';
 
 export default function AutomationsScreen() {
   const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } = useResponsive(920);
   const isWide = isTablet && isLandscape;
   const titleSize = Math.round((isTablet ? 30 : 26) * scale);
+  const subtitleSize = Math.round((isTablet ? 15 : 13) * scale);
+  const pillHeight = Math.round((isTablet ? 36 : 32) * scale);
+  const pillText = Math.round((isTablet ? 13 : 12) * scale);
+  const sectionTitleSize = Math.round((isTablet ? 18 : 16) * scale);
+  const sectionSubSize = Math.round((isTablet ? 13 : 12) * scale);
   const cardPad = Math.round((isTablet ? 18 : 16) * scale);
   const cardRadius = Math.round((isTablet ? 24 : 22) * scale);
   const cardTitleSize = Math.round((isTablet ? 16 : 14) * scale);
@@ -38,11 +44,14 @@ export default function AutomationsScreen() {
   const modalInputHeight = Math.round((isTablet ? 48 : 44) * scale);
   const modalBtnHeight = Math.round((isTablet ? 46 : 42) * scale);
   const rules = useHomeStore((s) => s.rules);
+  const flows = useHomeStore((s) => s.flows);
   const toggleRule = useHomeStore((s) => s.toggleRule);
   const addRule = useHomeStore((s) => s.addRule);
   const updateRule = useHomeStore((s) => s.updateRule);
   const removeRule = useHomeStore((s) => s.removeRule);
+  const toggleFlow = useHomeStore((s) => s.toggleFlow);
   const devices = useHomeStore((s) => s.devices);
+  const navigation = useNavigation<any>();
 
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,6 +71,7 @@ export default function AutomationsScreen() {
   const canCreate = selectedDevice && /^\d{1,2}$/.test(hour) && /^\d{1,2}$/.test(minute);
   const isEditing = modalMode === 'edit';
   const editingRule = rules.find((r) => r.id === editingId);
+  const flowSummary = (count: number, label: string) => `${count} ${label}${count === 1 ? '' : 's'}`;
 
   const openAdd = () => {
     setEditingId(null);
@@ -139,14 +149,79 @@ export default function AutomationsScreen() {
         contentContainerStyle={[
           styles.content,
           {
-            paddingHorizontal: gutter,
+            paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: topPad,
             paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 120) * scale),
           },
         ]}
       >
-        <View style={{ width: contentWidth }}>
-          <Text style={[styles.h1, { fontSize: titleSize }]}>Automations</Text>
+        <View style={{ width: contentWidth, paddingHorizontal: isTablet ? 0 : gutter }}>
+          <View style={styles.header}>
+            <View>
+              <Text style={[styles.h1, { fontSize: titleSize }]}>Automations</Text>
+              <Text style={[styles.p, { fontSize: subtitleSize }]}>Build flows and schedules.</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <View style={[styles.countPill, { height: pillHeight, borderRadius: Math.round(pillHeight / 2) }]}>
+                <Ionicons name="flash" size={Math.round(14 * scale)} color={theme.colors.text} />
+                <Text style={[styles.countText, { fontSize: pillText }]}>{flowSummary(flows.length, 'Flow')}</Text>
+              </View>
+              <Pressable
+                style={[styles.addPill, { height: pillHeight, borderRadius: Math.round(pillHeight / 2) }]}
+                onPress={() => navigation.navigate('AutomationBuilder')}
+              >
+                <Ionicons name="add" size={Math.round(16 * scale)} color={theme.colors.text} />
+                <Text style={[styles.addText, { fontSize: pillText }]}>New flow</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Flows</Text>
+              <Text style={[styles.sectionSub, { fontSize: sectionSubSize }]}>Triggers → Conditions → Actions</Text>
+            </View>
+          </View>
+
+          <View style={[styles.grid, isWide && { flexDirection: 'row', flexWrap: 'wrap', gap: cardGap }]}>
+            {flows.length === 0 ? (
+              <View style={[styles.emptyCard, { padding: cardPad, borderRadius: cardRadius }]}>
+                <Text style={styles.emptyTitle}>No flows yet</Text>
+                <Text style={styles.emptySub}>Create a flow to chain triggers and actions.</Text>
+              </View>
+            ) : (
+              flows.map((flow) => (
+                <Pressable
+                  key={flow.id}
+                  style={[
+                    styles.card,
+                    { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - cardGap) / 2 : '100%' },
+                  ]}
+                  onPress={() => navigation.navigate('AutomationBuilder', { flowId: flow.id })}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.name, { fontSize: cardTitleSize }]}>{flow.name}</Text>
+                    <Text style={[styles.sub, { fontSize: cardSubSize }]}>
+                      {flowSummary(flow.triggers.length, 'trigger')} • {flowSummary(flow.conditions.length, 'condition')} •{' '}
+                      {flowSummary(flow.actions.length, 'action')}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={flow.enabled}
+                    onValueChange={() => toggleFlow(flow.id)}
+                    style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
+                  />
+                </Pressable>
+              ))
+            )}
+          </View>
+
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Schedules</Text>
+              <Text style={[styles.sectionSub, { fontSize: sectionSubSize }]}>Time-based device rules</Text>
+            </View>
+          </View>
 
           <View style={[styles.grid, isWide && { flexDirection: 'row', flexWrap: 'wrap', gap: cardGap }]}>
             {rules.map((r) => (
@@ -178,7 +253,7 @@ export default function AutomationsScreen() {
             style={[styles.cta, { height: ctaHeight, borderRadius: ctaRadius, marginTop: cardGap }]}
             onPress={openAdd}
           >
-            <Text style={[styles.ctaText, { fontSize: cardTitleSize }]}>+ Add Automation</Text>
+            <Text style={[styles.ctaText, { fontSize: cardTitleSize }]}>+ Add Schedule</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -203,7 +278,7 @@ export default function AutomationsScreen() {
               ]}
             >
               <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
-                {isEditing ? 'Edit automation' : 'New automation'}
+                {isEditing ? 'Edit schedule' : 'New schedule'}
               </Text>
               <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
                 {isEditing ? 'Update your schedule or device action.' : 'Pick a device and schedule a time.'}
@@ -357,7 +432,7 @@ export default function AutomationsScreen() {
                     setModalMode(null);
                   }}
                 >
-                  <Text style={[styles.modalDeleteText, { fontSize: modalLabelSize }]}>Delete automation</Text>
+                  <Text style={[styles.modalDeleteText, { fontSize: modalLabelSize }]}>Delete schedule</Text>
                 </Pressable>
               ) : null}
             </LinearGradient>
@@ -371,7 +446,33 @@ export default function AutomationsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { alignItems: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   h1: { color: theme.colors.text, fontSize: 28, fontWeight: '900' },
+  p: { color: theme.colors.subtext, marginTop: 4, fontWeight: '700' },
+  countPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  countText: { color: theme.colors.text, fontWeight: '800' },
+  addPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(180,107,255,0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(180,107,255,0.45)',
+  },
+  addText: { color: theme.colors.text, fontWeight: '800' },
+  sectionHeader: { marginTop: 8, marginBottom: 10 },
+  sectionTitle: { color: theme.colors.text, fontWeight: '900' },
+  sectionSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: '700' },
   grid: { gap: 12 },
   card: {
     marginTop: 14,
@@ -386,6 +487,15 @@ const styles = StyleSheet.create({
   },
   name: { color: theme.colors.text, fontWeight: '900' },
   sub: { color: theme.colors.subtext, marginTop: 6, fontWeight: '700' },
+  emptyCard: {
+    marginTop: 14,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: theme.colors.stroke,
+  },
+  emptyTitle: { color: theme.colors.text, fontWeight: '900' },
+  emptySub: { color: theme.colors.subtext, marginTop: 6, fontWeight: '700' },
   cta: {
     marginTop: 16,
     padding: 14,

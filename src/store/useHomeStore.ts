@@ -31,11 +31,13 @@ export type DeviceKind =
   | 'speaker'
   | 'smoke';
 
+export type Weekday = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
+
 export type SprinklerSchedule = {
   id: string;
   hour: number;
   minute: number;
-  days: Array<'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun'>;
+  days: Weekday[];
   enabled: boolean;
 };
 
@@ -134,6 +136,34 @@ export type AutomationRule = {
     | { type: 'set-ac'; deviceId: string; tempC: number; mode: DeviceMode };
 };
 
+export type FlowTrigger =
+  | { type: 'time'; hour: number; minute: number }
+  | { type: 'device'; deviceId: string; state: 'on' | 'off' }
+  | { type: 'scene'; sceneId: string }
+  | { type: 'presence'; memberId: string; status: HouseholdMember['status'] };
+
+export type FlowCondition =
+  | { type: 'time-range'; startHour: number; startMinute: number; endHour: number; endMinute: number }
+  | { type: 'device'; deviceId: string; state: 'on' | 'off' }
+  | { type: 'day'; days: Weekday[] };
+
+export type FlowAction =
+  | { type: 'toggle'; deviceId: string; on: boolean }
+  | { type: 'set-ac'; deviceId: string; tempC: number; mode: DeviceMode }
+  | { type: 'set-brightness'; deviceId: string; brightness: number }
+  | { type: 'run-scene'; sceneId: string }
+  | { type: 'delay'; seconds: number }
+  | { type: 'notify'; message: string };
+
+export type AutomationFlow = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  triggers: FlowTrigger[];
+  conditions: FlowCondition[];
+  actions: FlowAction[];
+};
+
 export type IntegrationProvider = 'alexa' | 'google' | 'homekit' | 'matter';
 
 type IntegrationState = {
@@ -147,6 +177,11 @@ type IntegrationState = {
 type Preferences = {
   haptics: boolean;
   notifications: boolean;
+};
+
+type RealtimeSettings = {
+  enabled: boolean;
+  wsUrl: string;
 };
 
 type Profile = {
@@ -170,9 +205,12 @@ type State = {
   devices: Device[];
   scenes: Scene[];
   activeSceneId: string | null;
+  lastSceneRun: { sceneId: string; ts: number } | null;
   rules: AutomationRule[];
+  flows: AutomationFlow[];
   integrations: Record<IntegrationProvider, IntegrationState>;
   preferences: Preferences;
+  realtime: RealtimeSettings;
   household: HouseholdMember[];
 
   addRoom: (name: string) => void;
@@ -181,6 +219,7 @@ type State = {
   removeRoom: (roomId: string) => void;
   setProfile: (patch: Partial<Profile>) => void;
   setPreferences: (patch: Partial<Preferences>) => void;
+  setRealtime: (patch: Partial<RealtimeSettings>) => void;
   setDevice: (deviceId: string, patch: Partial<Device>) => void;
   setAC: (deviceId: string, patch: Partial<Device>) => void;
   toggleDevice: (deviceId: string) => void;
@@ -198,6 +237,10 @@ type State = {
   quickScheduleDevice: (deviceId: string, time: { hour: number; minute: number }) => void;
   runScene: (sceneId: string) => void;
   addScene: (scene: Omit<Scene, 'id'>) => void;
+  addFlow: (flow: Omit<AutomationFlow, 'id'>) => void;
+  updateFlow: (flowId: string, patch: Partial<AutomationFlow>) => void;
+  toggleFlow: (flowId: string) => void;
+  removeFlow: (flowId: string) => void;
 
   setIntegrationStatus: (provider: IntegrationProvider, status: IntegrationState['status']) => void;
   linkIntegration: (provider: IntegrationProvider, accountName?: string) => void;
@@ -320,6 +363,11 @@ const integrationsSeed: Record<IntegrationProvider, IntegrationState> = {
   matter: { status: 'not-linked' },
 };
 
+const realtimeSeed: RealtimeSettings = {
+  enabled: false,
+  wsUrl: 'ws://localhost:8088',
+};
+
 const scenesSeed: Scene[] = [
   {
     id: 's1',
@@ -401,6 +449,64 @@ const scenesSeed: Scene[] = [
       { type: 'toggle', deviceId: 'd17', on: false },
     ],
   },
+  {
+    id: 's9',
+    roomId: 'r1',
+    name: 'Away Mode',
+    actions: [
+      { type: 'toggle', deviceId: 'd2', on: false },
+      { type: 'toggle', deviceId: 'd3', on: false },
+      { type: 'toggle', deviceId: 'd4', on: false },
+      { type: 'patch', deviceId: 'd15', patch: { armed: true, motionAlerts: true, isOn: true } },
+      { type: 'patch', deviceId: 'd12', patch: { isOn: false, openPercent: 0 } },
+      { type: 'patch', deviceId: 'd13', patch: { isOn: false, openPercent: 0 } },
+      { type: 'patch', deviceId: 'd26', patch: { isOn: false, openPercent: 0 } },
+    ],
+  },
+  {
+    id: 's10',
+    roomId: 'r1',
+    name: 'Welcome Home',
+    actions: [
+      { type: 'patch', deviceId: 'd1', patch: { isOn: true, tempC: 22, mode: 'cold' } },
+      { type: 'patch', deviceId: 'd2', patch: { isOn: true, brightness: 75, color: '#FFD166' } },
+      { type: 'toggle', deviceId: 'd3', on: true },
+      { type: 'patch', deviceId: 'd15', patch: { armed: false, motionAlerts: false } },
+      { type: 'patch', deviceId: 'd26', patch: { isOn: true, openPercent: 100 } },
+    ],
+  },
+  {
+    id: 's11',
+    roomId: 'r2',
+    name: 'Night Wind Down',
+    actions: [
+      { type: 'patch', deviceId: 'd5', patch: { isOn: true, brightness: 20, color: '#B69CFF' } },
+      { type: 'patch', deviceId: 'd6', patch: { isOn: true, tempC: 21, mode: 'cold' } },
+      { type: 'toggle', deviceId: 'd7', on: false },
+      { type: 'patch', deviceId: 'd16', patch: { openPercent: 10 } },
+    ],
+  },
+  {
+    id: 's12',
+    roomId: 'r3',
+    name: 'Kitchen Party',
+    actions: [
+      { type: 'patch', deviceId: 'd8', patch: { isOn: true, brightness: 90, color: '#B69CFF' } },
+      { type: 'toggle', deviceId: 'd9', on: true },
+      { type: 'patch', deviceId: 'd10', patch: { isOn: true, speed: 70 } },
+      { type: 'patch', deviceId: 'd17', patch: { isOn: true, burnerLevel: 2 } },
+    ],
+  },
+  {
+    id: 's13',
+    roomId: 'r2',
+    name: 'Clean Sweep',
+    actions: [
+      { type: 'patch', deviceId: 'd14', patch: { isOn: true, status: 'cleaning' } },
+      { type: 'patch', deviceId: 'd16', patch: { openPercent: 40 } },
+      { type: 'toggle', deviceId: 'd5', on: false },
+    ],
+  },
 ];
 
 const rulesSeed: AutomationRule[] = [
@@ -410,6 +516,78 @@ const rulesSeed: AutomationRule[] = [
     enabled: true,
     trigger: { type: 'time', hour: 21, minute: 0 },
     action: { type: 'set-ac', deviceId: 'd1', tempC: 22, mode: 'cold' },
+  },
+  {
+    id: 'a2',
+    name: 'Morning Boost',
+    enabled: true,
+    trigger: { type: 'time', hour: 6, minute: 30 },
+    action: { type: 'set-ac', deviceId: 'd6', tempC: 21, mode: 'cold' },
+  },
+  {
+    id: 'a3',
+    name: 'Coffee Start',
+    enabled: true,
+    trigger: { type: 'time', hour: 7, minute: 0 },
+    action: { type: 'toggle', deviceId: 'd9', on: true },
+  },
+  {
+    id: 'a4',
+    name: 'Evening Lights',
+    enabled: true,
+    trigger: { type: 'time', hour: 18, minute: 30 },
+    action: { type: 'toggle', deviceId: 'd2', on: true },
+  },
+  {
+    id: 'a5',
+    name: 'Night Lockdown',
+    enabled: true,
+    trigger: { type: 'time', hour: 23, minute: 30 },
+    action: { type: 'toggle', deviceId: 'd26', on: false },
+  },
+  {
+    id: 'a6',
+    name: 'Sprinkler Morning',
+    enabled: false,
+    trigger: { type: 'time', hour: 6, minute: 15 },
+    action: { type: 'toggle', deviceId: 'd23', on: true },
+  },
+];
+
+const flowsSeed: AutomationFlow[] = [
+  {
+    id: 'f1',
+    name: 'Arrive Home',
+    enabled: true,
+    triggers: [{ type: 'presence', memberId: 'm1', status: 'home' }],
+    conditions: [{ type: 'time-range', startHour: 17, startMinute: 0, endHour: 23, endMinute: 30 }],
+    actions: [
+      { type: 'toggle', deviceId: 'd2', on: true },
+      { type: 'set-ac', deviceId: 'd1', tempC: 22, mode: 'cold' },
+      { type: 'run-scene', sceneId: 's10' },
+    ],
+  },
+  {
+    id: 'f2',
+    name: 'Morning Wake',
+    enabled: true,
+    triggers: [{ type: 'time', hour: 7, minute: 0 }],
+    conditions: [{ type: 'day', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] }],
+    actions: [
+      { type: 'set-brightness', deviceId: 'd5', brightness: 60 },
+      { type: 'set-ac', deviceId: 'd6', tempC: 21, mode: 'cold' },
+    ],
+  },
+  {
+    id: 'f3',
+    name: 'Movie Ready',
+    enabled: false,
+    triggers: [{ type: 'scene', sceneId: 's1' }],
+    conditions: [{ type: 'device', deviceId: 'd3', state: 'on' }],
+    actions: [
+      { type: 'set-brightness', deviceId: 'd2', brightness: 20 },
+      { type: 'notify', message: 'Movie time on.' },
+    ],
   },
 ];
 
@@ -426,9 +604,12 @@ export const useHomeStore = create<State>()(
 
   scenes: scenesSeed,
   activeSceneId: null,
+  lastSceneRun: null,
   rules: rulesSeed,
+  flows: flowsSeed,
   integrations: integrationsSeed,
   preferences: { haptics: true, notifications: true },
+  realtime: realtimeSeed,
   household: householdSeed,
 
   addRoom: (name) => {
@@ -483,6 +664,11 @@ export const useHomeStore = create<State>()(
   setPreferences: (patch) =>
     set((state) => ({
       preferences: { ...state.preferences, ...patch },
+    })),
+
+  setRealtime: (patch) =>
+    set((state) => ({
+      realtime: { ...state.realtime, ...patch },
     })),
 
   setDevice: (deviceId, patch) =>
@@ -594,12 +780,32 @@ export const useHomeStore = create<State>()(
         }, d);
       });
 
-      return { devices, activeSceneId: sceneId };
+      return { devices, activeSceneId: sceneId, lastSceneRun: { sceneId, ts: Date.now() } };
     }),
 
   addScene: (scene) =>
     set((state) => ({
       scenes: [...state.scenes, { ...scene, id: `s${Date.now()}` }],
+    })),
+
+  addFlow: (flow) =>
+    set((state) => ({
+      flows: [...state.flows, { ...flow, id: `f${Date.now()}` }],
+    })),
+
+  updateFlow: (flowId, patch) =>
+    set((state) => ({
+      flows: state.flows.map((f) => (f.id === flowId ? { ...f, ...patch } : f)),
+    })),
+
+  toggleFlow: (flowId) =>
+    set((state) => ({
+      flows: state.flows.map((f) => (f.id === flowId ? { ...f, enabled: !f.enabled } : f)),
+    })),
+
+  removeFlow: (flowId) =>
+    set((state) => ({
+      flows: state.flows.filter((f) => f.id !== flowId),
     })),
 
   setIntegrationStatus: (provider, status) =>
@@ -665,8 +871,10 @@ export const useHomeStore = create<State>()(
         scenes: state.scenes,
         activeSceneId: state.activeSceneId,
         rules: state.rules,
+        flows: state.flows,
         integrations: state.integrations,
         preferences: state.preferences,
+        realtime: state.realtime,
       }),
     }
   )

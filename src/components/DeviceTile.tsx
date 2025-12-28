@@ -6,6 +6,7 @@ import { theme } from '../theme/theme';
 import { deviceClient } from '../services/deviceClient';
 import { AC_TEMP_MAX_C, AC_TEMP_MIN_C, type Device } from '../store/useHomeStore';
 import { useResponsive } from '../theme/layout';
+import DeviceIcon from './DeviceIcon';
 
 /**
  * “Glass” device tile used in the Room grid.
@@ -14,57 +15,6 @@ import { useResponsive } from '../theme/layout';
  * - Tap power/controls: quick actions without navigating
  * - Long-press tile: open the bottom sheet
  */
-function iconFor(kind: Device['kind']): keyof typeof Ionicons.glyphMap {
-  switch (kind) {
-    case 'ac':
-      return 'snow';
-    case 'light':
-      return 'bulb';
-    case 'tv':
-      return 'tv';
-    case 'coffee':
-      return 'cafe';
-    case 'fan':
-      return 'aperture';
-    case 'fridge':
-      return 'thermometer';
-    case 'gate':
-      return 'exit';
-    case 'garage':
-      return 'car-sport';
-    case 'door':
-      return 'home';
-    case 'vacuum':
-      return 'sparkles';
-    case 'camera':
-      return 'videocam';
-    case 'window':
-      return 'copy';
-    case 'stove':
-      return 'flame';
-    case 'washer':
-      return 'sync';
-    case 'dryer':
-      return 'sync';
-    case 'microwave':
-      return 'timer';
-    case 'energy':
-      return 'stats-chart';
-    case 'water':
-      return 'water';
-    case 'air':
-      return 'leaf';
-    case 'sprinkler':
-      return 'rainy';
-    case 'speaker':
-      return 'volume-high';
-    case 'smoke':
-      return 'alert-circle';
-    default:
-      return 'cube';
-  }
-}
-
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 /**
@@ -206,7 +156,7 @@ export default function DeviceTile({
             device.isOn && styles.iconWrapOn,
           ]}
         >
-          <Ionicons name={iconFor(device.kind)} size={iconSize} color={theme.colors.text} />
+          <DeviceIcon kind={device.kind} size={iconSize} color={theme.colors.text} />
         </View>
 
         <Pressable

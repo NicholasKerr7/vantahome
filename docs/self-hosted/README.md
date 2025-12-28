@@ -92,7 +92,92 @@ In HA:
 - Add MQTT integration with host `127.0.0.1`, username `vantahome`, and your password.
 - Add the Frigate integration if you want detection events in HA.
 
-## 10) Security hardening
+## 10) VantaHome MQTT bridge (app)
+
+The app connects over MQTT WebSockets (`ws://`). The Mosquitto config in this repo enables port `9001`; restart the broker after copying the stack:
+
+```bash
+docker compose restart mosquitto
+```
+
+In your app `.env`:
+
+```
+EXPO_PUBLIC_MQTT_URL=ws://<nuc-ip>:9001
+EXPO_PUBLIC_MQTT_USERNAME=vantahome
+EXPO_PUBLIC_MQTT_PASSWORD=<password>
+EXPO_PUBLIC_MQTT_TOPIC_STATE=vantahome/devices/state
+EXPO_PUBLIC_MQTT_TOPIC_COMMAND=vantahome/devices/command
+```
+
+In the app, open Settings → Realtime (Dev) and enable the toggle (WebSocket URL can stay blank when using MQTT).
+
+MQTT payloads the app expects:
+
+- **State** (HA → app):
+```json
+{ "deviceId": "d2", "patch": { "isOn": true, "brightness": 80 }, "ts": 1730000000000 }
+```
+- **Command** (app → HA):
+```json
+{ "type": "command", "payload": { "op": "toggle", "deviceId": "d2", "on": true } }
+```
+
+Example HA automations (map `deviceId` to your HA entity IDs):
+
+```yaml
+alias: VantaHome - Living room light state
+trigger:
+  - platform: state
+    entity_id: light.living_room
+action:
+  - service: mqtt.publish
+    data:
+      topic: vantahome/devices/state
+      payload: >
+        {{ {
+          'deviceId': 'd2',
+          'patch': {
+            'isOn': is_state('light.living_room', 'on'),
+            'brightness': (state_attr('light.living_room', 'brightness')|int(0) / 255 * 100) | round
+          },
+          'ts': now().timestamp() | int
+        } | tojson }}
+```
+
+```yaml
+alias: VantaHome - Commands
+trigger:
+  - platform: mqtt
+    topic: vantahome/devices/command
+variables:
+  cmd: "{{ trigger.payload_json.payload }}"
+action:
+  - choose:
+      - conditions: "{{ cmd.op == 'toggle' and cmd.deviceId == 'd2' }}"
+        sequence:
+          - service: "light.turn_{{ 'on' if cmd.on else 'off' }}"
+            target:
+              entity_id: light.living_room
+      - conditions: "{{ cmd.op == 'set-brightness' and cmd.deviceId == 'd2' }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: light.living_room
+            data:
+              brightness_pct: "{{ cmd.value | int }}"
+      - conditions: "{{ cmd.op == 'set-temp' and cmd.deviceId == 'd1' }}"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: climate.living_room
+            data:
+              temperature: "{{ cmd.value | float }}"
+```
+
+Tip: keep device IDs stable by editing `src/store/useHomeStore.ts` so they match your HA entity mapping.
+
+## 11) Security hardening
 
 ### MQTT TLS (optional but recommended)
 1) Create certs:
@@ -127,6 +212,7 @@ sudo ufw default allow outgoing
 sudo ufw allow from 192.168.1.0/24 to any port 22
 sudo ufw allow from 192.168.1.0/24 to any port 8123
 sudo ufw allow from 192.168.1.0/24 to any port 1883
+sudo ufw allow from 192.168.1.0/24 to any port 9001
 sudo ufw allow from 192.168.1.0/24 to any port 8883
 sudo ufw allow from 192.168.1.0/24 to any port 5000
 sudo ufw allow from 192.168.1.0/24 to any port 1984

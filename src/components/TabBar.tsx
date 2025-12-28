@@ -6,6 +6,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from '
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { theme } from '../theme/theme';
 import { useResponsive } from '../theme/layout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * Custom bottom tab bar with an animated “pill” highlight (premium cue).
@@ -21,8 +22,10 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export default function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const { width, isTablet, isLandscape, scale } = useResponsive();
-  const inset = isTablet ? (isLandscape ? 28 : 24) : 18;
+  const { width, isTablet, isLandscape, scale, gutter } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const inset = isTablet ? (isLandscape ? 28 : 24) : gutter;
+  const bottomInset = insets.bottom > 0 ? insets.bottom + 8 : inset;
   const maxWidth = isTablet ? (isLandscape ? 720 : 560) : width - inset * 2;
   const barWidth = Math.min(width - inset * 2, maxWidth);
   const barLeft = (width - barWidth) / 2;
@@ -32,6 +35,13 @@ export default function TabBar({ state, descriptors, navigation }: BottomTabBarP
   const iconSize = Math.round((isTablet ? (isLandscape ? 24 : 23) : 22) * scale);
   const iconWrapSize = Math.round((isTablet ? (isLandscape ? 52 : 48) : 44) * scale);
   const iconRadius = Math.round(iconWrapSize * 0.36);
+  const activeRoute = state.routes[state.index]?.name ?? 'Home';
+  const isHome = activeRoute === 'Home';
+  const useAltTone = !isTablet && !isHome;
+  const barBackground = useAltTone ? 'rgba(20,10,40,0.82)' : 'rgba(255,255,255,0.12)';
+  const barBorder = useAltTone ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.16)';
+  const pillBackground = useAltTone ? 'rgba(180,107,255,0.38)' : 'rgba(180,107,255,0.28)';
+  const pillBorder = useAltTone ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.18)';
   // Measured container width (used to derive `itemW`). Stored as a shared value
   // so the animated pill can react to layout changes without re-render.
   const layoutW = useSharedValue(0);
@@ -73,6 +83,9 @@ export default function TabBar({ state, descriptors, navigation }: BottomTabBarP
           width: barWidth,
           height: barHeight,
           borderRadius: Math.round(barHeight / 2),
+          bottom: bottomInset,
+          backgroundColor: barBackground,
+          borderColor: barBorder,
         },
       ]}
       onLayout={onLayout}
@@ -85,6 +98,8 @@ export default function TabBar({ state, descriptors, navigation }: BottomTabBarP
             top: pillInset,
             bottom: pillInset,
             borderRadius: Math.round((barHeight - pillInset * 2) / 2),
+            backgroundColor: pillBackground,
+            borderColor: pillBorder,
           },
         ]}
       />

@@ -1,5 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import Pressable from '../components/Pressable';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,6 +19,28 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useResponsive } from '../theme/layout';
 import BackgroundLines from '../components/BackgroundLines';
 import { theme } from '../theme/theme';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import { supabase } from '../services/supabaseClient';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const redirectUri = AuthSession.makeRedirectUri({
+  scheme: 'vantahome',
+  path: 'auth-callback',
+});
+
+type OAuthProvider = 'apple' | 'google';
+
+const getAuthParams = (url: string) => {
+  const parsed = new URL(url);
+  const params = new URLSearchParams(parsed.search);
+  if (parsed.hash) {
+    const hashParams = new URLSearchParams(parsed.hash.replace(/^#/, ''));
+    hashParams.forEach((value, key) => params.set(key, value));
+  }
+  return params;
+};
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Auth'>;
 
@@ -38,6 +70,9 @@ export default function AuthScreen({ navigation }: Props) {
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
+  const [emailAuthLoading, setEmailAuthLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const emailValid = useMemo(() => /\S+@\S+\.\S+/.test(email.trim()), [email]);
   const passwordOk = password.trim().length >= 6;
@@ -47,14 +82,176 @@ export default function AuthScreen({ navigation }: Props) {
       ? emailValid && passwordOk
       : name.trim().length > 1 && emailValid && passwordOk && confirmOk;
 
-  const handleContinue = () => {
+  const applyProfileFromUser = (user?: { email?: string; user_metadata?: Record<string, any> } | null) => {
     const safeEmail = email.trim();
     const fallbackName = safeEmail.split('@')[0]?.replace(/[._-]+/g, ' ') ?? 'Home';
-    setProfile({
-      name: mode === 'login' ? (profile.name || fallbackName) : name.trim(),
-      email: safeEmail,
-    });
+    const meta = user?.user_metadata ?? {};
+    const metaName =
+      meta.full_name || meta.name || meta.preferred_username || meta.nickname || meta.given_name;
+    const nextName =
+      metaName || (mode === 'login' ? profile.name || fallbackName : name.trim()) || 'Vanta Home';
+    setProfile({ name: nextName, email: user?.email ?? safeEmail });
     navigation.replace('Onboarding');
+  };
+
+  const handleContinue = async () => {
+    if (!supabase) {
+      Alert.alert('Missing configuration', 'Add your Supabase URL and anon key to .env to enable email login.');
+      return;
+    }
+    if (emailAuthLoading || oauthLoading) return;
+    if (!canContinue) return;
+    setEmailAuthLoading(true);
+    const safeEmail = email.trim();
+    try {
+      if (mode === 'create') {
+        const { data, error } = await supabase.auth.signUp({
+          email: safeEmail,
+          password,
+          options: { data: { full_name: name.trim() } },
+        });
+        if (error) {
+          Alert.alert('Sign-up failed', error.message);
+          return;
+        }
+        if (data.session?.user) {
+          applyProfileFromUser(data.session.user);
+          return;
+        }
+        if (data.user) {
+          setProfile({
+            name: name.trim() || data.user.email?.split('@')[0]?.replace(/[._-]+/g, ' ') || 'Vanta Home',
+            email: data.user.email ?? safeEmail,
+          });
+        }
+        Alert.alert('Check your email', 'Confirm your email, then sign in.');
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: safeEmail,
+        password,
+      });
+      if (error) {
+        Alert.alert('Sign-in failed', error.message);
+        return;
+      }
+      if (data.user) {
+        applyProfileFromUser(data.user);
+        return;
+      }
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        applyProfileFromUser(userData.user);
+        return;
+      }
+      Alert.alert('Sign-in failed', 'Unable to read your account details. Please try again.');
+    } catch (err: any) {
+      Alert.alert('Sign-in failed', err?.message ?? 'Unable to complete sign-in.');
+    } finally {
+      setEmailAuthLoading(false);
+    }
+  };
+
+  const handleOAuth = async (provider: OAuthProvider) => {
+    if (!supabase) {
+      Alert.alert('Missing configuration', 'Add your Supabase URL and anon key to .env to enable social login.');
+      return;
+    }
+    if (oauthLoading || emailAuthLoading) return;
+    setOauthLoading(provider);
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: redirectUri },
+      });
+      if (error || !data?.url) {
+        Alert.alert('Sign-in failed', error?.message ?? 'Unable to start OAuth flow.');
+        return;
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+      if (result.type !== 'success' || !result.url) {
+        return;
+      }
+
+      const params = getAuthParams(result.url);
+      const code = params.get('code');
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      let sessionUser = null as null | { email?: string; user_metadata?: Record<string, any> };
+
+      if (code) {
+        const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) {
+          Alert.alert('Sign-in failed', exchangeError.message);
+          return;
+        }
+        sessionUser = exchangeData.session?.user ?? null;
+      } else if (accessToken && refreshToken) {
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) {
+          Alert.alert('Sign-in failed', sessionError.message);
+          return;
+        }
+        sessionUser = sessionData.session?.user ?? null;
+      }
+
+      if (!sessionUser) {
+        const { data: userData } = await supabase.auth.getUser();
+        sessionUser = userData.user ?? null;
+      }
+
+      if (sessionUser) {
+        const userEmail = sessionUser.email ?? profile.email ?? '';
+        const meta = sessionUser.user_metadata ?? {};
+        const userName =
+          meta.full_name ||
+          meta.name ||
+          meta.preferred_username ||
+          userEmail.split('@')[0]?.replace(/[._-]+/g, ' ') ||
+          profile.name ||
+          'Vanta Home';
+        setProfile({ name: userName, email: userEmail });
+        navigation.replace('Onboarding');
+      } else {
+        Alert.alert('Sign-in failed', 'Unable to read your account details. Please try again.');
+      }
+    } catch (err: any) {
+      Alert.alert('Sign-in failed', err?.message ?? 'Unable to complete OAuth.');
+    } finally {
+      setOauthLoading(null);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const safeEmail = email.trim();
+    if (!safeEmail) {
+      Alert.alert('Email required', 'Enter your email address to reset your password.');
+      return;
+    }
+    if (!supabase) {
+      Alert.alert('Missing configuration', 'Add your Supabase URL and anon key to .env to enable password reset.');
+      return;
+    }
+    if (resetLoading || emailAuthLoading || oauthLoading) return;
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(safeEmail);
+      if (error) {
+        Alert.alert('Reset failed', error.message);
+        return;
+      }
+      Alert.alert('Check your email', 'We sent a password reset link to your inbox.');
+    } catch (err: any) {
+      Alert.alert('Reset failed', err?.message ?? 'Unable to send reset email.');
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   return (
@@ -191,23 +388,35 @@ export default function AuthScreen({ navigation }: Props) {
                   : 'Forgot password?'}
               </Text>
               {mode === 'login' && (
-                <Pressable onPress={() => {}}>
-                  <Text style={[styles.hintLink, { fontSize: hintSize }]}>Reset</Text>
+                <Pressable onPress={handleResetPassword} disabled={resetLoading}>
+                  <Text style={[styles.hintLink, { fontSize: hintSize }]}>
+                    {resetLoading ? 'Sending…' : 'Reset'}
+                  </Text>
                 </Pressable>
               )}
             </View>
 
-            <Pressable style={[styles.cta, !canContinue && styles.ctaDisabled]} onPress={handleContinue} disabled={!canContinue}>
+            <Pressable
+              style={[styles.cta, (!canContinue || emailAuthLoading) && styles.ctaDisabled]}
+              onPress={handleContinue}
+              disabled={!canContinue || emailAuthLoading}
+            >
               <LinearGradient
                 colors={['#B08CFF', '#6B3CFF']}
                 start={{ x: 0.1, y: 0.2 }}
                 end={{ x: 0.9, y: 0.9 }}
                 style={[styles.ctaInner, { height: ctaHeight }, !canContinue && { opacity: 0.6 }]}
               >
-                <Text style={[styles.ctaText, { fontSize: ctaText }]}>
-                  {mode === 'create' ? 'Create account' : 'Sign in'}
-                </Text>
-                <Ionicons name="arrow-forward" size={Math.round(16 * scale)} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                {emailAuthLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={[styles.ctaText, { fontSize: ctaText }]}>
+                      {mode === 'create' ? 'Create account' : 'Sign in'}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={Math.round(16 * scale)} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                  </>
+                )}
               </LinearGradient>
             </Pressable>
 
@@ -218,12 +427,36 @@ export default function AuthScreen({ navigation }: Props) {
             </View>
 
             <View style={styles.socialRow}>
-              <Pressable style={[styles.socialBtn, { height: socialHeight, borderRadius: Math.round(socialHeight * 0.3) }]}>
-                <Ionicons name="logo-apple" size={Math.round(18 * scale)} color="#0C0C12" />
+              <Pressable
+                style={[
+                  styles.socialBtn,
+                  { height: socialHeight, borderRadius: Math.round(socialHeight * 0.3) },
+                  oauthLoading && styles.socialBtnDisabled,
+                ]}
+                onPress={() => handleOAuth('apple')}
+                disabled={oauthLoading !== null || emailAuthLoading}
+              >
+                {oauthLoading === 'apple' ? (
+                  <ActivityIndicator size="small" color="#0C0C12" />
+                ) : (
+                  <Ionicons name="logo-apple" size={Math.round(18 * scale)} color="#0C0C12" />
+                )}
                 <Text style={[styles.socialText, { fontSize: segmentText }]}>Apple</Text>
               </Pressable>
-              <Pressable style={[styles.socialBtn, { height: socialHeight, borderRadius: Math.round(socialHeight * 0.3) }]}>
-                <Ionicons name="logo-google" size={Math.round(18 * scale)} color="#0C0C12" />
+              <Pressable
+                style={[
+                  styles.socialBtn,
+                  { height: socialHeight, borderRadius: Math.round(socialHeight * 0.3) },
+                  oauthLoading && styles.socialBtnDisabled,
+                ]}
+                onPress={() => handleOAuth('google')}
+                disabled={oauthLoading !== null || emailAuthLoading}
+              >
+                {oauthLoading === 'google' ? (
+                  <ActivityIndicator size="small" color="#0C0C12" />
+                ) : (
+                  <Ionicons name="logo-google" size={Math.round(18 * scale)} color="#0C0C12" />
+                )}
                 <Text style={[styles.socialText, { fontSize: segmentText }]}>Google</Text>
               </Pressable>
             </View>
@@ -380,6 +613,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  socialBtnDisabled: { opacity: 0.6 },
   socialText: { color: '#0C0C12', fontWeight: '800' },
   skip: { marginTop: 14, alignSelf: 'center' },
   skipText: { color: 'rgba(12,12,18,0.55)', fontWeight: '800' },

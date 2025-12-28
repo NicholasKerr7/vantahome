@@ -10,6 +10,7 @@ import RoomScreen from '../screens/RoomScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ManageRoomsScreen from '../screens/ManageRoomsScreen';
+import AutomationBuilderScreen from '../screens/AutomationBuilderScreen';
 import { theme } from '../theme/theme';
 
 /**
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   Profile: undefined;
   ManageRooms: undefined;
+  AutomationBuilder: { flowId?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -48,12 +50,13 @@ export default function AppNavigator() {
           <Stack.Screen name="Auth" component={AuthScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Main" component={BottomTabs} />
-        <Stack.Screen name="Room" component={RoomScreen} />
-        <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} />
-        <Stack.Screen name="Notifications" component={NotificationsScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
-        <Stack.Screen name="ManageRooms" component={ManageRoomsScreen} />
-      </Stack.Navigator>
+          <Stack.Screen name="Room" component={RoomScreen} />
+          <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="ManageRooms" component={ManageRoomsScreen} />
+          <Stack.Screen name="AutomationBuilder" component={AutomationBuilderScreen} />
+        </Stack.Navigator>
       </NavigationContainer>
     </BottomSheetModalProvider>
   );

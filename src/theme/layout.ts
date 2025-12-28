@@ -10,9 +10,9 @@ export function useResponsive(maxWidth = DEFAULT_MAX_WIDTH) {
   // Keep tablet layouts roomy but cap content width so elements stay reachable.
   const targetWidth = isTablet && isLandscape ? Math.max(maxWidth, 980) : maxWidth;
   const contentWidth = Math.min(width, targetWidth);
-  const gutter = isTablet ? (isLandscape ? 36 : 28) : 18;
+  const gutter = isTablet ? (isLandscape ? 36 : 28) : 22;
   const topPad = isTablet ? (isLandscape ? 56 : 70) : 56;
-  const blockGap = isTablet ? (isLandscape ? 20 : 16) : 12;
+  const blockGap = isTablet ? (isLandscape ? 20 : 16) : 14;
   const scale = isTablet ? (isLandscape ? 1.08 : 1.14) : 1;
 
   return {
