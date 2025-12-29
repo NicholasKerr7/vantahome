@@ -1,10 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Pressable from './Pressable';
-import { theme } from '../theme/theme';
-import type { Device } from '../store/useHomeStore';
-import { useResponsive } from '../theme/layout';
-import DeviceIcon from './DeviceIcon';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Pressable from "./Pressable";
+import { theme } from "../theme/theme";
+import type { Device } from "../store/useHomeStore";
+import { useResponsive } from "../theme/layout";
+import DeviceIcon from "./DeviceIcon";
 
 export default function DeviceQuickRow({
   devices,
@@ -22,17 +22,31 @@ export default function DeviceQuickRow({
   return (
     <View style={[styles.row, { gap: rowGap }]}>
       {devices.map((d) => (
-        <Pressable key={d.id} style={styles.item} onPress={() => onPressDevice(d.id)}>
+        <Pressable
+          key={d.id}
+          style={styles.item}
+          onPress={() => onPressDevice(d.id)}
+        >
           <View
             style={[
               styles.iconWrap,
-              { width: iconWrapSize, height: iconWrapSize, borderRadius: iconWrapRadius },
+              {
+                width: iconWrapSize,
+                height: iconWrapSize,
+                borderRadius: iconWrapRadius,
+              },
               d.isOn && styles.iconWrapOn,
             ]}
           >
-            <DeviceIcon kind={d.kind} size={iconSize} color={theme.colors.text} />
+            <DeviceIcon
+              kind={d.kind}
+              size={iconSize}
+              color={theme.colors.text}
+            />
           </View>
-          <Text style={[styles.label, { fontSize: labelSize }]}>{d.kind.toUpperCase()}</Text>
+          <Text style={[styles.label, { fontSize: labelSize }]}>
+            {d.kind.toUpperCase()}
+          </Text>
         </Pressable>
       ))}
     </View>
@@ -40,18 +54,28 @@ export default function DeviceQuickRow({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 14, marginTop: 14, justifyContent: 'space-between' },
-  item: { alignItems: 'center', flex: 1 },
+  row: {
+    flexDirection: "row",
+    gap: 14,
+    marginTop: 14,
+    justifyContent: "space-between",
+  },
+  item: { alignItems: "center", flex: 1 },
   iconWrap: {
     width: 44,
     height: 44,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: "rgba(255,255,255,0.10)",
     borderWidth: 1,
     borderColor: theme.colors.stroke,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  iconWrapOn: { backgroundColor: 'rgba(180,107,255,0.28)' },
-  label: { marginTop: 8, color: theme.colors.subtext, fontSize: 12, fontWeight: '700' },
+  iconWrapOn: { backgroundColor: "rgba(180,107,255,0.28)" },
+  label: {
+    marginTop: 8,
+    color: theme.colors.subtext,
+    fontSize: 12,
+    fontWeight: "700",
+  },
 });

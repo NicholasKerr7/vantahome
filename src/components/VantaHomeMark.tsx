@@ -1,5 +1,12 @@
-import React from 'react';
-import Svg, { Defs, LinearGradient, Stop, Path, Rect, Circle } from 'react-native-svg';
+import React from "react";
+import Svg, {
+  Defs,
+  LinearGradient,
+  Stop,
+  Path,
+  Rect,
+  Circle,
+} from "react-native-svg";
 
 export default function VantaHomeMark({ size = 220 }: { size?: number }) {
   const s = size;
@@ -26,7 +33,15 @@ export default function VantaHomeMark({ size = 220 }: { size?: number }) {
       </Defs>
 
       <Rect x="26" y="26" width="168" height="168" rx="48" fill="url(#bg)" />
-      <Rect x="40" y="40" width="140" height="140" rx="40" fill="url(#inner)" stroke="rgba(255,255,255,0.35)" />
+      <Rect
+        x="40"
+        y="40"
+        width="140"
+        height="140"
+        rx="40"
+        fill="url(#inner)"
+        stroke="rgba(255,255,255,0.35)"
+      />
 
       <Path
         d="M 66 118 L 110 74 L 154 118 L 138 118 L 110 90 L 82 118 Z"
@@ -35,7 +50,15 @@ export default function VantaHomeMark({ size = 220 }: { size?: number }) {
       <Rect x="80" y="118" width="60" height="58" rx="16" fill="url(#base)" />
 
       <Circle cx="110" cy="146" r="8" fill="#6B3CFF" />
-      <Rect x="104" y="134" width="12" height="24" rx="5" fill="#FFFFFF" opacity="0.92" />
+      <Rect
+        x="104"
+        y="134"
+        width="12"
+        height="24"
+        rx="5"
+        fill="#FFFFFF"
+        opacity="0.92"
+      />
 
       <Path
         d="M 88 64 C 101 50 119 50 132 64"

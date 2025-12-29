@@ -57,6 +57,7 @@ PY
 ## 4) Configure account linking
 
 ### Alexa
+
 - **Authorization URI**: `https://<PROJECT>.functions.supabase.co/voice-authorize`
 - **Token URI**: `https://<PROJECT>.functions.supabase.co/voice-token`
 - **Client ID**: `alexa-client-id`
@@ -64,6 +65,7 @@ PY
 - **Scope**: optional (ignored)
 
 ### Google
+
 - **Authorization URI**: `https://<PROJECT>.functions.supabase.co/voice-authorize`
 - **Token URI**: `https://<PROJECT>.functions.supabase.co/voice-token`
 - **Client ID**: `google-client-id`
@@ -77,6 +79,7 @@ PY
 Both expect `Authorization: Bearer <access_token>` issued by `voice-token`.
 
 ## Notes
+
 - The OAuth login form uses email/password. If you sign in only with Google/Apple, set a password in Supabase to link voice assistants.
 - State is written into `device_state`; commands are queued into `device_commands`.
 - You can build a local bridge (MQTT/HA) to consume `device_commands` and apply them to devices.

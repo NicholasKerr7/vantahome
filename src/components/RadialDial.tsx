@@ -1,17 +1,24 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import React, { useEffect, useMemo } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Svg, {
+  Path,
+  Circle,
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Stop,
+  Text as SvgText,
+} from "react-native-svg";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
   runOnJS,
   useAnimatedProps,
   useAnimatedStyle,
   withTiming,
-} from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
-import { theme } from '../theme/theme';
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
+import { theme } from "../theme/theme";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -26,19 +33,26 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
  * compatible with newer Reanimated/RNGH versions.
  */
 function polarToCartesian(cx: number, cy: number, r: number, angleRad: number) {
-  'worklet';
+  "worklet";
   return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
 }
 
-function arcPath(cx: number, cy: number, r: number, startRad: number, endRad: number) {
-  'worklet';
+function arcPath(
+  cx: number,
+  cy: number,
+  r: number,
+  startRad: number,
+  endRad: number,
+) {
+  "worklet";
   const start = polarToCartesian(cx, cy, r, startRad);
   const end = polarToCartesian(cx, cy, r, endRad);
   const largeArc = Math.abs(endRad - startRad) <= Math.PI ? 0 : 1;
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
 }
 
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+const clamp = (v: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, v));
 const clamp01 = (t: number) => clamp(t, 0, 1);
 
 export default function RadialDial({
@@ -47,7 +61,7 @@ export default function RadialDial({
   max = 28,
   onChange,
   centerValue,
-  centerLabel = 'Room Temperature',
+  centerLabel = "Room Temperature",
   dimmed = false,
   tickValues,
   formatValue,
@@ -110,12 +124,15 @@ export default function RadialDial({
     lastSent.value = value;
   }, [value, min, max]);
 
-  const baseArc = useMemo(() => arcPath(cx, cy, r, start, end), [cx, cy, r, start, end]);
+  const baseArc = useMemo(
+    () => arcPath(cx, cy, r, start, end),
+    [cx, cy, r, start, end],
+  );
 
   const haptic = () => Haptics.selectionAsync().catch(() => {});
 
   const updateFromPoint = (x: number, y: number) => {
-    'worklet';
+    "worklet";
     const dx = x - cx;
     const dy = y - cy;
     const ang = Math.atan2(dy, dx); // -pi..pi
@@ -197,7 +214,9 @@ export default function RadialDial({
         ? tickValues
         : // Matches the reference UI for the default 15..28 range.
           [min, min + 3, min + 5, max - 3, max];
-    const uniq = Array.from(new Set(candidates.map((n) => Math.round(n)))).filter((n) => n >= min && n <= max);
+    const uniq = Array.from(
+      new Set(candidates.map((n) => Math.round(n))),
+    ).filter((n) => n >= min && n <= max);
     return uniq.map((v) => {
       const t = clamp01(tFromValue(v));
       const angle = start + sweep * t;
@@ -214,7 +233,13 @@ export default function RadialDial({
         <View style={{ width: dialSize, height: dialSize }}>
           <Svg width={dialSize} height={dialSize}>
             <Defs>
-              <SvgLinearGradient id="arc" x1="0" y1="0" x2={String(dialSize)} y2={String(dialSize)}>
+              <SvgLinearGradient
+                id="arc"
+                x1="0"
+                y1="0"
+                x2={String(dialSize)}
+                y2={String(dialSize)}
+              >
                 <Stop offset="0" stopColor="rgba(180,107,255,0.20)" />
                 <Stop offset="1" stopColor="rgba(122,92,255,0.65)" />
               </SvgLinearGradient>
@@ -237,8 +262,20 @@ export default function RadialDial({
             ))}
 
             {/* base track */}
-            <Path d={baseArc} stroke="rgba(255,255,255,0.36)" strokeWidth={trackWidth} strokeLinecap="round" fill="none" />
-            <Path d={baseArc} stroke="rgba(255,255,255,0.72)" strokeWidth={innerTrackWidth} strokeLinecap="round" fill="none" />
+            <Path
+              d={baseArc}
+              stroke="rgba(255,255,255,0.36)"
+              strokeWidth={trackWidth}
+              strokeLinecap="round"
+              fill="none"
+            />
+            <Path
+              d={baseArc}
+              stroke="rgba(255,255,255,0.72)"
+              strokeWidth={innerTrackWidth}
+              strokeLinecap="round"
+              fill="none"
+            />
             {/* progress */}
             <AnimatedPath
               animatedProps={progressArcProps as any}
@@ -271,7 +308,11 @@ export default function RadialDial({
             pointerEvents="none"
             style={[
               styles.bubble,
-              { width: bubbleSize, height: bubbleSize, borderRadius: bubbleSize / 2 },
+              {
+                width: bubbleSize,
+                height: bubbleSize,
+                borderRadius: bubbleSize / 2,
+              },
               bubbleStyle,
               dimmed && { opacity: 0.5 },
             ]}
@@ -287,17 +328,41 @@ export default function RadialDial({
           {/* center */}
           <View pointerEvents="none" style={styles.center}>
             {centerContent ? (
-              <View style={{ width: centerSize, height: centerSize, alignItems: 'center', justifyContent: 'center' }}>
-                <View style={centerContentScale < 1 ? { transform: [{ scale: centerContentScale }] } : undefined}>
+              <View
+                style={{
+                  width: centerSize,
+                  height: centerSize,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <View
+                  style={
+                    centerContentScale < 1
+                      ? { transform: [{ scale: centerContentScale }] }
+                      : undefined
+                  }
+                >
                   {centerContent}
                 </View>
               </View>
             ) : (
               <LinearGradient
-                colors={['rgba(255,255,255,0.94)', 'rgba(246,238,255,0.86)', 'rgba(240,232,255,0.80)']}
+                colors={[
+                  "rgba(255,255,255,0.94)",
+                  "rgba(246,238,255,0.86)",
+                  "rgba(240,232,255,0.80)",
+                ]}
                 start={{ x: 0.2, y: 0.2 }}
                 end={{ x: 1, y: 1 }}
-                style={[styles.centerDisc, { width: centerSize, height: centerSize, borderRadius: centerSize / 2 }]}
+                style={[
+                  styles.centerDisc,
+                  {
+                    width: centerSize,
+                    height: centerSize,
+                    borderRadius: centerSize / 2,
+                  },
+                ]}
               >
                 {centerIcon === undefined ? (
                   <View style={styles.acIcon}>
@@ -315,10 +380,26 @@ export default function RadialDial({
                   centerIcon
                 )}
 
-                <Text style={[styles.big, { fontSize: centerFont }, dimmed && { opacity: 0.55 }]}>
-                  {formatCenterValue ? formatCenterValue(centerTemp) : `${centerTemp}°C`}
+                <Text
+                  style={[
+                    styles.big,
+                    { fontSize: centerFont },
+                    dimmed && { opacity: 0.55 },
+                  ]}
+                >
+                  {formatCenterValue
+                    ? formatCenterValue(centerTemp)
+                    : `${centerTemp}°C`}
                 </Text>
-                <Text style={[styles.sub, { fontSize: subFont }, dimmed && { opacity: 0.55 }]}>{centerLabel}</Text>
+                <Text
+                  style={[
+                    styles.sub,
+                    { fontSize: subFont },
+                    dimmed && { opacity: 0.55 },
+                  ]}
+                >
+                  {centerLabel}
+                </Text>
               </LinearGradient>
             )}
           </View>
@@ -329,24 +410,37 @@ export default function RadialDial({
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  center: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  wrap: { alignItems: "center", justifyContent: "center", marginTop: 8 },
+  center: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   centerDisc: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: 'rgba(0,0,0,0.10)',
+    borderColor: "rgba(0,0,0,0.05)",
+    shadowColor: "rgba(0,0,0,0.10)",
     shadowOpacity: 0.18,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
   },
-  big: { color: 'rgba(12,12,18,0.92)', fontWeight: '900', letterSpacing: -0.8, marginTop: 6 },
-  sub: { color: 'rgba(12,12,18,0.48)', fontWeight: '800', marginTop: 6 },
+  big: {
+    color: "rgba(12,12,18,0.92)",
+    fontWeight: "900",
+    letterSpacing: -0.8,
+    marginTop: 6,
+  },
+  sub: { color: "rgba(12,12,18,0.48)", fontWeight: "800", marginTop: 6 },
 
   bubble: {
-    position: 'absolute',
-    shadowColor: 'rgba(122,92,255,0.65)',
+    position: "absolute",
+    shadowColor: "rgba(122,92,255,0.65)",
     shadowOpacity: 0.35,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
@@ -354,42 +448,42 @@ const styles = StyleSheet.create({
   bubbleInner: {
     flex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "rgba(255,255,255,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  acIcon: { width: 54, alignItems: 'center', marginBottom: 4 },
+  acIcon: { width: 54, alignItems: "center", marginBottom: 4 },
   acUnit: {
     width: 46,
     height: 20,
     borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: "rgba(255,255,255,0.92)",
     borderWidth: 1,
-    borderColor: 'rgba(12,12,18,0.10)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "rgba(12,12,18,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   acUnitTopSlot: {
-    position: 'absolute',
+    position: "absolute",
     top: 5,
     width: 14,
     height: 2,
     borderRadius: 2,
-    backgroundColor: 'rgba(12,12,18,0.28)',
+    backgroundColor: "rgba(12,12,18,0.28)",
   },
   acUnitBar: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 5,
     width: 16,
     height: 2,
     borderRadius: 2,
-    backgroundColor: 'rgba(122,92,255,0.70)',
+    backgroundColor: "rgba(122,92,255,0.70)",
   },
-  acFlow: { flexDirection: 'row', gap: 5, marginTop: 6 },
+  acFlow: { flexDirection: "row", gap: 5, marginTop: 6 },
   acFlowLine: {
     width: 2,
     height: 6,
     borderRadius: 2,
-    backgroundColor: 'rgba(122,92,255,0.70)',
+    backgroundColor: "rgba(122,92,255,0.70)",
   },
 });

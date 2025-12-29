@@ -1,17 +1,17 @@
-import React from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import AuthScreen from '../screens/AuthScreen';
-import OnboardingScreen from '../screens/OnboardingScreen';
-import BottomTabs from '../components/BottomTabs';
-import DeviceDetailScreen from '../screens/DeviceDetailScreen';
-import RoomScreen from '../screens/RoomScreen';
-import NotificationsScreen from '../screens/NotificationsScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import ManageRoomsScreen from '../screens/ManageRoomsScreen';
-import AutomationBuilderScreen from '../screens/AutomationBuilderScreen';
-import { theme } from '../theme/theme';
+import React from "react";
+import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import AuthScreen from "../screens/AuthScreen";
+import OnboardingScreen from "../screens/OnboardingScreen";
+import BottomTabs from "../components/BottomTabs";
+import DeviceDetailScreen from "../screens/DeviceDetailScreen";
+import RoomScreen from "../screens/RoomScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import ManageRoomsScreen from "../screens/ManageRoomsScreen";
+import AutomationBuilderScreen from "../screens/AutomationBuilderScreen";
+import { theme } from "../theme/theme";
 
 /**
  * Root stack for the app.
@@ -55,7 +55,10 @@ export default function AppNavigator() {
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="ManageRooms" component={ManageRoomsScreen} />
-          <Stack.Screen name="AutomationBuilder" component={AutomationBuilderScreen} />
+          <Stack.Screen
+            name="AutomationBuilder"
+            component={AutomationBuilderScreen}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </BottomSheetModalProvider>

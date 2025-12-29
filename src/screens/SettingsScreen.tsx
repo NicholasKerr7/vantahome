@@ -1,15 +1,38 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, Animated, Easing, TextInput, Alert } from 'react-native';
-import Pressable from '../components/Pressable';
-import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
-import BackgroundLines from '../components/BackgroundLines';
-import { theme } from '../theme/theme';
-import { type IntegrationProvider, useHomeStore } from '../store/useHomeStore';
-import { useResponsive } from '../theme/layout';
-import { deviceClient, type ConnectionStatus } from '../services/deviceClient';
-import { bootstrapHome, devicesToStateEvents, pushDeviceStateBatch } from '../services/cloudRegistry';
+import React, { useMemo, useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  Animated,
+  Easing,
+  TextInput,
+  Alert,
+} from "react-native";
+import Pressable from "../components/Pressable";
+import { LinearGradient } from "expo-linear-gradient";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
+import BackgroundLines from "../components/BackgroundLines";
+import { theme } from "../theme/theme";
+import { type IntegrationProvider, useHomeStore } from "../store/useHomeStore";
+import { useResponsive } from "../theme/layout";
+import { deviceClient, type ConnectionStatus } from "../services/deviceClient";
+import {
+  bootstrapHome,
+  devicesToStateEvents,
+  pushDeviceStateBatch,
+} from "../services/cloudRegistry";
+import * as AuthSession from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
+
+WebBrowser.maybeCompleteAuthSession();
+
+const voiceRedirectUri = AuthSession.makeRedirectUri({
+  scheme: "vantahome",
+  path: "voice-link",
+});
 
 type IntegrationRowProps = {
   provider: IntegrationProvider;
@@ -19,7 +42,8 @@ type IntegrationRowProps = {
 };
 
 export default function SettingsScreen() {
-  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } = useResponsive(900);
+  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
+    useResponsive(900);
   const isWide = isTablet && isLandscape;
   const titleSize = Math.round((isTablet ? 30 : 26) * scale);
   const cardPad = Math.round((isTablet ? 20 : 16) * scale);
@@ -56,15 +80,46 @@ export default function SettingsScreen() {
   const setRealtime = useHomeStore((s) => s.setRealtime);
   const userName = useHomeStore((s) => s.userName);
   const navigation = useNavigation<any>();
+  const voiceFunctionsBase = useMemo(() => {
+    const explicit = process.env.EXPO_PUBLIC_VOICE_FUNCTIONS_URL?.trim();
+    if (explicit) return explicit.replace(/\/$/, "");
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
+    if (!supabaseUrl) return null;
+    const normalized = supabaseUrl.replace(/\/$/, "");
+    if (normalized.includes(".functions.supabase.co")) return normalized;
+    return normalized.replace(/\.supabase\.co$/, ".functions.supabase.co");
+  }, []);
+  const voiceAuthorizeUrl = voiceFunctionsBase
+    ? `${voiceFunctionsBase}/voice-authorize`
+    : null;
+  const voiceClientIds = useMemo<Record<IntegrationProvider, string>>(
+    () => ({
+      alexa: process.env.EXPO_PUBLIC_VOICE_ALEXA_CLIENT_ID?.trim() ?? "",
+      google: process.env.EXPO_PUBLIC_VOICE_GOOGLE_CLIENT_ID?.trim() ?? "",
+      homekit: "",
+      matter: "",
+    }),
+    [],
+  );
 
-  const homeTitle = useMemo(() => `${userName}'s Home`, [userName]);
-  const [connection, setConnection] = useState<{ status: ConnectionStatus; error?: string }>({
-    status: 'disconnected',
+  const homeTitle = useMemo(() => {
+    const custom = profile.homeName?.trim();
+    if (custom) return custom;
+    return userName ? `${userName}'s Home` : "Your Home";
+  }, [profile.homeName, userName]);
+  const [connection, setConnection] = useState<{
+    status: ConnectionStatus;
+    error?: string;
+  }>({
+    status: "disconnected",
   });
   const [cloudSyncLoading, setCloudSyncLoading] = useState(false);
   const isLinking = useMemo(
-    () => Object.values(integrations).some((integration) => integration.status === 'linking'),
-    [integrations]
+    () =>
+      Object.values(integrations).some(
+        (integration) => integration.status === "linking",
+      ),
+    [integrations],
   );
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -75,32 +130,46 @@ export default function SettingsScreen() {
     }
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 0.5, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ])
+        Animated.timing(pulse, {
+          toValue: 0.5,
+          duration: 500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
     );
     loop.start();
     return () => loop.stop();
   }, [isLinking, pulse]);
 
-  useEffect(
-    () => deviceClient.subscribeConnection((evt) => setConnection({ status: evt.status, error: evt.error })),
-    []
-  );
+  useEffect(() => {
+    const unsubscribe = deviceClient.subscribeConnection((evt) =>
+      setConnection({ status: evt.status, error: evt.error }),
+    );
+    return () => unsubscribe();
+  }, []);
 
   const realtimeActive = realtime.enabled && realtime.wsUrl.trim().length > 0;
   const realtimeStatus = useMemo(() => {
-    if (!realtime.enabled) return { label: 'Disabled', status: 'disabled' as const };
-    if (!realtimeActive) return { label: 'Add URL', status: 'offline' as const };
+    if (!realtime.enabled)
+      return { label: "Disabled", status: "disabled" as const };
+    if (!realtimeActive)
+      return { label: "Add URL", status: "offline" as const };
     switch (connection.status) {
-      case 'connected':
-        return { label: 'Connected', status: 'connected' as const };
-      case 'connecting':
-        return { label: 'Connecting', status: 'connecting' as const };
-      case 'error':
-        return { label: 'Error', status: 'error' as const };
+      case "connected":
+        return { label: "Connected", status: "connected" as const };
+      case "connecting":
+        return { label: "Connecting", status: "connecting" as const };
+      case "error":
+        return { label: "Error", status: "error" as const };
       default:
-        return { label: 'Offline', status: 'offline' as const };
+        return { label: "Offline", status: "offline" as const };
     }
   }, [connection.status, realtime.enabled, realtimeActive]);
 
@@ -112,33 +181,128 @@ export default function SettingsScreen() {
       await bootstrapHome(homeName);
       const events = devicesToStateEvents(devices);
       const result = await pushDeviceStateBatch(events);
-      Alert.alert('Cloud sync', `Synced ${result.updated} devices.`);
+      Alert.alert("Cloud sync", `Synced ${result.updated} devices.`);
     } catch (err: any) {
-      Alert.alert('Cloud sync failed', err?.message ?? 'Unable to sync to cloud.');
+      Alert.alert(
+        "Cloud sync failed",
+        err?.message ?? "Unable to sync to cloud.",
+      );
     } finally {
       setCloudSyncLoading(false);
     }
   };
 
-  const renderIntegration = ({ provider, label, description, icon }: IntegrationRowProps) => {
+  const handleVoiceLink = async (provider: IntegrationProvider) => {
+    if (provider !== "alexa" && provider !== "google") {
+      Alert.alert(
+        "Coming soon",
+        "This integration uses a future bridge and is not available yet.",
+      );
+      return;
+    }
+    if (!voiceAuthorizeUrl) {
+      Alert.alert(
+        "Missing configuration",
+        "Set EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_VOICE_FUNCTIONS_URL first.",
+      );
+      return;
+    }
+    const clientId = voiceClientIds[provider];
+    if (!clientId) {
+      Alert.alert(
+        "Missing configuration",
+        "Set the voice client ID in your .env file to enable linking.",
+      );
+      return;
+    }
+    if (integrations[provider]?.status === "linking") return;
+
+    const state = `${provider}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    setIntegrationStatus(provider, "linking");
+    try {
+      const authUrl = `${voiceAuthorizeUrl}?${new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: voiceRedirectUri,
+        response_type: "code",
+        state,
+      }).toString()}`;
+      const result = await WebBrowser.openAuthSessionAsync(
+        authUrl,
+        voiceRedirectUri,
+      );
+      if (result.type !== "success" || !result.url) {
+        setIntegrationStatus(provider, "not-linked");
+        return;
+      }
+
+      const params = new URL(result.url).searchParams;
+      const code = params.get("code");
+      const returnedState = params.get("state");
+      if (!code) {
+        setIntegrationStatus(provider, "not-linked");
+        Alert.alert("Linking failed", "No authorization code returned.");
+        return;
+      }
+      if (returnedState && returnedState !== state) {
+        setIntegrationStatus(provider, "not-linked");
+        Alert.alert("Linking failed", "Invalid state returned.");
+        return;
+      }
+
+      const accountLabel =
+        profile.email?.trim() || userName?.trim() || "Linked account";
+      linkIntegration(provider, accountLabel);
+    } catch (err: any) {
+      setIntegrationStatus(provider, "not-linked");
+      Alert.alert(
+        "Linking failed",
+        err?.message ?? "Unable to complete linking.",
+      );
+    }
+  };
+
+  const renderIntegration = ({
+    provider,
+    label,
+    description,
+    icon,
+  }: IntegrationRowProps) => {
     const state = integrations[provider];
-    const linked = state?.status === 'linked';
-    const linking = state?.status === 'linking';
+    const linked = state?.status === "linked";
+    const linking = state?.status === "linking";
 
     return (
-      <View style={[styles.integrationRow, { paddingVertical: integrationPad, borderRadius: integrationRadius }]} key={provider}>
+      <View
+        style={[
+          styles.integrationRow,
+          { paddingVertical: integrationPad, borderRadius: integrationRadius },
+        ]}
+        key={provider}
+      >
         <View style={styles.integrationLeft}>
           <View
             style={[
               styles.integrationIcon,
-              { width: integrationIconWrap, height: integrationIconWrap, borderRadius: Math.round(integrationIconWrap * 0.35) },
+              {
+                width: integrationIconWrap,
+                height: integrationIconWrap,
+                borderRadius: Math.round(integrationIconWrap * 0.35),
+              },
             ]}
           >
-            <Ionicons name={icon} size={integrationIconSize} color="rgba(60,60,80,0.9)" />
+            <Ionicons
+              name={icon}
+              size={integrationIconSize}
+              color="rgba(60,60,80,0.9)"
+            />
           </View>
           <View>
-            <Text style={[styles.integrationLabel, { fontSize: rowLabelSize }]}>{label}</Text>
-            <Text style={[styles.integrationSub, { fontSize: rowValueSize }]}>{description}</Text>
+            <Text style={[styles.integrationLabel, { fontSize: rowLabelSize }]}>
+              {label}
+            </Text>
+            <Text style={[styles.integrationSub, { fontSize: rowValueSize }]}>
+              {description}
+            </Text>
           </View>
         </View>
 
@@ -147,12 +311,22 @@ export default function SettingsScreen() {
             style={[
               styles.statusPill,
               { height: statusHeight, borderRadius: statusRadius },
-              linked ? styles.statusOn : linking ? styles.statusLinking : styles.statusOff,
+              linked
+                ? styles.statusOn
+                : linking
+                  ? styles.statusLinking
+                  : styles.statusOff,
               linking && { opacity: pulse },
             ]}
           >
-            <Text style={[styles.statusText, { fontSize: rowValueSize }, linked ? styles.statusTextOn : styles.statusTextOff]}>
-              {linked ? 'Linked' : linking ? 'Linking…' : 'Not linked'}
+            <Text
+              style={[
+                styles.statusText,
+                { fontSize: rowValueSize },
+                linked ? styles.statusTextOn : styles.statusTextOff,
+              ]}
+            >
+              {linked ? "Linked" : linking ? "Linking…" : "Not linked"}
             </Text>
           </Animated.View>
 
@@ -161,25 +335,46 @@ export default function SettingsScreen() {
               <>
                 <Pressable
                   onPress={() => resyncIntegration(provider)}
-                  style={[styles.secondaryBtn, { width: buttonSize, height: buttonSize, borderRadius: Math.round(buttonSize * 0.35) }]}
+                  style={[
+                    styles.secondaryBtn,
+                    {
+                      width: buttonSize,
+                      height: buttonSize,
+                      borderRadius: Math.round(buttonSize * 0.35),
+                    },
+                  ]}
                   hitSlop={10}
                 >
-                  <Ionicons name="refresh" size={Math.round(16 * scale)} color="rgba(60,60,80,0.9)" />
+                  <Ionicons
+                    name="refresh"
+                    size={Math.round(16 * scale)}
+                    color="rgba(60,60,80,0.9)"
+                  />
                 </Pressable>
                 <Pressable
                   onPress={() => unlinkIntegration(provider)}
-                  style={[styles.secondaryBtn, { width: buttonSize, height: buttonSize, borderRadius: Math.round(buttonSize * 0.35) }]}
+                  style={[
+                    styles.secondaryBtn,
+                    {
+                      width: buttonSize,
+                      height: buttonSize,
+                      borderRadius: Math.round(buttonSize * 0.35),
+                    },
+                  ]}
                   hitSlop={10}
                 >
-                  <Ionicons name="close" size={Math.round(16 * scale)} color="rgba(60,60,80,0.9)" />
+                  <Ionicons
+                    name="close"
+                    size={Math.round(16 * scale)}
+                    color="rgba(60,60,80,0.9)"
+                  />
                 </Pressable>
               </>
             ) : (
               <Pressable
                 onPress={() => {
                   if (linking) return;
-                  setIntegrationStatus(provider, 'linking');
-                  setTimeout(() => linkIntegration(provider, 'Demo Account'), 900);
+                  void handleVoiceLink(provider);
                 }}
                 style={[
                   styles.primaryBtn,
@@ -188,8 +383,10 @@ export default function SettingsScreen() {
                 ]}
                 hitSlop={10}
               >
-                <Text style={[styles.primaryBtnText, { fontSize: rowValueSize }]}>
-                  {linking ? 'Linking…' : 'Mock link'}
+                <Text
+                  style={[styles.primaryBtnText, { fontSize: rowValueSize }]}
+                >
+                  {linking ? "Linking…" : "Link account"}
                 </Text>
               </Pressable>
             )}
@@ -200,7 +397,10 @@ export default function SettingsScreen() {
   };
 
   return (
-    <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={styles.root}>
+    <LinearGradient
+      colors={[theme.colors.bg1, theme.colors.bg0]}
+      style={styles.root}
+    >
       <BackgroundLines />
 
       <ScrollView
@@ -209,87 +409,152 @@ export default function SettingsScreen() {
           {
             paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: topPad,
-            paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 120) * scale),
+            paddingBottom: Math.round(
+              (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
+            ),
           },
         ]}
       >
-        <View style={{ width: contentWidth, paddingHorizontal: isTablet ? 0 : gutter }}>
+        <View
+          style={{
+            width: contentWidth,
+            paddingHorizontal: isTablet ? 0 : gutter,
+          }}
+        >
           <Text style={[styles.h1, { fontSize: titleSize }]}>Settings</Text>
 
-          <View style={[styles.cardsGrid, isWide && { flexDirection: 'row', flexWrap: 'wrap', gap: gridGap }]}>
+          <View
+            style={[
+              styles.cardsGrid,
+              isWide && {
+                flexDirection: "row",
+                flexWrap: "wrap",
+                gap: gridGap,
+              },
+            ]}
+          >
             <View
               style={[
                 styles.card,
-                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+                {
+                  padding: cardPad,
+                  borderRadius: cardRadius,
+                  width: isWide ? (contentWidth - gridGap) / 2 : "100%",
+                },
               ]}
             >
-              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Voice & Integrations</Text>
-            {renderIntegration({
-              provider: 'alexa',
-              label: 'Amazon Alexa',
-              description: 'Control devices with Alexa voice routines.',
-              icon: 'logo-amazon',
-            })}
-            {renderIntegration({
-              provider: 'google',
-              label: 'Google Home',
-              description: 'Use Assistant to trigger scenes & devices.',
-              icon: 'logo-google',
-            })}
-            {renderIntegration({
-              provider: 'homekit',
-              label: 'Apple HomeKit',
-              description: 'Expose devices to Home via a bridge (stub).',
-              icon: 'logo-apple',
-            })}
-            {renderIntegration({
-              provider: 'matter',
-              label: 'Matter Bridge',
-              description: 'Multi-ecosystem bridge (stub).',
-              icon: 'link-outline',
-            })}
+              <Text
+                style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
+              >
+                Voice & Integrations
+              </Text>
+              {renderIntegration({
+                provider: "alexa",
+                label: "Amazon Alexa",
+                description: "Control devices with Alexa voice routines.",
+                icon: "logo-amazon",
+              })}
+              {renderIntegration({
+                provider: "google",
+                label: "Google Home",
+                description: "Use Assistant to trigger scenes & devices.",
+                icon: "logo-google",
+              })}
+              {renderIntegration({
+                provider: "homekit",
+                label: "Apple HomeKit",
+                description: "Expose devices to Home via a bridge (stub).",
+                icon: "logo-apple",
+              })}
+              {renderIntegration({
+                provider: "matter",
+                label: "Matter Bridge",
+                description: "Multi-ecosystem bridge (stub).",
+                icon: "link-outline",
+              })}
             </View>
 
             <View
               style={[
                 styles.card,
-                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+                {
+                  padding: cardPad,
+                  borderRadius: cardRadius,
+                  width: isWide ? (contentWidth - gridGap) / 2 : "100%",
+                },
               ]}
             >
-              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Home Profile</Text>
+              <Text
+                style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
+              >
+                Home Profile
+              </Text>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Home</Text>
-                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>{homeTitle}</Text>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  Home
+                </Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>
+                  {homeTitle}
+                </Text>
               </View>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Rooms</Text>
-                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>{roomsCount}</Text>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  Rooms
+                </Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>
+                  {roomsCount}
+                </Text>
               </View>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Devices</Text>
-                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>{devicesCount}</Text>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  Devices
+                </Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>
+                  {devicesCount}
+                </Text>
               </View>
               <Pressable
                 style={[
                   styles.secondaryWideBtn,
-                  { marginTop: 12, height: wideBtnHeight, borderRadius: wideBtnRadius },
+                  {
+                    marginTop: 12,
+                    height: wideBtnHeight,
+                    borderRadius: wideBtnRadius,
+                  },
                 ]}
-                onPress={() => navigation.navigate('Profile')}
+                onPress={() => navigation.navigate("Profile")}
               >
-                <Ionicons name="person" size={Math.round(16 * scale)} color="rgba(60,60,80,0.9)" />
-                <Text style={[styles.secondaryWideBtnText, { fontSize: rowValueSize }]}>Edit profile</Text>
+                <Ionicons
+                  name="person"
+                  size={Math.round(16 * scale)}
+                  color="rgba(60,60,80,0.9)"
+                />
+                <Text
+                  style={[
+                    styles.secondaryWideBtnText,
+                    { fontSize: rowValueSize },
+                  ]}
+                >
+                  Edit profile
+                </Text>
               </Pressable>
               <Pressable
                 style={[
                   styles.primaryBtn,
-                  { marginTop: 12, height: wideBtnHeight, borderRadius: wideBtnRadius },
+                  {
+                    marginTop: 12,
+                    height: wideBtnHeight,
+                    borderRadius: wideBtnRadius,
+                  },
                   cloudSyncLoading && styles.primaryBtnDisabled,
                 ]}
                 onPress={handleCloudSync}
                 disabled={cloudSyncLoading}
               >
-                <Text style={[styles.primaryBtnText, { fontSize: rowValueSize }]}>
-                  {cloudSyncLoading ? 'Syncing…' : 'Resync to cloud'}
+                <Text
+                  style={[styles.primaryBtnText, { fontSize: rowValueSize }]}
+                >
+                  {cloudSyncLoading ? "Syncing…" : "Resync to cloud"}
                 </Text>
               </Pressable>
             </View>
@@ -297,65 +562,116 @@ export default function SettingsScreen() {
             <View
               style={[
                 styles.card,
-                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+                {
+                  padding: cardPad,
+                  borderRadius: cardRadius,
+                  width: isWide ? (contentWidth - gridGap) / 2 : "100%",
+                },
               ]}
             >
-              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Preferences</Text>
+              <Text
+                style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
+              >
+                Preferences
+              </Text>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Haptics</Text>
-              <Switch
-                value={prefs.haptics}
-                onValueChange={(v) => setPreferences({ haptics: v })}
-                thumbColor={prefs.haptics ? theme.colors.accent : 'rgba(255,255,255,0.8)'}
-                trackColor={{ true: 'rgba(180,107,255,0.45)', false: 'rgba(255,255,255,0.24)' }}
-                style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
-              />
-            </View>
-            <View style={styles.row}>
-              <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Notifications</Text>
-              <Switch
-                value={prefs.notifications}
-                onValueChange={(v) => setPreferences({ notifications: v })}
-                thumbColor={prefs.notifications ? theme.colors.accent : 'rgba(255,255,255,0.8)'}
-                trackColor={{ true: 'rgba(180,107,255,0.45)', false: 'rgba(255,255,255,0.24)' }}
-                style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
-              />
-            </View>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  Haptics
+                </Text>
+                <Switch
+                  value={prefs.haptics}
+                  onValueChange={(v) => setPreferences({ haptics: v })}
+                  thumbColor={
+                    prefs.haptics
+                      ? theme.colors.accent
+                      : "rgba(255,255,255,0.8)"
+                  }
+                  trackColor={{
+                    true: "rgba(180,107,255,0.45)",
+                    false: "rgba(255,255,255,0.24)",
+                  }}
+                  style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
+                />
+              </View>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Appearance</Text>
-                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>Purple</Text>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  Notifications
+                </Text>
+                <Switch
+                  value={prefs.notifications}
+                  onValueChange={(v) => setPreferences({ notifications: v })}
+                  thumbColor={
+                    prefs.notifications
+                      ? theme.colors.accent
+                      : "rgba(255,255,255,0.8)"
+                  }
+                  trackColor={{
+                    true: "rgba(180,107,255,0.45)",
+                    false: "rgba(255,255,255,0.24)",
+                  }}
+                  style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
+                />
+              </View>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  Appearance
+                </Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>
+                  Purple
+                </Text>
               </View>
             </View>
 
             <View
               style={[
                 styles.card,
-                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+                {
+                  padding: cardPad,
+                  borderRadius: cardRadius,
+                  width: isWide ? (contentWidth - gridGap) / 2 : "100%",
+                },
               ]}
             >
-              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Realtime (Dev)</Text>
-              <Text style={[styles.sectionSub, { fontSize: rowValueSize }]}>Connect to a local WebSocket bridge.</Text>
+              <Text
+                style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
+              >
+                Realtime (Dev)
+              </Text>
+              <Text style={[styles.sectionSub, { fontSize: rowValueSize }]}>
+                Connect to a local WebSocket bridge.
+              </Text>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Enable realtime</Text>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  Enable realtime
+                </Text>
                 <Switch
                   value={realtime.enabled}
                   onValueChange={(v) => setRealtime({ enabled: v })}
-                  thumbColor={realtime.enabled ? theme.colors.accent : 'rgba(255,255,255,0.8)'}
-                  trackColor={{ true: 'rgba(180,107,255,0.45)', false: 'rgba(255,255,255,0.24)' }}
+                  thumbColor={
+                    realtime.enabled
+                      ? theme.colors.accent
+                      : "rgba(255,255,255,0.8)"
+                  }
+                  trackColor={{
+                    true: "rgba(180,107,255,0.45)",
+                    false: "rgba(255,255,255,0.24)",
+                  }}
                   style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
                 />
               </View>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>Status</Text>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  Status
+                </Text>
                 <View
                   style={[
                     styles.statusPill,
                     { height: statusHeight, borderRadius: statusRadius },
-                    realtimeStatus.status === 'connected'
+                    realtimeStatus.status === "connected"
                       ? styles.statusOn
-                      : realtimeStatus.status === 'connecting'
+                      : realtimeStatus.status === "connecting"
                         ? styles.statusLinking
-                        : realtimeStatus.status === 'error'
+                        : realtimeStatus.status === "error"
                           ? styles.statusError
                           : styles.statusOff,
                   ]}
@@ -364,20 +680,27 @@ export default function SettingsScreen() {
                     style={[
                       styles.statusText,
                       { fontSize: rowValueSize },
-                      realtimeStatus.status === 'connected' ? styles.statusTextOn : styles.statusTextOff,
+                      realtimeStatus.status === "connected"
+                        ? styles.statusTextOn
+                        : styles.statusTextOff,
                     ]}
                   >
                     {realtimeStatus.label}
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>WebSocket endpoint</Text>
+              <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                WebSocket endpoint
+              </Text>
               <TextInput
                 value={realtime.wsUrl}
                 onChangeText={(value) => setRealtime({ wsUrl: value })}
                 placeholder="ws://localhost:8088"
                 placeholderTextColor="rgba(255,255,255,0.45)"
-                style={[styles.realtimeInput, { height: inputHeight, borderRadius: inputRadius }]}
+                style={[
+                  styles.realtimeInput,
+                  { height: inputHeight, borderRadius: inputRadius },
+                ]}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
@@ -386,23 +709,50 @@ export default function SettingsScreen() {
             <View
               style={[
                 styles.card,
-                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gridGap) / 2 : '100%' },
+                {
+                  padding: cardPad,
+                  borderRadius: cardRadius,
+                  width: isWide ? (contentWidth - gridGap) / 2 : "100%",
+                },
               ]}
             >
-              <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Support</Text>
+              <Text
+                style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
+              >
+                Support
+              </Text>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>App Version</Text>
-                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>1.0.0 (stub)</Text>
+                <Text style={[styles.rowLabel, { fontSize: rowLabelSize }]}>
+                  App Version
+                </Text>
+                <Text style={[styles.rowValue, { fontSize: rowValueSize }]}>
+                  1.0.0 (stub)
+                </Text>
               </View>
               <Pressable
                 style={[
                   styles.secondaryWideBtn,
-                  { marginTop: 12, height: wideBtnHeight, borderRadius: wideBtnRadius },
+                  {
+                    marginTop: 12,
+                    height: wideBtnHeight,
+                    borderRadius: wideBtnRadius,
+                  },
                 ]}
                 onPress={() => {}}
               >
-                <Ionicons name="mail" size={Math.round(16 * scale)} color="rgba(60,60,80,0.9)" />
-                <Text style={[styles.secondaryWideBtnText, { fontSize: rowValueSize }]}>Send feedback</Text>
+                <Ionicons
+                  name="mail"
+                  size={Math.round(16 * scale)}
+                  color="rgba(60,60,80,0.9)"
+                />
+                <Text
+                  style={[
+                    styles.secondaryWideBtnText,
+                    { fontSize: rowValueSize },
+                  ]}
+                >
+                  Send feedback
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -414,8 +764,13 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { alignItems: 'center' },
-  h1: { color: theme.colors.text, fontSize: 28, fontWeight: '900', marginBottom: 12 },
+  content: { alignItems: "center" },
+  h1: {
+    color: theme.colors.text,
+    fontSize: 28,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
   cardsGrid: { gap: 12 },
 
   card: {
@@ -423,108 +778,126 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
-  sectionTitle: { color: theme.colors.text, fontWeight: '900', marginBottom: 12 },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
 
   integrationRow: {
     paddingVertical: 12,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.10)",
     paddingHorizontal: 12,
     marginBottom: 10,
   },
-  integrationLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  integrationLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   integrationIcon: {
     width: 34,
     height: 34,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  integrationLabel: { color: 'rgba(255,255,255,0.95)', fontWeight: '900' },
-  integrationSub: { color: theme.colors.subtext, fontWeight: '700', marginTop: 2 },
+  integrationLabel: { color: "rgba(255,255,255,0.95)", fontWeight: "900" },
+  integrationSub: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
+    marginTop: 2,
+  },
 
-  integrationActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  integrationActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
   statusPill: {
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   statusOn: {
-    backgroundColor: 'rgba(180,107,255,0.22)',
-    borderColor: 'rgba(180,107,255,0.35)',
+    backgroundColor: "rgba(180,107,255,0.22)",
+    borderColor: "rgba(180,107,255,0.35)",
   },
   statusOff: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.16)",
   },
   statusLinking: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderColor: "rgba(255,255,255,0.20)",
   },
   statusError: {
-    backgroundColor: 'rgba(255,120,140,0.18)',
-    borderColor: 'rgba(255,120,140,0.35)',
+    backgroundColor: "rgba(255,120,140,0.18)",
+    borderColor: "rgba(255,120,140,0.35)",
   },
-  statusText: { fontWeight: '900', fontSize: 12 },
+  statusText: { fontWeight: "900", fontSize: 12 },
   statusTextOn: { color: theme.colors.text },
   statusTextOff: { color: theme.colors.subtext },
   realtimeInput: {
     marginTop: 8,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: "rgba(255,255,255,0.14)",
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: "rgba(255,255,255,0.22)",
     color: theme.colors.text,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
-  integrationButtons: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  integrationButtons: { flexDirection: "row", alignItems: "center", gap: 10 },
   primaryBtn: {
     height: 40,
     borderRadius: 16,
     paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(180,107,255,0.85)',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(180,107,255,0.85)",
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.30)',
+    borderColor: "rgba(255,255,255,0.30)",
   },
   primaryBtnDisabled: { opacity: 0.7 },
-  primaryBtnText: { color: '#fff', fontWeight: '900', fontSize: 13 },
+  primaryBtnText: { color: "#fff", fontWeight: "900", fontSize: 13 },
   secondaryBtn: {
     width: 40,
     height: 40,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
-  rowLabel: { color: theme.colors.text, fontWeight: '800' },
-  rowValue: { color: theme.colors.subtext, fontWeight: '800' },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+  },
+  rowLabel: { color: theme.colors.text, fontWeight: "800" },
+  rowValue: { color: theme.colors.subtext, fontWeight: "800" },
 
   secondaryWideBtn: {
     height: 44,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
     gap: 8,
   },
-  secondaryWideBtnText: { color: 'rgba(255,255,255,0.92)', fontWeight: '900' },
+  secondaryWideBtnText: { color: "rgba(255,255,255,0.92)", fontWeight: "900" },
 });

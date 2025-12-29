@@ -1,10 +1,10 @@
-import React from 'react';
+import React from "react";
 import {
   Pressable as RNPressable,
   type PressableProps,
   type StyleProp,
   type ViewStyle,
-} from 'react-native';
+} from "react-native";
 
 type Props = PressableProps & {
   pressedStyle?: StyleProp<ViewStyle>;
@@ -13,10 +13,15 @@ type Props = PressableProps & {
 
 const DEFAULT_PRESSED_STYLE: ViewStyle = { opacity: 0.75 };
 
-export default function Pressable({ style, pressedStyle, disablePressedStyle, ...props }: Props) {
+export default function Pressable({
+  style,
+  pressedStyle,
+  disablePressedStyle,
+  ...props
+}: Props) {
   const applyPressedStyle = !disablePressedStyle;
 
-  if (typeof style === 'function') {
+  if (typeof style === "function") {
     return (
       <RNPressable
         {...props}

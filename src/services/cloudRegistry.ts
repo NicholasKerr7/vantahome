@@ -1,8 +1,8 @@
-import type { Device } from '../store/useHomeStore';
-import { supabase } from './supabaseClient';
+import type { Device } from "../store/useHomeStore";
+import { supabase } from "./supabaseClient";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 export type DeviceStateEvent = {
   deviceId: string;
@@ -11,7 +11,7 @@ export type DeviceStateEvent = {
 
 function assertSupabaseReady() {
   if (!supabase || !supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase is not configured.');
+    throw new Error("Supabase is not configured.");
   }
 }
 
@@ -20,40 +20,57 @@ async function getAccessToken() {
   const { data, error } = await supabase!.auth.getSession();
   if (error) throw error;
   const token = data.session?.access_token;
-  if (!token) throw new Error('Missing auth session.');
+  if (!token) throw new Error("Missing auth session.");
   return token;
 }
 
-async function callEdge<T>(path: string, payload: unknown, method = 'POST'): Promise<T> {
+async function callEdge<T>(
+  path: string,
+  payload: unknown,
+  method = "POST",
+): Promise<T> {
   const token = await getAccessToken();
   const response = await fetch(`${supabaseUrl}/functions/v1/${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
       apikey: supabaseAnonKey,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = (data as { error?: string })?.error ?? 'Request failed.';
+    const message = (data as { error?: string })?.error ?? "Request failed.";
     throw new Error(message);
   }
   return data as T;
 }
 
 export async function bootstrapHome(name: string) {
-  return callEdge<{ home: { id: string; name: string } }>('home-bootstrap', { name });
+  return callEdge<{ home: { id: string; name: string } }>("home-bootstrap", {
+    name,
+  });
 }
 
-export async function pushDeviceState(deviceId: string, state: Record<string, unknown>) {
-  return callEdge<{ state: { device_id: string; updated_at: string } }>('device-state', { deviceId, state }, 'POST');
+export async function pushDeviceState(
+  deviceId: string,
+  state: Record<string, unknown>,
+) {
+  return callEdge<{ state: { device_id: string; updated_at: string } }>(
+    "device-state",
+    { deviceId, state },
+    "POST",
+  );
 }
 
 export async function pushDeviceStateBatch(events: DeviceStateEvent[]) {
-  return callEdge<{ updated: number }>('device-state-batch', { events }, 'POST');
+  return callEdge<{ updated: number }>(
+    "device-state-batch",
+    { events },
+    "POST",
+  );
 }
 
 export function deviceToStateEvent(device: Device): DeviceStateEvent {

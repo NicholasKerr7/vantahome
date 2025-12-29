@@ -1,34 +1,53 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import Pressable from '../components/Pressable';
-import { LinearGradient } from 'expo-linear-gradient';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { RootStackParamList } from '../app/AppNavigator';
-import GradientText from '../components/GradientText';
-import VantaHomeMark from '../components/VantaHomeMark';
-import BackgroundLines from '../components/BackgroundLines';
-import { theme } from '../theme/theme';
-import { useResponsive } from '../theme/layout';
+import React from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import Pressable from "../components/Pressable";
+import { LinearGradient } from "expo-linear-gradient";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { RootStackParamList } from "../app/AppNavigator";
+import GradientText from "../components/GradientText";
+import VantaHomeMark from "../components/VantaHomeMark";
+import BackgroundLines from "../components/BackgroundLines";
+import { theme } from "../theme/theme";
+import { useResponsive } from "../theme/layout";
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
+type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
 export default function OnboardingScreen({ navigation }: Props) {
-  const { contentWidth, gutter, isTablet, isLandscape, scale, height } = useResponsive(900);
+  const { contentWidth, gutter, isTablet, isLandscape, scale, height } =
+    useResponsive(900);
   const isWide = isTablet && isLandscape;
   const isPortraitTablet = isTablet && !isLandscape;
   const isCompact = !isTablet && height < 720;
   const cardWidth = Math.min(
     contentWidth - gutter * 2,
-    isTablet ? (isLandscape ? 560 : isPortraitTablet ? 620 : 520) : 420
+    isTablet ? (isLandscape ? 560 : isPortraitTablet ? 620 : 520) : 420,
   );
   const cardHeight = Math.round(
-    (isTablet ? (isLandscape ? 280 : isPortraitTablet ? 320 : 280) : isCompact ? 200 : 216) * scale
+    (isTablet
+      ? isLandscape
+        ? 280
+        : isPortraitTablet
+          ? 320
+          : 280
+      : isCompact
+        ? 200
+        : 216) * scale,
   );
   const contentPadTop = Math.round(
-    (isTablet ? (isLandscape ? 64 : isPortraitTablet ? 70 : 86) : isCompact ? 58 : 64) * scale
+    (isTablet
+      ? isLandscape
+        ? 64
+        : isPortraitTablet
+          ? 70
+          : 86
+      : isCompact
+        ? 58
+        : 64) * scale,
   );
-  const contentPadBottom = Math.round((isTablet ? 64 : isCompact ? 36 : 42) * scale);
+  const contentPadBottom = Math.round(
+    (isTablet ? 64 : isCompact ? 36 : 42) * scale,
+  );
   const brandSize = Math.round((isTablet ? 24 : 22) * scale);
   const statusSize = Math.round((isTablet ? 13 : 12) * scale);
   const kickerSize = Math.round((isTablet ? 13 : 12) * scale);
@@ -40,18 +59,22 @@ export default function OnboardingScreen({ navigation }: Props) {
   const sceneTextSize = Math.round((isTablet ? 13 : 12) * scale);
   const ctaHeight = Math.round((isTablet ? 60 : 56) * scale);
   const ctaTextSize = Math.round((isTablet ? 16 : 15) * scale);
-  const heroGap = Math.round((isTablet ? (isPortraitTablet ? 32 : 28) : isCompact ? 14 : 18) * scale);
+  const heroGap = Math.round(
+    (isTablet ? (isPortraitTablet ? 32 : 28) : isCompact ? 14 : 18) * scale,
+  );
   const mainGap = Math.round((isTablet ? 26 : isCompact ? 18 : 20) * scale);
   const heroRowGap = Math.round((isTablet ? 22 : isCompact ? 14 : 16) * scale);
   const heroStackGap = Math.round((isTablet ? 8 : isCompact ? 6 : 7) * scale);
   const heroSubheadTop = Math.round((isTablet ? 8 : isCompact ? 4 : 6) * scale);
   const previewPad = Math.round((isTablet ? 18 : isCompact ? 14 : 16) * scale);
   const deviceRowGap = Math.round((isTablet ? 10 : isCompact ? 8 : 10) * scale);
-  const deviceRowTop = Math.round((isTablet ? 16 : isCompact ? 12 : 14) * scale);
+  const deviceRowTop = Math.round(
+    (isTablet ? 16 : isCompact ? 12 : 14) * scale,
+  );
   const sceneRowTop = Math.round((isTablet ? 14 : isCompact ? 10 : 12) * scale);
   return (
     <LinearGradient
-      colors={['#190A3A', theme.colors.bg0, theme.colors.bg1]}
+      colors={["#190A3A", theme.colors.bg0, theme.colors.bg1]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.root}
@@ -67,13 +90,27 @@ export default function OnboardingScreen({ navigation }: Props) {
             paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: contentPadTop,
             paddingBottom: contentPadBottom,
-            justifyContent: 'space-between',
+            justifyContent: "space-between",
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.main, { width: contentWidth, gap: mainGap, paddingHorizontal: isTablet ? 0 : gutter }]}>
-          <View style={[styles.brandRow, isPortraitTablet && styles.brandRowPortrait]}>
+        <View
+          style={[
+            styles.main,
+            {
+              width: contentWidth,
+              gap: mainGap,
+              paddingHorizontal: isTablet ? 0 : gutter,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.brandRow,
+              isPortraitTablet && styles.brandRowPortrait,
+            ]}
+          >
             <View
               style={[
                 styles.logoWrap,
@@ -87,10 +124,14 @@ export default function OnboardingScreen({ navigation }: Props) {
               <VantaHomeMark size={Math.round((isTablet ? 70 : 64) * scale)} />
             </View>
             <View>
-              <Text style={[styles.brand, { fontSize: brandSize }]}>VantaHome</Text>
+              <Text style={[styles.brand, { fontSize: brandSize }]}>
+                VantaHome
+              </Text>
               <View style={styles.statusRow}>
                 <View style={styles.statusDot} />
-                <Text style={[styles.statusText, { fontSize: statusSize }]}>Connected</Text>
+                <Text style={[styles.statusText, { fontSize: statusSize }]}>
+                  Connected
+                </Text>
               </View>
             </View>
           </View>
@@ -99,7 +140,11 @@ export default function OnboardingScreen({ navigation }: Props) {
             style={[
               styles.heroRow,
               { gap: heroRowGap },
-              isWide && { flexDirection: 'row', alignItems: 'center', gap: heroGap },
+              isWide && {
+                flexDirection: "row",
+                alignItems: "center",
+                gap: heroGap,
+              },
               isPortraitTablet && styles.heroRowPortrait,
             ]}
           >
@@ -111,16 +156,34 @@ export default function OnboardingScreen({ navigation }: Props) {
                 isPortraitTablet && styles.heroPortrait,
               ]}
             >
-              <Text style={[styles.kicker, { fontSize: kickerSize }, isPortraitTablet && styles.textCenter]}>
+              <Text
+                style={[
+                  styles.kicker,
+                  { fontSize: kickerSize },
+                  isPortraitTablet && styles.textCenter,
+                ]}
+              >
                 Smart living, orchestrated
               </Text>
-              <Text style={[styles.headline, { fontSize: headlineSize }, isPortraitTablet && styles.textCenter]}>
+              <Text
+                style={[
+                  styles.headline,
+                  { fontSize: headlineSize },
+                  isPortraitTablet && styles.textCenter,
+                ]}
+              >
                 Your home
               </Text>
               <GradientText
                 text="in sync."
-                colors={['#C9B7FF', '#7A5CFF'] as [string, string]}
-                textProps={{ style: [styles.headlineAccent, { fontSize: headlineSize }, isPortraitTablet && styles.textCenter] }}
+                colors={["#C9B7FF", "#7A5CFF"] as [string, string]}
+                textProps={{
+                  style: [
+                    styles.headlineAccent,
+                    { fontSize: headlineSize },
+                    isPortraitTablet && styles.textCenter,
+                  ],
+                }}
               />
               <Text
                 style={[
@@ -129,69 +192,158 @@ export default function OnboardingScreen({ navigation }: Props) {
                   isPortraitTablet && styles.subheadPortrait,
                 ]}
               >
-                Scenes, automations, and live control blended into one elegant dashboard.
+                Scenes, automations, and live control blended into one elegant
+                dashboard.
               </Text>
             </View>
 
             <View
               style={[
                 styles.previewWrap,
-                isWide && { flex: 1, alignItems: 'flex-end' },
+                isWide && { flex: 1, alignItems: "flex-end" },
                 isPortraitTablet && styles.previewWrapPortrait,
               ]}
             >
               <LinearGradient
-                colors={['rgba(255,255,255,0.18)', 'rgba(255,255,255,0.08)']}
+                colors={["rgba(255,255,255,0.18)", "rgba(255,255,255,0.08)"]}
                 start={{ x: 0.1, y: 0.1 }}
                 end={{ x: 0.9, y: 1 }}
                 style={[
                   styles.previewCard,
-                  { width: cardWidth, minHeight: cardHeight, padding: previewPad },
+                  {
+                    width: cardWidth,
+                    minHeight: cardHeight,
+                    padding: previewPad,
+                  },
                   isPortraitTablet && styles.previewCardPortrait,
                 ]}
               >
                 <View style={styles.markGhost}>
-                  <VantaHomeMark size={Math.round((isTablet ? 170 : 150) * scale)} />
+                  <VantaHomeMark
+                    size={Math.round((isTablet ? 170 : 150) * scale)}
+                  />
                 </View>
 
                 <View style={styles.previewHeader}>
                   <View>
-                    <Text style={[styles.previewTitle, { fontSize: previewTitleSize }]}>Living Room</Text>
-                    <Text style={[styles.previewSub, { fontSize: previewSubSize }]}>Movie Time is running</Text>
+                    <Text
+                      style={[
+                        styles.previewTitle,
+                        { fontSize: previewTitleSize },
+                      ]}
+                    >
+                      Living Room
+                    </Text>
+                    <Text
+                      style={[styles.previewSub, { fontSize: previewSubSize }]}
+                    >
+                      Movie Time is running
+                    </Text>
                   </View>
                   <View style={styles.livePill}>
                     <View style={styles.liveDot} />
-                    <Text style={[styles.liveText, { fontSize: sceneTextSize }]}>Live</Text>
+                    <Text
+                      style={[styles.liveText, { fontSize: sceneTextSize }]}
+                    >
+                      Live
+                    </Text>
                   </View>
                 </View>
 
-                <View style={[styles.deviceRow, { gap: deviceRowGap, marginTop: deviceRowTop }]}>
+                <View
+                  style={[
+                    styles.deviceRow,
+                    { gap: deviceRowGap, marginTop: deviceRowTop },
+                  ]}
+                >
                   <View style={styles.devicePill}>
-                    <Ionicons name="bulb" size={Math.round(16 * scale)} color="#FFD36E" />
-                    <Text style={[styles.deviceText, { fontSize: deviceTextSize }]}>Lights 40%</Text>
+                    <Ionicons
+                      name="bulb"
+                      size={Math.round(16 * scale)}
+                      color="#FFD36E"
+                    />
+                    <Text
+                      style={[styles.deviceText, { fontSize: deviceTextSize }]}
+                    >
+                      Lights 40%
+                    </Text>
                   </View>
                   <View style={styles.devicePill}>
-                    <Ionicons name="snow" size={Math.round(16 * scale)} color="#C9E7FF" />
-                    <Text style={[styles.deviceText, { fontSize: deviceTextSize }]}>AC 22C</Text>
+                    <Ionicons
+                      name="snow"
+                      size={Math.round(16 * scale)}
+                      color="#C9E7FF"
+                    />
+                    <Text
+                      style={[styles.deviceText, { fontSize: deviceTextSize }]}
+                    >
+                      AC 22C
+                    </Text>
                   </View>
                   <View style={styles.devicePill}>
-                    <Ionicons name="tv" size={Math.round(16 * scale)} color="#A9B4FF" />
-                    <Text style={[styles.deviceText, { fontSize: deviceTextSize }]}>TV Vol 18</Text>
+                    <Ionicons
+                      name="tv"
+                      size={Math.round(16 * scale)}
+                      color="#A9B4FF"
+                    />
+                    <Text
+                      style={[styles.deviceText, { fontSize: deviceTextSize }]}
+                    >
+                      TV Vol 18
+                    </Text>
                   </View>
                 </View>
 
-                <View style={[styles.sceneRow, { gap: deviceRowGap, marginTop: sceneRowTop }]}>
+                <View
+                  style={[
+                    styles.sceneRow,
+                    { gap: deviceRowGap, marginTop: sceneRowTop },
+                  ]}
+                >
                   <View style={styles.sceneChip}>
-                    <Ionicons name="sparkles" size={Math.round(14 * scale)} color="#FFFFFF" />
-                    <Text style={[styles.sceneChipText, { fontSize: sceneTextSize }]}>6 Scenes</Text>
+                    <Ionicons
+                      name="sparkles"
+                      size={Math.round(14 * scale)}
+                      color="#FFFFFF"
+                    />
+                    <Text
+                      style={[
+                        styles.sceneChipText,
+                        { fontSize: sceneTextSize },
+                      ]}
+                    >
+                      6 Scenes
+                    </Text>
                   </View>
                   <View style={styles.sceneChip}>
-                    <Ionicons name="flash" size={Math.round(14 * scale)} color="#FFFFFF" />
-                    <Text style={[styles.sceneChipText, { fontSize: sceneTextSize }]}>3 Automations</Text>
+                    <Ionicons
+                      name="flash"
+                      size={Math.round(14 * scale)}
+                      color="#FFFFFF"
+                    />
+                    <Text
+                      style={[
+                        styles.sceneChipText,
+                        { fontSize: sceneTextSize },
+                      ]}
+                    >
+                      3 Automations
+                    </Text>
                   </View>
                   <View style={styles.sceneChip}>
-                    <Ionicons name="leaf" size={Math.round(14 * scale)} color="#FFFFFF" />
-                    <Text style={[styles.sceneChipText, { fontSize: sceneTextSize }]}>Energy -12%</Text>
+                    <Ionicons
+                      name="leaf"
+                      size={Math.round(14 * scale)}
+                      color="#FFFFFF"
+                    />
+                    <Text
+                      style={[
+                        styles.sceneChipText,
+                        { fontSize: sceneTextSize },
+                      ]}
+                    >
+                      Energy -12%
+                    </Text>
                   </View>
                 </View>
               </LinearGradient>
@@ -199,24 +351,38 @@ export default function OnboardingScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <View style={{ width: contentWidth, paddingHorizontal: isTablet ? 0 : gutter }}>
+        <View
+          style={{
+            width: contentWidth,
+            paddingHorizontal: isTablet ? 0 : gutter,
+          }}
+        >
           <View style={styles.ctaBlock}>
             <Pressable
               style={styles.ctaWrap}
               pressedStyle={styles.ctaWrapPressed}
-              onPress={() => navigation.replace('Main')}
+              onPress={() => navigation.replace("Main")}
             >
               <LinearGradient
-                colors={['#B08CFF', '#6B3CFF']}
+                colors={["#B08CFF", "#6B3CFF"]}
                 start={{ x: 0.1, y: 0.2 }}
                 end={{ x: 0.9, y: 0.9 }}
                 style={[styles.cta, { height: ctaHeight }]}
               >
-                <Text style={[styles.ctaText, { fontSize: ctaTextSize }]}>Enter VantaHome</Text>
-                <Ionicons name="arrow-forward" size={Math.round(16 * scale)} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                <Text style={[styles.ctaText, { fontSize: ctaTextSize }]}>
+                  Enter VantaHome
+                </Text>
+                <Ionicons
+                  name="arrow-forward"
+                  size={Math.round(16 * scale)}
+                  color="#FFFFFF"
+                  style={{ marginLeft: 8 }}
+                />
               </LinearGradient>
             </Pressable>
-            <Text style={[styles.ctaHint, { fontSize: sceneTextSize }]}>Control devices and scenes in seconds.</Text>
+            <Text style={[styles.ctaHint, { fontSize: sceneTextSize }]}>
+              Control devices and scenes in seconds.
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -228,148 +394,176 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
     flexGrow: 1,
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   main: { gap: 26 },
   glowTop: {
-    position: 'absolute',
+    position: "absolute",
     top: -120,
     right: -140,
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: 'rgba(122,92,255,0.35)',
+    backgroundColor: "rgba(122,92,255,0.35)",
   },
   glowBottom: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -160,
     left: -120,
     width: 360,
     height: 360,
     borderRadius: 180,
-    backgroundColor: 'rgba(180,107,255,0.25)',
+    backgroundColor: "rgba(180,107,255,0.25)",
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  brandRowPortrait: { justifyContent: 'center' },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  brandRowPortrait: { justifyContent: "center" },
   logoWrap: {
     width: 70,
     height: 70,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  brand: { color: '#FFFFFF', fontWeight: '900', fontSize: 22, letterSpacing: -0.4 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  brand: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 22,
+    letterSpacing: -0.4,
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+  },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#7CFFB2',
+    backgroundColor: "#7CFFB2",
   },
-  statusText: { color: 'rgba(255,255,255,0.72)', fontWeight: '700', fontSize: 12 },
+  statusText: {
+    color: "rgba(255,255,255,0.72)",
+    fontWeight: "700",
+    fontSize: 12,
+  },
   heroRow: { gap: 22 },
-  heroRowPortrait: { alignItems: 'center' },
-  hero: { alignItems: 'flex-start', gap: 6 },
-  heroPortrait: { alignItems: 'center' },
-  textCenter: { textAlign: 'center' },
+  heroRowPortrait: { alignItems: "center" },
+  hero: { alignItems: "flex-start", gap: 6 },
+  heroPortrait: { alignItems: "center" },
+  textCenter: { textAlign: "center" },
   kicker: {
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1.2,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: '800',
+    color: "rgba(255,255,255,0.6)",
+    fontWeight: "800",
   },
-  headline: { fontSize: 40, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.8 },
-  headlineAccent: { fontSize: 40, fontWeight: '900', letterSpacing: -0.8 },
+  headline: {
+    fontSize: 40,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: -0.8,
+  },
+  headlineAccent: { fontSize: 40, fontWeight: "900", letterSpacing: -0.8 },
   subhead: {
     marginTop: 8,
     maxWidth: 320,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '600',
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "600",
   },
-  subheadPortrait: { maxWidth: 420, textAlign: 'center' },
-  previewWrap: { alignItems: 'center' },
-  previewWrapPortrait: { alignItems: 'center' },
+  subheadPortrait: { maxWidth: 420, textAlign: "center" },
+  previewWrap: { alignItems: "center" },
+  previewWrapPortrait: { alignItems: "center" },
   previewCard: {
     borderRadius: 30,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    shadowColor: 'rgba(30,16,70,0.6)',
+    borderColor: "rgba(255,255,255,0.22)",
+    shadowColor: "rgba(30,16,70,0.6)",
     shadowOpacity: 0.35,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 16 },
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   previewCardPortrait: {
-    borderColor: 'rgba(180,107,255,0.35)',
-    shadowColor: 'rgba(180,107,255,0.45)',
+    borderColor: "rgba(180,107,255,0.35)",
+    shadowColor: "rgba(180,107,255,0.45)",
   },
   markGhost: {
-    position: 'absolute',
+    position: "absolute",
     right: -18,
     top: -8,
     opacity: 0.16,
   },
-  previewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  previewTitle: { color: '#FFFFFF', fontWeight: '900', fontSize: 18 },
-  previewSub: { marginTop: 4, color: 'rgba(255,255,255,0.75)', fontWeight: '700', fontSize: 12 },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  previewTitle: { color: "#FFFFFF", fontWeight: "900", fontSize: 18 },
+  previewSub: {
+    marginTop: 4,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "700",
+    fontSize: 12,
+  },
   livePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: "rgba(255,255,255,0.16)",
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: "rgba(255,255,255,0.25)",
   },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#7CFFB2' },
-  liveText: { color: '#FFFFFF', fontWeight: '800', fontSize: 11 },
-  deviceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#7CFFB2" },
+  liveText: { color: "#FFFFFF", fontWeight: "800", fontSize: 11 },
+  deviceRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 16 },
   devicePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: "rgba(255,255,255,0.2)",
   },
-  deviceText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
-  sceneRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  deviceText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
+  sceneRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 14 },
   sceneChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: "rgba(255,255,255,0.18)",
   },
-  sceneChipText: { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
-  ctaBlock: { alignItems: 'center', gap: 10, marginTop: 4 },
-  ctaWrap: { width: '100%' },
+  sceneChipText: { color: "#FFFFFF", fontWeight: "800", fontSize: 12 },
+  ctaBlock: { alignItems: "center", gap: 10, marginTop: 4 },
+  ctaWrap: { width: "100%" },
   ctaWrapPressed: { transform: [{ scale: 0.98 }] },
   cta: {
     height: 56,
     borderRadius: 999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#6B3CFF',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#6B3CFF",
     shadowOpacity: 0.35,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
   },
-  ctaText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
-  ctaHint: { color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: 12 },
+  ctaText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
+  ctaHint: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 12 },
 });

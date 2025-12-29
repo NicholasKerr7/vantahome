@@ -1,7 +1,7 @@
-import React from 'react';
-import { Text, type TextProps } from 'react-native';
-import MaskedView from '@react-native-masked-view/masked-view';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from "react";
+import { Text, type TextProps } from "react-native";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function GradientText({
   text,

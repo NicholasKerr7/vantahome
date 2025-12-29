@@ -1,7 +1,7 @@
-import { corsHeaders } from '../_shared/cors.ts';
-import { getSupabaseAdmin } from '../_shared/supabaseAdmin.ts';
-import { getVoiceClient, randomToken } from '../_shared/voiceAuth.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { corsHeaders } from "../_shared/cors.ts";
+import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { getVoiceClient, randomToken } from "../_shared/voiceAuth.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 function renderHtml(body: string) {
   return `<!doctype html>
@@ -28,11 +28,16 @@ function renderHtml(body: string) {
 }
 
 async function signInWithPassword(email: string, password: string) {
-  const url = Deno.env.get('SUPABASE_URL');
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  if (!url || !anonKey) throw new Error('Missing Supabase env.');
-  const client = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  const url = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!url || !anonKey) throw new Error("Missing Supabase env.");
+  const client = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await client.auth.signInWithPassword({
+    email,
+    password,
+  });
   if (error) throw error;
   return data.user;
 }
@@ -47,31 +52,37 @@ function parseForm(body: string) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   const url = new URL(req.url);
   const params = url.searchParams;
-  const clientId = params.get('client_id') ?? '';
-  const redirectUri = params.get('redirect_uri') ?? '';
-  const responseType = params.get('response_type') ?? '';
-  const state = params.get('state') ?? '';
+  const clientId = params.get("client_id") ?? "";
+  const redirectUri = params.get("redirect_uri") ?? "";
+  const responseType = params.get("response_type") ?? "";
+  const state = params.get("state") ?? "";
 
-  if (req.method === 'GET') {
-    if (!clientId || !redirectUri || responseType !== 'code') {
-      return new Response(renderHtml('<div class="error">Invalid OAuth request.</div>'), {
-        status: 400,
-        headers: { 'Content-Type': 'text/html' },
-      });
+  if (req.method === "GET") {
+    if (!clientId || !redirectUri || responseType !== "code") {
+      return new Response(
+        renderHtml('<div class="error">Invalid OAuth request.</div>'),
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html" },
+        },
+      );
     }
 
     const client = await getVoiceClient(clientId);
     if (!client || !client.redirect_uris.includes(redirectUri)) {
-      return new Response(renderHtml('<div class="error">Unknown client.</div>'), {
-        status: 400,
-        headers: { 'Content-Type': 'text/html' },
-      });
+      return new Response(
+        renderHtml('<div class="error">Unknown client.</div>'),
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html" },
+        },
+      );
     }
 
     const body = `
@@ -91,53 +102,62 @@ Deno.serve(async (req) => {
 
     return new Response(renderHtml(body), {
       status: 200,
-      headers: { 'Content-Type': 'text/html' },
+      headers: { "Content-Type": "text/html" },
     });
   }
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
   try {
     const form = parseForm(await req.text());
-    const formClientId = form.client_id ?? '';
-    const formRedirect = form.redirect_uri ?? '';
-    const formState = form.state ?? '';
-    const email = form.email ?? '';
-    const password = form.password ?? '';
+    const formClientId = form.client_id ?? "";
+    const formRedirect = form.redirect_uri ?? "";
+    const formState = form.state ?? "";
+    const email = form.email ?? "";
+    const password = form.password ?? "";
 
     if (!formClientId || !formRedirect || !email || !password) {
-      return new Response(renderHtml('<div class="error">Missing login details.</div>'), {
-        status: 400,
-        headers: { 'Content-Type': 'text/html' },
-      });
+      return new Response(
+        renderHtml('<div class="error">Missing login details.</div>'),
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html" },
+        },
+      );
     }
 
     const client = await getVoiceClient(formClientId);
     if (!client || !client.redirect_uris.includes(formRedirect)) {
-      return new Response(renderHtml('<div class="error">Unknown client.</div>'), {
-        status: 400,
-        headers: { 'Content-Type': 'text/html' },
-      });
+      return new Response(
+        renderHtml('<div class="error">Unknown client.</div>'),
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html" },
+        },
+      );
     }
 
     const user = await signInWithPassword(email, password);
     if (!user) {
-      return new Response(renderHtml('<div class="error">Invalid credentials.</div>'), {
-        status: 401,
-        headers: { 'Content-Type': 'text/html' },
-      });
+      return new Response(
+        renderHtml('<div class="error">Invalid credentials.</div>'),
+        {
+          status: 401,
+          headers: { "Content-Type": "text/html" },
+        },
+      );
     }
 
     const admin = getSupabaseAdmin();
     const code = randomToken(16);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    const { error } = await admin.from('voice_oauth_codes').insert({
+    const { error } = await admin.from("voice_oauth_codes").insert({
       code,
       client_id: formClientId,
       user_id: user.id,
@@ -146,21 +166,32 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      return new Response(renderHtml('<div class="error">Unable to create authorization code.</div>'), {
-        status: 500,
-        headers: { 'Content-Type': 'text/html' },
-      });
+      return new Response(
+        renderHtml(
+          '<div class="error">Unable to create authorization code.</div>',
+        ),
+        {
+          status: 500,
+          headers: { "Content-Type": "text/html" },
+        },
+      );
     }
 
     const redirect = new URL(formRedirect);
-    redirect.searchParams.set('code', code);
-    if (formState) redirect.searchParams.set('state', formState);
+    redirect.searchParams.set("code", code);
+    if (formState) redirect.searchParams.set("state", formState);
 
-    return new Response(null, { status: 302, headers: { Location: redirect.toString() } });
-  } catch (err) {
-    return new Response(renderHtml(`<div class="error">${(err as Error).message}</div>`), {
-      status: 500,
-      headers: { 'Content-Type': 'text/html' },
+    return new Response(null, {
+      status: 302,
+      headers: { Location: redirect.toString() },
     });
+  } catch (err) {
+    return new Response(
+      renderHtml(`<div class="error">${(err as Error).message}</div>`),
+      {
+        status: 500,
+        headers: { "Content-Type": "text/html" },
+      },
+    );
   }
 });

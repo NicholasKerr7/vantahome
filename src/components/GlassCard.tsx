@@ -1,6 +1,6 @@
-import React, { type PropsWithChildren } from 'react';
-import { View, StyleSheet, type ViewStyle } from 'react-native';
-import { theme } from '../theme/theme';
+import React, { type PropsWithChildren } from "react";
+import { View, StyleSheet, type ViewStyle } from "react-native";
+import { theme } from "../theme/theme";
 
 export default function GlassCard({
   style,
@@ -20,4 +20,3 @@ const styles = StyleSheet.create({
     padding: 16,
   },
 });
-

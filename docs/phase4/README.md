@@ -4,14 +4,14 @@ This phase connects your VantaHome device registry into Apple Home via Matter. T
 
 ## Recommended path (Home Assistant Matter server)
 
-1) **Update HA** to a version that includes the Matter integration.
-2) **Enable Matter** in HA:
+1. **Update HA** to a version that includes the Matter integration.
+2. **Enable Matter** in HA:
    - Settings → Devices & Services → Add Integration → Matter.
-   - Set the Matter server to *Bridge* mode.
-3) **Expose devices** in HA:
+   - Set the Matter server to _Bridge_ mode.
+3. **Expose devices** in HA:
    - Make sure your devices (or MQTT entities) exist in HA.
    - Use HA's “Expose to Matter” toggles.
-4) **Pair with Apple Home**:
+4. **Pair with Apple Home**:
    - In HA Matter integration, create a pairing code.
    - In Apple Home app: Add Accessory → More options → Matter device → scan/paste code.
 
@@ -20,6 +20,7 @@ Once paired, Apple Home uses Matter over your LAN. Your VantaHome app stays the 
 ## Alternative path (Dedicated Matter bridge)
 
 If you need custom device modeling or a cloud‑native bridge:
+
 - Run a Matter bridge using **matter.js** or **Project CHIP**.
 - Implement endpoints based on your device registry (`devices` + `device_state`).
 - Use the `device_commands` queue (Phase 3) to sync state and control.

@@ -1,9 +1,9 @@
-import 'react-native-url-polyfill/auto';
-import { Buffer } from 'buffer';
-import process from 'process';
-import { registerRootComponent } from 'expo';
+import "react-native-url-polyfill/auto";
+import { Buffer } from "buffer";
+import process from "process";
+import { registerRootComponent } from "expo";
 
-import App from './App';
+import App from "./App";
 
 const globalForMqtt = globalThis as typeof globalThis & {
   Buffer?: typeof Buffer;

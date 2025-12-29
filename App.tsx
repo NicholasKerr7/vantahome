@@ -1,12 +1,12 @@
-import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AppNavigator from './src/app/AppNavigator';
-import { startDeviceRealtime } from './src/services/realtime';
-import { useHomeStore } from './src/store/useHomeStore';
-import { startFlowRuntime } from './src/services/flowRuntime';
+import "react-native-gesture-handler";
+import React, { useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import AppNavigator from "./src/app/AppNavigator";
+import { startDeviceRealtime } from "./src/services/realtime";
+import { useHomeStore } from "./src/store/useHomeStore";
+import { startFlowRuntime } from "./src/services/flowRuntime";
 
 export default function App() {
   const realtime = useHomeStore((s) => s.realtime);

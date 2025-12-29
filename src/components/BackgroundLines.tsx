@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import React from "react";
+import { View, StyleSheet, useWindowDimensions } from "react-native";
+import Svg, { Path } from "react-native-svg";
 
 /**
  * Subtle SVG curves used as a low-contrast background texture.
@@ -22,7 +22,7 @@ export default function BackgroundLines() {
         />
         <Path
           d={`M ${-60} ${height * 0.45}
-              C ${width * 0.22} ${height * 0.28}, ${width * 0.55} ${height * 0.70}, ${width * 1.08} ${height * 0.48}`}
+              C ${width * 0.22} ${height * 0.28}, ${width * 0.55} ${height * 0.7}, ${width * 1.08} ${height * 0.48}`}
           stroke="rgba(255,255,255,0.08)"
           strokeWidth={2}
           fill="none"
@@ -36,7 +36,7 @@ export default function BackgroundLines() {
         />
         <Path
           d={`M ${width * 0.12} ${-20}
-              C ${width * 0.02} ${height * 0.22}, ${width * 0.22} ${height * 0.30}, ${width * 0.10} ${height * 0.55}
+              C ${width * 0.02} ${height * 0.22}, ${width * 0.22} ${height * 0.3}, ${width * 0.1} ${height * 0.55}
               S ${width * 0.05} ${height * 0.85}, ${width * 0.22} ${height + 40}`}
           stroke="rgba(255,255,255,0.05)"
           strokeWidth={1.5}

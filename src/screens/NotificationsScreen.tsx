@@ -1,13 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
-import Pressable from '../components/Pressable';
-import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { theme } from '../theme/theme';
-import { useNavigation } from '@react-navigation/native';
-import type { NavigationProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../app/AppNavigator';
-import { useResponsive } from '../theme/layout';
+import React from "react";
+import { View, Text, StyleSheet, FlatList } from "react-native";
+import Pressable from "../components/Pressable";
+import { LinearGradient } from "expo-linear-gradient";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { theme } from "../theme/theme";
+import { useNavigation } from "@react-navigation/native";
+import type { NavigationProp } from "@react-navigation/native";
+import type { RootStackParamList } from "../app/AppNavigator";
+import { useResponsive } from "../theme/layout";
 
 type NotificationItem = {
   id: string;
@@ -17,13 +17,29 @@ type NotificationItem = {
 };
 
 const MOCK_NOTIFICATIONS: NotificationItem[] = [
-  { id: 'n1', title: 'Air Conditioner', body: 'Set to 22°C • Cool', time: 'Just now' },
-  { id: 'n2', title: 'Bedroom AC', body: 'Scene “Movie Time” applied', time: '5m ago' },
-  { id: 'n3', title: 'Automation', body: 'Night Cool scheduled for 9:00 PM', time: '1h ago' },
+  {
+    id: "n1",
+    title: "Air Conditioner",
+    body: "Set to 22°C • Cool",
+    time: "Just now",
+  },
+  {
+    id: "n2",
+    title: "Bedroom AC",
+    body: "Scene “Movie Time” applied",
+    time: "5m ago",
+  },
+  {
+    id: "n3",
+    title: "Automation",
+    body: "Night Cool scheduled for 9:00 PM",
+    time: "1h ago",
+  },
 ];
 
 export default function NotificationsScreen() {
-  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } = useResponsive(900);
+  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
+    useResponsive(900);
   const isWide = isTablet && isLandscape;
   const iconBtnSize = Math.round((isTablet ? 46 : 40) * scale);
   const iconBtnRadius = Math.round(iconBtnSize * 0.4);
@@ -39,13 +55,32 @@ export default function NotificationsScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   return (
-    <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={[styles.root, { paddingTop: topPad }]}>
-      <View style={[styles.topBar, { paddingHorizontal: gutter, width: contentWidth, alignSelf: 'center' }]}>
+    <LinearGradient
+      colors={[theme.colors.bg1, theme.colors.bg0]}
+      style={[styles.root, { paddingTop: topPad }]}
+    >
+      <View
+        style={[
+          styles.topBar,
+          {
+            paddingHorizontal: gutter,
+            width: contentWidth,
+            alignSelf: "center",
+          },
+        ]}
+      >
         <Pressable
-          style={[styles.iconBtn, { width: iconBtnSize, height: iconBtnSize, borderRadius: iconBtnRadius }]}
+          style={[
+            styles.iconBtn,
+            {
+              width: iconBtnSize,
+              height: iconBtnSize,
+              borderRadius: iconBtnRadius,
+            },
+          ]}
           onPress={() => {
             if (navigation.canGoBack()) navigation.goBack();
-            else navigation.navigate('Main');
+            else navigation.navigate("Main");
           }}
         >
           <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
@@ -53,7 +88,13 @@ export default function NotificationsScreen() {
         <Text style={[styles.h1, { fontSize: titleSize }]}>Notifications</Text>
         <View style={{ width: iconBtnSize }} />
       </View>
-      <View style={{ width: contentWidth, alignSelf: 'center', paddingHorizontal: isTablet ? 0 : gutter }}>
+      <View
+        style={{
+          width: contentWidth,
+          alignSelf: "center",
+          paddingHorizontal: isTablet ? 0 : gutter,
+        }}
+      >
         <FlatList
           data={MOCK_NOTIFICATIONS}
           keyExtractor={(item) => item.id}
@@ -61,26 +102,51 @@ export default function NotificationsScreen() {
           columnWrapperStyle={isWide ? { gap } : undefined}
           contentContainerStyle={{
             paddingTop: 12,
-            paddingBottom: Math.round((isTablet ? (isLandscape ? 120 : 140) : 24) * scale),
+            paddingBottom: Math.round(
+              (isTablet ? (isLandscape ? 120 : 140) : 24) * scale,
+            ),
             gap,
             paddingHorizontal: isTablet ? gutter : 0,
           }}
-          style={{ width: '100%' }}
+          style={{ width: "100%" }}
           renderItem={({ item }) => (
             <View
               style={[
                 styles.card,
-                { padding: cardPad, borderRadius: cardRadius, width: isWide ? (contentWidth - gap) / 2 : '100%' },
+                {
+                  padding: cardPad,
+                  borderRadius: cardRadius,
+                  width: isWide ? (contentWidth - gap) / 2 : "100%",
+                },
               ]}
             >
-              <View style={[styles.iconWrap, { width: iconWrapSize, height: iconWrapSize, borderRadius: iconWrapRadius }]}>
-                <Ionicons name="notifications" size={iconSize} color={theme.colors.text} />
+              <View
+                style={[
+                  styles.iconWrap,
+                  {
+                    width: iconWrapSize,
+                    height: iconWrapSize,
+                    borderRadius: iconWrapRadius,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="notifications"
+                  size={iconSize}
+                  color={theme.colors.text}
+                />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.title, { fontSize: textSize }]}>{item.title}</Text>
-                <Text style={[styles.body, { fontSize: bodySize }]}>{item.body}</Text>
+                <Text style={[styles.title, { fontSize: textSize }]}>
+                  {item.title}
+                </Text>
+                <Text style={[styles.body, { fontSize: bodySize }]}>
+                  {item.body}
+                </Text>
               </View>
-              <Text style={[styles.time, { fontSize: bodySize }]}>{item.time}</Text>
+              <Text style={[styles.time, { fontSize: bodySize }]}>
+                {item.time}
+              </Text>
             </View>
           )}
         />
@@ -91,25 +157,30 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   iconBtn: {
     width: 40,
     height: 40,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: "rgba(255,255,255,0.10)",
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  h1: { color: theme.colors.text, fontSize: 24, fontWeight: '900' },
+  h1: { color: theme.colors.text, fontSize: 24, fontWeight: "900" },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     padding: 14,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
@@ -117,13 +188,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: "rgba(255,255,255,0.18)",
   },
-  title: { color: theme.colors.text, fontWeight: '900' },
-  body: { color: theme.colors.subtext, fontWeight: '700', marginTop: 4 },
-  time: { color: theme.colors.subtext, fontWeight: '700' },
+  title: { color: theme.colors.text, fontWeight: "900" },
+  body: { color: theme.colors.subtext, fontWeight: "700", marginTop: 4 },
+  time: { color: theme.colors.subtext, fontWeight: "700" },
 });
