@@ -16,6 +16,17 @@ These functions sit alongside the PostgREST API and handle bootstrapping + state
   - Body: `{ "events": [{ "deviceId": "<uuid>", "state": { ... } }] }`
   - Batch upsert for multiple devices.
 
+## Voice (Phase 3)
+
+- `voice-authorize` (GET/POST)
+  - OAuth2 authorize endpoint with a minimal login form.
+- `voice-token` (POST)
+  - OAuth2 token endpoint (authorization_code + refresh_token).
+- `alexa-smart-home` (POST)
+  - Alexa Smart Home fulfillment handler.
+- `google-smart-home` (POST)
+  - Google Smart Home fulfillment handler.
+
 ## Deploy
 
 ```bash
