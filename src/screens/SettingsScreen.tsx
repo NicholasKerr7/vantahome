@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, Animated, Easing, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, Animated, Easing, TextInput, Alert } from 'react-native';
 import Pressable from '../components/Pressable';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -9,6 +9,7 @@ import { theme } from '../theme/theme';
 import { type IntegrationProvider, useHomeStore } from '../store/useHomeStore';
 import { useResponsive } from '../theme/layout';
 import { deviceClient, type ConnectionStatus } from '../services/deviceClient';
+import { bootstrapHome, devicesToStateEvents, pushDeviceStateBatch } from '../services/cloudRegistry';
 
 type IntegrationRowProps = {
   provider: IntegrationProvider;
@@ -42,6 +43,8 @@ export default function SettingsScreen() {
   const wideBtnRadius = Math.round(wideBtnHeight * 0.4);
   const roomsCount = useHomeStore((s) => s.rooms.length);
   const devicesCount = useHomeStore((s) => s.devices.length);
+  const devices = useHomeStore((s) => s.devices);
+  const profile = useHomeStore((s) => s.profile);
   const integrations = useHomeStore((s) => s.integrations);
   const prefs = useHomeStore((s) => s.preferences);
   const realtime = useHomeStore((s) => s.realtime);
@@ -58,6 +61,7 @@ export default function SettingsScreen() {
   const [connection, setConnection] = useState<{ status: ConnectionStatus; error?: string }>({
     status: 'disconnected',
   });
+  const [cloudSyncLoading, setCloudSyncLoading] = useState(false);
   const isLinking = useMemo(
     () => Object.values(integrations).some((integration) => integration.status === 'linking'),
     [integrations]
@@ -99,6 +103,22 @@ export default function SettingsScreen() {
         return { label: 'Offline', status: 'offline' as const };
     }
   }, [connection.status, realtime.enabled, realtimeActive]);
+
+  const handleCloudSync = async () => {
+    if (cloudSyncLoading) return;
+    setCloudSyncLoading(true);
+    try {
+      const homeName = profile.homeName?.trim() || `${userName}'s Home`;
+      await bootstrapHome(homeName);
+      const events = devicesToStateEvents(devices);
+      const result = await pushDeviceStateBatch(events);
+      Alert.alert('Cloud sync', `Synced ${result.updated} devices.`);
+    } catch (err: any) {
+      Alert.alert('Cloud sync failed', err?.message ?? 'Unable to sync to cloud.');
+    } finally {
+      setCloudSyncLoading(false);
+    }
+  };
 
   const renderIntegration = ({ provider, label, description, icon }: IntegrationRowProps) => {
     const state = integrations[provider];
@@ -260,10 +280,17 @@ export default function SettingsScreen() {
                 <Text style={[styles.secondaryWideBtnText, { fontSize: rowValueSize }]}>Edit profile</Text>
               </Pressable>
               <Pressable
-                style={[styles.primaryBtn, { marginTop: 12, height: wideBtnHeight, borderRadius: wideBtnRadius }]}
-                onPress={() => resyncIntegration('alexa')}
+                style={[
+                  styles.primaryBtn,
+                  { marginTop: 12, height: wideBtnHeight, borderRadius: wideBtnRadius },
+                  cloudSyncLoading && styles.primaryBtnDisabled,
+                ]}
+                onPress={handleCloudSync}
+                disabled={cloudSyncLoading}
               >
-                <Text style={[styles.primaryBtnText, { fontSize: rowValueSize }]}>Resync to cloud (stub)</Text>
+                <Text style={[styles.primaryBtnText, { fontSize: rowValueSize }]}>
+                  {cloudSyncLoading ? 'Syncing…' : 'Resync to cloud'}
+                </Text>
               </Pressable>
             </View>
 

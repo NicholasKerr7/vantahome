@@ -22,6 +22,7 @@ import { theme } from '../theme/theme';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../services/supabaseClient';
+import { bootstrapHome } from '../services/cloudRegistry';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -91,6 +92,8 @@ export default function AuthScreen({ navigation }: Props) {
     const nextName =
       metaName || (mode === 'login' ? profile.name || fallbackName : name.trim()) || 'Vanta Home';
     setProfile({ name: nextName, email: user?.email ?? safeEmail });
+    const homeName = profile.homeName?.trim() || `${nextName}'s Home`;
+    void bootstrapHome(homeName).catch(() => {});
     navigation.replace('Onboarding');
   };
 
