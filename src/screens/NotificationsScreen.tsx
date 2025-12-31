@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,6 +8,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
 import type { RootStackParamList } from "../app/AppNavigator";
 import { useResponsive } from "../theme/layout";
+import { useHomeStore } from "../store/useHomeStore";
 
 type NotificationItem = {
   id: string;
@@ -53,6 +54,24 @@ export default function NotificationsScreen() {
   const bodySize = Math.round((isTablet ? 13 : 12) * scale);
   const gap = Math.round((isTablet ? 16 : 10) * scale);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const energy = useHomeStore((s) =>
+    s.devices.find((device) => device.kind === "energy"),
+  );
+  const powerOutage =
+    energy?.gridAvailable === false && (energy?.gridOutageAlerts ?? true);
+  const solarActive = (energy?.solarW ?? 0) > 0;
+  const notifications = useMemo(() => {
+    if (!powerOutage) return MOCK_NOTIFICATIONS;
+    const outageNotice: NotificationItem = {
+      id: "n-power-outage",
+      title: "Power outage",
+      body: solarActive
+        ? "Main power offline • Solar active"
+        : "Main power offline • Backup required",
+      time: "Just now",
+    };
+    return [outageNotice, ...MOCK_NOTIFICATIONS];
+  }, [powerOutage, solarActive]);
 
   return (
     <LinearGradient
@@ -96,7 +115,7 @@ export default function NotificationsScreen() {
         }}
       >
         <FlatList
-          data={MOCK_NOTIFICATIONS}
+          data={notifications}
           keyExtractor={(item) => item.id}
           numColumns={isWide ? 2 : 1}
           columnWrapperStyle={isWide ? { gap } : undefined}

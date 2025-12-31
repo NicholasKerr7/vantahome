@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import BackgroundLines from "../components/BackgroundLines";
 import RoomCarousel from "../components/RoomCarousel";
 import { useHomeStore } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
+import { notifyPowerStatus } from "../services/notifications";
 
 export default function HomeScreen() {
   const { contentWidth, gutter, isTablet, isLandscape, topPad, scale } =
@@ -54,9 +55,11 @@ export default function HomeScreen() {
   const outdoor = useHomeStore((s) => s.outdoor);
   const rooms = useHomeStore((s) => s.rooms);
   const devicesAll = useHomeStore((s) => s.devices);
+  const prefs = useHomeStore((s) => s.preferences);
   const addRoom = useHomeStore((s) => s.addRoom);
   const indoorFallback = useHomeStore((s) => s.indoor);
   const [activeRoomIndex, setActiveRoomIndex] = useState(0);
+  const lastPowerOutage = useRef<boolean | null>(null);
 
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [roomName, setRoomName] = useState("");
@@ -77,6 +80,28 @@ export default function HomeScreen() {
     if (hour < 21) return "Good evening";
     return "Good night";
   }, [clock]);
+
+  useEffect(() => {
+    const energy = devicesAll.find((device) => device.kind === "energy");
+    if (!energy) return;
+    const currentOutage = energy.gridAvailable === false;
+    const alertsEnabled = energy.gridOutageAlerts ?? true;
+    if (lastPowerOutage.current === null) {
+      lastPowerOutage.current = currentOutage;
+      return;
+    }
+    if (!prefs.notifications || !alertsEnabled) {
+      lastPowerOutage.current = currentOutage;
+      return;
+    }
+    if (currentOutage !== lastPowerOutage.current) {
+      lastPowerOutage.current = currentOutage;
+      notifyPowerStatus({
+        isOutage: currentOutage,
+        solarActive: (energy.solarW ?? 0) > 0,
+      }).catch(() => {});
+    }
+  }, [devicesAll, prefs.notifications]);
 
   const handleCreateRoom = () => {
     if (!canCreate) return;
@@ -104,7 +129,14 @@ export default function HomeScreen() {
     const alerts = devicesAll.filter(
       (d) =>
         (d.kind === "smoke" && d.smokeDetected) ||
-        (d.kind === "water" && d.waterLeakDetected) ||
+        (d.kind === "water" &&
+          (d.waterLeakDetected ||
+            ((d.waterPressureAlerts ?? true) &&
+              (d.waterPressurePsi ?? 0) > 0 &&
+              (d.waterPressurePsi ?? 0) < (d.waterPressureLowPsi ?? 40)))) ||
+        (d.kind === "energy" &&
+          d.gridAvailable === false &&
+          (d.gridOutageAlerts ?? true)) ||
         (d.kind === "camera" && d.recording),
     );
     alerts.forEach(add);

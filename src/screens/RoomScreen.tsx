@@ -87,16 +87,48 @@ const buildDeviceDefaults = (kind: Device["kind"]): Partial<Device> => {
     case "camera":
       return { armed: true, recording: false };
     case "stove":
-      return { burnerLevel: 0 };
+      return {
+        burnerLevel: 0,
+        stoveMode: "simmer",
+        stoveTimerMin: 0,
+        stoveLock: false,
+      };
     case "washer":
     case "dryer":
-      return { cycle: "Normal", progress: 0 };
+      return {
+        cycle: "Normal",
+        progress: 0,
+        washTemp: "Warm",
+        spinSpeedRpm: 1000,
+        soilLevel: "Normal",
+        heatLevel: "Med",
+        drynessLevel: "Dry",
+        remainingMin: 40,
+      };
     case "microwave":
-      return { timeRemainingSec: 0 };
+      return {
+        timeRemainingSec: 0,
+        microwavePower: 6,
+        microwaveMode: "Reheat",
+      };
     case "energy":
-      return { powerW: 480, energyTodayKwh: 1.8 };
+      return {
+        powerW: 480,
+        energyTodayKwh: 1.8,
+        gridAvailable: true,
+        gridOutageAlerts: true,
+        solarW: 0,
+        solarTodayKwh: 0,
+        gridTodayKwh: 1.8,
+      };
     case "water":
-      return { waterLpm: 0, waterTodayL: 0 };
+      return {
+        waterLpm: 0,
+        waterTodayL: 0,
+        waterPressurePsi: 50,
+        waterPressureLowPsi: 40,
+        waterPressureAlerts: true,
+      };
     case "air":
       return { airQualityIndex: 32, humidity: 44 };
     case "sprinkler":

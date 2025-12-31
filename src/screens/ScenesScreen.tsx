@@ -56,6 +56,7 @@ export default function ScenesScreen() {
   const runScene = useHomeStore((s) => s.runScene);
   const activeSceneId = useHomeStore((s) => s.activeSceneId);
   const addScene = useHomeStore((s) => s.addScene);
+  const updateScene = useHomeStore((s) => s.updateScene);
 
   const [showCreate, setShowCreate] = useState(false);
   const [sceneName, setSceneName] = useState("");
@@ -64,6 +65,8 @@ export default function ScenesScreen() {
   const [overrides, setOverrides] = useState<Record<string, Partial<Device>>>(
     {},
   );
+  const [detailSceneId, setDetailSceneId] = useState<string | null>(null);
+  const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
 
   const deviceMap = useMemo(
     () => new Map(devices.map((d) => [d.id, d])),
@@ -73,6 +76,25 @@ export default function ScenesScreen() {
     () => devices.filter((d) => d.roomId === roomId),
     [devices, roomId],
   );
+  const detailScene = useMemo(
+    () => scenes.find((scene) => scene.id === detailSceneId) ?? null,
+    [detailSceneId, scenes],
+  );
+  const detailRoom = useMemo(() => {
+    if (!detailScene) return null;
+    return rooms.find((room) => room.id === detailScene.roomId) ?? null;
+  }, [detailScene, rooms]);
+  const detailActionLabels = useMemo(() => {
+    if (!detailScene) return [];
+    return detailScene.actions.map((action) => formatAction(action, deviceMap));
+  }, [detailScene, deviceMap]);
+  const detailDevices = useMemo(() => {
+    if (!detailScene) return [];
+    const ids = Array.from(
+      new Set(detailScene.actions.map((action) => action.deviceId)),
+    );
+    return ids.map((id) => deviceMap.get(id)).filter(Boolean) as Device[];
+  }, [detailScene, deviceMap]);
   const sections = useMemo(
     () =>
       rooms.map((room) => ({
@@ -98,6 +120,7 @@ export default function ScenesScreen() {
 
   const openCreate = () => {
     setShowCreate(true);
+    setEditingSceneId(null);
     setSceneName("");
     setSelectedDeviceIds([]);
     setOverrides({});
@@ -115,11 +138,36 @@ export default function ScenesScreen() {
       );
     if (!actions.length) return;
 
-    addScene({ roomId, name, actions });
+    if (editingSceneId) {
+      updateScene(editingSceneId, { roomId, name, actions });
+    } else {
+      addScene({ roomId, name, actions });
+    }
     setShowCreate(false);
     setSceneName("");
     setSelectedDeviceIds([]);
     setOverrides({});
+    setEditingSceneId(null);
+  };
+
+  const openEdit = (scene: Scene) => {
+    setEditingSceneId(scene.id);
+    setShowCreate(true);
+    setSceneName(scene.name);
+    setRoomId(scene.roomId);
+    const deviceIds = Array.from(
+      new Set(scene.actions.map((action) => action.deviceId)),
+    );
+    setSelectedDeviceIds(deviceIds);
+    const nextOverrides: Record<string, Partial<Device>> = {};
+    scene.actions.forEach((action) => {
+      if (action.type === "toggle") {
+        nextOverrides[action.deviceId] = { isOn: action.on ?? true };
+        return;
+      }
+      nextOverrides[action.deviceId] = { ...action.patch };
+    });
+    setOverrides(nextOverrides);
   };
 
   const updateOverride = (deviceId: string, patch: Partial<Device>) => {
@@ -287,6 +335,7 @@ export default function ScenesScreen() {
                         actionLabels={actionLabels}
                         isActive={scene.id === activeSceneId}
                         onRun={() => runScene(scene.id)}
+                        onOpen={() => setDetailSceneId(scene.id)}
                       />
                     );
                   })
@@ -301,12 +350,18 @@ export default function ScenesScreen() {
         transparent
         visible={showCreate}
         animationType="fade"
-        onRequestClose={() => setShowCreate(false)}
+        onRequestClose={() => {
+          setShowCreate(false);
+          setEditingSceneId(null);
+        }}
       >
         <View style={styles.modalOverlay}>
           <Pressable
             style={styles.modalBackdrop}
-            onPress={() => setShowCreate(false)}
+            onPress={() => {
+              setShowCreate(false);
+              setEditingSceneId(null);
+            }}
           />
           <KeyboardAvoidingView
             behavior={Platform.select({ ios: "padding", android: undefined })}
@@ -335,10 +390,12 @@ export default function ScenesScreen() {
                 showsVerticalScrollIndicator={false}
               >
                 <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
-                  Create scene
+                  {editingSceneId ? "Edit scene" : "Create scene"}
                 </Text>
                 <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
-                  Capture a mood for this room.
+                  {editingSceneId
+                    ? "Update your scene settings."
+                    : "Capture a mood for this room."}
                 </Text>
 
                 <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
@@ -487,7 +544,10 @@ export default function ScenesScreen() {
                         borderRadius: Math.round(modalBtnHeight * 0.28),
                       },
                     ]}
-                    onPress={() => setShowCreate(false)}
+                    onPress={() => {
+                      setShowCreate(false);
+                      setEditingSceneId(null);
+                    }}
                   >
                     <Text
                       style={[
@@ -516,7 +576,223 @@ export default function ScenesScreen() {
                         { fontSize: modalLabelSize },
                       ]}
                     >
-                      Create
+                      {editingSceneId ? "Save" : "Create"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </ScrollView>
+            </LinearGradient>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={Boolean(detailScene)}
+        animationType="fade"
+        onRequestClose={() => setDetailSceneId(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setDetailSceneId(null)}
+          />
+          <KeyboardAvoidingView
+            behavior={Platform.select({ ios: "padding", android: undefined })}
+          >
+            <LinearGradient
+              colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.92)"]}
+              start={{ x: 0.1, y: 0.1 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.modalCard,
+                {
+                  borderRadius: modalRadius,
+                  maxWidth: isTablet ? 640 : undefined,
+                  width: isTablet
+                    ? Math.min(contentWidth - gutter * 2, 640)
+                    : undefined,
+                  alignSelf: isTablet ? "center" : "stretch",
+                },
+              ]}
+            >
+              <ScrollView
+                contentContainerStyle={[
+                  styles.modalContent,
+                  { padding: modalPad },
+                ]}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
+                  {detailScene?.name ?? "Scene details"}
+                </Text>
+                <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
+                  {detailRoom?.name ?? "Room"} •{" "}
+                  {detailScene?.actions.length ?? 0} actions •{" "}
+                  {detailDevices.length} devices
+                </Text>
+
+                <View
+                  style={[
+                    styles.detailStatusPill,
+                    {
+                      height: roomPillHeight,
+                      borderRadius: Math.round(roomPillHeight / 2),
+                    },
+                    detailScene?.id === activeSceneId &&
+                      styles.detailStatusPillActive,
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      detailScene?.id === activeSceneId
+                        ? "checkmark-circle"
+                        : "moon"
+                    }
+                    size={Math.round(14 * scale)}
+                    color="rgba(12,12,18,0.75)"
+                  />
+                  <Text
+                    style={[
+                      styles.detailStatusText,
+                      { fontSize: modalLabelSize },
+                    ]}
+                  >
+                    {detailScene?.id === activeSceneId ? "Active" : "Idle"}
+                  </Text>
+                </View>
+
+                <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
+                  Actions
+                </Text>
+                {detailActionLabels.length === 0 ? (
+                  <Text style={[styles.modalHint, { fontSize: modalSubSize }]}>
+                    No actions saved for this scene.
+                  </Text>
+                ) : (
+                  <View style={styles.detailActionRow}>
+                    {detailActionLabels.map((label, index) => (
+                      <View
+                        key={`${label}-${index}`}
+                        style={styles.detailActionChip}
+                      >
+                        <Text
+                          style={[
+                            styles.detailActionText,
+                            { fontSize: modalLabelSize },
+                          ]}
+                        >
+                          {label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
+                  Devices
+                </Text>
+                {detailDevices.length === 0 ? (
+                  <Text style={[styles.modalHint, { fontSize: modalSubSize }]}>
+                    No devices linked yet.
+                  </Text>
+                ) : (
+                  <View style={styles.deviceGrid}>
+                    {detailDevices.map((device) => (
+                      <View
+                        key={device.id}
+                        style={[
+                          styles.deviceChip,
+                          {
+                            height: deviceChipHeight,
+                            borderRadius: Math.round(deviceChipHeight * 0.4),
+                          },
+                        ]}
+                      >
+                        <View style={styles.deviceIcon}>
+                          <DeviceIcon
+                            kind={device.kind}
+                            size={Math.round(14 * scale)}
+                            color="rgba(12,12,18,0.85)"
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.deviceText,
+                            { fontSize: modalLabelSize },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {device.name}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <View style={styles.modalRow}>
+                  <Pressable
+                    style={[
+                      styles.modalGhost,
+                      {
+                        height: modalBtnHeight,
+                        borderRadius: Math.round(modalBtnHeight * 0.28),
+                      },
+                    ]}
+                    onPress={() => setDetailSceneId(null)}
+                  >
+                    <Text
+                      style={[
+                        styles.modalGhostText,
+                        { fontSize: modalLabelSize },
+                      ]}
+                    >
+                      Close
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.modalGhost,
+                      {
+                        height: modalBtnHeight,
+                        borderRadius: Math.round(modalBtnHeight * 0.28),
+                      },
+                    ]}
+                    onPress={() => {
+                      if (!detailScene) return;
+                      setDetailSceneId(null);
+                      openEdit(detailScene);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalGhostText,
+                        { fontSize: modalLabelSize },
+                      ]}
+                    >
+                      Edit
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.modalPrimary,
+                      {
+                        height: modalBtnHeight,
+                        borderRadius: Math.round(modalBtnHeight * 0.28),
+                      },
+                    ]}
+                    onPress={() => {
+                      if (!detailScene) return;
+                      runScene(detailScene.id);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalPrimaryText,
+                        { fontSize: modalLabelSize },
+                      ]}
+                    >
+                      Run scene
                     </Text>
                   </Pressable>
                 </View>
@@ -753,6 +1029,37 @@ const styles = StyleSheet.create({
   },
   deviceTextActive: { color: "#fff" },
   modalHint: { marginTop: 8, color: "rgba(12,12,18,0.55)", fontWeight: "700" },
+  detailStatusPill: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    marginTop: 12,
+    backgroundColor: "rgba(12,12,18,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(12,12,18,0.12)",
+  },
+  detailStatusPillActive: {
+    backgroundColor: "rgba(107,60,255,0.18)",
+    borderColor: "rgba(107,60,255,0.35)",
+  },
+  detailStatusText: { color: "rgba(12,12,18,0.75)", fontWeight: "800" },
+  detailActionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+  },
+  detailActionChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: "rgba(12,12,18,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(12,12,18,0.12)",
+  },
+  detailActionText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
   modalRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   modalGhost: {
     flex: 1,
@@ -1486,12 +1793,14 @@ function SceneCard({
   actionLabels,
   isActive,
   onRun,
+  onOpen,
 }: {
   scene: Scene;
   devices: Device[];
   actionLabels: string[];
   isActive: boolean;
   onRun: () => void;
+  onOpen: () => void;
 }) {
   const { isTablet, scale: scaleFactor } = useResponsive();
   const pressScale = useRef(new Animated.Value(1)).current;
@@ -1510,7 +1819,7 @@ function SceneCard({
   const chips = actionLabels.slice(0, 3);
   const extra = actionLabels.length - chips.length;
 
-  const handlePress = () => {
+  const handleOpen = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     Animated.sequence([
       Animated.timing(pressScale, {
@@ -1524,6 +1833,12 @@ function SceneCard({
         friction: 5,
       }),
     ]).start();
+    onOpen();
+  };
+
+  const handleRun = (event?: { stopPropagation?: () => void }) => {
+    event?.stopPropagation?.();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onRun();
   };
 
@@ -1535,7 +1850,7 @@ function SceneCard({
           { padding: cardPad, borderRadius: cardRadius },
           isActive && styles.sceneCardActive,
         ]}
-        onPress={handlePress}
+        onPress={handleOpen}
       >
         <View style={styles.sceneHeader}>
           <View style={{ flex: 1 }}>
@@ -1546,12 +1861,14 @@ function SceneCard({
               {scene.actions.length} actions • {devices.length} devices
             </Text>
           </View>
-          <View
+          <Pressable
             style={[
               styles.runPill,
               { height: runHeight, borderRadius: runRadius },
               isActive && styles.runPillActive,
             ]}
+            onPress={handleRun}
+            hitSlop={8}
           >
             <Ionicons
               name={isActive ? "checkmark-circle" : "play"}
@@ -1567,7 +1884,7 @@ function SceneCard({
             >
               {isActive ? "Active" : "Run"}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         <View style={styles.iconRow}>
@@ -1726,12 +2043,42 @@ function formatAction(
     return `${device.name} ${patch.recording ? "Recording" : "Idle"}`;
   if (patch.burnerLevel != null)
     return `${device.name} Heat ${patch.burnerLevel}`;
+  if (patch.stoveMode)
+    return `${device.name} ${patch.stoveMode.replace("-", " ")}`;
+  if (patch.stoveTimerMin != null)
+    return `${device.name} ${patch.stoveTimerMin} min timer`;
+  if (patch.stoveLock != null)
+    return `${device.name} ${patch.stoveLock ? "Locked" : "Unlocked"}`;
   if (patch.cycle) return `${device.name} ${patch.cycle}`;
+  if (patch.washTemp) return `${device.name} ${patch.washTemp}`;
+  if (patch.spinSpeedRpm != null)
+    return `${device.name} ${patch.spinSpeedRpm} rpm`;
+  if (patch.soilLevel) return `${device.name} ${patch.soilLevel} soil`;
+  if (patch.heatLevel) return `${device.name} ${patch.heatLevel} heat`;
+  if (patch.drynessLevel) return `${device.name} ${patch.drynessLevel}`;
+  if (patch.remainingMin != null)
+    return `${device.name} ${patch.remainingMin} min left`;
   if (patch.channel != null) return `${device.name} Ch ${patch.channel}`;
   if (patch.timeRemainingSec != null) {
     const minutes = Math.max(1, Math.round(patch.timeRemainingSec / 60));
     return `${device.name} ${minutes}m`;
   }
+  if (patch.microwavePower != null)
+    return `${device.name} Power ${patch.microwavePower}`;
+  if (patch.microwaveMode) return `${device.name} ${patch.microwaveMode}`;
+  if (patch.solarW != null) return `${device.name} Solar ${patch.solarW}W`;
+  if (patch.solarTodayKwh != null)
+    return `${device.name} Solar ${patch.solarTodayKwh} kWh`;
+  if (patch.gridTodayKwh != null)
+    return `${device.name} Grid ${patch.gridTodayKwh} kWh`;
+  if (patch.gridAvailable != null)
+    return `${device.name} ${patch.gridAvailable ? "Grid Online" : "Grid Outage"}`;
+  if (patch.gridOutageAlerts != null)
+    return `${device.name} ${patch.gridOutageAlerts ? "Outage Alerts" : "Alerts Off"}`;
+  if (patch.waterPressureLowPsi != null)
+    return `${device.name} Alert ${patch.waterPressureLowPsi} psi`;
+  if (patch.waterPressureAlerts != null)
+    return `${device.name} ${patch.waterPressureAlerts ? "Pressure Alerts" : "Alerts Off"}`;
   if (patch.isOn != null) return `${device.name} ${patch.isOn ? "ON" : "OFF"}`;
   return `${device.name} update`;
 }
@@ -1775,14 +2122,27 @@ function buildSceneAction(
       break;
     case "stove":
       patch.burnerLevel = device.burnerLevel ?? 1;
+      patch.stoveMode = device.stoveMode ?? "simmer";
+      patch.stoveTimerMin = device.stoveTimerMin ?? 0;
+      patch.stoveLock = device.stoveLock ?? false;
       break;
     case "washer":
     case "dryer":
       patch.cycle = device.cycle ?? "Normal";
       patch.progress = device.progress ?? 0;
+      patch.washTemp = device.washTemp ?? "Warm";
+      patch.spinSpeedRpm = device.spinSpeedRpm ?? 1000;
+      patch.soilLevel = device.soilLevel ?? "Normal";
+      patch.remainingMin = device.remainingMin ?? 0;
+      if (device.kind === "dryer") {
+        patch.heatLevel = device.heatLevel ?? "Med";
+        patch.drynessLevel = device.drynessLevel ?? "Dry";
+      }
       break;
     case "microwave":
       patch.timeRemainingSec = device.timeRemainingSec ?? 60;
+      patch.microwavePower = device.microwavePower ?? 6;
+      patch.microwaveMode = device.microwaveMode ?? "Reheat";
       break;
     case "fridge":
       patch.tempC = device.tempC ?? 4;

@@ -149,7 +149,9 @@ export default function DeviceTile({
                         : device.kind === "microwave"
                           ? `${device.timeRemainingSec ?? 0}s`
                           : device.kind === "energy"
-                            ? `${device.powerW ?? 0}W`
+                            ? device.gridAvailable === false
+                              ? "Grid Offline"
+                              : `${device.powerW ?? 0}W`
                             : device.kind === "water"
                               ? `${device.waterLpm ?? 0} L/min`
                               : device.kind === "air"

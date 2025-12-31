@@ -81,9 +81,18 @@ function startMockTelemetry(intervalMs = 2000) {
         );
         const nextEnergy =
           (device.energyTodayKwh ?? 0) + (nextPower / 1000) * deltaHours;
+        const baseSolar = device.solarW ?? 0;
+        const solarNoise = baseSolar > 0 ? (Math.random() - 0.45) * 120 : 0;
+        const nextSolar = clamp(baseSolar + solarNoise, 0, 2000);
+        const nextSolarToday =
+          (device.solarTodayKwh ?? 0) + (nextSolar / 1000) * deltaHours;
+        const nextGridToday = Math.max(0, nextEnergy - nextSolarToday);
         deviceClient.pushState(device.id, {
           powerW: Math.round(nextPower),
           energyTodayKwh: +nextEnergy.toFixed(2),
+          solarW: Math.round(nextSolar),
+          solarTodayKwh: +nextSolarToday.toFixed(2),
+          gridTodayKwh: +nextGridToday.toFixed(2),
         });
       }
       if (device.kind === "water") {

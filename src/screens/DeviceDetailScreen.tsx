@@ -259,8 +259,19 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const gateOpen = clamp(device.openPercent ?? 0, 0, 100);
   const gateAutoOpen = gateDevice?.autoOpenEnabled ?? false;
   const stoveLevel = clamp(device.burnerLevel ?? 0, 0, 10);
+  const stoveMode = device.stoveMode ?? "simmer";
+  const stoveTimer = clamp(device.stoveTimerMin ?? 0, 0, 120);
+  const stoveLock = device.stoveLock ?? false;
   const washerProgress = clamp(device.progress ?? 0, 0, 100);
+  const washTemp = device.washTemp ?? "Warm";
+  const spinSpeed = clamp(device.spinSpeedRpm ?? 1000, 600, 1400);
+  const soilLevel = device.soilLevel ?? "Normal";
+  const heatLevel = device.heatLevel ?? "Med";
+  const drynessLevel = device.drynessLevel ?? "Dry";
+  const remainingMin = clamp(device.remainingMin ?? 0, 0, 180);
   const microwaveSeconds = clamp(device.timeRemainingSec ?? 0, 0, 1800);
+  const microwavePower = clamp(device.microwavePower ?? 6, 1, 10);
+  const microwaveMode = device.microwaveMode ?? "Reheat";
   const sprinklerDuration = clamp(device.durationMin ?? 15, 0, 60);
   const speakerVolume = clamp(device.volume ?? 20, 0, 100);
   const energyPower = device.powerW ?? 0;
@@ -269,14 +280,28 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const energyMonth = device.energyMonthKwh ?? 0;
   const energyCostToday = device.energyCostToday ?? 0;
   const energyBudget = device.energyBudgetKwh ?? 0;
+  const gridAvailable = device.gridAvailable ?? true;
+  const gridOutageAlerts = device.gridOutageAlerts ?? true;
+  const solarW = device.solarW ?? 0;
+  const solarToday = device.solarTodayKwh ?? 0;
+  const gridToday =
+    device.gridTodayKwh ??
+    Math.max(0, +Math.max(energyToday - solarToday, 0).toFixed(1));
+  const powerOutage = !gridAvailable;
   const waterFlow = device.waterLpm ?? 0;
   const waterToday = device.waterTodayL ?? 0;
   const waterPressure = device.waterPressurePsi ?? 0;
+  const waterPressureLow = device.waterPressureLowPsi ?? 40;
   const waterTemp = device.waterTempC ?? 0;
   const waterLeakDetected = device.waterLeakDetected ?? false;
   const waterLeakAlerts = device.waterLeakAlerts ?? true;
+  const waterPressureAlerts = device.waterPressureAlerts ?? true;
   const waterAutoShutoff = device.waterAutoShutoff ?? false;
   const waterBudget = device.waterBudgetL ?? 0;
+  const lowPressure =
+    waterPressureAlerts &&
+    waterPressure > 0 &&
+    waterPressure < waterPressureLow;
   const nightVision = device.nightVision ?? false;
   const motionAlerts = device.motionAlerts ?? true;
   const motionSensitivity = clamp(device.motionSensitivity ?? 6, 1, 10);
@@ -2479,6 +2504,99 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           })}
                         </View>
                       </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Mode</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "Simmer", value: "simmer" },
+                            { label: "Boil", value: "boil" },
+                            { label: "Sear", value: "sear" },
+                            { label: "Keep Warm", value: "keep-warm" },
+                          ].map((preset) => {
+                            const active = stoveMode === preset.value;
+                            return (
+                              <Pressable
+                                key={preset.value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ stoveMode: preset.value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {preset.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Timer</Text>
+                        <View style={styles.chipRow}>
+                          {[0, 5, 10, 20, 30].map((value) => {
+                            const active = stoveTimer === value;
+                            const label = value === 0 ? "Off" : `${value} min`;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ stoveTimerMin: value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <Text style={styles.budgetHint}>
+                          {stoveTimer
+                            ? `Auto-off in ${stoveTimer} min`
+                            : "No timer set"}
+                        </Text>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Safety</Text>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              stoveLock && styles.controlPillActive,
+                            ]}
+                            onPress={() => sendPatch({ stoveLock: !stoveLock })}
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                stoveLock && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {stoveLock ? "Child Lock" : "Lock Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
                     </>
                   )}
 
@@ -2535,6 +2653,194 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             );
                           })}
                         </View>
+                      </View>
+
+                      {device.kind === "washer" && (
+                        <>
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Temperature</Text>
+                            <View style={styles.chipRow}>
+                              {["Cold", "Warm", "Hot"].map((label) => {
+                                const active = washTemp === label;
+                                return (
+                                  <Pressable
+                                    key={label}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() =>
+                                      sendPatch({ washTemp: label })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipText,
+                                        active && styles.chipTextActive,
+                                      ]}
+                                    >
+                                      {label}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Spin speed</Text>
+                            <View style={styles.chipRow}>
+                              {[800, 1000, 1200].map((value) => {
+                                const active = spinSpeed === value;
+                                return (
+                                  <Pressable
+                                    key={value}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() =>
+                                      sendPatch({ spinSpeedRpm: value })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipText,
+                                        active && styles.chipTextActive,
+                                      ]}
+                                    >
+                                      {value} rpm
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Soil level</Text>
+                            <View style={styles.chipRow}>
+                              {["Light", "Normal", "Heavy"].map((label) => {
+                                const active = soilLevel === label;
+                                return (
+                                  <Pressable
+                                    key={label}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() =>
+                                      sendPatch({ soilLevel: label })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipText,
+                                        active && styles.chipTextActive,
+                                      ]}
+                                    >
+                                      {label}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        </>
+                      )}
+
+                      {device.kind === "dryer" && (
+                        <>
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Heat</Text>
+                            <View style={styles.chipRow}>
+                              {["Low", "Med", "High"].map((label) => {
+                                const active = heatLevel === label;
+                                return (
+                                  <Pressable
+                                    key={label}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() =>
+                                      sendPatch({ heatLevel: label })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipText,
+                                        active && styles.chipTextActive,
+                                      ]}
+                                    >
+                                      {label}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Dryness</Text>
+                            <View style={styles.chipRow}>
+                              {["Damp", "Dry", "Extra"].map((label) => {
+                                const active = drynessLevel === label;
+                                return (
+                                  <Pressable
+                                    key={label}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() =>
+                                      sendPatch({ drynessLevel: label })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipText,
+                                        active && styles.chipTextActive,
+                                      ]}
+                                    >
+                                      {label}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        </>
+                      )}
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Time remaining</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "-10", value: -10 },
+                            { label: "+10", value: 10 },
+                            { label: "+20", value: 20 },
+                          ].map((preset) => (
+                            <Pressable
+                              key={preset.label}
+                              style={styles.chip}
+                              onPress={() => {
+                                const next = Math.max(
+                                  0,
+                                  remainingMin + preset.value,
+                                );
+                                sendPatch({ remainingMin: next });
+                              }}
+                            >
+                              <Text style={styles.chipText}>
+                                {preset.label} min
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                        <Text style={styles.budgetHint}>
+                          {remainingMin ? `${remainingMin} min left` : "Idle"}
+                        </Text>
                       </View>
 
                       <View style={styles.actionRow}>
@@ -2649,6 +2955,72 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           })
                         }
                       />
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Mode</Text>
+                        <View style={styles.chipRow}>
+                          {["Reheat", "Defrost", "Grill", "Popcorn"].map(
+                            (label) => {
+                              const active = microwaveMode === label;
+                              return (
+                                <Pressable
+                                  key={label}
+                                  style={[
+                                    styles.chip,
+                                    active && styles.chipActive,
+                                  ]}
+                                  onPress={() =>
+                                    sendPatch({ microwaveMode: label })
+                                  }
+                                >
+                                  <Text
+                                    style={[
+                                      styles.chipText,
+                                      active && styles.chipTextActive,
+                                    ]}
+                                  >
+                                    {label}
+                                  </Text>
+                                </Pressable>
+                              );
+                            },
+                          )}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Power</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "Low", value: 3 },
+                            { label: "Med", value: 6 },
+                            { label: "High", value: 10 },
+                          ].map((preset) => {
+                            const active = microwavePower === preset.value;
+                            return (
+                              <Pressable
+                                key={preset.label}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ microwavePower: preset.value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {preset.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
 
                       <View style={styles.actionRow}>
                         <Pressable
@@ -2794,6 +3166,111 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         </View>
                       </View>
 
+                      <View style={styles.metricRow}>
+                        <View
+                          style={[
+                            styles.metricCard,
+                            solarW > 0 && styles.metricCardSolar,
+                          ]}
+                        >
+                          <Text style={styles.metricValue}>{solarW}W</Text>
+                          <Text style={styles.metricLabel}>Solar now</Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.metricCard,
+                            solarToday > 0 && styles.metricCardSolar,
+                          ]}
+                        >
+                          <Text style={styles.metricValue}>
+                            {solarToday} kWh
+                          </Text>
+                          <Text style={styles.metricLabel}>Solar today</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {gridToday} kWh
+                          </Text>
+                          <Text style={styles.metricLabel}>Grid</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.solarHint}>
+                        {solarW > 0 || solarToday > 0
+                          ? "Solar feeding the home"
+                          : "Solar inactive"}
+                      </Text>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Main power</Text>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              gridAvailable && styles.controlPillActive,
+                            ]}
+                            onPress={() => sendPatch({ gridAvailable: true })}
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                gridAvailable && styles.controlPillTextActive,
+                              ]}
+                            >
+                              Online
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              !gridAvailable && styles.controlPillActive,
+                            ]}
+                            onPress={() => sendPatch({ gridAvailable: false })}
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                !gridAvailable && styles.controlPillTextActive,
+                              ]}
+                            >
+                              Outage
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              gridOutageAlerts && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                gridOutageAlerts: !gridOutageAlerts,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                gridOutageAlerts &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {gridOutageAlerts ? "Alerts On" : "Alerts Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        {powerOutage && (
+                          <View style={styles.alertRow}>
+                            <Ionicons
+                              name="alert-circle"
+                              size={14}
+                              color="#D8465B"
+                            />
+                            <Text style={styles.alertText}>
+                              Main power offline
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
                       <View style={controlCardStyle}>
                         <Text style={styles.cardLabel}>Monthly budget</Text>
                         <View style={styles.chipRow}>
@@ -2927,6 +3404,18 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             <Text style={styles.alertText}>Leak detected</Text>
                           </View>
                         )}
+                        {lowPressure && (
+                          <View style={styles.alertRow}>
+                            <Ionicons
+                              name="alert-circle"
+                              size={14}
+                              color="#F4B740"
+                            />
+                            <Text style={styles.alertTextWarn}>
+                              Low pressure
+                            </Text>
+                          </View>
+                        )}
                       </View>
 
                       <View style={controlCardStyle}>
@@ -2972,6 +3461,66 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             </Text>
                           </Pressable>
                         </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Pressure alerts</Text>
+                        <View style={styles.chipRow}>
+                          {[30, 40, 50].map((value) => {
+                            const active = waterPressureLow === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ waterPressureLowPsi: value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {value} psi
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              waterPressureAlerts && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                waterPressureAlerts: !waterPressureAlerts,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                waterPressureAlerts &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {waterPressureAlerts
+                                ? "Pressure Alerts"
+                                : "Alerts Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <Text style={styles.budgetHint}>
+                          {waterPressureAlerts
+                            ? `Alert below ${waterPressureLow} psi`
+                            : "Pressure alerts disabled"}
+                        </Text>
                       </View>
                     </>
                   )}
@@ -4379,9 +4928,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  metricCardSolar: {
+    backgroundColor: "rgba(180,107,255,0.18)",
+    borderColor: "rgba(122,92,255,0.25)",
+  },
   metricValue: { color: stylesVars.ink, fontWeight: "900", fontSize: 16 },
   metricLabel: {
     marginTop: 4,
+    color: stylesVars.subtext,
+    fontWeight: "800",
+    fontSize: 11,
+  },
+  solarHint: {
+    marginTop: 6,
+    textAlign: "center",
     color: stylesVars.subtext,
     fontWeight: "800",
     fontSize: 11,
@@ -4401,6 +4961,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   alertText: { color: "#D8465B", fontWeight: "800", fontSize: 12 },
+  alertTextWarn: { color: "#B7791F", fontWeight: "800", fontSize: 12 },
   cameraFeed: {
     height: 200,
     borderRadius: 20,

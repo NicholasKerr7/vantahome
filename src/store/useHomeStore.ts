@@ -78,21 +78,39 @@ export type Device = {
   micMuted?: boolean; // camera
   twoWayAudio?: boolean; // camera
   burnerLevel?: number; // stove
+  stoveMode?: "simmer" | "boil" | "sear" | "keep-warm"; // stove
+  stoveTimerMin?: number; // stove
+  stoveLock?: boolean; // stove
   cycle?: string; // washer/dryer
   progress?: number; // washer/dryer
+  washTemp?: "Cold" | "Warm" | "Hot"; // washer
+  spinSpeedRpm?: number; // washer
+  soilLevel?: "Light" | "Normal" | "Heavy"; // washer
+  heatLevel?: "Low" | "Med" | "High"; // dryer
+  drynessLevel?: "Damp" | "Dry" | "Extra"; // dryer
+  remainingMin?: number; // washer/dryer
   timeRemainingSec?: number; // microwave
+  microwavePower?: number; // microwave
+  microwaveMode?: "Reheat" | "Defrost" | "Grill" | "Popcorn"; // microwave
   powerW?: number; // energy monitor
   energyTodayKwh?: number; // energy monitor
   energyPeakW?: number; // energy monitor
   energyMonthKwh?: number; // energy monitor
   energyCostToday?: number; // energy monitor
   energyBudgetKwh?: number; // energy monitor
+  gridAvailable?: boolean; // energy monitor
+  gridOutageAlerts?: boolean; // energy monitor
+  solarW?: number; // energy monitor
+  solarTodayKwh?: number; // energy monitor
+  gridTodayKwh?: number; // energy monitor
   waterLpm?: number; // water meter
   waterTodayL?: number; // water meter
   waterPressurePsi?: number; // water meter
+  waterPressureLowPsi?: number; // water meter
   waterTempC?: number; // water meter
   waterLeakDetected?: boolean; // water meter
   waterLeakAlerts?: boolean; // water meter
+  waterPressureAlerts?: boolean; // water meter
   waterAutoShutoff?: boolean; // water meter
   waterBudgetL?: number; // water meter
   airQualityIndex?: number; // air quality
@@ -254,6 +272,7 @@ type State = {
   ) => void;
   runScene: (sceneId: string) => void;
   addScene: (scene: Omit<Scene, "id">) => void;
+  updateScene: (sceneId: string, patch: Partial<Scene>) => void;
   addFlow: (flow: Omit<AutomationFlow, "id">) => void;
   updateFlow: (flowId: string, patch: Partial<AutomationFlow>) => void;
   toggleFlow: (flowId: string) => void;
@@ -273,8 +292,8 @@ type State = {
 
 // Demo data to keep the UI populated before a real backend is wired up.
 const profileSeed: Profile = {
-  name: "Alex",
-  email: "alex@example.com",
+  name: "Nick",
+  email: "nick@example.com",
   phone: "",
   homeName: "Vanta Home",
   avatarColor: "#B46BFF",
@@ -296,7 +315,7 @@ const roomsSeed: Room[] = [
 const householdSeed: HouseholdMember[] = [
   {
     id: "m1",
-    name: "Alex Carter",
+    name: "Nick Carter",
     role: "Owner",
     status: "home",
     avatarColor: "#B46BFF",
@@ -473,6 +492,9 @@ const devicesSeed: Device[] = [
     roomId: "r3",
     isOn: false,
     burnerLevel: 0,
+    stoveMode: "simmer",
+    stoveTimerMin: 0,
+    stoveLock: false,
   },
   {
     id: "d18",
@@ -482,6 +504,10 @@ const devicesSeed: Device[] = [
     isOn: false,
     cycle: "Normal",
     progress: 0,
+    washTemp: "Warm",
+    spinSpeedRpm: 1000,
+    soilLevel: "Normal",
+    remainingMin: 42,
   },
   {
     id: "d19",
@@ -490,6 +516,8 @@ const devicesSeed: Device[] = [
     roomId: "r3",
     isOn: false,
     timeRemainingSec: 0,
+    microwavePower: 7,
+    microwaveMode: "Reheat",
   },
   {
     id: "d20",
@@ -503,6 +531,11 @@ const devicesSeed: Device[] = [
     energyMonthKwh: 78,
     energyCostToday: 2.4,
     energyBudgetKwh: 120,
+    gridAvailable: true,
+    gridOutageAlerts: true,
+    solarW: 420,
+    solarTodayKwh: 1.4,
+    gridTodayKwh: 2.8,
   },
   {
     id: "d21",
@@ -513,9 +546,11 @@ const devicesSeed: Device[] = [
     waterLpm: 8,
     waterTodayL: 120,
     waterPressurePsi: 52,
+    waterPressureLowPsi: 40,
     waterTempC: 18,
     waterLeakDetected: false,
     waterLeakAlerts: true,
+    waterPressureAlerts: true,
     waterAutoShutoff: false,
     waterBudgetL: 220,
   },
@@ -876,7 +911,7 @@ const flowsSeed: AutomationFlow[] = [
 export const useHomeStore = create<State>()(
   persist(
     (set, get) => ({
-      userName: "Alex",
+      userName: "Nick",
       profile: profileSeed,
       outdoor: outdoorSeed,
       indoor: indoorSeed,
@@ -1094,6 +1129,13 @@ export const useHomeStore = create<State>()(
       addScene: (scene) =>
         set((state) => ({
           scenes: [...state.scenes, { ...scene, id: `s${Date.now()}` }],
+        })),
+
+      updateScene: (sceneId, patch) =>
+        set((state) => ({
+          scenes: state.scenes.map((scene) =>
+            scene.id === sceneId ? { ...scene, ...patch } : scene,
+          ),
         })),
 
       addFlow: (flow) =>
