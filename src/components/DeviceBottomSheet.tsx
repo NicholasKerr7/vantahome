@@ -149,6 +149,10 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                           ? `${device.tempC ?? 22}°C • ${(device.mode ?? "cold").toUpperCase()}`
                           : device.kind === "light"
                             ? `Brightness ${device.brightness ?? 60}%`
+                            : device.kind === "water-heater"
+                              ? `${device.tempC ?? 52}°C • ${(
+                                  device.heaterMode ?? "eco"
+                                ).toUpperCase()}`
                             : device.kind === "tv" || device.kind === "speaker"
                               ? `Volume ${device.volume ?? 20}`
                               : device.isOn

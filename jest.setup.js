@@ -8,7 +8,9 @@ jest.mock("react-native/src/private/animated/NativeAnimatedHelper");
 jest.mock("react-native-reanimated", () => {
   const Reanimated = require("react-native-reanimated/mock");
   const { FlatList } = require("react-native");
-  Reanimated.default = Reanimated;
+  const Animated = Reanimated.default ?? Reanimated;
+  Animated.FlatList = FlatList;
+  Reanimated.default = Animated;
   Reanimated.FlatList = FlatList;
   return Reanimated;
 });

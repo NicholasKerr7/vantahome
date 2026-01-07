@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
@@ -9,15 +9,26 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import Pressable from "./Pressable";
 import { theme } from "../theme/theme";
 import { useResponsive } from "../theme/layout";
 
 export default function GradientOrb({
   outdoor,
   indoor,
+  unit = "C",
+  voiceActive,
+  onVoicePress,
+  onVoicePressIn,
+  onVoicePressOut,
 }: {
   outdoor: { tempC: number; label: string };
   indoor: { tempC: number; label: string };
+  unit?: "C" | "F";
+  voiceActive?: boolean;
+  onVoicePress?: () => void;
+  onVoicePressIn?: () => void;
+  onVoicePressOut?: () => void;
 }) {
   const { width, isTablet, isLandscape, scale } = useResponsive();
   const baseSize = isTablet ? (isLandscape ? 320 : 380) : 280;
@@ -29,10 +40,15 @@ export default function GradientOrb({
   const orbPadding = Math.round(
     (isTablet ? (isLandscape ? 30 : 34) : 28) * scale,
   );
+  const hasVoice =
+    !!onVoicePress || !!onVoicePressIn || !!onVoicePressOut || !!voiceActive;
+  const voiceAuraSize = Math.round(orbSize * (isTablet ? 1.2 : 1.14));
   const tempSize = Math.round(
     (isTablet ? (isLandscape ? 34 : 38) : 34) * scale,
   );
   const labelSize = Math.round((isTablet ? 13 : 12) * scale);
+  const promptTitleSize = Math.round((isTablet ? 18 : 16) * scale);
+  const promptSubSize = Math.round((isTablet ? 12 : 11) * scale);
   const rowGap = Math.round((isTablet ? 10 : 8) * scale);
   const dividerSpacing = Math.round((isTablet ? 18 : 14) * scale);
   const iconSize = Math.round((isTablet ? 20 : 18) * scale);
@@ -48,6 +64,12 @@ export default function GradientOrb({
         "rgba(122,92,255,0.88)",
       ];
   const pulse = useSharedValue(0);
+  const [showPrompt, setShowPrompt] = useState(false);
+
+  const formatTemp = (value: number) => {
+    if (unit === "F") return Math.round(value * 1.8 + 32);
+    return Math.round(value);
+  };
 
   useEffect(() => {
     pulse.value = withRepeat(
@@ -61,88 +83,168 @@ export default function GradientOrb({
     transform: [{ scale: 1 + pulse.value * 0.03 }],
     opacity: 0.85 + pulse.value * 0.15,
   }));
+  const orbPressHandler = hasVoice ? onVoicePress : undefined;
+  const showVoicePrompt = hasVoice && showPrompt;
+  const voicePromptTitle = "Say a command";
+  const voicePromptSub = voiceActive ? "Listening..." : "Tap to speak";
+
+  useEffect(() => {
+    if (!hasVoice) {
+      setShowPrompt(false);
+      return;
+    }
+    if (voiceActive) {
+      setShowPrompt(true);
+      return;
+    }
+    setShowPrompt(false);
+    const interval = setInterval(() => {
+      setShowPrompt((prev) => !prev);
+    }, 5200);
+    return () => clearInterval(interval);
+  }, [hasVoice, voiceActive]);
 
   return (
     <View style={styles.wrap}>
-      <Animated.View
-        style={[
-          styles.orb,
-          {
-            width: orbSize,
-            height: orbSize,
-            borderRadius: radius,
-            borderWidth: isTablet ? 2 : 2,
-            shadowOpacity: isTablet ? 0.5 : 0.45,
-            shadowRadius: isTablet ? 30 : 24,
-          },
-          glowStyle,
-        ]}
-      >
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0.15, y: 0.05 }}
-          end={{ x: 0.95, y: 0.95 }}
-          style={[
-            styles.orbInner,
-            { borderRadius: radius, paddingVertical: orbPadding },
-          ]}
+      <View style={styles.orbStack}>
+        {hasVoice && (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.voiceAura,
+              {
+                width: voiceAuraSize,
+                height: voiceAuraSize,
+                borderRadius: Math.round(voiceAuraSize / 2),
+              },
+              !voiceActive && styles.voiceAuraIdle,
+            ]}
+          />
+        )}
+        <Pressable
+          onPress={orbPressHandler}
+          disablePressedStyle
+          onPressIn={onVoicePressIn}
+          onPressOut={onVoicePressOut}
         >
-          <View style={styles.section}>
-            <View style={[styles.row, { gap: rowGap }]}>
-              <Ionicons
-                name="partly-sunny"
-                size={iconSize}
-                color="rgba(255,255,255,0.92)"
-              />
-              <Text style={[styles.temp, { fontSize: tempSize }]}>
-                {outdoor.tempC}°C
-              </Text>
-            </View>
-            <Text style={[styles.label, { fontSize: labelSize }]}>
-              {outdoor.label}
-            </Text>
-          </View>
+          <Animated.View
+            style={[
+              styles.orb,
+              {
+                width: orbSize,
+                height: orbSize,
+                borderRadius: radius,
+                borderWidth: isTablet ? 2 : 2,
+                shadowOpacity: isTablet ? 0.5 : 0.45,
+                shadowRadius: isTablet ? 30 : 24,
+              },
+              glowStyle,
+            ]}
+          >
+            <LinearGradient
+              colors={gradientColors}
+              start={{ x: 0.15, y: 0.05 }}
+              end={{ x: 0.95, y: 0.95 }}
+              style={[
+                styles.orbInner,
+                {
+                  borderRadius: radius,
+                  paddingTop: orbPadding,
+                  paddingBottom: orbPadding,
+                },
+              ]}
+            >
+              {showVoicePrompt ? (
+                <View style={styles.voicePrompt}>
+                  <Text
+                    style={[
+                      styles.voicePromptTitle,
+                      { fontSize: promptTitleSize },
+                    ]}
+                  >
+                    {voicePromptTitle}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.voicePromptSub,
+                      { fontSize: promptSubSize },
+                    ]}
+                  >
+                    {voicePromptSub}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.section}>
+                    <View style={[styles.row, { gap: rowGap }]}>
+                      <Ionicons
+                        name="partly-sunny"
+                        size={iconSize}
+                        color="rgba(255,255,255,0.92)"
+                      />
+                      <Text style={[styles.temp, { fontSize: tempSize }]}>
+                        {formatTemp(outdoor.tempC)}°{unit}
+                      </Text>
+                    </View>
+                    <Text style={[styles.label, { fontSize: labelSize }]}>
+                      {outdoor.label}
+                    </Text>
+                  </View>
 
-          <View style={[styles.divider, { marginVertical: dividerSpacing }]} />
+                  <View
+                    style={[
+                      styles.divider,
+                      { marginVertical: dividerSpacing },
+                    ]}
+                  />
 
-          <View style={styles.section}>
-            <View style={[styles.row, { gap: rowGap }]}>
-              <Ionicons
-                name="home"
-                size={iconSize}
-                color="rgba(255,255,255,0.92)"
-              />
-              <Text style={[styles.temp, { fontSize: tempSize }]}>
-                {indoor.tempC}°C
-              </Text>
-            </View>
-            <Text style={[styles.label, { fontSize: labelSize }]}>
-              {indoor.label}
-            </Text>
-          </View>
-        </LinearGradient>
+                  <View style={styles.section}>
+                    <View style={[styles.row, { gap: rowGap }]}>
+                      <Ionicons
+                        name="home"
+                        size={iconSize}
+                        color="rgba(255,255,255,0.92)"
+                      />
+                      <Text style={[styles.temp, { fontSize: tempSize }]}>
+                        {formatTemp(indoor.tempC)}°{unit}
+                      </Text>
+                    </View>
+                    <Text style={[styles.label, { fontSize: labelSize }]}>
+                      {indoor.label}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </LinearGradient>
 
-        {/* inner ring highlight */}
-        <View
-          pointerEvents="none"
-          style={[
-            styles.innerRing,
-            {
-              left: innerInset,
-              top: innerInset,
-              right: innerInset,
-              bottom: innerInset,
-              borderRadius: innerRadius,
-            },
-          ]}
-        />
-      </Animated.View>
+            {/* inner ring highlight */}
+            <View
+              pointerEvents="none"
+              style={[
+                styles.innerRing,
+                {
+                  left: innerInset,
+                  top: innerInset,
+                  right: innerInset,
+                  bottom: innerInset,
+                  borderRadius: innerRadius,
+                },
+              ]}
+            />
+          </Animated.View>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { alignItems: "center", marginTop: 10 },
+  orbStack: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   orb: {
     backgroundColor: "rgba(255,255,255,0.10)",
     borderWidth: 2,
@@ -177,5 +279,29 @@ const styles = StyleSheet.create({
     width: "68%",
     backgroundColor: "rgba(255,255,255,0.26)",
     marginVertical: 18,
+  },
+  voiceAura: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  voiceAuraIdle: { opacity: 0.45 },
+  voicePrompt: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 6,
+  },
+  voicePromptTitle: {
+    color: "rgba(255,255,255,0.96)",
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+  },
+  voicePromptSub: {
+    color: "rgba(255,255,255,0.72)",
+    fontWeight: "700",
+    textAlign: "center",
   },
 });

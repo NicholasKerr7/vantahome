@@ -19,12 +19,15 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useResponsive } from "../theme/layout";
 import BackgroundLines from "../components/BackgroundLines";
 import { theme } from "../theme/theme";
+import LottieView from "lottie-react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "../services/supabaseClient";
 import { bootstrapHome } from "../services/cloudRegistry";
 
 WebBrowser.maybeCompleteAuthSession();
+
+const AUTH_LOTTIE_SOURCE = require("../../assets/animations/Coffee Clicky.json");
 
 const redirectUri = AuthSession.makeRedirectUri({
   scheme: "vantahome",
@@ -54,6 +57,8 @@ export default function AuthScreen({ navigation }: Props) {
   );
   const cardPad = Math.round((isTablet ? 22 : 18) * scale);
   const cardRadius = Math.round((isTablet ? 30 : 28) * scale);
+  const authLottieSize = Math.round((isTablet ? 190 : 150) * scale);
+  const authLottieGap = Math.round((isTablet ? 14 : 10) * scale);
   const titleSize = Math.round((isTablet ? 28 : 24) * scale);
   const subSize = Math.round((isTablet ? 14 : 12) * scale);
   const segmentHeight = Math.round((isTablet ? 40 : 36) * scale);
@@ -355,6 +360,43 @@ export default function AuthScreen({ navigation }: Props) {
               { width: cardWidth, padding: cardPad, borderRadius: cardRadius },
             ]}
           >
+            <View
+              style={[
+                styles.authLottieWrap,
+                {
+                  width: authLottieSize,
+                  height: authLottieSize,
+                  marginBottom: authLottieGap,
+                  borderRadius: Math.round(authLottieSize / 2),
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={["rgba(255,255,255,0.98)", "rgba(255,255,255,0.85)"]}
+                start={{ x: 0.2, y: 0.1 }}
+                end={{ x: 0.9, y: 1 }}
+                style={styles.authLottieBackdrop}
+              />
+              <LottieView
+                source={AUTH_LOTTIE_SOURCE}
+                autoPlay
+                loop
+                resizeMode="contain"
+                style={styles.authLottie}
+              />
+              <LinearGradient
+                colors={[
+                  "rgba(255,255,255,0.6)",
+                  "rgba(255,255,255,0.0)",
+                  "rgba(255,255,255,0.6)",
+                ]}
+                locations={[0, 0.5, 1]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.authLottieFade}
+                pointerEvents="none"
+              />
+            </View>
             <Text style={[styles.h1, { fontSize: titleSize }]}>
               Welcome to VantaHome
             </Text>
@@ -395,7 +437,7 @@ export default function AuthScreen({ navigation }: Props) {
                 <TextInput
                   value={name}
                   onChangeText={setName}
-                  placeholder="Alex Carter"
+                  placeholder="Nick Kerr"
                   placeholderTextColor="rgba(12,12,18,0.35)"
                   style={[
                     styles.input,
@@ -701,6 +743,16 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
   },
+  authLottieWrap: {
+    alignSelf: "center",
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.85)",
+  },
+  authLottieBackdrop: { ...StyleSheet.absoluteFillObject },
+  authLottie: { width: "100%", height: "100%", opacity: 1 },
+  authLottieFade: { ...StyleSheet.absoluteFillObject },
   h1: { fontSize: 24, fontWeight: "900", color: "#0C0C12" },
   sub: { marginTop: 6, color: "rgba(12,12,18,0.55)", fontWeight: "700" },
   segment: {

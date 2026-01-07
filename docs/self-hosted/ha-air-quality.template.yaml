@@ -1,0 +1,46 @@
+alias: VantaHome - Living room air quality (device d22)
+description: >
+  Publishes air metrics from Home Assistant sensors to VantaHome via MQTT.
+  Update the entity IDs if yours differ.
+trigger:
+  - platform: state
+    entity_id:
+      - sensor.living_room_aqi
+      - sensor.living_room_pm25
+      - sensor.living_room_pm10
+      - sensor.living_room_co2
+      - sensor.living_room_voc
+      - sensor.living_room_humidity
+      - sensor.living_room_temperature
+      - sensor.outdoor_aqi
+      - sensor.outdoor_pm25
+      - sensor.outdoor_co2
+      - sensor.outdoor_voc
+      - sensor.outdoor_humidity
+      - sensor.outdoor_temperature
+condition: []
+action:
+  - service: mqtt.publish
+    data:
+      topic: vantahome/devices/state
+      payload: >
+        {{ {
+          'deviceId': 'd22',
+          'patch': {
+            'airQualityIndex': states('sensor.living_room_aqi') | int(0),
+            'airPm25': states('sensor.living_room_pm25') | float(0),
+            'airPm10': states('sensor.living_room_pm10') | float(0),
+            'airCo2': states('sensor.living_room_co2') | int(0),
+            'airVoc': states('sensor.living_room_voc') | int(0),
+            'humidity': states('sensor.living_room_humidity') | int(0),
+            'tempC': states('sensor.living_room_temperature') | float(0),
+            'airOutdoorAqi': states('sensor.outdoor_aqi') | int(0),
+            'airOutdoorPm25': states('sensor.outdoor_pm25') | float(0),
+            'airOutdoorCo2': states('sensor.outdoor_co2') | int(0),
+            'airOutdoorVoc': states('sensor.outdoor_voc') | int(0),
+            'airOutdoorHumidity': states('sensor.outdoor_humidity') | int(0),
+            'airOutdoorTempC': states('sensor.outdoor_temperature') | float(0)
+          },
+          'ts': now().timestamp() | int
+        } | tojson }}
+mode: single

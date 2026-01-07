@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppNavigator from "./src/app/AppNavigator";
+import { startAmbientData } from "./src/services/ambient";
 import { startDeviceRealtime } from "./src/services/realtime";
 import { useHomeStore } from "./src/store/useHomeStore";
 import { startFlowRuntime } from "./src/services/flowRuntime";
@@ -23,6 +24,7 @@ export default function App() {
     });
   }, [enableRealtime, wsUrlOrNull]);
 
+  useEffect(() => startAmbientData(), []);
   useEffect(() => startFlowRuntime(), []);
   useEffect(() => {
     if (!notificationsEnabled) return;

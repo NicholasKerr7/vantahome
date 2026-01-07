@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,6 +15,60 @@ type NotificationItem = {
   title: string;
   body: string;
   time: string;
+  category: NotificationCategory;
+  isNew?: boolean;
+};
+
+type NotificationCategory =
+  | "alert"
+  | "device"
+  | "scene"
+  | "automation"
+  | "security"
+  | "info";
+
+type NotificationFilter = "all" | NotificationCategory;
+
+const CATEGORY_META: Record<
+  NotificationCategory,
+  { label: string; icon: keyof typeof Ionicons.glyphMap; accent: string; soft: string }
+> = {
+  alert: {
+    label: "Alerts",
+    icon: "warning",
+    accent: "#FFB4B4",
+    soft: "rgba(255,180,180,0.18)",
+  },
+  device: {
+    label: "Devices",
+    icon: "hardware-chip",
+    accent: "#9AD6FF",
+    soft: "rgba(154,214,255,0.18)",
+  },
+  scene: {
+    label: "Scenes",
+    icon: "sparkles",
+    accent: theme.colors.accent,
+    soft: "rgba(180,107,255,0.18)",
+  },
+  automation: {
+    label: "Automations",
+    icon: "timer",
+    accent: "#8DFFC9",
+    soft: "rgba(141,255,201,0.18)",
+  },
+  security: {
+    label: "Security",
+    icon: "shield-checkmark",
+    accent: "#FFD48A",
+    soft: "rgba(255,212,138,0.18)",
+  },
+  info: {
+    label: "Info",
+    icon: "information-circle",
+    accent: "#C4D4FF",
+    soft: "rgba(196,212,255,0.18)",
+  },
 };
 
 const MOCK_NOTIFICATIONS: NotificationItem[] = [
@@ -23,18 +77,29 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     title: "Air Conditioner",
     body: "Set to 22°C • Cool",
     time: "Just now",
+    category: "device",
+    isNew: true,
   },
   {
     id: "n2",
-    title: "Bedroom AC",
-    body: "Scene “Movie Time” applied",
+    title: "Scene • Movie Time",
+    body: "Living room lights dimmed",
     time: "5m ago",
+    category: "scene",
   },
   {
     id: "n3",
     title: "Automation",
     body: "Night Cool scheduled for 9:00 PM",
     time: "1h ago",
+    category: "automation",
+  },
+  {
+    id: "n4",
+    title: "Entry Door",
+    body: "Front door locked",
+    time: "2h ago",
+    category: "security",
   },
 ];
 
@@ -54,24 +119,131 @@ export default function NotificationsScreen() {
   const bodySize = Math.round((isTablet ? 13 : 12) * scale);
   const gap = Math.round((isTablet ? 16 : 10) * scale);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [filter, setFilter] = useState<NotificationFilter>("all");
   const energy = useHomeStore((s) =>
     s.devices.find((device) => device.kind === "energy"),
+  );
+  const water = useHomeStore((s) =>
+    s.devices.find((device) => device.kind === "water"),
+  );
+  const openEntry = useHomeStore((s) =>
+    s.devices.find(
+      (device) =>
+        ["door", "window", "garage", "gate"].includes(device.kind) &&
+        (device.openPercent ?? 0) > 0,
+    ),
   );
   const powerOutage =
     energy?.gridAvailable === false && (energy?.gridOutageAlerts ?? true);
   const solarActive = (energy?.solarW ?? 0) > 0;
+  const waterPressureLow = water?.waterPressureLowPsi ?? 35;
+  const waterPressureHigh = water?.waterPressureHighPsi ?? 80;
+  const waterPressure = water?.waterPressurePsi ?? 0;
+  const waterLeak = water?.waterLeakDetected ?? false;
+  const waterBudget = water?.waterBudgetL ?? 0;
+  const waterToday = water?.waterTodayL ?? 0;
+  const waterOverBudget = waterBudget > 0 && waterToday > waterBudget;
+  const filters: NotificationFilter[] = [
+    "all",
+    "alert",
+    "device",
+    "scene",
+    "automation",
+    "security",
+    "info",
+  ];
   const notifications = useMemo(() => {
-    if (!powerOutage) return MOCK_NOTIFICATIONS;
-    const outageNotice: NotificationItem = {
-      id: "n-power-outage",
-      title: "Power outage",
-      body: solarActive
-        ? "Main power offline • Solar active"
-        : "Main power offline • Backup required",
-      time: "Just now",
-    };
-    return [outageNotice, ...MOCK_NOTIFICATIONS];
-  }, [powerOutage, solarActive]);
+    const dynamicItems: NotificationItem[] = [];
+    if (powerOutage) {
+      dynamicItems.push({
+        id: "n-power-outage",
+        title: "Power outage",
+        body: solarActive
+          ? "Main power offline • Solar active"
+          : "Main power offline • Backup required",
+        time: "Just now",
+        category: "alert",
+        isNew: true,
+      });
+    }
+    if (solarActive) {
+      dynamicItems.push({
+        id: "n-solar-online",
+        title: "Solar active",
+        body: `Producing ${Math.round(energy?.solarW ?? 0)}W`,
+        time: "Just now",
+        category: "info",
+      });
+    }
+    if (waterLeak) {
+      dynamicItems.push({
+        id: "n-water-leak",
+        title: "Water leak detected",
+        body: "Auto shutoff recommended",
+        time: "Just now",
+        category: "alert",
+        isNew: true,
+      });
+    } else if (waterPressure > waterPressureHigh) {
+      dynamicItems.push({
+        id: "n-water-pressure-high",
+        title: "High water pressure",
+        body: `${Math.round(waterPressure)} PSI • Above ${
+          Math.round(waterPressureHigh)
+        }`,
+        time: "Just now",
+        category: "alert",
+      });
+    } else if (waterPressure > 0 && waterPressure < waterPressureLow) {
+      dynamicItems.push({
+        id: "n-water-pressure-low",
+        title: "Low water pressure",
+        body: `${Math.round(waterPressure)} PSI • Below ${
+          Math.round(waterPressureLow)
+        }`,
+        time: "Just now",
+        category: "alert",
+      });
+    }
+    if (waterOverBudget) {
+      dynamicItems.push({
+        id: "n-water-budget",
+        title: "Water budget exceeded",
+        body: `${Math.round(waterToday)}L used • Budget ${Math.round(
+          waterBudget,
+        )}L`,
+        time: "Today",
+        category: "alert",
+      });
+    }
+    if (openEntry) {
+      dynamicItems.push({
+        id: "n-entry-open",
+        title: `${openEntry.name} open`,
+        body: `${Math.round(openEntry.openPercent ?? 0)}% open`,
+        time: "Just now",
+        category: "security",
+      });
+    }
+    return [...dynamicItems, ...MOCK_NOTIFICATIONS];
+  }, [
+    energy?.solarW,
+    openEntry,
+    powerOutage,
+    solarActive,
+    waterBudget,
+    waterLeak,
+    waterOverBudget,
+    waterPressure,
+    waterPressureHigh,
+    waterPressureLow,
+    waterToday,
+  ]);
+
+  const filteredNotifications = useMemo(() => {
+    if (filter === "all") return notifications;
+    return notifications.filter((item) => item.category === filter);
+  }, [filter, notifications]);
 
   return (
     <LinearGradient
@@ -108,6 +280,41 @@ export default function NotificationsScreen() {
         <View style={{ width: iconBtnSize }} />
       </View>
       <View
+        style={[
+          styles.filtersRow,
+          {
+            paddingHorizontal: gutter,
+            width: contentWidth,
+            alignSelf: "center",
+          },
+        ]}
+      >
+        {filters.map((option) => {
+          const active = filter === option;
+          const label =
+            option === "all" ? "All" : CATEGORY_META[option].label;
+          return (
+            <Pressable
+              key={option}
+              style={[
+                styles.filterChip,
+                active && styles.filterChipActive,
+              ]}
+              onPress={() => setFilter(option)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  active && styles.filterChipTextActive,
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View
         style={{
           width: contentWidth,
           alignSelf: "center",
@@ -115,7 +322,7 @@ export default function NotificationsScreen() {
         }}
       >
         <FlatList
-          data={notifications}
+          data={filteredNotifications}
           keyExtractor={(item) => item.id}
           numColumns={isWide ? 2 : 1}
           columnWrapperStyle={isWide ? { gap } : undefined}
@@ -128,43 +335,82 @@ export default function NotificationsScreen() {
             paddingHorizontal: isTablet ? gutter : 0,
           }}
           style={{ width: "100%" }}
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.card,
-                {
-                  padding: cardPad,
-                  borderRadius: cardRadius,
-                  width: isWide ? (contentWidth - gap) / 2 : "100%",
-                },
-              ]}
-            >
+          renderItem={({ item }) => {
+            const meta = CATEGORY_META[item.category];
+            return (
               <View
                 style={[
-                  styles.iconWrap,
+                  styles.card,
                   {
-                    width: iconWrapSize,
-                    height: iconWrapSize,
-                    borderRadius: iconWrapRadius,
+                    padding: cardPad,
+                    borderRadius: cardRadius,
+                    width: isWide ? (contentWidth - gap) / 2 : "100%",
                   },
                 ]}
               >
-                <Ionicons
-                  name="notifications"
-                  size={iconSize}
-                  color={theme.colors.text}
+                <View
+                  style={[
+                    styles.accentBar,
+                    { backgroundColor: meta.accent },
+                  ]}
                 />
+                <View
+                  style={[
+                    styles.iconWrap,
+                    {
+                      width: iconWrapSize,
+                      height: iconWrapSize,
+                      borderRadius: iconWrapRadius,
+                      backgroundColor: meta.soft,
+                      borderColor: meta.accent,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={meta.icon}
+                    size={iconSize}
+                    color={meta.accent}
+                  />
+                </View>
+                <View style={styles.cardBody}>
+                  <Text style={[styles.title, { fontSize: textSize }]}>
+                    {item.title}
+                  </Text>
+                  <Text style={[styles.body, { fontSize: bodySize }]}>
+                    {item.body}
+                  </Text>
+                </View>
+                <View style={styles.cardMeta}>
+                  {item.isNew && (
+                    <View
+                      style={[
+                        styles.newPill,
+                        {
+                          borderColor: meta.accent,
+                          backgroundColor: meta.soft,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.newPillText}>NEW</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.time, { fontSize: bodySize }]}>
+                    {item.time}
+                  </Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.title, { fontSize: textSize }]}>
-                  {item.title}
-                </Text>
-                <Text style={[styles.body, { fontSize: bodySize }]}>
-                  {item.body}
-                </Text>
-              </View>
-              <Text style={[styles.time, { fontSize: bodySize }]}>
-                {item.time}
+            );
+          }}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="checkmark-circle"
+                size={28}
+                color="rgba(255,255,255,0.65)"
+              />
+              <Text style={styles.emptyTitle}>All caught up</Text>
+              <Text style={styles.emptySub}>
+                No notifications for this filter.
               </Text>
             </View>
           )}
@@ -203,6 +449,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
+  accentBar: {
+    width: 4,
+    alignSelf: "stretch",
+    borderRadius: 999,
+  },
   iconWrap: {
     width: 36,
     height: 36,
@@ -213,7 +464,67 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.18)",
   },
+  cardBody: { flex: 1 },
+  cardMeta: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 6,
+  },
+  newPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  newPillText: {
+    color: theme.colors.text,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
   title: { color: theme.colors.text, fontWeight: "900" },
   body: { color: theme.colors.subtext, fontWeight: "700", marginTop: 4 },
   time: { color: theme.colors.subtext, fontWeight: "700" },
+  filtersRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 4,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.accent2,
+    borderColor: "rgba(255,255,255,0.65)",
+  },
+  filterChipText: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
+  },
+  filterChipTextActive: {
+    color: theme.colors.text,
+    fontWeight: "900",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    gap: 8,
+  },
+  emptyTitle: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    fontSize: 16,
+  },
+  emptySub: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
+    textAlign: "center",
+  },
 });

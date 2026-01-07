@@ -10,6 +10,9 @@ import VantaHomeMark from "../components/VantaHomeMark";
 import BackgroundLines from "../components/BackgroundLines";
 import { theme } from "../theme/theme";
 import { useResponsive } from "../theme/layout";
+import LottieView from "lottie-react-native";
+
+const ONBOARDING_LOTTIE_SOURCE = require("../../assets/animations/Automao casa externa.json");
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
@@ -19,21 +22,6 @@ export default function OnboardingScreen({ navigation }: Props) {
   const isWide = isTablet && isLandscape;
   const isPortraitTablet = isTablet && !isLandscape;
   const isCompact = !isTablet && height < 720;
-  const cardWidth = Math.min(
-    contentWidth - gutter * 2,
-    isTablet ? (isLandscape ? 560 : isPortraitTablet ? 620 : 520) : 420,
-  );
-  const cardHeight = Math.round(
-    (isTablet
-      ? isLandscape
-        ? 280
-        : isPortraitTablet
-          ? 320
-          : 280
-      : isCompact
-        ? 200
-        : 216) * scale,
-  );
   const contentPadTop = Math.round(
     (isTablet
       ? isLandscape
@@ -53,9 +41,6 @@ export default function OnboardingScreen({ navigation }: Props) {
   const kickerSize = Math.round((isTablet ? 13 : 12) * scale);
   const headlineSize = Math.round((isTablet ? 44 : 40) * scale);
   const subheadSize = Math.round((isTablet ? 15 : 14) * scale);
-  const previewTitleSize = Math.round((isTablet ? 20 : 18) * scale);
-  const previewSubSize = Math.round((isTablet ? 13 : 12) * scale);
-  const deviceTextSize = Math.round((isTablet ? 13 : 12) * scale);
   const sceneTextSize = Math.round((isTablet ? 13 : 12) * scale);
   const ctaHeight = Math.round((isTablet ? 60 : 56) * scale);
   const ctaTextSize = Math.round((isTablet ? 16 : 15) * scale);
@@ -66,12 +51,13 @@ export default function OnboardingScreen({ navigation }: Props) {
   const heroRowGap = Math.round((isTablet ? 22 : isCompact ? 14 : 16) * scale);
   const heroStackGap = Math.round((isTablet ? 8 : isCompact ? 6 : 7) * scale);
   const heroSubheadTop = Math.round((isTablet ? 8 : isCompact ? 4 : 6) * scale);
-  const previewPad = Math.round((isTablet ? 18 : isCompact ? 14 : 16) * scale);
-  const deviceRowGap = Math.round((isTablet ? 10 : isCompact ? 8 : 10) * scale);
-  const deviceRowTop = Math.round(
-    (isTablet ? 16 : isCompact ? 12 : 14) * scale,
+  const heroLottieWidth = Math.round(
+    Math.min(
+      isWide ? contentWidth * 0.45 : contentWidth - gutter * 2,
+      (isTablet ? (isLandscape ? 520 : 620) : 360) * scale,
+    ),
   );
-  const sceneRowTop = Math.round((isTablet ? 14 : isCompact ? 10 : 12) * scale);
+  const heroLottieHeight = Math.round((heroLottieWidth * 9) / 16);
   return (
     <LinearGradient
       colors={["#190A3A", theme.colors.bg0, theme.colors.bg1]}
@@ -199,154 +185,25 @@ export default function OnboardingScreen({ navigation }: Props) {
 
             <View
               style={[
-                styles.previewWrap,
+                styles.heroVisual,
                 isWide && { flex: 1, alignItems: "flex-end" },
-                isPortraitTablet && styles.previewWrapPortrait,
+                isPortraitTablet && styles.heroVisualPortrait,
               ]}
             >
-              <LinearGradient
-                colors={["rgba(255,255,255,0.18)", "rgba(255,255,255,0.08)"]}
-                start={{ x: 0.1, y: 0.1 }}
-                end={{ x: 0.9, y: 1 }}
+              <View
                 style={[
-                  styles.previewCard,
-                  {
-                    width: cardWidth,
-                    minHeight: cardHeight,
-                    padding: previewPad,
-                  },
-                  isPortraitTablet && styles.previewCardPortrait,
+                  styles.heroLottieFrame,
+                  { width: heroLottieWidth, height: heroLottieHeight },
                 ]}
               >
-                <View style={styles.markGhost}>
-                  <VantaHomeMark
-                    size={Math.round((isTablet ? 170 : 150) * scale)}
-                  />
-                </View>
-
-                <View style={styles.previewHeader}>
-                  <View>
-                    <Text
-                      style={[
-                        styles.previewTitle,
-                        { fontSize: previewTitleSize },
-                      ]}
-                    >
-                      Living Room
-                    </Text>
-                    <Text
-                      style={[styles.previewSub, { fontSize: previewSubSize }]}
-                    >
-                      Movie Time is running
-                    </Text>
-                  </View>
-                  <View style={styles.livePill}>
-                    <View style={styles.liveDot} />
-                    <Text
-                      style={[styles.liveText, { fontSize: sceneTextSize }]}
-                    >
-                      Live
-                    </Text>
-                  </View>
-                </View>
-
-                <View
-                  style={[
-                    styles.deviceRow,
-                    { gap: deviceRowGap, marginTop: deviceRowTop },
-                  ]}
-                >
-                  <View style={styles.devicePill}>
-                    <Ionicons
-                      name="bulb"
-                      size={Math.round(16 * scale)}
-                      color="#FFD36E"
-                    />
-                    <Text
-                      style={[styles.deviceText, { fontSize: deviceTextSize }]}
-                    >
-                      Lights 40%
-                    </Text>
-                  </View>
-                  <View style={styles.devicePill}>
-                    <Ionicons
-                      name="snow"
-                      size={Math.round(16 * scale)}
-                      color="#C9E7FF"
-                    />
-                    <Text
-                      style={[styles.deviceText, { fontSize: deviceTextSize }]}
-                    >
-                      AC 22C
-                    </Text>
-                  </View>
-                  <View style={styles.devicePill}>
-                    <Ionicons
-                      name="tv"
-                      size={Math.round(16 * scale)}
-                      color="#A9B4FF"
-                    />
-                    <Text
-                      style={[styles.deviceText, { fontSize: deviceTextSize }]}
-                    >
-                      TV Vol 18
-                    </Text>
-                  </View>
-                </View>
-
-                <View
-                  style={[
-                    styles.sceneRow,
-                    { gap: deviceRowGap, marginTop: sceneRowTop },
-                  ]}
-                >
-                  <View style={styles.sceneChip}>
-                    <Ionicons
-                      name="sparkles"
-                      size={Math.round(14 * scale)}
-                      color="#FFFFFF"
-                    />
-                    <Text
-                      style={[
-                        styles.sceneChipText,
-                        { fontSize: sceneTextSize },
-                      ]}
-                    >
-                      6 Scenes
-                    </Text>
-                  </View>
-                  <View style={styles.sceneChip}>
-                    <Ionicons
-                      name="flash"
-                      size={Math.round(14 * scale)}
-                      color="#FFFFFF"
-                    />
-                    <Text
-                      style={[
-                        styles.sceneChipText,
-                        { fontSize: sceneTextSize },
-                      ]}
-                    >
-                      3 Automations
-                    </Text>
-                  </View>
-                  <View style={styles.sceneChip}>
-                    <Ionicons
-                      name="leaf"
-                      size={Math.round(14 * scale)}
-                      color="#FFFFFF"
-                    />
-                    <Text
-                      style={[
-                        styles.sceneChipText,
-                        { fontSize: sceneTextSize },
-                      ]}
-                    >
-                      Energy -12%
-                    </Text>
-                  </View>
-                </View>
-              </LinearGradient>
+                <LottieView
+                  source={ONBOARDING_LOTTIE_SOURCE}
+                  autoPlay
+                  loop
+                  resizeMode="contain"
+                  style={styles.onboardingLottie}
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -455,6 +312,10 @@ const styles = StyleSheet.create({
   heroRowPortrait: { alignItems: "center" },
   hero: { alignItems: "flex-start", gap: 6 },
   heroPortrait: { alignItems: "center" },
+  heroVisual: { alignItems: "center", justifyContent: "center" },
+  heroVisualPortrait: { alignItems: "center" },
+  heroLottieFrame: { alignItems: "center", justifyContent: "center" },
+  onboardingLottie: { width: "100%", height: "100%" },
   textCenter: { textAlign: "center" },
   kicker: {
     textTransform: "uppercase",
@@ -478,78 +339,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   subheadPortrait: { maxWidth: 420, textAlign: "center" },
-  previewWrap: { alignItems: "center" },
-  previewWrapPortrait: { alignItems: "center" },
-  previewCard: {
-    borderRadius: 30,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    shadowColor: "rgba(30,16,70,0.6)",
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 16 },
-    overflow: "hidden",
-  },
-  previewCardPortrait: {
-    borderColor: "rgba(180,107,255,0.35)",
-    shadowColor: "rgba(180,107,255,0.45)",
-  },
-  markGhost: {
-    position: "absolute",
-    right: -18,
-    top: -8,
-    opacity: 0.16,
-  },
-  previewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  previewTitle: { color: "#FFFFFF", fontWeight: "900", fontSize: 18 },
-  previewSub: {
-    marginTop: 4,
-    color: "rgba(255,255,255,0.75)",
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  livePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-  },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#7CFFB2" },
-  liveText: { color: "#FFFFFF", fontWeight: "800", fontSize: 11 },
-  deviceRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 16 },
-  devicePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  deviceText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
-  sceneRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 14 },
-  sceneChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.18)",
-  },
-  sceneChipText: { color: "#FFFFFF", fontWeight: "800", fontSize: 12 },
   ctaBlock: { alignItems: "center", gap: 10, marginTop: 4 },
   ctaWrap: { width: "100%" },
   ctaWrapPressed: { transform: [{ scale: 0.98 }] },

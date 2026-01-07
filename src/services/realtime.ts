@@ -117,9 +117,109 @@ function startMockTelemetry(intervalMs = 2000) {
           30,
           65,
         );
+        const nextPm25 = clamp(
+          (device.airPm25 ?? 8) + (Math.random() - 0.5) * 2,
+          2,
+          60,
+        );
+        const nextPm10 = clamp(
+          (device.airPm10 ?? 14) + (Math.random() - 0.5) * 3,
+          5,
+          90,
+        );
+        const nextCo2 = clamp(
+          (device.airCo2 ?? 620) + (Math.random() - 0.5) * 60,
+          420,
+          1600,
+        );
+        const nextVoc = clamp(
+          (device.airVoc ?? 120) + (Math.random() - 0.5) * 24,
+          40,
+          420,
+        );
+        const nextFormaldehyde = clamp(
+          (device.airFormaldehyde ?? 0.04) + (Math.random() - 0.5) * 0.01,
+          0.01,
+          0.2,
+        );
+        const nextPollen = clamp(
+          (device.airPollen ?? 1) + (Math.random() - 0.5) * 0.6,
+          0,
+          5,
+        );
+        const nextConfidence = clamp(
+          (device.airQualityConfidence ?? 92) + (Math.random() - 0.5) * 2,
+          70,
+          99,
+        );
+        const nextTemp = clamp(
+          (device.tempC ?? 22) + (Math.random() - 0.5) * 0.4,
+          16,
+          28,
+        );
+        const nextOutdoorAqi =
+          typeof device.airOutdoorAqi === "number"
+            ? clamp(device.airOutdoorAqi + (Math.random() - 0.5) * 3, 8, 120)
+            : undefined;
+        const nextOutdoorPm25 =
+          typeof device.airOutdoorPm25 === "number"
+            ? clamp(device.airOutdoorPm25 + (Math.random() - 0.5) * 2, 3, 70)
+            : undefined;
+        const nextOutdoorCo2 =
+          typeof device.airOutdoorCo2 === "number"
+            ? clamp(device.airOutdoorCo2 + (Math.random() - 0.5) * 30, 380, 800)
+            : undefined;
+        const nextOutdoorVoc =
+          typeof device.airOutdoorVoc === "number"
+            ? clamp(device.airOutdoorVoc + (Math.random() - 0.5) * 16, 30, 240)
+            : undefined;
+        const nextOutdoorHumidity =
+          typeof device.airOutdoorHumidity === "number"
+            ? clamp(
+                device.airOutdoorHumidity + (Math.random() - 0.5) * 3,
+                30,
+                70,
+              )
+            : undefined;
+        const nextOutdoorTempC =
+          typeof device.airOutdoorTempC === "number"
+            ? clamp(device.airOutdoorTempC + (Math.random() - 0.5) * 0.4, 12, 32)
+            : undefined;
         deviceClient.pushState(device.id, {
           airQualityIndex: Math.round(nextAqi),
           humidity: Math.round(nextHumidity),
+          airPm25: Math.round(nextPm25),
+          airPm10: Math.round(nextPm10),
+          airCo2: Math.round(nextCo2),
+          airVoc: Math.round(nextVoc),
+          airFormaldehyde: Math.round(nextFormaldehyde * 100) / 100,
+          airPollen: Math.round(nextPollen * 10) / 10,
+          airQualityConfidence: Math.round(nextConfidence),
+          tempC: Math.round(nextTemp * 10) / 10,
+          airOutdoorAqi:
+            nextOutdoorAqi == null
+              ? device.airOutdoorAqi
+              : Math.round(nextOutdoorAqi),
+          airOutdoorPm25:
+            nextOutdoorPm25 == null
+              ? device.airOutdoorPm25
+              : Math.round(nextOutdoorPm25),
+          airOutdoorCo2:
+            nextOutdoorCo2 == null
+              ? device.airOutdoorCo2
+              : Math.round(nextOutdoorCo2),
+          airOutdoorVoc:
+            nextOutdoorVoc == null
+              ? device.airOutdoorVoc
+              : Math.round(nextOutdoorVoc),
+          airOutdoorHumidity:
+            nextOutdoorHumidity == null
+              ? device.airOutdoorHumidity
+              : Math.round(nextOutdoorHumidity),
+          airOutdoorTempC:
+            nextOutdoorTempC == null
+              ? device.airOutdoorTempC
+              : Math.round(nextOutdoorTempC * 10) / 10,
         });
       }
     });

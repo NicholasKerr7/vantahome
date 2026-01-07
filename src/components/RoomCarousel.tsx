@@ -199,8 +199,8 @@ function RoomCard({
     ? (wholeHomeDevices ?? allDevices)
     : roomDevices;
 
-  // ✅ 4 icons + “More” tile aligned
-  const iconTiles = displayDevices.slice(0, 4);
+  // ✅ 3 icons + “More” tile aligned
+  const iconTiles = displayDevices.slice(0, 3);
   const remaining = Math.max(0, allDevices.length - iconTiles.length);
   const runningLabel = running === 1 ? "Running Device" : "Running Devices";
 
@@ -390,33 +390,26 @@ function RoomCard({
                 </Pressable>
               ))}
 
-              {remaining > 0 && (
+              <View style={[styles.iconTile, { width: layout.iconTileWidth }]}>
                 <View
-                  style={[styles.iconTile, { width: layout.iconTileWidth }]}
+                  style={[
+                    styles.iconBubble,
+                    styles.moreBubble,
+                    {
+                      width: layout.bubbleSize,
+                      height: layout.bubbleSize,
+                      borderRadius: layout.bubbleRadius,
+                    },
+                  ]}
                 >
-                  <View
-                    style={[
-                      styles.iconBubble,
-                      styles.moreBubble,
-                      {
-                        width: layout.bubbleSize,
-                        height: layout.bubbleSize,
-                        borderRadius: layout.bubbleRadius,
-                      },
-                    ]}
-                  >
-                    <Text style={styles.moreCount}>+{remaining}</Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.iconLabel,
-                      { fontSize: layout.iconLabelSize },
-                    ]}
-                  >
-                    More
-                  </Text>
+                  <Text style={styles.moreCount}>+{remaining}</Text>
                 </View>
-              )}
+                <Text
+                  style={[styles.iconLabel, { fontSize: layout.iconLabelSize }]}
+                >
+                  More
+                </Text>
+              </View>
             </View>
           ) : null}
         </LinearGradient>
@@ -470,7 +463,7 @@ export default function RoomCarousel({
       cardWidth,
       cardHeight,
       cardPad,
-      iconTileWidth: (cardWidth - cardPad * 2) / 5,
+      iconTileWidth: (cardWidth - cardPad * 2) / 4,
       titleSize: Math.round((isTablet ? (isLandscape ? 23 : 22) : 18) * scale),
       titleSizeInactive: Math.round((isTablet ? 17 : 14) * scale),
       subSize: Math.round((isTablet ? 14 : 12) * scale),
@@ -545,7 +538,7 @@ export default function RoomCarousel({
           {
             paddingHorizontal: sidePad,
             paddingTop: Math.round((isTablet ? 20 : 14) * scale),
-            paddingBottom: Math.round((isTablet ? 18 : 12) * scale),
+            paddingBottom: Math.round((isTablet ? 10 : 6) * scale),
           },
         ]}
         ItemSeparatorComponent={() => <View style={{ width: gap }} />}
@@ -583,8 +576,8 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingHorizontal: 0,
-    paddingTop: 14,
-    paddingBottom: 12, // ✅ avoids bottom cut-off
+    paddingTop: 20,
+    paddingBottom: 10, // ✅ avoids bottom cut-off
   },
 
   item: {
@@ -598,7 +591,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.58)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.6)",
-    transform: [{ translateY: -16 }],
+    transform: [{ translateY: -28 }],
     alignItems: "center",
     paddingTop: 10,
     paddingHorizontal: 14,
@@ -609,7 +602,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.42)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.48)",
-    transform: [{ translateY: -26 }],
+    transform: [{ translateY: -42 }],
     alignItems: "center",
     paddingTop: 8,
     paddingHorizontal: 14,
@@ -659,7 +652,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  // ✅ 5 columns: 4 icons + More tile aligned
+  // ✅ 4 columns: 3 icons + More tile aligned
   iconTile: {
     alignItems: "center",
     justifyContent: "center",

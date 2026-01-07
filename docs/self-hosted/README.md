@@ -175,6 +175,37 @@ action:
 ```
 
 ```yaml
+alias: VantaHome - Living room air quality
+trigger:
+  - platform: state
+    entity_id:
+      - sensor.living_room_aqi
+      - sensor.living_room_pm25
+      - sensor.living_room_co2
+      - sensor.living_room_voc
+condition: []
+action:
+  - service: mqtt.publish
+    data:
+      topic: vantahome/devices/state
+      payload: >
+        {{ {
+          'deviceId': 'd22',
+          'patch': {
+            'airQualityIndex': states('sensor.living_room_aqi') | int(0),
+            'airPm25': states('sensor.living_room_pm25') | float(0),
+            'airCo2': states('sensor.living_room_co2') | int(0),
+            'airVoc': states('sensor.living_room_voc') | int(0),
+            'humidity': states('sensor.living_room_humidity') | int(0)
+          },
+          'ts': now().timestamp() | int
+        } | tojson }}
+mode: single
+```
+
+Template with indoor + outdoor sensors (deviceId `d22`): `docs/self-hosted/ha-air-quality.template.yaml`.
+
+```yaml
 alias: VantaHome - Commands
 trigger:
   - platform: mqtt

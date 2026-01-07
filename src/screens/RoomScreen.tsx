@@ -49,6 +49,7 @@ const DEVICE_OPTIONS: Array<{
   { kind: "microwave", label: "Microwave", defaultName: "Microwave" },
   { kind: "energy", label: "Energy", defaultName: "Energy Monitor" },
   { kind: "water", label: "Water", defaultName: "Water Meter" },
+  { kind: "water-heater", label: "Water Heater", defaultName: "Water Heater" },
   { kind: "air", label: "Air", defaultName: "Air Quality" },
   { kind: "sprinkler", label: "Sprinkler", defaultName: "Sprinkler" },
   { kind: "speaker", label: "Speaker", defaultName: "Smart Speaker" },
@@ -69,13 +70,43 @@ const buildDeviceDefaults = (kind: Device["kind"]): Partial<Device> => {
         autoOffMin: 0,
       };
     case "ac":
-      return { tempC: 22, mode: "cold" };
+      return {
+        tempC: 22,
+        mode: "cold",
+        acFanSpeed: 60,
+        acSwingMode: "both",
+        acEcoMode: false,
+        acTurboMode: false,
+        acQuietMode: false,
+        acTargetHumidity: 45,
+        acFilterLife: 85,
+      };
     case "tv":
       return { volume: 20, channel: 1, source: "Live TV" };
     case "fan":
-      return { speed: 50 };
+      return {
+        speed: 50,
+        fanOscillation: true,
+        fanDirection: "forward",
+        fanTimerMin: 0,
+        fanAutoMode: false,
+        fanLightOn: true,
+        fanSleepMode: false,
+      };
     case "fridge":
-      return { tempC: 4 };
+      return {
+        tempC: 4,
+        freezerTempC: -18,
+        fridgeMode: "normal",
+        fridgeDoorOpen: false,
+        fridgeDoorAlarm: true,
+        fridgeIceMaker: true,
+        fridgeQuickCool: false,
+        fridgeQuickFreeze: false,
+        fridgeEnergySaver: true,
+        fridgeFilterLife: 80,
+        fridgeHumidity: 50,
+      };
     case "garage":
     case "door":
     case "window":
@@ -83,7 +114,19 @@ const buildDeviceDefaults = (kind: Device["kind"]): Partial<Device> => {
     case "gate":
       return { openPercent: 0, autoOpenEnabled: true };
     case "vacuum":
-      return { status: "docked", battery: 85 };
+      return {
+        status: "docked",
+        battery: 85,
+        vacuumSuction: 70,
+        vacuumMode: "auto",
+        vacuumMop: false,
+        vacuumQuietMode: false,
+        vacuumBinFull: false,
+        vacuumBrushDirty: false,
+        vacuumFilterLife: 70,
+        vacuumAreaM2: 24,
+        vacuumRuntimeMin: 40,
+      };
     case "camera":
       return { armed: true, recording: false };
     case "stove":
@@ -94,22 +137,57 @@ const buildDeviceDefaults = (kind: Device["kind"]): Partial<Device> => {
         stoveLock: false,
       };
     case "washer":
-    case "dryer":
       return {
         cycle: "Normal",
         progress: 0,
         washTemp: "Warm",
         spinSpeedRpm: 1000,
         soilLevel: "Normal",
+        remainingMin: 40,
+        loadSize: "Medium",
+        rinseCount: 2,
+        prewash: false,
+        steamWash: false,
+        sanitizeWash: false,
+        smartDispense: true,
+        extraSpin: false,
+        ecoWash: false,
+      };
+    case "dryer":
+      return {
+        cycle: "Normal",
+        progress: 0,
         heatLevel: "Med",
         drynessLevel: "Dry",
         remainingMin: 40,
+        sensorDry: true,
+        wrinkleGuard: true,
+        steamRefresh: false,
+        ecoDry: false,
+        airFluff: false,
+        coolDown: true,
+        lintFilterOk: true,
+        antiStatic: false,
       };
     case "microwave":
       return {
         timeRemainingSec: 0,
         microwavePower: 6,
         microwaveMode: "Reheat",
+      };
+    case "coffee":
+      return {
+        coffeeStrength: "normal",
+        coffeeSizeOz: 8,
+        coffeeTempC: 92,
+        coffeeKeepWarmMin: 20,
+        coffeeCupCount: 2,
+        coffeeGrinder: true,
+        coffeeMilkFrother: false,
+        coffeeWaterLevel: 70,
+        coffeeBeanLevel: 55,
+        coffeeDescaleNeeded: false,
+        coffeeAutoBrewTime: "07:00",
       };
     case "energy":
       return {
@@ -127,16 +205,82 @@ const buildDeviceDefaults = (kind: Device["kind"]): Partial<Device> => {
         waterTodayL: 0,
         waterPressurePsi: 50,
         waterPressureLowPsi: 40,
+        waterPressureHighPsi: 80,
         waterPressureAlerts: true,
       };
+    case "water-heater":
+      return {
+        tempC: 52,
+        waterHeaterType: "electric-tank",
+        heaterMode: "eco",
+        recirculation: false,
+        antiLegionella: false,
+        vacationDays: 0,
+        heaterScheduleEnabled: true,
+      };
     case "air":
-      return { airQualityIndex: 32, humidity: 44 };
+      return {
+        airQualityIndex: 32,
+        humidity: 44,
+        airPm25: 8,
+        airPm10: 14,
+        airCo2: 620,
+        airVoc: 120,
+        airFormaldehyde: 0.04,
+        airPollen: 1,
+        airQualityConfidence: 92,
+        airOutdoorAqi: 46,
+        airOutdoorPm25: 12,
+        airOutdoorCo2: 420,
+        airOutdoorVoc: 90,
+        airOutdoorHumidity: 48,
+        airOutdoorTempC: 26,
+        airAlertsEnabled: true,
+        airAlertAqi: 100,
+        airAlertCo2: 1200,
+        airAlertVoc: 300,
+        airAlertPm25: 35,
+        airAlertPm10: 50,
+        airAlertPollen: 3,
+        airPurifierMode: "auto",
+        airPurifierSpeed: 40,
+        airIonizerEnabled: false,
+        airFilterLife: 78,
+        airFilterDaysLeft: 45,
+        airAutoVentilation: true,
+      };
     case "sprinkler":
       return { zone: "Front Yard", durationMin: 15 };
     case "speaker":
-      return { volume: 22 };
+      return {
+        volume: 22,
+        speakerSource: "Bluetooth",
+        speakerPreset: "Flat",
+        bass: 50,
+        treble: 50,
+        spatialAudio: false,
+        partyMode: false,
+        nightMode: false,
+        micEnabled: true,
+        voiceAssistantEnabled: true,
+        shuffle: false,
+        repeat: "off",
+        trackTitle: "New Day",
+        trackArtist: "Vanta",
+        trackAlbum: "Home Sessions",
+        trackDurationSec: 210,
+        trackProgressSec: 0,
+      };
     case "smoke":
-      return { smokeDetected: false };
+      return {
+        smokeDetected: false,
+        coDetected: false,
+        coPpm: 3,
+        smokePpm: 0,
+        smokeBattery: 80,
+        smokeSensorStatus: "ok",
+        smokeSilenced: false,
+      };
     default:
       return {};
   }
@@ -223,6 +367,7 @@ export default function RoomScreen({ route, navigation }: Props) {
   const [newKind, setNewKind] = useState<Device["kind"]>("light");
   const [newName, setNewName] = useState("New Light");
   const [nameTouched, setNameTouched] = useState(false);
+  const [stackLaundry, setStackLaundry] = useState(false);
 
   React.useEffect(() => {
     return () => {
@@ -234,6 +379,7 @@ export default function RoomScreen({ route, navigation }: Props) {
     setNewKind("light");
     setNewName("New Light");
     setNameTouched(false);
+    setStackLaundry(false);
     setShowAddDevice(true);
   };
 
@@ -241,9 +387,48 @@ export default function RoomScreen({ route, navigation }: Props) {
     if (!roomId || isWholeHome) return;
     const option = DEVICE_OPTIONS.find((o) => o.kind === newKind);
     const name = newName.trim() || option?.defaultName || "New Device";
-    const id = `d${Date.now()}`;
     const defaults = buildDeviceDefaults(newKind);
-    const isOn = ["energy", "water", "air", "smoke"].includes(newKind);
+    const isOn = ["energy", "water", "water-heater", "air", "smoke"].includes(
+      newKind,
+    );
+    const isLaundry = newKind === "washer" || newKind === "dryer";
+    if (isLaundry && stackLaundry) {
+      const baseId = Date.now();
+      const stackId = `stack-${baseId}`;
+      const primaryId = `d${baseId}`;
+      const secondaryId = `d${baseId + 1}`;
+      const partnerKind = newKind === "washer" ? "dryer" : "washer";
+      const partnerOption = DEVICE_OPTIONS.find((o) => o.kind === partnerKind);
+      const partnerName =
+        name.trim().length > 0
+          ? `${name} ${partnerKind === "washer" ? "Washer" : "Dryer"}`
+          : partnerOption?.defaultName || "Laundry";
+      addDevice({
+        id: primaryId,
+        name,
+        kind: newKind,
+        roomId,
+        isOn: false,
+        stackId,
+        stackPosition: newKind === "dryer" ? "top" : "bottom",
+        ...defaults,
+      });
+      addDevice({
+        id: secondaryId,
+        name: partnerName,
+        kind: partnerKind,
+        roomId,
+        isOn: false,
+        stackId,
+        stackPosition: partnerKind === "dryer" ? "top" : "bottom",
+        ...buildDeviceDefaults(partnerKind),
+      });
+      setShowAddDevice(false);
+      setSelectedId(primaryId);
+      requestAnimationFrame(() => sheetRef.current?.present());
+      return;
+    }
+    const id = `d${Date.now()}`;
     addDevice({
       id,
       name,
@@ -504,6 +689,12 @@ export default function RoomScreen({ route, navigation }: Props) {
                       ]}
                       onPress={() => {
                         setNewKind(option.kind);
+                        if (
+                          option.kind !== "washer" &&
+                          option.kind !== "dryer"
+                        ) {
+                          setStackLaundry(false);
+                        }
                         if (!nameTouched) setNewName(option.defaultName);
                       }}
                     >
@@ -525,6 +716,55 @@ export default function RoomScreen({ route, navigation }: Props) {
                   );
                 })}
               </ScrollView>
+
+              {(newKind === "washer" || newKind === "dryer") && (
+                <>
+                  <Text
+                    style={[styles.modalLabel, { fontSize: modalLabelSize }]}
+                  >
+                    Laundry setup
+                  </Text>
+                  <View style={styles.stackRow}>
+                    <Pressable
+                      style={[
+                        styles.stackPill,
+                        !stackLaundry && styles.stackPillActive,
+                      ]}
+                      onPress={() => setStackLaundry(false)}
+                    >
+                      <Text
+                        style={[
+                          styles.stackPillText,
+                          !stackLaundry && styles.stackPillTextActive,
+                        ]}
+                      >
+                        Single unit
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.stackPill,
+                        stackLaundry && styles.stackPillActive,
+                      ]}
+                      onPress={() => setStackLaundry(true)}
+                    >
+                      <Text
+                        style={[
+                          styles.stackPillText,
+                          stackLaundry && styles.stackPillTextActive,
+                        ]}
+                      >
+                        Stacked pair
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <Text style={styles.stackHint}>
+                    {stackLaundry
+                      ? `Creates both washer + dryer and links them.`
+                      : `Adds just this ${newKind}.`}
+                  </Text>
+                </>
+              )}
 
               <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
                 Name
@@ -675,6 +915,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   deviceTypeTextActive: { color: "#fff" },
+  stackRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  stackPill: {
+    flex: 1,
+    height: 38,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+  },
+  stackPillActive: {
+    backgroundColor: "#6B3CFF",
+    borderColor: "#6B3CFF",
+  },
+  stackPillText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
+  stackPillTextActive: { color: "#fff" },
+  stackHint: {
+    color: "rgba(12,12,18,0.5)",
+    fontWeight: "700",
+    marginBottom: 6,
+  },
   modalInput: {
     height: 44,
     borderRadius: 12,

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,9 +11,11 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import Slider from "@react-native-community/slider";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import LottieView from "lottie-react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../app/AppNavigator";
 import { theme } from "../theme/theme";
@@ -36,6 +38,20 @@ import {
 import { deviceClient } from "../services/deviceClient";
 import { useResponsive } from "../theme/layout";
 import DeviceIcon from "../components/DeviceIcon";
+
+const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
+
+const TV_LOTTIE_SOURCE = require("../../assets/animations/tv-screen.json");
+const AC_LOTTIE_SOURCE = require("../../assets/animations/ac-screen.json");
+const GARAGE_LOTTIE_SOURCE = require("../../assets/animations/garage-screen.json");
+const CAMERA_LOTTIE_SOURCE = require("../../assets/animations/camera-screen.json");
+const WASHER_LOTTIE_SOURCE = require("../../assets/animations/washer-screen.json");
+const DOOR_LOTTIE_SOURCE = require("../../assets/animations/door-screen.json");
+const GATE_LOTTIE_SOURCE = require("../../assets/animations/front-gate-screen.json");
+const STOVE_LOTTIE_SOURCE = require("../../assets/animations/stove-screen.json");
+const ENERGY_LOTTIE_SOURCE = require("../../assets/animations/energy-screen.json");
+const WATER_LOTTIE_SOURCE = require("../../assets/animations/water.json");
+const WINDOW_LOTTIE_SOURCE = require("../../assets/animations/window-screen.json");
 
 type Props = NativeStackScreenProps<RootStackParamList, "DeviceDetail">;
 
@@ -83,6 +99,85 @@ const LIGHT_EFFECTS: Array<{
 
 const LIGHT_AUTO_OFF = [0, 15, 30, 60];
 
+const AIR_QUALITY_BANDS = [
+  {
+    max: 50,
+    label: "Good",
+    color: "#2F9E7D",
+    gradient: ["#C8F3E4", "#6B3CFF"],
+  },
+  {
+    max: 100,
+    label: "Moderate",
+    color: "#C08A1F",
+    gradient: ["#FFE8B6", "#FF9B6A"],
+  },
+  {
+    max: 150,
+    label: "Poor",
+    color: "#D05763",
+    gradient: ["#FFD2D6", "#D8465B"],
+  },
+  {
+    max: Number.POSITIVE_INFINITY,
+    label: "Hazardous",
+    color: "#8B2F43",
+    gradient: ["#F4B0BA", "#B63A51"],
+  },
+];
+
+const resolveAirBand = (aqi: number) =>
+  AIR_QUALITY_BANDS.find((band) => aqi <= band.max) ?? AIR_QUALITY_BANDS[0];
+
+const AIR_CHART_WINDOW_HOURS = 24;
+const AIR_CHART_MAX_POINTS = 48;
+const AIR_CHART_MIN_POINTS = 12;
+
+const formatTimeAgo = (ts: number) => {
+  const diffMs = Date.now() - ts;
+  if (!Number.isFinite(diffMs) || diffMs < 0) return "Just now";
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDays = Math.round(diffHr / 24);
+  return `${diffDays}d ago`;
+};
+
+const buildAirSeries = (
+  history: Array<{ ts: number; aqi?: number }>,
+  fallbackAqi: number,
+) => {
+  if (!history.length) return [];
+  const sorted = [...history].sort((a, b) => a.ts - b.ts);
+  const now = Date.now();
+  const windowMs = AIR_CHART_WINDOW_HOURS * 60 * 60 * 1000;
+  const windowed = sorted.filter((sample) => sample.ts >= now - windowMs);
+  if (windowed.length <= 1) return windowed;
+
+  const deltas = windowed
+    .slice(1)
+    .map((sample, idx) => sample.ts - windowed[idx].ts)
+    .filter((delta) => delta > 0);
+  const median = deltas.length
+    ? deltas.sort((a, b) => a - b)[Math.floor(deltas.length / 2)]
+    : 30 * 60 * 1000;
+  const targetPoints = Math.min(
+    AIR_CHART_MAX_POINTS,
+    Math.max(AIR_CHART_MIN_POINTS, Math.round(windowMs / median)),
+  );
+  const stride =
+    windowed.length > targetPoints
+      ? Math.ceil(windowed.length / targetPoints)
+      : 1;
+  const downsampled =
+    stride > 1 ? windowed.filter((_, idx) => idx % stride === 0) : windowed;
+  return downsampled.length
+    ? downsampled
+    : [{ ts: now, aqi: fallbackAqi }];
+};
+
 export default function DeviceDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { gutter, isTablet, isLandscape, scale, contentWidth, height } =
@@ -104,6 +199,32 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     (isTablet ? (isLandscape ? 320 : 340) : 280) * scale,
   );
   const compactDialSize = Math.round((isTablet ? 280 : 240) * scale);
+  const airOrbSize = Math.round((isTablet ? 220 : 190) * scale);
+  const laundryDialSize = compactDialSize;
+  const laundryCenterSize = Math.max(140, Math.round(laundryDialSize * 0.66));
+  const laundryCenterRadius = Math.round(laundryCenterSize / 2);
+  const laundryCenterValueSize = Math.max(
+    20,
+    Math.round(laundryCenterSize * 0.26),
+  );
+  const laundryCenterLabelSize = Math.max(
+    11,
+    Math.round(laundryCenterSize * 0.12),
+  );
+  const windowDialSize = compactDialSize;
+  const windowCenterSize = Math.max(120, Math.round(windowDialSize * 0.66));
+  const windowCenterRadius = Math.round(windowCenterSize / 2);
+  const windowCenterValueSize = Math.max(
+    18,
+    Math.round(windowCenterSize * 0.24),
+  );
+  const windowCenterLabelSize = Math.max(
+    11,
+    Math.round(windowCenterSize * 0.12),
+  );
+  const speakerBarBase = Math.round((isTablet ? 12 : 10) * scale);
+  const speakerBarMax = Math.round((isTablet ? 36 : 28) * scale);
+  const speakerCoverSize = Math.round((isTablet ? 72 : 60) * scale);
   const controlCardPad = Math.round((isTablet ? 16 : 12) * scale);
   const controlCardRadius = Math.round((isTablet ? 20 : 18) * scale);
   const controlCardRowGap = Math.round((isTablet ? 12 : 10) * scale);
@@ -198,6 +319,26 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   };
   const lightSceneMinWidth = Math.round((isTablet ? 92 : 78) * scale);
   const lightControlsCompact = isLightMobile;
+  const renderDeviceLottie = (source: any, size: number) => (
+    <View
+      style={[
+        styles.deviceLottieDock,
+        {
+          width: size,
+          height: size,
+          borderRadius: Math.round(size / 2),
+        },
+      ]}
+    >
+      <LottieView
+        source={source}
+        autoPlay
+        loop
+        resizeMode="contain"
+        style={styles.deviceLottie}
+      />
+    </View>
+  );
   const { deviceId } = route.params;
   const device = useHomeStore((s) => s.devices.find((d) => d.id === deviceId));
   const roomName = useHomeStore(
@@ -210,14 +351,21 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     s.devices.find((d) => d.kind === "gate"),
   );
   const roomTemp = useHomeStore((s) => s.indoor.tempC);
+  const outdoor = useHomeStore((s) => s.outdoor);
   const rooms = useHomeStore((s) => s.rooms);
+  const devicesAll = useHomeStore((s) => s.devices);
   const coffeeFill = useRef(
     new Animated.Value(device?.kind === "coffee" && device.isOn ? 1 : 0),
   ).current;
-  const coffeeLoop = useRef<Animated.CompositeAnimation | null>(null);
-  const doorSwing = useRef(
-    new Animated.Value(device?.kind === "door" && device.isOn ? 1 : 0),
+  const waterFill = useRef(new Animated.Value(0)).current;
+  const waterLoop = useRef<Animated.CompositeAnimation | null>(null);
+  const speakerBars = useRef(
+    Array.from({ length: 10 }, () => new Animated.Value(0.2)),
   ).current;
+  const coffeeLoop = useRef<Animated.CompositeAnimation | null>(null);
+  const openProgress = useRef(new Animated.Value(0)).current;
+  const openDeviceIdRef = useRef<string | null>(null);
+  const openPercentRef = useRef<number | null>(null);
 
   if (!device) return null;
 
@@ -237,6 +385,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const motionBoost = device.motionBoost ?? false;
   const nightShift = device.nightShift ?? false;
   const autoOffMin = clamp(device.autoOffMin ?? 0, 0, 120);
+  const acFanSpeed = clamp(device.acFanSpeed ?? 60, 0, 100);
+  const acSwingMode = device.acSwingMode ?? "both";
+  const acEcoMode = device.acEcoMode ?? false;
+  const acTurboMode = device.acTurboMode ?? false;
+  const acQuietMode = device.acQuietMode ?? false;
+  const acTargetHumidity = clamp(device.acTargetHumidity ?? 45, 30, 60);
+  const acFilterLife = clamp(device.acFilterLife ?? 100, 0, 100);
   const bulbColor = device.color ?? "#FFD166";
   const bulbIsLight = isLightColor(bulbColor);
   const bulbGradient = bulbIsLight
@@ -252,11 +407,48 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     : "rgba(255,255,255,0.18)";
   const volume = clamp(device.volume ?? 20, 0, 100);
   const channel = clamp(device.channel ?? 1, 1, 999);
-  const source = device.source ?? "Live TV";
+  const tvSource = device.source ?? "Live TV";
+  const tvIsLive = tvSource === "Live TV" || tvSource === "Guide";
+  const tvStatusLabel = device.isOn
+    ? tvIsLive
+      ? "Live TV"
+      : "Quick App"
+    : "TV Off";
+  const tvDetailLabel = device.isOn
+    ? tvIsLive
+      ? `Ch ${channel}`
+      : tvSource
+    : "Press power to start";
   const fridgeTemp = clamp(device.tempC ?? 4, 1, 8);
+  const freezerTemp = clamp(device.freezerTempC ?? -18, -24, -12);
+  const fridgeMode = device.fridgeMode ?? "normal";
+  const fridgeDoorOpen = device.fridgeDoorOpen ?? false;
+  const fridgeDoorAlarm = device.fridgeDoorAlarm ?? true;
+  const fridgeIceMaker = device.fridgeIceMaker ?? true;
+  const fridgeQuickCool = device.fridgeQuickCool ?? false;
+  const fridgeQuickFreeze = device.fridgeQuickFreeze ?? false;
+  const fridgeEnergySaver = device.fridgeEnergySaver ?? true;
+  const fridgeFilterLife = clamp(device.fridgeFilterLife ?? 100, 0, 100);
+  const fridgeHumidity = clamp(device.fridgeHumidity ?? 50, 30, 70);
   const fanSpeed = clamp(device.speed ?? 50, 0, 100);
-  const windowOpen = clamp(device.openPercent ?? 0, 0, 100);
-  const gateOpen = clamp(device.openPercent ?? 0, 0, 100);
+  const fanOscillation = device.fanOscillation ?? true;
+  const fanDirection = device.fanDirection ?? "forward";
+  const fanTimerMin = clamp(device.fanTimerMin ?? 0, 0, 240);
+  const fanAutoMode = device.fanAutoMode ?? false;
+  const fanLightOn = device.fanLightOn ?? true;
+  const fanSleepMode = device.fanSleepMode ?? false;
+  const isOpenable = ["garage", "gate", "door", "window"].includes(device.kind);
+  const openPercent = isOpenable
+    ? clamp(
+        typeof device.openPercent === "number"
+          ? device.openPercent
+          : device.isOn
+            ? 100
+            : 0,
+        0,
+        100,
+      )
+    : 0;
   const gateAutoOpen = gateDevice?.autoOpenEnabled ?? false;
   const stoveLevel = clamp(device.burnerLevel ?? 0, 0, 10);
   const stoveMode = device.stoveMode ?? "simmer";
@@ -269,11 +461,78 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const heatLevel = device.heatLevel ?? "Med";
   const drynessLevel = device.drynessLevel ?? "Dry";
   const remainingMin = clamp(device.remainingMin ?? 0, 0, 180);
+  const loadSize = device.loadSize ?? "Medium";
+  const rinseCount = Math.min(
+    3,
+    Math.max(1, device.rinseCount ?? 2),
+  ) as 1 | 2 | 3;
+  const prewash = device.prewash ?? false;
+  const steamWash = device.steamWash ?? false;
+  const sanitizeWash = device.sanitizeWash ?? false;
+  const smartDispense = device.smartDispense ?? false;
+  const extraSpin = device.extraSpin ?? false;
+  const ecoWash = device.ecoWash ?? false;
+  const sensorDry = device.sensorDry ?? true;
+  const wrinkleGuard = device.wrinkleGuard ?? false;
+  const steamRefresh = device.steamRefresh ?? false;
+  const ecoDry = device.ecoDry ?? false;
+  const airFluff = device.airFluff ?? false;
+  const coolDown = device.coolDown ?? true;
+  const lintFilterOk = device.lintFilterOk ?? true;
+  const antiStatic = device.antiStatic ?? false;
+  const coffeeStrength = device.coffeeStrength ?? "normal";
+  const coffeeSizeOz = clamp(device.coffeeSizeOz ?? 8, 4, 16);
+  const coffeeTempC = clamp(device.coffeeTempC ?? 92, 80, 98);
+  const coffeeKeepWarmMin = clamp(device.coffeeKeepWarmMin ?? 20, 0, 60);
+  const coffeeCupCount = clamp(device.coffeeCupCount ?? 2, 1, 6);
+  const coffeeGrinder = device.coffeeGrinder ?? true;
+  const coffeeMilkFrother = device.coffeeMilkFrother ?? false;
+  const coffeeWaterLevel = clamp(device.coffeeWaterLevel ?? 70, 0, 100);
+  const coffeeBeanLevel = clamp(device.coffeeBeanLevel ?? 55, 0, 100);
+  const coffeeDescaleNeeded = device.coffeeDescaleNeeded ?? false;
+  const coffeeAutoBrewTime = device.coffeeAutoBrewTime ?? "07:00";
+  const laundryCycles =
+    device.kind === "dryer"
+      ? ["Normal", "Quick", "Delicate", "Bedding", "Towels", "Air Fluff"]
+      : ["Normal", "Quick", "Delicate", "Bedding", "Eco"];
   const microwaveSeconds = clamp(device.timeRemainingSec ?? 0, 0, 1800);
   const microwavePower = clamp(device.microwavePower ?? 6, 1, 10);
   const microwaveMode = device.microwaveMode ?? "Reheat";
   const sprinklerDuration = clamp(device.durationMin ?? 15, 0, 60);
+  const vacuumStatus = device.status ?? "docked";
+  const vacuumBattery = clamp(device.battery ?? 0, 0, 100);
+  const vacuumSuction = clamp(device.vacuumSuction ?? 70, 0, 100);
+  const vacuumMode = device.vacuumMode ?? "auto";
+  const vacuumMop = device.vacuumMop ?? false;
+  const vacuumQuietMode = device.vacuumQuietMode ?? false;
+  const vacuumBinFull = device.vacuumBinFull ?? false;
+  const vacuumBrushDirty = device.vacuumBrushDirty ?? false;
+  const vacuumFilterLife = clamp(device.vacuumFilterLife ?? 100, 0, 100);
+  const vacuumAreaM2 = clamp(device.vacuumAreaM2 ?? 0, 0, 300);
+  const vacuumRuntimeMin = clamp(device.vacuumRuntimeMin ?? 0, 0, 240);
   const speakerVolume = clamp(device.volume ?? 20, 0, 100);
+  const speakerSource = device.speakerSource ?? "Bluetooth";
+  const speakerPreset = device.speakerPreset ?? "Flat";
+  const speakerBass = clamp(device.bass ?? 50, 0, 100);
+  const speakerTreble = clamp(device.treble ?? 50, 0, 100);
+  const speakerSpatial = device.spatialAudio ?? false;
+  const speakerParty = device.partyMode ?? false;
+  const speakerNight = device.nightMode ?? false;
+  const speakerMic = device.micEnabled ?? true;
+  const speakerAssistant = device.voiceAssistantEnabled ?? true;
+  const speakerShuffle = device.shuffle ?? false;
+  const speakerRepeat = device.repeat ?? "off";
+  const speakerTrackTitle = device.trackTitle ?? "Now playing";
+  const speakerTrackArtist = device.trackArtist ?? "Unknown artist";
+  const speakerTrackAlbum = device.trackAlbum ?? speakerSource;
+  const speakerTrackDuration = device.trackDurationSec ?? 0;
+  const speakerTrackProgress = clamp(
+    device.trackProgressSec ?? 0,
+    0,
+    speakerTrackDuration || 0,
+  );
+  const speakerTrackProgressPct =
+    speakerTrackDuration > 0 ? speakerTrackProgress / speakerTrackDuration : 0;
   const energyPower = device.powerW ?? 0;
   const energyToday = device.energyTodayKwh ?? 0;
   const energyPeak = device.energyPeakW ?? 0;
@@ -292,31 +551,254 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const waterToday = device.waterTodayL ?? 0;
   const waterPressure = device.waterPressurePsi ?? 0;
   const waterPressureLow = device.waterPressureLowPsi ?? 40;
+  const waterPressureHigh = device.waterPressureHighPsi ?? 80;
   const waterTemp = device.waterTempC ?? 0;
   const waterLeakDetected = device.waterLeakDetected ?? false;
   const waterLeakAlerts = device.waterLeakAlerts ?? true;
   const waterPressureAlerts = device.waterPressureAlerts ?? true;
   const waterAutoShutoff = device.waterAutoShutoff ?? false;
   const waterBudget = device.waterBudgetL ?? 0;
+  const waterBudgetProgress =
+    waterBudget > 0
+      ? Math.min(Math.max(waterToday / waterBudget, 0), 1)
+      : 0;
+  const waterBudgetExceeded = waterBudget > 0 && waterToday >= waterBudget;
   const lowPressure =
     waterPressureAlerts &&
     waterPressure > 0 &&
     waterPressure < waterPressureLow;
+  const highPressure =
+    waterPressureAlerts &&
+    waterPressureHigh > 0 &&
+    waterPressure > waterPressureHigh;
   const nightVision = device.nightVision ?? false;
   const motionAlerts = device.motionAlerts ?? true;
   const motionSensitivity = clamp(device.motionSensitivity ?? 6, 1, 10);
   const micMuted = device.micMuted ?? false;
   const twoWayAudio = device.twoWayAudio ?? true;
+  const smokeDetected = device.smokeDetected ?? false;
+  const coDetected = device.coDetected ?? false;
+  const coPpm = clamp(device.coPpm ?? 0, 0, 400);
+  const smokePpm = clamp(device.smokePpm ?? 0, 0, 200);
+  const smokeBattery = clamp(device.smokeBattery ?? 0, 0, 100);
+  const smokeSensorStatus = device.smokeSensorStatus ?? "ok";
+  const smokeSilenced = device.smokeSilenced ?? false;
+  const smokeLastTestAt = device.smokeLastTestAt ?? null;
+  const smokeLastAlarmAt = device.smokeLastAlarmAt ?? null;
   const airQuality = device.airQualityIndex ?? 0;
   const humidity = device.humidity ?? 0;
+  const airPm25 = device.airPm25 ?? 0;
+  const airPm10 = device.airPm10 ?? 0;
+  const airCo2 = device.airCo2 ?? 0;
+  const airVoc = device.airVoc ?? 0;
+  const airFormaldehyde = device.airFormaldehyde ?? 0;
+  const airPollen = device.airPollen ?? 0;
+  const airConfidence = clamp(device.airQualityConfidence ?? 92, 0, 100);
+  const airPurifierMode = device.airPurifierMode ?? "auto";
+  const airPurifierSpeed = clamp(device.airPurifierSpeed ?? 40, 0, 100);
+  const airIonizerEnabled = device.airIonizerEnabled ?? false;
+  const airFilterLife = clamp(device.airFilterLife ?? 100, 0, 100);
+  const airFilterDaysLeft = clamp(device.airFilterDaysLeft ?? 0, 0, 365);
+  const airAutoVentilation = device.airAutoVentilation ?? false;
+  const airAlertsEnabled = device.airAlertsEnabled ?? true;
+  const airAlertAqi = clamp(device.airAlertAqi ?? 100, 50, 200);
+  const airAlertCo2 = clamp(device.airAlertCo2 ?? 1200, 600, 2000);
+  const airAlertVoc = clamp(device.airAlertVoc ?? 300, 80, 800);
+  const airAlertPm25 = clamp(device.airAlertPm25 ?? 35, 10, 120);
+  const airAlertPm10 = clamp(device.airAlertPm10 ?? 50, 20, 160);
+  const airAlertPollen = clamp(device.airAlertPollen ?? 3, 1, 5);
+  const airOutdoorAqi = device.airOutdoorAqi ?? 0;
+  const airOutdoorPm25 = device.airOutdoorPm25 ?? 0;
+  const airOutdoorCo2 = device.airOutdoorCo2 ?? 0;
+  const airOutdoorVoc = device.airOutdoorVoc ?? 0;
+  const airOutdoorHumidity = device.airOutdoorHumidity ?? 0;
+  const airOutdoorTempC =
+    typeof device.airOutdoorTempC === "number"
+      ? device.airOutdoorTempC
+      : outdoor.tempC;
+  const airHistory = Array.isArray(device.airHistory) ? device.airHistory : [];
+  const airBand = resolveAirBand(airQuality);
+  const airSeries = useMemo(() => {
+    if (airHistory.length >= 2) {
+      return buildAirSeries(airHistory, airQuality);
+    }
+    const now = Date.now();
+    return Array.from({ length: AIR_CHART_MIN_POINTS }, (_, idx) => ({
+      ts: now - (AIR_CHART_MIN_POINTS - 1 - idx) * 30 * 60 * 1000,
+      aqi: airQuality,
+    }));
+  }, [airHistory, airQuality]);
+  const airSeriesAqi = airSeries.map(
+    (sample) => sample.aqi ?? airQuality ?? 0,
+  );
+  const airChartMax = Math.max(...airSeriesAqi, 1);
+  const airTrendDelta =
+    airSeriesAqi.length > 1
+      ? airSeriesAqi[airSeriesAqi.length - 1] -
+        airSeriesAqi[airSeriesAqi.length - 2]
+      : 0;
+  const airLastUpdatedAt =
+    device.airLastUpdatedAt ?? airSeries[airSeries.length - 1]?.ts ?? null;
+  const airRecommendations = useMemo(() => {
+    const items: string[] = [];
+    if (airQuality >= 120) {
+      items.push("Run purifier on Boost mode.");
+    } else if (airQuality >= 80) {
+      items.push("Keep purifier on Auto to stabilize AQI.");
+    }
+    if (airCo2 >= 1000) {
+      items.push("Increase ventilation to reduce CO2.");
+    }
+    if (airVoc >= 220) {
+      items.push("Avoid aerosols and enable exhaust fans.");
+    }
+    if (humidity >= 60) {
+      items.push("Humidity is high. Consider dehumidifying.");
+    }
+    if (humidity > 0 && humidity < 35) {
+      items.push("Air is dry. Consider humidifying.");
+    }
+    if (airPollen >= 3) {
+      items.push("High pollen: keep windows closed.");
+    }
+    if (airFilterLife <= 20) {
+      items.push("Filter life low. Replace soon.");
+    }
+    if (!items.length) {
+      items.push("Air quality looks great. Maintain Auto mode.");
+    }
+    return items.slice(0, 4);
+  }, [airQuality, airCo2, airVoc, airPollen, airFilterLife, humidity]);
+  const airSensors = useMemo(
+    () => devicesAll.filter((item) => item.kind === "air"),
+    [devicesAll],
+  );
+  const roomLookup = useMemo(
+    () => new Map(rooms.map((room) => [room.id, room.name])),
+    [rooms],
+  );
+  const formatMetric = (
+    value: number | null | undefined,
+    unit?: string,
+    digits = 0,
+  ) => {
+    if (value == null || Number.isNaN(value)) return "--";
+    const formatted = digits
+      ? value.toFixed(digits)
+      : Math.round(value).toString();
+    return unit ? `${formatted} ${unit}` : formatted;
+  };
+  const airMetricWidth = isTablet ? "23%" : "31%";
+  const airTrendIcon =
+    airTrendDelta > 2 ? "trending-up" : airTrendDelta < -2 ? "trending-down" : "remove";
+  const airTrendLabel = `${airTrendDelta >= 0 ? "+" : ""}${Math.round(
+    airTrendDelta,
+  )}`;
+  const heaterTemp = clamp(device.tempC ?? 52, 40, 70);
+  const heaterType = device.waterHeaterType ?? "electric-tank";
+  const heaterMode = device.heaterMode ?? "eco";
+  const heaterRecirculation = device.recirculation ?? false;
+  const heaterScheduleEnabled = device.heaterScheduleEnabled ?? true;
+  const heaterSanitize = device.antiLegionella ?? false;
+  const heaterVacationDays = clamp(device.vacationDays ?? 0, 0, 30);
+  const heaterStatus = device.isOn ? "Heating" : "Standby";
+  const showRecirculation =
+    heaterType === "tankless" || heaterType === "heat-pump";
+  const heaterTypeOptions: Array<{
+    label: string;
+    value: NonNullable<Device["waterHeaterType"]>;
+  }> =
+    [
+      { label: "Electric Tank", value: "electric-tank" },
+      { label: "Gas Tank", value: "gas-tank" },
+      { label: "Heat Pump", value: "heat-pump" },
+      { label: "Tankless", value: "tankless" },
+    ];
+  const heaterModeOptions: Array<{
+    label: string;
+    value: NonNullable<Device["heaterMode"]>;
+  }> =
+    heaterType === "heat-pump"
+      ? [
+          { label: "Eco", value: "eco" },
+          { label: "Heat Pump", value: "standard" },
+          { label: "High Demand", value: "boost" },
+          { label: "Vacation", value: "vacation" },
+        ]
+      : heaterType === "tankless"
+        ? [
+            { label: "Eco", value: "eco" },
+            { label: "Comfort", value: "standard" },
+            { label: "Turbo", value: "boost" },
+            { label: "Vacation", value: "vacation" },
+          ]
+        : [
+            { label: "Eco", value: "eco" },
+            { label: "Standard", value: "standard" },
+            { label: "Boost", value: "boost" },
+            { label: "Vacation", value: "vacation" },
+          ];
+  const isLaundry = device.kind === "washer" || device.kind === "dryer";
+  const stackPartnerKind =
+    device.kind === "washer"
+      ? "dryer"
+      : device.kind === "dryer"
+        ? "washer"
+        : null;
+  const stackCandidates = useMemo(() => {
+    if (!stackPartnerKind) return [];
+    return devicesAll.filter(
+      (d) =>
+        d.id !== device.id &&
+        d.kind === stackPartnerKind &&
+        d.roomId === draftRoomId,
+    );
+  }, [devicesAll, device.id, draftRoomId, stackPartnerKind]);
+  const currentStackPartner = useMemo(() => {
+    if (!device.stackId) return null;
+    return (
+      devicesAll.find(
+        (d) => d.id !== device.id && d.stackId === device.stackId,
+      ) ?? null
+    );
+  }, [devicesAll, device.id, device.stackId]);
+  const canStackSave = !isLaundry || !stackEnabled || Boolean(stackTargetId);
   const formatClock = (sec: number) => {
     const mins = Math.floor(sec / 60);
     const secs = Math.floor(sec % 60);
     return `${mins}:${String(secs).padStart(2, "0")}`;
   };
+  const formatTrackTime = (sec?: number) => {
+    if (sec == null || !Number.isFinite(sec) || sec < 0) return "--:--";
+    return formatClock(sec);
+  };
   const sendPatch = (patch: Partial<Device>) => {
     deviceClient
       .sendCommand({ op: "patch", deviceId: device.id, patch })
+      .catch(() => {});
+  };
+  const setOpenTarget = (target: number) => {
+    sendPatch({ openPercent: target, isOn: target > 0 });
+  };
+  const handlePowerToggle = () => {
+    const nextOn = !device.isOn;
+    if (device.kind === "tv") {
+      const patch: Partial<Device> = { isOn: nextOn };
+      if (nextOn) {
+        patch.source = device.source ?? "Live TV";
+        patch.channel = device.channel ?? 1;
+      }
+      deviceClient
+        .sendCommand({ op: "patch", deviceId: device.id, patch })
+        .catch(() => {});
+      return;
+    }
+    deviceClient
+      .sendCommand({
+        op: "patch",
+        deviceId: device.id,
+        patch: { isOn: nextOn },
+      })
       .catch(() => {});
   };
   const hasCustom = [
@@ -335,6 +817,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     "microwave",
     "energy",
     "water",
+    "water-heater",
     "air",
     "sprinkler",
     "speaker",
@@ -343,10 +826,21 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     "coffee",
   ].includes(device.kind);
   const bulbScale = useRef(new Animated.Value(1)).current;
+  const [openMotion, setOpenMotion] = useState<
+    "opening" | "closing" | null
+  >(null);
+  const [openDisplayPercent, setOpenDisplayPercent] = useState(openPercent);
+  const [pressureLowDraft, setPressureLowDraft] = useState(waterPressureLow);
+  const [pressureHighDraft, setPressureHighDraft] =
+    useState(waterPressureHigh);
+  const [speakerBassDraft, setSpeakerBassDraft] = useState(speakerBass);
+  const [speakerTrebleDraft, setSpeakerTrebleDraft] = useState(speakerTreble);
   const [showEdit, setShowEdit] = useState(false);
   const [draftName, setDraftName] = useState(device.name);
   const [draftRoomId, setDraftRoomId] = useState(device.roomId);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [stackEnabled, setStackEnabled] = useState(false);
+  const [stackTargetId, setStackTargetId] = useState<string | null>(null);
   const [cameraEvents, setCameraEvents] = useState<
     Array<{ id: string; label: string; kind: "known" | "unknown"; ts: number }>
   >([]);
@@ -355,6 +849,52 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const [schedDays, setSchedDays] = useState<
     Array<SprinklerSchedule["days"][number]>
   >(["Mon", "Wed", "Fri"]);
+  const openDisplayValue = clamp(openDisplayPercent, 0, 100);
+  const openStatusLabel =
+    openMotion === "opening"
+      ? "Opening..."
+      : openMotion === "closing"
+        ? "Closing..."
+        : openDisplayValue === 0
+          ? "Closed"
+          : openDisplayValue === 100
+            ? "Open"
+            : "Open";
+  const openStatusText =
+    openMotion
+      ? `${openStatusLabel} ${openDisplayValue}%`
+      : openDisplayValue === 0
+        ? "Closed"
+        : openDisplayValue === 100
+          ? "Open"
+          : `${openDisplayValue}% open`;
+  const isOpen = isOpenable && openPercent > 0;
+  const isClosed = isOpenable && openPercent === 0;
+  const renderOpenDeviceLottie = (source: any, size: number) => (
+    <View
+      style={[
+        styles.deviceLottieDock,
+        {
+          width: size,
+          height: size,
+          borderRadius: Math.round(size / 2),
+        },
+      ]}
+    >
+      <AnimatedLottieView
+        source={source}
+        progress={openProgress}
+        autoPlay={false}
+        loop={false}
+        resizeMode="contain"
+        style={styles.deviceLottie}
+      />
+      <View style={styles.openStatusOverlay} pointerEvents="none">
+        <Text style={styles.openStatusValue}>{openDisplayValue}%</Text>
+        <Text style={styles.openStatusLabel}>{openStatusLabel}</Text>
+      </View>
+    </View>
+  );
 
   useEffect(() => {
     setDraftName(device.name);
@@ -362,11 +902,79 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   }, [device.id, device.name, device.roomId, showEdit]);
 
   useEffect(() => {
+    if (!showEdit) return;
+    if (!isLaundry) {
+      setStackEnabled(false);
+      setStackTargetId(null);
+      return;
+    }
+    setStackEnabled(Boolean(device.stackId));
+    setStackTargetId(currentStackPartner?.id ?? null);
+  }, [showEdit, isLaundry, device.stackId, currentStackPartner?.id]);
+
+  useEffect(() => {
+    if (!showEdit || !isLaundry || !stackEnabled) return;
+    const hasTarget =
+      stackTargetId && stackCandidates.some((d) => d.id === stackTargetId);
+    if (hasTarget) return;
+    setStackTargetId(stackCandidates[0]?.id ?? null);
+  }, [showEdit, isLaundry, stackEnabled, stackTargetId, stackCandidates]);
+
+  useEffect(() => {
     if (!showSchedule) return;
     setSchedHour("06");
     setSchedMinute("00");
     setSchedDays(["Mon", "Wed", "Fri"]);
   }, [showSchedule]);
+
+  useEffect(() => {
+    const listenerId = openProgress.addListener(({ value }) => {
+      setOpenDisplayPercent(Math.round(value * 100));
+    });
+    return () => {
+      openProgress.removeListener(listenerId);
+    };
+  }, [openProgress]);
+
+  useEffect(() => {
+    if (!isOpenable) {
+      openDeviceIdRef.current = device.id;
+      openPercentRef.current = null;
+      openProgress.setValue(0);
+      setOpenDisplayPercent(0);
+      setOpenMotion(null);
+      return;
+    }
+
+    if (openDeviceIdRef.current !== device.id) {
+      openDeviceIdRef.current = device.id;
+      openPercentRef.current = openPercent;
+      openProgress.setValue(openPercent / 100);
+      setOpenDisplayPercent(Math.round(openPercent));
+      setOpenMotion(null);
+      return;
+    }
+
+    const prev = openPercentRef.current;
+    if (prev == null || prev === openPercent) return;
+
+    setOpenMotion(openPercent > prev ? "opening" : "closing");
+    openPercentRef.current = openPercent;
+    const distance = Math.abs(openPercent - prev);
+    const duration = Math.max(600, Math.min(2400, Math.round(distance * 18)));
+
+    openProgress.stopAnimation();
+    Animated.timing(openProgress, {
+      toValue: openPercent / 100,
+      duration,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (finished) {
+        setOpenMotion(null);
+      }
+    });
+  }, [device.id, isOpenable, openPercent, openProgress]);
 
   const logCameraEvent = (label: string, kind: "known" | "unknown") => {
     // Maintain a short, most-recent-first log for the UI preview.
@@ -383,26 +991,47 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     );
   };
 
-  const openGate = () => {
+  const setGateTarget = (target: number) => {
+    if (device.kind === "gate") {
+      setOpenTarget(target);
+      return;
+    }
     if (!gateDevice) return;
     deviceClient
       .sendCommand({
         op: "patch",
         deviceId: gateDevice.id,
-        patch: { openPercent: 100, isOn: true },
+        patch: { openPercent: target, isOn: target > 0 },
       })
       .catch(() => {});
   };
 
+  const setPressureLow = (value: number) => {
+    const nextHigh =
+      waterPressureHigh > 0 && value >= waterPressureHigh
+        ? Math.min(100, value + 10)
+        : waterPressureHigh;
+    sendPatch({
+      waterPressureLowPsi: value,
+      waterPressureHighPsi: nextHigh,
+    });
+  };
+
+  const setPressureHigh = (value: number) => {
+    const nextLow =
+      waterPressureLow >= value ? Math.max(20, value - 10) : waterPressureLow;
+    sendPatch({
+      waterPressureHighPsi: value,
+      waterPressureLowPsi: nextLow,
+    });
+  };
+
+  const openGate = () => {
+    setGateTarget(100);
+  };
+
   const closeGate = () => {
-    if (!gateDevice) return;
-    deviceClient
-      .sendCommand({
-        op: "patch",
-        deviceId: gateDevice.id,
-        patch: { openPercent: 0, isOn: false },
-      })
-      .catch(() => {});
+    setGateTarget(0);
   };
 
   const handleKnownFace = (memberId: string, name: string) => {
@@ -418,16 +1047,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const handleUnknownFace = () => {
     logCameraEvent("Unrecognized visitor detected", "unknown");
   };
-
-  useEffect(() => {
-    if (device.kind !== "door") return;
-    Animated.timing(doorSwing, {
-      toValue: device.isOn ? 1 : 0,
-      duration: 420,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [device.kind, device.isOn, doorSwing]);
 
   const animateBulb = () => {
     Animated.sequence([
@@ -484,6 +1103,87 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       coffeeLoop.current = null;
     };
   }, [device.kind, device.isOn]);
+
+  useEffect(() => {
+    if (device.kind !== "water") return;
+    if (!waterBudget || waterBudget <= 0) {
+      waterLoop.current?.stop();
+      waterLoop.current = null;
+      waterFill.setValue(0);
+      return;
+    }
+    const max = Math.min(Math.max(waterBudgetProgress, 0), 1);
+    const min = Math.max(0, max - 0.05);
+    waterLoop.current?.stop();
+    waterFill.setValue(min);
+    waterLoop.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(waterFill, {
+          toValue: max,
+          duration: 1400,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: false,
+        }),
+        Animated.timing(waterFill, {
+          toValue: min,
+          duration: 1400,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    waterLoop.current.start();
+    return () => {
+      waterLoop.current?.stop();
+      waterLoop.current = null;
+    };
+  }, [device.kind, waterBudget, waterBudgetProgress, waterFill]);
+
+  useEffect(() => {
+    if (device.kind !== "speaker") return;
+    const base = (idx: number) => 0.2 + (idx % 3) * 0.08;
+    const loops = speakerBars.map((bar, idx) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(bar, {
+            toValue: 1,
+            duration: 240 + idx * 30,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: false,
+          }),
+          Animated.timing(bar, {
+            toValue: base(idx),
+            duration: 220 + idx * 28,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: false,
+          }),
+        ]),
+      ),
+    );
+
+    if (device.isOn) {
+      loops.forEach((loop) => loop.start());
+    } else {
+      loops.forEach((loop) => loop.stop());
+      speakerBars.forEach((bar, idx) => bar.setValue(base(idx)));
+    }
+
+    return () => {
+      loops.forEach((loop) => loop.stop());
+    };
+  }, [device.kind, device.isOn, speakerBars]);
+
+  useEffect(() => {
+    if (device.kind !== "water") return;
+    setPressureLowDraft(waterPressureLow);
+    setPressureHighDraft(waterPressureHigh);
+  }, [device.kind, waterPressureLow, waterPressureHigh]);
+
+  useEffect(() => {
+    if (device.kind !== "speaker") return;
+    setSpeakerBassDraft(speakerBass);
+    setSpeakerTrebleDraft(speakerTreble);
+  }, [device.kind, speakerBass, speakerTreble]);
 
   return (
     <LinearGradient
@@ -619,22 +1319,26 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 </View>
               ) : isAC ? (
                 <>
-                  <RadialDial
-                    size={dialSize}
-                    value={temp}
-                    min={AC_TEMP_MIN_C}
-                    max={AC_TEMP_MAX_C}
-                    tickValues={[
-                      AC_TEMP_MIN_C,
-                      AC_TEMP_MIN_C + 2,
-                      AC_TEMP_MIN_C + 4,
-                      AC_TEMP_MAX_C - 5,
-                    ]}
-                    centerValue={roomTemp}
-                    centerLabel="Room Temperature"
-                    dimmed={!device.isOn}
-                    onChange={(v) => sendPatch({ tempC: v, isOn: true })}
-                  />
+                  {device.isOn ? (
+                    <RadialDial
+                      size={dialSize}
+                      value={temp}
+                      min={AC_TEMP_MIN_C}
+                      max={AC_TEMP_MAX_C}
+                      tickValues={[
+                        AC_TEMP_MIN_C,
+                        AC_TEMP_MIN_C + 2,
+                        AC_TEMP_MIN_C + 4,
+                        AC_TEMP_MAX_C - 5,
+                      ]}
+                      centerValue={roomTemp}
+                      centerLabel="Room Temperature"
+                      dimmed={!device.isOn}
+                      onChange={(v) => sendPatch({ tempC: v, isOn: true })}
+                    />
+                  ) : (
+                    renderDeviceLottie(AC_LOTTIE_SOURCE, dialSize)
+                  )}
 
                   <Text style={[styles.moodLabel, { fontSize: moodLabelSize }]}>
                     Mood
@@ -647,6 +1351,170 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     value={mode}
                     onChange={(m) => sendPatch({ mode: m, isOn: true })}
                   />
+
+                  <View style={styles.metricRow}>
+                    <View style={styles.metricCard}>
+                      <Text style={styles.metricValue}>{acFanSpeed}%</Text>
+                      <Text style={styles.metricLabel}>Fan speed</Text>
+                    </View>
+                    <View style={styles.metricCard}>
+                      <Text style={styles.metricValue}>
+                        {acTargetHumidity}%
+                      </Text>
+                      <Text style={styles.metricLabel}>Target humidity</Text>
+                    </View>
+                    <View style={styles.metricCard}>
+                      <Text style={styles.metricValue}>{acFilterLife}%</Text>
+                      <Text style={styles.metricLabel}>Filter life</Text>
+                    </View>
+                  </View>
+
+                  <View style={controlCardStyle}>
+                    <Text style={styles.cardLabel}>Airflow</Text>
+                    <View style={styles.pressureSliderRow}>
+                      <Text style={styles.pressureSliderLabel}>Fan</Text>
+                      <Text style={styles.pressureSliderValue}>
+                        {acFanSpeed}%
+                      </Text>
+                    </View>
+                    <Slider
+                      value={acFanSpeed}
+                      minimumValue={0}
+                      maximumValue={100}
+                      step={1}
+                      onSlidingComplete={(value) =>
+                        sendPatch({
+                          acFanSpeed: Math.round(value),
+                          isOn: true,
+                        })
+                      }
+                      minimumTrackTintColor="rgba(122,92,255,0.9)"
+                      maximumTrackTintColor="rgba(12,12,18,0.12)"
+                      thumbTintColor="rgba(255,255,255,0.92)"
+                      style={styles.pressureSlider}
+                    />
+                    <Text style={styles.cardHint}>Swing</Text>
+                    <View style={styles.chipRow}>
+                      {[
+                        { label: "Off", value: "off" },
+                        { label: "Vertical", value: "vertical" },
+                        { label: "Horizontal", value: "horizontal" },
+                        { label: "Both", value: "both" },
+                      ].map((option) => {
+                        const active = acSwingMode === option.value;
+                        return (
+                          <Pressable
+                            key={option.value}
+                            style={[styles.chip, active && styles.chipActive]}
+                            onPress={() =>
+                              sendPatch({
+                                acSwingMode: option.value as Device["acSwingMode"],
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.chipText,
+                                active && styles.chipTextActive,
+                              ]}
+                            >
+                              {option.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={controlCardStyle}>
+                    <Text style={styles.cardLabel}>Efficiency</Text>
+                    <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                      <Pressable
+                        style={[
+                          styles.controlPill,
+                          acEcoMode && styles.controlPillActive,
+                        ]}
+                        onPress={() =>
+                          sendPatch({ acEcoMode: !acEcoMode, isOn: true })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.controlPillText,
+                            acEcoMode && styles.controlPillTextActive,
+                          ]}
+                        >
+                          {acEcoMode ? "Eco" : "Eco Off"}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.controlPill,
+                          acTurboMode && styles.controlPillActive,
+                        ]}
+                        onPress={() =>
+                          sendPatch({ acTurboMode: !acTurboMode, isOn: true })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.controlPillText,
+                            acTurboMode && styles.controlPillTextActive,
+                          ]}
+                        >
+                          {acTurboMode ? "Turbo" : "Turbo Off"}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.controlPill,
+                          acQuietMode && styles.controlPillActive,
+                        ]}
+                        onPress={() =>
+                          sendPatch({ acQuietMode: !acQuietMode, isOn: true })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.controlPillText,
+                            acQuietMode && styles.controlPillTextActive,
+                          ]}
+                        >
+                          {acQuietMode ? "Quiet" : "Quiet Off"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={controlCardStyle}>
+                    <Text style={styles.cardLabel}>Humidity target</Text>
+                    <View style={styles.pressureSliderRow}>
+                      <Text style={styles.pressureSliderLabel}>Target</Text>
+                      <Text style={styles.pressureSliderValue}>
+                        {acTargetHumidity}%
+                      </Text>
+                    </View>
+                    <Slider
+                      value={acTargetHumidity}
+                      minimumValue={30}
+                      maximumValue={60}
+                      step={1}
+                      onSlidingComplete={(value) =>
+                        sendPatch({
+                          acTargetHumidity: Math.round(value),
+                          isOn: true,
+                        })
+                      }
+                      minimumTrackTintColor="rgba(122,92,255,0.9)"
+                      maximumTrackTintColor="rgba(12,12,18,0.12)"
+                      thumbTintColor="rgba(255,255,255,0.92)"
+                      style={styles.pressureSlider}
+                    />
+                    <Text style={styles.budgetHint}>
+                      Adjust target humidity for comfort.
+                    </Text>
+                  </View>
                 </>
               ) : (
                 <View style={{ marginTop: 28 }}>
@@ -1465,31 +2333,23 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "garage" && (
                     <>
-                      <View style={styles.garageHero}>
-                        <View style={styles.garageIcon}>
-                          <Ionicons
-                            name="car-sport"
-                            size={32}
-                            color={stylesVars.ink}
-                          />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.heroTitle}>{device.name}</Text>
-                          <Text style={styles.heroSub}>
-                            {device.isOn ? "Open" : "Closed"}
-                          </Text>
-                        </View>
-                      </View>
+                      {renderOpenDeviceLottie(
+                        GARAGE_LOTTIE_SOURCE,
+                        compactDialSize,
+                      )}
+                      <Text style={styles.garageStatusText}>
+                        {openStatusText}
+                      </Text>
 
                       <View style={styles.actionRow}>
                         <Pressable
                           style={[
                             styles.modeTile,
-                            device.isOn && styles.modeTileActive,
+                            isOpen && styles.modeTileActive,
                           ]}
-                          onPress={() => sendPatch({ isOn: true })}
+                          onPress={() => setOpenTarget(100)}
                         >
-                          {device.isOn ? (
+                          {isOpen ? (
                             <LinearGradient
                               colors={[
                                 theme.colors.accent2,
@@ -1526,11 +2386,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         <Pressable
                           style={[
                             styles.modeTile,
-                            !device.isOn && styles.modeTileActive,
+                            isClosed && styles.modeTileActive,
                           ]}
-                          onPress={() => sendPatch({ isOn: false })}
+                          onPress={() => setOpenTarget(0)}
                         >
-                          {!device.isOn ? (
+                          {isClosed ? (
                             <LinearGradient
                               colors={[
                                 theme.colors.accent2,
@@ -1558,7 +2418,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           <Text
                             style={[
                               styles.modeText,
-                              !device.isOn && styles.modeTextActive,
+                              isClosed && styles.modeTextActive,
                             ]}
                           >
                             Close
@@ -1571,41 +2431,23 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   {device.kind === "door" && (
                     <>
                       <View style={styles.doorWrap}>
-                        <View style={styles.doorFrame}>
-                          <Animated.View
-                            style={[
-                              styles.doorPanel,
-                              {
-                                transform: [
-                                  { perspective: 800 },
-                                  {
-                                    rotateY: doorSwing.interpolate({
-                                      inputRange: [0, 1],
-                                      outputRange: ["0deg", "-62deg"],
-                                    }),
-                                  },
-                                ],
-                              },
-                            ]}
-                          >
-                            <View style={styles.doorHandle} />
-                          </Animated.View>
-                        </View>
+                        {renderOpenDeviceLottie(
+                          DOOR_LOTTIE_SOURCE,
+                          compactDialSize,
+                        )}
                         <Text style={styles.doorTitle}>{device.name}</Text>
-                        <Text style={styles.doorStatus}>
-                          {device.isOn ? "Open" : "Closed"}
-                        </Text>
+                        <Text style={styles.doorStatus}>{openStatusText}</Text>
                       </View>
 
                       <View style={styles.actionRow}>
                         <Pressable
                           style={[
                             styles.modeTile,
-                            device.isOn && styles.modeTileActive,
+                            isOpen && styles.modeTileActive,
                           ]}
-                          onPress={() => sendPatch({ isOn: true })}
+                          onPress={() => setOpenTarget(100)}
                         >
-                          {device.isOn ? (
+                          {isOpen ? (
                             <LinearGradient
                               colors={[
                                 theme.colors.accent2,
@@ -1642,11 +2484,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         <Pressable
                           style={[
                             styles.modeTile,
-                            !device.isOn && styles.modeTileActive,
+                            isClosed && styles.modeTileActive,
                           ]}
-                          onPress={() => sendPatch({ isOn: false })}
+                          onPress={() => setOpenTarget(0)}
                         >
-                          {!device.isOn ? (
+                          {isClosed ? (
                             <LinearGradient
                               colors={[
                                 theme.colors.accent2,
@@ -1674,7 +2516,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           <Text
                             style={[
                               styles.modeText,
-                              !device.isOn && styles.modeTextActive,
+                              isClosed && styles.modeTextActive,
                             ]}
                           >
                             Close
@@ -1686,41 +2528,97 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "gate" && (
                     <>
-                      <View style={styles.infoOrb}>
-                        <LinearGradient
-                          colors={["#D9F0FF", "#7A5CFF"]}
-                          start={{ x: 0.2, y: 0.1 }}
-                          end={{ x: 0.9, y: 1 }}
-                          style={styles.infoOrbInner}
-                        >
-                          <Ionicons name="exit" size={32} color="#fff" />
-                          <Text style={styles.infoValue}>
-                            {gateOpen > 20 ? "OPEN" : "CLOSED"}
-                          </Text>
-                          <Text style={styles.infoSub}>Front Gate</Text>
-                        </LinearGradient>
+                      <View style={styles.doorWrap}>
+                        {renderOpenDeviceLottie(
+                          GATE_LOTTIE_SOURCE,
+                          compactDialSize,
+                        )}
+                        <Text style={styles.doorTitle}>Front Gate</Text>
+                        <Text style={styles.doorStatus}>{openStatusText}</Text>
                       </View>
 
                       <View style={styles.actionRow}>
-                        <Pressable style={styles.modeTile} onPress={openGate}>
-                          <View style={styles.modeIconBubble}>
-                            <Ionicons
-                              name="lock-open"
-                              size={18}
-                              color="rgba(12,12,18,0.65)"
-                            />
-                          </View>
-                          <Text style={styles.modeText}>Open</Text>
+                        <Pressable
+                          style={[
+                            styles.modeTile,
+                            isOpen && styles.modeTileActive,
+                          ]}
+                          onPress={openGate}
+                        >
+                          {isOpen ? (
+                            <LinearGradient
+                              colors={[
+                                theme.colors.accent2,
+                                theme.colors.accent,
+                              ]}
+                              start={{ x: 0.1, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.modeIconBubbleActive}
+                            >
+                              <Ionicons
+                                name="lock-open"
+                                size={18}
+                                color="#FFFFFF"
+                              />
+                            </LinearGradient>
+                          ) : (
+                            <View style={styles.modeIconBubble}>
+                              <Ionicons
+                                name="lock-open"
+                                size={18}
+                                color="rgba(12,12,18,0.65)"
+                              />
+                            </View>
+                          )}
+                          <Text
+                            style={[
+                              styles.modeText,
+                              isOpen && styles.modeTextActive,
+                            ]}
+                          >
+                            Open
+                          </Text>
                         </Pressable>
-                        <Pressable style={styles.modeTile} onPress={closeGate}>
-                          <View style={styles.modeIconBubble}>
-                            <Ionicons
-                              name="lock-closed"
-                              size={18}
-                              color="rgba(12,12,18,0.65)"
-                            />
-                          </View>
-                          <Text style={styles.modeText}>Close</Text>
+                        <Pressable
+                          style={[
+                            styles.modeTile,
+                            isClosed && styles.modeTileActive,
+                          ]}
+                          onPress={closeGate}
+                        >
+                          {isClosed ? (
+                            <LinearGradient
+                              colors={[
+                                theme.colors.accent2,
+                                theme.colors.accent,
+                              ]}
+                              start={{ x: 0.1, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.modeIconBubbleActive}
+                            >
+                              <Ionicons
+                                name="lock-closed"
+                                size={18}
+                                color="#FFFFFF"
+                              />
+                            </LinearGradient>
+                          ) : (
+                            <View style={styles.modeIconBubble}>
+                              <Ionicons
+                                name="lock-closed"
+                                size={18}
+                                color="rgba(12,12,18,0.65)"
+                              />
+                            </View>
+                          )}
+                          <Text
+                            style={[
+                              styles.modeText,
+                              isClosed && styles.modeTextActive,
+                            ]}
+                          >
+                            Close
+                          </Text>
                         </Pressable>
                       </View>
 
@@ -1813,6 +2711,256 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           })}
                         </View>
                       </View>
+
+                      <View style={styles.metricRow}>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {freezerTemp}°C
+                          </Text>
+                          <Text style={styles.metricLabel}>Freezer</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {fridgeFilterLife}%
+                          </Text>
+                          <Text style={styles.metricLabel}>Filter life</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {fridgeHumidity}%
+                          </Text>
+                          <Text style={styles.metricLabel}>Humidity</Text>
+                        </View>
+                      </View>
+
+                      {fridgeDoorOpen && (
+                        <View style={styles.alertRow}>
+                          <Ionicons name="warning" size={14} color="#D8465B" />
+                          <Text style={styles.alertText}>
+                            Door left open
+                          </Text>
+                        </View>
+                      )}
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Freezer</Text>
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>Temp</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {freezerTemp}°C
+                          </Text>
+                        </View>
+                        <Slider
+                          value={freezerTemp}
+                          minimumValue={-24}
+                          maximumValue={-12}
+                          step={1}
+                          onSlidingComplete={(value) =>
+                            sendPatch({
+                              freezerTempC: Math.round(value),
+                              isOn: true,
+                            })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Modes</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "Eco", value: "eco" },
+                            { label: "Normal", value: "normal" },
+                            { label: "Boost", value: "boost" },
+                            { label: "Vacation", value: "vacation" },
+                          ].map((option) => {
+                            const active = fridgeMode === option.value;
+                            return (
+                              <Pressable
+                                key={option.value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    fridgeMode:
+                                      option.value as Device["fridgeMode"],
+                                    isOn: true,
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {option.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Quick actions</Text>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fridgeQuickCool && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fridgeQuickCool: !fridgeQuickCool,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fridgeQuickCool &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fridgeQuickCool ? "Quick cool" : "Cool Off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fridgeQuickFreeze && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fridgeQuickFreeze: !fridgeQuickFreeze,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fridgeQuickFreeze &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fridgeQuickFreeze
+                                ? "Quick freeze"
+                                : "Freeze Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Hardware</Text>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fridgeIceMaker && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fridgeIceMaker: !fridgeIceMaker,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fridgeIceMaker &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fridgeIceMaker ? "Ice maker" : "Ice Off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fridgeDoorAlarm && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fridgeDoorAlarm: !fridgeDoorAlarm,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fridgeDoorAlarm &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fridgeDoorAlarm ? "Door alarm" : "Alarm Off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fridgeEnergySaver && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fridgeEnergySaver: !fridgeEnergySaver,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fridgeEnergySaver &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fridgeEnergySaver
+                                ? "Energy saver"
+                                : "Saver Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Humidity drawers</Text>
+                        <View style={styles.chipRow}>
+                          {[40, 50, 60].map((value) => {
+                            const active = fridgeHumidity === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ fridgeHumidity: value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {value}%
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
                     </>
                   )}
 
@@ -1876,31 +3024,217 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           })}
                         </View>
                       </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Oscillation</Text>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fanOscillation && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fanOscillation: !fanOscillation,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fanOscillation && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fanOscillation ? "Oscillate" : "Fixed"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <Text style={styles.cardHint}>Direction</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "Forward", value: "forward" },
+                            { label: "Reverse", value: "reverse" },
+                          ].map((option) => {
+                            const active = fanDirection === option.value;
+                            return (
+                              <Pressable
+                                key={option.value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    fanDirection:
+                                      option.value as Device["fanDirection"],
+                                    isOn: true,
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {option.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Timer & light</Text>
+                        <View style={styles.chipRow}>
+                          {[0, 30, 60, 120].map((value) => {
+                            const active = fanTimerMin === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ fanTimerMin: value, isOn: true })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {value === 0 ? "Off" : `${value}m`}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fanLightOn && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fanLightOn: !fanLightOn,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fanLightOn && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fanLightOn ? "Light on" : "Light off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fanAutoMode && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fanAutoMode: !fanAutoMode,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fanAutoMode && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fanAutoMode ? "Auto" : "Auto off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              fanSleepMode && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                fanSleepMode: !fanSleepMode,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                fanSleepMode && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {fanSleepMode ? "Sleep" : "Sleep off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
                     </>
                   )}
 
                   {device.kind === "window" && (
                     <>
                       <RadialDial
-                        size={compactDialSize}
-                        value={windowOpen}
+                        size={windowDialSize}
+                        value={openDisplayValue}
                         min={0}
                         max={100}
                         tickValues={[0, 25, 50, 75, 100]}
-                        centerLabel="Open"
-                        centerIcon={
-                          <View style={{ marginBottom: 6 }}>
-                            <DeviceIcon
-                              kind="window"
-                              size={26}
-                              color={stylesVars.ink}
+                        centerContent={
+                          <View
+                            style={[
+                              styles.windowCenter,
+                              {
+                                width: windowCenterSize,
+                                height: windowCenterSize,
+                                borderRadius: windowCenterRadius,
+                              },
+                            ]}
+                          >
+                            <AnimatedLottieView
+                              source={WINDOW_LOTTIE_SOURCE}
+                              progress={openProgress}
+                              autoPlay={false}
+                              loop={false}
+                              resizeMode="contain"
+                              pointerEvents="none"
+                              style={styles.windowCenterLottie}
                             />
+                            <View style={styles.windowCenterOverlay}>
+                              <Text
+                                style={[
+                                  styles.windowCenterValue,
+                                  { fontSize: windowCenterValueSize },
+                                ]}
+                              >
+                                {openDisplayValue}%
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.windowCenterLabel,
+                                  { fontSize: windowCenterLabelSize },
+                                ]}
+                              >
+                                {openStatusLabel}
+                              </Text>
+                            </View>
                           </View>
                         }
                         formatTick={(v) => `${v}`}
                         formatValue={(v) => `${v}%`}
                         formatCenterValue={(v) => `${v}%`}
-                        dimmed={!device.isOn}
+                        dimmed={!isOpen}
                         onChange={(v) =>
                           sendPatch({
                             openPercent: clamp(v, 0, 100),
@@ -1917,7 +3251,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             { label: "Vent", value: 25 },
                             { label: "Close", value: 0 },
                           ].map((preset) => {
-                            const active = windowOpen === preset.value;
+                            const active = openPercent === preset.value;
                             return (
                               <Pressable
                                 key={preset.label}
@@ -1959,10 +3293,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         >
                           <DeviceIcon kind="vacuum" size={32} color="#fff" />
                           <Text style={styles.infoValue}>
-                            {(device.status ?? "docked").toUpperCase()}
+                            {vacuumStatus.toUpperCase()}
                           </Text>
                           <Text style={styles.infoSub}>
-                            Battery {device.battery ?? 0}%
+                            Battery {vacuumBattery}%
                           </Text>
                         </LinearGradient>
                       </View>
@@ -1988,8 +3322,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             on: false,
                           },
                         ].map((action) => {
-                          const active =
-                            (device.status ?? "docked") === action.status;
+                          const active = vacuumStatus === action.status;
                           return (
                             <Pressable
                               key={action.label}
@@ -2041,51 +3374,214 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           );
                         })}
                       </View>
+
+                      <View style={styles.metricRow}>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {vacuumAreaM2} m2
+                          </Text>
+                          <Text style={styles.metricLabel}>Area</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {vacuumRuntimeMin} min
+                          </Text>
+                          <Text style={styles.metricLabel}>Runtime</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {vacuumFilterLife}%
+                          </Text>
+                          <Text style={styles.metricLabel}>Filter</Text>
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Cleaning mode</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "Auto", value: "auto" },
+                            { label: "Spot", value: "spot" },
+                            { label: "Edge", value: "edge" },
+                            { label: "Room", value: "room" },
+                          ].map((option) => {
+                            const active = vacuumMode === option.value;
+                            return (
+                              <Pressable
+                                key={option.value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    vacuumMode:
+                                      option.value as Device["vacuumMode"],
+                                    isOn: true,
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {option.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>
+                            Suction
+                          </Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {vacuumSuction}%
+                          </Text>
+                        </View>
+                        <Slider
+                          value={vacuumSuction}
+                          minimumValue={0}
+                          maximumValue={100}
+                          step={1}
+                          onSlidingComplete={(value) =>
+                            sendPatch({
+                              vacuumSuction: Math.round(value),
+                              isOn: true,
+                            })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              vacuumMop && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({ vacuumMop: !vacuumMop, isOn: true })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                vacuumMop && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {vacuumMop ? "Mop on" : "Mop off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              vacuumQuietMode && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                vacuumQuietMode: !vacuumQuietMode,
+                                isOn: true,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                vacuumQuietMode &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {vacuumQuietMode ? "Quiet" : "Quiet off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Maintenance</Text>
+                        <View style={styles.metricRow}>
+                          <View style={styles.metricCard}>
+                            <Text style={styles.metricValue}>
+                              {vacuumBinFull ? "Full" : "OK"}
+                            </Text>
+                            <Text style={styles.metricLabel}>Bin</Text>
+                          </View>
+                          <View style={styles.metricCard}>
+                            <Text style={styles.metricValue}>
+                              {vacuumBrushDirty ? "Dirty" : "OK"}
+                            </Text>
+                            <Text style={styles.metricLabel}>Brush</Text>
+                          </View>
+                        </View>
+                        {(vacuumBinFull || vacuumBrushDirty) && (
+                          <View style={styles.alertRow}>
+                            <Ionicons
+                              name="warning"
+                              size={14}
+                              color="#D8465B"
+                            />
+                            <Text style={styles.alertText}>
+                              Service the bin/brush
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </>
                   )}
 
                   {device.kind === "camera" && (
                     <>
-                      <LinearGradient
-                        colors={[
-                          "rgba(255,255,255,0.9)",
-                          "rgba(236,228,255,0.85)",
-                        ]}
-                        start={{ x: 0.1, y: 0.1 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.cameraFeed}
-                      >
-                        <View style={styles.cameraFeedHeader}>
-                          <View style={styles.cameraLivePill}>
-                            <View style={styles.cameraLiveDot} />
-                            <Text style={styles.cameraLiveText}>Live</Text>
-                          </View>
-                          <Text style={styles.cameraStatusText}>
-                            {device.isOn ? "Connected" : "Offline"}
-                          </Text>
-                          {gateDevice ? (
-                            <View style={styles.gateStatusPill}>
-                              <Text style={styles.gateStatusText}>
-                                Gate{" "}
-                                {gateDevice.openPercent &&
-                                gateDevice.openPercent > 20
-                                  ? "Open"
-                                  : "Closed"}
-                              </Text>
+                      {device.isOn ? (
+                        <LinearGradient
+                          colors={[
+                            "rgba(255,255,255,0.9)",
+                            "rgba(236,228,255,0.85)",
+                          ]}
+                          start={{ x: 0.1, y: 0.1 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.cameraFeed}
+                        >
+                          <View style={styles.cameraFeedHeader}>
+                            <View style={styles.cameraLivePill}>
+                              <View style={styles.cameraLiveDot} />
+                              <Text style={styles.cameraLiveText}>Live</Text>
                             </View>
-                          ) : null}
-                        </View>
-                        <View style={styles.cameraFeedBody}>
-                          <Ionicons
-                            name="videocam"
-                            size={40}
-                            color="rgba(12,12,18,0.35)"
-                          />
-                          <Text style={styles.cameraPreviewText}>
-                            Live feed (simulated)
-                          </Text>
-                        </View>
-                      </LinearGradient>
+                            <Text style={styles.cameraStatusText}>
+                              {device.isOn ? "Connected" : "Offline"}
+                            </Text>
+                            {gateDevice ? (
+                              <View style={styles.gateStatusPill}>
+                                <Text style={styles.gateStatusText}>
+                                  Gate{" "}
+                                  {gateDevice.openPercent &&
+                                  gateDevice.openPercent > 20
+                                    ? "Open"
+                                    : "Closed"}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          <View style={styles.cameraFeedBody}>
+                            <Ionicons
+                              name="videocam"
+                              size={40}
+                              color="rgba(12,12,18,0.35)"
+                            />
+                            <Text style={styles.cameraPreviewText}>
+                              Live feed (simulated)
+                            </Text>
+                          </View>
+                        </LinearGradient>
+                      ) : (
+                        renderDeviceLottie(
+                          CAMERA_LOTTIE_SOURCE,
+                          compactDialSize,
+                        )
+                      )}
 
                       <View style={styles.actionRow}>
                         <Pressable
@@ -2439,33 +3935,37 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "stove" && (
                     <>
-                      <RadialDial
-                        size={compactDialSize}
-                        value={stoveLevel}
-                        min={0}
-                        max={10}
-                        tickValues={[0, 2, 4, 6, 8, 10]}
-                        centerLabel="Heat"
-                        centerIcon={
-                          <View style={{ marginBottom: 6 }}>
-                            <Ionicons
-                              name="flame"
-                              size={28}
-                              color={stylesVars.ink}
-                            />
-                          </View>
-                        }
-                        formatTick={(v) => `${v}`}
-                        formatValue={(v) => `${v}`}
-                        formatCenterValue={(v) => `Lv ${v}`}
-                        dimmed={!device.isOn}
-                        onChange={(v) =>
-                          sendPatch({
-                            burnerLevel: clamp(v, 0, 10),
-                            isOn: v > 0,
-                          })
-                        }
-                      />
+                      {device.isOn ? (
+                        <RadialDial
+                          size={compactDialSize}
+                          value={stoveLevel}
+                          min={0}
+                          max={10}
+                          tickValues={[0, 2, 4, 6, 8, 10]}
+                          centerLabel="Heat"
+                          centerIcon={
+                            <View style={{ marginBottom: 6 }}>
+                              <Ionicons
+                                name="flame"
+                                size={28}
+                                color={stylesVars.ink}
+                              />
+                            </View>
+                          }
+                          formatTick={(v) => `${v}`}
+                          formatValue={(v) => `${v}`}
+                          formatCenterValue={(v) => `Lv ${v}`}
+                          dimmed={!device.isOn}
+                          onChange={(v) =>
+                            sendPatch({
+                              burnerLevel: clamp(v, 0, 10),
+                              isOn: v > 0,
+                            })
+                          }
+                        />
+                      ) : (
+                        renderDeviceLottie(STOVE_LOTTIE_SOURCE, compactDialSize)
+                      )}
 
                       <View style={controlCardStyle}>
                         <Text style={styles.cardLabel}>Presets</Text>
@@ -2603,19 +4103,51 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   {(device.kind === "washer" || device.kind === "dryer") && (
                     <>
                       <RadialDial
-                        size={compactDialSize}
+                        size={laundryDialSize}
                         value={washerProgress}
                         min={0}
                         max={100}
                         tickValues={[0, 25, 50, 75, 100]}
-                        centerLabel="Cycle"
-                        centerIcon={
-                          <View style={{ marginBottom: 6 }}>
-                            <DeviceIcon
-                              kind={device.kind}
-                              size={28}
-                              color={stylesVars.ink}
+                        centerContent={
+                          <View
+                            style={[
+                              styles.laundryCenter,
+                              {
+                                width: laundryCenterSize,
+                                height: laundryCenterSize,
+                                borderRadius: laundryCenterRadius,
+                              },
+                            ]}
+                          >
+                            <LottieView
+                              source={WASHER_LOTTIE_SOURCE}
+                              autoPlay
+                              loop
+                              resizeMode="contain"
+                              pointerEvents="none"
+                              style={styles.laundryCenterLottie}
                             />
+                            <View style={styles.laundryCenterOverlay}>
+                              <Text
+                                style={[
+                                  styles.laundryCenterValue,
+                                  { fontSize: laundryCenterValueSize },
+                                ]}
+                              >
+                                {washerProgress}%
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.laundryCenterLabel,
+                                  { fontSize: laundryCenterLabelSize },
+                                ]}
+                              >
+                                {(device.cycle ?? "Cycle") +
+                                  (device.kind === "dryer"
+                                    ? " • Drying"
+                                    : " • Washing")}
+                              </Text>
+                            </View>
                           </View>
                         }
                         formatTick={(v) => `${v}`}
@@ -2623,14 +4155,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         formatCenterValue={(v) => `${v}%`}
                         dimmed={!device.isOn}
                         onChange={(v) =>
-                          sendPatch({ progress: clamp(v, 0, 100), isOn: v > 0 })
+                          sendPatch({
+                            progress: clamp(v, 0, 100),
+                            isOn: v > 0,
+                          })
                         }
                       />
 
                       <View style={controlCardStyle}>
                         <Text style={styles.cardLabel}>Cycle</Text>
                         <View style={styles.chipRow}>
-                          {["Normal", "Quick", "Eco"].map((label) => {
+                          {laundryCycles.map((label) => {
                             const active = (device.cycle ?? "Normal") === label;
                             return (
                               <Pressable
@@ -2746,6 +4281,185 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                               })}
                             </View>
                           </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Load size</Text>
+                            <View style={styles.chipRow}>
+                              {["Small", "Medium", "Large"].map((label) => {
+                                const active = loadSize === label;
+                                return (
+                                  <Pressable
+                                    key={label}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() =>
+                                      sendPatch({
+                                        loadSize:
+                                          label as Device["loadSize"],
+                                      })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipText,
+                                        active && styles.chipTextActive,
+                                      ]}
+                                    >
+                                      {label}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Rinse</Text>
+                            <View style={styles.chipRow}>
+                              {[1, 2, 3].map((value) => {
+                                const active = rinseCount === value;
+                                return (
+                                  <Pressable
+                                    key={value}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() =>
+                                      sendPatch({
+                                        rinseCount: value as Device["rinseCount"],
+                                      })
+                                    }
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.chipText,
+                                        active && styles.chipTextActive,
+                                      ]}
+                                    >
+                                      {value}x
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Enhancements</Text>
+                            <View style={controlCardRowStyle}>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  prewash && styles.controlPillActive,
+                                ]}
+                                onPress={() => sendPatch({ prewash: !prewash })}
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    prewash && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Prewash
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  steamWash && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ steamWash: !steamWash })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    steamWash && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Steam
+                                </Text>
+                              </Pressable>
+                            </View>
+                            <View style={controlCardRowStyle}>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  sanitizeWash && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ sanitizeWash: !sanitizeWash })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    sanitizeWash && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Sanitize
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  extraSpin && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ extraSpin: !extraSpin })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    extraSpin && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Extra Spin
+                                </Text>
+                              </Pressable>
+                            </View>
+                            <View style={controlCardRowStyle}>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  smartDispense && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ smartDispense: !smartDispense })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    smartDispense && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Smart Dose
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  ecoWash && styles.controlPillActive,
+                                ]}
+                                onPress={() => sendPatch({ ecoWash: !ecoWash })}
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    ecoWash && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Eco Boost
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
                         </>
                       )}
 
@@ -2808,6 +4522,166 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                                   </Pressable>
                                 );
                               })}
+                            </View>
+                          </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Dryer options</Text>
+                            <View style={controlCardRowStyle}>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  sensorDry && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ sensorDry: !sensorDry })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    sensorDry && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Sensor Dry
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  wrinkleGuard && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ wrinkleGuard: !wrinkleGuard })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    wrinkleGuard && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Wrinkle Guard
+                                </Text>
+                              </Pressable>
+                            </View>
+                            <View style={controlCardRowStyle}>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  steamRefresh && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ steamRefresh: !steamRefresh })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    steamRefresh && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Steam Refresh
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  ecoDry && styles.controlPillActive,
+                                ]}
+                                onPress={() => sendPatch({ ecoDry: !ecoDry })}
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    ecoDry && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Eco Dry
+                                </Text>
+                              </Pressable>
+                            </View>
+                            <View style={controlCardRowStyle}>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  airFluff && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ airFluff: !airFluff })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    airFluff && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Air Fluff
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  coolDown && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ coolDown: !coolDown })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    coolDown && styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Cool Down
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Maintenance</Text>
+                            <View style={controlCardRowStyle}>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  lintFilterOk && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ lintFilterOk: !lintFilterOk })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    lintFilterOk &&
+                                      styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  {lintFilterOk ? "Filter OK" : "Clean Filter"}
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={[
+                                  styles.controlPill,
+                                  antiStatic && styles.controlPillActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ antiStatic: !antiStatic })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.controlPillText,
+                                    antiStatic &&
+                                      styles.controlPillTextActive,
+                                  ]}
+                                >
+                                  Anti-Static
+                                </Text>
+                              </Pressable>
                             </View>
                           </View>
                         </>
@@ -3141,11 +5015,29 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           end={{ x: 0.9, y: 1 }}
                           style={styles.infoOrbInner}
                         >
-                          <Ionicons name="stats-chart" size={32} color="#fff" />
-                          <Text style={styles.infoValue}>{energyPower}W</Text>
-                          <Text style={styles.infoSub}>
-                            {energyToday} kWh today
-                          </Text>
+                          <View
+                            pointerEvents="none"
+                            style={styles.energyLottieLayer}
+                          >
+                            <LottieView
+                              source={ENERGY_LOTTIE_SOURCE}
+                              autoPlay
+                              loop
+                              resizeMode="contain"
+                              style={styles.energyLottie}
+                            />
+                          </View>
+                          <View style={styles.energyOrbContent}>
+                            <Ionicons
+                              name="stats-chart"
+                              size={32}
+                              color="#fff"
+                            />
+                            <Text style={styles.infoValue}>{energyPower}W</Text>
+                            <Text style={styles.infoSub}>
+                              {energyToday} kWh today
+                            </Text>
+                          </View>
                         </LinearGradient>
                       </View>
 
@@ -3325,21 +5217,39 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "water" && (
                     <>
-                      <View style={styles.infoOrb}>
-                        <LinearGradient
-                          colors={["#BFE7FF", "#6B3CFF"]}
-                          start={{ x: 0.2, y: 0.1 }}
-                          end={{ x: 0.9, y: 1 }}
-                          style={styles.infoOrbInner}
-                        >
-                          <Ionicons name="water" size={32} color="#fff" />
-                          <Text style={styles.infoValue}>
+                      <View
+                        style={[
+                          styles.waterOrb,
+                          {
+                            width: compactDialSize,
+                            height: compactDialSize,
+                            borderRadius: Math.round(compactDialSize / 2),
+                          },
+                        ]}
+                      >
+                        <AnimatedLottieView
+                          source={WATER_LOTTIE_SOURCE}
+                          autoPlay={waterBudget <= 0}
+                          loop={waterBudget <= 0}
+                          progress={waterBudget > 0 ? waterFill : undefined}
+                          resizeMode="contain"
+                          style={styles.deviceLottie}
+                        />
+                        <View style={styles.waterOrbOverlay}>
+                          <Text style={styles.waterOrbValue}>
                             {waterFlow} L/min
                           </Text>
-                          <Text style={styles.infoSub}>
-                            {waterToday} L today
+                          <Text style={styles.waterOrbSub}>
+                            {waterBudget > 0
+                              ? `${waterToday} / ${waterBudget} L`
+                              : `${waterToday} L today`}
                           </Text>
-                        </LinearGradient>
+                          {waterBudget > 0 && (
+                            <Text style={styles.waterOrbPercent}>
+                              {Math.round(waterBudgetProgress * 100)}% used
+                            </Text>
+                          )}
+                        </View>
                       </View>
 
                       <View style={styles.metricRow}>
@@ -3394,6 +5304,18 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             ? `${waterToday} / ${waterBudget} L used`
                             : `${waterToday} L today`}
                         </Text>
+                        {waterBudgetExceeded && (
+                          <View style={styles.alertRow}>
+                            <Ionicons
+                              name="warning"
+                              size={14}
+                              color="#D8465B"
+                            />
+                            <Text style={styles.alertText}>
+                              Daily budget exceeded
+                            </Text>
+                          </View>
+                        )}
                         {waterLeakDetected && (
                           <View style={styles.alertRow}>
                             <Ionicons
@@ -3413,6 +5335,18 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             />
                             <Text style={styles.alertTextWarn}>
                               Low pressure
+                            </Text>
+                          </View>
+                        )}
+                        {highPressure && (
+                          <View style={styles.alertRow}>
+                            <Ionicons
+                              name="alert-circle"
+                              size={14}
+                              color="#D8465B"
+                            />
+                            <Text style={styles.alertText}>
+                              High pressure
                             </Text>
                           </View>
                         )}
@@ -3465,32 +5399,50 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                       <View style={controlCardStyle}>
                         <Text style={styles.cardLabel}>Pressure alerts</Text>
-                        <View style={styles.chipRow}>
-                          {[30, 40, 50].map((value) => {
-                            const active = waterPressureLow === value;
-                            return (
-                              <Pressable
-                                key={value}
-                                style={[
-                                  styles.chip,
-                                  active && styles.chipActive,
-                                ]}
-                                onPress={() =>
-                                  sendPatch({ waterPressureLowPsi: value })
-                                }
-                              >
-                                <Text
-                                  style={[
-                                    styles.chipText,
-                                    active && styles.chipTextActive,
-                                  ]}
-                                >
-                                  {value} psi
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>Low</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {pressureLowDraft} psi
+                          </Text>
                         </View>
+                        <Slider
+                          value={pressureLowDraft}
+                          minimumValue={20}
+                          maximumValue={60}
+                          step={1}
+                          onValueChange={(value) =>
+                            setPressureLowDraft(Math.round(value))
+                          }
+                          onSlidingComplete={(value) =>
+                            setPressureLow(Math.round(value))
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>High</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {pressureHighDraft} psi
+                          </Text>
+                        </View>
+                        <Slider
+                          value={pressureHighDraft}
+                          minimumValue={60}
+                          maximumValue={100}
+                          step={1}
+                          onValueChange={(value) =>
+                            setPressureHighDraft(Math.round(value))
+                          }
+                          onSlidingComplete={(value) =>
+                            setPressureHigh(Math.round(value))
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
                         <View style={[controlCardRowStyle, { marginTop: 8 }]}>
                           <Pressable
                             style={[
@@ -3518,8 +5470,218 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         </View>
                         <Text style={styles.budgetHint}>
                           {waterPressureAlerts
-                            ? `Alert below ${waterPressureLow} psi`
+                            ? `Alert below ${waterPressureLow} psi or above ${waterPressureHigh} psi`
                             : "Pressure alerts disabled"}
+                        </Text>
+                      </View>
+                    </>
+                  )}
+
+                  {device.kind === "water-heater" && (
+                    <>
+                      <RadialDial
+                        size={compactDialSize}
+                        value={heaterTemp}
+                        min={40}
+                        max={70}
+                        tickValues={[40, 45, 50, 55, 60, 65, 70]}
+                        centerLabel="Setpoint"
+                        centerIcon={
+                          <View style={{ marginBottom: 6 }}>
+                            <Ionicons
+                              name="thermometer"
+                              size={28}
+                              color={stylesVars.ink}
+                            />
+                          </View>
+                        }
+                        formatTick={(v) => `${v}`}
+                        formatValue={(v) => `${v}°C`}
+                        formatCenterValue={(v) => `${v}°C`}
+                        dimmed={!device.isOn}
+                        onChange={(v) =>
+                          sendPatch({ tempC: clamp(v, 40, 70), isOn: true })
+                        }
+                      />
+                      <Text style={styles.heaterStatusText}>{heaterStatus}</Text>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Heater type</Text>
+                        <View style={styles.chipRow}>
+                          {heaterTypeOptions.map((option) => {
+                            const active = heaterType === option.value;
+                            return (
+                              <Pressable
+                                key={option.value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ waterHeaterType: option.value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {option.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Mode</Text>
+                        <View style={styles.chipRow}>
+                          {heaterModeOptions.map((option) => {
+                            const active = heaterMode === option.value;
+                            return (
+                              <Pressable
+                                key={option.value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ heaterMode: option.value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {option.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Smart features</Text>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              heaterScheduleEnabled &&
+                                styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                heaterScheduleEnabled: !heaterScheduleEnabled,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                heaterScheduleEnabled &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {heaterScheduleEnabled
+                                ? "Schedule"
+                                : "Schedule Off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              heaterSanitize && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({ antiLegionella: !heaterSanitize })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                heaterSanitize && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {heaterSanitize ? "Sanitize" : "Sanitize Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        {showRecirculation && (
+                          <View
+                            style={[controlCardRowStyle, { marginTop: 10 }]}
+                          >
+                            <Pressable
+                              style={[
+                                styles.controlPill,
+                                heaterRecirculation &&
+                                  styles.controlPillActive,
+                              ]}
+                              onPress={() =>
+                                sendPatch({
+                                  recirculation: !heaterRecirculation,
+                                })
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.controlPillText,
+                                  heaterRecirculation &&
+                                    styles.controlPillTextActive,
+                                ]}
+                              >
+                                {heaterRecirculation
+                                  ? "Recirculation"
+                                  : "Recirc Off"}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        )}
+                        <Text style={styles.budgetHint}>
+                          {heaterType === "tankless"
+                            ? "Recirculation keeps hot water ready."
+                            : "Schedules reduce standby heat loss."}
+                        </Text>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Vacation</Text>
+                        <View style={styles.chipRow}>
+                          {[0, 3, 7, 14, 30].map((value) => {
+                            const active = heaterVacationDays === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ vacationDays: value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {value === 0 ? "Off" : `${value}d`}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <Text style={styles.budgetHint}>
+                          {heaterMode === "vacation"
+                            ? heaterVacationDays > 0
+                              ? `Vacation mode set for ${heaterVacationDays} days.`
+                              : "Vacation mode active."
+                            : "Set days, then enable Vacation mode."}
                         </Text>
                       </View>
                     </>
@@ -3527,36 +5689,549 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "air" && (
                     <>
-                      <View style={styles.infoOrb}>
+                      <View
+                        style={[
+                          styles.infoOrb,
+                          {
+                            width: airOrbSize,
+                            height: airOrbSize,
+                            borderRadius: Math.round(airOrbSize / 2),
+                          },
+                        ]}
+                      >
                         <LinearGradient
-                          colors={["#C8F3E4", "#6B3CFF"]}
+                          colors={airBand.gradient}
                           start={{ x: 0.2, y: 0.1 }}
                           end={{ x: 0.9, y: 1 }}
                           style={styles.infoOrbInner}
                         >
-                          <Ionicons name="leaf" size={32} color="#fff" />
-                          <Text style={styles.infoValue}>AQI {airQuality}</Text>
+                          <Ionicons name="leaf" size={30} color="#fff" />
+                          <Text style={styles.infoValue}>
+                            AQI {airQuality > 0 ? airQuality : "--"}
+                          </Text>
                           <Text style={styles.infoSub}>
-                            Humidity {humidity}%
+                            {airBand.label} • Humidity{" "}
+                            {formatMetric(humidity, "%")}
+                          </Text>
+                          <Text style={styles.infoSub}>
+                            CO2 {formatMetric(airCo2, "ppm")} • PM2.5{" "}
+                            {formatMetric(airPm25, "ug/m3")}
+                          </Text>
+                          <Text style={styles.infoSub}>
+                            {airConfidence}% confidence
+                            {airLastUpdatedAt
+                              ? ` • ${formatTimeAgo(airLastUpdatedAt)}`
+                              : ""}
                           </Text>
                         </LinearGradient>
+                      </View>
+
+                      <View style={[controlCardStyle, styles.airTrendCard]}>
+                        <View style={styles.airTrendHeader}>
+                          <Text style={styles.cardLabel}>24h trend</Text>
+                          <View style={styles.airTrendPill}>
+                            <Ionicons
+                              name={airTrendIcon as keyof typeof Ionicons.glyphMap}
+                              size={14}
+                              color={airBand.color}
+                            />
+                            <Text style={styles.airTrendText}>
+                              {airTrendLabel}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.airChart}>
+                          {airSeriesAqi.map((value, index) => {
+                            const height = Math.max(
+                              6,
+                              Math.round(
+                                (value / airChartMax) * (isTablet ? 80 : 64),
+                              ),
+                            );
+                            const band = resolveAirBand(value);
+                            return (
+                              <View
+                                key={`air-bar-${index}`}
+                                style={[
+                                  styles.airChartBar,
+                                  {
+                                    height,
+                                    backgroundColor: band.color,
+                                    opacity:
+                                      index === airSeriesAqi.length - 1 ? 1 : 0.6,
+                                  },
+                                ]}
+                              />
+                            );
+                          })}
+                        </View>
+                        <View style={styles.airLegendRow}>
+                          {AIR_QUALITY_BANDS.slice(0, 3).map((band) => (
+                            <View
+                              key={`air-legend-${band.label}`}
+                              style={styles.airLegendItem}
+                            >
+                              <View
+                                style={[
+                                  styles.airLegendDot,
+                                  { backgroundColor: band.color },
+                                ]}
+                              />
+                              <Text style={styles.airLegendText}>
+                                {band.label}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                        <Text style={styles.budgetHint}>
+                          Updated{" "}
+                          {airLastUpdatedAt
+                            ? formatTimeAgo(airLastUpdatedAt)
+                            : "just now"}
+                        </Text>
+                      </View>
+
+                      <View style={styles.airMetricGrid}>
+                        {[
+                          {
+                            label: "PM2.5",
+                            value: formatMetric(airPm25, "ug/m3"),
+                          },
+                          {
+                            label: "PM10",
+                            value: formatMetric(airPm10, "ug/m3"),
+                          },
+                          {
+                            label: "CO2",
+                            value: formatMetric(airCo2, "ppm"),
+                          },
+                          {
+                            label: "VOC",
+                            value: formatMetric(airVoc, "ppb"),
+                          },
+                          {
+                            label: "HCHO",
+                            value: formatMetric(airFormaldehyde, "mg/m3", 2),
+                          },
+                          {
+                            label: "Pollen",
+                            value: formatMetric(airPollen, "idx", 1),
+                          },
+                          {
+                            label: "Temp",
+                            value: formatMetric(
+                              device.tempC ?? roomTemp,
+                              "C",
+                              1,
+                            ),
+                          },
+                          {
+                            label: "Humidity",
+                            value: formatMetric(humidity, "%"),
+                          },
+                          {
+                            label: "AQI",
+                            value: airQuality > 0 ? `${airQuality}` : "--",
+                          },
+                        ].map((metric) => (
+                          <View
+                            key={`air-metric-${metric.label}`}
+                            style={[
+                              styles.airMetricCard,
+                              { width: airMetricWidth },
+                            ]}
+                          >
+                            <Text style={styles.metricValue}>
+                              {metric.value}
+                            </Text>
+                            <Text style={styles.metricLabel}>
+                              {metric.label}
+                            </Text>
+                          </View>
+                        ))}
                       </View>
 
                       <View style={styles.metricRow}>
                         <View style={styles.metricCard}>
                           <Text style={styles.metricValue}>
-                            {airQuality <= 50
-                              ? "Good"
-                              : airQuality <= 100
-                                ? "Moderate"
-                                : "Poor"}
+                            {airFilterLife}%
                           </Text>
-                          <Text style={styles.metricLabel}>Quality</Text>
+                          <Text style={styles.metricLabel}>Filter life</Text>
                         </View>
                         <View style={styles.metricCard}>
-                          <Text style={styles.metricValue}>{humidity}%</Text>
-                          <Text style={styles.metricLabel}>Humidity</Text>
+                          <Text style={styles.metricValue}>
+                            {airFilterDaysLeft} days
+                          </Text>
+                          <Text style={styles.metricLabel}>Replace in</Text>
                         </View>
+                      </View>
+
+                      {airFilterLife <= 20 && (
+                        <View style={styles.alertRow}>
+                          <Ionicons name="warning" size={14} color="#D8465B" />
+                          <Text style={styles.alertText}>
+                            Replace filter soon
+                          </Text>
+                        </View>
+                      )}
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Purifier</Text>
+                        <View style={styles.chipRow}>
+                          {["auto", "manual", "sleep", "boost"].map((mode) => {
+                            const active = airPurifierMode === mode;
+                            const label =
+                              mode === "auto"
+                                ? "Auto"
+                                : mode === "manual"
+                                  ? "Manual"
+                                  : mode === "sleep"
+                                    ? "Sleep"
+                                    : "Boost";
+                            return (
+                              <Pressable
+                                key={mode}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    airPurifierMode: mode as Device["airPurifierMode"],
+                                    isOn: true,
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>Fan</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {airPurifierSpeed}%
+                          </Text>
+                        </View>
+                        <Slider
+                          value={airPurifierSpeed}
+                          minimumValue={0}
+                          maximumValue={100}
+                          step={1}
+                          onSlidingComplete={(value) =>
+                            sendPatch({
+                              airPurifierSpeed: Math.round(value),
+                              isOn: true,
+                            })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              airIonizerEnabled && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                airIonizerEnabled: !airIonizerEnabled,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                airIonizerEnabled &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {airIonizerEnabled ? "Ionizer" : "Ionizer Off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              airAutoVentilation && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                airAutoVentilation: !airAutoVentilation,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                airAutoVentilation &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {airAutoVentilation
+                                ? "Auto Vent"
+                                : "Vent Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Recommendations</Text>
+                        {airRecommendations.map((item, index) => (
+                          <View
+                            key={`air-rec-${index}`}
+                            style={styles.airRecommendationRow}
+                          >
+                            <Ionicons
+                              name="sparkles"
+                              size={14}
+                              color={stylesVars.ink}
+                            />
+                            <Text style={styles.airRecommendationText}>
+                              {item}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      <View style={styles.airCompareRow}>
+                        <View style={styles.airCompareCard}>
+                          <Text style={styles.airCompareTitle}>Indoor</Text>
+                          <Text style={styles.airCompareValue}>
+                            AQI {airQuality > 0 ? airQuality : "--"}
+                          </Text>
+                          <Text style={styles.airCompareSub}>
+                            CO2 {formatMetric(airCo2, "ppm")}
+                          </Text>
+                          <Text style={styles.airCompareSub}>
+                            PM2.5 {formatMetric(airPm25, "ug/m3")}
+                          </Text>
+                          <Text style={styles.airCompareSub}>
+                            Humidity {formatMetric(humidity, "%")}
+                          </Text>
+                          <Text style={styles.airCompareSub}>
+                            Temp{" "}
+                            {formatMetric(device.tempC ?? roomTemp, "C", 1)}
+                          </Text>
+                        </View>
+                        <View style={styles.airCompareCard}>
+                          <Text style={styles.airCompareTitle}>Outdoor</Text>
+                          <Text style={styles.airCompareValue}>
+                            AQI {airOutdoorAqi > 0 ? airOutdoorAqi : "--"}
+                          </Text>
+                          <Text style={styles.airCompareSub}>
+                            CO2 {formatMetric(airOutdoorCo2, "ppm")}
+                          </Text>
+                          <Text style={styles.airCompareSub}>
+                            PM2.5 {formatMetric(airOutdoorPm25, "ug/m3")}
+                          </Text>
+                          <Text style={styles.airCompareSub}>
+                            Humidity {formatMetric(airOutdoorHumidity, "%")}
+                          </Text>
+                          <Text style={styles.airCompareSub}>
+                            Temp {formatMetric(airOutdoorTempC, "C", 1)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Alerts</Text>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              airAlertsEnabled && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({ airAlertsEnabled: !airAlertsEnabled })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                airAlertsEnabled && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {airAlertsEnabled ? "Alerts on" : "Alerts off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>AQI</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {airAlertAqi}
+                          </Text>
+                        </View>
+                        <Slider
+                          value={airAlertAqi}
+                          minimumValue={50}
+                          maximumValue={200}
+                          step={1}
+                          onSlidingComplete={(value) =>
+                            sendPatch({ airAlertAqi: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>CO2</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {airAlertCo2} ppm
+                          </Text>
+                        </View>
+                        <Slider
+                          value={airAlertCo2}
+                          minimumValue={600}
+                          maximumValue={2000}
+                          step={10}
+                          onSlidingComplete={(value) =>
+                            sendPatch({ airAlertCo2: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>PM2.5</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {airAlertPm25} ug/m3
+                          </Text>
+                        </View>
+                        <Slider
+                          value={airAlertPm25}
+                          minimumValue={10}
+                          maximumValue={120}
+                          step={1}
+                          onSlidingComplete={(value) =>
+                            sendPatch({ airAlertPm25: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>PM10</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {airAlertPm10} ug/m3
+                          </Text>
+                        </View>
+                        <Slider
+                          value={airAlertPm10}
+                          minimumValue={20}
+                          maximumValue={160}
+                          step={1}
+                          onSlidingComplete={(value) =>
+                            sendPatch({ airAlertPm10: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>VOC</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {airAlertVoc} ppb
+                          </Text>
+                        </View>
+                        <Slider
+                          value={airAlertVoc}
+                          minimumValue={80}
+                          maximumValue={800}
+                          step={10}
+                          onSlidingComplete={(value) =>
+                            sendPatch({ airAlertVoc: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>Pollen</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {airAlertPollen} idx
+                          </Text>
+                        </View>
+                        <Slider
+                          value={airAlertPollen}
+                          minimumValue={1}
+                          maximumValue={5}
+                          step={1}
+                          onSlidingComplete={(value) =>
+                            sendPatch({ airAlertPollen: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Sensor map</Text>
+                        {airSensors.length === 0 ? (
+                          <Text style={styles.scheduleEmpty}>
+                            No air sensors yet
+                          </Text>
+                        ) : (
+                          <View style={styles.airSensorList}>
+                            {airSensors.map((sensor) => {
+                              const sensorBand = resolveAirBand(
+                                sensor.airQualityIndex ?? 0,
+                              );
+                              const isActive = sensor.id === device.id;
+                              return (
+                                <Pressable
+                                  key={sensor.id}
+                                  style={[
+                                    styles.airSensorRow,
+                                    isActive && styles.airSensorRowActive,
+                                  ]}
+                                  onPress={() =>
+                                    navigation.navigate("DeviceDetail", {
+                                      deviceId: sensor.id,
+                                    })
+                                  }
+                                >
+                                  <View
+                                    style={[
+                                      styles.airSensorDot,
+                                      { backgroundColor: sensorBand.color },
+                                    ]}
+                                  />
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={styles.airSensorName}>
+                                      {sensor.name}
+                                    </Text>
+                                    <Text style={styles.airSensorSub}>
+                                      {roomLookup.get(sensor.roomId) ?? ""}
+                                    </Text>
+                                  </View>
+                                  <Text style={styles.airSensorValue}>
+                                    AQI{" "}
+                                    {sensor.airQualityIndex
+                                      ? sensor.airQualityIndex
+                                      : "--"}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        )}
                       </View>
                     </>
                   )}
@@ -3760,6 +6435,111 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "speaker" && (
                     <>
+                      <View style={styles.speakerNowCard}>
+                        <LinearGradient
+                          colors={["#E6DAFF", "#8B5CFF"]}
+                          start={{ x: 0.1, y: 0.1 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.speakerNowInner}
+                        >
+                          <View
+                            style={[
+                              styles.speakerCover,
+                              {
+                                width: speakerCoverSize,
+                                height: speakerCoverSize,
+                                borderRadius: Math.round(speakerCoverSize * 0.22),
+                              },
+                            ]}
+                          >
+                            <LinearGradient
+                              colors={["rgba(255,255,255,0.95)", "#6B3CFF"]}
+                              start={{ x: 0.1, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.speakerCoverInner}
+                            >
+                              <Ionicons
+                                name="musical-notes"
+                                size={Math.round(speakerCoverSize * 0.36)}
+                                color="#2E1B6B"
+                              />
+                            </LinearGradient>
+                          </View>
+                          <View style={styles.speakerNowMeta}>
+                            <Text
+                              style={styles.speakerTrackTitle}
+                              numberOfLines={1}
+                            >
+                              {speakerTrackTitle}
+                            </Text>
+                            <Text
+                              style={styles.speakerTrackArtist}
+                              numberOfLines={1}
+                            >
+                              {speakerTrackArtist}
+                            </Text>
+                            <Text
+                              style={styles.speakerTrackSub}
+                              numberOfLines={1}
+                            >
+                              {speakerTrackAlbum}
+                            </Text>
+                          </View>
+                          <View style={styles.speakerSourcePill}>
+                            <Text style={styles.speakerSourceText}>
+                              {speakerSource}
+                            </Text>
+                          </View>
+                        </LinearGradient>
+
+                        <View style={styles.speakerProgressRow}>
+                          <Text style={styles.speakerTime}>
+                            {formatTrackTime(speakerTrackProgress)}
+                          </Text>
+                          <View style={styles.speakerProgressTrack}>
+                            <View
+                              style={[
+                                styles.speakerProgressFill,
+                                {
+                                  width: `${Math.round(
+                                    speakerTrackProgressPct * 100,
+                                  )}%`,
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text style={styles.speakerTime}>
+                            {formatTrackTime(speakerTrackDuration)}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.speakerVisualizerRow,
+                            { height: speakerBarMax },
+                          ]}
+                        >
+                          {speakerBars.map((bar, idx) => (
+                            <Animated.View
+                              key={`speaker-bar-${idx}`}
+                              style={[
+                                styles.speakerVisualizerBar,
+                                {
+                                  height: bar.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [
+                                      speakerBarBase,
+                                      speakerBarMax,
+                                    ],
+                                  }),
+                                  opacity: device.isOn ? 1 : 0.4,
+                                },
+                              ]}
+                            />
+                          ))}
+                        </View>
+                      </View>
+
                       <RadialDial
                         size={compactDialSize}
                         value={speakerVolume}
@@ -3832,6 +6612,244 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           />
                         </Pressable>
                       </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Source</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            "Spotify",
+                            "AirPlay",
+                            "Bluetooth",
+                            "AUX",
+                            "TV",
+                          ].map((value) => {
+                            const active = speakerSource === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    speakerSource:
+                                      value as Device["speakerSource"],
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {value}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>EQ Preset</Text>
+                        <View style={styles.chipRow}>
+                          {["Flat", "Warm", "Bright", "Bass", "Vocal"].map(
+                            (value) => {
+                              const active = speakerPreset === value;
+                              return (
+                                <Pressable
+                                  key={value}
+                                  style={[
+                                    styles.chip,
+                                    active && styles.chipActive,
+                                  ]}
+                                  onPress={() =>
+                                    sendPatch({
+                                      speakerPreset:
+                                        value as Device["speakerPreset"],
+                                    })
+                                  }
+                                >
+                                  <Text
+                                    style={[
+                                      styles.chipText,
+                                      active && styles.chipTextActive,
+                                    ]}
+                                  >
+                                    {value}
+                                  </Text>
+                                </Pressable>
+                              );
+                            },
+                          )}
+                        </View>
+
+                        <View style={styles.speakerSliderRow}>
+                          <Text style={styles.speakerSliderLabel}>Bass</Text>
+                          <Text style={styles.speakerSliderValue}>
+                            {speakerBassDraft}%
+                          </Text>
+                        </View>
+                        <Slider
+                          value={speakerBassDraft}
+                          minimumValue={0}
+                          maximumValue={100}
+                          step={1}
+                          onValueChange={(value) =>
+                            setSpeakerBassDraft(Math.round(value))
+                          }
+                          onSlidingComplete={(value) =>
+                            sendPatch({ bass: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.speakerSlider}
+                        />
+
+                        <View style={styles.speakerSliderRow}>
+                          <Text style={styles.speakerSliderLabel}>Treble</Text>
+                          <Text style={styles.speakerSliderValue}>
+                            {speakerTrebleDraft}%
+                          </Text>
+                        </View>
+                        <Slider
+                          value={speakerTrebleDraft}
+                          minimumValue={0}
+                          maximumValue={100}
+                          step={1}
+                          onValueChange={(value) =>
+                            setSpeakerTrebleDraft(Math.round(value))
+                          }
+                          onSlidingComplete={(value) =>
+                            sendPatch({ treble: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.speakerSlider}
+                        />
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Smart modes</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "Spatial", field: "spatialAudio" },
+                            { label: "Party", field: "partyMode" },
+                            { label: "Night", field: "nightMode" },
+                            { label: "Shuffle", field: "shuffle" },
+                          ].map((item) => {
+                            const active =
+                              item.field === "spatialAudio"
+                                ? speakerSpatial
+                                : item.field === "partyMode"
+                                  ? speakerParty
+                                  : item.field === "nightMode"
+                                    ? speakerNight
+                                    : speakerShuffle;
+                            return (
+                              <Pressable
+                                key={item.label}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    [item.field]: !active,
+                                  } as Partial<Device>)
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {item.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <View style={[controlCardRowStyle, { marginTop: 10 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              speakerMic && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({ micEnabled: !speakerMic })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                speakerMic && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {speakerMic ? "Mic On" : "Mic Off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              speakerAssistant && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                voiceAssistantEnabled: !speakerAssistant,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                speakerAssistant &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {speakerAssistant ? "Assistant" : "Assistant Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <Text style={styles.cardHint}>Repeat</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "Off", value: "off" },
+                            { label: "All", value: "all" },
+                            { label: "One", value: "one" },
+                          ].map((option) => {
+                            const active = speakerRepeat === option.value;
+                            return (
+                              <Pressable
+                                key={option.value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    repeat: option.value as Device["repeat"],
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {option.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
                     </>
                   )}
 
@@ -3840,7 +6858,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       <View style={styles.infoOrb}>
                         <LinearGradient
                           colors={
-                            device.smokeDetected
+                            smokeDetected || coDetected
                               ? ["#FFB4B4", "#B46BFF"]
                               : ["#D9F5E6", "#6B3CFF"]
                           }
@@ -3850,7 +6868,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         >
                           <Ionicons
                             name={
-                              device.smokeDetected
+                              smokeDetected || coDetected
                                 ? "alert-circle"
                                 : "checkmark-circle"
                             }
@@ -3858,22 +6876,119 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             color="#fff"
                           />
                           <Text style={styles.infoValue}>
-                            {device.smokeDetected ? "ALERT" : "CLEAR"}
+                            {smokeDetected || coDetected ? "ALERT" : "CLEAR"}
                           </Text>
                           <Text style={styles.infoSub}>{device.name}</Text>
                         </LinearGradient>
                       </View>
 
+                      <View style={styles.metricRow}>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>{coPpm} ppm</Text>
+                          <Text style={styles.metricLabel}>CO</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {smokePpm} ppm
+                          </Text>
+                          <Text style={styles.metricLabel}>Smoke</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {smokeBattery}%
+                          </Text>
+                          <Text style={styles.metricLabel}>Battery</Text>
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Status</Text>
+                        <View style={styles.chipRow}>
+                          {["ok", "warning", "error"].map((status) => {
+                            const active = smokeSensorStatus === status;
+                            const label =
+                              status === "ok"
+                                ? "OK"
+                                : status === "warning"
+                                  ? "Warning"
+                                  : "Error";
+                            return (
+                              <Pressable
+                                key={status}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    smokeSensorStatus:
+                                      status as Device["smokeSensorStatus"],
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <Text style={styles.budgetHint}>
+                          Last test:{" "}
+                          {smokeLastTestAt
+                            ? formatTimeAgo(smokeLastTestAt)
+                            : "Not yet"}
+                        </Text>
+                        <Text style={styles.budgetHint}>
+                          Last alarm:{" "}
+                          {smokeLastAlarmAt
+                            ? formatTimeAgo(smokeLastAlarmAt)
+                            : "None"}
+                        </Text>
+                      </View>
+
+                      {smokeSilenced && (
+                        <View style={styles.alertRow}>
+                          <Ionicons
+                            name="alert"
+                            size={14}
+                            color="#B7791F"
+                          />
+                          <Text style={styles.alertTextWarn}>
+                            Alarm silenced
+                          </Text>
+                        </View>
+                      )}
+
                       <View style={controlCardRowStyle}>
                         <Pressable
                           style={styles.controlPill}
-                          onPress={() => sendPatch({ smokeDetected: true })}
+                          onPress={() =>
+                            sendPatch({
+                              smokeDetected: true,
+                              coDetected: false,
+                              smokeSilenced: false,
+                              smokeLastTestAt: Date.now(),
+                              smokeLastAlarmAt: Date.now(),
+                            })
+                          }
                         >
                           <Text style={styles.controlPillText}>Test alarm</Text>
                         </Pressable>
                         <Pressable
                           style={styles.controlPill}
-                          onPress={() => sendPatch({ smokeDetected: false })}
+                          onPress={() =>
+                            sendPatch({
+                              smokeDetected: false,
+                              coDetected: false,
+                              smokeSilenced: true,
+                            })
+                          }
                         >
                           <Text style={styles.controlPillText}>Silence</Text>
                         </Pressable>
@@ -3883,44 +6998,52 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "tv" && (
                     <>
-                      <RadialDial
-                        size={compactDialSize}
-                        value={volume}
-                        min={0}
-                        max={100}
-                        tickValues={[0, 25, 50, 75, 100]}
-                        dimmed={!device.isOn}
-                        formatValue={(v) => `${v}`}
-                        formatTick={(v) => `${v}`}
-                        onChange={(v) => {
-                          const next = clamp(v, 0, 100);
-                          deviceClient
-                            .sendCommand({
-                              op: "set-volume",
-                              deviceId: device.id,
-                              value: next,
-                            })
-                            .catch(() => {});
-                        }}
-                        centerContent={
-                          <View style={styles.tvOrb}>
-                            <LinearGradient
-                              colors={["#7AB8FF", "#6B3CFF"]}
-                              start={{ x: 0.2, y: 0.1 }}
-                              end={{ x: 0.9, y: 1 }}
-                              style={styles.tvOrbInner}
-                            >
-                              <Ionicons name="tv" size={40} color="#fff" />
-                              <Text style={styles.tvName}>{device.name}</Text>
-                              <Text style={styles.tvRoom}>
-                                {roomName || "TV"}
-                              </Text>
-                              <Text style={styles.tvRoom}>{source}</Text>
-                              <Text style={styles.tvRoom}>Ch {channel}</Text>
-                            </LinearGradient>
-                          </View>
-                        }
-                      />
+                      {device.isOn ? (
+                        <RadialDial
+                          size={compactDialSize}
+                          value={volume}
+                          min={0}
+                          max={100}
+                          tickValues={[0, 25, 50, 75, 100]}
+                          dimmed={!device.isOn}
+                          formatValue={(v) => `${v}`}
+                          formatTick={(v) => `${v}`}
+                          onChange={(v) => {
+                            const next = clamp(v, 0, 100);
+                            deviceClient
+                              .sendCommand({
+                                op: "set-volume",
+                                deviceId: device.id,
+                                value: next,
+                              })
+                              .catch(() => {});
+                          }}
+                          centerContent={
+                            <View style={styles.tvOrb}>
+                              <LinearGradient
+                                colors={["#7AB8FF", "#6B3CFF"]}
+                                start={{ x: 0.2, y: 0.1 }}
+                                end={{ x: 0.9, y: 1 }}
+                                style={styles.tvOrbInner}
+                              >
+                                <Ionicons name="tv" size={40} color="#fff" />
+                                <Text style={styles.tvName}>{device.name}</Text>
+                                <Text style={styles.tvRoom}>
+                                  {roomName || "TV"}
+                                </Text>
+                                <Text style={styles.tvRoom}>
+                                  {tvStatusLabel}
+                                </Text>
+                                <Text style={styles.tvRoom}>
+                                  {tvDetailLabel}
+                                </Text>
+                              </LinearGradient>
+                            </View>
+                          }
+                        />
+                      ) : (
+                        renderDeviceLottie(TV_LOTTIE_SOURCE, compactDialSize)
+                      )}
 
                       <View style={[controlCardStyle, styles.remoteCard]}>
                         <View style={styles.remoteGrid}>
@@ -4205,9 +7328,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                               const next = clamp(channel + 1, 1, 999);
                               deviceClient
                                 .sendCommand({
-                                  op: "set-channel",
+                                  op: "patch",
                                   deviceId: device.id,
-                                  value: next,
+                                  patch: {
+                                    channel: next,
+                                    source: "Live TV",
+                                    isOn: true,
+                                  },
                                 })
                                 .catch(() => {});
                             }}
@@ -4225,9 +7352,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                               const next = clamp(channel - 1, 1, 999);
                               deviceClient
                                 .sendCommand({
-                                  op: "set-channel",
+                                  op: "patch",
                                   deviceId: device.id,
-                                  value: next,
+                                  patch: {
+                                    channel: next,
+                                    source: "Live TV",
+                                    isOn: true,
+                                  },
                                 })
                                 .catch(() => {});
                             }}
@@ -4289,6 +7420,248 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                           <Text style={styles.controlPillText}>Stop</Text>
                         </Pressable>
                       </View>
+
+                      <View style={styles.metricRow}>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {coffeeWaterLevel}%
+                          </Text>
+                          <Text style={styles.metricLabel}>Water tank</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>
+                            {coffeeBeanLevel}%
+                          </Text>
+                          <Text style={styles.metricLabel}>Bean hopper</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                          <Text style={styles.metricValue}>{coffeeTempC}°C</Text>
+                          <Text style={styles.metricLabel}>Brew temp</Text>
+                        </View>
+                      </View>
+
+                      {coffeeDescaleNeeded && (
+                        <View style={styles.alertRow}>
+                          <Ionicons name="warning" size={14} color="#D8465B" />
+                          <Text style={styles.alertText}>
+                            Descale cycle recommended
+                          </Text>
+                        </View>
+                      )}
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Brew profile</Text>
+                        <Text style={styles.cardHint}>Size</Text>
+                        <View style={styles.chipRow}>
+                          {[6, 8, 10, 12].map((value) => {
+                            const active = coffeeSizeOz === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ coffeeSizeOz: value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {value} oz
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <Text style={styles.cardHint}>Strength</Text>
+                        <View style={styles.chipRow}>
+                          {[
+                            { label: "Mild", value: "mild" },
+                            { label: "Normal", value: "normal" },
+                            { label: "Strong", value: "strong" },
+                          ].map((option) => {
+                            const active = coffeeStrength === option.value;
+                            return (
+                              <Pressable
+                                key={option.value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({
+                                    coffeeStrength:
+                                      option.value as Device["coffeeStrength"],
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {option.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <Text style={styles.cardHint}>Cups</Text>
+                        <View style={styles.chipRow}>
+                          {[1, 2, 4, 6].map((value) => {
+                            const active = coffeeCupCount === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ coffeeCupCount: value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {value}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Temperature</Text>
+                        <View style={styles.pressureSliderRow}>
+                          <Text style={styles.pressureSliderLabel}>Brew</Text>
+                          <Text style={styles.pressureSliderValue}>
+                            {coffeeTempC}°C
+                          </Text>
+                        </View>
+                        <Slider
+                          value={coffeeTempC}
+                          minimumValue={80}
+                          maximumValue={98}
+                          step={1}
+                          onSlidingComplete={(value) =>
+                            sendPatch({ coffeeTempC: Math.round(value) })
+                          }
+                          minimumTrackTintColor="rgba(122,92,255,0.9)"
+                          maximumTrackTintColor="rgba(12,12,18,0.12)"
+                          thumbTintColor="rgba(255,255,255,0.92)"
+                          style={styles.pressureSlider}
+                        />
+                        <Text style={styles.cardHint}>Keep warm</Text>
+                        <View style={styles.chipRow}>
+                          {[0, 10, 20, 30].map((value) => {
+                            const active = coffeeKeepWarmMin === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ coffeeKeepWarmMin: value })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {value === 0 ? "Off" : `${value}m`}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={controlCardStyle}>
+                        <Text style={styles.cardLabel}>Extras</Text>
+                        <View style={[controlCardRowStyle, { marginTop: 8 }]}>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              coffeeGrinder && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({ coffeeGrinder: !coffeeGrinder })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                coffeeGrinder && styles.controlPillTextActive,
+                              ]}
+                            >
+                              {coffeeGrinder ? "Grinder" : "Grinder Off"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.controlPill,
+                              coffeeMilkFrother && styles.controlPillActive,
+                            ]}
+                            onPress={() =>
+                              sendPatch({
+                                coffeeMilkFrother: !coffeeMilkFrother,
+                              })
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.controlPillText,
+                                coffeeMilkFrother &&
+                                  styles.controlPillTextActive,
+                              ]}
+                            >
+                              {coffeeMilkFrother ? "Frother" : "Frother Off"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <Text style={styles.cardHint}>Auto brew</Text>
+                        <View style={styles.chipRow}>
+                          {["06:30", "07:00", "07:30", "08:00"].map((time) => {
+                            const active = coffeeAutoBrewTime === time;
+                            return (
+                              <Pressable
+                                key={time}
+                                style={[
+                                  styles.chip,
+                                  active && styles.chipActive,
+                                ]}
+                                onPress={() =>
+                                  sendPatch({ coffeeAutoBrewTime: time })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.chipText,
+                                    active && styles.chipTextActive,
+                                  ]}
+                                >
+                                  {time}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
                     </>
                   )}
                 </View>
@@ -4309,18 +7682,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               },
             ]}
           >
-            <Pressable
-              style={styles.powerWrap}
-              onPress={() =>
-                deviceClient
-                  .sendCommand({
-                    op: "patch",
-                    deviceId: device.id,
-                    patch: { isOn: !device.isOn },
-                  })
-                  .catch(() => {})
-              }
-            >
+            <Pressable style={styles.powerWrap} onPress={handlePowerToggle}>
               <View
                 style={[styles.powerRing, device.isOn && styles.powerRingOn]}
               >
@@ -4433,6 +7795,92 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 })}
               </View>
 
+              {isLaundry && (
+                <>
+                  <Text style={[styles.editLabel, { fontSize: editLabelSize }]}>
+                    Laundry stack
+                  </Text>
+                  <View style={styles.stackRow}>
+                    <Pressable
+                      style={[
+                        styles.stackPill,
+                        !stackEnabled && styles.stackPillActive,
+                      ]}
+                      onPress={() => setStackEnabled(false)}
+                    >
+                      <Text
+                        style={[
+                          styles.stackPillText,
+                          !stackEnabled && styles.stackPillTextActive,
+                        ]}
+                      >
+                        Single
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.stackPill,
+                        stackEnabled && styles.stackPillActive,
+                      ]}
+                      onPress={() => setStackEnabled(true)}
+                    >
+                      <Text
+                        style={[
+                          styles.stackPillText,
+                          stackEnabled && styles.stackPillTextActive,
+                        ]}
+                      >
+                        Stacked
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {stackEnabled && (
+                    <>
+                      <Text
+                        style={[styles.editLabel, { fontSize: editLabelSize }]}
+                      >
+                        Pair with {stackPartnerKind}
+                      </Text>
+                      <View style={styles.stackTargetsRow}>
+                        {stackCandidates.length ? (
+                          stackCandidates.map((candidate) => {
+                            const active = candidate.id === stackTargetId;
+                            return (
+                              <Pressable
+                                key={candidate.id}
+                                style={[
+                                  styles.stackTargetPill,
+                                  active && styles.stackTargetPillActive,
+                                ]}
+                                onPress={() => setStackTargetId(candidate.id)}
+                              >
+                                <Text
+                                  style={[
+                                    styles.stackTargetText,
+                                    active && styles.stackTargetTextActive,
+                                  ]}
+                                >
+                                  {candidate.name}
+                                </Text>
+                              </Pressable>
+                            );
+                          })
+                        ) : (
+                          <Text style={styles.stackHint}>
+                            No {stackPartnerKind} in this room yet.
+                          </Text>
+                        )}
+                      </View>
+                    </>
+                  )}
+                  <Text style={styles.stackHint}>
+                    {stackEnabled
+                      ? "Link this unit to show as a stacked pair."
+                      : "Keep this unit independent."}
+                  </Text>
+                </>
+              )}
+
               <View style={styles.editActions}>
                 <Pressable
                   style={[
@@ -4457,14 +7905,130 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       height: editButtonHeight,
                       borderRadius: Math.round(editButtonHeight * 0.28),
                     },
-                    !draftName.trim() && styles.editPrimaryDisabled,
+                    (!draftName.trim() || !canStackSave) &&
+                      styles.editPrimaryDisabled,
                   ]}
                   onPress={() => {
-                    if (!draftName.trim()) return;
-                    sendPatch({ name: draftName.trim(), roomId: draftRoomId });
+                    if (!draftName.trim() || !canStackSave) return;
+                    const basePatch: Partial<Device> = {
+                      name: draftName.trim(),
+                      roomId: draftRoomId,
+                    };
+                    if (!isLaundry) {
+                      sendPatch(basePatch);
+                      setShowEdit(false);
+                      return;
+                    }
+                    if (stackEnabled && stackTargetId) {
+                      const partner = devicesAll.find(
+                        (d) => d.id === stackTargetId,
+                      );
+                      if (partner) {
+                        const nextStackId =
+                          device.stackId ??
+                          partner.stackId ??
+                          `stack-${Date.now()}`;
+                        const clearIds = new Set<string>();
+                        if (
+                          device.stackId &&
+                          currentStackPartner &&
+                          currentStackPartner.id !== partner.id
+                        ) {
+                          devicesAll.forEach((d) => {
+                            if (
+                              d.stackId === device.stackId &&
+                              d.id !== device.id &&
+                              d.id !== partner.id
+                            ) {
+                              clearIds.add(d.id);
+                            }
+                          });
+                        }
+                        if (
+                          partner.stackId &&
+                          partner.stackId !== nextStackId
+                        ) {
+                          devicesAll.forEach((d) => {
+                            if (
+                              d.stackId === partner.stackId &&
+                              d.id !== partner.id &&
+                              d.id !== device.id
+                            ) {
+                              clearIds.add(d.id);
+                            }
+                          });
+                        }
+                        const selfPosition =
+                          device.kind === "dryer" ? "top" : "bottom";
+                        const partnerPosition =
+                          partner.kind === "dryer" ? "top" : "bottom";
+                        sendPatch({
+                          ...basePatch,
+                          stackId: nextStackId,
+                          stackPosition: selfPosition,
+                        });
+                        deviceClient
+                          .sendCommand({
+                            op: "patch",
+                            deviceId: partner.id,
+                            patch: {
+                              stackId: nextStackId,
+                              stackPosition: partnerPosition,
+                            },
+                          })
+                          .catch(() => {});
+                        clearIds.forEach((id) => {
+                          deviceClient
+                            .sendCommand({
+                              op: "patch",
+                              deviceId: id,
+                              patch: {
+                                stackId: undefined,
+                                stackPosition: undefined,
+                              },
+                            })
+                            .catch(() => {});
+                        });
+                      } else {
+                        sendPatch({
+                          ...basePatch,
+                          stackId: undefined,
+                          stackPosition: undefined,
+                        });
+                      }
+                      setShowEdit(false);
+                      return;
+                    }
+                    const idsToClear = new Set<string>();
+                    if (device.stackId) {
+                      devicesAll.forEach((d) => {
+                        if (d.stackId === device.stackId) idsToClear.add(d.id);
+                      });
+                    }
+                    idsToClear.add(device.id);
+                    idsToClear.forEach((id) => {
+                      if (id === device.id) {
+                        sendPatch({
+                          ...basePatch,
+                          stackId: undefined,
+                          stackPosition: undefined,
+                        });
+                        return;
+                      }
+                      deviceClient
+                        .sendCommand({
+                          op: "patch",
+                          deviceId: id,
+                          patch: {
+                            stackId: undefined,
+                            stackPosition: undefined,
+                          },
+                        })
+                        .catch(() => {});
+                    });
                     setShowEdit(false);
                   }}
-                  disabled={!draftName.trim()}
+                  disabled={!draftName.trim() || !canStackSave}
                 >
                   <Text
                     style={[
@@ -4805,25 +8369,21 @@ const styles = StyleSheet.create({
   capabilitiesWrap: { marginTop: 16 },
   heroTitle: { color: stylesVars.ink, fontWeight: "900", fontSize: 18 },
   heroSub: { color: stylesVars.subtext, fontWeight: "700", marginTop: 4 },
-  garageHero: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.82)",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
+  garageStatusText: {
+    marginTop: 6,
+    marginBottom: 2,
+    textAlign: "center",
+    color: stylesVars.subtext,
+    fontWeight: "800",
+    fontSize: 12,
   },
-  garageIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.70)",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
-    alignItems: "center",
-    justifyContent: "center",
+  heaterStatusText: {
+    marginTop: 6,
+    marginBottom: 2,
+    textAlign: "center",
+    color: stylesVars.subtext,
+    fontWeight: "800",
+    fontSize: 12,
   },
 
   controlCard: {
@@ -4869,6 +8429,23 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "center",
   },
+  pressureSliderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  pressureSliderLabel: {
+    color: stylesVars.subtext,
+    fontWeight: "800",
+    fontSize: 12,
+  },
+  pressureSliderValue: {
+    color: stylesVars.ink,
+    fontWeight: "900",
+    fontSize: 12,
+  },
+  pressureSlider: { marginTop: 6, marginBottom: 2 },
   chip: {
     paddingHorizontal: 14,
     height: 36,
@@ -4910,12 +8487,55 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
   },
+  energyLottieLayer: {
+    position: "absolute",
+    left: -8,
+    right: -8,
+    top: -8,
+    bottom: -8,
+    opacity: 0.5,
+  },
+  energyLottie: { width: "100%", height: "100%" },
+  energyOrbContent: { alignItems: "center", justifyContent: "center" },
   infoValue: { marginTop: 8, color: "#fff", fontWeight: "900", fontSize: 24 },
   infoSub: {
     marginTop: 4,
     color: "rgba(255,255,255,0.85)",
     fontWeight: "800",
     fontSize: 12,
+  },
+  waterOrb: {
+    alignSelf: "center",
+    overflow: "hidden",
+    shadowColor: "rgba(180,107,255,0.35)",
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    marginBottom: 12,
+  },
+  waterOrbOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  waterOrbValue: { color: "#fff", fontWeight: "900", fontSize: 22 },
+  waterOrbSub: {
+    marginTop: 6,
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "800",
+    fontSize: 12,
+  },
+  waterOrbPercent: {
+    marginTop: 6,
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.4,
   },
   metricRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   metricCard: {
@@ -4939,6 +8559,125 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 11,
   },
+  airMetricGrid: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    justifyContent: "space-between",
+  },
+  airMetricCard: {
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  airTrendCard: { marginTop: 6 },
+  airTrendHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  airTrendPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+  },
+  airTrendText: { color: stylesVars.ink, fontWeight: "900", fontSize: 12 },
+  airChart: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 4,
+    minHeight: 64,
+  },
+  airChartBar: {
+    flex: 1,
+    borderRadius: 8,
+    backgroundColor: "rgba(122,92,255,0.6)",
+  },
+  airLegendRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  airLegendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  airLegendDot: { width: 8, height: 8, borderRadius: 4 },
+  airLegendText: {
+    color: stylesVars.subtext,
+    fontWeight: "800",
+    fontSize: 11,
+  },
+  airRecommendationRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  airRecommendationText: {
+    flex: 1,
+    color: stylesVars.subtext,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  airCompareRow: { flexDirection: "row", gap: 10, marginTop: 12 },
+  airCompareCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  airCompareTitle: { color: stylesVars.subtext, fontWeight: "800" },
+  airCompareValue: {
+    marginTop: 6,
+    color: stylesVars.ink,
+    fontWeight: "900",
+    fontSize: 16,
+  },
+  airCompareSub: {
+    marginTop: 4,
+    color: stylesVars.subtext,
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  airSensorList: { marginTop: 10, gap: 8 },
+  airSensorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.68)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  airSensorRowActive: {
+    borderColor: "rgba(122,92,255,0.35)",
+    backgroundColor: "rgba(180,107,255,0.16)",
+  },
+  airSensorDot: { width: 10, height: 10, borderRadius: 5 },
+  airSensorName: { color: stylesVars.ink, fontWeight: "900", fontSize: 13 },
+  airSensorSub: {
+    marginTop: 2,
+    color: stylesVars.subtext,
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  airSensorValue: { color: stylesVars.ink, fontWeight: "900", fontSize: 12 },
   solarHint: {
     marginTop: 6,
     textAlign: "center",
@@ -5089,6 +8828,119 @@ const styles = StyleSheet.create({
     marginTop: 16,
     justifyContent: "center",
   },
+  speakerNowCard: {
+    marginBottom: 14,
+    padding: 12,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+  },
+  speakerNowInner: {
+    borderRadius: 18,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  speakerCover: {
+    backgroundColor: "rgba(255,255,255,0.5)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.6)",
+    overflow: "hidden",
+  },
+  speakerCoverInner: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  speakerNowMeta: { flex: 1, minWidth: 0 },
+  speakerTrackTitle: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+  speakerTrackArtist: {
+    marginTop: 2,
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  speakerTrackSub: {
+    marginTop: 2,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  speakerSourcePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  speakerSourceText: {
+    color: "rgba(12,12,18,0.8)",
+    fontWeight: "900",
+    fontSize: 11,
+  },
+  speakerProgressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+  },
+  speakerProgressTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.5)",
+    overflow: "hidden",
+  },
+  speakerProgressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#fff",
+  },
+  speakerTime: {
+    width: 42,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "800",
+    fontSize: 11,
+  },
+  speakerVisualizerRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 6,
+    paddingBottom: 4,
+  },
+  speakerVisualizerBar: {
+    width: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.9)",
+  },
+  speakerSliderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  speakerSliderLabel: {
+    color: stylesVars.subtext,
+    fontWeight: "800",
+    fontSize: 12,
+  },
+  speakerSliderValue: {
+    color: stylesVars.ink,
+    fontWeight: "900",
+    fontSize: 12,
+  },
+  speakerSlider: { marginTop: 6, marginBottom: 2 },
   mediaBtn: {
     width: 52,
     height: 52,
@@ -5276,6 +9128,94 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   tvOrbInner: { flex: 1, alignItems: "center", justifyContent: "center" },
+  deviceLottieDock: {
+    alignSelf: "center",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  deviceLottie: { width: "100%", height: "100%" },
+  openStatusOverlay: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  openStatusValue: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 22,
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowRadius: 6,
+  },
+  openStatusLabel: {
+    marginTop: 4,
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "800",
+    fontSize: 12,
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowRadius: 6,
+  },
+  laundryCenter: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(12,12,18,0.22)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
+    overflow: "hidden",
+  },
+  laundryCenterLottie: { width: "100%", height: "100%" },
+  laundryCenterOverlay: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  laundryCenterValue: {
+    color: "#fff",
+    fontWeight: "900",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowRadius: 6,
+  },
+  laundryCenterLabel: {
+    marginTop: 4,
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "800",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowRadius: 6,
+  },
+  windowCenter: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(12,12,18,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    overflow: "hidden",
+  },
+  windowCenterLottie: { width: "100%", height: "100%" },
+  windowCenterOverlay: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  windowCenterValue: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 20,
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowRadius: 6,
+  },
+  windowCenterLabel: {
+    marginTop: 4,
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "800",
+    fontSize: 12,
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowRadius: 6,
+  },
   tvName: { marginTop: 8, color: "#fff", fontWeight: "900", fontSize: 18 },
   tvRoom: {
     marginTop: 2,
@@ -5462,6 +9402,56 @@ const styles = StyleSheet.create({
   },
   roomPillText: { color: stylesVars.subtext, fontWeight: "800", fontSize: 12 },
   roomPillTextActive: { color: stylesVars.ink },
+  stackRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  stackPill: {
+    flex: 1,
+    height: 40,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+  },
+  stackPillActive: {
+    backgroundColor: "#6B3CFF",
+    borderColor: "#6B3CFF",
+  },
+  stackPillText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
+  stackPillTextActive: { color: "#fff" },
+  stackTargetsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  stackTargetPill: {
+    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(12,12,18,0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(12,12,18,0.08)",
+  },
+  stackTargetPillActive: {
+    backgroundColor: "rgba(107,60,255,0.2)",
+    borderColor: "rgba(107,60,255,0.5)",
+  },
+  stackTargetText: { color: stylesVars.ink, fontWeight: "800" },
+  stackTargetTextActive: { color: "#6B3CFF" },
+  stackHint: {
+    color: stylesVars.muted,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
   editActions: { flexDirection: "row", gap: 10, marginTop: 16 },
   editGhost: {
     flex: 1,

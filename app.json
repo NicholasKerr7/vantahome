@@ -15,15 +15,23 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow VantaHome to access your photo library to set a profile avatar."
-      }
+        "NSPhotoLibraryUsageDescription": "Allow VantaHome to access your photo library to set a profile avatar.",
+        "NSMicrophoneUsageDescription": "Allow VantaHome to capture voice commands.",
+        "NSSpeechRecognitionUsageDescription": "Allow VantaHome to recognize your voice commands."
+      },
+      "bundleIdentifier": "com.anonymous.vantahome"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": ["READ_MEDIA_IMAGES", "READ_EXTERNAL_STORAGE"]
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

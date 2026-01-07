@@ -120,7 +120,7 @@ export default function DeviceTile({
   const controlFont = Math.round((isTablet ? 14 : 12) * scale);
   const pillHeight = Math.round((isTablet ? 40 : 36) * scale);
 
-  const meta =
+  const baseMeta =
     device.kind === "ac"
       ? `${device.tempC ?? 22}°C • ${(device.mode ?? "cold").toUpperCase()}`
       : device.kind === "light"
@@ -154,19 +154,35 @@ export default function DeviceTile({
                               : `${device.powerW ?? 0}W`
                             : device.kind === "water"
                               ? `${device.waterLpm ?? 0} L/min`
-                              : device.kind === "air"
-                                ? `AQI ${device.airQualityIndex ?? 0}`
-                                : device.kind === "sprinkler"
+                              : device.kind === "water-heater"
+                                ? `${device.tempC ?? 52}°C • ${(
+                                    device.heaterMode ?? "eco"
+                                  ).toUpperCase()}`
+                                : device.kind === "air"
+                                  ? `AQI ${device.airQualityIndex ?? 0}`
+                                  : device.kind === "sprinkler"
                                   ? (device.zone ?? "Sprinkler")
                                   : device.kind === "speaker"
-                                    ? `Vol ${device.volume ?? 20}`
+                                    ? device.isOn
+                                      ? device.trackTitle ?? `Vol ${device.volume ?? 20}`
+                                      : `Vol ${device.volume ?? 20}`
                                     : device.kind === "smoke"
-                                      ? device.smokeDetected
-                                        ? "Alert"
-                                        : "Clear"
-                                      : device.isOn
-                                        ? "On"
-                                        : "Off";
+                                        ? device.smokeDetected
+                                          ? "Alert"
+                                          : "Clear"
+                                        : device.isOn
+                                          ? "On"
+                                          : "Off";
+  const stackSuffix = device.stackId
+    ? ` • ${
+        device.stackPosition === "top"
+          ? "Stack top"
+          : device.stackPosition === "bottom"
+            ? "Stack bottom"
+            : "Stacked"
+      }`
+    : "";
+  const meta = `${baseMeta}${stackSuffix}`;
 
   return (
     <Pressable

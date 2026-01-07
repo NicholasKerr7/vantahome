@@ -26,10 +26,24 @@ export type DeviceKind =
   | "microwave"
   | "energy"
   | "water"
+  | "water-heater"
   | "air"
   | "sprinkler"
   | "speaker"
   | "smoke";
+
+export type AirQualitySample = {
+  ts: number;
+  aqi?: number;
+  pm25?: number;
+  pm10?: number;
+  co2?: number;
+  voc?: number;
+  formaldehyde?: number;
+  pollen?: number;
+  humidity?: number;
+  tempC?: number;
+};
 
 export type Weekday = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
@@ -64,12 +78,29 @@ export type Device = {
   channel?: number;
   muted?: boolean;
   source?: string;
+  stackId?: string; // washer/dryer pairing
+  stackPosition?: "top" | "bottom"; // washer/dryer stacking position
 
   // Extra per-kind fields
   speed?: number; // fan
+  fanOscillation?: boolean; // fan
+  fanDirection?: "forward" | "reverse"; // fan
+  fanTimerMin?: number; // fan
+  fanAutoMode?: boolean; // fan
+  fanLightOn?: boolean; // fan
+  fanSleepMode?: boolean; // fan
   openPercent?: number; // garage/door/window
   status?: "docked" | "cleaning" | "paused"; // vacuum
   battery?: number; // vacuum
+  vacuumSuction?: number; // vacuum
+  vacuumMode?: "auto" | "spot" | "edge" | "room"; // vacuum
+  vacuumMop?: boolean; // vacuum
+  vacuumQuietMode?: boolean; // vacuum
+  vacuumBinFull?: boolean; // vacuum
+  vacuumBrushDirty?: boolean; // vacuum
+  vacuumFilterLife?: number; // vacuum
+  vacuumAreaM2?: number; // vacuum
+  vacuumRuntimeMin?: number; // vacuum
   armed?: boolean; // camera
   recording?: boolean; // camera
   nightVision?: boolean; // camera
@@ -89,9 +120,35 @@ export type Device = {
   heatLevel?: "Low" | "Med" | "High"; // dryer
   drynessLevel?: "Damp" | "Dry" | "Extra"; // dryer
   remainingMin?: number; // washer/dryer
+  loadSize?: "Small" | "Medium" | "Large"; // washer
+  rinseCount?: 1 | 2 | 3; // washer
+  prewash?: boolean; // washer
+  steamWash?: boolean; // washer
+  sanitizeWash?: boolean; // washer
+  smartDispense?: boolean; // washer
+  extraSpin?: boolean; // washer
+  ecoWash?: boolean; // washer
+  sensorDry?: boolean; // dryer
+  wrinkleGuard?: boolean; // dryer
+  steamRefresh?: boolean; // dryer
+  ecoDry?: boolean; // dryer
+  airFluff?: boolean; // dryer
+  coolDown?: boolean; // dryer
+  lintFilterOk?: boolean; // dryer
+  antiStatic?: boolean; // dryer
   timeRemainingSec?: number; // microwave
   microwavePower?: number; // microwave
   microwaveMode?: "Reheat" | "Defrost" | "Grill" | "Popcorn"; // microwave
+  freezerTempC?: number; // fridge
+  fridgeMode?: "eco" | "normal" | "boost" | "vacation"; // fridge
+  fridgeDoorOpen?: boolean; // fridge
+  fridgeDoorAlarm?: boolean; // fridge
+  fridgeIceMaker?: boolean; // fridge
+  fridgeQuickCool?: boolean; // fridge
+  fridgeQuickFreeze?: boolean; // fridge
+  fridgeEnergySaver?: boolean; // fridge
+  fridgeFilterLife?: number; // fridge
+  fridgeHumidity?: number; // fridge
   powerW?: number; // energy monitor
   energyTodayKwh?: number; // energy monitor
   energyPeakW?: number; // energy monitor
@@ -107,14 +164,92 @@ export type Device = {
   waterTodayL?: number; // water meter
   waterPressurePsi?: number; // water meter
   waterPressureLowPsi?: number; // water meter
+  waterPressureHighPsi?: number; // water meter
   waterTempC?: number; // water meter
   waterLeakDetected?: boolean; // water meter
   waterLeakAlerts?: boolean; // water meter
   waterPressureAlerts?: boolean; // water meter
   waterAutoShutoff?: boolean; // water meter
   waterBudgetL?: number; // water meter
+  speakerSource?: "AirPlay" | "Bluetooth" | "Spotify" | "AUX" | "TV";
+  speakerPreset?: "Flat" | "Warm" | "Bright" | "Bass" | "Vocal";
+  bass?: number;
+  treble?: number;
+  spatialAudio?: boolean;
+  partyMode?: boolean;
+  nightMode?: boolean;
+  micEnabled?: boolean;
+  voiceAssistantEnabled?: boolean;
+  shuffle?: boolean;
+  repeat?: "off" | "all" | "one";
+  trackTitle?: string;
+  trackArtist?: string;
+  trackAlbum?: string;
+  trackDurationSec?: number;
+  trackProgressSec?: number;
+  waterHeaterType?: "electric-tank" | "gas-tank" | "heat-pump" | "tankless";
+  heaterMode?: "eco" | "standard" | "boost" | "vacation";
+  recirculation?: boolean;
+  antiLegionella?: boolean;
+  vacationDays?: number;
+  heaterScheduleEnabled?: boolean;
   airQualityIndex?: number; // air quality
   humidity?: number; // air quality
+  airPm25?: number; // air quality
+  airPm10?: number; // air quality
+  airCo2?: number; // air quality
+  airVoc?: number; // air quality
+  airFormaldehyde?: number; // air quality
+  airPollen?: number; // air quality
+  airQualityConfidence?: number; // air quality
+  airOutdoorAqi?: number; // air quality
+  airOutdoorPm25?: number; // air quality
+  airOutdoorCo2?: number; // air quality
+  airOutdoorVoc?: number; // air quality
+  airOutdoorHumidity?: number; // air quality
+  airOutdoorTempC?: number; // air quality
+  airAlertsEnabled?: boolean; // air quality
+  airAlertAqi?: number; // air quality
+  airAlertCo2?: number; // air quality
+  airAlertVoc?: number; // air quality
+  airAlertPm25?: number; // air quality
+  airAlertPm10?: number; // air quality
+  airAlertPollen?: number; // air quality
+  airPurifierMode?: "auto" | "manual" | "sleep" | "boost"; // air quality
+  airPurifierSpeed?: number; // air quality
+  airIonizerEnabled?: boolean; // air quality
+  airFilterLife?: number; // air quality
+  airFilterDaysLeft?: number; // air quality
+  airAutoVentilation?: boolean; // air quality
+  airHistory?: AirQualitySample[]; // air quality
+  airLastUpdatedAt?: number; // air quality
+  airSensorLabel?: string; // air quality
+  acFanSpeed?: number; // AC
+  acSwingMode?: "off" | "vertical" | "horizontal" | "both"; // AC
+  acEcoMode?: boolean; // AC
+  acTurboMode?: boolean; // AC
+  acQuietMode?: boolean; // AC
+  acTargetHumidity?: number; // AC
+  acFilterLife?: number; // AC
+  coffeeStrength?: "mild" | "normal" | "strong"; // coffee
+  coffeeSizeOz?: number; // coffee
+  coffeeTempC?: number; // coffee
+  coffeeKeepWarmMin?: number; // coffee
+  coffeeCupCount?: number; // coffee
+  coffeeGrinder?: boolean; // coffee
+  coffeeMilkFrother?: boolean; // coffee
+  coffeeWaterLevel?: number; // coffee
+  coffeeBeanLevel?: number; // coffee
+  coffeeDescaleNeeded?: boolean; // coffee
+  coffeeAutoBrewTime?: string; // coffee
+  coDetected?: boolean; // smoke/CO
+  coPpm?: number; // smoke/CO
+  smokePpm?: number; // smoke/CO
+  smokeBattery?: number; // smoke/CO
+  smokeSensorStatus?: "ok" | "warning" | "error"; // smoke/CO
+  smokeSilenced?: boolean; // smoke/CO
+  smokeLastTestAt?: number; // smoke/CO
+  smokeLastAlarmAt?: number; // smoke/CO
   zone?: string; // sprinkler
   durationMin?: number; // sprinkler
   smokeDetected?: boolean; // smoke alarm
@@ -122,6 +257,13 @@ export type Device = {
 };
 
 export type Room = { id: string; name: string };
+
+export type AmbientReading = {
+  tempC: number;
+  label: string;
+  updatedAt?: number;
+  source?: "seed" | "sensor" | "weather" | "estimate";
+};
 
 export type HouseholdMember = {
   id: string;
@@ -203,6 +345,19 @@ type Preferences = {
   notifications: boolean;
 };
 
+const AIR_SAMPLE_FIELDS: Array<keyof Device> = [
+  "airQualityIndex",
+  "humidity",
+  "airPm25",
+  "airPm10",
+  "airCo2",
+  "airVoc",
+  "airFormaldehyde",
+  "airPollen",
+  "tempC",
+];
+const AIR_HISTORY_MAX = 144;
+
 type RealtimeSettings = {
   enabled: boolean;
   wsUrl: string;
@@ -223,8 +378,8 @@ type Profile = {
 type State = {
   userName: string;
   profile: Profile;
-  outdoor: { tempC: number; label: string };
-  indoor: { tempC: number; label: string };
+  outdoor: AmbientReading;
+  indoor: AmbientReading;
   rooms: Room[];
   devices: Device[];
   scenes: Scene[];
@@ -242,6 +397,8 @@ type State = {
   moveRoom: (roomId: string, direction: -1 | 1) => void;
   removeRoom: (roomId: string) => void;
   setProfile: (patch: Partial<Profile>) => void;
+  setOutdoor: (patch: Partial<AmbientReading>) => void;
+  setIndoor: (patch: Partial<AmbientReading>) => void;
   setPreferences: (patch: Partial<Preferences>) => void;
   setRealtime: (patch: Partial<RealtimeSettings>) => void;
   setDevice: (deviceId: string, patch: Partial<Device>) => void;
@@ -303,8 +460,16 @@ const profileSeed: Profile = {
   timezone: "Auto",
 };
 
-const outdoorSeed = { tempC: 24, label: "Sunny" };
-const indoorSeed = { tempC: 22, label: "Indoor" };
+const outdoorSeed: AmbientReading = {
+  tempC: 24,
+  label: "Sunny",
+  source: "seed",
+};
+const indoorSeed: AmbientReading = {
+  tempC: 22,
+  label: "Indoor",
+  source: "seed",
+};
 
 const roomsSeed: Room[] = [
   { id: "r1", name: "Drawing Room" },
@@ -345,6 +510,13 @@ const devicesSeed: Device[] = [
     isOn: true,
     tempC: 22,
     mode: "cold",
+    acFanSpeed: 60,
+    acSwingMode: "both",
+    acEcoMode: false,
+    acTurboMode: false,
+    acQuietMode: true,
+    acTargetHumidity: 45,
+    acFilterLife: 72,
   },
   {
     id: "d2",
@@ -365,7 +537,24 @@ const devicesSeed: Device[] = [
     channel: 5,
     source: "Live TV",
   },
-  { id: "d4", name: "Coffee", kind: "coffee", roomId: "r1", isOn: false },
+  {
+    id: "d4",
+    name: "Coffee",
+    kind: "coffee",
+    roomId: "r1",
+    isOn: false,
+    coffeeStrength: "normal",
+    coffeeSizeOz: 8,
+    coffeeTempC: 92,
+    coffeeKeepWarmMin: 20,
+    coffeeCupCount: 2,
+    coffeeGrinder: true,
+    coffeeMilkFrother: false,
+    coffeeWaterLevel: 70,
+    coffeeBeanLevel: 55,
+    coffeeDescaleNeeded: false,
+    coffeeAutoBrewTime: "07:00",
+  },
   {
     id: "d26",
     name: "Front Gate",
@@ -393,6 +582,13 @@ const devicesSeed: Device[] = [
     isOn: true,
     tempC: 21,
     mode: "cold",
+    acFanSpeed: 50,
+    acSwingMode: "vertical",
+    acEcoMode: true,
+    acTurboMode: false,
+    acQuietMode: false,
+    acTargetHumidity: 48,
+    acFilterLife: 80,
   },
   {
     id: "d7",
@@ -420,6 +616,17 @@ const devicesSeed: Device[] = [
     kind: "coffee",
     roomId: "r3",
     isOn: true,
+    coffeeStrength: "strong",
+    coffeeSizeOz: 10,
+    coffeeTempC: 94,
+    coffeeKeepWarmMin: 30,
+    coffeeCupCount: 2,
+    coffeeGrinder: true,
+    coffeeMilkFrother: true,
+    coffeeWaterLevel: 60,
+    coffeeBeanLevel: 40,
+    coffeeDescaleNeeded: true,
+    coffeeAutoBrewTime: "06:45",
   },
 
   {
@@ -429,6 +636,12 @@ const devicesSeed: Device[] = [
     roomId: "r3",
     isOn: true,
     speed: 60,
+    fanOscillation: true,
+    fanDirection: "forward",
+    fanTimerMin: 0,
+    fanAutoMode: false,
+    fanLightOn: true,
+    fanSleepMode: false,
   },
   {
     id: "d11",
@@ -437,6 +650,16 @@ const devicesSeed: Device[] = [
     roomId: "r3",
     isOn: true,
     tempC: 4,
+    freezerTempC: -18,
+    fridgeMode: "normal",
+    fridgeDoorOpen: false,
+    fridgeDoorAlarm: true,
+    fridgeIceMaker: true,
+    fridgeQuickCool: false,
+    fridgeQuickFreeze: false,
+    fridgeEnergySaver: true,
+    fridgeFilterLife: 64,
+    fridgeHumidity: 50,
   },
   {
     id: "d12",
@@ -462,6 +685,15 @@ const devicesSeed: Device[] = [
     isOn: false,
     status: "docked",
     battery: 86,
+    vacuumSuction: 70,
+    vacuumMode: "auto",
+    vacuumMop: false,
+    vacuumQuietMode: false,
+    vacuumBinFull: false,
+    vacuumBrushDirty: false,
+    vacuumFilterLife: 68,
+    vacuumAreaM2: 32,
+    vacuumRuntimeMin: 46,
   },
   {
     id: "d15",
@@ -508,6 +740,14 @@ const devicesSeed: Device[] = [
     spinSpeedRpm: 1000,
     soilLevel: "Normal",
     remainingMin: 42,
+    loadSize: "Medium",
+    rinseCount: 2,
+    prewash: false,
+    steamWash: false,
+    sanitizeWash: false,
+    smartDispense: true,
+    extraSpin: false,
+    ecoWash: false,
   },
   {
     id: "d19",
@@ -547,6 +787,7 @@ const devicesSeed: Device[] = [
     waterTodayL: 120,
     waterPressurePsi: 52,
     waterPressureLowPsi: 40,
+    waterPressureHighPsi: 80,
     waterTempC: 18,
     waterLeakDetected: false,
     waterLeakAlerts: true,
@@ -562,6 +803,32 @@ const devicesSeed: Device[] = [
     isOn: true,
     airQualityIndex: 32,
     humidity: 44,
+    airPm25: 8,
+    airPm10: 14,
+    airCo2: 620,
+    airVoc: 120,
+    airFormaldehyde: 0.04,
+    airPollen: 1,
+    airQualityConfidence: 92,
+    airOutdoorAqi: 46,
+    airOutdoorPm25: 12,
+    airOutdoorCo2: 420,
+    airOutdoorVoc: 90,
+    airOutdoorHumidity: 48,
+    airOutdoorTempC: 26,
+    airAlertsEnabled: true,
+    airAlertAqi: 100,
+    airAlertCo2: 1200,
+    airAlertVoc: 300,
+    airAlertPm25: 35,
+    airAlertPm10: 50,
+    airAlertPollen: 3,
+    airPurifierMode: "auto",
+    airPurifierSpeed: 40,
+    airIonizerEnabled: false,
+    airFilterLife: 78,
+    airFilterDaysLeft: 45,
+    airAutoVentilation: true,
   },
   {
     id: "d23",
@@ -588,6 +855,22 @@ const devicesSeed: Device[] = [
     roomId: "r1",
     isOn: true,
     volume: 28,
+    speakerSource: "Spotify",
+    speakerPreset: "Warm",
+    bass: 58,
+    treble: 46,
+    spatialAudio: true,
+    partyMode: false,
+    nightMode: false,
+    micEnabled: true,
+    voiceAssistantEnabled: true,
+    shuffle: true,
+    repeat: "all",
+    trackTitle: "Midnight City",
+    trackArtist: "M83",
+    trackAlbum: "Hurry Up, We're Dreaming",
+    trackDurationSec: 252,
+    trackProgressSec: 96,
   },
   {
     id: "d25",
@@ -596,6 +879,26 @@ const devicesSeed: Device[] = [
     roomId: "r2",
     isOn: true,
     smokeDetected: false,
+    coDetected: false,
+    coPpm: 3,
+    smokePpm: 0,
+    smokeBattery: 84,
+    smokeSensorStatus: "ok",
+    smokeSilenced: false,
+  },
+  {
+    id: "d27",
+    name: "Water Heater",
+    kind: "water-heater",
+    roomId: "r3",
+    isOn: true,
+    tempC: 52,
+    waterHeaterType: "heat-pump",
+    heaterMode: "eco",
+    recirculation: true,
+    antiLegionella: false,
+    vacationDays: 0,
+    heaterScheduleEnabled: true,
   },
 ];
 
@@ -980,6 +1283,24 @@ export const useHomeStore = create<State>()(
           };
         }),
 
+      setOutdoor: (patch) =>
+        set((state) => ({
+          outdoor: {
+            ...state.outdoor,
+            ...patch,
+            updatedAt: patch.updatedAt ?? Date.now(),
+          },
+        })),
+
+      setIndoor: (patch) =>
+        set((state) => ({
+          indoor: {
+            ...state.indoor,
+            ...patch,
+            updatedAt: patch.updatedAt ?? Date.now(),
+          },
+        })),
+
       setPreferences: (patch) =>
         set((state) => ({
           preferences: { ...state.preferences, ...patch },
@@ -991,11 +1312,58 @@ export const useHomeStore = create<State>()(
         })),
 
       setDevice: (deviceId, patch) =>
-        set((state) => ({
-          devices: state.devices.map((d) =>
-            d.id === deviceId ? { ...d, ...patch } : d,
-          ),
-        })),
+        set((state) => {
+          const now = Date.now();
+          return {
+            devices: state.devices.map((d) => {
+              if (d.id !== deviceId) return d;
+              const next = { ...d, ...patch };
+              if (d.kind !== "air") return next;
+
+              const hasSampleUpdate = AIR_SAMPLE_FIELDS.some(
+                (field) => patch[field] !== undefined,
+              );
+              const incomingHistory = patch.airHistory;
+              if (!hasSampleUpdate && !incomingHistory) return next;
+
+              const ts = patch.airLastUpdatedAt ?? now;
+              if (Array.isArray(incomingHistory)) {
+                const trimmed = incomingHistory
+                  .filter((item) => item && typeof item.ts === "number")
+                  .slice(-AIR_HISTORY_MAX);
+                return {
+                  ...next,
+                  airLastUpdatedAt: ts,
+                  airHistory: trimmed,
+                };
+              }
+
+              const sample: AirQualitySample = {
+                ts,
+                aqi: patch.airQualityIndex ?? d.airQualityIndex,
+                humidity: patch.humidity ?? d.humidity,
+                pm25: patch.airPm25 ?? d.airPm25,
+                pm10: patch.airPm10 ?? d.airPm10,
+                co2: patch.airCo2 ?? d.airCo2,
+                voc: patch.airVoc ?? d.airVoc,
+                formaldehyde: patch.airFormaldehyde ?? d.airFormaldehyde,
+                pollen: patch.airPollen ?? d.airPollen,
+                tempC: patch.tempC ?? d.tempC,
+              };
+              const history = Array.isArray(d.airHistory) ? d.airHistory : [];
+              const cutoff = ts - 24 * 60 * 60 * 1000;
+              const trimmed = [...history, sample]
+                .filter((item) => item && typeof item.ts === "number")
+                .filter((item) => item.ts >= cutoff)
+                .slice(-AIR_HISTORY_MAX);
+              return {
+                ...next,
+                airLastUpdatedAt: ts,
+                airHistory: trimmed,
+              };
+            }),
+          };
+        }),
 
       setAC: (deviceId, patch) =>
         set((state) => ({

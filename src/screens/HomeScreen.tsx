@@ -18,9 +18,19 @@ import AvatarChip from "../components/AvatarChip";
 import GradientOrb from "../components/GradientOrb";
 import BackgroundLines from "../components/BackgroundLines";
 import RoomCarousel from "../components/RoomCarousel";
-import { useHomeStore } from "../store/useHomeStore";
+import {
+  AC_TEMP_MAX_C,
+  AC_TEMP_MIN_C,
+  useHomeStore,
+} from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
-import { notifyPowerStatus } from "../services/notifications";
+import {
+  notifyAirAlert,
+  notifyPowerStatus,
+  notifyWaterAlert,
+} from "../services/notifications";
+import { deviceClient } from "../services/deviceClient";
+import Voice from "@react-native-voice/voice";
 
 export default function HomeScreen() {
   const { contentWidth, gutter, isTablet, isLandscape, topPad, scale } =
@@ -52,6 +62,7 @@ export default function HomeScreen() {
 
   const userName = useHomeStore((s) => s.userName);
   const profile = useHomeStore((s) => s.profile);
+  const tempUnit = profile.tempUnit ?? "C";
   const outdoor = useHomeStore((s) => s.outdoor);
   const rooms = useHomeStore((s) => s.rooms);
   const devicesAll = useHomeStore((s) => s.devices);
@@ -60,16 +71,81 @@ export default function HomeScreen() {
   const indoorFallback = useHomeStore((s) => s.indoor);
   const [activeRoomIndex, setActiveRoomIndex] = useState(0);
   const lastPowerOutage = useRef<boolean | null>(null);
+  const lastWaterAlert = useRef<{
+    budgetExceeded: boolean;
+    lowPressure: boolean;
+    highPressure: boolean;
+  } | null>(null);
+  const lastAirAlert = useRef<
+    Record<
+      string,
+      {
+        aqi: boolean;
+        co2: boolean;
+        voc: boolean;
+        pm25: boolean;
+        pm10: boolean;
+        pollen: boolean;
+      }
+    >
+  >({});
 
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [roomName, setRoomName] = useState("");
+  const [showVoice, setShowVoice] = useState(false);
   const canCreate = roomName.trim().length > 1;
   const [clock, setClock] = useState(() => new Date());
+  const voiceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceTranscriptRef = useRef("");
+  const runVoiceCommandRef = useRef<
+    (raw: string) => { ok: boolean; message: string }
+  >(() => ({ ok: false, message: "" }));
+  const VOICE_TIMEOUT_MS = 6000;
 
   useEffect(() => {
     // Refresh greeting at minute granularity so it stays accurate without over-rendering.
     const timer = setInterval(() => setClock(new Date()), 60 * 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    Voice.onSpeechResults = (event: any) => {
+      const phrase = event?.value?.[0]?.trim?.();
+      if (phrase) {
+        voiceTranscriptRef.current = phrase;
+      }
+    };
+    Voice.onSpeechEnd = () => {
+      const phrase = voiceTranscriptRef.current.trim();
+      if (phrase) {
+        runVoiceCommandRef.current(phrase);
+      }
+      voiceTranscriptRef.current = "";
+      if (voiceTimeoutRef.current) {
+        clearTimeout(voiceTimeoutRef.current);
+        voiceTimeoutRef.current = null;
+      }
+      setShowVoice(false);
+    };
+    Voice.onSpeechError = () => {
+      voiceTranscriptRef.current = "";
+      if (voiceTimeoutRef.current) {
+        clearTimeout(voiceTimeoutRef.current);
+        voiceTimeoutRef.current = null;
+      }
+      setShowVoice(false);
+    };
+    return () => {
+      Voice.destroy()
+        .then(() => Voice.removeAllListeners())
+        .catch(() => {});
+    };
   }, []);
 
   const greeting = useMemo(() => {
@@ -103,6 +179,160 @@ export default function HomeScreen() {
     }
   }, [devicesAll, prefs.notifications]);
 
+  useEffect(() => {
+    const water = devicesAll.find((device) => device.kind === "water");
+    if (!water) return;
+    const waterBudget = water.waterBudgetL ?? 0;
+    const waterToday = water.waterTodayL ?? 0;
+    const budgetExceeded = waterBudget > 0 && waterToday >= waterBudget;
+    const pressureLimit = water.waterPressureLowPsi ?? 40;
+    const pressureHighLimit = water.waterPressureHighPsi ?? 80;
+    const pressureAlerts = water.waterPressureAlerts ?? true;
+    const pressureValue = water.waterPressurePsi ?? 0;
+    const lowPressure =
+      pressureAlerts && pressureValue > 0 && pressureValue < pressureLimit;
+    const highPressure =
+      pressureAlerts &&
+      pressureHighLimit > 0 &&
+      pressureValue > pressureHighLimit;
+
+    if (lastWaterAlert.current === null) {
+      lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
+      return;
+    }
+
+    if (!prefs.notifications) {
+      lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
+      return;
+    }
+
+    if (budgetExceeded && !lastWaterAlert.current.budgetExceeded) {
+      notifyWaterAlert({
+        kind: "budget",
+        current: waterToday,
+        limit: waterBudget,
+      }).catch(() => {});
+    }
+    if (lowPressure && !lastWaterAlert.current.lowPressure) {
+      notifyWaterAlert({
+        kind: "pressure-low",
+        current: pressureValue,
+        limit: pressureLimit,
+      }).catch(() => {});
+    }
+    if (highPressure && !lastWaterAlert.current.highPressure) {
+      notifyWaterAlert({
+        kind: "pressure-high",
+        current: pressureValue,
+        limit: pressureHighLimit,
+      }).catch(() => {});
+    }
+
+    lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
+  }, [devicesAll, prefs.notifications]);
+
+  useEffect(() => {
+    const airDevices = devicesAll.filter((device) => device.kind === "air");
+    if (!airDevices.length) return;
+    const nextState = { ...lastAirAlert.current };
+
+    airDevices.forEach((device) => {
+      const alertsEnabled = device.airAlertsEnabled ?? true;
+      const aqiLimit = device.airAlertAqi ?? 100;
+      const co2Limit = device.airAlertCo2 ?? 1200;
+      const vocLimit = device.airAlertVoc ?? 300;
+      const pm25Limit = device.airAlertPm25 ?? 35;
+      const pm10Limit = device.airAlertPm10 ?? 50;
+      const pollenLimit = device.airAlertPollen ?? 3;
+
+      const aqi = device.airQualityIndex ?? 0;
+      const co2 = device.airCo2 ?? 0;
+      const voc = device.airVoc ?? 0;
+      const pm25 = device.airPm25 ?? 0;
+      const pm10 = device.airPm10 ?? 0;
+      const pollen = device.airPollen ?? 0;
+
+      const aqiExceeded = alertsEnabled && aqi > 0 && aqi >= aqiLimit;
+      const co2Exceeded = alertsEnabled && co2 > 0 && co2 >= co2Limit;
+      const vocExceeded = alertsEnabled && voc > 0 && voc >= vocLimit;
+      const pm25Exceeded = alertsEnabled && pm25 > 0 && pm25 >= pm25Limit;
+      const pm10Exceeded = alertsEnabled && pm10 > 0 && pm10 >= pm10Limit;
+      const pollenExceeded =
+        alertsEnabled && pollen > 0 && pollen >= pollenLimit;
+
+      const prev = nextState[device.id] ?? {
+        aqi: false,
+        co2: false,
+        voc: false,
+        pm25: false,
+        pm10: false,
+        pollen: false,
+      };
+
+      if (prefs.notifications && alertsEnabled) {
+        if (aqiExceeded && !prev.aqi) {
+          notifyAirAlert({
+            deviceName: device.name,
+            kind: "aqi",
+            current: aqi,
+            limit: aqiLimit,
+          }).catch(() => {});
+        }
+        if (co2Exceeded && !prev.co2) {
+          notifyAirAlert({
+            deviceName: device.name,
+            kind: "co2",
+            current: co2,
+            limit: co2Limit,
+          }).catch(() => {});
+        }
+        if (vocExceeded && !prev.voc) {
+          notifyAirAlert({
+            deviceName: device.name,
+            kind: "voc",
+            current: voc,
+            limit: vocLimit,
+          }).catch(() => {});
+        }
+        if (pm25Exceeded && !prev.pm25) {
+          notifyAirAlert({
+            deviceName: device.name,
+            kind: "pm25",
+            current: pm25,
+            limit: pm25Limit,
+          }).catch(() => {});
+        }
+        if (pm10Exceeded && !prev.pm10) {
+          notifyAirAlert({
+            deviceName: device.name,
+            kind: "pm10",
+            current: pm10,
+            limit: pm10Limit,
+          }).catch(() => {});
+        }
+        if (pollenExceeded && !prev.pollen) {
+          notifyAirAlert({
+            deviceName: device.name,
+            kind: "pollen",
+            current: pollen,
+            limit: pollenLimit,
+          }).catch(() => {});
+        }
+      }
+
+      nextState[device.id] = {
+        aqi: aqiExceeded,
+        co2: co2Exceeded,
+        voc: vocExceeded,
+        pm25: pm25Exceeded,
+        pm10: pm10Exceeded,
+        pollen: pollenExceeded,
+      };
+    });
+
+    lastAirAlert.current = nextState;
+  }, [devicesAll, prefs.notifications]);
+
   const handleCreateRoom = () => {
     if (!canCreate) return;
     addRoom(roomName.trim());
@@ -110,11 +340,195 @@ export default function HomeScreen() {
     setShowAddRoom(false);
   };
 
+  const clamp = (value: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, value));
+
+  const normalizeText = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9% ]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const escapeRegex = (value: string) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const includesWord = (text: string, word: string) => {
+    if (!word) return false;
+    return new RegExp(`\\b${escapeRegex(word)}\\b`, "i").test(text);
+  };
+
+  const includesPhrase = (text: string, phrase: string) => {
+    if (!phrase) return false;
+    const tokens = phrase.split(" ").filter(Boolean).map(escapeRegex);
+    if (!tokens.length) return false;
+    return new RegExp(`\\b${tokens.join("\\s+")}\\b`, "i").test(text);
+  };
+
+  const matchesDeviceName = (deviceName: string, text: string) => {
+    const name = normalizeText(deviceName);
+    if (!name) return false;
+    if (name.length <= 3) return includesWord(text, name);
+    if (name.includes(" ")) return includesPhrase(text, name);
+    return includesWord(text, name) || text.includes(name);
+  };
+
+  const runVoiceCommand = (raw: string) => {
+    const normalized = normalizeText(raw);
+    if (!normalized) {
+      return { ok: false, message: "Say a command first." };
+    }
+
+    const wantsOn = /(turn on|switch on|enable)/.test(normalized);
+    const wantsOff = /(turn off|switch off|disable)/.test(normalized);
+    const brightnessMatch = normalized.match(/(\d{1,3})\s*%/);
+    const tempMatch = normalized.match(/(\d{1,2})\s*(degrees|degree|c|f)\b/);
+
+    const roomMatch = rooms.find((room) => {
+      const roomName = normalizeText(room.name);
+      return includesPhrase(normalized, roomName);
+    });
+    const scopedDevices = roomMatch
+      ? devicesAll.filter((device) => device.roomId === roomMatch.id)
+      : devicesAll;
+
+    const nameMatches = scopedDevices.filter((device) =>
+      matchesDeviceName(device.name, normalized),
+    );
+    let targets = nameMatches;
+
+    if (targets.length === 0) {
+      if (includesWord(normalized, "light") || includesWord(normalized, "lights"))
+        targets = scopedDevices.filter((device) => device.kind === "light");
+      else if (
+        includesPhrase(normalized, "air conditioner") ||
+        includesWord(normalized, "aircon") ||
+        includesWord(normalized, "ac")
+      )
+        targets = scopedDevices.filter((device) => device.kind === "ac");
+      else if (
+        includesWord(normalized, "tv") ||
+        includesPhrase(normalized, "television")
+      )
+        targets = scopedDevices.filter((device) => device.kind === "tv");
+      else if (includesWord(normalized, "fan"))
+        targets = scopedDevices.filter((device) => device.kind === "fan");
+    }
+
+    if (targets.length === 0) {
+      return { ok: false, message: "No matching devices found." };
+    }
+
+    if (brightnessMatch) {
+      const value = clamp(parseInt(brightnessMatch[1], 10), 0, 100);
+      const lights = targets.filter((device) => device.kind === "light");
+      if (lights.length === 0) {
+        return { ok: false, message: "Brightness works for lights." };
+      }
+      lights.forEach((device) => {
+        void deviceClient.sendCommand({
+          op: "set-brightness",
+          deviceId: device.id,
+          value,
+        });
+      });
+      return {
+        ok: true,
+        message: `Set ${lights.length} light${lights.length === 1 ? "" : "s"} to ${value}%.`,
+      };
+    }
+
+    if (tempMatch) {
+      let value = parseInt(tempMatch[1], 10);
+      if (tempMatch[0].includes("f")) {
+        value = Math.round((value - 32) / 1.8);
+      }
+      value = clamp(value, AC_TEMP_MIN_C, AC_TEMP_MAX_C);
+      const acs = targets.filter((device) => device.kind === "ac");
+      if (acs.length === 0) {
+        return { ok: false, message: "Temperature works for AC units." };
+      }
+      acs.forEach((device) => {
+        void deviceClient.sendCommand({
+          op: "set-temp",
+          deviceId: device.id,
+          value,
+        });
+      });
+      return {
+        ok: true,
+        message: `Set ${acs.length} AC${acs.length === 1 ? "" : "s"} to ${value}C.`,
+      };
+    }
+
+    if (wantsOn || wantsOff) {
+      const on =
+        wantsOn && !wantsOff ? true : wantsOff && !wantsOn ? false : null;
+      if (on === null) {
+        return { ok: false, message: "Say turn on or turn off." };
+      }
+      targets.forEach((device) => {
+        void deviceClient.sendCommand({
+          op: "toggle",
+          deviceId: device.id,
+          on,
+        });
+      });
+      return {
+        ok: true,
+        message: `Turned ${on ? "on" : "off"} ${targets.length} device${
+          targets.length === 1 ? "" : "s"
+        }.`,
+      };
+    }
+
+    return {
+      ok: false,
+      message: "Try: Turn on lights or set AC to 22 degrees.",
+    };
+  };
+  runVoiceCommandRef.current = runVoiceCommand;
+
+  const handleVoicePress = async () => {
+    if (showVoice) {
+      try {
+        await Voice.stop();
+      } catch {
+        // Ignore stop errors so the UI still recovers.
+      }
+      if (voiceTimeoutRef.current) {
+        clearTimeout(voiceTimeoutRef.current);
+        voiceTimeoutRef.current = null;
+      }
+      setShowVoice(false);
+      return;
+    }
+    voiceTranscriptRef.current = "";
+    setShowVoice(true);
+    try {
+      await Voice.start("en-US");
+    } catch {
+      setShowVoice(false);
+      return;
+    }
+    if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
+    voiceTimeoutRef.current = setTimeout(() => {
+      Voice.stop().catch(() => {});
+    }, VOICE_TIMEOUT_MS);
+  };
+
   const activeRoom =
     rooms[Math.max(0, Math.min(activeRoomIndex, rooms.length - 1))];
   const roomDevices = useMemo(
     () => devicesAll.filter((d) => d.roomId === activeRoom?.id),
     [devicesAll, activeRoom?.id],
+  );
+  const indoorSensors = useMemo(
+    () =>
+      devicesAll.filter(
+        (d) => d.kind === "air" && typeof d.tempC === "number",
+      ),
+    [devicesAll],
   );
   const featuredDevices = useMemo(() => {
     // Pick attention-worthy devices first, then fill with active/any devices.
@@ -131,9 +545,13 @@ export default function HomeScreen() {
         (d.kind === "smoke" && d.smokeDetected) ||
         (d.kind === "water" &&
           (d.waterLeakDetected ||
+            ((d.waterBudgetL ?? 0) > 0 &&
+              (d.waterTodayL ?? 0) >= (d.waterBudgetL ?? 0)) ||
             ((d.waterPressureAlerts ?? true) &&
               (d.waterPressurePsi ?? 0) > 0 &&
-              (d.waterPressurePsi ?? 0) < (d.waterPressureLowPsi ?? 40)))) ||
+              ((d.waterPressurePsi ?? 0) < (d.waterPressureLowPsi ?? 40) ||
+                (d.waterPressurePsi ?? 0) >
+                  (d.waterPressureHighPsi ?? 80))))) ||
         (d.kind === "energy" &&
           d.gridAvailable === false &&
           (d.gridOutageAlerts ?? true)) ||
@@ -160,13 +578,25 @@ export default function HomeScreen() {
   const roomAcs = roomDevices.filter(
     (d) => d.kind === "ac" && d.isOn && typeof d.tempC === "number",
   );
-  const indoorTemp =
+  const indoorSensorTemp =
+    indoorSensors.length > 0
+      ? Math.round(
+          indoorSensors.reduce((sum, d) => sum + (d.tempC ?? 0), 0) /
+            indoorSensors.length,
+        )
+      : null;
+  const indoorEstimate =
     roomAcs.length > 0
       ? Math.round(
           roomAcs.reduce((sum, d) => sum + (d.tempC ?? 0), 0) / roomAcs.length,
         )
-      : indoorFallback.tempC;
+      : null;
+  const indoorTemp =
+    indoorFallback.source && indoorFallback.source !== "seed"
+      ? indoorFallback.tempC
+      : indoorSensorTemp ?? indoorEstimate ?? indoorFallback.tempC;
   const indoor = {
+    ...indoorFallback,
     tempC: indoorTemp,
     label: indoorFallback.label,
   };
@@ -183,7 +613,7 @@ export default function HomeScreen() {
           styles.scroll,
           {
             paddingBottom: Math.round(
-              (isTablet ? (isLandscape ? 140 : 160) : 120) * scale,
+              (isTablet ? (isLandscape ? 95 : 110) : 70) * scale,
             ),
           },
         ]}
@@ -234,7 +664,13 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.heroStack}>
-            <GradientOrb outdoor={outdoor} indoor={indoor} />
+            <GradientOrb
+              outdoor={outdoor}
+              indoor={indoor}
+              unit={tempUnit}
+              voiceActive={showVoice}
+              onVoicePress={handleVoicePress}
+            />
 
             <View
               style={[
