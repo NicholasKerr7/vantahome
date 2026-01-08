@@ -233,7 +233,7 @@ export default function OnboardingScreen({ navigation }: Props) {
                   name="arrow-forward"
                   size={Math.round(16 * scale)}
                   color="#FFFFFF"
-                  style={{ marginLeft: 8 }}
+                  style={styles.ctaArrow}
                 />
               </LinearGradient>
             </Pressable>
@@ -355,4 +355,5 @@ const styles = StyleSheet.create({
   },
   ctaText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
   ctaHint: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 12 },
+  ctaArrow: { marginLeft: 8, transform: [{ rotate: "-45deg" }] },
 });

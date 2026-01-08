@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import { theme } from "../theme/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AvatarChip from "../components/AvatarChip";
 import GradientOrb from "../components/GradientOrb";
 import BackgroundLines from "../components/BackgroundLines";
@@ -52,6 +53,14 @@ export default function HomeScreen() {
   const modalSubSize = Math.round((isTablet ? 14 : 12) * scale);
   const modalInputHeight = Math.round((isTablet ? 48 : 46) * scale);
   const modalButtonHeight = Math.round((isTablet ? 46 : 44) * scale);
+  const insets = useSafeAreaInsets();
+  const tabInset = isTablet ? (isLandscape ? 28 : 24) : gutter;
+  const tabBarInset = insets.bottom > 0 ? insets.bottom + 8 : tabInset;
+  const tabBarHeight = Math.round(
+    (isTablet ? (isLandscape ? 74 : 72) : 68) * scale,
+  );
+  const tabBarGap = Math.round((isTablet ? 8 : 4) * scale);
+  const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
   const nav = useNavigation<any>();
   const goRoot = (name: string, params?: Record<string, any>) => {
     // Navigate from nested stacks without needing to know the active parent.
@@ -612,9 +621,7 @@ export default function HomeScreen() {
         contentContainerStyle={[
           styles.scroll,
           {
-            paddingBottom: Math.round(
-              (isTablet ? (isLandscape ? 95 : 110) : 70) * scale,
-            ),
+            paddingBottom: tabBarPad,
           },
         ]}
       >

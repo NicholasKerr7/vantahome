@@ -26,6 +26,7 @@ import {
 } from "../services/cloudRegistry";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -65,6 +66,14 @@ export default function SettingsScreen() {
   const primaryBtnRadius = Math.round(primaryBtnHeight / 2);
   const wideBtnHeight = Math.round((isTablet ? 44 : 40) * scale);
   const wideBtnRadius = Math.round(wideBtnHeight * 0.4);
+  const insets = useSafeAreaInsets();
+  const tabInset = isTablet ? (isLandscape ? 28 : 24) : gutter;
+  const tabBarInset = insets.bottom > 0 ? insets.bottom + 8 : tabInset;
+  const tabBarHeight = Math.round(
+    (isTablet ? (isLandscape ? 74 : 72) : 68) * scale,
+  );
+  const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
+  const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
   const roomsCount = useHomeStore((s) => s.rooms.length);
   const devicesCount = useHomeStore((s) => s.devices.length);
   const devices = useHomeStore((s) => s.devices);
@@ -409,9 +418,7 @@ export default function SettingsScreen() {
           {
             paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: topPad,
-            paddingBottom: Math.round(
-              (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
-            ),
+            paddingBottom: tabBarPad,
           },
         ]}
       >

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { View, StyleSheet, LayoutChangeEvent } from "react-native";
+import { View, Text, StyleSheet, LayoutChangeEvent } from "react-native";
 import Pressable from "./Pressable";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import Animated, {
@@ -9,9 +9,9 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { theme } from "../theme/theme";
 import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 
 /**
  * Custom bottom tab bar with an animated “pill” highlight (premium cue).
@@ -25,6 +25,14 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Scenes: "grid",
   Settings: "settings",
 };
+const LABELS: Record<string, string> = {
+  Home: "Home",
+  Automations: "Auto",
+  Scenes: "Scenes",
+  Settings: "Settings",
+};
+const AnimatedLinearGradient =
+  Animated.createAnimatedComponent(LinearGradient);
 
 export default function TabBar({
   state,
@@ -40,31 +48,20 @@ export default function TabBar({
   const barLeft = (width - barWidth) / 2;
   const count = state.routes.length;
   const barHeight = Math.round(
-    (isTablet ? (isLandscape ? 74 : 72) : 68) * scale,
+    (isTablet ? (isLandscape ? 76 : 72) : 60) * scale,
   );
-  const pillInset = isTablet ? 10 : 8;
+  const pillInset = Math.round((isTablet ? 10 : 8) * scale);
+  const pillInsetX = Math.round((isTablet ? 10 : 6) * scale);
   const iconSize = Math.round(
-    (isTablet ? (isLandscape ? 24 : 23) : 22) * scale,
+    (isTablet ? (isLandscape ? 22 : 21) : 20) * scale,
   );
-  const iconWrapSize = Math.round(
-    (isTablet ? (isLandscape ? 52 : 48) : 44) * scale,
-  );
-  const iconRadius = Math.round(iconWrapSize * 0.36);
-  const activeRoute = state.routes[state.index]?.name ?? "Home";
-  const isHome = activeRoute === "Home";
-  const useAltTone = !isTablet && !isHome;
-  const barBackground = useAltTone
-    ? "rgba(20,10,40,0.82)"
-    : "rgba(255,255,255,0.12)";
-  const barBorder = useAltTone
-    ? "rgba(255,255,255,0.12)"
-    : "rgba(255,255,255,0.16)";
-  const pillBackground = useAltTone
-    ? "rgba(180,107,255,0.38)"
-    : "rgba(180,107,255,0.28)";
-  const pillBorder = useAltTone
-    ? "rgba(255,255,255,0.22)"
-    : "rgba(255,255,255,0.18)";
+  const labelSize = Math.round((isTablet ? 12 : 11) * scale);
+  const itemGap = Math.round((isTablet ? 8 : 6) * scale);
+  const barBackground = "rgba(245,235,255,0.92)";
+  const barBorder = "rgba(255,255,255,0.7)";
+  const pillBorder = "rgba(255,255,255,0.35)";
+  const pillColors = ["#B08CFF", "#6B3CFF"];
+  const inactiveIcon = "rgba(80,70,120,0.72)";
   // Measured container width (used to derive `itemW`). Stored as a shared value
   // so the animated pill can react to layout changes without re-render.
   const layoutW = useSharedValue(0);
@@ -90,8 +87,8 @@ export default function TabBar({
   }, [state.index]);
 
   const pillStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: pillX.value }],
-    width: itemW.value,
+    transform: [{ translateX: pillX.value + pillInsetX }],
+    width: Math.max(0, itemW.value - pillInsetX * 2),
   }));
 
   const routes = useMemo(() => state.routes, [state.routes]);
@@ -113,7 +110,7 @@ export default function TabBar({
       ]}
       onLayout={onLayout}
     >
-      <Animated.View
+      <AnimatedLinearGradient
         style={[
           styles.pill,
           pillStyle,
@@ -121,15 +118,18 @@ export default function TabBar({
             top: pillInset,
             bottom: pillInset,
             borderRadius: Math.round((barHeight - pillInset * 2) / 2),
-            backgroundColor: pillBackground,
             borderColor: pillBorder,
           },
         ]}
+        colors={pillColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       />
 
       {routes.map((route, idx) => {
         const isFocused = state.index === idx;
         const icon = ICONS[route.name] ?? "cube";
+        const label = LABELS[route.name] ?? route.name;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -149,22 +149,17 @@ export default function TabBar({
             onPress={onPress}
             style={styles.item}
           >
-            <View
-              style={[
-                styles.iconWrap,
-                {
-                  width: iconWrapSize,
-                  height: iconWrapSize,
-                  borderRadius: iconRadius,
-                },
-                isFocused && styles.iconWrapFocused,
-              ]}
-            >
+            <View style={[styles.itemInner, { gap: itemGap }]}>
               <Ionicons
                 name={icon}
                 size={iconSize}
-                color={isFocused ? theme.colors.text : theme.colors.subtext}
+                color={isFocused ? "#FFFFFF" : inactiveIcon}
               />
+              {isFocused ? (
+                <Text style={[styles.itemLabel, { fontSize: labelSize }]}>
+                  {label}
+                </Text>
+              ) : null}
             </View>
           </Pressable>
         );
@@ -180,10 +175,10 @@ const styles = StyleSheet.create({
     right: 18,
     bottom: 18,
     height: 68,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 26,
+    backgroundColor: "rgba(245,235,255,0.92)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: "rgba(255,255,255,0.7)",
     flexDirection: "row",
     overflow: "hidden",
   },
@@ -192,23 +187,19 @@ const styles = StyleSheet.create({
     top: 8,
     bottom: 8,
     left: 0,
-    borderRadius: 18,
-    backgroundColor: "rgba(180,107,255,0.28)",
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: "rgba(255,255,255,0.35)",
   },
   item: { flex: 1, alignItems: "center", justifyContent: "center" },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
+  itemInner: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
-  iconWrapFocused: {
-    shadowColor: theme.colors.glow,
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
+  itemLabel: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    letterSpacing: 0.2,
   },
 });

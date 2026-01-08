@@ -23,6 +23,7 @@ import BackgroundLines from "../components/BackgroundLines";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useResponsive } from "../theme/layout";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AutomationsScreen() {
   const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
@@ -48,6 +49,14 @@ export default function AutomationsScreen() {
   const modalLabelSize = Math.round((isTablet ? 13 : 12) * scale);
   const modalInputHeight = Math.round((isTablet ? 48 : 44) * scale);
   const modalBtnHeight = Math.round((isTablet ? 46 : 42) * scale);
+  const insets = useSafeAreaInsets();
+  const tabInset = isTablet ? (isLandscape ? 28 : 24) : gutter;
+  const tabBarInset = insets.bottom > 0 ? insets.bottom + 8 : tabInset;
+  const tabBarHeight = Math.round(
+    (isTablet ? (isLandscape ? 74 : 72) : 68) * scale,
+  );
+  const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
+  const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
   const rules = useHomeStore((s) => s.rules);
   const flows = useHomeStore((s) => s.flows);
   const toggleRule = useHomeStore((s) => s.toggleRule);
@@ -163,9 +172,7 @@ export default function AutomationsScreen() {
           {
             paddingHorizontal: isTablet ? gutter : 0,
             paddingTop: topPad,
-            paddingBottom: Math.round(
-              (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
-            ),
+            paddingBottom: tabBarPad,
           },
         ]}
       >

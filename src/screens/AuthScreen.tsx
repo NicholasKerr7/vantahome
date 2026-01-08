@@ -591,7 +591,7 @@ export default function AuthScreen({ navigation }: Props) {
                       name="arrow-forward"
                       size={Math.round(16 * scale)}
                       color="#FFFFFF"
-                      style={{ marginLeft: 8 }}
+                      style={styles.ctaArrow}
                     />
                   </>
                 )}
@@ -818,6 +818,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
   },
   ctaText: { color: "#FFFFFF", fontWeight: "800" },
+  ctaArrow: { marginLeft: 8, transform: [{ rotate: "-45deg" }] },
   ctaDisabled: { opacity: 0.65 },
   orRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16 },
   orLine: { flex: 1, height: 1, backgroundColor: "rgba(12,12,18,0.12)" },

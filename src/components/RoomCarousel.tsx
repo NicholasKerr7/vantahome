@@ -27,24 +27,30 @@ const WHOLE_HOME_ROOM: Room = { id: WHOLE_HOME_ID, name: "Whole Home" };
 
 const ACTIVE_GRADIENT = [
   "#FFFFFF",
-  "rgba(248,240,255,0.98)",
-  "rgba(242,233,255,0.94)",
+  "rgba(249,244,255,0.98)",
+  "rgba(236,226,255,0.95)",
 ];
 const ACTIVE_GRADIENT_TABLET = [
   "#FFFFFF",
-  "rgba(236,247,255,0.98)",
-  "rgba(228,234,255,0.94)",
+  "rgba(242,247,255,0.98)",
+  "rgba(230,236,255,0.95)",
 ];
 const STACKED_GRADIENT = [
-  "rgba(255,255,255,0.86)",
-  "rgba(248,240,255,0.78)",
-  "rgba(242,233,255,0.7)",
+  "rgba(255,255,255,0.92)",
+  "rgba(250,244,255,0.84)",
+  "rgba(240,232,255,0.78)",
 ];
 const STACKED_GRADIENT_TABLET = [
-  "rgba(255,255,255,0.74)",
-  "rgba(244,238,255,0.65)",
-  "rgba(236,230,255,0.58)",
+  "rgba(255,255,255,0.86)",
+  "rgba(246,242,255,0.82)",
+  "rgba(236,232,255,0.76)",
 ];
+const CARD_BORDER = "rgba(214,204,255,0.6)";
+const CARD_BORDER_TABLET = "rgba(190,210,255,0.55)";
+const CARD_SHADOW = "rgba(120,80,200,0.28)";
+const CARD_SHADOW_TABLET = "rgba(120,140,255,0.28)";
+const STACK_BORDER = "rgba(210,200,255,0.45)";
+const STACK_BORDER_TABLET = "rgba(196,212,255,0.4)";
 
 function labelFor(kind: Device["kind"]) {
   switch (kind) {
@@ -148,8 +154,8 @@ type RoomCardProps = {
     subSize: number;
     iconSize: number;
     iconLabelSize: number;
+    iconRowTop: number;
     stackInset1: number;
-    stackInset2: number;
     stackGap: number;
     stackRadius: number;
     cardRadius: number;
@@ -158,14 +164,13 @@ type RoomCardProps = {
     bubbleRadius: number;
     stackTitleSize: number;
     inactiveScale: number;
-    inactiveLift: number;
     inactiveOpacity: number;
   };
   isTablet: boolean;
   isActive: boolean;
   isWholeHome: boolean;
   wholeHomeDevices?: Device[];
-  stackTitles?: Array<string | undefined>;
+  stackTitle?: string;
   onRoomPress?: (roomId: string) => void;
   onWholeHomePress?: () => void;
   onDevicePress?: (deviceId: string) => void;
@@ -182,7 +187,7 @@ function RoomCard({
   isActive,
   isWholeHome,
   wholeHomeDevices,
-  stackTitles,
+  stackTitle,
   onRoomPress,
   onWholeHomePress,
   onDevicePress,
@@ -207,29 +212,24 @@ function RoomCard({
   const animStyle = useAnimatedStyle(() => {
     const pos = index * itemWidth;
     const dist = (x.value - pos) / itemWidth;
+    const absDist = Math.min(1, Math.abs(dist));
 
     // Subtle motion only (like reference)
     const scale = interpolate(
-      Math.abs(dist),
+      absDist,
       [0, 1],
       [1, layout.inactiveScale],
       Extrapolation.CLAMP,
     );
-    const lift = interpolate(
-      Math.abs(dist),
-      [0, 1],
-      [0, layout.inactiveLift],
-      Extrapolation.CLAMP,
-    );
     const opacity = interpolate(
-      Math.abs(dist),
+      absDist,
       [0, 1],
       [1, layout.inactiveOpacity],
       Extrapolation.CLAMP,
     );
 
     return {
-      transform: [{ translateY: lift }, { scale }],
+      transform: [{ scale }],
       opacity: isActive ? 1 : opacity,
     };
   }, [index, isActive, itemWidth, layout]);
@@ -241,10 +241,8 @@ function RoomCard({
     : isTablet
       ? STACKED_GRADIENT_TABLET
       : STACKED_GRADIENT;
-  const borderColor = isTablet
-    ? "rgba(140,180,255,0.55)"
-    : "rgba(255,255,255,0.72)";
-  const shadowColor = isTablet ? "rgba(120,140,255,0.35)" : "rgba(0,0,0,0.25)";
+  const borderColor = isTablet ? CARD_BORDER_TABLET : CARD_BORDER;
+  const shadowColor = isTablet ? CARD_SHADOW_TABLET : CARD_SHADOW;
   const titleSize = isActive ? layout.titleSize : layout.titleSizeInactive;
 
   return (
@@ -263,43 +261,26 @@ function RoomCard({
         <>
           <View
             style={[
-              styles.stackBack2,
-              {
-                height: layout.cardHeight,
-                left: layout.stackInset2,
-                right: layout.stackInset2,
-                borderRadius: layout.stackRadius,
-              },
-            ]}
-            testID="room-card-stack-2"
-          >
-            {stackTitles?.[1] ? (
-              <Text
-                style={[styles.stackTitle, { fontSize: layout.stackTitleSize }]}
-                numberOfLines={1}
-              >
-                {stackTitles[1]}
-              </Text>
-            ) : null}
-          </View>
-          <View
-            style={[
               styles.stackBack1,
               {
                 height: layout.cardHeight,
                 left: layout.stackInset1,
                 right: layout.stackInset1,
                 borderRadius: layout.stackRadius,
+                borderColor: isTablet ? STACK_BORDER_TABLET : STACK_BORDER,
+                backgroundColor: isTablet
+                  ? "rgba(255,255,255,0.7)"
+                  : "rgba(255,255,255,0.68)",
               },
             ]}
             testID="room-card-stack-1"
           >
-            {stackTitles?.[0] ? (
+            {stackTitle ? (
               <Text
                 style={[styles.stackTitle, { fontSize: layout.stackTitleSize }]}
                 numberOfLines={1}
               >
-                {stackTitles[0]}
+                {stackTitle}
               </Text>
             ) : null}
           </View>
@@ -351,7 +332,12 @@ function RoomCard({
           ) : null}
 
           {isActive ? (
-            <View style={[styles.iconRow, { gap: layout.iconGap }]}>
+            <View
+              style={[
+                styles.iconRow,
+                { gap: layout.iconGap, marginTop: layout.iconRowTop },
+              ]}
+            >
               {iconTiles.map((d) => (
                 <Pressable
                   key={d.id}
@@ -448,9 +434,9 @@ export default function RoomCarousel({
   );
   const sidePad = isTablet ? (isLandscape ? 56 : 40) : gutter;
   const gap = 0;
-  const cardPad = Math.round((isTablet ? (isLandscape ? 28 : 26) : 18) * scale);
+  const cardPad = Math.round((isTablet ? (isLandscape ? 26 : 24) : 16) * scale);
   const cardHeight = Math.round(
-    (isTablet ? (isLandscape ? 240 : 248) : 180) * scale,
+    (isTablet ? (isLandscape ? 234 : 242) : 170) * scale,
   );
   const minCard = isTablet ? 360 : 260;
   const cardWidth = Math.max(
@@ -469,18 +455,17 @@ export default function RoomCarousel({
       subSize: Math.round((isTablet ? 14 : 12) * scale),
       iconSize: Math.round((isTablet ? 26 : 22) * scale),
       iconLabelSize: Math.round((isTablet ? 12 : 11) * scale),
-      stackInset1: Math.round((isTablet ? 18 : 14) * scale),
-      stackInset2: Math.round((isTablet ? 32 : 24) * scale),
-      stackGap: Math.round((isTablet ? 46 : 34) * scale),
-      stackRadius: Math.round((isTablet ? 34 : 28) * scale),
-      cardRadius: Math.round((isTablet ? 38 : 30) * scale),
-      iconGap: Math.round((isTablet ? 14 : 10) * scale),
-      bubbleSize: Math.round((isTablet ? 54 : 44) * scale),
-      bubbleRadius: Math.round((isTablet ? 18 : 16) * scale),
-      stackTitleSize: Math.round((isTablet ? 13 : 11) * scale),
-      inactiveScale: isTablet ? 0.992 : 0.985,
-      inactiveLift: Math.round((isTablet ? 4 : 6) * scale),
-      inactiveOpacity: isTablet ? 0.94 : 0.92,
+      iconRowTop: Math.round((isTablet ? 16 : 12) * scale),
+      stackInset1: Math.round((isTablet ? 16 : 12) * scale),
+      stackGap: Math.round((isTablet ? 34 : 20) * scale),
+      stackRadius: Math.round((isTablet ? 32 : 26) * scale),
+      cardRadius: Math.round((isTablet ? 36 : 28) * scale),
+      iconGap: Math.round((isTablet ? 12 : 8) * scale),
+      bubbleSize: Math.round((isTablet ? 52 : 42) * scale),
+      bubbleRadius: Math.round((isTablet ? 18 : 14) * scale),
+      stackTitleSize: Math.round((isTablet ? 12 : 10) * scale),
+      inactiveScale: isTablet ? 0.992 : 0.982,
+      inactiveOpacity: isTablet ? 0.93 : 0.88,
     }),
     [cardWidth, cardHeight, cardPad, isTablet, isLandscape, scale],
   );
@@ -537,16 +522,14 @@ export default function RoomCarousel({
           styles.listContent,
           {
             paddingHorizontal: sidePad,
-            paddingTop: Math.round((isTablet ? 20 : 14) * scale),
-            paddingBottom: Math.round((isTablet ? 10 : 6) * scale),
+            paddingTop: Math.round((isTablet ? 16 : 10) * scale),
+            paddingBottom: Math.round((isTablet ? 6 : 2) * scale),
           },
         ]}
         ItemSeparatorComponent={() => <View style={{ width: gap }} />}
         renderItem={({ item, index }) => {
-          const stackTitles =
-            index === activeIndex
-              ? [data[index + 1]?.name, data[index + 2]?.name]
-              : undefined;
+          const stackTitle =
+            index === activeIndex ? data[index + 1]?.name : undefined;
           return (
             <RoomCard
               item={item}
@@ -559,7 +542,7 @@ export default function RoomCarousel({
               isActive={index === activeIndex}
               isWholeHome={item.id === WHOLE_HOME_ID}
               wholeHomeDevices={wholeHomeDevices}
-              stackTitles={stackTitles}
+              stackTitle={stackTitle}
               onRoomPress={onRoomPress}
               onWholeHomePress={onWholeHomePress}
               onDevicePress={onDevicePress}
@@ -572,12 +555,12 @@ export default function RoomCarousel({
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginTop: 10, overflow: "visible" },
+  wrap: { marginTop: 6, overflow: "visible" },
 
   listContent: {
     paddingHorizontal: 0,
-    paddingTop: 20,
-    paddingBottom: 10, // ✅ avoids bottom cut-off
+    paddingTop: 16,
+    paddingBottom: 6, // ✅ avoids bottom cut-off
   },
 
   item: {
@@ -587,66 +570,59 @@ const styles = StyleSheet.create({
   // ✅ stacked caps behind active card (like reference)
   stackBack1: {
     position: "absolute",
-    top: 6,
-    backgroundColor: "rgba(255,255,255,0.58)",
+    top: 8,
+    backgroundColor: "rgba(255,255,255,0.68)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
-    transform: [{ translateY: -28 }],
-    alignItems: "center",
-    paddingTop: 10,
-    paddingHorizontal: 14,
-  },
-  stackBack2: {
-    position: "absolute",
-    top: 0,
-    backgroundColor: "rgba(255,255,255,0.42)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.48)",
-    transform: [{ translateY: -42 }],
+    borderColor: STACK_BORDER,
+    transform: [{ translateY: -26 }],
     alignItems: "center",
     paddingTop: 8,
     paddingHorizontal: 14,
+    shadowColor: "rgba(120,80,200,0.16)",
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
   },
-
   stackTitle: {
-    color: "rgba(20,20,30,0.55)",
+    color: "rgba(90,80,130,0.4)",
     fontWeight: "800",
     textAlign: "center",
   },
 
   cardShell: {
-    shadowColor: "rgba(0,0,0,0.25)",
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.16,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 20 },
     overflow: "visible",
-    elevation: 8,
+    elevation: 10,
   },
   cardSurface: {
     flex: 1,
     borderWidth: 1,
     overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.98)",
+    backfaceVisibility: "hidden",
   },
 
   title: {
     textAlign: "center",
-    color: "rgba(0,0,0,0.85)",
+    color: "rgba(20,20,28,0.92)",
     fontWeight: "900",
     letterSpacing: -0.2,
   },
   titleInactive: {
-    color: "rgba(0,0,0,0.6)",
+    color: "rgba(30,30,42,0.6)",
     fontWeight: "800",
   },
   sub: {
     textAlign: "center",
-    color: "rgba(0,0,0,0.55)",
+    color: "rgba(24,24,36,0.56)",
     fontWeight: "700",
     marginTop: 6,
   },
 
   iconRow: {
-    marginTop: 18,
     flexDirection: "row",
     justifyContent: "space-evenly",
     gap: 10,
@@ -660,25 +636,25 @@ const styles = StyleSheet.create({
   iconBubble: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.98)",
+    backgroundColor: "rgba(255,255,255,0.94)",
     borderWidth: 1,
-    borderColor: "rgba(80,80,120,0.08)",
-    shadowColor: "rgba(70,40,140,0.22)",
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 4,
+    borderColor: "rgba(190,180,240,0.25)",
+    shadowColor: "rgba(110,80,200,0.18)",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   iconLabel: {
     marginTop: 8,
     fontWeight: "800",
-    color: "rgba(0,0,0,0.55)",
+    color: "rgba(26,26,34,0.6)",
     textAlign: "center",
   },
 
   moreBubble: {
-    backgroundColor: "rgba(107,60,255,0.14)",
-    borderColor: "rgba(107,60,255,0.22)",
+    backgroundColor: "rgba(123,85,255,0.16)",
+    borderColor: "rgba(123,85,255,0.3)",
   },
   moreCount: {
     color: theme.colors.accent2,

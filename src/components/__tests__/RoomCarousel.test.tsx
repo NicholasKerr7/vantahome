@@ -100,9 +100,10 @@ describe("RoomCarousel", () => {
       tree = renderer.create(<RoomCarousel rooms={rooms} devices={devices} />);
     });
     const stacks = tree.root.findAllByProps({ testID: "room-card-stack-1" });
-    const stacks2 = tree.root.findAllByProps({ testID: "room-card-stack-2" });
     expect(stacks.length).toBeGreaterThan(0);
-    expect(stacks2.length).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: "room-card-stack-2" }).length,
+    ).toBe(0);
     act(() => {
       tree.unmount();
     });

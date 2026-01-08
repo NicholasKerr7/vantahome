@@ -1,10 +1,11 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Modal } from "react-native";
 import Pressable from "./Pressable";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
 import { useHomeStore } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function RoomScenesRow({
   title = "Scenes",
@@ -16,7 +17,7 @@ export default function RoomScenesRow({
   onRun: (sceneId: string) => void;
 }) {
   const activeSceneId = useHomeStore((s) => s.activeSceneId);
-  const { gutter, isTablet, scale } = useResponsive();
+  const { gutter, isTablet, scale, contentWidth } = useResponsive();
   const titleSize = Math.round((isTablet ? 18 : 16) * scale);
   const chipHeight = Math.round((isTablet ? 36 : 32) * scale);
   const chipRadius = Math.round(chipHeight / 2);
@@ -25,6 +26,13 @@ export default function RoomScenesRow({
   const pillText = Math.round((isTablet ? 13 : 12) * scale);
   const headerGap = Math.round((isTablet ? 8 : 6) * scale);
   const rowGap = Math.round((isTablet ? 12 : 10) * scale);
+  const infoPad = Math.round((isTablet ? 20 : 16) * scale);
+  const infoRadius = Math.round((isTablet ? 24 : 20) * scale);
+  const infoTitleSize = Math.round((isTablet ? 18 : 16) * scale);
+  const infoTextSize = Math.round((isTablet ? 13 : 12) * scale);
+  const infoButtonHeight = Math.round((isTablet ? 44 : 40) * scale);
+  const infoButtonRadius = Math.round(infoButtonHeight * 0.45);
+  const [showInfo, setShowInfo] = useState(false);
 
   if (!scenes.length) return null;
 
@@ -32,7 +40,7 @@ export default function RoomScenesRow({
     <View style={{ marginTop: 14 }}>
       <View style={[styles.header, { paddingHorizontal: gutter }]}>
         <Text style={[styles.h, { fontSize: titleSize }]}>{title}</Text>
-        <View
+        <Pressable
           style={[
             styles.hChip,
             {
@@ -41,16 +49,18 @@ export default function RoomScenesRow({
               paddingHorizontal: headerGap * 2,
             },
           ]}
+          pressedStyle={styles.hChipPressed}
+          onPress={() => setShowInfo(true)}
         >
           <Ionicons
-            name="sparkles"
+            name="information-circle"
             size={Math.round((isTablet ? 16 : 14) * scale)}
             color={theme.colors.text}
           />
           <Text style={[styles.hChipText, { fontSize: pillText }]}>
-            One tap
+            How it works
           </Text>
-        </View>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -87,6 +97,58 @@ export default function RoomScenesRow({
           </Pressable>
         ))}
       </ScrollView>
+
+      <Modal
+        transparent
+        visible={showInfo}
+        animationType="fade"
+        onRequestClose={() => setShowInfo(false)}
+      >
+        <View style={styles.infoOverlay}>
+          <Pressable
+            style={styles.infoBackdrop}
+            onPress={() => setShowInfo(false)}
+          />
+          <LinearGradient
+            colors={["rgba(255,255,255,0.98)", "rgba(245,238,255,0.92)"]}
+            start={{ x: 0.1, y: 0.1 }}
+            end={{ x: 1, y: 1 }}
+            style={[
+              styles.infoCard,
+              {
+                padding: infoPad,
+                borderRadius: infoRadius,
+                maxWidth: isTablet ? 520 : undefined,
+                width: isTablet
+                  ? Math.min(contentWidth - gutter * 2, 520)
+                  : undefined,
+              },
+            ]}
+          >
+            <Text style={[styles.infoTitle, { fontSize: infoTitleSize }]}>
+              One-tap scenes
+            </Text>
+            <Text style={[styles.infoText, { fontSize: infoTextSize }]}>
+              Tap a scene chip to apply it instantly to this room. You can undo
+              for a few seconds after it runs.
+            </Text>
+            <Pressable
+              style={[
+                styles.infoButton,
+                {
+                  height: infoButtonHeight,
+                  borderRadius: infoButtonRadius,
+                },
+              ]}
+              onPress={() => setShowInfo(false)}
+            >
+              <Text style={[styles.infoButtonText, { fontSize: infoTextSize }]}>
+                Got it
+              </Text>
+            </Pressable>
+          </LinearGradient>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -109,6 +171,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.14)",
   },
+  hChipPressed: { transform: [{ scale: 0.98 }] },
   hChipText: { color: theme.colors.subtext, fontWeight: "800", fontSize: 12 },
 
   row: { gap: 10, paddingTop: 12, paddingBottom: 6 },
@@ -132,4 +195,30 @@ const styles = StyleSheet.create({
   },
   pillText: { color: theme.colors.text, fontWeight: "900" },
   pillTextActive: { color: "#FFFFFF" },
+  infoOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.38)",
+    justifyContent: "center",
+    padding: 18,
+  },
+  infoBackdrop: { ...StyleSheet.absoluteFillObject },
+  infoCard: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.6)",
+    alignSelf: "center",
+  },
+  infoTitle: { color: "#1B1535", fontWeight: "900" },
+  infoText: {
+    color: "rgba(12,12,18,0.62)",
+    fontWeight: "700",
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  infoButton: {
+    marginTop: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#6B3CFF",
+  },
+  infoButtonText: { color: "#FFFFFF", fontWeight: "900" },
 });
