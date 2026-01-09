@@ -781,6 +781,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     sendPatch({ openPercent: target, isOn: target > 0 });
   };
   const handlePowerToggle = () => {
+    if (isOpenable) {
+      setOpenTarget(openPercent > 0 ? 0 : 100);
+      return;
+    }
     const nextOn = !device.isOn;
     if (device.kind === "tv") {
       const patch: Partial<Device> = { isOn: nextOn };

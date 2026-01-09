@@ -101,6 +101,11 @@ export default function DeviceTile({
       .sendCommand({ op: "patch", deviceId: device.id, patch })
       .catch(() => {});
   };
+  const toggleOpenable = () => {
+    const openNow = (device.openPercent ?? (device.isOn ? 100 : 0)) > 0;
+    const nextOpen = openNow ? 0 : 100;
+    sendPatch({ openPercent: nextOpen, isOn: nextOpen > 0 });
+  };
   const cardPad = Math.round((isTablet ? (isLandscape ? 16 : 18) : 14) * scale);
   const cardRadius = Math.round((isTablet ? 28 : 24) * scale);
   const minHeight = Math.round(
@@ -214,7 +219,13 @@ export default function DeviceTile({
         </View>
 
         <Pressable
-          onPress={(e) => stop(e, () => sendPatch({ isOn: !device.isOn }))}
+          onPress={(e) =>
+            stop(e, () =>
+              ["gate", "door", "garage", "window"].includes(device.kind)
+                ? toggleOpenable()
+                : sendPatch({ isOn: !device.isOn }),
+            )
+          }
           style={[
             styles.power,
             { width: powerSize, height: powerSize, borderRadius: powerRadius },
