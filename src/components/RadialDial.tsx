@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Svg, {
   Path,
   Circle,
@@ -55,6 +62,60 @@ const clamp = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, v));
 const clamp01 = (t: number) => clamp(t, 0, 1);
 
+const dialSizeStyle = (size: number): StyleProp<ViewStyle> => ({
+  width: size,
+  height: size,
+});
+
+const bubbleWrapperStyle = (
+  size: number,
+  dimmed: boolean,
+  animatedStyle: StyleProp<ViewStyle>,
+): StyleProp<ViewStyle> => [
+  styles.bubble,
+  { width: size, height: size, borderRadius: size / 2 },
+  animatedStyle,
+  dimmed && styles.bubbleDimmed,
+];
+
+const bubbleInnerStyle = (size: number): StyleProp<ViewStyle> => [
+  styles.bubbleInner,
+  { borderRadius: size / 2 },
+];
+
+const centerContentWrapStyle = (size: number): StyleProp<ViewStyle> => [
+  styles.centerContentWrap,
+  { width: size, height: size },
+];
+
+const centerContentScaleStyle = (scale: number): StyleProp<ViewStyle> =>
+  ({
+    transform: [{ scale }],
+  }) as StyleProp<ViewStyle>;
+
+const centerDiscStyle = (size: number): StyleProp<ViewStyle> => [
+  styles.centerDisc,
+  { width: size, height: size, borderRadius: size / 2 },
+];
+
+const centerValueTextStyle = (
+  fontSize: number,
+  dimmed: boolean,
+): StyleProp<TextStyle> => [
+  styles.big,
+  { fontSize },
+  dimmed && styles.textDimmed,
+];
+
+const centerLabelTextStyle = (
+  fontSize: number,
+  dimmed: boolean,
+): StyleProp<TextStyle> => [
+  styles.sub,
+  { fontSize },
+  dimmed && styles.textDimmed,
+];
+
 export default function RadialDial({
   value,
   min = 15,
@@ -86,13 +147,21 @@ export default function RadialDial({
   centerIcon?: React.ReactNode;
   centerContent?: React.ReactNode;
 }) {
+  const safeMin = Number.isFinite(min) ? min : 0;
+  const safeMax = Number.isFinite(max) && max > safeMin ? max : safeMin + 1;
+  const safeValue = Number.isFinite(value)
+    ? clamp(value, safeMin, safeMax)
+    : safeMin;
+  const range = safeMax - safeMin;
   const dialSize = size;
   const bubbleSize = Math.max(22, dialSize * 0.095);
   const bubbleHaloOuter = bubbleSize * 0.52;
   const bubbleHaloInner = bubbleSize * 0.38;
-  const centerSize = Math.max(140, dialSize * 0.66);
   const trackWidth = Math.max(20, dialSize * 0.1);
   const innerTrackWidth = Math.max(16, dialSize * 0.0714);
+  const r = dialSize * 0.39;
+  const ringInnerDiameter = Math.max(0, (r - innerTrackWidth * 0.5) * 2);
+  const centerSize = Math.max(140, ringInnerDiameter);
   const centerFont = Math.max(32, dialSize * 0.157);
   const subFont = Math.max(11, dialSize * 0.043);
   const tickFont = Math.max(11, dialSize * 0.043);
@@ -102,7 +171,6 @@ export default function RadialDial({
 
   const cx = dialSize / 2;
   const cy = dialSize / 2;
-  const r = dialSize * 0.39;
 
   // Dial sweep similar to the reference UI:
   // from ~150° (lower-left) to ~30° (lower-right), leaving a bottom gap.
@@ -110,29 +178,38 @@ export default function RadialDial({
   const sweep = (Math.PI * 4) / 3; // 240°
   const end = start + sweep;
 
-  const tFromValue = (v: number) => (v - min) / (max - min);
-  const valueFromT = (t: number) => Math.round(min + t * (max - min));
+  const tFromValue = (v: number) =>
+    range > 0 ? (v - safeMin) / range : 0;
+  const valueFromT = (t: number) =>
+    Math.round(safeMin + clamp01(t) * range);
 
   // Parameter along the arc in [0..1]. Keeping it as a shared value means the
   // knob can move without causing React re-renders.
-  const knobT = useSharedValue(tFromValue(value));
-  const lastSent = useSharedValue(value);
+  const knobT = useSharedValue(clamp01(tFromValue(safeValue)));
+  const lastSent = useSharedValue(safeValue);
   const knobScale = useSharedValue(1);
 
   useEffect(() => {
-    knobT.value = clamp01(tFromValue(value));
-    lastSent.value = value;
-  }, [value, min, max]);
+    const nextValue = Number.isFinite(value)
+      ? clamp(value, safeMin, safeMax)
+      : safeMin;
+    knobT.value = clamp01(tFromValue(nextValue));
+    lastSent.value = nextValue;
+  }, [value, safeMin, safeMax, range]);
 
   const baseArc = useMemo(
     () => arcPath(cx, cy, r, start, end),
     [cx, cy, r, start, end],
   );
 
-  const haptic = () => Haptics.selectionAsync().catch(() => {});
+  const haptic = () => {
+    if (typeof Haptics?.selectionAsync !== "function") return;
+    Haptics.selectionAsync().catch(() => {});
+  };
 
   const updateFromPoint = (x: number, y: number) => {
     "worklet";
+    if (!Number.isFinite(x) || !Number.isFinite(y) || range <= 0) return;
     const dx = x - cx;
     const dy = y - cy;
     const ang = Math.atan2(dy, dx); // -pi..pi
@@ -208,29 +285,30 @@ export default function RadialDial({
     return { cx: p.x, cy: p.y };
   });
 
+  const tickRadius = r + Math.max(2, innerTrackWidth * 0.15);
   const ticks = useMemo(() => {
     const candidates =
       tickValues?.length && tickValues.length > 0
         ? tickValues
         : // Matches the reference UI for the default 15..28 range.
-          [min, min + 3, min + 5, max - 3, max];
+          [safeMin, safeMin + 3, safeMin + 5, safeMax - 3, safeMax];
     const uniq = Array.from(
       new Set(candidates.map((n) => Math.round(n))),
-    ).filter((n) => n >= min && n <= max);
+    ).filter((n) => n >= safeMin && n <= safeMax);
     return uniq.map((v) => {
       const t = clamp01(tFromValue(v));
       const angle = start + sweep * t;
-      const p = polarToCartesian(cx, cy, r + 6, angle);
+      const p = polarToCartesian(cx, cy, tickRadius, angle);
       return { v, x: p.x, y: p.y };
     });
-  }, [min, max, tickValues]);
+  }, [safeMin, safeMax, tickValues, tickRadius]);
 
-  const centerTemp = centerValue ?? value;
+  const centerTemp = centerValue ?? safeValue;
 
   return (
     <View style={styles.wrap}>
       <GestureDetector gesture={gesture}>
-        <View style={{ width: dialSize, height: dialSize }}>
+        <View style={dialSizeStyle(dialSize)}>
           <Svg width={dialSize} height={dialSize}>
             <Defs>
               <SvgLinearGradient
@@ -244,22 +322,6 @@ export default function RadialDial({
                 <Stop offset="1" stopColor="rgba(122,92,255,0.65)" />
               </SvgLinearGradient>
             </Defs>
-
-            {/* labels */}
-            {ticks.map((t) => (
-              <SvgText
-                key={t.v}
-                x={t.x}
-                y={t.y}
-                fontSize={tickFont}
-                fontWeight="700"
-                fill="rgba(12,12,18,0.30)"
-                textAnchor="middle"
-                alignmentBaseline="middle"
-              >
-                {formatTick ? formatTick(t.v) : `${t.v}°`}
-              </SvgText>
-            ))}
 
             {/* base track */}
             <Path
@@ -286,6 +348,22 @@ export default function RadialDial({
               opacity={dimmed ? 0.35 : 1}
             />
 
+            {/* labels */}
+            {ticks.map((t) => (
+              <SvgText
+                key={t.v}
+                x={t.x}
+                y={t.y}
+                fontSize={tickFont}
+                fontWeight="700"
+                fill="rgba(12,12,18,0.48)"
+                textAnchor="middle"
+                alignmentBaseline="middle"
+              >
+                {formatTick ? formatTick(t.v) : `${t.v}°`}
+              </SvgText>
+            ))}
+
             {/* halo behind the knob bubble */}
             <AnimatedCircle
               animatedProps={bubbleHaloPos as any}
@@ -306,40 +384,24 @@ export default function RadialDial({
           {/* knob bubble */}
           <Animated.View
             pointerEvents="none"
-            style={[
-              styles.bubble,
-              {
-                width: bubbleSize,
-                height: bubbleSize,
-                borderRadius: bubbleSize / 2,
-              },
-              bubbleStyle,
-              dimmed && { opacity: 0.5 },
-            ]}
+            style={bubbleWrapperStyle(bubbleSize, dimmed, bubbleStyle)}
           >
             <LinearGradient
               colors={[theme.colors.accent2, theme.colors.accent]}
               start={{ x: 0.1, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[styles.bubbleInner, { borderRadius: bubbleSize / 2 }]}
+              style={bubbleInnerStyle(bubbleSize)}
             />
           </Animated.View>
 
           {/* center */}
           <View pointerEvents="none" style={styles.center}>
             {centerContent ? (
-              <View
-                style={{
-                  width: centerSize,
-                  height: centerSize,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+              <View style={centerContentWrapStyle(centerSize)}>
                 <View
                   style={
                     centerContentScale < 1
-                      ? { transform: [{ scale: centerContentScale }] }
+                      ? centerContentScaleStyle(centerContentScale)
                       : undefined
                   }
                 >
@@ -355,14 +417,7 @@ export default function RadialDial({
                 ]}
                 start={{ x: 0.2, y: 0.2 }}
                 end={{ x: 1, y: 1 }}
-                style={[
-                  styles.centerDisc,
-                  {
-                    width: centerSize,
-                    height: centerSize,
-                    borderRadius: centerSize / 2,
-                  },
-                ]}
+                style={centerDiscStyle(centerSize)}
               >
                 {centerIcon === undefined ? (
                   <View style={styles.acIcon}>
@@ -381,28 +436,21 @@ export default function RadialDial({
                 )}
 
                 <Text
-                  style={[
-                    styles.big,
-                    { fontSize: centerFont },
-                    dimmed && { opacity: 0.55 },
-                  ]}
+                  style={centerValueTextStyle(centerFont, dimmed)}
                 >
                   {formatCenterValue
                     ? formatCenterValue(centerTemp)
                     : `${centerTemp}°C`}
                 </Text>
                 <Text
-                  style={[
-                    styles.sub,
-                    { fontSize: subFont },
-                    dimmed && { opacity: 0.55 },
-                  ]}
+                  style={centerLabelTextStyle(subFont, dimmed)}
                 >
                   {centerLabel}
                 </Text>
               </LinearGradient>
             )}
           </View>
+
         </View>
       </GestureDetector>
     </View>
@@ -410,7 +458,7 @@ export default function RadialDial({
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: "center", justifyContent: "center", marginTop: 8 },
+  wrap: { width: "100%", alignItems: "center", justifyContent: "center" },
   center: {
     position: "absolute",
     left: 0,
@@ -430,6 +478,10 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
   },
+  centerContentWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   big: {
     color: "rgba(12,12,18,0.92)",
     fontWeight: "900",
@@ -437,6 +489,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   sub: { color: "rgba(12,12,18,0.48)", fontWeight: "800", marginTop: 6 },
+  textDimmed: { opacity: 0.55 },
 
   bubble: {
     position: "absolute",
@@ -445,6 +498,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
+  bubbleDimmed: { opacity: 0.5 },
   bubbleInner: {
     flex: 1,
     borderWidth: 1,

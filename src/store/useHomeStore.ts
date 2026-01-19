@@ -90,8 +90,9 @@ export type Device = {
   fanLightOn?: boolean; // fan
   fanSleepMode?: boolean; // fan
   openPercent?: number; // garage/door/window
+  openLastActor?: string; // garage/door/window
   status?: "docked" | "cleaning" | "paused"; // vacuum
-  battery?: number; // vacuum
+  battery?: number; // vacuum/door/garage
   vacuumSuction?: number; // vacuum
   vacuumMode?: "auto" | "spot" | "edge" | "room"; // vacuum
   vacuumMop?: boolean; // vacuum
@@ -428,6 +429,7 @@ type State = {
     time: { hour: number; minute: number },
   ) => void;
   runScene: (sceneId: string) => void;
+  clearActiveScene: () => void;
   addScene: (scene: Omit<Scene, "id">) => void;
   updateScene: (sceneId: string, patch: Partial<Scene>) => void;
   addFlow: (flow: Omit<AutomationFlow, "id">) => void;
@@ -475,6 +477,9 @@ const roomsSeed: Room[] = [
   { id: "r1", name: "Drawing Room" },
   { id: "r2", name: "Bedroom" },
   { id: "r3", name: "Kitchen" },
+  { id: "r4", name: "Office" },
+  { id: "r5", name: "Guest Suite" },
+  { id: "r6", name: "Patio" },
 ];
 
 const householdSeed: HouseholdMember[] = [
@@ -668,6 +673,7 @@ const devicesSeed: Device[] = [
     roomId: "r1",
     isOn: false,
     openPercent: 0,
+    battery: 88,
   },
   {
     id: "d13",
@@ -676,6 +682,7 @@ const devicesSeed: Device[] = [
     roomId: "r1",
     isOn: false,
     openPercent: 0,
+    battery: 76,
   },
   {
     id: "d14",
@@ -900,6 +907,129 @@ const devicesSeed: Device[] = [
     vacationDays: 0,
     heaterScheduleEnabled: true,
   },
+  {
+    id: "d28",
+    name: "Desk Light",
+    kind: "light",
+    roomId: "r4",
+    isOn: true,
+    brightness: 68,
+    color: "#B6D0FF",
+  },
+  {
+    id: "d29",
+    name: "Office AC",
+    kind: "ac",
+    roomId: "r4",
+    isOn: false,
+    tempC: 23,
+    mode: "fan",
+    acFanSpeed: 45,
+    acSwingMode: "vertical",
+    acEcoMode: true,
+    acTurboMode: false,
+    acQuietMode: true,
+    acTargetHumidity: 45,
+    acFilterLife: 74,
+  },
+  {
+    id: "d30",
+    name: "Focus Speaker",
+    kind: "speaker",
+    roomId: "r4",
+    isOn: true,
+    volume: 18,
+    speakerSource: "Spotify",
+    speakerPreset: "Flat",
+    bass: 48,
+    treble: 52,
+    spatialAudio: false,
+    partyMode: false,
+    nightMode: true,
+    micEnabled: false,
+    voiceAssistantEnabled: false,
+    shuffle: false,
+    repeat: "all",
+    trackTitle: "Ambient Flow",
+    trackArtist: "Vanta",
+    trackAlbum: "Workday",
+    trackDurationSec: 242,
+    trackProgressSec: 102,
+  },
+  {
+    id: "d31",
+    name: "Guest Light",
+    kind: "light",
+    roomId: "r5",
+    isOn: false,
+    brightness: 55,
+    color: "#FFD6E8",
+  },
+  {
+    id: "d32",
+    name: "Guest TV",
+    kind: "tv",
+    roomId: "r5",
+    isOn: false,
+    volume: 18,
+    channel: 4,
+    source: "Streaming",
+  },
+  {
+    id: "d33",
+    name: "Guest Window",
+    kind: "window",
+    roomId: "r5",
+    isOn: true,
+    openPercent: 15,
+  },
+  {
+    id: "d34",
+    name: "Patio Lights",
+    kind: "light",
+    roomId: "r6",
+    isOn: true,
+    brightness: 72,
+    color: "#FFD1A3",
+  },
+  {
+    id: "d35",
+    name: "Patio Fan",
+    kind: "fan",
+    roomId: "r6",
+    isOn: true,
+    speed: 40,
+    fanOscillation: true,
+    fanDirection: "forward",
+    fanTimerMin: 0,
+    fanAutoMode: false,
+    fanLightOn: false,
+    fanSleepMode: false,
+  },
+  {
+    id: "d36",
+    name: "Patio Speaker",
+    kind: "speaker",
+    roomId: "r6",
+    isOn: false,
+    volume: 26,
+    speakerSource: "Bluetooth",
+    speakerPreset: "Warm",
+    bass: 55,
+    treble: 46,
+    spatialAudio: false,
+    partyMode: false,
+    nightMode: false,
+    micEnabled: true,
+    voiceAssistantEnabled: true,
+    shuffle: true,
+    repeat: "all",
+    trackTitle: "Golden Hour",
+    trackArtist: "Tycho",
+    trackAlbum: "Awake",
+    trackDurationSec: 280,
+    trackProgressSec: 48,
+  },
 ];
 
 const integrationsSeed: Record<IntegrationProvider, IntegrationState> = {
@@ -912,6 +1042,16 @@ const integrationsSeed: Record<IntegrationProvider, IntegrationState> = {
 const realtimeSeed: RealtimeSettings = {
   enabled: false,
   wsUrl: "ws://localhost:8088",
+};
+
+const mergeById = <T extends { id: string }>(
+  current: T[] | undefined,
+  seed: T[],
+) => {
+  const map = new Map<string, T>();
+  (seed || []).forEach((item) => map.set(item.id, item));
+  (current || []).forEach((item) => map.set(item.id, item));
+  return Array.from(map.values());
 };
 
 const scenesSeed: Scene[] = [
@@ -1117,6 +1257,102 @@ const scenesSeed: Scene[] = [
       },
       { type: "patch", deviceId: "d16", patch: { openPercent: 40 } },
       { type: "toggle", deviceId: "d5", on: false },
+    ],
+  },
+  {
+    id: "s14",
+    roomId: "r4",
+    name: "Focus Work",
+    actions: [
+      {
+        type: "patch",
+        deviceId: "d28",
+        patch: { isOn: true, brightness: 75, color: "#B6D0FF" },
+      },
+      {
+        type: "patch",
+        deviceId: "d29",
+        patch: { isOn: true, tempC: 22, mode: "fan" },
+      },
+      {
+        type: "patch",
+        deviceId: "d30",
+        patch: { isOn: true, volume: 14, speakerPreset: "Flat" },
+      },
+    ],
+  },
+  {
+    id: "s15",
+    roomId: "r4",
+    name: "Video Call",
+    actions: [
+      {
+        type: "patch",
+        deviceId: "d28",
+        patch: { isOn: true, brightness: 85, color: "#FFFFFF" },
+      },
+      {
+        type: "patch",
+        deviceId: "d29",
+        patch: { isOn: true, tempC: 21, mode: "cold" },
+      },
+      { type: "toggle", deviceId: "d30", on: false },
+    ],
+  },
+  {
+    id: "s16",
+    roomId: "r5",
+    name: "Guest Welcome",
+    actions: [
+      {
+        type: "patch",
+        deviceId: "d31",
+        patch: { isOn: true, brightness: 70, color: "#FFD6E8" },
+      },
+      { type: "toggle", deviceId: "d32", on: true },
+      { type: "patch", deviceId: "d33", patch: { openPercent: 25 } },
+    ],
+  },
+  {
+    id: "s17",
+    roomId: "r5",
+    name: "Sleep Prep",
+    actions: [
+      {
+        type: "patch",
+        deviceId: "d31",
+        patch: { isOn: true, brightness: 15, color: "#B69CFF" },
+      },
+      { type: "toggle", deviceId: "d32", on: false },
+      { type: "patch", deviceId: "d33", patch: { openPercent: 5 } },
+    ],
+  },
+  {
+    id: "s18",
+    roomId: "r6",
+    name: "Evening Hangout",
+    actions: [
+      {
+        type: "patch",
+        deviceId: "d34",
+        patch: { isOn: true, brightness: 80, color: "#FFD1A3" },
+      },
+      {
+        type: "patch",
+        deviceId: "d35",
+        patch: { isOn: true, speed: 45 },
+      },
+      { type: "patch", deviceId: "d36", patch: { isOn: true, volume: 32 } },
+    ],
+  },
+  {
+    id: "s19",
+    roomId: "r6",
+    name: "Patio Close",
+    actions: [
+      { type: "toggle", deviceId: "d34", on: false },
+      { type: "toggle", deviceId: "d35", on: false },
+      { type: "toggle", deviceId: "d36", on: false },
     ],
   },
 ];
@@ -1494,6 +1730,11 @@ export const useHomeStore = create<State>()(
           };
         }),
 
+      clearActiveScene: () =>
+        set(() => ({
+          activeSceneId: null,
+        })),
+
       addScene: (scene) =>
         set((state) => ({
           scenes: [...state.scenes, { ...scene, id: `s${Date.now()}` }],
@@ -1578,12 +1819,19 @@ export const useHomeStore = create<State>()(
     }),
     {
       name: "vantahome-store",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
-      migrate: (persistedState) => {
+      migrate: (persistedState, version) => {
         if (!persistedState || typeof persistedState !== "object")
           return {} as State;
-        return persistedState as State;
+        const state = persistedState as State;
+        if (version && version >= 2) return state;
+        return {
+          ...state,
+          rooms: mergeById(state.rooms, roomsSeed),
+          devices: mergeById(state.devices, devicesSeed),
+          scenes: mergeById(state.scenes, scenesSeed),
+        };
       },
       // Only persist user-facing state to keep storage light and migration-safe.
       partialize: (state) => ({

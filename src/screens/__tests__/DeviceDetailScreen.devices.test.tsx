@@ -1,10 +1,11 @@
 import React from "react";
-import renderer, { act } from "react-test-renderer";
+import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import DeviceDetailScreen from "../DeviceDetailScreen";
 import {
   useHomeStore,
   type Device,
   type DeviceKind,
+  type HouseholdMember,
 } from "../../store/useHomeStore";
 
 const mockLayout = {
@@ -79,7 +80,7 @@ const seed = useHomeStore.getState();
 const baseRooms = seed.rooms.length
   ? seed.rooms.map((room) => ({ ...room }))
   : [{ id: "r1", name: "Living Room" }];
-const baseHousehold = seed.household.length
+const baseHousehold: HouseholdMember[] = seed.household.length
   ? seed.household.map((member) => ({ ...member }))
   : [
       {
@@ -338,7 +339,7 @@ describe("DeviceDetailScreen device coverage", () => {
       params: { deviceId: device.id },
     } as any;
 
-    let tree: renderer.ReactTestRenderer;
+    let tree: ReactTestRenderer;
     act(() => {
       tree = renderer.create(
         <DeviceDetailScreen navigation={navigation} route={route} />,

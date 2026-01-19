@@ -1,5 +1,5 @@
 import React from "react";
-import renderer, { act } from "react-test-renderer";
+import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import RoomCarousel from "../RoomCarousel";
 import type { Device, Room } from "../../store/useHomeStore";
 
@@ -65,7 +65,7 @@ const devices: Device[] = [
 
 describe("RoomCarousel", () => {
   it("snaps between cards (swipe carousel)", () => {
-    let tree: renderer.ReactTestRenderer;
+    let tree: ReactTestRenderer;
     act(() => {
       tree = renderer.create(
         <RoomCarousel
@@ -95,7 +95,7 @@ describe("RoomCarousel", () => {
   });
 
   it("renders stacked layers for the active card", () => {
-    let tree: renderer.ReactTestRenderer;
+    let tree: ReactTestRenderer;
     act(() => {
       tree = renderer.create(<RoomCarousel rooms={rooms} devices={devices} />);
     });

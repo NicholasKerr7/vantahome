@@ -9,6 +9,9 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,10 +27,11 @@ import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "../services/supabaseClient";
 import { bootstrapHome } from "../services/cloudRegistry";
+import LandscapeFrame from "../components/LandscapeFrame";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const AUTH_LOTTIE_SOURCE = require("../../assets/animations/Coffee Clicky.json");
+const AUTH_LOTTIE_SOURCE = require("../../assets/animations/auth-hero.json");
 
 const redirectUri = AuthSession.makeRedirectUri({
   scheme: "vantahome",
@@ -49,17 +53,39 @@ const getAuthParams = (url: string) => {
 type Props = NativeStackScreenProps<RootStackParamList, "Auth">;
 
 export default function AuthScreen({ navigation }: Props) {
-  const { contentWidth, gutter, isTablet, isLandscape, scale } =
+  const { contentWidth, gutter, isTablet, isLandscape, scale, height } =
     useResponsive(640);
-  const cardWidth = Math.min(
-    contentWidth - gutter * 2,
-    isTablet ? (isLandscape ? 640 : 560) : 420,
-  );
+  const useLandscapeFrame = isLandscape;
+  const maxCardWidth = isLandscape
+    ? isTablet
+      ? 760
+      : 520
+    : isTablet
+      ? 560
+      : 420;
+  const cardWidth = Math.min(contentWidth - gutter * 2, maxCardWidth);
   const cardPad = Math.round((isTablet ? 22 : 18) * scale);
+  const landscapeCardPad = useLandscapeFrame
+    ? Math.round(cardPad * (isTablet ? 0.92 : 0.88))
+    : cardPad;
   const cardRadius = Math.round((isTablet ? 30 : 28) * scale);
-  const authLottieSize = Math.round((isTablet ? 190 : 150) * scale);
-  const authLottieGap = Math.round((isTablet ? 14 : 10) * scale);
+  const framePad = Math.round((isTablet ? 10 : 8) * scale);
+  const frameRadius = Math.round(cardRadius + framePad);
+  const frameWidth = useLandscapeFrame
+    ? Math.min(contentWidth - gutter * 2, cardWidth + framePad * 2)
+    : cardWidth;
+  const authLottieScale = isLandscape ? (isTablet ? 1.5 : 1.4) : 1;
+  const authLottieSize = Math.round(
+    (isTablet ? 190 : 150) * scale * authLottieScale,
+  );
+  const authLottieGap = Math.round(
+    (isTablet ? 14 : 10) * scale * (isLandscape ? 2 : 1),
+  );
   const titleSize = Math.round((isTablet ? 28 : 24) * scale);
+  const landscapeTitleSize = Math.round(
+    titleSize * (isTablet ? 1.6 : 1.4),
+  );
+  const heroTitleGap = Math.round((isTablet ? 12 : 8) * scale);
   const subSize = Math.round((isTablet ? 14 : 12) * scale);
   const segmentHeight = Math.round((isTablet ? 40 : 36) * scale);
   const segmentText = Math.round((isTablet ? 13 : 12) * scale);
@@ -71,6 +97,10 @@ export default function AuthScreen({ navigation }: Props) {
   const ctaHeight = Math.round((isTablet ? 58 : 54) * scale);
   const ctaText = Math.round((isTablet ? 14 : 13) * scale);
   const socialHeight = Math.round((isTablet ? 50 : 46) * scale);
+  const landscapeGap = Math.round((isTablet ? 26 : 18) * scale);
+  const landscapeColumnPad = Math.round((isTablet ? 6 : 4) * scale);
+  const scrollPad = Math.round((isLandscape ? 16 : 0) * scale);
+  const scrollMinHeight = Math.max(0, height - gutter * 2);
   const setProfile = useHomeStore((s) => s.setProfile);
   const profile = useHomeStore((s) => s.profile);
   const [mode, setMode] = useState<"create" | "login">("create");
@@ -94,6 +124,139 @@ export default function AuthScreen({ navigation }: Props) {
     mode === "login"
       ? emailValid && passwordOk
       : name.trim().length > 1 && emailValid && passwordOk && confirmOk;
+  const lottieWrapLayout: ViewStyle = {
+    width: authLottieSize,
+    height: authLottieSize,
+    marginBottom: authLottieGap,
+    borderRadius: Math.round(authLottieSize / 2),
+  };
+  const lottieWrapStyle: StyleProp<ViewStyle> = [
+    styles.authLottieWrap,
+    lottieWrapLayout,
+    useLandscapeFrame && styles.authLottieWrapLandscape,
+  ];
+  const heroTitleLayout: TextStyle = {
+    fontSize: useLandscapeFrame ? landscapeTitleSize : titleSize,
+    marginBottom: useLandscapeFrame ? heroTitleGap : 0,
+  };
+  const heroTitleStyle: StyleProp<TextStyle> = [
+    styles.h1,
+    heroTitleLayout,
+    useLandscapeFrame && styles.heroTitleLandscape,
+  ];
+  const heroSubStyle: StyleProp<TextStyle> = [
+    styles.sub,
+    { fontSize: subSize },
+    useLandscapeFrame && styles.heroSubLandscape,
+  ];
+  const segmentStyle: StyleProp<ViewStyle> = [
+    styles.segment,
+    useLandscapeFrame && styles.segmentLandscape,
+  ];
+  const segmentBtnLayout: ViewStyle = { height: segmentHeight };
+  const segmentButtonStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.segmentBtn,
+    segmentBtnLayout,
+    active && styles.segmentBtnActive,
+  ];
+  const segmentTextStyle: StyleProp<TextStyle> = [
+    styles.segmentText,
+    { fontSize: segmentText },
+  ];
+  const segmentTextToneStyle = (active: boolean): StyleProp<TextStyle> => [
+    segmentTextStyle,
+    active && styles.segmentTextActive,
+  ];
+  const labelStyle: StyleProp<TextStyle> = [
+    styles.label,
+    { fontSize: labelSize },
+  ];
+  const inputLayout: TextStyle = { height: inputHeight, borderRadius: inputRadius };
+  const inputStyle: StyleProp<TextStyle> = [styles.input, inputLayout];
+  const inputInlineStyle: StyleProp<TextStyle> = [
+    styles.input,
+    styles.inputInline,
+    inputLayout,
+  ];
+  const eyeBtnLayout: ViewStyle = {
+    width: eyeBtnSize,
+    height: eyeBtnSize,
+    borderRadius: inputRadius,
+  };
+  const eyeBtnStyle: StyleProp<ViewStyle> = [styles.eyeBtn, eyeBtnLayout];
+  const hintTextStyle: StyleProp<TextStyle> = [
+    styles.hintText,
+    { fontSize: hintSize },
+  ];
+  const hintLinkStyle: StyleProp<TextStyle> = [
+    styles.hintLink,
+    { fontSize: hintSize },
+  ];
+  const ctaStyle: StyleProp<ViewStyle> = [
+    styles.cta,
+    (!canContinue || emailAuthLoading) && styles.ctaDisabled,
+  ];
+  const ctaInnerLayout: ViewStyle = { height: ctaHeight };
+  const ctaInnerStyle: StyleProp<ViewStyle> = [
+    styles.ctaInner,
+    ctaInnerLayout,
+    !canContinue && { opacity: 0.6 },
+  ];
+  const ctaTextStyle: StyleProp<TextStyle> = [
+    styles.ctaText,
+    { fontSize: ctaText },
+  ];
+  const socialBtnLayout: ViewStyle = {
+    height: socialHeight,
+    borderRadius: Math.round(socialHeight * 0.3),
+  };
+  const socialButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
+    styles.socialBtn,
+    socialBtnLayout,
+    disabled && styles.socialBtnDisabled,
+  ];
+  const socialTextStyle: StyleProp<TextStyle> = [
+    styles.socialText,
+    { fontSize: segmentText },
+  ];
+  const skipTextStyle: StyleProp<TextStyle> = [
+    styles.skipText,
+    { fontSize: hintSize },
+  ];
+  const outerStyle: StyleProp<ViewStyle> = [
+    styles.outer,
+    { padding: gutter },
+  ];
+  const scrollContentStyle: StyleProp<ViewStyle> = [
+    styles.scroll,
+    isLandscape && {
+      paddingVertical: scrollPad,
+      minHeight: scrollMinHeight,
+      justifyContent: "center",
+    },
+  ];
+  const cardLayout: ViewStyle = {
+    width: cardWidth,
+    padding: landscapeCardPad,
+    borderRadius: cardRadius,
+  };
+  const cardStyle: StyleProp<ViewStyle> = [styles.card, cardLayout];
+  const heroColumnLayout: ViewStyle = {
+    paddingRight: landscapeGap,
+    paddingVertical: landscapeColumnPad,
+  };
+  const heroColumnStyle: StyleProp<ViewStyle> = [
+    styles.heroColumn,
+    heroColumnLayout,
+  ];
+  const formColumnLayout: ViewStyle = {
+    paddingLeft: landscapeGap,
+    paddingVertical: landscapeColumnPad,
+  };
+  const formColumnStyle: StyleProp<ViewStyle> = [
+    styles.formColumn,
+    formColumnLayout,
+  ];
 
   const applyProfileFromUser = (
     user?: { email?: string; user_metadata?: Record<string, any> } | null,
@@ -322,12 +485,243 @@ export default function AuthScreen({ navigation }: Props) {
     }
   };
 
+  const heroContent = (
+    <>
+      <View
+        style={lottieWrapStyle}
+      >
+        <LinearGradient
+          colors={["rgba(255,255,255,0.98)", "rgba(255,255,255,0.85)"]}
+          start={{ x: 0.2, y: 0.1 }}
+          end={{ x: 0.9, y: 1 }}
+          style={styles.authLottieBackdrop}
+        />
+        <LottieView
+          source={AUTH_LOTTIE_SOURCE}
+          autoPlay
+          loop
+          resizeMode="contain"
+          style={styles.authLottie}
+        />
+        <LinearGradient
+          colors={[
+            "rgba(255,255,255,0.6)",
+            "rgba(255,255,255,0.0)",
+            "rgba(255,255,255,0.6)",
+          ]}
+          locations={[0, 0.5, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.authLottieFade}
+          pointerEvents="none"
+        />
+      </View>
+      <Text style={heroTitleStyle}>
+        VantaHome, connected.
+      </Text>
+      <Text style={heroSubStyle}>
+        Create an account or sign in to sync devices, scenes, and automations.
+      </Text>
+    </>
+  );
+
+  const formContent = (
+    <>
+      <View style={segmentStyle}>
+        {(["create", "login"] as const).map((k) => (
+          <Pressable
+            key={k}
+            style={segmentButtonStyle(mode === k)}
+            onPress={() => setMode(k)}
+          >
+            <Text style={segmentTextToneStyle(mode === k)}>
+              {k === "create" ? "Create" : "Login"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {mode === "create" && (
+        <View style={styles.field}>
+          <Text style={labelStyle}>Full name</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Nick Kerr"
+            placeholderTextColor="rgba(12,12,18,0.35)"
+            style={inputStyle}
+            autoCapitalize="words"
+            returnKeyType="next"
+          />
+        </View>
+      )}
+
+      <View style={styles.field}>
+        <Text style={labelStyle}>Email</Text>
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          placeholder="you@example.com"
+          placeholderTextColor="rgba(12,12,18,0.35)"
+          style={inputStyle}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          returnKeyType="next"
+        />
+      </View>
+
+      <View style={styles.field}>
+        <Text style={labelStyle}>Password</Text>
+        <View style={styles.inputRow}>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="••••••••"
+            placeholderTextColor="rgba(12,12,18,0.35)"
+            style={inputInlineStyle}
+            secureTextEntry={!showPassword}
+            returnKeyType={mode === "create" ? "next" : "done"}
+          />
+          <Pressable
+            style={eyeBtnStyle}
+            onPress={() => setShowPassword((v) => !v)}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off" : "eye"}
+              size={Math.round(18 * scale)}
+              color="rgba(12,12,18,0.55)"
+            />
+          </Pressable>
+        </View>
+      </View>
+
+      {mode === "create" && (
+        <View style={styles.field}>
+          <Text style={labelStyle}>Confirm password</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              value={confirm}
+              onChangeText={setConfirm}
+              placeholder="••••••••"
+              placeholderTextColor="rgba(12,12,18,0.35)"
+              style={inputInlineStyle}
+              secureTextEntry={!showConfirm}
+              returnKeyType="done"
+            />
+            <Pressable
+              style={eyeBtnStyle}
+              onPress={() => setShowConfirm((v) => !v)}
+            >
+              <Ionicons
+                name={showConfirm ? "eye-off" : "eye"}
+                size={Math.round(18 * scale)}
+                color="rgba(12,12,18,0.55)"
+              />
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      <View style={styles.hintRow}>
+        <Text style={hintTextStyle}>
+          {mode === "create"
+            ? "Password must be at least 6 characters."
+            : "Forgot password?"}
+        </Text>
+        {mode === "login" && (
+          <Pressable onPress={handleResetPassword} disabled={resetLoading}>
+            <Text style={hintLinkStyle}>
+              {resetLoading ? "Sending…" : "Reset"}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
+      <Pressable
+        style={ctaStyle}
+        onPress={handleContinue}
+        disabled={!canContinue || emailAuthLoading}
+      >
+        <LinearGradient
+          colors={["#B08CFF", "#6B3CFF"]}
+          start={{ x: 0.1, y: 0.2 }}
+          end={{ x: 0.9, y: 0.9 }}
+          style={ctaInnerStyle}
+        >
+          {emailAuthLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={ctaTextStyle}>
+                {mode === "create" ? "Create account" : "Sign in"}
+              </Text>
+              <Ionicons
+                name="arrow-forward"
+                size={Math.round(16 * scale)}
+                color="#FFFFFF"
+                style={styles.ctaArrow}
+              />
+            </>
+          )}
+        </LinearGradient>
+      </Pressable>
+
+      <View style={styles.orRow}>
+        <View style={styles.orLine} />
+        <Text style={styles.orText}>or</Text>
+        <View style={styles.orLine} />
+      </View>
+
+      <View style={styles.socialRow}>
+        <Pressable
+          style={socialButtonStyle(Boolean(oauthLoading))}
+          onPress={() => handleOAuth("apple")}
+          disabled={oauthLoading !== null || emailAuthLoading}
+        >
+          {oauthLoading === "apple" ? (
+            <ActivityIndicator size="small" color="#0C0C12" />
+          ) : (
+            <Ionicons
+              name="logo-apple"
+              size={Math.round(18 * scale)}
+              color="#0C0C12"
+            />
+          )}
+          <Text style={socialTextStyle}>Apple</Text>
+        </Pressable>
+        <Pressable
+          style={socialButtonStyle(Boolean(oauthLoading))}
+          onPress={() => handleOAuth("google")}
+          disabled={oauthLoading !== null || emailAuthLoading}
+        >
+          {oauthLoading === "google" ? (
+            <ActivityIndicator size="small" color="#0C0C12" />
+          ) : (
+            <Ionicons
+              name="logo-google"
+              size={Math.round(18 * scale)}
+              color="#0C0C12"
+            />
+          )}
+          <Text style={socialTextStyle}>Google</Text>
+        </Pressable>
+      </View>
+
+      <Pressable
+        onPress={() => navigation.replace("Onboarding")}
+        style={styles.skip}
+      >
+        <Text style={skipTextStyle}>Skip for now</Text>
+      </Pressable>
+    </>
+  );
+
   return (
     <LinearGradient
       colors={[theme.colors.bg1, theme.colors.bg0]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.outer, { padding: gutter }]}
+      style={outerStyle}
     >
       <BackgroundLines />
       <LinearGradient
@@ -351,321 +745,35 @@ export default function AuthScreen({ navigation }: Props) {
         style={styles.container}
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          style={styles.scrollView}
+          contentContainerStyle={scrollContentStyle}
           showsVerticalScrollIndicator={false}
         >
-          <View
-            style={[
-              styles.card,
-              { width: cardWidth, padding: cardPad, borderRadius: cardRadius },
-            ]}
+          <LandscapeFrame
+            enabled={useLandscapeFrame}
+            width={frameWidth}
+            pad={framePad}
+            radius={frameRadius}
           >
-            <View
-              style={[
-                styles.authLottieWrap,
-                {
-                  width: authLottieSize,
-                  height: authLottieSize,
-                  marginBottom: authLottieGap,
-                  borderRadius: Math.round(authLottieSize / 2),
-                },
-              ]}
-            >
-              <LinearGradient
-                colors={["rgba(255,255,255,0.98)", "rgba(255,255,255,0.85)"]}
-                start={{ x: 0.2, y: 0.1 }}
-                end={{ x: 0.9, y: 1 }}
-                style={styles.authLottieBackdrop}
-              />
-              <LottieView
-                source={AUTH_LOTTIE_SOURCE}
-                autoPlay
-                loop
-                resizeMode="contain"
-                style={styles.authLottie}
-              />
-              <LinearGradient
-                colors={[
-                  "rgba(255,255,255,0.6)",
-                  "rgba(255,255,255,0.0)",
-                  "rgba(255,255,255,0.6)",
-                ]}
-                locations={[0, 0.5, 1]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={styles.authLottieFade}
-                pointerEvents="none"
-              />
-            </View>
-            <Text style={[styles.h1, { fontSize: titleSize }]}>
-              Welcome to VantaHome
-            </Text>
-            <Text style={[styles.sub, { fontSize: subSize }]}>
-              Create an account or sign in to sync devices across every
-              ecosystem.
-            </Text>
-
-            <View style={styles.segment}>
-              {(["create", "login"] as const).map((k) => (
-                <Pressable
-                  key={k}
-                  style={[
-                    styles.segmentBtn,
-                    { height: segmentHeight },
-                    mode === k && styles.segmentBtnActive,
-                  ]}
-                  onPress={() => setMode(k)}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      { fontSize: segmentText },
-                      mode === k && styles.segmentTextActive,
-                    ]}
-                  >
-                    {k === "create" ? "Create" : "Login"}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {mode === "create" && (
-              <View style={styles.field}>
-                <Text style={[styles.label, { fontSize: labelSize }]}>
-                  Full name
-                </Text>
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Nick Kerr"
-                  placeholderTextColor="rgba(12,12,18,0.35)"
-                  style={[
-                    styles.input,
-                    { height: inputHeight, borderRadius: inputRadius },
-                  ]}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                />
-              </View>
-            )}
-
-            <View style={styles.field}>
-              <Text style={[styles.label, { fontSize: labelSize }]}>Email</Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor="rgba(12,12,18,0.35)"
-                style={[
-                  styles.input,
-                  { height: inputHeight, borderRadius: inputRadius },
-                ]}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                returnKeyType="next"
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={[styles.label, { fontSize: labelSize }]}>
-                Password
-              </Text>
-              <View style={styles.inputRow}>
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="••••••••"
-                  placeholderTextColor="rgba(12,12,18,0.35)"
-                  style={[
-                    styles.input,
-                    styles.inputInline,
-                    { height: inputHeight, borderRadius: inputRadius },
-                  ]}
-                  secureTextEntry={!showPassword}
-                  returnKeyType={mode === "create" ? "next" : "done"}
-                />
-                <Pressable
-                  style={[
-                    styles.eyeBtn,
-                    {
-                      width: eyeBtnSize,
-                      height: eyeBtnSize,
-                      borderRadius: inputRadius,
-                    },
-                  ]}
-                  onPress={() => setShowPassword((v) => !v)}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={Math.round(18 * scale)}
-                    color="rgba(12,12,18,0.55)"
-                  />
-                </Pressable>
-              </View>
-            </View>
-
-            {mode === "create" && (
-              <View style={styles.field}>
-                <Text style={[styles.label, { fontSize: labelSize }]}>
-                  Confirm password
-                </Text>
-                <View style={styles.inputRow}>
-                  <TextInput
-                    value={confirm}
-                    onChangeText={setConfirm}
-                    placeholder="••••••••"
-                    placeholderTextColor="rgba(12,12,18,0.35)"
-                    style={[
-                      styles.input,
-                      styles.inputInline,
-                      { height: inputHeight, borderRadius: inputRadius },
-                    ]}
-                    secureTextEntry={!showConfirm}
-                    returnKeyType="done"
-                  />
-                  <Pressable
-                    style={[
-                      styles.eyeBtn,
-                      {
-                        width: eyeBtnSize,
-                        height: eyeBtnSize,
-                        borderRadius: inputRadius,
-                      },
-                    ]}
-                    onPress={() => setShowConfirm((v) => !v)}
-                  >
-                    <Ionicons
-                      name={showConfirm ? "eye-off" : "eye"}
-                      size={Math.round(18 * scale)}
-                      color="rgba(12,12,18,0.55)"
-                    />
-                  </Pressable>
+            <View style={cardStyle}>
+              {useLandscapeFrame ? (
+                <View style={styles.cardLandscape}>
+                  <View style={heroColumnStyle}>
+                    {heroContent}
+                  </View>
+                  <View style={styles.heroDivider} />
+                  <View style={formColumnStyle}>
+                    {formContent}
+                  </View>
                 </View>
-              </View>
-            )}
-
-            <View style={styles.hintRow}>
-              <Text style={[styles.hintText, { fontSize: hintSize }]}>
-                {mode === "create"
-                  ? "Password must be at least 6 characters."
-                  : "Forgot password?"}
-              </Text>
-              {mode === "login" && (
-                <Pressable
-                  onPress={handleResetPassword}
-                  disabled={resetLoading}
-                >
-                  <Text style={[styles.hintLink, { fontSize: hintSize }]}>
-                    {resetLoading ? "Sending…" : "Reset"}
-                  </Text>
-                </Pressable>
+              ) : (
+                <>
+                  {heroContent}
+                  {formContent}
+                </>
               )}
             </View>
-
-            <Pressable
-              style={[
-                styles.cta,
-                (!canContinue || emailAuthLoading) && styles.ctaDisabled,
-              ]}
-              onPress={handleContinue}
-              disabled={!canContinue || emailAuthLoading}
-            >
-              <LinearGradient
-                colors={["#B08CFF", "#6B3CFF"]}
-                start={{ x: 0.1, y: 0.2 }}
-                end={{ x: 0.9, y: 0.9 }}
-                style={[
-                  styles.ctaInner,
-                  { height: ctaHeight },
-                  !canContinue && { opacity: 0.6 },
-                ]}
-              >
-                {emailAuthLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Text style={[styles.ctaText, { fontSize: ctaText }]}>
-                      {mode === "create" ? "Create account" : "Sign in"}
-                    </Text>
-                    <Ionicons
-                      name="arrow-forward"
-                      size={Math.round(16 * scale)}
-                      color="#FFFFFF"
-                      style={styles.ctaArrow}
-                    />
-                  </>
-                )}
-              </LinearGradient>
-            </Pressable>
-
-            <View style={styles.orRow}>
-              <View style={styles.orLine} />
-              <Text style={styles.orText}>or</Text>
-              <View style={styles.orLine} />
-            </View>
-
-            <View style={styles.socialRow}>
-              <Pressable
-                style={[
-                  styles.socialBtn,
-                  {
-                    height: socialHeight,
-                    borderRadius: Math.round(socialHeight * 0.3),
-                  },
-                  oauthLoading && styles.socialBtnDisabled,
-                ]}
-                onPress={() => handleOAuth("apple")}
-                disabled={oauthLoading !== null || emailAuthLoading}
-              >
-                {oauthLoading === "apple" ? (
-                  <ActivityIndicator size="small" color="#0C0C12" />
-                ) : (
-                  <Ionicons
-                    name="logo-apple"
-                    size={Math.round(18 * scale)}
-                    color="#0C0C12"
-                  />
-                )}
-                <Text style={[styles.socialText, { fontSize: segmentText }]}>
-                  Apple
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.socialBtn,
-                  {
-                    height: socialHeight,
-                    borderRadius: Math.round(socialHeight * 0.3),
-                  },
-                  oauthLoading && styles.socialBtnDisabled,
-                ]}
-                onPress={() => handleOAuth("google")}
-                disabled={oauthLoading !== null || emailAuthLoading}
-              >
-                {oauthLoading === "google" ? (
-                  <ActivityIndicator size="small" color="#0C0C12" />
-                ) : (
-                  <Ionicons
-                    name="logo-google"
-                    size={Math.round(18 * scale)}
-                    color="#0C0C12"
-                  />
-                )}
-                <Text style={[styles.socialText, { fontSize: segmentText }]}>
-                  Google
-                </Text>
-              </Pressable>
-            </View>
-
-            <Pressable
-              onPress={() => navigation.replace("Onboarding")}
-              style={styles.skip}
-            >
-              <Text style={[styles.skipText, { fontSize: hintSize }]}>
-                Skip for now
-              </Text>
-            </Pressable>
-          </View>
+          </LandscapeFrame>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -675,6 +783,7 @@ export default function AuthScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   outer: { flex: 1, justifyContent: "center", alignItems: "center" },
   container: { flex: 1, justifyContent: "center" },
+  scrollView: { flex: 1, width: "100%" },
   scroll: { flexGrow: 1, justifyContent: "center", alignItems: "center" },
   auroraTop: {
     position: "absolute",
@@ -743,6 +852,23 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
   },
+  cardLandscape: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    width: "100%",
+  },
+  heroColumn: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+  },
+  formColumn: { flex: 1.2, minWidth: 0 },
+  heroDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: "rgba(12,12,18,0.12)",
+  },
   authLottieWrap: {
     alignSelf: "center",
     overflow: "hidden",
@@ -750,11 +876,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.85)",
   },
+  authLottieWrapLandscape: { alignSelf: "flex-start" },
   authLottieBackdrop: { ...StyleSheet.absoluteFillObject },
   authLottie: { width: "100%", height: "100%", opacity: 1 },
   authLottieFade: { ...StyleSheet.absoluteFillObject },
   h1: { fontSize: 24, fontWeight: "900", color: "#0C0C12" },
+  heroTitleLandscape: { textAlign: "left", maxWidth: 360 },
   sub: { marginTop: 6, color: "rgba(12,12,18,0.55)", fontWeight: "700" },
+  heroSubLandscape: { textAlign: "left", maxWidth: 360, marginTop: 0 },
   segment: {
     flexDirection: "row",
     backgroundColor: "rgba(12,12,18,0.08)",
@@ -762,6 +891,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 4,
   },
+  segmentLandscape: { marginTop: 0 },
   segmentBtn: {
     flex: 1,
     height: 36,

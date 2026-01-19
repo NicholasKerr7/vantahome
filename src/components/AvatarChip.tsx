@@ -1,5 +1,13 @@
 import React, { useMemo } from "react";
-import { Text, StyleSheet, Image, type ViewStyle } from "react-native";
+import {
+  Text,
+  StyleSheet,
+  Image,
+  type ImageStyle,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../theme/theme";
 
@@ -22,41 +30,41 @@ export default function AvatarChip({
   size?: number;
   color?: string;
   uri?: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   const initials = useMemo(() => initialsFrom(name), [name]);
   const tint = color ?? theme.colors.accent2;
   const innerSize = Math.max(10, size - 4);
+  const wrapStyle: StyleProp<ViewStyle> = [
+    styles.wrap,
+    {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+    },
+    style,
+  ];
+  const imageStyle: StyleProp<ImageStyle> = {
+    width: innerSize,
+    height: innerSize,
+    borderRadius: innerSize / 2,
+  };
+  const textStyle: StyleProp<TextStyle> = [
+    styles.text,
+    { fontSize: Math.max(12, size * 0.38) },
+  ];
 
   return (
     <LinearGradient
       colors={[tint, "rgba(255,255,255,0.28)"]}
       start={{ x: 0.1, y: 0.1 }}
       end={{ x: 1, y: 1 }}
-      style={[
-        styles.wrap,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-        },
-        style,
-      ]}
+      style={wrapStyle}
     >
       {uri ? (
-        <Image
-          source={{ uri }}
-          resizeMode="cover"
-          style={{
-            width: innerSize,
-            height: innerSize,
-            borderRadius: innerSize / 2,
-          }}
-        />
+        <Image source={{ uri }} resizeMode="cover" style={imageStyle} />
       ) : (
-        <Text style={[styles.text, { fontSize: Math.max(12, size * 0.38) }]}>
-          {initials}
-        </Text>
+        <Text style={textStyle}>{initials}</Text>
       )}
     </LinearGradient>
   );

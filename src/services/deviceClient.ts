@@ -76,6 +76,13 @@ type ConnectOptions = {
   maxReconnectDelayMs?: number;
 };
 
+type ResolvedConnectOptions = {
+  protocols?: string | string[];
+  autoReconnect: boolean;
+  reconnectDelayMs: number;
+  maxReconnectDelayMs: number;
+};
+
 type CommandOptions = {
   optimistic?: boolean;
 };
@@ -100,7 +107,7 @@ class DeviceClient {
   private reconnectAttempts = 0;
   private connection: {
     url: string;
-    options: Required<ConnectOptions>;
+    options: ResolvedConnectOptions;
   } | null = null;
   private commandTransport: CommandTransport | null = null;
   private connectionStatus: ConnectionStatus = "disconnected";
@@ -125,7 +132,7 @@ class DeviceClient {
   }
 
   connect(url: string, options: ConnectOptions = {}) {
-    const merged: Required<ConnectOptions> = {
+    const merged: ResolvedConnectOptions = {
       protocols: options.protocols,
       autoReconnect: options.autoReconnect ?? true,
       reconnectDelayMs: options.reconnectDelayMs ?? 800,

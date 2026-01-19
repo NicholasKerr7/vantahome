@@ -1,5 +1,5 @@
 import React from "react";
-import renderer, { act } from "react-test-renderer";
+import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import HomeScreen from "../HomeScreen";
 import { useHomeStore } from "../../store/useHomeStore";
 
@@ -130,7 +130,7 @@ describe("HomeScreen", () => {
   });
 
   it("navigates to Profile when avatar is pressed", () => {
-    let tree: renderer.ReactTestRenderer;
+    let tree: ReactTestRenderer;
     act(() => {
       tree = renderer.create(<HomeScreen />);
     });
@@ -143,7 +143,7 @@ describe("HomeScreen", () => {
   });
 
   it("navigates to Notifications when bell is pressed", () => {
-    let tree: renderer.ReactTestRenderer;
+    let tree: ReactTestRenderer;
     act(() => {
       tree = renderer.create(<HomeScreen />);
     });

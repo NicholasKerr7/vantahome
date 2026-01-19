@@ -6,7 +6,14 @@ import ScenesScreen from "../screens/ScenesScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import TabBar from "./TabBar";
 
-const Tab = createBottomTabNavigator();
+export type BottomTabParamList = {
+  Home: undefined;
+  Automations: undefined;
+  Scenes: undefined;
+  Settings: undefined;
+};
+
+const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 export default function BottomTabs() {
   return (

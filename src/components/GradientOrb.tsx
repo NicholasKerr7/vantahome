@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -52,7 +59,7 @@ export default function GradientOrb({
   const rowGap = Math.round((isTablet ? 10 : 8) * scale);
   const dividerSpacing = Math.round((isTablet ? 18 : 14) * scale);
   const iconSize = Math.round((isTablet ? 20 : 18) * scale);
-  const gradientColors = isTablet
+  const gradientColors: [string, string, string] = isTablet
     ? [
         "rgba(255,255,255,0.26)",
         "rgba(185,215,255,0.46)",
@@ -87,6 +94,69 @@ export default function GradientOrb({
   const showVoicePrompt = hasVoice && showPrompt;
   const voicePromptTitle = "Say a command";
   const voicePromptSub = voiceActive ? "Listening..." : "Tap to speak";
+  const voiceAuraStyle: StyleProp<ViewStyle> = [
+    styles.voiceAura,
+    {
+      width: voiceAuraSize,
+      height: voiceAuraSize,
+      borderRadius: Math.round(voiceAuraSize / 2),
+    },
+    !voiceActive && styles.voiceAuraIdle,
+  ];
+  const orbStyle: StyleProp<ViewStyle> = [
+    styles.orb,
+    {
+      width: orbSize,
+      height: orbSize,
+      borderRadius: radius,
+      borderWidth: isTablet ? 2 : 2,
+      shadowOpacity: isTablet ? 0.5 : 0.45,
+      shadowRadius: isTablet ? 30 : 24,
+    },
+    glowStyle,
+  ];
+  const orbInnerStyle: StyleProp<ViewStyle> = [
+    styles.orbInner,
+    {
+      borderRadius: radius,
+      paddingTop: orbPadding,
+      paddingBottom: orbPadding,
+    },
+  ];
+  const voicePromptTitleStyle: StyleProp<TextStyle> = [
+    styles.voicePromptTitle,
+    { fontSize: promptTitleSize },
+  ];
+  const voicePromptSubStyle: StyleProp<TextStyle> = [
+    styles.voicePromptSub,
+    { fontSize: promptSubSize },
+  ];
+  const rowStyle: StyleProp<ViewStyle> = [
+    styles.row,
+    { gap: rowGap },
+  ];
+  const tempTextStyle: StyleProp<TextStyle> = [
+    styles.temp,
+    { fontSize: tempSize },
+  ];
+  const labelTextStyle: StyleProp<TextStyle> = [
+    styles.label,
+    { fontSize: labelSize },
+  ];
+  const dividerStyle: StyleProp<ViewStyle> = [
+    styles.divider,
+    { marginVertical: dividerSpacing },
+  ];
+  const innerRingStyle: StyleProp<ViewStyle> = [
+    styles.innerRing,
+    {
+      left: innerInset,
+      top: innerInset,
+      right: innerInset,
+      bottom: innerInset,
+      borderRadius: innerRadius,
+    },
+  ];
 
   useEffect(() => {
     if (!hasVoice) {
@@ -110,15 +180,7 @@ export default function GradientOrb({
         {hasVoice && (
           <View
             pointerEvents="none"
-            style={[
-              styles.voiceAura,
-              {
-                width: voiceAuraSize,
-                height: voiceAuraSize,
-                borderRadius: Math.round(voiceAuraSize / 2),
-              },
-              !voiceActive && styles.voiceAuraIdle,
-            ]}
+            style={voiceAuraStyle}
           />
         )}
         <Pressable
@@ -127,91 +189,52 @@ export default function GradientOrb({
           onPressIn={onVoicePressIn}
           onPressOut={onVoicePressOut}
         >
-          <Animated.View
-            style={[
-              styles.orb,
-              {
-                width: orbSize,
-                height: orbSize,
-                borderRadius: radius,
-                borderWidth: isTablet ? 2 : 2,
-                shadowOpacity: isTablet ? 0.5 : 0.45,
-                shadowRadius: isTablet ? 30 : 24,
-              },
-              glowStyle,
-            ]}
-          >
+          <Animated.View style={orbStyle}>
             <LinearGradient
               colors={gradientColors}
               start={{ x: 0.15, y: 0.05 }}
               end={{ x: 0.95, y: 0.95 }}
-              style={[
-                styles.orbInner,
-                {
-                  borderRadius: radius,
-                  paddingTop: orbPadding,
-                  paddingBottom: orbPadding,
-                },
-              ]}
+              style={orbInnerStyle}
             >
               {showVoicePrompt ? (
                 <View style={styles.voicePrompt}>
-                  <Text
-                    style={[
-                      styles.voicePromptTitle,
-                      { fontSize: promptTitleSize },
-                    ]}
-                  >
+                  <Text style={voicePromptTitleStyle}>
                     {voicePromptTitle}
                   </Text>
-                  <Text
-                    style={[
-                      styles.voicePromptSub,
-                      { fontSize: promptSubSize },
-                    ]}
-                  >
+                  <Text style={voicePromptSubStyle}>
                     {voicePromptSub}
                   </Text>
                 </View>
               ) : (
                 <>
                   <View style={styles.section}>
-                    <View style={[styles.row, { gap: rowGap }]}>
+                    <View style={rowStyle}>
                       <Ionicons
                         name="partly-sunny"
                         size={iconSize}
                         color="rgba(255,255,255,0.92)"
                       />
-                      <Text style={[styles.temp, { fontSize: tempSize }]}>
+                      <Text style={tempTextStyle}>
                         {formatTemp(outdoor.tempC)}°{unit}
                       </Text>
                     </View>
-                    <Text style={[styles.label, { fontSize: labelSize }]}>
-                      {outdoor.label}
-                    </Text>
+                    <Text style={labelTextStyle}>{outdoor.label}</Text>
                   </View>
 
-                  <View
-                    style={[
-                      styles.divider,
-                      { marginVertical: dividerSpacing },
-                    ]}
-                  />
+                  <View style={dividerStyle} />
 
                   <View style={styles.section}>
-                    <View style={[styles.row, { gap: rowGap }]}>
+                    <View style={rowStyle}>
                       <Ionicons
                         name="home"
                         size={iconSize}
                         color="rgba(255,255,255,0.92)"
                       />
-                      <Text style={[styles.temp, { fontSize: tempSize }]}>
+                      <Text style={tempTextStyle}>
                         {formatTemp(indoor.tempC)}°{unit}
                       </Text>
                     </View>
-                    <Text style={[styles.label, { fontSize: labelSize }]}>
-                      {indoor.label}
-                    </Text>
+                    <Text style={labelTextStyle}>{indoor.label}</Text>
                   </View>
                 </>
               )}
@@ -220,16 +243,7 @@ export default function GradientOrb({
             {/* inner ring highlight */}
             <View
               pointerEvents="none"
-              style={[
-                styles.innerRing,
-                {
-                  left: innerInset,
-                  top: innerInset,
-                  right: innerInset,
-                  bottom: innerInset,
-                  borderRadius: innerRadius,
-                },
-              ]}
+              style={innerRingStyle}
             />
           </Animated.View>
         </Pressable>

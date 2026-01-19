@@ -1,10 +1,14 @@
 import React from "react";
-import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
+import {
+  NavigationContainer,
+  DefaultTheme,
+  type NavigatorScreenParams,
+} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import AuthScreen from "../screens/AuthScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
-import BottomTabs from "../components/BottomTabs";
+import BottomTabs, { type BottomTabParamList } from "../components/BottomTabs";
 import DeviceDetailScreen from "../screens/DeviceDetailScreen";
 import RoomScreen from "../screens/RoomScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
@@ -25,7 +29,7 @@ import { theme } from "../theme/theme";
 export type RootStackParamList = {
   Auth: undefined;
   Onboarding: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<BottomTabParamList>;
   Room: { roomId?: string; showAll?: boolean };
   DeviceDetail: { deviceId: string };
   Notifications: undefined;

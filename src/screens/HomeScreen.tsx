@@ -4,11 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Modal,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -19,6 +17,9 @@ import AvatarChip from "../components/AvatarChip";
 import GradientOrb from "../components/GradientOrb";
 import BackgroundLines from "../components/BackgroundLines";
 import RoomCarousel from "../components/RoomCarousel";
+import ModalCard from "../components/ModalCard";
+import ModalActionRow from "../components/ModalActionRow";
+import HeaderPill from "../components/HeaderPill";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
@@ -45,10 +46,11 @@ export default function HomeScreen() {
   const roomsBtnText = Math.round((isTablet ? 13 : 12) * scale);
   const roomsGap = Math.round((isTablet ? 10 : 8) * scale);
   const heroGap = Math.round((isTablet ? 28 : 16) * scale);
+  const contentInset = Math.round(gutter);
+  const headerPadTop = topPad;
   const avatarSize = Math.round(
     (isTablet ? (isLandscape ? 48 : 52) : 38) * scale,
   );
-  const topGutter = isTablet ? Math.max(12, gutter - 8) : gutter;
   const modalTitleSize = Math.round((isTablet ? 20 : 18) * scale);
   const modalSubSize = Math.round((isTablet ? 14 : 12) * scale);
   const modalInputHeight = Math.round((isTablet ? 48 : 46) * scale);
@@ -110,6 +112,89 @@ export default function HomeScreen() {
     (raw: string) => { ok: boolean; message: string }
   >(() => ({ ok: false, message: "" }));
   const VOICE_TIMEOUT_MS = 6000;
+  const scrollContentStyle: StyleProp<ViewStyle> = [
+    styles.scroll,
+    { paddingBottom: tabBarPad },
+  ];
+  const pageStyle: StyleProp<ViewStyle> = [
+    styles.page,
+    { width: contentWidth, paddingHorizontal: contentInset },
+  ];
+  const headerPadStyle: ViewStyle = { paddingTop: headerPadTop };
+  const greetingStyle: StyleProp<TextStyle> = [
+    styles.greeting,
+    { fontSize: greetingSize },
+  ];
+  const bellStyle: StyleProp<ViewStyle> = [
+    styles.bell,
+    { width: bellSize, height: bellSize, borderRadius: bellRadius },
+  ];
+  const roomsSectionStyle: StyleProp<ViewStyle> = [
+    styles.roomsSection,
+    { marginTop: heroGap },
+  ];
+  const roomsTitleStyle: StyleProp<TextStyle> = [
+    styles.roomsTitle,
+    { fontSize: roomsTitleSize },
+  ];
+  const roomsActionsStyle: StyleProp<ViewStyle> = [
+    styles.roomsActions,
+    { gap: roomsGap },
+  ];
+  const roomsAddStyle: StyleProp<ViewStyle> = [
+    styles.roomsAdd,
+    { height: roomsBtnHeight },
+  ];
+  const roomsAddTextStyle: StyleProp<TextStyle> = [
+    styles.roomsAddText,
+    { fontSize: roomsBtnText },
+  ];
+  const modalCardStyle: StyleProp<ViewStyle> = [
+    styles.modalCard,
+    isTablet && {
+      maxWidth: 520,
+      width: Math.min(contentWidth - gutter * 2, 520),
+      alignSelf: "center",
+    },
+  ];
+  const modalTitleStyle: StyleProp<TextStyle> = [
+    styles.modalTitle,
+    { fontSize: modalTitleSize },
+  ];
+  const modalSubStyle: StyleProp<TextStyle> = [
+    styles.modalSub,
+    { fontSize: modalSubSize },
+  ];
+  const modalInputStyle: StyleProp<ViewStyle> = [
+    styles.modalInput,
+    {
+      height: modalInputHeight,
+      borderRadius: Math.round(modalInputHeight * 0.3),
+    },
+  ];
+  const modalGhostStyle: StyleProp<ViewStyle> = [
+    styles.modalGhost,
+    {
+      height: modalButtonHeight,
+      borderRadius: Math.round(modalButtonHeight * 0.3),
+    },
+  ];
+  const modalGhostTextStyle: StyleProp<TextStyle> = [
+    styles.modalGhostText,
+    { fontSize: modalSubSize },
+  ];
+  const modalPrimaryStyle: StyleProp<ViewStyle> = [
+    styles.modalPrimary,
+    {
+      height: modalButtonHeight,
+      borderRadius: Math.round(modalButtonHeight * 0.3),
+    },
+    !canCreate && styles.modalPrimaryDisabled,
+  ];
+  const modalPrimaryTextStyle: StyleProp<TextStyle> = [
+    styles.modalPrimaryText,
+    { fontSize: modalSubSize },
+  ];
 
   useEffect(() => {
     // Refresh greeting at minute granularity so it stays accurate without over-rendering.
@@ -618,226 +703,147 @@ export default function HomeScreen() {
       <BackgroundLines />
 
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          {
-            paddingBottom: tabBarPad,
-          },
-        ]}
+        contentContainerStyle={scrollContentStyle}
       >
-        <View style={{ width: contentWidth }}>
-          <View style={{ paddingHorizontal: topGutter, paddingTop: topPad }}>
-            <View style={styles.topBar}>
-              <Text
-                style={[styles.greeting, { fontSize: greetingSize }]}
-                numberOfLines={1}
-              >
-                {greeting}, {profile.name || userName}!
-              </Text>
-              <View style={styles.topActions}>
-                <Pressable
-                  style={[
-                    styles.bell,
-                    {
-                      width: bellSize,
-                      height: bellSize,
-                      borderRadius: bellRadius,
-                    },
-                  ]}
-                  onPress={() => goRoot("Notifications")}
-                  testID="home-notifications-button"
+        <View style={pageStyle}>
+          <View style={styles.topSection}>
+            <View style={headerPadStyle}>
+              <View style={styles.topBar}>
+                <Text
+                  style={greetingStyle}
+                  numberOfLines={1}
                 >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={bellIcon}
-                    color={theme.colors.text}
-                  />
-                </Pressable>
-                <Pressable
-                  style={styles.avatarBtn}
-                  onPress={() => goRoot("Profile")}
-                  hitSlop={8}
-                  testID="home-avatar-button"
-                >
-                  <AvatarChip
-                    name={profile.name || userName}
-                    color={profile.avatarColor}
-                    uri={profile.avatarUri}
-                    size={avatarSize}
-                  />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.heroStack}>
-            <GradientOrb
-              outdoor={outdoor}
-              indoor={indoor}
-              unit={tempUnit}
-              voiceActive={showVoice}
-              onVoicePress={handleVoicePress}
-            />
-
-            <View
-              style={[
-                styles.roomsSection,
-                { width: contentWidth, marginTop: heroGap },
-              ]}
-            >
-              <View style={[styles.roomsHeader, { paddingHorizontal: gutter }]}>
-                <Text style={[styles.roomsTitle, { fontSize: roomsTitleSize }]}>
-                  Rooms
+                  {greeting}, {profile.name || userName}!
                 </Text>
-                <View style={[styles.roomsActions, { gap: roomsGap }]}>
+                <View style={styles.topActions}>
                   <Pressable
-                    style={[styles.roomsAdd, { height: roomsBtnHeight }]}
-                    onPress={() => goRoot("ManageRooms")}
+                    style={bellStyle}
+                    onPress={() => goRoot("Notifications")}
+                    testID="home-notifications-button"
                   >
                     <Ionicons
-                      name="settings-outline"
-                      size={Math.round(14 * scale)}
+                      name="notifications-outline"
+                      size={bellIcon}
                       color={theme.colors.text}
                     />
-                    <Text
-                      style={[styles.roomsAddText, { fontSize: roomsBtnText }]}
-                    >
-                      Manage
-                    </Text>
                   </Pressable>
                   <Pressable
-                    style={[styles.roomsAdd, { height: roomsBtnHeight }]}
-                    onPress={() => setShowAddRoom(true)}
+                    style={styles.avatarBtn}
+                    onPress={() => goRoot("Profile")}
+                    hitSlop={8}
+                    testID="home-avatar-button"
                   >
-                    <Ionicons
-                      name="add"
-                      size={Math.round(16 * scale)}
-                      color={theme.colors.text}
+                    <AvatarChip
+                      name={profile.name || userName}
+                      color={profile.avatarColor}
+                      uri={profile.avatarUri}
+                      size={avatarSize}
                     />
-                    <Text
-                      style={[styles.roomsAddText, { fontSize: roomsBtnText }]}
-                    >
-                      Add room
-                    </Text>
                   </Pressable>
                 </View>
               </View>
+            </View>
 
-              <View style={styles.roomsCarouselWrap}>
-                <RoomCarousel
-                  rooms={rooms}
-                  devices={devicesAll}
-                  onRoomPress={(roomId) => goRoot("Room", { roomId })}
-                  onDevicePress={(deviceId) =>
-                    goRoot("DeviceDetail", { deviceId })
-                  }
-                  onIndexChange={(index) =>
-                    setActiveRoomIndex(
-                      hasWholeHome ? Math.max(0, index - 1) : index,
-                    )
-                  }
-                  wholeHomeDevices={hasWholeHome ? featuredDevices : undefined}
-                  onWholeHomePress={() => goRoot("Room", { showAll: true })}
+            <View style={styles.heroStack}>
+              <View>
+                <GradientOrb
+                  outdoor={outdoor}
+                  indoor={indoor}
+                  unit={tempUnit}
+                  voiceActive={showVoice}
+                  onVoicePress={handleVoicePress}
                 />
+              </View>
+
+              <View
+                style={roomsSectionStyle}
+              >
+                <View style={styles.roomsHeader}>
+                  <Text style={roomsTitleStyle}>Rooms</Text>
+                  <View style={roomsActionsStyle}>
+                    <HeaderPill
+                      label="Manage"
+                      icon="settings-outline"
+                      iconSize={Math.round(14 * scale)}
+                      style={roomsAddStyle}
+                      textStyle={roomsAddTextStyle}
+                      onPress={() => goRoot("ManageRooms")}
+                    />
+                    <HeaderPill
+                      label="Add room"
+                      icon="add"
+                      iconSize={Math.round(16 * scale)}
+                      style={roomsAddStyle}
+                      textStyle={roomsAddTextStyle}
+                      onPress={() => setShowAddRoom(true)}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.roomsCarouselWrap}>
+                  <RoomCarousel
+                    rooms={rooms}
+                    devices={devicesAll}
+                    onRoomPress={(roomId) => goRoot("Room", { roomId })}
+                    onDevicePress={(deviceId) =>
+                      goRoot("DeviceDetail", { deviceId })
+                    }
+                    onIndexChange={(index) =>
+                      setActiveRoomIndex(
+                        hasWholeHome ? Math.max(0, index - 1) : index,
+                      )
+                    }
+                    wholeHomeDevices={hasWholeHome ? featuredDevices : undefined}
+                    onWholeHomePress={() => goRoot("Room", { showAll: true })}
+                  />
+                </View>
               </View>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      <Modal
-        transparent
+      <ModalCard
         visible={showAddRoom}
-        animationType="fade"
         onRequestClose={() => setShowAddRoom(false)}
+        onBackdropPress={() => setShowAddRoom(false)}
+        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
+        cardStyle={modalCardStyle}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setShowAddRoom(false)}
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.select({ ios: "padding", android: undefined })}
-          >
-            <LinearGradient
-              colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
-              start={{ x: 0.1, y: 0.1 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.modalCard,
-                isTablet && {
-                  maxWidth: 520,
-                  width: Math.min(contentWidth - gutter * 2, 520),
-                  alignSelf: "center",
-                },
-              ]}
-            >
-              <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
-                Add room
-              </Text>
-              <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
-                Name your space so it stays organized.
-              </Text>
+        <Text style={modalTitleStyle}>Add room</Text>
+        <Text style={modalSubStyle}>
+          Name your space so it stays organized.
+        </Text>
 
-              <TextInput
-                value={roomName}
-                onChangeText={setRoomName}
-                placeholder="Office, Patio, Studio..."
-                placeholderTextColor="rgba(12,12,18,0.45)"
-                style={[
-                  styles.modalInput,
-                  {
-                    height: modalInputHeight,
-                    borderRadius: Math.round(modalInputHeight * 0.3),
-                  },
-                ]}
-                autoCapitalize="words"
-                returnKeyType="done"
-              />
+        <TextInput
+          value={roomName}
+          onChangeText={setRoomName}
+          placeholder="Office, Patio, Studio..."
+          placeholderTextColor="rgba(12,12,18,0.45)"
+          style={modalInputStyle}
+          autoCapitalize="words"
+          returnKeyType="done"
+        />
 
-              <View style={styles.modalRow}>
-                <Pressable
-                  style={[
-                    styles.modalGhost,
-                    {
-                      height: modalButtonHeight,
-                      borderRadius: Math.round(modalButtonHeight * 0.3),
-                    },
-                  ]}
-                  onPress={() => setShowAddRoom(false)}
-                >
-                  <Text
-                    style={[styles.modalGhostText, { fontSize: modalSubSize }]}
-                  >
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.modalPrimary,
-                    {
-                      height: modalButtonHeight,
-                      borderRadius: Math.round(modalButtonHeight * 0.3),
-                    },
-                    !canCreate && styles.modalPrimaryDisabled,
-                  ]}
-                  onPress={handleCreateRoom}
-                  disabled={!canCreate}
-                >
-                  <Text
-                    style={[
-                      styles.modalPrimaryText,
-                      { fontSize: modalSubSize },
-                    ]}
-                  >
-                    Create
-                  </Text>
-                </Pressable>
-              </View>
-            </LinearGradient>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+        <ModalActionRow
+          style={styles.modalRow}
+          actions={[
+            {
+              label: "Cancel",
+              onPress: () => setShowAddRoom(false),
+              style: modalGhostStyle,
+              textStyle: modalGhostTextStyle,
+            },
+            {
+              label: "Create",
+              onPress: handleCreateRoom,
+              style: modalPrimaryStyle,
+              textStyle: modalPrimaryTextStyle,
+              disabled: !canCreate,
+            },
+          ]}
+        />
+      </ModalCard>
     </LinearGradient>
   );
 }
@@ -845,11 +851,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { flexGrow: 1, alignItems: "center" },
+  page: { width: "100%", alignSelf: "center" },
+  topSection: { width: "100%" },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 6,
+    width: "100%",
   },
   avatarBtn: { padding: 1 },
   greeting: { flex: 1, color: theme.colors.text, fontWeight: "800" },
@@ -864,14 +873,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  heroStack: { marginTop: 8, alignItems: "center" },
-  roomsSection: { alignSelf: "center" },
-  roomsCarouselWrap: { alignItems: "center" },
+  heroStack: { marginTop: 8, alignItems: "center", width: "100%" },
+  roomsSection: { alignSelf: "center", width: "100%" },
+  roomsCarouselWrap: { alignItems: "center", width: "100%" },
   roomsHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 6,
+    width: "100%",
   },
   roomsActions: { flexDirection: "row", gap: 8, alignItems: "center" },
   roomsTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 16 },
@@ -887,15 +897,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.18)",
   },
   roomsAddText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    padding: 18,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
   modalCard: {
     borderRadius: 24,
     padding: 18,

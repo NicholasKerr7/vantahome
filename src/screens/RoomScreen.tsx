@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Modal,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
@@ -21,10 +21,16 @@ import RoomScenesRow from "../components/RoomScenesRow";
 import DeviceTile from "../components/DeviceTile";
 import DeviceBottomSheet from "../components/DeviceBottomSheet";
 import DeviceIcon from "../components/DeviceIcon";
+import ModalCard from "../components/ModalCard";
+import ModalActionRow from "../components/ModalActionRow";
+import ModalField from "../components/ModalField";
+import LandscapeFrame from "../components/LandscapeFrame";
+import PortraitFrame from "../components/PortraitFrame";
 import { theme } from "../theme/theme";
 import { deviceClient } from "../services/deviceClient";
 import { useHomeStore, type Device } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DEVICE_OPTIONS: Array<{
   kind: Device["kind"];
@@ -290,6 +296,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Room">;
 
 export default function RoomScreen({ route, navigation }: Props) {
   const {
+    width,
     contentWidth,
     gutter,
     isTablet,
@@ -297,15 +304,52 @@ export default function RoomScreen({ route, navigation }: Props) {
     topPad,
     blockGap,
     scale,
-  } = useResponsive(900);
-  const columns = isTablet
-    ? isLandscape
-      ? contentWidth >= 1040
-        ? 4
-        : 3
-      : 3
-    : 2;
+  } = useResponsive(1200);
+  const isWide = isTablet && isLandscape;
+  const isPortrait = !isLandscape;
+  const frameEnabled = isPortrait || isWide;
+  const FrameComponent = isPortrait ? PortraitFrame : LandscapeFrame;
+  const framePad = Math.round((isTablet ? 14 : 10) * scale);
+  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
+  const outerGutter = isWide ? Math.round(gutter * 0.6) : isTablet ? gutter : 0;
+  const innerGutter = isWide ? Math.round(gutter * 0.75) : gutter;
   const listGap = Math.round((isTablet ? 18 : 12) * scale);
+  const frameWidth = Math.max(0, width - outerGutter * 2);
+  const frameInnerWidth = Math.max(
+    0,
+    frameWidth - (frameEnabled ? framePad * 2 : 0),
+  );
+  const contentInset = frameEnabled
+    ? Math.max(0, innerGutter - framePad)
+    : innerGutter;
+  const gridInset = contentInset;
+  const gridWidth = Math.max(0, frameInnerWidth - gridInset * 2);
+  const minTileWidth = Math.round(
+    (isTablet ? (isLandscape ? 210 : 220) : 160) * scale,
+  );
+  const insets = useSafeAreaInsets();
+  const safeBottom = Math.max(
+    insets.bottom,
+    Math.round((isTablet ? 16 : 12) * scale),
+  );
+  const listBottomPad =
+    safeBottom + Math.round((isTablet ? 24 : 18) * scale);
+  const gridVariantStyle = isLandscape
+    ? styles.landscapeGrid
+    : styles.portraitGrid;
+  const gridRowStyle = isLandscape
+    ? styles.landscapeGridRow
+    : styles.portraitGridRow;
+  const landscapeColumns = isWide
+    ? Math.max(
+        3,
+        Math.min(
+          5,
+          Math.floor((gridWidth + listGap) / (minTileWidth + listGap)),
+        ),
+      )
+    : 0;
+  const columns = isTablet ? (isLandscape ? landscapeColumns : 2) : 2;
   const iconBtnSize = Math.round((isTablet ? 46 : 40) * scale);
   const iconBtnRadius = Math.round(iconBtnSize * 0.4);
   const titleSize = Math.round((isTablet ? 20 : 16) * scale);
@@ -320,6 +364,147 @@ export default function RoomScreen({ route, navigation }: Props) {
   const modalInputHeight = Math.round((isTablet ? 48 : 44) * scale);
   const modalPillHeight = Math.round((isTablet ? 44 : 38) * scale);
   const modalButtonHeight = Math.round((isTablet ? 46 : 42) * scale);
+  const contentLayout: ViewStyle = {
+    width,
+    paddingTop: topPad,
+    paddingHorizontal: outerGutter,
+    paddingBottom: safeBottom,
+  };
+  const contentStyle: StyleProp<ViewStyle> = [styles.content, contentLayout];
+  const frameStyle: StyleProp<ViewStyle> = [
+    styles.frameFill,
+    isWide ? { marginTop: Math.round(6 * scale) } : null,
+    outerGutter > 0 ? { marginBottom: outerGutter } : null,
+  ];
+  const topRowLayout: ViewStyle = {
+    paddingHorizontal: contentInset,
+    width: "100%",
+    alignSelf: "center",
+  };
+  const topRowStyle: StyleProp<ViewStyle> = [styles.top, topRowLayout];
+  const iconButtonLayout: ViewStyle = {
+    width: iconBtnSize,
+    height: iconBtnSize,
+    borderRadius: iconBtnRadius,
+  };
+  const iconButtonStyle: StyleProp<ViewStyle> = [
+    styles.iconBtn,
+    iconButtonLayout,
+  ];
+  const columnWrapperLayout: ViewStyle = {
+    gap: listGap,
+    paddingHorizontal: gridInset,
+  };
+  const columnWrapperStyle: StyleProp<ViewStyle> | undefined =
+    columns > 1 ? [styles.gridRow, gridRowStyle, columnWrapperLayout] : undefined;
+  const gridContentLayout: ViewStyle = {
+    gap: listGap,
+    paddingTop: blockGap,
+    paddingHorizontal: columns > 1 ? 0 : gridInset,
+    paddingBottom: listBottomPad,
+  };
+  const gridContentStyle: StyleProp<ViewStyle> = [
+    styles.gridContent,
+    gridVariantStyle,
+    gridContentLayout,
+  ];
+  const gridListStyle: StyleProp<ViewStyle> = [styles.gridList, gridVariantStyle];
+  const headerCenterStyle: StyleProp<ViewStyle> = {
+    flex: 1,
+    alignItems: "center",
+  };
+  const headerSlotStyle: StyleProp<ViewStyle> = {
+    width: iconBtnSize,
+    height: iconBtnSize,
+  };
+  const titleTextStyle: StyleProp<TextStyle> = [
+    styles.title,
+    { fontSize: titleSize },
+  ];
+  const subTextStyle: StyleProp<TextStyle> = [
+    styles.sub,
+    { fontSize: subSize },
+  ];
+  const undoBarStyle: StyleProp<ViewStyle> = [
+    styles.undoBar,
+    {
+      width: contentWidth - gutter * 2,
+      height: undoHeight,
+      borderRadius: undoRadius,
+      bottom: safeBottom,
+    },
+  ];
+  const modalCardStyle: StyleProp<ViewStyle> = [
+    styles.modalCard,
+    {
+      padding: modalPad,
+      borderRadius: modalRadius,
+      maxWidth: isTablet ? 560 : undefined,
+      width: isTablet ? Math.min(contentWidth - gutter * 2, 560) : undefined,
+      alignSelf: isTablet ? "center" : "stretch",
+    },
+  ];
+  const modalTitleTextStyle: StyleProp<TextStyle> = [
+    styles.modalTitle,
+    { fontSize: modalTitleSize },
+  ];
+  const modalSubTextStyle: StyleProp<TextStyle> = [
+    styles.modalSub,
+    { fontSize: modalSubSize },
+  ];
+  const modalLabelTextStyle: StyleProp<TextStyle> = [
+    styles.modalLabel,
+    { fontSize: modalLabelSize },
+  ];
+  const modalInputStyle: StyleProp<ViewStyle> = [
+    styles.modalInput,
+    {
+      height: modalInputHeight,
+      borderRadius: Math.round(modalInputHeight * 0.28),
+    },
+  ];
+  const modalTypePillStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.deviceTypePill,
+    {
+      height: modalPillHeight,
+      borderRadius: Math.round(modalPillHeight / 2),
+    },
+    active && styles.deviceTypePillActive,
+  ];
+  const modalTypeTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.deviceTypeText,
+    { fontSize: modalLabelSize },
+    active && styles.deviceTypeTextActive,
+  ];
+  const modalStackPillStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.stackPill,
+    active && styles.stackPillActive,
+  ];
+  const modalStackPillTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.stackPillText,
+    active && styles.stackPillTextActive,
+  ];
+  const modalButtonFrameStyle = {
+    height: modalButtonHeight,
+    borderRadius: Math.round(modalButtonHeight * 0.28),
+  };
+  const modalGhostButtonStyle: StyleProp<ViewStyle> = [
+    styles.modalGhost,
+    modalButtonFrameStyle,
+  ];
+  const modalGhostTextStyle: StyleProp<TextStyle> = [
+    styles.modalGhostText,
+    { fontSize: modalLabelSize },
+  ];
+  const modalPrimaryButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
+    styles.modalPrimary,
+    modalButtonFrameStyle,
+    disabled && styles.modalPrimaryDisabled,
+  ];
+  const modalPrimaryTextStyle: StyleProp<TextStyle> = [
+    styles.modalPrimaryText,
+    { fontSize: modalLabelSize },
+  ];
   const { roomId, showAll } = route.params;
   const isWholeHome = Boolean(showAll);
 
@@ -469,117 +654,89 @@ export default function RoomScreen({ route, navigation }: Props) {
   };
 
   return (
-    <LinearGradient
-      colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={[styles.root, { paddingTop: topPad }]}
-    >
+    <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={styles.root}>
       <BackgroundLines />
 
       <View
-        style={[
-          styles.top,
-          {
-            paddingHorizontal: gutter,
-            width: contentWidth,
-            alignSelf: "center",
-          },
-        ]}
+        style={contentStyle}
       >
-        <Pressable
-          style={[
-            styles.iconBtn,
-            {
-              width: iconBtnSize,
-              height: iconBtnSize,
-              borderRadius: iconBtnRadius,
-            },
-          ]}
-          onPress={() => navigation.goBack()}
+        <FrameComponent
+          enabled={frameEnabled}
+          width="100%"
+          pad={framePad}
+          radius={frameRadius}
+          style={frameStyle}
         >
-          <Ionicons
-            name="chevron-back"
-            size={Math.round(20 * scale)}
-            color={theme.colors.text}
-          />
-        </Pressable>
-
-        <View style={{ flex: 1, alignItems: "center" }}>
-          <Text style={[styles.title, { fontSize: titleSize }]}>
-            {isWholeHome ? "Whole Home" : (room?.name ?? "Room")}
-          </Text>
-          <Text style={[styles.sub, { fontSize: subSize }]}>
-            {running} running • {devices.length} total
-          </Text>
-        </View>
-
-        {isWholeHome ? (
-          <View style={{ width: iconBtnSize, height: iconBtnSize }} />
-        ) : (
+          <View style={topRowStyle}>
           <Pressable
-            style={[
-              styles.iconBtn,
-              {
-                width: iconBtnSize,
-                height: iconBtnSize,
-                borderRadius: iconBtnRadius,
-              },
-            ]}
-            onPress={handleAddDevice}
+            style={iconButtonStyle}
+            onPress={() => navigation.goBack()}
           >
             <Ionicons
-              name="add"
+              name="chevron-back"
               size={Math.round(20 * scale)}
               color={theme.colors.text}
             />
           </Pressable>
-        )}
+
+          <View style={headerCenterStyle}>
+            <Text style={titleTextStyle}>
+              {isWholeHome ? "Whole Home" : (room?.name ?? "Room")}
+            </Text>
+            <Text style={subTextStyle}>
+              {running} running • {devices.length} total
+            </Text>
+          </View>
+
+          {isWholeHome ? (
+            <View style={headerSlotStyle} />
+          ) : (
+            <Pressable
+              style={iconButtonStyle}
+              onPress={handleAddDevice}
+            >
+              <Ionicons
+                name="add"
+                size={Math.round(20 * scale)}
+                color={theme.colors.text}
+              />
+            </Pressable>
+          )}
+        </View>
+
+          <RoomScenesRow
+            scenes={scenes}
+            onRun={handleRunScene}
+            horizontalInset={contentInset}
+          />
+
+          <FlatList
+            key={`room-grid-${columns}`}
+            data={devices}
+            keyExtractor={(d) => d.id}
+            numColumns={columns}
+            columnWrapperStyle={columnWrapperStyle}
+            contentContainerStyle={gridContentStyle}
+            style={gridListStyle}
+            renderItem={({ item }) => (
+              <DeviceTile
+                device={item}
+                onPress={() =>
+                  navigation.navigate("DeviceDetail", { deviceId: item.id })
+                }
+                onLongPress={() => {
+                  setSelectedId(item.id);
+                  // Delay to the next frame so state updates before the sheet reads `selected`.
+                  requestAnimationFrame(() => sheetRef.current?.present());
+                }}
+              />
+            )}
+          />
+        </FrameComponent>
       </View>
 
-      <FlatList
-        data={devices}
-        keyExtractor={(d) => d.id}
-        numColumns={columns}
-        columnWrapperStyle={
-          columns > 1 ? { gap: listGap, paddingHorizontal: gutter } : undefined
-        }
-        contentContainerStyle={{
-          gap: listGap,
-          paddingTop: blockGap,
-          paddingHorizontal: columns > 1 ? 0 : gutter,
-          paddingBottom: Math.round(
-            (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
-          ),
-        }}
-        style={{ width: contentWidth, alignSelf: "center" }}
-        ListHeaderComponent={
-          <RoomScenesRow scenes={scenes} onRun={handleRunScene} />
-        }
-        renderItem={({ item }) => (
-          <DeviceTile
-            device={item}
-            onPress={() =>
-              navigation.navigate("DeviceDetail", { deviceId: item.id })
-            }
-            onLongPress={() => {
-              setSelectedId(item.id);
-              // Delay to the next frame so state updates before the sheet reads `selected`.
-              requestAnimationFrame(() => sheetRef.current?.present());
-            }}
-          />
-        )}
-      />
-
       {undoScene ? (
-        <View
-          style={[
-            styles.undoBar,
-            {
-              width: contentWidth - gutter * 2,
-              height: undoHeight,
-              borderRadius: undoRadius,
-            },
-          ]}
-        >
+        <View style={undoBarStyle}>
           <Text style={styles.undoText}>{undoScene.label} applied</Text>
           <Pressable
             onPress={() => {
@@ -628,216 +785,131 @@ export default function RoomScreen({ route, navigation }: Props) {
         }}
       />
 
-      <Modal
-        transparent
+      <ModalCard
         visible={showAddDevice}
-        animationType="fade"
         onRequestClose={() => setShowAddDevice(false)}
+        onBackdropPress={() => setShowAddDevice(false)}
+        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
+        cardStyle={modalCardStyle}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setShowAddDevice(false)}
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.select({ ios: "padding", android: undefined })}
+        <Text style={modalTitleTextStyle}>Add device</Text>
+        <Text style={modalSubTextStyle}>
+          Choose a device type and name.
+        </Text>
+
+        <ModalField label="Device type" labelStyle={modalLabelTextStyle}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.deviceTypeRow}
           >
-            <LinearGradient
-              colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
-              start={{ x: 0.1, y: 0.1 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.modalCard,
-                {
-                  padding: modalPad,
-                  borderRadius: modalRadius,
-                  maxWidth: isTablet ? 560 : undefined,
-                  width: isTablet
-                    ? Math.min(contentWidth - gutter * 2, 560)
-                    : undefined,
-                  alignSelf: isTablet ? "center" : "stretch",
-                },
-              ]}
-            >
-              <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
-                Add device
-              </Text>
-              <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
-                Choose a device type and name.
-              </Text>
+            {DEVICE_OPTIONS.map((option) => {
+              const active = option.kind === newKind;
+              return (
+                <Pressable
+                  key={option.kind}
+                  style={modalTypePillStyle(active)}
+                  onPress={() => {
+                    setNewKind(option.kind);
+                    if (option.kind !== "washer" && option.kind !== "dryer") {
+                      setStackLaundry(false);
+                    }
+                    if (!nameTouched) setNewName(option.defaultName);
+                  }}
+                >
+                  <DeviceIcon
+                    kind={option.kind}
+                    size={16}
+                    color={active ? "#fff" : "rgba(12,12,18,0.7)"}
+                  />
+                  <Text style={modalTypeTextStyle(active)}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </ModalField>
 
-              <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                Device type
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.deviceTypeRow}
+        {(newKind === "washer" || newKind === "dryer") && (
+          <ModalField
+            label="Laundry setup"
+            labelStyle={modalLabelTextStyle}
+            hint={
+              stackLaundry
+                ? "Creates both washer + dryer and links them."
+                : `Adds just this ${newKind}.`
+            }
+            hintStyle={styles.stackHint}
+          >
+            <View style={styles.stackRow}>
+              <Pressable
+                style={modalStackPillStyle(!stackLaundry)}
+                onPress={() => setStackLaundry(false)}
               >
-                {DEVICE_OPTIONS.map((option) => {
-                  const active = option.kind === newKind;
-                  return (
-                    <Pressable
-                      key={option.kind}
-                      style={[
-                        styles.deviceTypePill,
-                        {
-                          height: modalPillHeight,
-                          borderRadius: Math.round(modalPillHeight / 2),
-                        },
-                        active && styles.deviceTypePillActive,
-                      ]}
-                      onPress={() => {
-                        setNewKind(option.kind);
-                        if (
-                          option.kind !== "washer" &&
-                          option.kind !== "dryer"
-                        ) {
-                          setStackLaundry(false);
-                        }
-                        if (!nameTouched) setNewName(option.defaultName);
-                      }}
-                    >
-                      <DeviceIcon
-                        kind={option.kind}
-                        size={16}
-                        color={active ? "#fff" : "rgba(12,12,18,0.7)"}
-                      />
-                      <Text
-                        style={[
-                          styles.deviceTypeText,
-                          { fontSize: modalLabelSize },
-                          active && styles.deviceTypeTextActive,
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+                <Text style={modalStackPillTextStyle(!stackLaundry)}>
+                  Single unit
+                </Text>
+              </Pressable>
+              <Pressable
+                style={modalStackPillStyle(stackLaundry)}
+                onPress={() => setStackLaundry(true)}
+              >
+                <Text style={modalStackPillTextStyle(stackLaundry)}>
+                  Stacked pair
+                </Text>
+              </Pressable>
+            </View>
+          </ModalField>
+        )}
 
-              {(newKind === "washer" || newKind === "dryer") && (
-                <>
-                  <Text
-                    style={[styles.modalLabel, { fontSize: modalLabelSize }]}
-                  >
-                    Laundry setup
-                  </Text>
-                  <View style={styles.stackRow}>
-                    <Pressable
-                      style={[
-                        styles.stackPill,
-                        !stackLaundry && styles.stackPillActive,
-                      ]}
-                      onPress={() => setStackLaundry(false)}
-                    >
-                      <Text
-                        style={[
-                          styles.stackPillText,
-                          !stackLaundry && styles.stackPillTextActive,
-                        ]}
-                      >
-                        Single unit
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={[
-                        styles.stackPill,
-                        stackLaundry && styles.stackPillActive,
-                      ]}
-                      onPress={() => setStackLaundry(true)}
-                    >
-                      <Text
-                        style={[
-                          styles.stackPillText,
-                          stackLaundry && styles.stackPillTextActive,
-                        ]}
-                      >
-                        Stacked pair
-                      </Text>
-                    </Pressable>
-                  </View>
-                  <Text style={styles.stackHint}>
-                    {stackLaundry
-                      ? `Creates both washer + dryer and links them.`
-                      : `Adds just this ${newKind}.`}
-                  </Text>
-                </>
-              )}
+        <ModalField label="Name" labelStyle={modalLabelTextStyle}>
+          <TextInput
+            value={newName}
+            onChangeText={(value) => {
+              setNameTouched(true);
+              setNewName(value);
+            }}
+            placeholder="Device name"
+            placeholderTextColor="rgba(12,12,18,0.45)"
+            style={modalInputStyle}
+          />
+        </ModalField>
 
-              <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                Name
-              </Text>
-              <TextInput
-                value={newName}
-                onChangeText={(value) => {
-                  setNameTouched(true);
-                  setNewName(value);
-                }}
-                placeholder="Device name"
-                placeholderTextColor="rgba(12,12,18,0.45)"
-                style={[
-                  styles.modalInput,
-                  {
-                    height: modalInputHeight,
-                    borderRadius: Math.round(modalInputHeight * 0.28),
-                  },
-                ]}
-              />
-
-              <View style={styles.modalRow}>
-                <Pressable
-                  style={[
-                    styles.modalGhost,
-                    {
-                      height: modalButtonHeight,
-                      borderRadius: Math.round(modalButtonHeight * 0.28),
-                    },
-                  ]}
-                  onPress={() => setShowAddDevice(false)}
-                >
-                  <Text
-                    style={[
-                      styles.modalGhostText,
-                      { fontSize: modalLabelSize },
-                    ]}
-                  >
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.modalPrimary,
-                    {
-                      height: modalButtonHeight,
-                      borderRadius: Math.round(modalButtonHeight * 0.28),
-                    },
-                    !newName.trim() && styles.modalPrimaryDisabled,
-                  ]}
-                  onPress={handleCreateDevice}
-                  disabled={!newName.trim()}
-                >
-                  <Text
-                    style={[
-                      styles.modalPrimaryText,
-                      { fontSize: modalLabelSize },
-                    ]}
-                  >
-                    Add device
-                  </Text>
-                </Pressable>
-              </View>
-            </LinearGradient>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+        <ModalActionRow
+          style={styles.modalRow}
+          actions={[
+            {
+              label: "Cancel",
+              onPress: () => setShowAddDevice(false),
+              style: modalGhostButtonStyle,
+              textStyle: modalGhostTextStyle,
+            },
+            {
+              label: "Add device",
+              onPress: handleCreateDevice,
+              style: modalPrimaryButtonStyle(!newName.trim()),
+              textStyle: modalPrimaryTextStyle,
+              disabled: !newName.trim(),
+            },
+          ]}
+        />
+      </ModalCard>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  content: { flex: 1, alignSelf: "stretch" },
+  gridList: { width: "100%", alignSelf: "stretch", flex: 1 },
+  gridContent: { width: "100%", flexGrow: 1 },
+  gridRow: { width: "100%" },
+  landscapeGrid: { width: "100%", alignSelf: "stretch" },
+  portraitGrid: { width: "100%", alignSelf: "stretch" },
+  landscapeGridRow: { justifyContent: "space-between" },
+  portraitGridRow: { justifyContent: "flex-start" },
+  frameFill: { flex: 1, alignSelf: "stretch" },
   top: { flexDirection: "row", alignItems: "center", gap: 12 },
   iconBtn: {
     width: 40,
@@ -872,13 +944,6 @@ const styles = StyleSheet.create({
   },
   undoText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
   undoAction: { color: "#6B3CFF", fontWeight: "900" },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    padding: 18,
-  },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject },
   modalCard: {
     borderRadius: 22,
     padding: 16,

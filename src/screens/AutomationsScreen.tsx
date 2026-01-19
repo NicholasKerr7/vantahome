@@ -4,12 +4,10 @@ import {
   Text,
   StyleSheet,
   Switch,
-  Modal,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from "react-native";
+import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Slider from "@react-native-community/slider";
@@ -24,24 +22,41 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useResponsive } from "../theme/layout";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ScreenFrame from "../components/ScreenFrame";
+import ScreenSectionLayout from "../components/ScreenSectionLayout";
+import HeaderPill from "../components/HeaderPill";
+import ModalCard from "../components/ModalCard";
+import ModalActionRow from "../components/ModalActionRow";
+import ModalField from "../components/ModalField";
 
 export default function AutomationsScreen() {
-  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
+  const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
   const isWide = isTablet && isLandscape;
+  const isPortrait = !isLandscape;
   const titleSize = Math.round((isTablet ? 30 : 26) * scale);
   const subtitleSize = Math.round((isTablet ? 15 : 13) * scale);
-  const pillHeight = Math.round((isTablet ? 36 : 32) * scale);
-  const pillText = Math.round((isTablet ? 13 : 12) * scale);
+  const badgeHeight = Math.round((isTablet ? 30 : 26) * scale);
+  const badgeText = Math.round((isTablet ? 12 : 11) * scale);
+  const actionHeight = Math.round((isTablet ? 34 : 30) * scale);
+  const actionText = Math.round((isTablet ? 13 : 12) * scale);
   const sectionTitleSize = Math.round((isTablet ? 18 : 16) * scale);
   const sectionSubSize = Math.round((isTablet ? 13 : 12) * scale);
   const cardPad = Math.round((isTablet ? 18 : 16) * scale);
   const cardRadius = Math.round((isTablet ? 24 : 22) * scale);
+  const sectionPad = Math.round((isTablet ? 20 : 16) * scale);
+  const sectionRadius = Math.round((isTablet ? 26 : 22) * scale);
+  const framePad = Math.round((isTablet ? 14 : 10) * scale);
+  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
+  const outerGutter = isWide ? Math.round(gutter * 0.6) : isTablet ? gutter : 0;
+  const innerGutter = isWide ? Math.round(gutter * 0.75) : gutter;
   const cardTitleSize = Math.round((isTablet ? 16 : 14) * scale);
   const cardSubSize = Math.round((isTablet ? 13 : 12) * scale);
-  const cardGap = Math.round((isTablet ? 18 : 12) * scale);
-  const ctaHeight = Math.round((isTablet ? 48 : 44) * scale);
-  const ctaRadius = Math.round(ctaHeight * 0.4);
+  const cardGap = Math.round((isTablet ? 16 : 12) * scale);
+  const sectionMinWidth = Math.round((isTablet ? 380 : 320) * scale);
+  const cardMinWidth = Math.round((isTablet ? 320 : 280) * scale);
+  const dividerPad = Math.round((isTablet ? 16 : 12) * scale);
+  const scrollBottomPad = Math.round(cardGap * 1.2);
   const modalPad = Math.round((isTablet ? 20 : 18) * scale);
   const modalRadius = Math.round((isTablet ? 24 : 22) * scale);
   const modalTitleSize = Math.round((isTablet ? 20 : 18) * scale);
@@ -57,6 +72,39 @@ export default function AutomationsScreen() {
   );
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
+  const availableWidth = width - outerGutter * 2 - innerGutter * 2;
+  const sectionColumns = isWide
+    ? Math.max(
+        1,
+        Math.min(
+          2,
+          Math.floor(
+            (availableWidth + cardGap) / (sectionMinWidth + cardGap),
+          ),
+        ),
+      )
+    : 1;
+  const isSplit = sectionColumns > 1;
+  const sectionWidth = isSplit
+    ? Math.max(0, (availableWidth - cardGap) / 2)
+    : availableWidth;
+  const sectionContentWidth = Math.max(0, sectionWidth - sectionPad * 2);
+  const cardColumns = Math.max(
+    1,
+    Math.min(
+      2,
+      Math.floor(
+        (sectionContentWidth + cardGap) / (cardMinWidth + cardGap),
+      ),
+    ),
+  );
+  const cardWidth = Math.max(
+    0,
+    cardColumns > 1
+      ? (sectionContentWidth - cardGap * (cardColumns - 1)) / cardColumns
+      : sectionContentWidth,
+  );
+  const emptyCardWidth = sectionContentWidth;
   const rules = useHomeStore((s) => s.rules);
   const flows = useHomeStore((s) => s.flows);
   const toggleRule = useHomeStore((s) => s.toggleRule);
@@ -90,6 +138,207 @@ export default function AutomationsScreen() {
   const editingRule = rules.find((r) => r.id === editingId);
   const flowSummary = (count: number, label: string) =>
     `${count} ${label}${count === 1 ? "" : "s"}`;
+  const headerSummary = `${flowSummary(flows.length, "Flow")} / ${flowSummary(rules.length, "Schedule")}`;
+  const contentStyle: StyleProp<ViewStyle> = [
+    styles.content,
+    {
+      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
+      paddingTop: topPad,
+      paddingBottom: tabBarPad,
+    },
+  ];
+  const headerWrapStyle: StyleProp<ViewStyle> = {
+    paddingHorizontal: innerGutter,
+  };
+  const headerTitleStyle: StyleProp<TextStyle> = [
+    styles.h1,
+    { fontSize: titleSize },
+  ];
+  const headerSubtitleStyle: StyleProp<TextStyle> = [
+    styles.p,
+    { fontSize: subtitleSize },
+  ];
+  const headerPillStyle: StyleProp<ViewStyle> = [
+    styles.headerPill,
+    { height: badgeHeight, borderRadius: Math.round(badgeHeight / 2) },
+  ];
+  const headerPillTextStyle: StyleProp<TextStyle> = [
+    styles.headerPillText,
+    { fontSize: badgeText },
+  ];
+  const headerDividerWrapStyle: StyleProp<ViewStyle> = {
+    paddingVertical: dividerPad,
+  };
+  const sectionsScrollContentStyle: StyleProp<ViewStyle> = {
+    paddingBottom: scrollBottomPad,
+    paddingHorizontal: innerGutter,
+  };
+  const sectionsGridLandscapeStyle: StyleProp<ViewStyle> = [
+    styles.sectionsGridLandscape,
+    { gap: cardGap },
+  ];
+  const sectionsColumnStyle: StyleProp<ViewStyle> = [
+    styles.sectionsColumn,
+    { gap: cardGap },
+  ];
+  const sectionsStackStyle: StyleProp<ViewStyle> = [
+    styles.sectionsStack,
+    { gap: cardGap },
+  ];
+  const sectionCardStyle: StyleProp<ViewStyle> = [
+    styles.sectionCard,
+    { padding: sectionPad, borderRadius: sectionRadius },
+  ];
+  const sectionTitleStyle: StyleProp<TextStyle> = [
+    styles.sectionTitle,
+    { fontSize: sectionTitleSize },
+  ];
+  const sectionSubStyle: StyleProp<TextStyle> = [
+    styles.sectionSub,
+    { fontSize: sectionSubSize },
+  ];
+  const sectionBadgeStyle: StyleProp<ViewStyle> = [
+    styles.sectionBadge,
+    { height: badgeHeight, borderRadius: Math.round(badgeHeight / 2) },
+  ];
+  const sectionBadgeTextStyle: StyleProp<TextStyle> = [
+    styles.sectionBadgeText,
+    { fontSize: badgeText },
+  ];
+  const sectionActionStyle: StyleProp<ViewStyle> = [
+    styles.sectionAction,
+    { height: actionHeight, borderRadius: Math.round(actionHeight / 2) },
+  ];
+  const sectionActionTextStyle: StyleProp<TextStyle> = [
+    styles.sectionActionText,
+    { fontSize: actionText },
+  ];
+  const cardStyle: StyleProp<ViewStyle> = [
+    styles.card,
+    { padding: cardPad, borderRadius: cardRadius, width: cardWidth },
+  ];
+  const emptyCardStyle: StyleProp<ViewStyle> = [
+    styles.emptyCard,
+    { padding: cardPad, borderRadius: cardRadius, width: emptyCardWidth },
+  ];
+  const gridStyle: StyleProp<ViewStyle> = [
+    styles.grid,
+    cardColumns > 1 && styles.gridMulti,
+    { gap: cardGap },
+  ];
+  const cardBodyStyle: ViewStyle = { flex: 1 };
+  const cardNameStyle: StyleProp<TextStyle> = [
+    styles.name,
+    { fontSize: cardTitleSize },
+  ];
+  const cardSubStyle: StyleProp<TextStyle> = [
+    styles.sub,
+    { fontSize: cardSubSize },
+  ];
+  const switchScaleStyle: ViewStyle = {
+    transform: [{ scale: isTablet ? 1.05 : 1 }],
+  };
+  const modalCardStyle: StyleProp<ViewStyle> = [
+    styles.modalCard,
+    {
+      padding: modalPad,
+      borderRadius: modalRadius,
+      maxWidth: isTablet ? 560 : undefined,
+      width: isTablet ? Math.min(contentWidth - gutter * 2, 560) : undefined,
+      alignSelf: isTablet ? "center" : "stretch",
+    },
+  ];
+  const modalTitleStyle: StyleProp<TextStyle> = [
+    styles.modalTitle,
+    { fontSize: modalTitleSize },
+  ];
+  const modalSubStyle: StyleProp<TextStyle> = [
+    styles.modalSub,
+    { fontSize: modalSubSize },
+  ];
+  const modalLabelStyle: StyleProp<TextStyle> = [
+    styles.modalLabel,
+    { fontSize: modalLabelSize },
+  ];
+  const modalInputStyle: StyleProp<ViewStyle> = [
+    styles.modalInput,
+    {
+      height: modalInputHeight,
+      borderRadius: Math.round(modalInputHeight * 0.28),
+    },
+  ];
+  const timeInputStyle: StyleProp<ViewStyle> = [
+    styles.timeInput,
+    {
+      height: modalInputHeight,
+      borderRadius: Math.round(modalInputHeight * 0.28),
+    },
+  ];
+  const sliderStyle: ViewStyle = { flex: 1 };
+  const sliderValueStyle: StyleProp<TextStyle> = [
+    styles.sliderValue,
+    { fontSize: modalLabelSize },
+  ];
+  const modalGhostStyle: StyleProp<ViewStyle> = [
+    styles.modalGhost,
+    {
+      height: modalBtnHeight,
+      borderRadius: Math.round(modalBtnHeight * 0.28),
+    },
+  ];
+  const modalGhostTextStyle: StyleProp<TextStyle> = [
+    styles.modalGhostText,
+    { fontSize: modalLabelSize },
+  ];
+  const modalPrimaryStyle: StyleProp<ViewStyle> = [
+    styles.modalPrimary,
+    {
+      height: modalBtnHeight,
+      borderRadius: Math.round(modalBtnHeight * 0.28),
+    },
+    !canCreate && styles.modalPrimaryDisabled,
+  ];
+  const modalPrimaryTextStyle: StyleProp<TextStyle> = [
+    styles.modalPrimaryText,
+    { fontSize: modalLabelSize },
+  ];
+  const modalDeleteStyle: StyleProp<ViewStyle> = [
+    styles.modalDelete,
+    {
+      height: modalBtnHeight,
+      borderRadius: Math.round(modalBtnHeight * 0.28),
+    },
+  ];
+  const modalDeleteTextStyle: StyleProp<TextStyle> = [
+    styles.modalDeleteText,
+    { fontSize: modalLabelSize },
+  ];
+  const devicePillStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.devicePill,
+    {
+      height: modalInputHeight,
+      borderRadius: Math.round(modalInputHeight / 2),
+    },
+    active && styles.devicePillActive,
+  ];
+  const devicePillTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.devicePillText,
+    { fontSize: modalLabelSize },
+    active && styles.devicePillTextActive,
+  ];
+  const toggleBtnStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.toggleBtn,
+    {
+      height: modalInputHeight,
+      borderRadius: Math.round(modalInputHeight * 0.28),
+    },
+    active && styles.toggleBtnActive,
+  ];
+  const toggleTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.toggleText,
+    { fontSize: modalLabelSize },
+    active && styles.toggleTextActive,
+  ];
 
   const openAdd = () => {
     setEditingId(null);
@@ -160,597 +409,438 @@ export default function AutomationsScreen() {
     setModalMode(null);
   };
 
+  const flowsList = (
+    <View style={gridStyle}>
+      {flows.length === 0 ? (
+        <View style={emptyCardStyle}>
+          <Text style={styles.emptyTitle}>No flows yet</Text>
+          <Text style={styles.emptySub}>
+            Create a flow to chain triggers and actions.
+          </Text>
+        </View>
+      ) : (
+        flows.map((flow) => (
+          <Pressable
+            key={flow.id}
+            style={cardStyle}
+            onPress={() =>
+              navigation.navigate("AutomationBuilder", {
+                flowId: flow.id,
+              })
+            }
+          >
+            <View style={cardBodyStyle}>
+              <Text style={cardNameStyle}>{flow.name}</Text>
+              <Text style={cardSubStyle}>
+                {flowSummary(flow.triggers.length, "trigger")} •{" "}
+                {flowSummary(flow.conditions.length, "condition")} •{" "}
+                {flowSummary(flow.actions.length, "action")}
+              </Text>
+            </View>
+            <Switch
+              value={flow.enabled}
+              onValueChange={() => toggleFlow(flow.id)}
+              trackColor={{
+                false: "rgba(255,255,255,0.18)",
+                true: "rgba(180,107,255,0.55)",
+              }}
+              thumbColor={flow.enabled ? "#FFFFFF" : "rgba(255,255,255,0.9)"}
+              style={switchScaleStyle}
+            />
+          </Pressable>
+        ))
+      )}
+    </View>
+  );
+
+  const schedulesList = (
+    <View style={gridStyle}>
+      {rules.map((r) => (
+        <Pressable
+          key={r.id}
+          style={cardStyle}
+          onPress={() => openEdit(r.id)}
+        >
+          <View style={cardBodyStyle}>
+            <Text style={cardNameStyle}>{r.name}</Text>
+            <Text style={cardSubStyle}>
+              Trigger: {String(r.trigger.hour).padStart(2, "0")}:
+              {String(r.trigger.minute).padStart(2, "0")} • Action:{" "}
+              {r.action.type === "set-ac"
+                ? `AC → ${r.action.tempC}°C`
+                : `Toggle → ${r.action.on ? "ON" : "OFF"}`}
+            </Text>
+          </View>
+          <Switch
+            value={r.enabled}
+            onValueChange={() => toggleRule(r.id)}
+            trackColor={{
+              false: "rgba(255,255,255,0.18)",
+              true: "rgba(180,107,255,0.55)",
+            }}
+            thumbColor={r.enabled ? "#FFFFFF" : "rgba(255,255,255,0.9)"}
+            style={switchScaleStyle}
+          />
+        </Pressable>
+      ))}
+    </View>
+  );
+  const flowsPanel = (
+    <View style={sectionCardStyle}>
+      <View style={styles.sectionHeader}>
+        <View>
+          <Text style={sectionTitleStyle}>Flows</Text>
+          <Text style={sectionSubStyle}>Triggers → Conditions → Actions</Text>
+        </View>
+        <View style={styles.sectionActions}>
+          <View style={sectionBadgeStyle}>
+            <Text style={sectionBadgeTextStyle}>
+              {flowSummary(flows.length, "Flow")}
+            </Text>
+          </View>
+          <Pressable
+            style={sectionActionStyle}
+            onPress={() => navigation.navigate("AutomationBuilder")}
+          >
+            <Ionicons
+              name="add"
+              size={Math.round(14 * scale)}
+              color="rgba(255,255,255,0.95)"
+            />
+            <Text style={sectionActionTextStyle}>New flow</Text>
+          </Pressable>
+        </View>
+      </View>
+      {flowsList}
+    </View>
+  );
+  const schedulesPanel = (
+    <View style={sectionCardStyle}>
+      <View style={styles.sectionHeader}>
+        <View>
+          <Text style={sectionTitleStyle}>Schedules</Text>
+          <Text style={sectionSubStyle}>Time-based device rules</Text>
+        </View>
+        <View style={styles.sectionActions}>
+          <View style={sectionBadgeStyle}>
+            <Text style={sectionBadgeTextStyle}>
+              {flowSummary(rules.length, "Schedule")}
+            </Text>
+          </View>
+          <Pressable
+            style={sectionActionStyle}
+            onPress={openAdd}
+          >
+            <Ionicons
+              name="add"
+              size={Math.round(14 * scale)}
+              color="rgba(255,255,255,0.95)"
+            />
+            <Text style={sectionActionTextStyle}>Add schedule</Text>
+          </Pressable>
+        </View>
+      </View>
+      {schedulesList}
+    </View>
+  );
+
+  const frameEnabled = isPortrait || isWide;
+
   return (
     <LinearGradient
       colors={[theme.colors.bg1, theme.colors.bg0]}
       style={styles.root}
     >
       <BackgroundLines />
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal: isTablet ? gutter : 0,
-            paddingTop: topPad,
-            paddingBottom: tabBarPad,
-          },
-        ]}
-      >
-        <View
-          style={{
-            width: contentWidth,
-            paddingHorizontal: isTablet ? 0 : gutter,
-          }}
+      <View style={contentStyle}>
+        <ScreenFrame
+          isPortrait={isPortrait}
+          enabled={frameEnabled}
+          isWide={isWide}
+          pad={framePad}
+          radius={frameRadius}
         >
-          <View style={styles.header}>
-            <View>
-              <Text style={[styles.h1, { fontSize: titleSize }]}>
-                Automations
-              </Text>
-              <Text style={[styles.p, { fontSize: subtitleSize }]}>
-                Build flows and schedules.
-              </Text>
-            </View>
-            <View style={styles.headerActions}>
-              <View
-                style={[
-                  styles.countPill,
-                  {
-                    height: pillHeight,
-                    borderRadius: Math.round(pillHeight / 2),
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="flash"
-                  size={Math.round(14 * scale)}
-                  color={theme.colors.text}
-                />
-                <Text style={[styles.countText, { fontSize: pillText }]}>
-                  {flowSummary(flows.length, "Flow")}
-                </Text>
-              </View>
-              <Pressable
-                style={[
-                  styles.addPill,
-                  {
-                    height: pillHeight,
-                    borderRadius: Math.round(pillHeight / 2),
-                  },
-                ]}
-                onPress={() => navigation.navigate("AutomationBuilder")}
-              >
-                <Ionicons
-                  name="add"
-                  size={Math.round(16 * scale)}
-                  color={theme.colors.text}
-                />
-                <Text style={[styles.addText, { fontSize: pillText }]}>
-                  New flow
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text
-                style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
-              >
-                Flows
-              </Text>
-              <Text style={[styles.sectionSub, { fontSize: sectionSubSize }]}>
-                Triggers → Conditions → Actions
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.grid,
-              isWide && {
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: cardGap,
-              },
-            ]}
-          >
-            {flows.length === 0 ? (
-              <View
-                style={[
-                  styles.emptyCard,
-                  { padding: cardPad, borderRadius: cardRadius },
-                ]}
-              >
-                <Text style={styles.emptyTitle}>No flows yet</Text>
-                <Text style={styles.emptySub}>
-                  Create a flow to chain triggers and actions.
-                </Text>
-              </View>
-            ) : (
-              flows.map((flow) => (
-                <Pressable
-                  key={flow.id}
-                  style={[
-                    styles.card,
-                    {
-                      padding: cardPad,
-                      borderRadius: cardRadius,
-                      width: isWide ? (contentWidth - cardGap) / 2 : "100%",
-                    },
-                  ]}
-                  onPress={() =>
-                    navigation.navigate("AutomationBuilder", {
-                      flowId: flow.id,
-                    })
-                  }
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.name, { fontSize: cardTitleSize }]}>
-                      {flow.name}
-                    </Text>
-                    <Text style={[styles.sub, { fontSize: cardSubSize }]}>
-                      {flowSummary(flow.triggers.length, "trigger")} •{" "}
-                      {flowSummary(flow.conditions.length, "condition")} •{" "}
-                      {flowSummary(flow.actions.length, "action")}
-                    </Text>
-                  </View>
-                  <Switch
-                    value={flow.enabled}
-                    onValueChange={() => toggleFlow(flow.id)}
-                    style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
-                  />
-                </Pressable>
-              ))
-            )}
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text
-                style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
-              >
-                Schedules
-              </Text>
-              <Text style={[styles.sectionSub, { fontSize: sectionSubSize }]}>
-                Time-based device rules
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.grid,
-              isWide && {
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: cardGap,
-              },
-            ]}
-          >
-            {rules.map((r) => (
-              <Pressable
-                key={r.id}
-                style={[
-                  styles.card,
-                  {
-                    padding: cardPad,
-                    borderRadius: cardRadius,
-                    width: isWide ? (contentWidth - cardGap) / 2 : "100%",
-                  },
-                ]}
-                onPress={() => openEdit(r.id)}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.name, { fontSize: cardTitleSize }]}>
-                    {r.name}
-                  </Text>
-                  <Text style={[styles.sub, { fontSize: cardSubSize }]}>
-                    Trigger: {String(r.trigger.hour).padStart(2, "0")}:
-                    {String(r.trigger.minute).padStart(2, "0")} • Action:{" "}
-                    {r.action.type === "set-ac"
-                      ? `AC → ${r.action.tempC}°C`
-                      : `Toggle → ${r.action.on ? "ON" : "OFF"}`}
+          <ScreenSectionLayout
+            header={
+              <View style={styles.header}>
+                <View>
+                  <Text style={headerTitleStyle}>Automations</Text>
+                  <Text style={headerSubtitleStyle}>
+                    Build flows and schedules.
                   </Text>
                 </View>
-                <Switch
-                  value={r.enabled}
-                  onValueChange={() => toggleRule(r.id)}
-                  style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
+                <HeaderPill
+                  label={headerSummary}
+                  icon="flash-outline"
+                  iconSize={Math.round(14 * scale)}
+                  style={headerPillStyle}
+                  textStyle={headerPillTextStyle}
                 />
-              </Pressable>
-            ))}
-          </View>
-
-          <Pressable
-            style={[
-              styles.cta,
-              {
-                height: ctaHeight,
-                borderRadius: ctaRadius,
-                marginTop: cardGap,
-              },
-            ]}
-            onPress={openAdd}
+              </View>
+            }
+            headerWrapStyle={headerWrapStyle}
+            showDivider={isWide}
+            dividerWrapStyle={headerDividerWrapStyle}
+            scrollStyle={styles.sectionsScroll}
+            contentContainerStyle={sectionsScrollContentStyle}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={[styles.ctaText, { fontSize: cardTitleSize }]}>
-              + Add Schedule
-            </Text>
-          </Pressable>
-        </View>
-      </ScrollView>
+            {isSplit ? (
+              <View style={sectionsGridLandscapeStyle}>
+                <View style={sectionsColumnStyle}>{flowsPanel}</View>
+                <View style={sectionsColumnStyle}>{schedulesPanel}</View>
+              </View>
+            ) : (
+              <View style={sectionsStackStyle}>
+                {flowsPanel}
+                {schedulesPanel}
+              </View>
+            )}
+          </ScreenSectionLayout>
+        </ScreenFrame>
+      </View>
 
-      <Modal
-        transparent
+      <ModalCard
         visible={modalMode !== null}
-        animationType="fade"
         onRequestClose={() => setModalMode(null)}
+        onBackdropPress={() => setModalMode(null)}
+        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
+        cardStyle={modalCardStyle}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setModalMode(null)}
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.select({ ios: "padding", android: undefined })}
-          >
-            <LinearGradient
-              colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
-              start={{ x: 0.1, y: 0.1 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.modalCard,
-                {
-                  padding: modalPad,
-                  borderRadius: modalRadius,
-                  maxWidth: isTablet ? 560 : undefined,
-                  width: isTablet
-                    ? Math.min(contentWidth - gutter * 2, 560)
-                    : undefined,
-                  alignSelf: isTablet ? "center" : "stretch",
-                },
-              ]}
-            >
-              <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
-                {isEditing ? "Edit schedule" : "New schedule"}
-              </Text>
-              <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
-                {isEditing
-                  ? "Update your schedule or device action."
-                  : "Pick a device and schedule a time."}
-              </Text>
+        <Text style={modalTitleStyle}>
+          {isEditing ? "Edit schedule" : "New schedule"}
+        </Text>
+        <Text style={modalSubStyle}>
+          {isEditing
+            ? "Update your schedule or device action."
+            : "Pick a device and schedule a time."}
+        </Text>
 
-              <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                Name
-              </Text>
-              <TextInput
-                value={ruleName}
-                onChangeText={setRuleName}
-                placeholder="Morning routine"
-                placeholderTextColor="rgba(12,12,18,0.45)"
-                style={[
-                  styles.modalInput,
+        <ModalField label="Name" labelStyle={modalLabelStyle}>
+          <TextInput
+            value={ruleName}
+            onChangeText={setRuleName}
+            placeholder="Morning routine"
+            placeholderTextColor="rgba(12,12,18,0.45)"
+            style={modalInputStyle}
+          />
+        </ModalField>
+
+        <ModalField label="Device" labelStyle={modalLabelStyle}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.deviceRow}
+          >
+            {devices.map((d) => {
+              const active = d.id === selectedDevice?.id;
+              return (
+                <Pressable
+                  key={d.id}
+                  style={devicePillStyle(active)}
+                  onPress={() => {
+                    setSelectedDeviceId(d.id);
+                    if (d.kind === "ac") setTemp(d.tempC ?? 22);
+                  }}
+                >
+                  <Text style={devicePillTextStyle(active)}>{d.name}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </ModalField>
+
+        <ModalField label="Time" labelStyle={modalLabelStyle}>
+          <View style={styles.timeRow}>
+            <TextInput
+              value={hour}
+              onChangeText={setHour}
+              placeholder="21"
+              keyboardType="number-pad"
+              style={timeInputStyle}
+              maxLength={2}
+            />
+            <Text style={styles.timeColon}>:</Text>
+            <TextInput
+              value={minute}
+              onChangeText={setMinute}
+              placeholder="00"
+              keyboardType="number-pad"
+              style={timeInputStyle}
+              maxLength={2}
+            />
+          </View>
+        </ModalField>
+
+        {isAC ? (
+          <ModalField label="Temperature" labelStyle={modalLabelStyle}>
+            <View style={styles.sliderRow}>
+              <Text style={sliderValueStyle}>{temp}°C</Text>
+              <Slider
+                style={sliderStyle}
+                minimumValue={AC_TEMP_MIN_C}
+                maximumValue={AC_TEMP_MAX_C}
+                value={temp}
+                minimumTrackTintColor="rgba(180,107,255,0.8)"
+                maximumTrackTintColor="rgba(12,12,18,0.1)"
+                thumbTintColor="#fff"
+                onValueChange={(v) => setTemp(Math.round(v))}
+              />
+            </View>
+          </ModalField>
+        ) : (
+          <ModalField label="Action" labelStyle={modalLabelStyle}>
+            <View style={styles.toggleRow}>
+              <Pressable
+                style={toggleBtnStyle(toggleOn)}
+                onPress={() => setToggleOn(true)}
+              >
+                <Ionicons
+                  name="power"
+                  size={Math.round(16 * scale)}
+                  color={toggleOn ? "#fff" : "rgba(12,12,18,0.7)"}
+                />
+                <Text style={toggleTextStyle(toggleOn)}>On</Text>
+              </Pressable>
+              <Pressable
+                style={toggleBtnStyle(!toggleOn)}
+                onPress={() => setToggleOn(false)}
+              >
+                <Ionicons
+                  name="power"
+                  size={Math.round(16 * scale)}
+                  color={!toggleOn ? "#fff" : "rgba(12,12,18,0.7)"}
+                />
+                <Text style={toggleTextStyle(!toggleOn)}>Off</Text>
+              </Pressable>
+            </View>
+          </ModalField>
+        )}
+
+              <ModalActionRow
+                style={styles.modalRow}
+                actions={[
                   {
-                    height: modalInputHeight,
-                    borderRadius: Math.round(modalInputHeight * 0.28),
+                    label: "Cancel",
+                    onPress: () => setModalMode(null),
+                    style: modalGhostStyle,
+                    textStyle: modalGhostTextStyle,
+                  },
+                  {
+                    label: isEditing ? "Save" : "Create",
+                    onPress: handleSubmit,
+                    style: modalPrimaryStyle,
+                    textStyle: modalPrimaryTextStyle,
+                    disabled: !canCreate,
                   },
                 ]}
               />
-
-              <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                Device
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.deviceRow}
-              >
-                {devices.map((d) => {
-                  const active = d.id === selectedDevice?.id;
-                  return (
-                    <Pressable
-                      key={d.id}
-                      style={[
-                        styles.devicePill,
-                        {
-                          height: modalInputHeight,
-                          borderRadius: Math.round(modalInputHeight / 2),
-                        },
-                        active && styles.devicePillActive,
-                      ]}
-                      onPress={() => {
-                        setSelectedDeviceId(d.id);
-                        if (d.kind === "ac") setTemp(d.tempC ?? 22);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.devicePillText,
-                          { fontSize: modalLabelSize },
-                          active && styles.devicePillTextActive,
-                        ]}
-                      >
-                        {d.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-
-              <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                Time
-              </Text>
-              <View style={styles.timeRow}>
-                <TextInput
-                  value={hour}
-                  onChangeText={setHour}
-                  placeholder="21"
-                  keyboardType="number-pad"
-                  style={[
-                    styles.timeInput,
-                    {
-                      height: modalInputHeight,
-                      borderRadius: Math.round(modalInputHeight * 0.28),
-                    },
-                  ]}
-                  maxLength={2}
-                />
-                <Text style={styles.timeColon}>:</Text>
-                <TextInput
-                  value={minute}
-                  onChangeText={setMinute}
-                  placeholder="00"
-                  keyboardType="number-pad"
-                  style={[
-                    styles.timeInput,
-                    {
-                      height: modalInputHeight,
-                      borderRadius: Math.round(modalInputHeight * 0.28),
-                    },
-                  ]}
-                  maxLength={2}
-                />
-              </View>
-
-              {isAC ? (
-                <>
-                  <Text
-                    style={[styles.modalLabel, { fontSize: modalLabelSize }]}
-                  >
-                    Temperature
-                  </Text>
-                  <View style={styles.sliderRow}>
-                    <Text
-                      style={[styles.sliderValue, { fontSize: modalLabelSize }]}
-                    >
-                      {temp}°C
-                    </Text>
-                    <Slider
-                      style={{ flex: 1 }}
-                      minimumValue={AC_TEMP_MIN_C}
-                      maximumValue={AC_TEMP_MAX_C}
-                      value={temp}
-                      minimumTrackTintColor="rgba(180,107,255,0.8)"
-                      maximumTrackTintColor="rgba(12,12,18,0.1)"
-                      thumbTintColor="#fff"
-                      onValueChange={(v) => setTemp(Math.round(v))}
-                    />
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text
-                    style={[styles.modalLabel, { fontSize: modalLabelSize }]}
-                  >
-                    Action
-                  </Text>
-                  <View style={styles.toggleRow}>
-                    <Pressable
-                      style={[
-                        styles.toggleBtn,
-                        {
-                          height: modalInputHeight,
-                          borderRadius: Math.round(modalInputHeight * 0.28),
-                        },
-                        toggleOn && styles.toggleBtnActive,
-                      ]}
-                      onPress={() => setToggleOn(true)}
-                    >
-                      <Ionicons
-                        name="power"
-                        size={Math.round(16 * scale)}
-                        color={toggleOn ? "#fff" : "rgba(12,12,18,0.7)"}
-                      />
-                      <Text
-                        style={[
-                          styles.toggleText,
-                          { fontSize: modalLabelSize },
-                          toggleOn && styles.toggleTextActive,
-                        ]}
-                      >
-                        On
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={[
-                        styles.toggleBtn,
-                        {
-                          height: modalInputHeight,
-                          borderRadius: Math.round(modalInputHeight * 0.28),
-                        },
-                        !toggleOn && styles.toggleBtnActive,
-                      ]}
-                      onPress={() => setToggleOn(false)}
-                    >
-                      <Ionicons
-                        name="power"
-                        size={Math.round(16 * scale)}
-                        color={!toggleOn ? "#fff" : "rgba(12,12,18,0.7)"}
-                      />
-                      <Text
-                        style={[
-                          styles.toggleText,
-                          { fontSize: modalLabelSize },
-                          !toggleOn && styles.toggleTextActive,
-                        ]}
-                      >
-                        Off
-                      </Text>
-                    </Pressable>
-                  </View>
-                </>
-              )}
-
-              <View style={styles.modalRow}>
-                <Pressable
-                  style={[
-                    styles.modalGhost,
-                    {
-                      height: modalBtnHeight,
-                      borderRadius: Math.round(modalBtnHeight * 0.28),
-                    },
-                  ]}
-                  onPress={() => setModalMode(null)}
-                >
-                  <Text
-                    style={[
-                      styles.modalGhostText,
-                      { fontSize: modalLabelSize },
-                    ]}
-                  >
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.modalPrimary,
-                    {
-                      height: modalBtnHeight,
-                      borderRadius: Math.round(modalBtnHeight * 0.28),
-                    },
-                    !canCreate && styles.modalPrimaryDisabled,
-                  ]}
-                  onPress={handleSubmit}
-                  disabled={!canCreate}
-                >
-                  <Text
-                    style={[
-                      styles.modalPrimaryText,
-                      { fontSize: modalLabelSize },
-                    ]}
-                  >
-                    {isEditing ? "Save" : "Create"}
-                  </Text>
-                </Pressable>
-              </View>
-              {isEditing ? (
-                <Pressable
-                  style={[
-                    styles.modalDelete,
-                    {
-                      height: modalBtnHeight,
-                      borderRadius: Math.round(modalBtnHeight * 0.28),
-                    },
-                  ]}
-                  onPress={() => {
-                    if (!editingId) return;
-                    removeRule(editingId);
-                    setModalMode(null);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.modalDeleteText,
-                      { fontSize: modalLabelSize },
-                    ]}
-                  >
-                    Delete schedule
-                  </Text>
-                </Pressable>
-              ) : null}
-            </LinearGradient>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+        {isEditing ? (
+          <Pressable
+            style={modalDeleteStyle}
+            onPress={() => {
+              if (!editingId) return;
+              removeRule(editingId);
+              setModalMode(null);
+            }}
+          >
+            <Text style={modalDeleteTextStyle}>Delete schedule</Text>
+          </Pressable>
+        ) : null}
+      </ModalCard>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { alignItems: "center" },
+  content: { flex: 1, alignItems: "center" },
+  sectionsScroll: { flex: 1 },
+  sectionsGridLandscape: { flexDirection: "row", alignItems: "flex-start" },
+  sectionsColumn: { flex: 1, minWidth: 0 },
+  sectionsStack: { width: "100%" },
+  sectionCard: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+  },
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
-    marginBottom: 18,
+    gap: 12,
+    flexWrap: "wrap",
+    marginBottom: 16,
   },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
   h1: { color: theme.colors.text, fontSize: 28, fontWeight: "900" },
   p: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
-  countPill: {
+  headerPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  headerPillText: { color: theme.colors.text, fontWeight: "800" },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 14,
+  },
+  sectionTitle: { color: theme.colors.text, fontWeight: "900" },
+  sectionSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
+  sectionActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
+  sectionBadge: {
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.22)",
   },
-  countText: { color: theme.colors.text, fontWeight: "800" },
-  addPill: {
+  sectionBadgeText: { color: theme.colors.text, fontWeight: "800" },
+  sectionAction: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(180,107,255,0.3)",
+    backgroundColor: "rgba(180,107,255,0.18)",
     borderWidth: 1,
-    borderColor: "rgba(180,107,255,0.45)",
+    borderColor: "rgba(180,107,255,0.35)",
   },
-  addText: { color: theme.colors.text, fontWeight: "800" },
-  sectionHeader: { marginTop: 8, marginBottom: 10 },
-  sectionTitle: { color: theme.colors.text, fontWeight: "900" },
-  sectionSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
+  sectionActionText: { color: theme.colors.text, fontWeight: "800" },
   grid: { gap: 12 },
+  gridMulti: { flexDirection: "row", flexWrap: "wrap" },
   card: {
-    marginTop: 14,
     padding: 16,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.10)",
     borderWidth: 1,
-    borderColor: theme.colors.stroke,
+    borderColor: "rgba(255,255,255,0.18)",
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   name: { color: theme.colors.text, fontWeight: "900" },
   sub: { color: theme.colors.subtext, marginTop: 6, fontWeight: "700" },
   emptyCard: {
-    marginTop: 14,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.06)",
     borderWidth: 1,
-    borderColor: theme.colors.stroke,
+    borderColor: "rgba(255,255,255,0.16)",
   },
   emptyTitle: { color: theme.colors.text, fontWeight: "900" },
   emptySub: { color: theme.colors.subtext, marginTop: 6, fontWeight: "700" },
-  cta: {
-    marginTop: 16,
-    padding: 14,
-    borderRadius: 18,
-    alignItems: "center",
-    backgroundColor: "rgba(180,107,255,0.22)",
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  ctaText: { color: theme.colors.text, fontWeight: "900" },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    padding: 18,
-  },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject },
   modalCard: {
     borderRadius: 24,
     padding: 18,

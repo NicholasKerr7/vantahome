@@ -1,5 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -12,16 +20,18 @@ import { theme } from "../theme/theme";
 import { useResponsive } from "../theme/layout";
 import LottieView from "lottie-react-native";
 
-const ONBOARDING_LOTTIE_SOURCE = require("../../assets/animations/Automao casa externa.json");
+const ONBOARDING_LOTTIE_SOURCE = require("../../assets/animations/onboarding-hero.json");
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
 export default function OnboardingScreen({ navigation }: Props) {
-  const { contentWidth, gutter, isTablet, isLandscape, scale, height } =
+  const { contentWidth, gutter, isTablet, isLandscape, scale, height, width } =
     useResponsive(900);
   const isWide = isTablet && isLandscape;
   const isPortraitTablet = isTablet && !isLandscape;
   const isCompact = !isTablet && height < 720;
+  const outerGutter = isWide ? Math.round(gutter * 0.6) : isTablet ? gutter : 0;
+  const innerGutter = isWide ? Math.round(gutter * 0.75) : gutter;
   const contentPadTop = Math.round(
     (isTablet
       ? isLandscape
@@ -42,8 +52,12 @@ export default function OnboardingScreen({ navigation }: Props) {
   const headlineSize = Math.round((isTablet ? 44 : 40) * scale);
   const subheadSize = Math.round((isTablet ? 15 : 14) * scale);
   const sceneTextSize = Math.round((isTablet ? 13 : 12) * scale);
-  const ctaHeight = Math.round((isTablet ? 60 : 56) * scale);
-  const ctaTextSize = Math.round((isTablet ? 16 : 15) * scale);
+  const ctaHeight = Math.round((isTablet ? 50 : 46) * scale);
+  const ctaTextSize = Math.round((isTablet ? 14 : 13) * scale);
+  const ctaIconSize = Math.round((isTablet ? 15 : 14) * scale);
+  const ctaWidth = Math.round(
+    (isTablet ? (isLandscape ? 360 : 340) : 300) * scale,
+  );
   const heroGap = Math.round(
     (isTablet ? (isPortraitTablet ? 32 : 28) : isCompact ? 14 : 18) * scale,
   );
@@ -51,13 +65,127 @@ export default function OnboardingScreen({ navigation }: Props) {
   const heroRowGap = Math.round((isTablet ? 22 : isCompact ? 14 : 16) * scale);
   const heroStackGap = Math.round((isTablet ? 8 : isCompact ? 6 : 7) * scale);
   const heroSubheadTop = Math.round((isTablet ? 8 : isCompact ? 4 : 6) * scale);
+  const heroShellPad = Math.round((isTablet ? 20 : 14) * scale);
+  const heroShellRadius = Math.round((isTablet ? 30 : 26) * scale);
+  const heroMaxWidth = isWide
+    ? width - outerGutter * 2 - innerGutter * 2
+    : contentWidth - gutter * 2;
+  const heroVisualMaxWidth = Math.max(0, heroMaxWidth - heroShellPad * 2);
   const heroLottieWidth = Math.round(
     Math.min(
-      isWide ? contentWidth * 0.45 : contentWidth - gutter * 2,
-      (isTablet ? (isLandscape ? 520 : 620) : 360) * scale,
+      isWide ? heroVisualMaxWidth * 0.55 : heroVisualMaxWidth,
+      (isTablet ? (isLandscape ? 620 : 640) : 380) * scale,
     ),
   );
-  const heroLottieHeight = Math.round((heroLottieWidth * 9) / 16);
+  const heroLottieHeight = Math.round((heroLottieWidth * 10) / 16);
+  const heroLottieRadius = Math.round((isTablet ? 28 : 24) * scale);
+  const pageStyle: StyleProp<ViewStyle> = [
+    styles.page,
+    {
+      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
+      paddingTop: contentPadTop,
+      paddingBottom: contentPadBottom,
+    },
+  ];
+  const mainContentStyle: StyleProp<ViewStyle> = [
+    styles.main,
+    { gap: mainGap, paddingHorizontal: innerGutter },
+  ];
+  const heroRowLayout: ViewStyle = {
+    gap: heroRowGap,
+    padding: heroShellPad,
+    borderRadius: heroShellRadius,
+  };
+  const heroRowWideLayout: ViewStyle = {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: heroGap,
+  };
+  const heroRowStyle: StyleProp<ViewStyle> = [
+    styles.heroRow,
+    styles.heroShell,
+    heroRowLayout,
+    isWide && heroRowWideLayout,
+    isPortraitTablet && styles.heroRowPortrait,
+  ];
+  const heroStackLayout: ViewStyle = { gap: heroStackGap };
+  const heroStackStyle: StyleProp<ViewStyle> = [
+    styles.hero,
+    heroStackLayout,
+    isWide && { flex: 1 },
+    isPortraitTablet && styles.heroPortrait,
+  ];
+  const heroBrandRowStyle: StyleProp<ViewStyle> = [
+    styles.heroBrandRow,
+    isPortraitTablet && styles.heroBrandRowPortrait,
+  ];
+  const logoWrapLayout: ViewStyle = {
+    width: Math.round((isTablet ? 72 : 66) * scale),
+    height: Math.round((isTablet ? 72 : 66) * scale),
+    borderRadius: Math.round((isTablet ? 20 : 18) * scale),
+  };
+  const logoWrapStyle: StyleProp<ViewStyle> = [styles.logoWrap, logoWrapLayout];
+  const brandTextStyle: StyleProp<TextStyle> = [
+    styles.brand,
+    { fontSize: brandSize },
+  ];
+  const statusTextStyle: StyleProp<TextStyle> = [
+    styles.statusText,
+    { fontSize: statusSize },
+  ];
+  const kickerTextStyle: StyleProp<TextStyle> = [
+    styles.kicker,
+    { fontSize: kickerSize },
+    isPortraitTablet && styles.textCenter,
+  ];
+  const headlineTextStyle: StyleProp<TextStyle> = [
+    styles.headline,
+    { fontSize: headlineSize },
+    isPortraitTablet && styles.textCenter,
+  ];
+  const headlineAccentStyle: StyleProp<TextStyle> = [
+    styles.headlineAccent,
+    { fontSize: headlineSize },
+    isPortraitTablet && styles.textCenter,
+  ];
+  const subheadTextStyle: StyleProp<TextStyle> = [
+    styles.subhead,
+    { fontSize: subheadSize, marginTop: heroSubheadTop },
+    isPortraitTablet && styles.subheadPortrait,
+  ];
+  const heroVisualStyle: StyleProp<ViewStyle> = [
+    styles.heroVisual,
+    isWide && { flex: 1, alignItems: "flex-end" },
+    isPortraitTablet && styles.heroVisualPortrait,
+  ];
+  const heroLottieFrameStyle: StyleProp<ViewStyle> = [
+    styles.heroLottieFrame,
+    {
+      width: heroLottieWidth,
+      height: heroLottieHeight,
+      borderRadius: heroLottieRadius,
+    },
+  ];
+  const ctaFooterStyle: StyleProp<ViewStyle> = [
+    styles.ctaFooter,
+    { paddingHorizontal: innerGutter },
+  ];
+  const ctaWrapStyle: StyleProp<ViewStyle> = [
+    styles.ctaWrap,
+    { maxWidth: ctaWidth },
+  ];
+  const ctaStyle: StyleProp<ViewStyle> = [
+    styles.cta,
+    { height: ctaHeight },
+  ];
+  const ctaTextStyle: StyleProp<TextStyle> = [
+    styles.ctaText,
+    { fontSize: ctaTextSize },
+  ];
+  const ctaHintStyle: StyleProp<TextStyle> = [
+    styles.ctaHint,
+    { fontSize: sceneTextSize },
+  ];
   return (
     <LinearGradient
       colors={["#190A3A", theme.colors.bg0, theme.colors.bg1]}
@@ -69,132 +197,54 @@ export default function OnboardingScreen({ navigation }: Props) {
       <View style={styles.glowTop} />
       <View style={styles.glowBottom} />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal: isTablet ? gutter : 0,
-            paddingTop: contentPadTop,
-            paddingBottom: contentPadBottom,
-            justifyContent: "space-between",
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View
-          style={[
-            styles.main,
-            {
-              width: contentWidth,
-              gap: mainGap,
-              paddingHorizontal: isTablet ? 0 : gutter,
-            },
-          ]}
+      <View style={pageStyle}>
+        <ScrollView
+          style={styles.sectionsScroll}
+          contentContainerStyle={mainContentStyle}
+          showsVerticalScrollIndicator={false}
         >
-          <View
-            style={[
-              styles.brandRow,
-              isPortraitTablet && styles.brandRowPortrait,
-            ]}
-          >
-            <View
-              style={[
-                styles.logoWrap,
-                {
-                  width: Math.round((isTablet ? 76 : 70) * scale),
-                  height: Math.round((isTablet ? 76 : 70) * scale),
-                  borderRadius: Math.round((isTablet ? 22 : 20) * scale),
-                },
-              ]}
-            >
-              <VantaHomeMark size={Math.round((isTablet ? 70 : 64) * scale)} />
-            </View>
-            <View>
-              <Text style={[styles.brand, { fontSize: brandSize }]}>
-                VantaHome
-              </Text>
-              <View style={styles.statusRow}>
-                <View style={styles.statusDot} />
-                <Text style={[styles.statusText, { fontSize: statusSize }]}>
-                  Connected
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.heroRow,
-              { gap: heroRowGap },
-              isWide && {
-                flexDirection: "row",
-                alignItems: "center",
-                gap: heroGap,
-              },
-              isPortraitTablet && styles.heroRowPortrait,
-            ]}
-          >
-            <View
-              style={[
-                styles.hero,
-                { gap: heroStackGap },
-                isWide && { flex: 1 },
-                isPortraitTablet && styles.heroPortrait,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.kicker,
-                  { fontSize: kickerSize },
-                  isPortraitTablet && styles.textCenter,
-                ]}
+          <View style={heroRowStyle}>
+            <View style={heroStackStyle}>
+              <View
+                style={heroBrandRowStyle}
               >
+                <View
+                  style={logoWrapStyle}
+                >
+                  <VantaHomeMark
+                    size={Math.round((isTablet ? 64 : 58) * scale)}
+                  />
+                </View>
+                <View>
+                  <Text style={brandTextStyle}>VantaHome</Text>
+                  <View style={styles.statusRow}>
+                    <View style={styles.statusDot} />
+                    <Text style={statusTextStyle}>Connected</Text>
+                  </View>
+                </View>
+              </View>
+              <Text style={kickerTextStyle}>
                 Smart living, orchestrated
               </Text>
-              <Text
-                style={[
-                  styles.headline,
-                  { fontSize: headlineSize },
-                  isPortraitTablet && styles.textCenter,
-                ]}
-              >
+              <Text style={headlineTextStyle}>
                 Your home
               </Text>
               <GradientText
                 text="in sync."
                 colors={["#C9B7FF", "#7A5CFF"] as [string, string]}
                 textProps={{
-                  style: [
-                    styles.headlineAccent,
-                    { fontSize: headlineSize },
-                    isPortraitTablet && styles.textCenter,
-                  ],
+                  style: headlineAccentStyle,
                 }}
               />
-              <Text
-                style={[
-                  styles.subhead,
-                  { fontSize: subheadSize, marginTop: heroSubheadTop },
-                  isPortraitTablet && styles.subheadPortrait,
-                ]}
-              >
+              <Text style={subheadTextStyle}>
                 Scenes, automations, and live control blended into one elegant
                 dashboard.
               </Text>
             </View>
 
-            <View
-              style={[
-                styles.heroVisual,
-                isWide && { flex: 1, alignItems: "flex-end" },
-                isPortraitTablet && styles.heroVisualPortrait,
-              ]}
-            >
+            <View style={heroVisualStyle}>
               <View
-                style={[
-                  styles.heroLottieFrame,
-                  { width: heroLottieWidth, height: heroLottieHeight },
-                ]}
+                style={heroLottieFrameStyle}
               >
                 <LottieView
                   source={ONBOARDING_LOTTIE_SOURCE}
@@ -206,55 +256,53 @@ export default function OnboardingScreen({ navigation }: Props) {
               </View>
             </View>
           </View>
-        </View>
+        </ScrollView>
 
-        <View
-          style={{
-            width: contentWidth,
-            paddingHorizontal: isTablet ? 0 : gutter,
-          }}
-        >
+        <View style={ctaFooterStyle}>
           <View style={styles.ctaBlock}>
             <Pressable
-              style={styles.ctaWrap}
+              style={ctaWrapStyle}
               pressedStyle={styles.ctaWrapPressed}
-              onPress={() => navigation.replace("Main")}
+              onPress={() => navigation.replace("Main", { screen: "Home" })}
             >
               <LinearGradient
                 colors={["#B08CFF", "#6B3CFF"]}
                 start={{ x: 0.1, y: 0.2 }}
                 end={{ x: 0.9, y: 0.9 }}
-                style={[styles.cta, { height: ctaHeight }]}
+                style={ctaStyle}
               >
-                <Text style={[styles.ctaText, { fontSize: ctaTextSize }]}>
-                  Enter VantaHome
-                </Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={Math.round(16 * scale)}
-                  color="#FFFFFF"
-                  style={styles.ctaArrow}
-                />
+                <Text style={ctaTextStyle}>Enter VantaHome</Text>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={ctaIconSize}
+                    color="#FFFFFF"
+                    style={styles.ctaArrow}
+                  />
               </LinearGradient>
             </Pressable>
-            <Text style={[styles.ctaHint, { fontSize: sceneTextSize }]}>
+            <Text style={ctaHintStyle}>
               Control devices and scenes in seconds.
             </Text>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: {
-    flexGrow: 1,
-    justifyContent: "space-between",
+  page: {
+    flex: 1,
     alignItems: "center",
   },
-  main: { gap: 26 },
+  sectionsScroll: { flex: 1, width: "100%" },
+  main: { gap: 26, width: "100%" },
+  heroShell: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+  },
   glowTop: {
     position: "absolute",
     top: -120,
@@ -308,13 +356,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 12,
   },
-  heroRow: { gap: 22 },
+  heroRow: { gap: 22, width: "100%" },
   heroRowPortrait: { alignItems: "center" },
   hero: { alignItems: "flex-start", gap: 6 },
   heroPortrait: { alignItems: "center" },
+  heroBrandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  heroBrandRowPortrait: { justifyContent: "center" },
   heroVisual: { alignItems: "center", justifyContent: "center" },
   heroVisualPortrait: { alignItems: "center" },
-  heroLottieFrame: { alignItems: "center", justifyContent: "center" },
+  heroLottieFrame: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    overflow: "hidden",
+  },
   onboardingLottie: { width: "100%", height: "100%" },
   textCenter: { textAlign: "center" },
   kicker: {
@@ -339,8 +396,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   subheadPortrait: { maxWidth: 420, textAlign: "center" },
+  ctaFooter: { width: "100%", paddingTop: 12 },
   ctaBlock: { alignItems: "center", gap: 10, marginTop: 4 },
-  ctaWrap: { width: "100%" },
+  ctaWrap: { width: "100%", alignSelf: "center" },
   ctaWrapPressed: { transform: [{ scale: 0.98 }] },
   cta: {
     height: 56,
@@ -349,9 +407,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#6B3CFF",
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
   },
   ctaText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
   ctaHint: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 12 },

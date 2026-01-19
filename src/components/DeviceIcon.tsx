@@ -20,7 +20,7 @@ const ICON_MAP: Record<Device["kind"], { set: "ion" | "mci"; name: string }> = {
   washer: { set: "mci", name: "washing-machine" },
   dryer: { set: "mci", name: "tumble-dryer" },
   microwave: { set: "mci", name: "microwave" },
-  energy: { set: "ion", name: "stats-chart" },
+  energy: { set: "ion", name: "flash" },
   water: { set: "ion", name: "water" },
   "water-heater": { set: "ion", name: "thermometer" },
   air: { set: "ion", name: "leaf" },

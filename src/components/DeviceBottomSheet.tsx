@@ -1,5 +1,12 @@
 import React, { forwardRef, useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Pressable from "./Pressable";
 import {
   BottomSheetBackdrop,
@@ -77,6 +84,113 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
     const chipText = Math.round((isTablet ? 13 : 12) * scale);
     const linkHeight = Math.round((isTablet ? 48 : 44) * scale);
     const footerHeight = Math.round((isTablet ? 50 : 46) * scale);
+    const sheetWrapStyle: StyleProp<ViewStyle> = [
+      styles.sheetWrap,
+      { padding: gutter },
+    ];
+    const glassStyle: StyleProp<ViewStyle> = [
+      styles.glass,
+      {
+        width: "100%",
+        maxWidth: contentWidth,
+        alignSelf: "center",
+        borderRadius: glassRadius,
+      },
+    ];
+    const iconWrapStyle = (on: boolean): StyleProp<ViewStyle> => [
+      styles.iconWrap,
+      {
+        width: iconWrapSize,
+        height: iconWrapSize,
+        borderRadius: iconWrapRadius,
+      },
+      on && styles.iconWrapOn,
+    ];
+    const powerStyle = (on: boolean): StyleProp<ViewStyle> => [
+      styles.power,
+      {
+        width: powerSize,
+        height: powerSize,
+        borderRadius: powerRadius,
+      },
+      on && styles.powerOn,
+    ];
+    const titleTextStyle: StyleProp<TextStyle> = [
+      styles.title,
+      { fontSize: titleSize },
+    ];
+    const subTextStyle: StyleProp<TextStyle> = [
+      styles.sub,
+      { fontSize: subSize },
+    ];
+    const sectionStyle: StyleProp<ViewStyle> = [
+      styles.section,
+      {
+        padding: sectionPad,
+        borderRadius: Math.round(sectionPad * 1.4),
+      },
+    ];
+    const sectionTitleStyle: StyleProp<TextStyle> = [
+      styles.sectionTitle,
+      { fontSize: sectionTitleSize },
+    ];
+    const scheduleRowStyle: StyleProp<ViewStyle> = {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 10,
+    };
+    const chipStyle: StyleProp<ViewStyle> = [
+      styles.chip,
+      { height: chipHeight, borderRadius: chipRadius },
+    ];
+    const chipTextStyle: StyleProp<TextStyle> = [
+      styles.chipText,
+      { fontSize: chipText },
+    ];
+    const linkButtonStyle: StyleProp<ViewStyle> = [
+      styles.linkBtn,
+      {
+        marginTop: 12,
+        height: linkHeight,
+        borderRadius: Math.round(linkHeight * 0.4),
+      },
+    ];
+    const linkButtonTextStyle: StyleProp<TextStyle> = [
+      styles.linkBtnText,
+      { fontSize: chipText },
+    ];
+    const footerRowStyle: StyleProp<ViewStyle> = {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 6,
+    };
+    const footerButtonStyle: StyleProp<ViewStyle> = [
+      styles.footerBtn,
+      {
+        height: footerHeight,
+        borderRadius: Math.round(footerHeight * 0.38),
+      },
+    ];
+    const footerButtonTextStyle: StyleProp<TextStyle> = [
+      styles.footerBtnText,
+      { fontSize: chipText },
+    ];
+    const deleteButtonStyle: StyleProp<ViewStyle> = [
+      styles.footerBtn,
+      {
+        height: footerHeight,
+        borderRadius: Math.round(footerHeight * 0.38),
+      },
+      styles.deleteBtn,
+    ];
+    const deleteButtonTextStyle: StyleProp<TextStyle> = [
+      styles.footerBtnText,
+      { color: "#ffebef", fontSize: chipText },
+    ];
+    const flex1Style: StyleProp<ViewStyle> = { flex: 1 };
+    const transparentBackgroundStyle: ViewStyle = {
+      backgroundColor: "transparent",
+    };
 
     const haptic = () => Haptics.selectionAsync().catch(() => {});
 
@@ -94,21 +208,11 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
           />
         )}
         // We render our own blurred background container, so keep the sheet itself transparent.
-        backgroundStyle={{ backgroundColor: "transparent" }}
+        backgroundStyle={transparentBackgroundStyle}
         handleIndicatorStyle={styles.handle}
       >
-        <BottomSheetView style={[styles.sheetWrap, { padding: gutter }]}>
-          <View
-            style={[
-              styles.glass,
-              {
-                width: "100%",
-                maxWidth: contentWidth,
-                alignSelf: "center",
-                borderRadius: glassRadius,
-              },
-            ]}
-          >
+        <BottomSheetView style={sheetWrapStyle}>
+          <View style={glassStyle}>
             {/* Real blur glass */}
             <BlurView
               intensity={45}
@@ -123,15 +227,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                 <>
                   <View style={styles.header}>
                     <View
-                      style={[
-                        styles.iconWrap,
-                        {
-                          width: iconWrapSize,
-                          height: iconWrapSize,
-                          borderRadius: iconWrapRadius,
-                        },
-                        device.isOn && styles.iconWrapOn,
-                      ]}
+                      style={iconWrapStyle(device.isOn)}
                     >
                       <DeviceIcon
                         kind={device.kind}
@@ -140,11 +236,9 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                       />
                     </View>
 
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.title, { fontSize: titleSize }]}>
-                        {device.name}
-                      </Text>
-                      <Text style={[styles.sub, { fontSize: subSize }]}>
+                    <View style={flex1Style}>
+                      <Text style={titleTextStyle}>{device.name}</Text>
+                      <Text style={subTextStyle}>
                         {device.kind === "ac"
                           ? `${device.tempC ?? 22}°C • ${(device.mode ?? "cold").toUpperCase()}`
                           : device.kind === "light"
@@ -163,15 +257,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
 
                     <Pressable
                       onPress={onToggle}
-                      style={[
-                        styles.power,
-                        {
-                          width: powerSize,
-                          height: powerSize,
-                          borderRadius: powerRadius,
-                        },
-                        device.isOn && styles.powerOn,
-                      ]}
+                      style={powerStyle(device.isOn)}
                     >
                       <Ionicons
                         name="power"
@@ -181,23 +267,8 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     </Pressable>
                   </View>
 
-                  <View
-                    style={[
-                      styles.section,
-                      {
-                        padding: sectionPad,
-                        borderRadius: Math.round(sectionPad * 1.4),
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sectionTitle,
-                        { fontSize: sectionTitleSize },
-                      ]}
-                    >
-                      Quick controls
-                    </Text>
+                  <View style={sectionStyle}>
+                    <Text style={sectionTitleStyle}>Quick controls</Text>
                     <DeviceCapabilityControls
                       device={device}
                       context="quick"
@@ -207,66 +278,36 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     />
                   </View>
 
-                  <View
-                    style={[
-                      styles.section,
-                      {
-                        padding: sectionPad,
-                        borderRadius: Math.round(sectionPad * 1.4),
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.sectionTitle,
-                        { fontSize: sectionTitleSize },
-                      ]}
-                    >
-                      Schedule
-                    </Text>
-                    <View
-                      style={{ flexDirection: "row", gap: 10, marginTop: 10 }}
-                    >
+                  <View style={sectionStyle}>
+                    <Text style={sectionTitleStyle}>Schedule</Text>
+                    <View style={scheduleRowStyle}>
                       <Pressable
-                        style={[
-                          styles.chip,
-                          { height: chipHeight, borderRadius: chipRadius },
-                        ]}
+                        style={chipStyle}
                         onPress={() => {
                           haptic();
                           onQuickSchedule({ hour: 21, minute: 0 });
                         }}
                       >
-                        <Text style={[styles.chipText, { fontSize: chipText }]}>
+                        <Text style={chipTextStyle}>
                           Tonight 9:00 PM
                         </Text>
                       </Pressable>
 
                       <Pressable
-                        style={[
-                          styles.chip,
-                          { height: chipHeight, borderRadius: chipRadius },
-                        ]}
+                        style={chipStyle}
                         onPress={() => {
                           haptic();
                           onQuickSchedule({ hour: 7, minute: 0 });
                         }}
                       >
-                        <Text style={[styles.chipText, { fontSize: chipText }]}>
+                        <Text style={chipTextStyle}>
                           Tomorrow 7:00 AM
                         </Text>
                       </Pressable>
                     </View>
 
                     <Pressable
-                      style={[
-                        styles.linkBtn,
-                        {
-                          marginTop: 12,
-                          height: linkHeight,
-                          borderRadius: Math.round(linkHeight * 0.4),
-                        },
-                      ]}
+                      style={linkButtonStyle}
                       onPress={onGoToAutomations}
                     >
                       <Ionicons
@@ -274,71 +315,35 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                         size={Math.round((isTablet ? 18 : 16) * scale)}
                         color={theme.colors.text}
                       />
-                      <Text
-                        style={[styles.linkBtnText, { fontSize: chipText }]}
-                      >
+                      <Text style={linkButtonTextStyle}>
                         Create automation for this device
                       </Text>
                     </Pressable>
                   </View>
 
-                  <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+                  <View style={footerRowStyle}>
                     <Pressable
-                      style={[
-                        styles.footerBtn,
-                        {
-                          height: footerHeight,
-                          borderRadius: Math.round(footerHeight * 0.38),
-                        },
-                      ]}
+                      style={footerButtonStyle}
                       onPress={onOpenDetails}
                     >
-                      <Text
-                        style={[styles.footerBtnText, { fontSize: chipText }]}
-                      >
-                        Open details
-                      </Text>
+                      <Text style={footerButtonTextStyle}>Open details</Text>
                     </Pressable>
                     <Pressable
-                      style={[
-                        styles.footerBtn,
-                        {
-                          height: footerHeight,
-                          borderRadius: Math.round(footerHeight * 0.38),
-                        },
-                      ]}
+                      style={footerButtonStyle}
                       onPress={onClose}
                     >
-                      <Text
-                        style={[styles.footerBtnText, { fontSize: chipText }]}
-                      >
-                        Close
-                      </Text>
+                      <Text style={footerButtonTextStyle}>Close</Text>
                     </Pressable>
                   </View>
                   {onDelete ? (
                     <Pressable
-                      style={[
-                        styles.footerBtn,
-                        {
-                          height: footerHeight,
-                          borderRadius: Math.round(footerHeight * 0.38),
-                        },
-                        styles.deleteBtn,
-                      ]}
+                      style={deleteButtonStyle}
                       onPress={() => {
                         onDelete();
                         onClose();
                       }}
                     >
-                      <Text
-                        style={[
-                          styles.footerBtnText,
-                          { color: "#ffebef", fontSize: chipText },
-                        ]}
-                      >
-                        Delete device
-                      </Text>
+                      <Text style={deleteButtonTextStyle}>Delete device</Text>
                     </Pressable>
                   ) : null}
                 </>

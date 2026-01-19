@@ -1,5 +1,12 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Slider from "@react-native-community/slider";
 import * as Haptics from "expo-haptics";
 import Pressable from "./Pressable";
@@ -225,6 +232,16 @@ export default function DeviceCapabilityControls({
       Haptics.selectionAsync().catch(() => {});
     }
   };
+  const sliderStyle: StyleProp<ViewStyle> = { flex: 1, height: 40 };
+  const toggleGroupStyle: StyleProp<ViewStyle> = { marginTop: 8 };
+  const pillButtonStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.pillBtn,
+    active && styles.pillBtnActive,
+  ];
+  const pillButtonTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.pillBtnText,
+    active && styles.pillBtnTextActive,
+  ];
 
   const sendPatch = (patch: Partial<Device>) => {
     deviceClient
@@ -301,7 +318,7 @@ export default function DeviceCapabilityControls({
       <View key={cap.id} style={styles.sliderRow}>
         <Text style={styles.valueText}>{label}</Text>
         <Slider
-          style={{ flex: 1, height: 40 }}
+          style={sliderStyle}
           minimumValue={cap.min}
           maximumValue={cap.max}
           value={current}
@@ -320,26 +337,22 @@ export default function DeviceCapabilityControls({
   const renderToggle = (cap: ToggleCapability) => {
     const current = Boolean(device[cap.field]);
     return (
-      <View key={cap.id} style={{ marginTop: 8 }}>
+      <View key={cap.id} style={toggleGroupStyle}>
         <Text style={styles.controlLabel}>{cap.label}</Text>
         <View style={styles.toggleRow}>
           <Pressable
-            style={[styles.pillBtn, current && styles.pillBtnActive]}
+            style={pillButtonStyle(current)}
             onPress={() => sendPatch({ [cap.field]: true } as Partial<Device>)}
           >
-            <Text
-              style={[styles.pillBtnText, current && styles.pillBtnTextActive]}
-            >
+            <Text style={pillButtonTextStyle(current)}>
               {cap.onLabel ?? "On"}
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.pillBtn, !current && styles.pillBtnActive]}
+            style={pillButtonStyle(!current)}
             onPress={() => sendPatch({ [cap.field]: false } as Partial<Device>)}
           >
-            <Text
-              style={[styles.pillBtnText, !current && styles.pillBtnTextActive]}
-            >
+            <Text style={pillButtonTextStyle(!current)}>
               {cap.offLabel ?? "Off"}
             </Text>
           </Pressable>
@@ -351,7 +364,7 @@ export default function DeviceCapabilityControls({
   const renderEnum = (cap: EnumCapability) => {
     const current = device[cap.field];
     return (
-      <View key={cap.id} style={{ marginTop: 8 }}>
+      <View key={cap.id} style={toggleGroupStyle}>
         <Text style={styles.controlLabel}>{cap.label}</Text>
         <View style={styles.toggleRow}>
           {cap.options.map((opt) => {
@@ -359,17 +372,12 @@ export default function DeviceCapabilityControls({
             return (
               <Pressable
                 key={`${cap.id}-${opt.value}`}
-                style={[styles.pillBtn, active && styles.pillBtnActive]}
+                style={pillButtonStyle(active)}
                 onPress={() =>
                   sendPatch({ [cap.field]: opt.value } as Partial<Device>)
                 }
               >
-                <Text
-                  style={[
-                    styles.pillBtnText,
-                    active && styles.pillBtnTextActive,
-                  ]}
-                >
+                <Text style={pillButtonTextStyle(active)}>
                   {opt.label}
                 </Text>
               </Pressable>

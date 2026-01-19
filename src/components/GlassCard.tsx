@@ -1,14 +1,24 @@
 import React, { type PropsWithChildren } from "react";
-import { View, StyleSheet, type ViewStyle } from "react-native";
+import {
+  View,
+  StyleSheet,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { theme } from "../theme/theme";
 
 export default function GlassCard({
   style,
   children,
 }: PropsWithChildren<{
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }>) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  const cardStyle = (input?: StyleProp<ViewStyle>): StyleProp<ViewStyle> => [
+    styles.card,
+    input,
+  ];
+
+  return <View style={cardStyle(style)}>{children}</View>;
 }
 
 const styles = StyleSheet.create({

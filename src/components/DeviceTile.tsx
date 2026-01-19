@@ -3,6 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
   type GestureResponderEvent,
 } from "react-native";
 import Pressable from "./Pressable";
@@ -36,6 +39,142 @@ const stop = (e: GestureResponderEvent, fn: () => void) => {
   fn();
 };
 
+const OPENABLE_KINDS = ["gate", "door", "garage", "window"] as const;
+type OpenableKind = (typeof OPENABLE_KINDS)[number];
+const isOpenableKind = (kind: Device["kind"]): kind is OpenableKind =>
+  OPENABLE_KINDS.includes(kind as OpenableKind);
+
+const deviceMeta = (device: Device): string => {
+  switch (device.kind) {
+    case "ac":
+      return `${device.tempC ?? 22}°C • ${(
+        device.mode ?? "cold"
+      ).toUpperCase()}`;
+    case "light":
+      return `${device.brightness ?? 60}%`;
+    case "tv":
+      return `Vol ${device.volume ?? 20}`;
+    case "fan":
+      return `Speed ${device.speed ?? 50}%`;
+    case "fridge":
+      return `${device.tempC ?? 4}°C`;
+    case "garage":
+    case "door":
+    case "gate":
+    case "window":
+      return `${Math.round(device.openPercent ?? 0)}% open`;
+    case "vacuum":
+      return `${device.status ?? "docked"}`;
+    case "camera":
+      return device.armed ? "Armed" : "Disarmed";
+    case "stove":
+      return `Level ${device.burnerLevel ?? 0}`;
+    case "washer":
+    case "dryer":
+      return `${device.cycle ?? "Normal"}`;
+    case "microwave":
+      return `${device.timeRemainingSec ?? 0}s`;
+    case "energy":
+      return device.gridAvailable === false
+        ? "Grid Offline"
+        : `${device.powerW ?? 0}W`;
+    case "water":
+      return `${device.waterLpm ?? 0} L/min`;
+    case "water-heater":
+      return `${device.tempC ?? 52}°C • ${(
+        device.heaterMode ?? "eco"
+      ).toUpperCase()}`;
+    case "air":
+      return `AQI ${device.airQualityIndex ?? 0}`;
+    case "sprinkler":
+      return device.zone ?? "Sprinkler";
+    case "speaker":
+      return device.isOn
+        ? device.trackTitle ?? `Vol ${device.volume ?? 20}`
+        : `Vol ${device.volume ?? 20}`;
+    case "smoke":
+      return device.smokeDetected ? "Alert" : "Clear";
+    default:
+      return device.isOn ? "On" : "Off";
+  }
+};
+
+const stackMeta = (device: Device) => {
+  if (!device.stackId) return "";
+  if (device.stackPosition === "top") return " • Stack top";
+  if (device.stackPosition === "bottom") return " • Stack bottom";
+  return " • Stacked";
+};
+
+const stepButtonStyle = (size: number): StyleProp<ViewStyle> => [
+  styles.stepBtn,
+  { width: size, height: size, borderRadius: Math.round(size * 0.4) },
+];
+
+const controlPillStyle = (height: number): StyleProp<ViewStyle> => [
+  styles.controlPill,
+  { height, borderRadius: Math.round(height * 0.44) },
+];
+
+const controlPillTextStyle = (fontSize: number): StyleProp<TextStyle> => [
+  styles.controlPillText,
+  { fontSize },
+];
+
+const cardStyle = (
+  padding: number,
+  borderRadius: number,
+  minHeight: number,
+): StyleProp<ViewStyle> => [
+  styles.card,
+  { padding, borderRadius, minHeight },
+];
+
+const iconWrapStyle = (
+  size: number,
+  borderRadius: number,
+  isOn: boolean,
+): StyleProp<ViewStyle> => [
+  styles.iconWrap,
+  { width: size, height: size, borderRadius },
+  isOn && styles.iconWrapOn,
+];
+
+const powerStyle = (
+  size: number,
+  borderRadius: number,
+  isOn: boolean,
+): StyleProp<ViewStyle> => [
+  styles.power,
+  { width: size, height: size, borderRadius },
+  isOn && styles.powerOn,
+];
+
+const nameStyle = (fontSize: number): StyleProp<TextStyle> => [
+  styles.name,
+  { fontSize },
+];
+
+const metaStyle = (fontSize: number): StyleProp<TextStyle> => [
+  styles.meta,
+  { fontSize },
+];
+
+const dividerStyle = (gap: number): StyleProp<ViewStyle> => [
+  styles.divider,
+  { marginTop: gap, marginBottom: gap },
+];
+
+const controlValueStyle = (fontSize: number): StyleProp<TextStyle> => [
+  styles.controlValue,
+  { fontSize },
+];
+
+const controlsRowStyle = (alignStart: boolean): StyleProp<ViewStyle> => [
+  styles.controlsRow,
+  alignStart && styles.controlsRowStart,
+];
+
 function StepBtn({
   icon,
   onPress,
@@ -50,10 +189,7 @@ function StepBtn({
   return (
     <Pressable
       onPress={(e) => stop(e, onPress)}
-      style={[
-        styles.stepBtn,
-        { width: size, height: size, borderRadius: Math.round(size * 0.4) },
-      ]}
+      style={stepButtonStyle(size)}
       hitSlop={6}
     >
       <Ionicons name={icon} size={iconSize} color={theme.colors.text} />
@@ -75,13 +211,10 @@ function ControlPill({
   return (
     <Pressable
       onPress={(e) => stop(e, onPress)}
-      style={[
-        styles.controlPill,
-        { height, borderRadius: Math.round(height * 0.44) },
-      ]}
+      style={controlPillStyle(height)}
       hitSlop={6}
     >
-      <Text style={[styles.controlPillText, { fontSize }]}>{label}</Text>
+      <Text style={controlPillTextStyle(fontSize)}>{label}</Text>
     </Pressable>
   );
 }
@@ -102,6 +235,7 @@ export default function DeviceTile({
       .catch(() => {});
   };
   const toggleOpenable = () => {
+    if (!isOpenableKind(device.kind)) return;
     const openNow = (device.openPercent ?? (device.isOn ? 100 : 0)) > 0;
     const nextOpen = openNow ? 0 : 100;
     sendPatch({ openPercent: nextOpen, isOn: nextOpen > 0 });
@@ -125,91 +259,18 @@ export default function DeviceTile({
   const controlFont = Math.round((isTablet ? 14 : 12) * scale);
   const pillHeight = Math.round((isTablet ? 40 : 36) * scale);
 
-  const baseMeta =
-    device.kind === "ac"
-      ? `${device.tempC ?? 22}°C • ${(device.mode ?? "cold").toUpperCase()}`
-      : device.kind === "light"
-        ? `${device.brightness ?? 60}%`
-        : device.kind === "tv"
-          ? `Vol ${device.volume ?? 20}`
-          : device.kind === "fan"
-            ? `Speed ${device.speed ?? 50}%`
-            : device.kind === "fridge"
-              ? `${device.tempC ?? 4}°C`
-              : device.kind === "garage" ||
-                  device.kind === "door" ||
-                  device.kind === "gate" ||
-                  device.kind === "window"
-                ? `${Math.round(device.openPercent ?? 0)}% open`
-                : device.kind === "vacuum"
-                  ? `${device.status ?? "docked"}`
-                  : device.kind === "camera"
-                    ? device.armed
-                      ? "Armed"
-                      : "Disarmed"
-                    : device.kind === "stove"
-                      ? `Level ${device.burnerLevel ?? 0}`
-                      : device.kind === "washer" || device.kind === "dryer"
-                        ? `${device.cycle ?? "Normal"}`
-                        : device.kind === "microwave"
-                          ? `${device.timeRemainingSec ?? 0}s`
-                          : device.kind === "energy"
-                            ? device.gridAvailable === false
-                              ? "Grid Offline"
-                              : `${device.powerW ?? 0}W`
-                            : device.kind === "water"
-                              ? `${device.waterLpm ?? 0} L/min`
-                              : device.kind === "water-heater"
-                                ? `${device.tempC ?? 52}°C • ${(
-                                    device.heaterMode ?? "eco"
-                                  ).toUpperCase()}`
-                                : device.kind === "air"
-                                  ? `AQI ${device.airQualityIndex ?? 0}`
-                                  : device.kind === "sprinkler"
-                                  ? (device.zone ?? "Sprinkler")
-                                  : device.kind === "speaker"
-                                    ? device.isOn
-                                      ? device.trackTitle ?? `Vol ${device.volume ?? 20}`
-                                      : `Vol ${device.volume ?? 20}`
-                                    : device.kind === "smoke"
-                                        ? device.smokeDetected
-                                          ? "Alert"
-                                          : "Clear"
-                                        : device.isOn
-                                          ? "On"
-                                          : "Off";
-  const stackSuffix = device.stackId
-    ? ` • ${
-        device.stackPosition === "top"
-          ? "Stack top"
-          : device.stackPosition === "bottom"
-            ? "Stack bottom"
-            : "Stacked"
-      }`
-    : "";
-  const meta = `${baseMeta}${stackSuffix}`;
+  const meta = `${deviceMeta(device)}${stackMeta(device)}`;
 
   return (
     <Pressable
-      style={[
-        styles.card,
-        { padding: cardPad, borderRadius: cardRadius, minHeight },
-      ]}
+      style={cardStyle(cardPad, cardRadius, minHeight)}
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={220}
     >
       <View style={styles.topRow}>
         <View
-          style={[
-            styles.iconWrap,
-            {
-              width: iconWrapSize,
-              height: iconWrapSize,
-              borderRadius: iconWrapRadius,
-            },
-            device.isOn && styles.iconWrapOn,
-          ]}
+          style={iconWrapStyle(iconWrapSize, iconWrapRadius, device.isOn)}
         >
           <DeviceIcon
             kind={device.kind}
@@ -221,16 +282,12 @@ export default function DeviceTile({
         <Pressable
           onPress={(e) =>
             stop(e, () =>
-              ["gate", "door", "garage", "window"].includes(device.kind)
+              isOpenableKind(device.kind)
                 ? toggleOpenable()
                 : sendPatch({ isOn: !device.isOn }),
             )
           }
-          style={[
-            styles.power,
-            { width: powerSize, height: powerSize, borderRadius: powerRadius },
-            device.isOn && styles.powerOn,
-          ]}
+          style={powerStyle(powerSize, powerRadius, device.isOn)}
           hitSlop={6}
         >
           <Ionicons
@@ -241,19 +298,14 @@ export default function DeviceTile({
         </Pressable>
       </View>
 
-      <Text style={[styles.name, { fontSize: nameSize }]} numberOfLines={1}>
+      <Text style={nameStyle(nameSize)} numberOfLines={1}>
         {device.name}
       </Text>
-      <Text style={[styles.meta, { fontSize: metaSize }]} numberOfLines={1}>
+      <Text style={metaStyle(metaSize)} numberOfLines={1}>
         {meta}
       </Text>
 
-      <View
-        style={[
-          styles.divider,
-          { marginTop: dividerGap, marginBottom: dividerGap },
-        ]}
-      />
+      <View style={dividerStyle(dividerGap)} />
 
       {device.kind === "light" && (
         <View style={styles.controlsRow}>
@@ -266,7 +318,7 @@ export default function DeviceTile({
               sendPatch({ brightness: next, isOn: next > 0 });
             }}
           />
-          <Text style={[styles.controlValue, { fontSize: controlFont }]}>
+          <Text style={controlValueStyle(controlFont)}>
             {device.brightness ?? 60}%
           </Text>
           <StepBtn
@@ -298,7 +350,7 @@ export default function DeviceTile({
               })
             }
           />
-          <Text style={[styles.controlValue, { fontSize: controlFont }]}>
+          <Text style={controlValueStyle(controlFont)}>
             {device.tempC ?? 22}°C
           </Text>
           <StepBtn
@@ -332,7 +384,7 @@ export default function DeviceTile({
               })
             }
           />
-          <Text style={[styles.controlValue, { fontSize: controlFont }]}>
+          <Text style={controlValueStyle(controlFont)}>
             Vol {device.volume ?? 20}
           </Text>
           <StepBtn
@@ -362,7 +414,7 @@ export default function DeviceTile({
               })
             }
           />
-          <Text style={[styles.controlValue, { fontSize: controlFont }]}>
+          <Text style={controlValueStyle(controlFont)}>
             Speed {device.speed ?? 50}%
           </Text>
           <StepBtn
@@ -392,7 +444,7 @@ export default function DeviceTile({
               })
             }
           />
-          <Text style={[styles.controlValue, { fontSize: controlFont }]}>
+          <Text style={controlValueStyle(controlFont)}>
             Vol {device.volume ?? 20}
           </Text>
           <StepBtn
@@ -413,7 +465,7 @@ export default function DeviceTile({
         device.kind === "garage" ||
         device.kind === "gate" ||
         device.kind === "window") && (
-        <View style={[styles.controlsRow, { justifyContent: "flex-start" }]}>
+        <View style={controlsRowStyle(true)}>
           <ControlPill
             label="Open"
             height={pillHeight}
@@ -430,7 +482,7 @@ export default function DeviceTile({
       )}
 
       {device.kind === "camera" && (
-        <View style={[styles.controlsRow, { justifyContent: "flex-start" }]}>
+        <View style={controlsRowStyle(true)}>
           <ControlPill
             label={device.armed ? "Disarm" : "Arm"}
             height={pillHeight}
@@ -447,7 +499,7 @@ export default function DeviceTile({
       )}
 
       {device.kind === "sprinkler" && (
-        <View style={[styles.controlsRow, { justifyContent: "flex-start" }]}>
+        <View style={controlsRowStyle(true)}>
           <ControlPill
             label="Start"
             height={pillHeight}
@@ -464,7 +516,7 @@ export default function DeviceTile({
       )}
 
       {device.kind === "coffee" && (
-        <View style={[styles.controlsRow, { justifyContent: "flex-start" }]}>
+        <View style={controlsRowStyle(true)}>
           <ControlPill
             label="Brew now"
             height={pillHeight}
@@ -544,6 +596,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
+  controlsRowStart: { justifyContent: "flex-start" },
   stepBtn: {
     width: 36,
     height: 36,

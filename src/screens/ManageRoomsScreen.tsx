@@ -5,14 +5,18 @@ import {
   StyleSheet,
   TextInput,
   ScrollView,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import BackgroundLines from "../components/BackgroundLines";
+import LandscapeFrame from "../components/LandscapeFrame";
+import PortraitFrame from "../components/PortraitFrame";
+import ModalCard from "../components/ModalCard";
+import ModalActionRow from "../components/ModalActionRow";
 import { theme } from "../theme/theme";
 import { useHomeStore } from "../store/useHomeStore";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -22,7 +26,7 @@ import { useResponsive } from "../theme/layout";
 type Props = NativeStackScreenProps<RootStackParamList, "ManageRooms">;
 
 export default function ManageRoomsScreen({ navigation }: Props) {
-  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
+  const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(900);
   const isWide = isTablet && isLandscape;
   const iconSize = Math.round((isTablet ? 46 : 40) * scale);
@@ -30,6 +34,21 @@ export default function ManageRoomsScreen({ navigation }: Props) {
   const titleSize = Math.round((isTablet ? 20 : 18) * scale);
   const cardPad = Math.round((isTablet ? 18 : 14) * scale);
   const cardRadius = Math.round((isTablet ? 26 : 24) * scale);
+  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
+  const outerGutter = isWide
+    ? Math.round(gutter * 0.4)
+    : Math.round(
+        gutter *
+          (isLandscape ? (isTablet ? 0.9 : 0.75) : isTablet ? 0.8 : 0.65),
+      );
+  const innerGutter = Math.round(
+    gutter * (isLandscape ? (isTablet ? 1.05 : 0.95) : isTablet ? 0.95 : 0.85),
+  );
+  const framePad = innerGutter;
+  const frameWidth = Math.max(
+    0,
+    (isWide ? width : contentWidth) - outerGutter * 2,
+  );
   const inputHeight = Math.round((isTablet ? 48 : 44) * scale);
   const inputRadius = Math.round(inputHeight * 0.28);
   const labelSize = Math.round((isTablet ? 13 : 12) * scale);
@@ -46,6 +65,182 @@ export default function ManageRoomsScreen({ navigation }: Props) {
   const modalSubSize = Math.round((isTablet ? 14 : 12) * scale);
   const modalInputHeight = Math.round((isTablet ? 48 : 44) * scale);
   const modalButtonHeight = Math.round((isTablet ? 46 : 42) * scale);
+  const scrollTopPad = Math.round(12 * scale);
+  const scrollBottomPad = Math.round(
+    (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
+  );
+  const rootStyle: StyleProp<ViewStyle> = [styles.root, { paddingTop: topPad }];
+  const contentStyle: StyleProp<ViewStyle> = [
+    styles.content,
+    {
+      paddingHorizontal: outerGutter,
+      paddingTop: Math.round(12 * scale),
+      paddingBottom: outerGutter,
+    },
+  ];
+  const iconButtonLayout: ViewStyle = {
+    width: iconSize,
+    height: iconSize,
+    borderRadius: iconRadius,
+  };
+  const iconButtonStyle: StyleProp<ViewStyle> = [
+    styles.iconBtn,
+    iconButtonLayout,
+  ];
+  const titleTextStyle: StyleProp<TextStyle> = [
+    styles.title,
+    { fontSize: titleSize },
+  ];
+  const scrollContentStyle: ViewStyle = {
+    paddingTop: scrollTopPad,
+    paddingBottom: scrollBottomPad,
+  };
+  const landscapeColumns = isWide ? (width >= 1200 ? 4 : 3) : 1;
+  const portraitColumns = !isLandscape && width >= 700 ? 2 : 1;
+  const columns = isWide ? landscapeColumns : portraitColumns;
+  const isGridColumns = columns > 1;
+  const cardsGridLayout: ViewStyle | null = isGridColumns
+    ? { flexDirection: "row", flexWrap: "wrap" }
+    : null;
+  const cardsGridStyle: StyleProp<ViewStyle> = [
+    styles.cardsGrid,
+    { gap: gridGap },
+    cardsGridLayout,
+    isGridColumns && styles.cardsGridWide,
+  ];
+  const gridWidth = Math.max(0, frameWidth - framePad * 2);
+  const cardWidth = isGridColumns
+    ? (gridWidth - gridGap * (columns - 1)) / columns
+    : "100%";
+  const cardLayout: ViewStyle = {
+    padding: cardPad,
+    borderRadius: cardRadius,
+    ...(isGridColumns
+      ? {
+          flexBasis: cardWidth,
+          flexGrow: 1,
+          minWidth: cardWidth,
+        }
+      : { width: "100%" }),
+  };
+  const roomCardStyle: StyleProp<ViewStyle> = [
+    styles.card,
+    cardLayout,
+  ];
+  const flex1Style: StyleProp<ViewStyle> = { flex: 1 };
+  const rowTopStyle: StyleProp<ViewStyle> = [
+    styles.rowTop,
+    { gap: rowGap },
+  ];
+  const rowBottomStyle: StyleProp<ViewStyle> = [
+    styles.rowBottom,
+    { gap: rowGap },
+  ];
+  const labelTextStyle: StyleProp<TextStyle> = [
+    styles.label,
+    { fontSize: labelSize },
+  ];
+  const inputLayout: TextStyle = {
+    height: inputHeight,
+    borderRadius: inputRadius,
+  };
+  const inputStyle: StyleProp<TextStyle> = [styles.input, inputLayout];
+  const metaTextStyle: StyleProp<TextStyle> = [
+    styles.meta,
+    { fontSize: metaSize },
+  ];
+  const actionBtnLayout: ViewStyle = {
+    width: actionBtnSize,
+    height: actionBtnSize,
+    borderRadius: actionBtnRadius,
+  };
+  const actionBtnStyle: StyleProp<ViewStyle> = [
+    styles.actionBtn,
+    actionBtnLayout,
+  ];
+  const actionButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
+    actionBtnStyle,
+    disabled && styles.actionBtnDisabled,
+  ];
+  const primaryBtnLayout: ViewStyle = {
+    height: primaryHeight,
+    borderRadius: primaryRadius,
+  };
+  const primaryBtnStyle: StyleProp<ViewStyle> = [
+    styles.primaryBtn,
+    primaryBtnLayout,
+  ];
+  const primaryButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
+    primaryBtnStyle,
+    disabled && styles.primaryBtnDisabled,
+  ];
+  const primaryTextStyle: StyleProp<TextStyle> = [
+    styles.primaryText,
+    { fontSize: labelSize },
+  ];
+  const deleteBtnStyle: StyleProp<ViewStyle> = [
+    styles.deleteBtn,
+    primaryBtnLayout,
+  ];
+  const deleteButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
+    deleteBtnStyle,
+    disabled && styles.actionBtnDisabled,
+  ];
+  const deleteTextStyle: StyleProp<TextStyle> = [
+    styles.deleteText,
+    { fontSize: labelSize },
+  ];
+  const modalCardLayout: ViewStyle = {
+    padding: modalPad,
+    borderRadius: modalRadius,
+    maxWidth: isTablet ? 520 : undefined,
+    width: isTablet ? Math.min(contentWidth - gutter * 2, 520) : undefined,
+    alignSelf: isTablet ? "center" : "stretch",
+  };
+  const modalCardStyle: StyleProp<ViewStyle> = [
+    styles.modalCard,
+    modalCardLayout,
+  ];
+  const modalTitleStyle: StyleProp<TextStyle> = [
+    styles.modalTitle,
+    { fontSize: modalTitleSize },
+  ];
+  const modalSubStyle: StyleProp<TextStyle> = [
+    styles.modalSub,
+    { fontSize: modalSubSize },
+  ];
+  const modalInputLayout: TextStyle = {
+    height: modalInputHeight,
+    borderRadius: Math.round(modalInputHeight * 0.28),
+  };
+  const modalInputStyle: StyleProp<TextStyle> = [
+    styles.modalInput,
+    modalInputLayout,
+  ];
+  const modalGhostLayout: ViewStyle = {
+    height: modalButtonHeight,
+    borderRadius: Math.round(modalButtonHeight * 0.28),
+  };
+  const modalGhostStyle: StyleProp<ViewStyle> = [
+    styles.modalGhost,
+    modalGhostLayout,
+  ];
+  const modalGhostTextStyle: StyleProp<TextStyle> = [
+    styles.modalGhostText,
+    { fontSize: labelSize },
+  ];
+  const modalPrimaryStyle: StyleProp<ViewStyle> = [
+    styles.modalPrimary,
+    modalGhostLayout,
+  ];
+  const modalPrimaryButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
+    modalPrimaryStyle,
+    disabled && styles.modalPrimaryDisabled,
+  ];
+  const modalPrimaryTextStyle: StyleProp<TextStyle> = [
+    styles.modalPrimaryText,
+    { fontSize: labelSize },
+  ];
   const rooms = useHomeStore((s) => s.rooms);
   const devices = useHomeStore((s) => s.devices);
   const addRoom = useHomeStore((s) => s.addRoom);
@@ -56,6 +251,8 @@ export default function ManageRoomsScreen({ navigation }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const FrameComponent = isLandscape ? LandscapeFrame : PortraitFrame;
+  const frameEnabled = true;
 
   const deviceCountByRoom = useMemo(() => {
     const map: Record<string, number> = {};
@@ -76,303 +273,184 @@ export default function ManageRoomsScreen({ navigation }: Props) {
   return (
     <LinearGradient
       colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={[styles.root, { paddingTop: topPad }]}
+      style={rootStyle}
     >
       <BackgroundLines />
 
-      <View
-        style={[
-          styles.top,
-          {
-            paddingHorizontal: gutter,
-            width: contentWidth,
-            alignSelf: "center",
-          },
-        ]}
-      >
-        <Pressable
-          style={[
-            styles.iconBtn,
-            { width: iconSize, height: iconSize, borderRadius: iconRadius },
-          ]}
-          onPress={() => navigation.goBack()}
+      <View style={contentStyle}>
+        <View style={styles.top}>
+          <Pressable
+            style={iconButtonStyle}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
+          </Pressable>
+          <Text style={titleTextStyle}>Manage Rooms</Text>
+          <Pressable
+            style={iconButtonStyle}
+            onPress={() => setShowAdd(true)}
+          >
+            <Ionicons name="add" size={20} color={theme.colors.text} />
+          </Pressable>
+        </View>
+
+        <FrameComponent
+          enabled={frameEnabled}
+          pad={framePad}
+          radius={frameRadius}
+          width={frameWidth}
+          style={styles.frameFill}
         >
-          <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
-        </Pressable>
-        <Text style={[styles.title, { fontSize: titleSize }]}>
-          Manage Rooms
-        </Text>
-        <Pressable
-          style={[
-            styles.iconBtn,
-            { width: iconSize, height: iconSize, borderRadius: iconRadius },
-          ]}
-          onPress={() => setShowAdd(true)}
-        >
-          <Ionicons name="add" size={20} color={theme.colors.text} />
-        </Pressable>
+          <ScrollView
+            style={styles.cardsScroll}
+            contentContainerStyle={scrollContentStyle}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={cardsGridStyle}>
+              {rooms.map((room, idx) => {
+                const draft = drafts[room.id] ?? room.name;
+                const canSave =
+                  draft.trim().length > 1 && draft.trim() !== room.name;
+                const isLastRoom = rooms.length <= 1;
+                return (
+                  <View key={room.id} style={roomCardStyle}>
+                    <View style={rowTopStyle}>
+                      <View style={flex1Style}>
+                        <Text style={labelTextStyle}>Room name</Text>
+                        <TextInput
+                          value={draft}
+                          onChangeText={(value) =>
+                            setDrafts((prev) => ({
+                              ...prev,
+                              [room.id]: value,
+                            }))
+                          }
+                          placeholder="Room name"
+                          placeholderTextColor="rgba(255,255,255,0.45)"
+                          style={inputStyle}
+                        />
+                        <Text style={metaTextStyle}>
+                          {deviceCountByRoom[room.id] ?? 0} devices
+                        </Text>
+                      </View>
+
+                      <View style={styles.actions}>
+                        <Pressable
+                          style={actionButtonStyle(idx === 0)}
+                          onPress={() => moveRoom(room.id, -1)}
+                          disabled={idx === 0}
+                        >
+                          <Ionicons
+                            name="chevron-up"
+                            size={18}
+                            color={theme.colors.text}
+                          />
+                        </Pressable>
+                        <Pressable
+                          style={actionButtonStyle(idx === rooms.length - 1)}
+                          onPress={() => moveRoom(room.id, 1)}
+                          disabled={idx === rooms.length - 1}
+                        >
+                          <Ionicons
+                            name="chevron-down"
+                            size={18}
+                            color={theme.colors.text}
+                          />
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <View style={rowBottomStyle}>
+                      <Pressable
+                        style={primaryButtonStyle(!canSave)}
+                        onPress={() => {
+                          if (!canSave) return;
+                          renameRoom(room.id, draft.trim());
+                        }}
+                        disabled={!canSave}
+                      >
+                        <Text style={primaryTextStyle}>Save</Text>
+                      </Pressable>
+                      <Pressable
+                        style={deleteButtonStyle(isLastRoom)}
+                        onPress={() => {
+                          if (isLastRoom) return;
+                          removeRoom(room.id);
+                        }}
+                        disabled={isLastRoom}
+                      >
+                        <Text style={deleteTextStyle}>
+                          {isLastRoom ? "Keep at least 1 room" : "Delete"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </FrameComponent>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal: isTablet ? gutter : 0,
-            paddingTop: 12,
-            paddingBottom: Math.round(
-              (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
-            ),
-          },
-        ]}
-      >
-        <View
-          style={{
-            width: contentWidth,
-            paddingHorizontal: isTablet ? 0 : gutter,
-          }}
-        >
-          <View
-            style={[
-              styles.cardsGrid,
-              isWide && {
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: gridGap,
-              },
-            ]}
-          >
-            {rooms.map((room, idx) => {
-              const draft = drafts[room.id] ?? room.name;
-              const canSave =
-                draft.trim().length > 1 && draft.trim() !== room.name;
-              const isLastRoom = rooms.length <= 1;
-              return (
-                <View
-                  key={room.id}
-                  style={[
-                    styles.card,
-                    {
-                      padding: cardPad,
-                      borderRadius: cardRadius,
-                      width: isWide ? (contentWidth - gridGap) / 2 : "100%",
-                    },
-                  ]}
-                >
-                  <View style={[styles.rowTop, { gap: rowGap }]}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.label, { fontSize: labelSize }]}>
-                        Room name
-                      </Text>
-                      <TextInput
-                        value={draft}
-                        onChangeText={(value) =>
-                          setDrafts((prev) => ({ ...prev, [room.id]: value }))
-                        }
-                        placeholder="Room name"
-                        placeholderTextColor="rgba(255,255,255,0.45)"
-                        style={[
-                          styles.input,
-                          { height: inputHeight, borderRadius: inputRadius },
-                        ]}
-                      />
-                      <Text style={[styles.meta, { fontSize: metaSize }]}>
-                        {deviceCountByRoom[room.id] ?? 0} devices
-                      </Text>
-                    </View>
-
-                    <View style={styles.actions}>
-                      <Pressable
-                        style={[
-                          styles.actionBtn,
-                          {
-                            width: actionBtnSize,
-                            height: actionBtnSize,
-                            borderRadius: actionBtnRadius,
-                          },
-                          idx === 0 && styles.actionBtnDisabled,
-                        ]}
-                        onPress={() => moveRoom(room.id, -1)}
-                        disabled={idx === 0}
-                      >
-                        <Ionicons
-                          name="chevron-up"
-                          size={18}
-                          color={theme.colors.text}
-                        />
-                      </Pressable>
-                      <Pressable
-                        style={[
-                          styles.actionBtn,
-                          {
-                            width: actionBtnSize,
-                            height: actionBtnSize,
-                            borderRadius: actionBtnRadius,
-                          },
-                          idx === rooms.length - 1 && styles.actionBtnDisabled,
-                        ]}
-                        onPress={() => moveRoom(room.id, 1)}
-                        disabled={idx === rooms.length - 1}
-                      >
-                        <Ionicons
-                          name="chevron-down"
-                          size={18}
-                          color={theme.colors.text}
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
-
-                  <View style={[styles.rowBottom, { gap: rowGap }]}>
-                    <Pressable
-                      style={[
-                        styles.primaryBtn,
-                        { height: primaryHeight, borderRadius: primaryRadius },
-                        !canSave && styles.primaryBtnDisabled,
-                      ]}
-                      onPress={() => {
-                        if (!canSave) return;
-                        renameRoom(room.id, draft.trim());
-                      }}
-                      disabled={!canSave}
-                    >
-                      <Text
-                        style={[styles.primaryText, { fontSize: labelSize }]}
-                      >
-                        Save
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={[
-                        styles.deleteBtn,
-                        { height: primaryHeight, borderRadius: primaryRadius },
-                        isLastRoom && styles.actionBtnDisabled,
-                      ]}
-                      onPress={() => {
-                        if (isLastRoom) return;
-                        removeRoom(room.id);
-                      }}
-                      disabled={isLastRoom}
-                    >
-                      <Text
-                        style={[styles.deleteText, { fontSize: labelSize }]}
-                      >
-                        {isLastRoom ? "Keep at least 1 room" : "Delete"}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      </ScrollView>
-
-      <Modal
-        transparent
+      <ModalCard
         visible={showAdd}
-        animationType="fade"
         onRequestClose={() => setShowAdd(false)}
+        onBackdropPress={() => setShowAdd(false)}
+        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
+        cardStyle={modalCardStyle}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setShowAdd(false)}
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.select({ ios: "padding", android: undefined })}
-          >
-            <LinearGradient
-              colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
-              start={{ x: 0.1, y: 0.1 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.modalCard,
-                {
-                  padding: modalPad,
-                  borderRadius: modalRadius,
-                  maxWidth: isTablet ? 520 : undefined,
-                  width: isTablet
-                    ? Math.min(contentWidth - gutter * 2, 520)
-                    : undefined,
-                  alignSelf: isTablet ? "center" : "stretch",
-                },
-              ]}
-            >
-              <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
-                Add room
-              </Text>
-              <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
-                Give the room a friendly name.
-              </Text>
+        <Text style={modalTitleStyle}>Add room</Text>
+        <Text style={modalSubStyle}>Give the room a friendly name.</Text>
 
-              <TextInput
-                value={roomName}
-                onChangeText={setRoomName}
-                placeholder="Office, Patio, Studio..."
-                placeholderTextColor="rgba(12,12,18,0.45)"
-                style={[
-                  styles.modalInput,
-                  {
-                    height: modalInputHeight,
-                    borderRadius: Math.round(modalInputHeight * 0.28),
-                  },
-                ]}
-                autoCapitalize="words"
-                returnKeyType="done"
-              />
+        <TextInput
+          value={roomName}
+          onChangeText={setRoomName}
+          placeholder="Office, Patio, Studio..."
+          placeholderTextColor="rgba(12,12,18,0.45)"
+          style={modalInputStyle}
+          autoCapitalize="words"
+          returnKeyType="done"
+        />
 
-              <View style={styles.modalRow}>
-                <Pressable
-                  style={[
-                    styles.modalGhost,
-                    {
-                      height: modalButtonHeight,
-                      borderRadius: Math.round(modalButtonHeight * 0.28),
-                    },
-                  ]}
-                  onPress={() => setShowAdd(false)}
-                >
-                  <Text
-                    style={[styles.modalGhostText, { fontSize: labelSize }]}
-                  >
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.modalPrimary,
-                    {
-                      height: modalButtonHeight,
-                      borderRadius: Math.round(modalButtonHeight * 0.28),
-                    },
-                    !roomName.trim() && styles.modalPrimaryDisabled,
-                  ]}
-                  onPress={handleCreate}
-                  disabled={!roomName.trim()}
-                >
-                  <Text
-                    style={[styles.modalPrimaryText, { fontSize: labelSize }]}
-                  >
-                    Create
-                  </Text>
-                </Pressable>
-              </View>
-            </LinearGradient>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+        <ModalActionRow
+          style={styles.modalRow}
+          actions={[
+            {
+              label: "Cancel",
+              onPress: () => setShowAdd(false),
+              style: modalGhostStyle,
+              textStyle: modalGhostTextStyle,
+            },
+            {
+              label: "Create",
+              onPress: handleCreate,
+              style: modalPrimaryButtonStyle(!roomName.trim()),
+              textStyle: modalPrimaryTextStyle,
+              disabled: !roomName.trim(),
+            },
+          ]}
+        />
+      </ModalCard>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { alignItems: "center" },
-  cardsGrid: { gap: 12 },
+  content: { flex: 1, alignItems: "center" },
+  frameFill: { flex: 1 },
+  cardsScroll: { flex: 1 },
+  cardsGrid: { width: "100%" },
+  cardsGridWide: {
+    justifyContent: "space-between",
+    alignContent: "stretch",
+  },
   top: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 12,
   },
   iconBtn: {
     width: 40,
@@ -389,7 +467,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     padding: 14,
-    marginBottom: 12,
     backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: theme.colors.stroke,
@@ -449,13 +526,6 @@ const styles = StyleSheet.create({
   },
   deleteText: { color: "#ffdbe6", fontWeight: "900", fontSize: 12 },
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    padding: 18,
-  },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject },
   modalCard: {
     borderRadius: 24,
     padding: 18,

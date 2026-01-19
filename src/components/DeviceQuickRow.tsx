@@ -1,5 +1,12 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Pressable from "./Pressable";
 import { theme } from "../theme/theme";
 import type { Device } from "../store/useHomeStore";
@@ -19,34 +26,39 @@ export default function DeviceQuickRow({
   const iconWrapRadius = Math.round(iconWrapSize * 0.36);
   const iconSize = Math.round((isTablet ? 20 : 18) * scale);
   const labelSize = Math.round((isTablet ? 13 : 12) * scale);
+  const rowStyle: StyleProp<ViewStyle> = [
+    styles.row,
+    { gap: rowGap },
+  ];
+  const iconWrapStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.iconWrap,
+    {
+      width: iconWrapSize,
+      height: iconWrapSize,
+      borderRadius: iconWrapRadius,
+    },
+    active && styles.iconWrapOn,
+  ];
+  const labelStyle: StyleProp<TextStyle> = [
+    styles.label,
+    { fontSize: labelSize },
+  ];
   return (
-    <View style={[styles.row, { gap: rowGap }]}>
+    <View style={rowStyle}>
       {devices.map((d) => (
         <Pressable
           key={d.id}
           style={styles.item}
           onPress={() => onPressDevice(d.id)}
         >
-          <View
-            style={[
-              styles.iconWrap,
-              {
-                width: iconWrapSize,
-                height: iconWrapSize,
-                borderRadius: iconWrapRadius,
-              },
-              d.isOn && styles.iconWrapOn,
-            ]}
-          >
+          <View style={iconWrapStyle(d.isOn)}>
             <DeviceIcon
               kind={d.kind}
               size={iconSize}
               color={theme.colors.text}
             />
           </View>
-          <Text style={[styles.label, { fontSize: labelSize }]}>
-            {d.kind.toUpperCase()}
-          </Text>
+          <Text style={labelStyle}>{d.kind.toUpperCase()}</Text>
         </Pressable>
       ))}
     </View>

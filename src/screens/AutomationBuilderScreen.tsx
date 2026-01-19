@@ -6,15 +6,17 @@ import {
   ScrollView,
   TextInput,
   Switch,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import Pressable from "../components/Pressable";
 import BackgroundLines from "../components/BackgroundLines";
+import ModalCard from "../components/ModalCard";
+import ModalField from "../components/ModalField";
 import { theme } from "../theme/theme";
 import {
   AC_TEMP_MAX_C,
@@ -59,7 +61,8 @@ const WEEK_DAYS: Weekday[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DELAY_PRESETS = [5, 15, 30, 60, 120, 300];
 
 export default function AutomationBuilderScreen({ navigation, route }: Props) {
-  const { contentWidth, gutter, topPad, isTablet, scale } = useResponsive(920);
+  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
+    useResponsive(920);
   const flowId = route.params?.flowId;
   const titleSize = Math.round((isTablet ? 28 : 24) * scale);
   const labelSize = Math.round((isTablet ? 13 : 12) * scale);
@@ -73,6 +76,139 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
   const chipRadius = Math.round(chipHeight / 2);
   const sectionTitleSize = Math.round((isTablet ? 16 : 14) * scale);
   const sectionSubSize = Math.round((isTablet ? 13 : 12) * scale);
+  const itemRowRadius = Math.round(cardRadius * 0.6);
+  const itemRowStyle: StyleProp<ViewStyle> = [
+    styles.itemRow,
+    { borderRadius: itemRowRadius },
+  ];
+  const flex1Style: StyleProp<ViewStyle> = { flex: 1 };
+  const itemLabelStyle: StyleProp<TextStyle> = [
+    styles.itemLabel,
+    { fontSize: labelSize },
+  ];
+  const itemValueStyle: StyleProp<TextStyle> = [
+    styles.itemValue,
+    { fontSize: sectionSubSize },
+  ];
+  const headerStyle: StyleProp<ViewStyle> = [
+    styles.header,
+    {
+      paddingHorizontal: gutter,
+      paddingTop: topPad,
+      width: contentWidth,
+      alignSelf: "center",
+    },
+  ];
+  const headerButtonStyle: StyleProp<ViewStyle> = [
+    styles.headerBtn,
+    { height: buttonHeight, borderRadius: buttonRadius },
+  ];
+  const headerSaveButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
+    styles.headerBtn,
+    styles.saveBtn,
+    { height: buttonHeight, borderRadius: buttonRadius },
+    disabled && styles.saveBtnDisabled,
+  ];
+  const headerTitleStyle: StyleProp<TextStyle> = [
+    styles.headerTitle,
+    { fontSize: titleSize },
+  ];
+  const contentStyle: StyleProp<ViewStyle> = [
+    styles.content,
+    {
+      paddingBottom: Math.round(
+        (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
+      ),
+    },
+  ];
+  const contentWrapStyle: StyleProp<ViewStyle> = {
+    width: contentWidth,
+    alignSelf: "center",
+    paddingHorizontal: gutter,
+  };
+  const cardStyle: StyleProp<ViewStyle> = [
+    styles.card,
+    { padding: cardPad, borderRadius: cardRadius },
+  ];
+  const sectionCardStyle: StyleProp<ViewStyle> = [
+    styles.sectionCard,
+    { padding: cardPad, borderRadius: cardRadius },
+  ];
+  const sectionTitleStyle: StyleProp<TextStyle> = [
+    styles.sectionTitle,
+    { fontSize: sectionTitleSize },
+  ];
+  const sectionSubStyle: StyleProp<TextStyle> = [
+    styles.sectionSub,
+    { fontSize: sectionSubSize },
+  ];
+  const inputLabelStyle: StyleProp<TextStyle> = [
+    styles.inputLabel,
+    { fontSize: labelSize },
+  ];
+  const inputStyle: StyleProp<TextStyle> = [
+    styles.input,
+    { height: inputHeight, borderRadius: inputRadius },
+  ];
+  const switchScaleStyle: StyleProp<ViewStyle> = {
+    transform: [{ scale: isTablet ? 1.05 : 1 }],
+  };
+  const addButtonStyle: StyleProp<ViewStyle> = [
+    styles.addBtn,
+    { height: chipHeight, borderRadius: chipRadius },
+  ];
+  const addButtonTextStyle: StyleProp<TextStyle> = [
+    styles.addBtnText,
+    { fontSize: labelSize },
+  ];
+  const deleteButtonStyle: StyleProp<ViewStyle> = [
+    styles.deleteBtn,
+    { height: buttonHeight },
+  ];
+  const deleteTextStyle: StyleProp<TextStyle> = [
+    styles.deleteText,
+    { fontSize: labelSize },
+  ];
+  const modalCardStyle: StyleProp<ViewStyle> = [
+    styles.modalCard,
+    {
+      padding: cardPad,
+      borderRadius: Math.round(cardRadius * 0.9),
+      width: isTablet ? Math.min(contentWidth - gutter * 2, 580) : undefined,
+      alignSelf: "center",
+    },
+  ];
+  const modalTitleStyle: StyleProp<TextStyle> = [
+    styles.modalTitle,
+    { fontSize: sectionTitleSize },
+  ];
+  const typeChipStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.typeChip,
+    { height: chipHeight, borderRadius: chipRadius },
+    active && styles.typeChipActive,
+  ];
+  const typeChipTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.typeChipText,
+    active && styles.typeChipTextActive,
+  ];
+  const choiceChipStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.choiceChip,
+    { height: chipHeight, borderRadius: chipRadius },
+    active && styles.choiceChipActive,
+  ];
+  const choiceChipTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.choiceChipText,
+    active && styles.choiceChipTextActive,
+  ];
+  const modalScrollStyle: StyleProp<ViewStyle> = { maxHeight: 360 };
+  const modalButtonStyle: StyleProp<ViewStyle> = [
+    styles.modalBtn,
+    { height: buttonHeight, borderRadius: buttonRadius },
+  ];
+  const modalButtonTextStyle: StyleProp<TextStyle> = [
+    styles.modalBtnText,
+    { fontSize: labelSize },
+  ];
 
   const flows = useHomeStore((s) => s.flows);
   const addFlow = useHomeStore((s) => s.addFlow);
@@ -361,14 +497,10 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
   };
 
   const renderRow = (label: string, text: string, onRemove: () => void) => (
-    <View
-      style={[styles.itemRow, { borderRadius: Math.round(cardRadius * 0.6) }]}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.itemLabel, { fontSize: labelSize }]}>{label}</Text>
-        <Text style={[styles.itemValue, { fontSize: sectionSubSize }]}>
-          {text}
-        </Text>
+    <View style={itemRowStyle}>
+      <View style={flex1Style}>
+        <Text style={itemLabelStyle}>{label}</Text>
+        <Text style={itemValueStyle}>{text}</Text>
       </View>
       <Pressable style={styles.removeBtn} onPress={onRemove}>
         <Ionicons
@@ -387,22 +519,9 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     >
       <BackgroundLines />
 
-      <View
-        style={[
-          styles.header,
-          {
-            paddingHorizontal: gutter,
-            paddingTop: topPad,
-            width: contentWidth,
-            alignSelf: "center",
-          },
-        ]}
-      >
+      <View style={headerStyle}>
         <Pressable
-          style={[
-            styles.headerBtn,
-            { height: buttonHeight, borderRadius: buttonRadius },
-          ]}
+          style={headerButtonStyle}
           onPress={() => navigation.goBack()}
         >
           <Ionicons
@@ -411,16 +530,11 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             color={theme.colors.text}
           />
         </Pressable>
-        <Text style={[styles.headerTitle, { fontSize: titleSize }]}>
+        <Text style={headerTitleStyle}>
           {isEditing ? "Edit Flow" : "New Flow"}
         </Text>
         <Pressable
-          style={[
-            styles.headerBtn,
-            styles.saveBtn,
-            { height: buttonHeight, borderRadius: buttonRadius },
-            !canSave && styles.saveBtnDisabled,
-          ]}
+          style={headerSaveButtonStyle(!canSave)}
           onPress={handleSave}
           disabled={!canSave}
         >
@@ -432,56 +546,26 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
         </Pressable>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal: isTablet ? gutter : 0,
-            paddingBottom: Math.round(
-              (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
-            ),
-          },
-        ]}
-      >
-        <View
-          style={{
-            width: contentWidth,
-            alignSelf: "center",
-            paddingHorizontal: isTablet ? 0 : gutter,
-          }}
-        >
-          <View
-            style={[
-              styles.card,
-              { padding: cardPad, borderRadius: cardRadius },
-            ]}
-          >
-            <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>
-              Flow details
-            </Text>
-            <Text style={[styles.sectionSub, { fontSize: sectionSubSize }]}>
+      <ScrollView contentContainerStyle={contentStyle}>
+        <View style={contentWrapStyle}>
+          <View style={cardStyle}>
+            <Text style={sectionTitleStyle}>Flow details</Text>
+            <Text style={sectionSubStyle}>
               Triggers start the flow, conditions filter it, and actions run
               when everything matches.
             </Text>
 
-            <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-              Name
-            </Text>
+            <Text style={inputLabelStyle}>Name</Text>
             <TextInput
               value={name}
               onChangeText={setName}
               placeholder="New flow"
               placeholderTextColor="rgba(255,255,255,0.45)"
-              style={[
-                styles.input,
-                { height: inputHeight, borderRadius: inputRadius },
-              ]}
+              style={inputStyle}
             />
 
             <View style={styles.switchRow}>
-              <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                Enabled
-              </Text>
+              <Text style={inputLabelStyle}>Enabled</Text>
               <Switch
                 value={enabled}
                 onValueChange={setEnabled}
@@ -492,33 +576,19 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   true: "rgba(180,107,255,0.45)",
                   false: "rgba(255,255,255,0.24)",
                 }}
-                style={{ transform: [{ scale: isTablet ? 1.05 : 1 }] }}
+                style={switchScaleStyle}
               />
             </View>
           </View>
 
-          <View
-            style={[
-              styles.sectionCard,
-              { padding: cardPad, borderRadius: cardRadius },
-            ]}
-          >
+          <View style={sectionCardStyle}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text
-                  style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
-                >
-                  Triggers
-                </Text>
-                <Text style={[styles.sectionSub, { fontSize: sectionSubSize }]}>
-                  Start this flow when...
-                </Text>
+                <Text style={sectionTitleStyle}>Triggers</Text>
+                <Text style={sectionSubStyle}>Start this flow when...</Text>
               </View>
               <Pressable
-                style={[
-                  styles.addBtn,
-                  { height: chipHeight, borderRadius: chipRadius },
-                ]}
+                style={addButtonStyle}
                 onPress={() => openEditor("trigger")}
               >
                 <Ionicons
@@ -526,9 +596,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   size={Math.round(16 * scale)}
                   color={theme.colors.text}
                 />
-                <Text style={[styles.addBtnText, { fontSize: labelSize }]}>
-                  Add
-                </Text>
+                <Text style={addButtonTextStyle}>Add</Text>
               </Pressable>
             </View>
             {triggers.length === 0 ? (
@@ -545,28 +613,14 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             )}
           </View>
 
-          <View
-            style={[
-              styles.sectionCard,
-              { padding: cardPad, borderRadius: cardRadius },
-            ]}
-          >
+          <View style={sectionCardStyle}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text
-                  style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
-                >
-                  Conditions
-                </Text>
-                <Text style={[styles.sectionSub, { fontSize: sectionSubSize }]}>
-                  Only run when...
-                </Text>
+                <Text style={sectionTitleStyle}>Conditions</Text>
+                <Text style={sectionSubStyle}>Only run when...</Text>
               </View>
               <Pressable
-                style={[
-                  styles.addBtn,
-                  { height: chipHeight, borderRadius: chipRadius },
-                ]}
+                style={addButtonStyle}
                 onPress={() => openEditor("condition")}
               >
                 <Ionicons
@@ -574,9 +628,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   size={Math.round(16 * scale)}
                   color={theme.colors.text}
                 />
-                <Text style={[styles.addBtnText, { fontSize: labelSize }]}>
-                  Add
-                </Text>
+                <Text style={addButtonTextStyle}>Add</Text>
               </Pressable>
             </View>
             {conditions.length === 0 ? (
@@ -593,28 +645,14 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             )}
           </View>
 
-          <View
-            style={[
-              styles.sectionCard,
-              { padding: cardPad, borderRadius: cardRadius },
-            ]}
-          >
+          <View style={sectionCardStyle}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text
-                  style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}
-                >
-                  Actions
-                </Text>
-                <Text style={[styles.sectionSub, { fontSize: sectionSubSize }]}>
-                  Then do this...
-                </Text>
+                <Text style={sectionTitleStyle}>Actions</Text>
+                <Text style={sectionSubStyle}>Then do this...</Text>
               </View>
               <Pressable
-                style={[
-                  styles.addBtn,
-                  { height: chipHeight, borderRadius: chipRadius },
-                ]}
+                style={addButtonStyle}
                 onPress={() => openEditor("action")}
               >
                 <Ionicons
@@ -622,9 +660,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   size={Math.round(16 * scale)}
                   color={theme.colors.text}
                 />
-                <Text style={[styles.addBtnText, { fontSize: labelSize }]}>
-                  Add
-                </Text>
+                <Text style={addButtonTextStyle}>Add</Text>
               </Pressable>
             </View>
             {actions.length === 0 ? (
@@ -643,7 +679,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
 
           {isEditing && (
             <Pressable
-              style={[styles.deleteBtn, { height: buttonHeight }]}
+              style={deleteButtonStyle}
               onPress={handleDelete}
             >
               <Ionicons
@@ -651,720 +687,516 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                 size={Math.round(16 * scale)}
                 color="#FFD0D8"
               />
-              <Text style={[styles.deleteText, { fontSize: labelSize }]}>
-                Delete flow
-              </Text>
+              <Text style={deleteTextStyle}>Delete flow</Text>
             </Pressable>
           )}
         </View>
       </ScrollView>
 
-      <Modal
-        transparent
+      <ModalCard
         visible={editorSection !== null}
-        animationType="fade"
         onRequestClose={() => setEditorSection(null)}
+        onBackdropPress={() => setEditorSection(null)}
+        colors={["rgba(255,255,255,0.98)", "rgba(236,228,255,0.95)"]}
+        start={{ x: 0.1, y: 0.1 }}
+        end={{ x: 0.9, y: 1 }}
+        cardStyle={modalCardStyle}
+        overlayStyle={styles.modalOverlay}
+        backdropStyle={styles.modalBackdrop}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setEditorSection(null)}
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.select({ ios: "padding", android: undefined })}
-          >
-            <LinearGradient
-              colors={["rgba(255,255,255,0.98)", "rgba(236,228,255,0.95)"]}
-              start={{ x: 0.1, y: 0.1 }}
-              end={{ x: 0.9, y: 1 }}
-              style={[
-                styles.modalCard,
-                {
-                  padding: cardPad,
-                  borderRadius: Math.round(cardRadius * 0.9),
-                  width: isTablet
-                    ? Math.min(contentWidth - gutter * 2, 580)
-                    : undefined,
-                  alignSelf: "center",
-                },
-              ]}
+        <Text style={modalTitleStyle}>
+          {editorSection ? `Add ${editorSection}` : ""}
+        </Text>
+
+        <View style={styles.typeRow}>
+          {(editorSection === "trigger"
+            ? TRIGGER_TYPES
+            : editorSection === "condition"
+              ? CONDITION_TYPES
+              : ACTION_TYPES
+          ).map((item) => (
+            <Pressable
+              key={item.id}
+              style={typeChipStyle(editorType === item.id)}
+              onPress={() => setEditorType(item.id)}
             >
-              <Text style={[styles.modalTitle, { fontSize: sectionTitleSize }]}>
-                {editorSection ? `Add ${editorSection}` : ""}
+              <Text style={typeChipTextStyle(editorType === item.id)}>
+                {item.label}
               </Text>
-
-              <View style={styles.typeRow}>
-                {(editorSection === "trigger"
-                  ? TRIGGER_TYPES
-                  : editorSection === "condition"
-                    ? CONDITION_TYPES
-                    : ACTION_TYPES
-                ).map((item) => (
-                  <Pressable
-                    key={item.id}
-                    style={[
-                      styles.typeChip,
-                      { height: chipHeight, borderRadius: chipRadius },
-                      editorType === item.id && styles.typeChipActive,
-                    ]}
-                    onPress={() => setEditorType(item.id)}
-                  >
-                    <Text
-                      style={[
-                        styles.typeChipText,
-                        editorType === item.id && styles.typeChipTextActive,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <ScrollView
-                style={{ maxHeight: 360 }}
-                showsVerticalScrollIndicator={false}
-              >
-                {editorSection === "trigger" && editorType === "time" && (
-                  <View style={styles.formRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        Hour
-                      </Text>
-                      <TextInput
-                        value={draftTime.hour}
-                        onChangeText={(value) =>
-                          setDraftTime((prev) => ({ ...prev, hour: value }))
-                        }
-                        keyboardType="number-pad"
-                        style={[
-                          styles.input,
-                          { height: inputHeight, borderRadius: inputRadius },
-                        ]}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        Minute
-                      </Text>
-                      <TextInput
-                        value={draftTime.minute}
-                        onChangeText={(value) =>
-                          setDraftTime((prev) => ({ ...prev, minute: value }))
-                        }
-                        keyboardType="number-pad"
-                        style={[
-                          styles.input,
-                          { height: inputHeight, borderRadius: inputRadius },
-                        ]}
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {editorSection === "trigger" && editorType === "device" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Device
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipRow}
-                    >
-                      {devices.map((d) => (
-                        <Pressable
-                          key={d.id}
-                          style={[
-                            styles.choiceChip,
-                            { height: chipHeight, borderRadius: chipRadius },
-                            draftDeviceId === d.id && styles.choiceChipActive,
-                          ]}
-                          onPress={() => setDraftDeviceId(d.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.choiceChipText,
-                              draftDeviceId === d.id &&
-                                styles.choiceChipTextActive,
-                            ]}
-                          >
-                            {d.name}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                    <View style={styles.switchRow}>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        State: {draftStateOn ? "On" : "Off"}
-                      </Text>
-                      <Switch
-                        value={draftStateOn}
-                        onValueChange={setDraftStateOn}
-                        thumbColor={
-                          draftStateOn
-                            ? theme.colors.accent
-                            : "rgba(255,255,255,0.8)"
-                        }
-                        trackColor={{
-                          true: "rgba(180,107,255,0.45)",
-                          false: "rgba(255,255,255,0.24)",
-                        }}
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {editorSection === "trigger" && editorType === "presence" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Household member
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipRow}
-                    >
-                      {household.map((m) => (
-                        <Pressable
-                          key={m.id}
-                          style={[
-                            styles.choiceChip,
-                            { height: chipHeight, borderRadius: chipRadius },
-                            draftMemberId === m.id && styles.choiceChipActive,
-                          ]}
-                          onPress={() => setDraftMemberId(m.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.choiceChipText,
-                              draftMemberId === m.id &&
-                                styles.choiceChipTextActive,
-                            ]}
-                          >
-                            {m.name.split(" ")[0]}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                    <View style={styles.switchRow}>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        Status:{" "}
-                        {draftPresenceStatus === "home" ? "Home" : "Away"}
-                      </Text>
-                      <Switch
-                        value={draftPresenceStatus === "home"}
-                        onValueChange={(v) =>
-                          setDraftPresenceStatus(v ? "home" : "away")
-                        }
-                        thumbColor={
-                          draftPresenceStatus === "home"
-                            ? theme.colors.accent
-                            : "rgba(255,255,255,0.8)"
-                        }
-                        trackColor={{
-                          true: "rgba(180,107,255,0.45)",
-                          false: "rgba(255,255,255,0.24)",
-                        }}
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {editorSection === "trigger" && editorType === "scene" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Scene
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipRow}
-                    >
-                      {scenes.map((s) => (
-                        <Pressable
-                          key={s.id}
-                          style={[
-                            styles.choiceChip,
-                            { height: chipHeight, borderRadius: chipRadius },
-                            draftSceneId === s.id && styles.choiceChipActive,
-                          ]}
-                          onPress={() => setDraftSceneId(s.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.choiceChipText,
-                              draftSceneId === s.id &&
-                                styles.choiceChipTextActive,
-                            ]}
-                          >
-                            {s.name}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-
-                {editorSection === "condition" &&
-                  editorType === "time-range" && (
-                    <>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        Start time
-                      </Text>
-                      <View style={styles.formRow}>
-                        <TextInput
-                          value={draftRange.startHour}
-                          onChangeText={(value) =>
-                            setDraftRange((prev) => ({
-                              ...prev,
-                              startHour: value,
-                            }))
-                          }
-                          keyboardType="number-pad"
-                          style={[
-                            styles.input,
-                            { height: inputHeight, borderRadius: inputRadius },
-                          ]}
-                        />
-                        <TextInput
-                          value={draftRange.startMinute}
-                          onChangeText={(value) =>
-                            setDraftRange((prev) => ({
-                              ...prev,
-                              startMinute: value,
-                            }))
-                          }
-                          keyboardType="number-pad"
-                          style={[
-                            styles.input,
-                            { height: inputHeight, borderRadius: inputRadius },
-                          ]}
-                        />
-                      </View>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        End time
-                      </Text>
-                      <View style={styles.formRow}>
-                        <TextInput
-                          value={draftRange.endHour}
-                          onChangeText={(value) =>
-                            setDraftRange((prev) => ({
-                              ...prev,
-                              endHour: value,
-                            }))
-                          }
-                          keyboardType="number-pad"
-                          style={[
-                            styles.input,
-                            { height: inputHeight, borderRadius: inputRadius },
-                          ]}
-                        />
-                        <TextInput
-                          value={draftRange.endMinute}
-                          onChangeText={(value) =>
-                            setDraftRange((prev) => ({
-                              ...prev,
-                              endMinute: value,
-                            }))
-                          }
-                          keyboardType="number-pad"
-                          style={[
-                            styles.input,
-                            { height: inputHeight, borderRadius: inputRadius },
-                          ]}
-                        />
-                      </View>
-                    </>
-                  )}
-
-                {editorSection === "condition" && editorType === "device" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Device
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipRow}
-                    >
-                      {devices.map((d) => (
-                        <Pressable
-                          key={d.id}
-                          style={[
-                            styles.choiceChip,
-                            { height: chipHeight, borderRadius: chipRadius },
-                            draftDeviceId === d.id && styles.choiceChipActive,
-                          ]}
-                          onPress={() => setDraftDeviceId(d.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.choiceChipText,
-                              draftDeviceId === d.id &&
-                                styles.choiceChipTextActive,
-                            ]}
-                          >
-                            {d.name}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                    <View style={styles.switchRow}>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        State: {draftStateOn ? "On" : "Off"}
-                      </Text>
-                      <Switch
-                        value={draftStateOn}
-                        onValueChange={setDraftStateOn}
-                        thumbColor={
-                          draftStateOn
-                            ? theme.colors.accent
-                            : "rgba(255,255,255,0.8)"
-                        }
-                        trackColor={{
-                          true: "rgba(180,107,255,0.45)",
-                          false: "rgba(255,255,255,0.24)",
-                        }}
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {editorSection === "condition" && editorType === "day" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Days
-                    </Text>
-                    <View style={styles.dayGrid}>
-                      {WEEK_DAYS.map((day) => {
-                        const active = draftDays.includes(day);
-                        return (
-                          <Pressable
-                            key={day}
-                            style={[
-                              styles.choiceChip,
-                              { height: chipHeight, borderRadius: chipRadius },
-                              active && styles.choiceChipActive,
-                            ]}
-                            onPress={() =>
-                              setDraftDays((prev) =>
-                                prev.includes(day)
-                                  ? prev.filter((d) => d !== day)
-                                  : [...prev, day],
-                              )
-                            }
-                          >
-                            <Text
-                              style={[
-                                styles.choiceChipText,
-                                active && styles.choiceChipTextActive,
-                              ]}
-                            >
-                              {day}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
-                )}
-
-                {editorSection === "action" && editorType === "toggle" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Device
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipRow}
-                    >
-                      {devices.map((d) => (
-                        <Pressable
-                          key={d.id}
-                          style={[
-                            styles.choiceChip,
-                            { height: chipHeight, borderRadius: chipRadius },
-                            draftDeviceId === d.id && styles.choiceChipActive,
-                          ]}
-                          onPress={() => setDraftDeviceId(d.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.choiceChipText,
-                              draftDeviceId === d.id &&
-                                styles.choiceChipTextActive,
-                            ]}
-                          >
-                            {d.name}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                    <View style={styles.switchRow}>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        Turn {draftStateOn ? "On" : "Off"}
-                      </Text>
-                      <Switch
-                        value={draftStateOn}
-                        onValueChange={setDraftStateOn}
-                        thumbColor={
-                          draftStateOn
-                            ? theme.colors.accent
-                            : "rgba(255,255,255,0.8)"
-                        }
-                        trackColor={{
-                          true: "rgba(180,107,255,0.45)",
-                          false: "rgba(255,255,255,0.24)",
-                        }}
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {editorSection === "action" && editorType === "set-ac" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      AC device
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipRow}
-                    >
-                      {(acDevices.length ? acDevices : devices).map((d) => (
-                        <Pressable
-                          key={d.id}
-                          style={[
-                            styles.choiceChip,
-                            { height: chipHeight, borderRadius: chipRadius },
-                            draftDeviceId === d.id && styles.choiceChipActive,
-                          ]}
-                          onPress={() => setDraftDeviceId(d.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.choiceChipText,
-                              draftDeviceId === d.id &&
-                                styles.choiceChipTextActive,
-                            ]}
-                          >
-                            {d.name}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Temperature
-                    </Text>
-                    <TextInput
-                      value={String(draftTemp)}
-                      onChangeText={(value) =>
-                        setDraftTemp(parseInt(value || "0", 10))
-                      }
-                      keyboardType="number-pad"
-                      style={[
-                        styles.input,
-                        { height: inputHeight, borderRadius: inputRadius },
-                      ]}
-                    />
-                  </View>
-                )}
-
-                {editorSection === "action" &&
-                  editorType === "set-brightness" && (
-                    <View>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        Light device
-                      </Text>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.chipRow}
-                      >
-                        {(lightDevices.length ? lightDevices : devices).map(
-                          (d) => (
-                            <Pressable
-                              key={d.id}
-                              style={[
-                                styles.choiceChip,
-                                {
-                                  height: chipHeight,
-                                  borderRadius: chipRadius,
-                                },
-                                draftDeviceId === d.id &&
-                                  styles.choiceChipActive,
-                              ]}
-                              onPress={() => setDraftDeviceId(d.id)}
-                            >
-                              <Text
-                                style={[
-                                  styles.choiceChipText,
-                                  draftDeviceId === d.id &&
-                                    styles.choiceChipTextActive,
-                                ]}
-                              >
-                                {d.name}
-                              </Text>
-                            </Pressable>
-                          ),
-                        )}
-                      </ScrollView>
-                      <Text
-                        style={[styles.inputLabel, { fontSize: labelSize }]}
-                      >
-                        Brightness %
-                      </Text>
-                      <TextInput
-                        value={String(draftBrightness)}
-                        onChangeText={(value) =>
-                          setDraftBrightness(parseInt(value || "0", 10))
-                        }
-                        keyboardType="number-pad"
-                        style={[
-                          styles.input,
-                          { height: inputHeight, borderRadius: inputRadius },
-                        ]}
-                      />
-                    </View>
-                  )}
-
-                {editorSection === "action" && editorType === "run-scene" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Scene
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipRow}
-                    >
-                      {scenes.map((s) => (
-                        <Pressable
-                          key={s.id}
-                          style={[
-                            styles.choiceChip,
-                            { height: chipHeight, borderRadius: chipRadius },
-                            draftSceneId === s.id && styles.choiceChipActive,
-                          ]}
-                          onPress={() => setDraftSceneId(s.id)}
-                        >
-                          <Text
-                            style={[
-                              styles.choiceChipText,
-                              draftSceneId === s.id &&
-                                styles.choiceChipTextActive,
-                            ]}
-                          >
-                            {s.name}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-
-                {editorSection === "action" && editorType === "notify" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Message
-                    </Text>
-                    <TextInput
-                      value={draftMessage}
-                      onChangeText={setDraftMessage}
-                      placeholder="Send a notification"
-                      placeholderTextColor="rgba(12,12,18,0.45)"
-                      style={[
-                        styles.input,
-                        { height: inputHeight, borderRadius: inputRadius },
-                      ]}
-                    />
-                  </View>
-                )}
-
-                {editorSection === "action" && editorType === "delay" && (
-                  <View>
-                    <Text style={[styles.inputLabel, { fontSize: labelSize }]}>
-                      Delay (seconds)
-                    </Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipRow}
-                    >
-                      {DELAY_PRESETS.map((seconds) => {
-                        const active = draftDelaySeconds === seconds;
-                        return (
-                          <Pressable
-                            key={seconds}
-                            style={[
-                              styles.choiceChip,
-                              { height: chipHeight, borderRadius: chipRadius },
-                              active && styles.choiceChipActive,
-                            ]}
-                            onPress={() => setDraftDelaySeconds(seconds)}
-                          >
-                            <Text
-                              style={[
-                                styles.choiceChipText,
-                                active && styles.choiceChipTextActive,
-                              ]}
-                            >
-                              {formatDelayLabel(seconds)}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
-                    <TextInput
-                      value={String(draftDelaySeconds)}
-                      onChangeText={(value) =>
-                        setDraftDelaySeconds(parseInt(value || "0", 10))
-                      }
-                      keyboardType="number-pad"
-                      style={[
-                        styles.input,
-                        { height: inputHeight, borderRadius: inputRadius },
-                      ]}
-                    />
-                  </View>
-                )}
-              </ScrollView>
-
-              <Pressable
-                style={[
-                  styles.modalBtn,
-                  { height: buttonHeight, borderRadius: buttonRadius },
-                ]}
-                onPress={addItem}
-              >
-                <Text style={[styles.modalBtnText, { fontSize: labelSize }]}>
-                  Add {editorSection}
-                </Text>
-              </Pressable>
-            </LinearGradient>
-          </KeyboardAvoidingView>
+            </Pressable>
+          ))}
         </View>
-      </Modal>
+
+        <ScrollView
+          style={modalScrollStyle}
+          showsVerticalScrollIndicator={false}
+        >
+          {editorSection === "trigger" && editorType === "time" && (
+            <View style={styles.formRow}>
+              <ModalField
+                label="Hour"
+                labelStyle={inputLabelStyle}
+                containerStyle={flex1Style}
+              >
+                <TextInput
+                  value={draftTime.hour}
+                  onChangeText={(value) =>
+                    setDraftTime((prev) => ({ ...prev, hour: value }))
+                  }
+                  keyboardType="number-pad"
+                  style={inputStyle}
+                />
+              </ModalField>
+              <ModalField
+                label="Minute"
+                labelStyle={inputLabelStyle}
+                containerStyle={flex1Style}
+              >
+                <TextInput
+                  value={draftTime.minute}
+                  onChangeText={(value) =>
+                    setDraftTime((prev) => ({ ...prev, minute: value }))
+                  }
+                  keyboardType="number-pad"
+                  style={inputStyle}
+                />
+              </ModalField>
+            </View>
+          )}
+
+          {editorSection === "trigger" && editorType === "device" && (
+            <View>
+              <ModalField label="Device" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {devices.map((d) => (
+                    <Pressable
+                      key={d.id}
+                      style={choiceChipStyle(draftDeviceId === d.id)}
+                      onPress={() => setDraftDeviceId(d.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftDeviceId === d.id)}>
+                        {d.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+              <View style={styles.switchRow}>
+                <Text style={inputLabelStyle}>
+                  State: {draftStateOn ? "On" : "Off"}
+                </Text>
+                <Switch
+                  value={draftStateOn}
+                  onValueChange={setDraftStateOn}
+                  thumbColor={
+                    draftStateOn
+                      ? theme.colors.accent
+                      : "rgba(255,255,255,0.8)"
+                  }
+                  trackColor={{
+                    true: "rgba(180,107,255,0.45)",
+                    false: "rgba(255,255,255,0.24)",
+                  }}
+                />
+              </View>
+            </View>
+          )}
+
+          {editorSection === "trigger" && editorType === "presence" && (
+            <View>
+              <ModalField label="Household member" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {household.map((m) => (
+                    <Pressable
+                      key={m.id}
+                      style={choiceChipStyle(draftMemberId === m.id)}
+                      onPress={() => setDraftMemberId(m.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftMemberId === m.id)}>
+                        {m.name.split(" ")[0]}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+              <View style={styles.switchRow}>
+                <Text style={inputLabelStyle}>
+                  Status:{" "}
+                  {draftPresenceStatus === "home" ? "Home" : "Away"}
+                </Text>
+                <Switch
+                  value={draftPresenceStatus === "home"}
+                  onValueChange={(v) =>
+                    setDraftPresenceStatus(v ? "home" : "away")
+                  }
+                  thumbColor={
+                    draftPresenceStatus === "home"
+                      ? theme.colors.accent
+                      : "rgba(255,255,255,0.8)"
+                  }
+                  trackColor={{
+                    true: "rgba(180,107,255,0.45)",
+                    false: "rgba(255,255,255,0.24)",
+                  }}
+                />
+              </View>
+            </View>
+          )}
+
+          {editorSection === "trigger" && editorType === "scene" && (
+            <View>
+              <ModalField label="Scene" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {scenes.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      style={choiceChipStyle(draftSceneId === s.id)}
+                      onPress={() => setDraftSceneId(s.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftSceneId === s.id)}>
+                        {s.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+            </View>
+          )}
+
+          {editorSection === "condition" &&
+            editorType === "time-range" && (
+              <>
+                <ModalField label="Start time" labelStyle={inputLabelStyle}>
+                  <View style={styles.formRow}>
+                    <TextInput
+                      value={draftRange.startHour}
+                      onChangeText={(value) =>
+                        setDraftRange((prev) => ({
+                          ...prev,
+                          startHour: value,
+                        }))
+                      }
+                      keyboardType="number-pad"
+                      style={inputStyle}
+                    />
+                    <TextInput
+                      value={draftRange.startMinute}
+                      onChangeText={(value) =>
+                        setDraftRange((prev) => ({
+                          ...prev,
+                          startMinute: value,
+                        }))
+                      }
+                      keyboardType="number-pad"
+                      style={inputStyle}
+                    />
+                  </View>
+                </ModalField>
+                <ModalField label="End time" labelStyle={inputLabelStyle}>
+                  <View style={styles.formRow}>
+                    <TextInput
+                      value={draftRange.endHour}
+                      onChangeText={(value) =>
+                        setDraftRange((prev) => ({
+                          ...prev,
+                          endHour: value,
+                        }))
+                      }
+                      keyboardType="number-pad"
+                      style={inputStyle}
+                    />
+                    <TextInput
+                      value={draftRange.endMinute}
+                      onChangeText={(value) =>
+                        setDraftRange((prev) => ({
+                          ...prev,
+                          endMinute: value,
+                        }))
+                      }
+                      keyboardType="number-pad"
+                      style={inputStyle}
+                    />
+                  </View>
+                </ModalField>
+              </>
+            )}
+
+          {editorSection === "condition" && editorType === "device" && (
+            <View>
+              <ModalField label="Device" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {devices.map((d) => (
+                    <Pressable
+                      key={d.id}
+                      style={choiceChipStyle(draftDeviceId === d.id)}
+                      onPress={() => setDraftDeviceId(d.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftDeviceId === d.id)}>
+                        {d.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+              <View style={styles.switchRow}>
+                <Text style={inputLabelStyle}>
+                  State: {draftStateOn ? "On" : "Off"}
+                </Text>
+                <Switch
+                  value={draftStateOn}
+                  onValueChange={setDraftStateOn}
+                  thumbColor={
+                    draftStateOn
+                      ? theme.colors.accent
+                      : "rgba(255,255,255,0.8)"
+                  }
+                  trackColor={{
+                    true: "rgba(180,107,255,0.45)",
+                    false: "rgba(255,255,255,0.24)",
+                  }}
+                />
+              </View>
+            </View>
+          )}
+
+          {editorSection === "condition" && editorType === "day" && (
+            <View>
+              <ModalField label="Days" labelStyle={inputLabelStyle}>
+                <View style={styles.dayGrid}>
+                  {WEEK_DAYS.map((day) => {
+                    const active = draftDays.includes(day);
+                    return (
+                      <Pressable
+                        key={day}
+                        style={choiceChipStyle(active)}
+                        onPress={() =>
+                          setDraftDays((prev) =>
+                            prev.includes(day)
+                              ? prev.filter((d) => d !== day)
+                              : [...prev, day],
+                          )
+                        }
+                      >
+                        <Text style={choiceChipTextStyle(active)}>
+                          {day}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </ModalField>
+            </View>
+          )}
+
+          {editorSection === "action" && editorType === "toggle" && (
+            <View>
+              <ModalField label="Device" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {devices.map((d) => (
+                    <Pressable
+                      key={d.id}
+                      style={choiceChipStyle(draftDeviceId === d.id)}
+                      onPress={() => setDraftDeviceId(d.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftDeviceId === d.id)}>
+                        {d.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+              <View style={styles.switchRow}>
+                <Text style={inputLabelStyle}>
+                  Turn {draftStateOn ? "On" : "Off"}
+                </Text>
+                <Switch
+                  value={draftStateOn}
+                  onValueChange={setDraftStateOn}
+                  thumbColor={
+                    draftStateOn
+                      ? theme.colors.accent
+                      : "rgba(255,255,255,0.8)"
+                  }
+                  trackColor={{
+                    true: "rgba(180,107,255,0.45)",
+                    false: "rgba(255,255,255,0.24)",
+                  }}
+                />
+              </View>
+            </View>
+          )}
+
+          {editorSection === "action" && editorType === "set-ac" && (
+            <View>
+              <ModalField label="AC device" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {(acDevices.length ? acDevices : devices).map((d) => (
+                    <Pressable
+                      key={d.id}
+                      style={choiceChipStyle(draftDeviceId === d.id)}
+                      onPress={() => setDraftDeviceId(d.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftDeviceId === d.id)}>
+                        {d.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+              <ModalField label="Temperature" labelStyle={inputLabelStyle}>
+                <TextInput
+                  value={String(draftTemp)}
+                  onChangeText={(value) =>
+                    setDraftTemp(parseInt(value || "0", 10))
+                  }
+                  keyboardType="number-pad"
+                  style={inputStyle}
+                />
+              </ModalField>
+            </View>
+          )}
+
+          {editorSection === "action" &&
+            editorType === "set-brightness" && (
+              <View>
+                <ModalField label="Light device" labelStyle={inputLabelStyle}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.chipRow}
+                  >
+                    {(lightDevices.length ? lightDevices : devices).map(
+                      (d) => (
+                        <Pressable
+                          key={d.id}
+                          style={choiceChipStyle(draftDeviceId === d.id)}
+                          onPress={() => setDraftDeviceId(d.id)}
+                        >
+                          <Text
+                            style={choiceChipTextStyle(draftDeviceId === d.id)}
+                          >
+                            {d.name}
+                          </Text>
+                        </Pressable>
+                      ),
+                    )}
+                  </ScrollView>
+                </ModalField>
+                <ModalField label="Brightness %" labelStyle={inputLabelStyle}>
+                  <TextInput
+                    value={String(draftBrightness)}
+                    onChangeText={(value) =>
+                      setDraftBrightness(parseInt(value || "0", 10))
+                    }
+                    keyboardType="number-pad"
+                    style={inputStyle}
+                  />
+                </ModalField>
+              </View>
+            )}
+
+          {editorSection === "action" && editorType === "run-scene" && (
+            <View>
+              <ModalField label="Scene" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {scenes.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      style={choiceChipStyle(draftSceneId === s.id)}
+                      onPress={() => setDraftSceneId(s.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftSceneId === s.id)}>
+                        {s.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+            </View>
+          )}
+
+          {editorSection === "action" && editorType === "notify" && (
+            <View>
+              <ModalField label="Message" labelStyle={inputLabelStyle}>
+                <TextInput
+                  value={draftMessage}
+                  onChangeText={setDraftMessage}
+                  placeholder="Send a notification"
+                  placeholderTextColor="rgba(12,12,18,0.45)"
+                  style={inputStyle}
+                />
+              </ModalField>
+            </View>
+          )}
+
+          {editorSection === "action" && editorType === "delay" && (
+            <View>
+              <ModalField label="Delay (seconds)" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {DELAY_PRESETS.map((seconds) => {
+                    const active = draftDelaySeconds === seconds;
+                    return (
+                      <Pressable
+                        key={seconds}
+                        style={choiceChipStyle(active)}
+                        onPress={() => setDraftDelaySeconds(seconds)}
+                      >
+                        <Text style={choiceChipTextStyle(active)}>
+                          {formatDelayLabel(seconds)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                <TextInput
+                  value={String(draftDelaySeconds)}
+                  onChangeText={(value) =>
+                    setDraftDelaySeconds(parseInt(value || "0", 10))
+                  }
+                  keyboardType="number-pad"
+                  style={inputStyle}
+                />
+              </ModalField>
+            </View>
+          )}
+        </ScrollView>
+
+        <Pressable style={modalButtonStyle} onPress={addItem}>
+          <Text style={modalButtonTextStyle}>Add {editorSection}</Text>
+        </Pressable>
+      </ModalCard>
     </LinearGradient>
   );
 }
@@ -1545,7 +1377,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   deleteText: { color: "#FFD0D8", fontWeight: "800" },
-  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center" },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    padding: 0,
+  },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(10,8,30,0.6)",

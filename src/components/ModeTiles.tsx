@@ -1,5 +1,12 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Pressable from "./Pressable";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,18 +42,41 @@ export default function ModeTiles({
   const iconSize = Math.round((isTablet ? 22 : 20) * scale);
   const textSize = Math.round((isTablet ? 13 : 12) * scale);
   const gap = Math.round((isTablet ? 16 : 14) * scale);
+  const modesStyle: StyleProp<ViewStyle> = [styles.modes, { gap }];
+  const modeTileStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.modeTile,
+    { width: tileSize, height: tileSize, borderRadius: tileRadius },
+    active && styles.modeTileActive,
+  ];
+  const iconBubbleStyle: StyleProp<ViewStyle> = [
+    styles.iconBubble,
+    {
+      width: iconBubble,
+      height: iconBubble,
+      borderRadius: iconBubbleRadius,
+    },
+  ];
+  const iconBubbleActiveStyle: StyleProp<ViewStyle> = [
+    styles.iconBubbleActive,
+    {
+      width: iconBubble,
+      height: iconBubble,
+      borderRadius: iconBubbleRadius,
+    },
+  ];
+  const modeTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.modeText,
+    { fontSize: textSize },
+    active && styles.modeTextActive,
+  ];
   return (
-    <View style={[styles.modes, { gap }]}>
+    <View style={modesStyle}>
       {MODES.map((m) => {
         const active = value === m.key;
         return (
           <Pressable
             key={m.key}
-            style={[
-              styles.modeTile,
-              { width: tileSize, height: tileSize, borderRadius: tileRadius },
-              active && styles.modeTileActive,
-            ]}
+            style={modeTileStyle(active)}
             onPress={() => onChange(m.key)}
           >
             {active ? (
@@ -54,28 +84,12 @@ export default function ModeTiles({
                 colors={[theme.colors.accent2, theme.colors.accent]}
                 start={{ x: 0.1, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={[
-                  styles.iconBubbleActive,
-                  {
-                    width: iconBubble,
-                    height: iconBubble,
-                    borderRadius: iconBubbleRadius,
-                  },
-                ]}
+                style={iconBubbleActiveStyle}
               >
                 <Ionicons name={m.icon} size={iconSize} color="#FFFFFF" />
               </LinearGradient>
             ) : (
-              <View
-                style={[
-                  styles.iconBubble,
-                  {
-                    width: iconBubble,
-                    height: iconBubble,
-                    borderRadius: iconBubbleRadius,
-                  },
-                ]}
-              >
+              <View style={iconBubbleStyle}>
                 <Ionicons
                   name={m.icon}
                   size={iconSize}
@@ -83,13 +97,7 @@ export default function ModeTiles({
                 />
               </View>
             )}
-            <Text
-              style={[
-                styles.modeText,
-                { fontSize: textSize },
-                active && styles.modeTextActive,
-              ]}
-            >
+            <Text style={modeTextStyle(active)}>
               {m.label}
             </Text>
           </Pressable>

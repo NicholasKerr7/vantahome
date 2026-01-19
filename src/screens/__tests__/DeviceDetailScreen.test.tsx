@@ -1,5 +1,5 @@
 import React from "react";
-import renderer, { act } from "react-test-renderer";
+import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import DeviceDetailScreen from "../DeviceDetailScreen";
 import { useHomeStore } from "../../store/useHomeStore";
 
@@ -98,7 +98,7 @@ describe("DeviceDetailScreen", () => {
       params: { deviceId: "d1" },
     } as any;
 
-    let tree: renderer.ReactTestRenderer;
+    let tree: ReactTestRenderer;
     act(() => {
       tree = renderer.create(
         <DeviceDetailScreen navigation={navigation} route={route} />,

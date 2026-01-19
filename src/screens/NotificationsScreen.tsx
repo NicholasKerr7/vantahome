@@ -1,6 +1,16 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Pressable from "../components/Pressable";
+import LandscapeFrame from "../components/LandscapeFrame";
+import PortraitFrame from "../components/PortraitFrame";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
@@ -9,6 +19,7 @@ import type { NavigationProp } from "@react-navigation/native";
 import type { RootStackParamList } from "../app/AppNavigator";
 import { useResponsive } from "../theme/layout";
 import { useHomeStore } from "../store/useHomeStore";
+import { Swipeable } from "react-native-gesture-handler";
 
 type NotificationItem = {
   id: string;
@@ -107,19 +118,132 @@ export default function NotificationsScreen() {
   const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(900);
   const isWide = isTablet && isLandscape;
+  const isPortrait = !isLandscape;
   const iconBtnSize = Math.round((isTablet ? 46 : 40) * scale);
   const iconBtnRadius = Math.round(iconBtnSize * 0.4);
   const titleSize = Math.round((isTablet ? 26 : 24) * scale);
   const cardPad = Math.round((isTablet ? 18 : 14) * scale);
   const cardRadius = Math.round((isTablet ? 22 : 18) * scale);
+  const framePad = Math.round((isTablet ? 14 : 10) * scale);
+  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
+  const listWidth = isWide
+    ? Math.max(0, contentWidth - framePad * 2)
+    : contentWidth;
   const iconWrapSize = Math.round((isTablet ? 40 : 36) * scale);
   const iconWrapRadius = Math.round(iconWrapSize * 0.34);
   const iconSize = Math.round((isTablet ? 20 : 18) * scale);
   const textSize = Math.round((isTablet ? 14 : 13) * scale);
   const bodySize = Math.round((isTablet ? 13 : 12) * scale);
   const gap = Math.round((isTablet ? 16 : 10) * scale);
+  const listBottomPad = Math.round(
+    (isTablet ? (isLandscape ? 120 : 140) : 24) * scale,
+  );
+  const rootStyle: StyleProp<ViewStyle> = [styles.root, { paddingTop: topPad }];
+  const topBarLayout: ViewStyle = {
+    paddingHorizontal: gutter,
+    width: contentWidth,
+    alignSelf: "center",
+  };
+  const topBarStyle: StyleProp<ViewStyle> = [styles.topBar, topBarLayout];
+  const iconButtonLayout: ViewStyle = {
+    width: iconBtnSize,
+    height: iconBtnSize,
+    borderRadius: iconBtnRadius,
+  };
+  const iconButtonStyle: StyleProp<ViewStyle> = [
+    styles.iconBtn,
+    iconButtonLayout,
+  ];
+  const frameStyle: StyleProp<ViewStyle> = isWide
+    ? { marginTop: Math.round(8 * scale) }
+    : undefined;
+  const filtersRowLayout: ViewStyle = {
+    paddingHorizontal: isWide ? 0 : gutter,
+    width: "100%",
+    alignSelf: "center",
+  };
+  const filtersRowStyle: StyleProp<ViewStyle> = [
+    styles.filtersRow,
+    filtersRowLayout,
+  ];
+  const listWrapStyle: ViewStyle = {
+    width: "100%",
+    alignSelf: "center",
+    paddingHorizontal: isWide ? 0 : gutter,
+  };
+  const listContentStyle: ViewStyle = {
+    paddingTop: 12,
+    paddingBottom: listBottomPad,
+    gap,
+    paddingHorizontal: isWide ? 0 : isTablet ? gutter : 0,
+  };
+  const listStyle: ViewStyle = { width: "100%" };
+  const titleTextStyle: StyleProp<TextStyle> = [
+    styles.h1,
+    { fontSize: titleSize },
+  ];
+  const filterChipStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.filterChip,
+    active && styles.filterChipActive,
+  ];
+  const filterChipTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.filterChipText,
+    active && styles.filterChipTextActive,
+  ];
+  const listColumnStyle: StyleProp<ViewStyle> | undefined = isWide
+    ? { gap }
+    : undefined;
+  const swipeTextStyle: StyleProp<TextStyle> = [
+    styles.swipeText,
+    { fontSize: bodySize },
+  ];
+  const cardStyle: StyleProp<ViewStyle> = [
+    styles.card,
+    { padding: cardPad, borderRadius: cardRadius, width: "100%" },
+  ];
+  const accentBarStyleFor = (accent: string): StyleProp<ViewStyle> => [
+    styles.accentBar,
+    { backgroundColor: accent },
+  ];
+  const iconWrapStyleFor = (
+    accent: string,
+    soft: string,
+  ): StyleProp<ViewStyle> => [
+    styles.iconWrap,
+    {
+      width: iconWrapSize,
+      height: iconWrapSize,
+      borderRadius: iconWrapRadius,
+      backgroundColor: soft,
+      borderColor: accent,
+    },
+  ];
+  const cardTitleStyle: StyleProp<TextStyle> = [
+    styles.title,
+    { fontSize: textSize },
+  ];
+  const cardBodyStyle: StyleProp<TextStyle> = [
+    styles.body,
+    { fontSize: bodySize },
+  ];
+  const timeTextStyle: StyleProp<TextStyle> = [
+    styles.time,
+    { fontSize: bodySize },
+  ];
+  const newPillStyleFor = (
+    accent: string,
+    soft: string,
+  ): StyleProp<ViewStyle> => [
+    styles.newPill,
+    { borderColor: accent, backgroundColor: soft },
+  ];
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [filter, setFilter] = useState<NotificationFilter>("all");
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const FrameComponent = isPortrait ? PortraitFrame : LandscapeFrame;
+  const frameEnabled = isPortrait || isWide;
   const energy = useHomeStore((s) =>
     s.devices.find((device) => device.kind === "energy"),
   );
@@ -244,178 +368,177 @@ export default function NotificationsScreen() {
     if (filter === "all") return notifications;
     return notifications.filter((item) => item.category === filter);
   }, [filter, notifications]);
+  const visibleNotifications = useMemo(
+    () => filteredNotifications.filter((item) => !dismissedIds.has(item.id)),
+    [dismissedIds, filteredNotifications],
+  );
+  const canClearAll = useMemo(
+    () => notifications.some((item) => !dismissedIds.has(item.id)),
+    [dismissedIds, notifications],
+  );
+  const clearButtonStyle = [
+    styles.clearBtn,
+    !canClearAll && styles.clearBtnDisabled,
+  ];
+  const clearButtonTextStyle = [
+    styles.clearBtnText,
+    { fontSize: bodySize },
+    !canClearAll && styles.clearBtnTextDisabled,
+  ];
+
+  const dismissNotification = (id: string) => {
+    setDismissedIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
+
+  const handleClearAll = () => {
+    setDismissedIds((prev) => {
+      const next = new Set(prev);
+      notifications.forEach((item) => next.add(item.id));
+      return next;
+    });
+  };
 
   return (
     <LinearGradient
       colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={[styles.root, { paddingTop: topPad }]}
+      style={rootStyle}
     >
       <View
-        style={[
-          styles.topBar,
-          {
-            paddingHorizontal: gutter,
-            width: contentWidth,
-            alignSelf: "center",
-          },
-        ]}
+        style={topBarStyle}
       >
         <Pressable
-          style={[
-            styles.iconBtn,
-            {
-              width: iconBtnSize,
-              height: iconBtnSize,
-              borderRadius: iconBtnRadius,
-            },
-          ]}
+          style={iconButtonStyle}
           onPress={() => {
             if (navigation.canGoBack()) navigation.goBack();
-            else navigation.navigate("Main");
+            else navigation.navigate({ name: "Main", params: { screen: "Home" } });
           }}
         >
           <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
         </Pressable>
-        <Text style={[styles.h1, { fontSize: titleSize }]}>Notifications</Text>
-        <View style={{ width: iconBtnSize }} />
+        <View style={styles.titleWrap}>
+          <Text style={titleTextStyle}>Notifications</Text>
+        </View>
+        <Pressable
+          style={clearButtonStyle}
+          onPress={handleClearAll}
+          disabled={!canClearAll}
+        >
+          <Ionicons
+            name="trash-outline"
+            size={Math.round(16 * scale)}
+            color={canClearAll ? theme.colors.text : theme.colors.subtext}
+          />
+          <Text style={clearButtonTextStyle}>
+            Clear all
+          </Text>
+        </Pressable>
       </View>
-      <View
-        style={[
-          styles.filtersRow,
-          {
-            paddingHorizontal: gutter,
-            width: contentWidth,
-            alignSelf: "center",
-          },
-        ]}
+      <FrameComponent
+        enabled={frameEnabled}
+        width={contentWidth}
+        pad={framePad}
+        radius={frameRadius}
+        style={frameStyle}
       >
-        {filters.map((option) => {
-          const active = filter === option;
-          const label =
-            option === "all" ? "All" : CATEGORY_META[option].label;
-          return (
-            <Pressable
-              key={option}
-              style={[
-                styles.filterChip,
-                active && styles.filterChipActive,
-              ]}
-              onPress={() => setFilter(option)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  active && styles.filterChipTextActive,
-                ]}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      <View
-        style={{
-          width: contentWidth,
-          alignSelf: "center",
-          paddingHorizontal: isTablet ? 0 : gutter,
-        }}
-      >
-        <FlatList
-          data={filteredNotifications}
-          keyExtractor={(item) => item.id}
-          numColumns={isWide ? 2 : 1}
-          columnWrapperStyle={isWide ? { gap } : undefined}
-          contentContainerStyle={{
-            paddingTop: 12,
-            paddingBottom: Math.round(
-              (isTablet ? (isLandscape ? 120 : 140) : 24) * scale,
-            ),
-            gap,
-            paddingHorizontal: isTablet ? gutter : 0,
-          }}
-          style={{ width: "100%" }}
-          renderItem={({ item }) => {
-            const meta = CATEGORY_META[item.category];
+        <View style={filtersRowStyle}>
+          {filters.map((option) => {
+            const active = filter === option;
+              const label =
+                option === "all" ? "All" : CATEGORY_META[option].label;
             return (
-              <View
-                style={[
-                  styles.card,
-                  {
-                    padding: cardPad,
-                    borderRadius: cardRadius,
-                    width: isWide ? (contentWidth - gap) / 2 : "100%",
-                  },
-                ]}
+              <Pressable
+                key={option}
+                style={filterChipStyle(active)}
+                onPress={() => setFilter(option)}
               >
-                <View
-                  style={[
-                    styles.accentBar,
-                    { backgroundColor: meta.accent },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.iconWrap,
-                    {
-                      width: iconWrapSize,
-                      height: iconWrapSize,
-                      borderRadius: iconWrapRadius,
-                      backgroundColor: meta.soft,
-                      borderColor: meta.accent,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={meta.icon}
-                    size={iconSize}
-                    color={meta.accent}
-                  />
-                </View>
-                <View style={styles.cardBody}>
-                  <Text style={[styles.title, { fontSize: textSize }]}>
-                    {item.title}
-                  </Text>
-                  <Text style={[styles.body, { fontSize: bodySize }]}>
-                    {item.body}
-                  </Text>
-                </View>
-                <View style={styles.cardMeta}>
-                  {item.isNew && (
-                    <View
-                      style={[
-                        styles.newPill,
-                        {
-                          borderColor: meta.accent,
-                          backgroundColor: meta.soft,
-                        },
-                      ]}
-                    >
-                      <Text style={styles.newPillText}>NEW</Text>
+                <Text style={filterChipTextStyle(active)}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={listWrapStyle}>
+          <FlatList
+            data={visibleNotifications}
+            keyExtractor={(item) => item.id}
+            numColumns={isWide ? 2 : 1}
+            columnWrapperStyle={listColumnStyle}
+            contentContainerStyle={listContentStyle}
+            style={listStyle}
+            renderItem={({ item }) => {
+              const meta = CATEGORY_META[item.category];
+              const cardWidth = isWide
+                ? Math.floor((listWidth - gap) / 2)
+                : "100%";
+              const cardContainerStyle: StyleProp<ViewStyle> = { width: cardWidth };
+              return (
+                <Swipeable
+                  renderRightActions={() => (
+                    <View style={styles.swipeActions}>
+                      <Pressable
+                        style={styles.swipeButton}
+                        onPress={() => dismissNotification(item.id)}
+                      >
+                        <Ionicons
+                          name="close"
+                          size={Math.round(18 * scale)}
+                          color={theme.colors.text}
+                        />
+                        <Text style={swipeTextStyle}>Dismiss</Text>
+                      </Pressable>
                     </View>
                   )}
-                  <Text style={[styles.time, { fontSize: bodySize }]}>
-                    {item.time}
-                  </Text>
-                </View>
+                  onSwipeableOpen={() => dismissNotification(item.id)}
+                  rightThreshold={48}
+                  overshootRight={false}
+                  containerStyle={cardContainerStyle}
+                >
+                  <View style={cardStyle}>
+                    <View style={accentBarStyleFor(meta.accent)} />
+                    <View style={iconWrapStyleFor(meta.accent, meta.soft)}>
+                      <Ionicons
+                        name={meta.icon}
+                        size={iconSize}
+                        color={meta.accent}
+                      />
+                    </View>
+                    <View style={styles.cardBody}>
+                      <Text style={cardTitleStyle}>{item.title}</Text>
+                      <Text style={cardBodyStyle}>{item.body}</Text>
+                    </View>
+                    <View style={styles.cardMeta}>
+                      {item.isNew && (
+                        <View style={newPillStyleFor(meta.accent, meta.soft)}>
+                          <Text style={styles.newPillText}>NEW</Text>
+                        </View>
+                      )}
+                      <Text style={timeTextStyle}>{item.time}</Text>
+                    </View>
+                  </View>
+                </Swipeable>
+              );
+            }}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={28}
+                  color="rgba(255,255,255,0.65)"
+                />
+                <Text style={styles.emptyTitle}>All caught up</Text>
+                <Text style={styles.emptySub}>
+                  No notifications for this filter.
+                </Text>
               </View>
-            );
-          }}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyState}>
-              <Ionicons
-                name="checkmark-circle"
-                size={28}
-                color="rgba(255,255,255,0.65)"
-              />
-              <Text style={styles.emptyTitle}>All caught up</Text>
-              <Text style={styles.emptySub}>
-                No notifications for this filter.
-              </Text>
-            </View>
-          )}
-        />
-      </View>
+            )}
+          />
+        </View>
+      </FrameComponent>
     </LinearGradient>
   );
 }
@@ -427,6 +550,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
+    position: "relative",
+  },
+  titleWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
   },
   iconBtn: {
     width: 40,
@@ -439,6 +569,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   h1: { color: theme.colors.text, fontSize: 24, fontWeight: "900" },
+  clearBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  clearBtnDisabled: { opacity: 0.5 },
+  clearBtnText: { color: theme.colors.text, fontWeight: "800" },
+  clearBtnTextDisabled: { color: theme.colors.subtext },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -491,6 +635,21 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 4,
   },
+  swipeActions: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,99,132,0.18)",
+    borderRadius: 18,
+    marginLeft: 10,
+    height: "100%",
+  },
+  swipeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+    gap: 4,
+  },
+  swipeText: { color: theme.colors.text, fontWeight: "800" },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,

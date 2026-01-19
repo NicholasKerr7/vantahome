@@ -5,6 +5,9 @@ import {
   StyleSheet,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import Pressable from "./Pressable";
 import Animated, {
@@ -25,22 +28,22 @@ import DeviceIcon from "./DeviceIcon";
 const WHOLE_HOME_ID = "whole-home";
 const WHOLE_HOME_ROOM: Room = { id: WHOLE_HOME_ID, name: "Whole Home" };
 
-const ACTIVE_GRADIENT = [
+const ACTIVE_GRADIENT: [string, string, string] = [
   "#FFFFFF",
   "rgba(249,244,255,0.98)",
   "rgba(236,226,255,0.95)",
 ];
-const ACTIVE_GRADIENT_TABLET = [
+const ACTIVE_GRADIENT_TABLET: [string, string, string] = [
   "#FFFFFF",
   "rgba(242,247,255,0.98)",
   "rgba(230,236,255,0.95)",
 ];
-const STACKED_GRADIENT = [
+const STACKED_GRADIENT: [string, string, string] = [
   "rgba(255,255,255,0.92)",
   "rgba(250,244,255,0.84)",
   "rgba(240,232,255,0.78)",
 ];
-const STACKED_GRADIENT_TABLET = [
+const STACKED_GRADIENT_TABLET: [string, string, string] = [
   "rgba(255,255,255,0.86)",
   "rgba(246,242,255,0.82)",
   "rgba(236,232,255,0.76)",
@@ -244,42 +247,95 @@ function RoomCard({
   const borderColor = isTablet ? CARD_BORDER_TABLET : CARD_BORDER;
   const shadowColor = isTablet ? CARD_SHADOW_TABLET : CARD_SHADOW;
   const titleSize = isActive ? layout.titleSize : layout.titleSizeInactive;
+  const itemStyle: StyleProp<ViewStyle> = [
+    styles.item,
+    {
+      width: layout.cardWidth,
+      height: layout.cardHeight + layout.stackGap,
+    },
+    animStyle,
+  ];
+  const stackBackStyle: StyleProp<ViewStyle> = [
+    styles.stackBack1,
+    {
+      height: layout.cardHeight,
+      left: layout.stackInset1,
+      right: layout.stackInset1,
+      borderRadius: layout.stackRadius,
+      borderColor: isTablet ? STACK_BORDER_TABLET : STACK_BORDER,
+      backgroundColor: isTablet
+        ? "rgba(255,255,255,0.7)"
+        : "rgba(255,255,255,0.68)",
+    },
+  ];
+  const stackTitleStyle: StyleProp<TextStyle> = [
+    styles.stackTitle,
+    { fontSize: layout.stackTitleSize },
+  ];
+  const cardShellStyle: StyleProp<ViewStyle> = [
+    styles.cardShell,
+    {
+      height: layout.cardHeight,
+      borderRadius: layout.cardRadius,
+      shadowColor,
+    },
+  ];
+  const cardSurfaceStyle: StyleProp<ViewStyle> = [
+    styles.cardSurface,
+    {
+      borderRadius: layout.cardRadius,
+      paddingTop: layout.cardPad,
+      paddingHorizontal: layout.cardPad,
+      borderColor,
+    },
+  ];
+  const titleTextStyle: StyleProp<TextStyle> = [
+    styles.title,
+    { fontSize: titleSize },
+    !isActive && styles.titleInactive,
+  ];
+  const subTextStyle: StyleProp<TextStyle> = [
+    styles.sub,
+    { fontSize: layout.subSize },
+  ];
+  const iconRowStyle: StyleProp<ViewStyle> = [
+    styles.iconRow,
+    { gap: layout.iconGap, marginTop: layout.iconRowTop },
+  ];
+  const iconTileStyle: StyleProp<ViewStyle> = [
+    styles.iconTile,
+    { width: layout.iconTileWidth },
+  ];
+  const iconBubbleStyle: StyleProp<ViewStyle> = [
+    styles.iconBubble,
+    {
+      width: layout.bubbleSize,
+      height: layout.bubbleSize,
+      borderRadius: layout.bubbleRadius,
+    },
+  ];
+  const iconLabelStyle: StyleProp<TextStyle> = [
+    styles.iconLabel,
+    { fontSize: layout.iconLabelSize },
+  ];
+  const moreBubbleStyle: StyleProp<ViewStyle> = [
+    styles.iconBubble,
+    styles.moreBubble,
+    {
+      width: layout.bubbleSize,
+      height: layout.bubbleSize,
+      borderRadius: layout.bubbleRadius,
+    },
+  ];
 
   return (
-    <Animated.View
-      style={[
-        styles.item,
-        {
-          width: layout.cardWidth,
-          height: layout.cardHeight + layout.stackGap,
-        },
-        animStyle,
-      ]}
-    >
+    <Animated.View style={itemStyle}>
       {/* ✅ Fix: only ACTIVE card has stacked layers (prevents “3 cards” look) */}
       {isActive && (
         <>
-          <View
-            style={[
-              styles.stackBack1,
-              {
-                height: layout.cardHeight,
-                left: layout.stackInset1,
-                right: layout.stackInset1,
-                borderRadius: layout.stackRadius,
-                borderColor: isTablet ? STACK_BORDER_TABLET : STACK_BORDER,
-                backgroundColor: isTablet
-                  ? "rgba(255,255,255,0.7)"
-                  : "rgba(255,255,255,0.68)",
-              },
-            ]}
-            testID="room-card-stack-1"
-          >
+          <View style={stackBackStyle} testID="room-card-stack-1">
             {stackTitle ? (
-              <Text
-                style={[styles.stackTitle, { fontSize: layout.stackTitleSize }]}
-                numberOfLines={1}
-              >
+              <Text style={stackTitleStyle} numberOfLines={1}>
                 {stackTitle}
               </Text>
             ) : null}
@@ -288,14 +344,7 @@ function RoomCard({
       )}
 
       <Pressable
-        style={[
-          styles.cardShell,
-          {
-            height: layout.cardHeight,
-            borderRadius: layout.cardRadius,
-            shadowColor,
-          },
-        ]}
+        style={cardShellStyle}
         onPress={() => {
           if (isWholeHome) onWholeHomePress?.();
           else onRoomPress?.(item.id);
@@ -305,43 +354,21 @@ function RoomCard({
           colors={cardGradient}
           start={{ x: 0.1, y: 0.1 }}
           end={{ x: 1, y: 1 }}
-          style={[
-            styles.cardSurface,
-            {
-              borderRadius: layout.cardRadius,
-              paddingTop: layout.cardPad,
-              paddingHorizontal: layout.cardPad,
-              borderColor,
-            },
-          ]}
+          style={cardSurfaceStyle}
         >
-          <Text
-            style={[
-              styles.title,
-              { fontSize: titleSize },
-              !isActive && styles.titleInactive,
-            ]}
-            numberOfLines={1}
-          >
+          <Text style={titleTextStyle} numberOfLines={1}>
             {item.name}
           </Text>
           {isActive ? (
-            <Text style={[styles.sub, { fontSize: layout.subSize }]}>
-              {running} {runningLabel}
-            </Text>
+            <Text style={subTextStyle}>{running} {runningLabel}</Text>
           ) : null}
 
           {isActive ? (
-            <View
-              style={[
-                styles.iconRow,
-                { gap: layout.iconGap, marginTop: layout.iconRowTop },
-              ]}
-            >
+            <View style={iconRowStyle}>
               {iconTiles.map((d) => (
                 <Pressable
                   key={d.id}
-                  style={[styles.iconTile, { width: layout.iconTileWidth }]}
+                  style={iconTileStyle}
                   disabled={!onDevicePress}
                   onPress={(event) => {
                     // Prevent the card press from firing when tapping a device.
@@ -349,50 +376,24 @@ function RoomCard({
                     onDevicePress?.(d.id);
                   }}
                 >
-                  <View
-                    style={[
-                      styles.iconBubble,
-                      {
-                        width: layout.bubbleSize,
-                        height: layout.bubbleSize,
-                        borderRadius: layout.bubbleRadius,
-                      },
-                    ]}
-                  >
+                  <View style={iconBubbleStyle}>
                     <DeviceIcon
                       kind={d.kind}
                       size={layout.iconSize}
                       color={colorFor(d.kind)}
                     />
                   </View>
-                  <Text
-                    style={[
-                      styles.iconLabel,
-                      { fontSize: layout.iconLabelSize },
-                    ]}
-                  >
+                  <Text style={iconLabelStyle}>
                     {labelFor(d.kind)}
                   </Text>
                 </Pressable>
               ))}
 
-              <View style={[styles.iconTile, { width: layout.iconTileWidth }]}>
-                <View
-                  style={[
-                    styles.iconBubble,
-                    styles.moreBubble,
-                    {
-                      width: layout.bubbleSize,
-                      height: layout.bubbleSize,
-                      borderRadius: layout.bubbleRadius,
-                    },
-                  ]}
-                >
+              <View style={iconTileStyle}>
+                <View style={moreBubbleStyle}>
                   <Text style={styles.moreCount}>+{remaining}</Text>
                 </View>
-                <Text
-                  style={[styles.iconLabel, { fontSize: layout.iconLabelSize }]}
-                >
+                <Text style={iconLabelStyle}>
                   More
                 </Text>
               </View>
@@ -469,6 +470,19 @@ export default function RoomCarousel({
     }),
     [cardWidth, cardHeight, cardPad, isTablet, isLandscape, scale],
   );
+  const listStyle: StyleProp<ViewStyle> = {
+    width: listWidth,
+    alignSelf: "center",
+  };
+  const listContentStyle: StyleProp<ViewStyle> = [
+    styles.listContent,
+    {
+      paddingHorizontal: sidePad,
+      paddingTop: Math.round((isTablet ? 16 : 10) * scale),
+      paddingBottom: Math.round((isTablet ? 6 : 2) * scale),
+    },
+  ];
+  const separatorStyle: StyleProp<ViewStyle> = { width: gap };
 
   const [activeIndex, setActiveIndex] = useState(0);
   const x = useSharedValue(0);
@@ -505,7 +519,7 @@ export default function RoomCarousel({
         data={data}
         keyExtractor={(r) => r.id}
         showsHorizontalScrollIndicator={false}
-        style={{ width: listWidth, alignSelf: "center" }}
+        style={listStyle}
         // ✅ Fix: one card per swipe (no extra cards peeking)
         pagingEnabled
         snapToInterval={itemWidth}
@@ -518,15 +532,8 @@ export default function RoomCarousel({
         onMomentumScrollEnd={onMomentumEnd}
         onScrollEndDrag={onEndDrag}
         removeClippedSubviews={false} // ✅ fixes top/bottom clipping
-        contentContainerStyle={[
-          styles.listContent,
-          {
-            paddingHorizontal: sidePad,
-            paddingTop: Math.round((isTablet ? 16 : 10) * scale),
-            paddingBottom: Math.round((isTablet ? 6 : 2) * scale),
-          },
-        ]}
-        ItemSeparatorComponent={() => <View style={{ width: gap }} />}
+        contentContainerStyle={listContentStyle}
+        ItemSeparatorComponent={() => <View style={separatorStyle} />}
         renderItem={({ item, index }) => {
           const stackTitle =
             index === activeIndex ? data[index + 1]?.name : undefined;

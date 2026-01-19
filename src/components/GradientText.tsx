@@ -1,5 +1,11 @@
 import React from "react";
-import { Text, type TextProps } from "react-native";
+import {
+  Text,
+  StyleSheet,
+  type StyleProp,
+  type TextProps,
+  type TextStyle,
+} from "react-native";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -12,6 +18,9 @@ export default function GradientText({
   colors: readonly [string, string, ...string[]];
   textProps: TextProps;
 }) {
+  const hiddenTextStyle = (style?: StyleProp<TextStyle>): StyleProp<TextStyle> =>
+    [style, styles.hiddenText];
+
   return (
     <MaskedView maskElement={<Text {...textProps}>{text}</Text>}>
       <LinearGradient
@@ -20,10 +29,14 @@ export default function GradientText({
         end={{ x: 1, y: 1 }}
       >
         {/* Invisible text to size the gradient correctly */}
-        <Text {...textProps} style={[textProps.style, { opacity: 0 } as any]}>
+        <Text {...textProps} style={hiddenTextStyle(textProps.style)}>
           {text}
         </Text>
       </LinearGradient>
     </MaskedView>
   );
 }
+
+const styles = StyleSheet.create({
+  hiddenText: { opacity: 0 },
+});

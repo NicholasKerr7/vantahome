@@ -4,12 +4,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Modal,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   Animated,
 } from "react-native";
+import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -17,6 +15,12 @@ import Slider from "@react-native-community/slider";
 import * as Haptics from "expo-haptics";
 import { theme } from "../theme/theme";
 import BackgroundLines from "../components/BackgroundLines";
+import ScreenFrame from "../components/ScreenFrame";
+import ScreenSectionLayout from "../components/ScreenSectionLayout";
+import HeaderPill from "../components/HeaderPill";
+import ModalCard from "../components/ModalCard";
+import ModalActionRow from "../components/ModalActionRow";
+import ModalField from "../components/ModalField";
 import DeviceIcon from "../components/DeviceIcon";
 import {
   AC_TEMP_MAX_C,
@@ -30,9 +34,10 @@ import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ScenesScreen() {
-  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
+  const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
   const isWide = isTablet && isLandscape;
+  const isPortrait = !isLandscape;
   const titleSize = Math.round((isTablet ? 32 : 28) * scale);
   const subtitleSize = Math.round((isTablet ? 15 : 13) * scale);
   const pillHeight = Math.round((isTablet ? 36 : 32) * scale);
@@ -41,7 +46,17 @@ export default function ScenesScreen() {
   const sectionSubSize = Math.round((isTablet ? 13 : 12) * scale);
   const cardPad = Math.round((isTablet ? 18 : 16) * scale);
   const cardRadius = Math.round((isTablet ? 24 : 22) * scale);
+  const framePad = Math.round((isTablet ? 14 : 10) * scale);
+  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
+  const outerGutter = isWide ? Math.round(gutter * 0.6) : isTablet ? gutter : 0;
+  const innerGutter = isWide ? Math.round(gutter * 0.75) : gutter;
   const gridGap = Math.round((isTablet ? 18 : 12) * scale);
+  const dividerPad = Math.round((isTablet ? 16 : 12) * scale);
+  const scrollTopPad = 0;
+  const scrollBottomPad = Math.round(gridGap * 1.2);
+  const panelPad = Math.round((isTablet ? 18 : 14) * scale);
+  const panelRadius = Math.round((isTablet ? 26 : 22) * scale);
+  const minSectionWidth = Math.round((isTablet ? 320 : 280) * scale);
   const modalPad = Math.round((isTablet ? 20 : 18) * scale);
   const modalRadius = Math.round((isTablet ? 26 : 24) * scale);
   const modalTitleSize = Math.round((isTablet ? 20 : 18) * scale);
@@ -63,6 +78,7 @@ export default function ScenesScreen() {
   const scenes = useHomeStore((s) => s.scenes);
   const devices = useHomeStore((s) => s.devices);
   const runScene = useHomeStore((s) => s.runScene);
+  const clearActiveScene = useHomeStore((s) => s.clearActiveScene);
   const activeSceneId = useHomeStore((s) => s.activeSceneId);
   const addScene = useHomeStore((s) => s.addScene);
   const updateScene = useHomeStore((s) => s.updateScene);
@@ -112,6 +128,33 @@ export default function ScenesScreen() {
       })),
     [rooms, scenes],
   );
+  const columnCount = useMemo(() => {
+    if (!isWide) return 1;
+    const availableWidth = width - outerGutter * 2 - innerGutter * 2;
+    const maxColumns = Math.floor(
+      (availableWidth + gridGap) / (minSectionWidth + gridGap),
+    );
+    return Math.max(1, Math.min(3, maxColumns));
+  }, [
+    gridGap,
+    innerGutter,
+    isWide,
+    minSectionWidth,
+    outerGutter,
+    width,
+  ]);
+  const sceneColumns = useMemo(() => {
+    const columns = Array.from(
+      { length: columnCount },
+      () => [] as typeof sections,
+    );
+    sections.forEach((section, index) => {
+      columns[index % columnCount].push(section);
+    });
+    return columns;
+  }, [columnCount, sections]);
+
+  const frameEnabled = isPortrait || isWide;
 
   useEffect(() => {
     if (!rooms.length) {
@@ -126,6 +169,191 @@ export default function ScenesScreen() {
   }, [rooms, roomId]);
 
   const canCreate = Boolean(roomId && selectedDeviceIds.length > 0);
+  const contentStyle: StyleProp<ViewStyle> = [
+    styles.content,
+    {
+      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
+      paddingTop: topPad,
+      paddingBottom: tabBarPad,
+    },
+  ];
+  const headerWrapStyle: StyleProp<ViewStyle> = {
+    paddingHorizontal: innerGutter,
+  };
+  const headerTitleStyle: StyleProp<TextStyle> = [
+    styles.h1,
+    { fontSize: titleSize },
+  ];
+  const headerSubtitleStyle: StyleProp<TextStyle> = [
+    styles.p,
+    { fontSize: subtitleSize },
+  ];
+  const countPillStyle: StyleProp<ViewStyle> = [
+    styles.countPill,
+    { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+  ];
+  const countTextStyle: StyleProp<TextStyle> = [
+    styles.countText,
+    { fontSize: pillText },
+  ];
+  const clearPillStyle: StyleProp<ViewStyle> = [
+    styles.clearPill,
+    { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+  ];
+  const clearTextStyle: StyleProp<TextStyle> = [
+    styles.clearText,
+    { fontSize: pillText },
+  ];
+  const addPillStyle: StyleProp<ViewStyle> = [
+    styles.addPill,
+    { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+  ];
+  const addTextStyle: StyleProp<TextStyle> = [
+    styles.addText,
+    { fontSize: pillText },
+  ];
+  const headerDividerWrapStyle: StyleProp<ViewStyle> = {
+    paddingVertical: dividerPad,
+  };
+  const sectionsScrollContentStyle: StyleProp<ViewStyle> = {
+    paddingTop: scrollTopPad,
+    paddingBottom: scrollBottomPad,
+    paddingHorizontal: innerGutter,
+  };
+  const sectionsGridLandscapeStyle: StyleProp<ViewStyle> = [
+    styles.sectionsGrid,
+    styles.sectionsGridLandscape,
+    { gap: gridGap },
+  ];
+  const sectionsColumnStyle: StyleProp<ViewStyle> = [
+    styles.sectionsColumn,
+    { gap: gridGap },
+  ];
+  const sectionStyle: StyleProp<ViewStyle> = [
+    styles.section,
+    { marginTop: isWide ? 0 : gridGap, width: "100%" },
+  ];
+  const roomPanelStyle: StyleProp<ViewStyle> = [
+    styles.roomPanel,
+    { padding: panelPad, borderRadius: panelRadius },
+  ];
+  const sectionTitleStyle: StyleProp<TextStyle> = [
+    styles.sectionTitle,
+    { fontSize: sectionTitleSize },
+  ];
+  const sectionSubStyle: StyleProp<TextStyle> = [
+    styles.sectionSub,
+    { fontSize: sectionSubSize },
+  ];
+  const emptyCardStyle: StyleProp<ViewStyle> = [
+    styles.emptyCard,
+    { padding: cardPad, borderRadius: cardRadius },
+  ];
+  const modalCardStyle: StyleProp<ViewStyle> = [
+    styles.modalCard,
+    {
+      borderRadius: modalRadius,
+      maxWidth: isTablet ? 640 : undefined,
+      width: isTablet ? Math.min(contentWidth - gutter * 2, 640) : undefined,
+      alignSelf: isTablet ? "center" : "stretch",
+    },
+  ];
+  const modalContentStyle: StyleProp<ViewStyle> = [
+    styles.modalContent,
+    { padding: modalPad },
+  ];
+  const modalTitleStyle: StyleProp<TextStyle> = [
+    styles.modalTitle,
+    { fontSize: modalTitleSize },
+  ];
+  const modalSubStyle: StyleProp<TextStyle> = [
+    styles.modalSub,
+    { fontSize: modalSubSize },
+  ];
+  const modalLabelStyle: StyleProp<TextStyle> = [
+    styles.modalLabel,
+    { fontSize: modalLabelSize },
+  ];
+  const modalHintStyle: StyleProp<TextStyle> = [
+    styles.modalHint,
+    { fontSize: modalSubSize },
+  ];
+  const modalInputStyle: StyleProp<ViewStyle> = [
+    styles.modalInput,
+    {
+      height: modalInputHeight,
+      borderRadius: Math.round(modalInputHeight * 0.28),
+    },
+  ];
+  const modalGhostStyle: StyleProp<ViewStyle> = [
+    styles.modalGhost,
+    {
+      height: modalBtnHeight,
+      borderRadius: Math.round(modalBtnHeight * 0.28),
+    },
+  ];
+  const modalGhostTextStyle: StyleProp<TextStyle> = [
+    styles.modalGhostText,
+    { fontSize: modalLabelSize },
+  ];
+  const modalPrimaryBaseStyle: StyleProp<ViewStyle> = [
+    styles.modalPrimary,
+    {
+      height: modalBtnHeight,
+      borderRadius: Math.round(modalBtnHeight * 0.28),
+    },
+  ];
+  const modalPrimaryStyle: StyleProp<ViewStyle> = [
+    modalPrimaryBaseStyle,
+    !canCreate && styles.modalPrimaryDisabled,
+  ];
+  const modalPrimaryTextStyle: StyleProp<TextStyle> = [
+    styles.modalPrimaryText,
+    { fontSize: modalLabelSize },
+  ];
+  const roomPillStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.roomPill,
+    { height: roomPillHeight, borderRadius: Math.round(roomPillHeight / 2) },
+    active && styles.roomPillActive,
+  ];
+  const roomPillTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.roomPillText,
+    { fontSize: modalLabelSize },
+    active && styles.roomPillTextActive,
+  ];
+  const deviceChipStyle = (active?: boolean): StyleProp<ViewStyle> => [
+    styles.deviceChip,
+    {
+      height: deviceChipHeight,
+      borderRadius: Math.round(deviceChipHeight * 0.4),
+    },
+    active && styles.deviceChipActive,
+  ];
+  const deviceIconStyle = (active?: boolean): StyleProp<ViewStyle> => [
+    styles.deviceIcon,
+    active && styles.deviceIconActive,
+  ];
+  const deviceTextStyle = (active?: boolean): StyleProp<TextStyle> => [
+    styles.deviceText,
+    { fontSize: modalLabelSize },
+    active && styles.deviceTextActive,
+  ];
+  const detailStatusPillStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.detailStatusPill,
+    {
+      height: roomPillHeight,
+      borderRadius: Math.round(roomPillHeight / 2),
+    },
+    active && styles.detailStatusPillActive,
+  ];
+  const detailStatusTextStyle: StyleProp<TextStyle> = [
+    styles.detailStatusText,
+    { fontSize: modalLabelSize },
+  ];
+  const detailActionTextStyle: StyleProp<TextStyle> = [
+    styles.detailActionText,
+    { fontSize: modalLabelSize },
+  ];
 
   const openCreate = () => {
     setShowCreate(true);
@@ -204,451 +432,300 @@ export default function ScenesScreen() {
     });
   };
 
+  const renderSection = ({
+    room,
+    scenes: roomScenes,
+  }: (typeof sections)[number]) => (
+    <View key={room.id} style={sectionStyle}>
+      <View style={roomPanelStyle}>
+        <View style={styles.sectionHeader}>
+          <Text style={sectionTitleStyle}>{room.name}</Text>
+          <Text style={sectionSubStyle}>{roomScenes.length} presets</Text>
+        </View>
+
+        {roomScenes.length === 0 ? (
+          <View style={emptyCardStyle}>
+            <Text style={styles.emptyTitle}>No scenes yet</Text>
+            <Text style={styles.emptySub}>
+              Create a quick mood from your devices.
+            </Text>
+          </View>
+        ) : (
+          roomScenes.map((scene) => {
+            const deviceIds = Array.from(
+              new Set(scene.actions.map((a) => a.deviceId)),
+            );
+            const sceneDevices = deviceIds
+              .map((id) => deviceMap.get(id))
+              .filter(Boolean) as Device[];
+            const actionLabels = scene.actions.map((action) =>
+              formatAction(action, deviceMap),
+            );
+            return (
+              <SceneCard
+                key={scene.id}
+                scene={scene}
+                devices={sceneDevices}
+                actionLabels={actionLabels}
+                isActive={scene.id === activeSceneId}
+                onRun={() => runScene(scene.id)}
+                onOpen={() => setDetailSceneId(scene.id)}
+              />
+            );
+          })
+        )}
+      </View>
+    </View>
+  );
+
   return (
     <LinearGradient
       colors={[theme.colors.bg1, theme.colors.bg0]}
       style={styles.root}
     >
       <BackgroundLines />
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal: isTablet ? gutter : 0,
-            paddingTop: topPad,
-            paddingBottom: tabBarPad,
-          },
-        ]}
-      >
-        <View
-          style={{
-            width: contentWidth,
-            paddingHorizontal: isTablet ? 0 : gutter,
-          }}
+      <View style={contentStyle}>
+        <ScreenFrame
+          isPortrait={isPortrait}
+          enabled={frameEnabled}
+          isWide={isWide}
+          pad={framePad}
+          radius={frameRadius}
         >
-          <View style={styles.header}>
-            <View>
-              <Text style={[styles.h1, { fontSize: titleSize }]}>Scenes</Text>
-              <Text style={[styles.p, { fontSize: subtitleSize }]}>
-                One-tap moods for each room.
-              </Text>
-            </View>
-            <View style={styles.headerActions}>
-              <View
-                style={[
-                  styles.countPill,
-                  {
-                    height: pillHeight,
-                    borderRadius: Math.round(pillHeight / 2),
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="sparkles"
-                  size={Math.round(14 * scale)}
-                  color={theme.colors.text}
-                />
-                <Text style={[styles.countText, { fontSize: pillText }]}>
-                  {scenes.length} Scenes
-                </Text>
-              </View>
-              <Pressable
-                style={[
-                  styles.addPill,
-                  {
-                    height: pillHeight,
-                    borderRadius: Math.round(pillHeight / 2),
-                  },
-                ]}
-                onPress={openCreate}
-              >
-                <Ionicons
-                  name="add"
-                  size={Math.round(16 * scale)}
-                  color={theme.colors.text}
-                />
-                <Text style={[styles.addText, { fontSize: pillText }]}>
-                  Create
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.sectionsGrid,
-              isWide && {
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: gridGap,
-              },
-            ]}
-          >
-            {sections.map(({ room, scenes: roomScenes }) => (
-              <View
-                key={room.id}
-                style={[
-                  styles.section,
-                  {
-                    marginTop: isWide ? 0 : gridGap,
-                    width: isWide ? (contentWidth - gridGap) / 2 : "100%",
-                  },
-                ]}
-              >
-                <View style={styles.sectionHeader}>
-                  <Text
-                    style={[
-                      styles.sectionTitle,
-                      { fontSize: sectionTitleSize },
-                    ]}
-                  >
-                    {room.name}
-                  </Text>
-                  <Text
-                    style={[styles.sectionSub, { fontSize: sectionSubSize }]}
-                  >
-                    {roomScenes.length} presets
+          <ScreenSectionLayout
+            header={
+              <View style={styles.header}>
+                <View>
+                  <Text style={headerTitleStyle}>Scenes</Text>
+                  <Text style={headerSubtitleStyle}>
+                    One-tap moods for each room.
                   </Text>
                 </View>
-
-                {roomScenes.length === 0 ? (
-                  <View
-                    style={[
-                      styles.emptyCard,
-                      { padding: cardPad, borderRadius: cardRadius },
-                    ]}
-                  >
-                    <Text style={styles.emptyTitle}>No scenes yet</Text>
-                    <Text style={styles.emptySub}>
-                      Create a quick mood from your devices.
-                    </Text>
-                  </View>
-                ) : (
-                  roomScenes.map((scene) => {
-                    const deviceIds = Array.from(
-                      new Set(scene.actions.map((a) => a.deviceId)),
-                    );
-                    const sceneDevices = deviceIds
-                      .map((id) => deviceMap.get(id))
-                      .filter(Boolean) as Device[];
-                    const actionLabels = scene.actions.map((action) =>
-                      formatAction(action, deviceMap),
-                    );
-                    return (
-                      <SceneCard
-                        key={scene.id}
-                        scene={scene}
-                        devices={sceneDevices}
-                        actionLabels={actionLabels}
-                        isActive={scene.id === activeSceneId}
-                        onRun={() => runScene(scene.id)}
-                        onOpen={() => setDetailSceneId(scene.id)}
-                      />
-                    );
-                  })
-                )}
+                <View style={styles.headerActions}>
+                <HeaderPill
+                  label={`${scenes.length} Scenes`}
+                  icon="sparkles"
+                  iconSize={Math.round(14 * scale)}
+                  style={countPillStyle}
+                  textStyle={countTextStyle}
+                />
+                {activeSceneId ? (
+                  <HeaderPill
+                    label="Clear active"
+                    icon="close-circle"
+                    iconSize={Math.round(16 * scale)}
+                    style={clearPillStyle}
+                    textStyle={clearTextStyle}
+                    onPress={clearActiveScene}
+                  />
+                ) : null}
+                <HeaderPill
+                  label="Create"
+                  icon="add"
+                  iconSize={Math.round(16 * scale)}
+                  style={addPillStyle}
+                  textStyle={addTextStyle}
+                  onPress={openCreate}
+                />
               </View>
-            ))}
-          </View>
-        </View>
-      </ScrollView>
+            </View>
+          }
+            headerWrapStyle={headerWrapStyle}
+            showDivider={isWide}
+            dividerWrapStyle={headerDividerWrapStyle}
+            scrollStyle={styles.sectionsScroll}
+            contentContainerStyle={sectionsScrollContentStyle}
+            showsVerticalScrollIndicator={false}
+          >
+            {isWide && columnCount > 1 ? (
+              <View style={sectionsGridLandscapeStyle}>
+                {sceneColumns.map((column, index) => (
+                  <View
+                    key={`scene-column-${index}`}
+                    style={sectionsColumnStyle}
+                  >
+                    {column.map(renderSection)}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.sectionsGrid}>
+                {sections.map(renderSection)}
+              </View>
+            )}
+          </ScreenSectionLayout>
+        </ScreenFrame>
+      </View>
 
-      <Modal
-        transparent
+      <ModalCard
         visible={showCreate}
-        animationType="fade"
         onRequestClose={() => {
           setShowCreate(false);
           setEditingSceneId(null);
         }}
+        onBackdropPress={() => {
+          setShowCreate(false);
+          setEditingSceneId(null);
+        }}
+        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.92)"]}
+        cardStyle={modalCardStyle}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => {
-              setShowCreate(false);
-              setEditingSceneId(null);
-            }}
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.select({ ios: "padding", android: undefined })}
-          >
-            <LinearGradient
-              colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.92)"]}
-              start={{ x: 0.1, y: 0.1 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.modalCard,
-                {
-                  borderRadius: modalRadius,
-                  maxWidth: isTablet ? 640 : undefined,
-                  width: isTablet
-                    ? Math.min(contentWidth - gutter * 2, 640)
-                    : undefined,
-                  alignSelf: isTablet ? "center" : "stretch",
-                },
-              ]}
+        <ScrollView
+          contentContainerStyle={modalContentStyle}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={modalTitleStyle}>
+            {editingSceneId ? "Edit scene" : "Create scene"}
+          </Text>
+          <Text style={modalSubStyle}>
+            {editingSceneId
+              ? "Update your scene settings."
+              : "Capture a mood for this room."}
+          </Text>
+
+          <ModalField label="Scene name" labelStyle={modalLabelStyle}>
+            <TextInput
+              value={sceneName}
+              onChangeText={setSceneName}
+              placeholder="Movie Night"
+              placeholderTextColor="rgba(12,12,18,0.45)"
+              style={modalInputStyle}
+            />
+          </ModalField>
+
+          <ModalField label="Room" labelStyle={modalLabelStyle}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.roomRow}
             >
-              <ScrollView
-                contentContainerStyle={[
-                  styles.modalContent,
-                  { padding: modalPad },
-                ]}
-                showsVerticalScrollIndicator={false}
-              >
-                <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
-                  {editingSceneId ? "Edit scene" : "Create scene"}
-                </Text>
-                <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
-                  {editingSceneId
-                    ? "Update your scene settings."
-                    : "Capture a mood for this room."}
-                </Text>
+              {rooms.map((room) => {
+                const active = room.id === roomId;
+                return (
+                  <Pressable
+                    key={room.id}
+                    style={roomPillStyle(active)}
+                    onPress={() => {
+                      setRoomId(room.id);
+                      setSelectedDeviceIds([]);
+                      setOverrides({});
+                    }}
+                  >
+                    <Text style={roomPillTextStyle(active)}>
+                      {room.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </ModalField>
 
-                <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                  Scene name
-                </Text>
-                <TextInput
-                  value={sceneName}
-                  onChangeText={setSceneName}
-                  placeholder="Movie Night"
-                  placeholderTextColor="rgba(12,12,18,0.45)"
-                  style={[
-                    styles.modalInput,
-                    {
-                      height: modalInputHeight,
-                      borderRadius: Math.round(modalInputHeight * 0.28),
-                    },
-                  ]}
-                />
-
-                <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                  Room
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.roomRow}
-                >
-                  {rooms.map((room) => {
-                    const active = room.id === roomId;
-                    return (
-                      <Pressable
-                        key={room.id}
-                        style={[
-                          styles.roomPill,
-                          {
-                            height: roomPillHeight,
-                            borderRadius: Math.round(roomPillHeight / 2),
-                          },
-                          active && styles.roomPillActive,
-                        ]}
-                        onPress={() => {
-                          setRoomId(room.id);
-                          setSelectedDeviceIds([]);
-                          setOverrides({});
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.roomPillText,
-                            { fontSize: modalLabelSize },
-                            active && styles.roomPillTextActive,
-                          ]}
-                        >
-                          {room.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-
-                <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                  Devices
-                </Text>
-                {roomDevices.length === 0 ? (
-                  <Text style={[styles.modalHint, { fontSize: modalSubSize }]}>
-                    No devices in this room yet.
-                  </Text>
-                ) : (
-                  <View style={styles.deviceGrid}>
-                    {roomDevices.map((device) => {
-                      const active = selectedDeviceIds.includes(device.id);
-                      return (
-                        <Pressable
-                          key={device.id}
-                          style={[
-                            styles.deviceChip,
-                            {
-                              height: deviceChipHeight,
-                              borderRadius: Math.round(deviceChipHeight * 0.4),
-                            },
-                            active && styles.deviceChipActive,
-                          ]}
-                          onPress={() => toggleDeviceSelection(device)}
-                        >
-                          <View
-                            style={[
-                              styles.deviceIcon,
-                              active && styles.deviceIconActive,
-                            ]}
-                          >
-                            <DeviceIcon
-                              kind={device.kind}
-                              size={Math.round(14 * scale)}
-                              color={active ? "#fff" : "#2B0A73"}
-                            />
-                          </View>
-                          <Text
-                            style={[
-                              styles.deviceText,
-                              { fontSize: modalLabelSize },
-                              active && styles.deviceTextActive,
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {device.name}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                )}
-
-                <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                  Controls
-                </Text>
-                {selectedDeviceIds.length === 0 ? (
-                  <Text style={[styles.modalHint, { fontSize: modalSubSize }]}>
-                    Select devices to configure scene controls.
-                  </Text>
-                ) : (
-                  <View style={styles.controlsStack}>
-                    {selectedDeviceIds.map((id) => {
-                      const device = deviceMap.get(id);
-                      if (!device) return null;
-                      return (
-                        <DeviceControlCard
-                          key={id}
-                          device={device}
-                          override={overrides[id]}
-                          onPatch={(patch) => updateOverride(device.id, patch)}
+          <ModalField label="Devices" labelStyle={modalLabelStyle}>
+            {roomDevices.length === 0 ? (
+              <Text style={modalHintStyle}>No devices in this room yet.</Text>
+            ) : (
+              <View style={styles.deviceGrid}>
+                {roomDevices.map((device) => {
+                  const active = selectedDeviceIds.includes(device.id);
+                  return (
+                    <Pressable
+                      key={device.id}
+                      style={deviceChipStyle(active)}
+                      onPress={() => toggleDeviceSelection(device)}
+                    >
+                      <View style={deviceIconStyle(active)}>
+                        <DeviceIcon
+                          kind={device.kind}
+                          size={Math.round(14 * scale)}
+                          color={active ? "#fff" : "#2B0A73"}
                         />
-                      );
-                    })}
-                  </View>
-                )}
-                <Text style={[styles.modalHint, { fontSize: modalSubSize }]}>
+                      </View>
+                      <Text
+                        style={deviceTextStyle(active)}
+                        numberOfLines={1}
+                      >
+                        {device.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </ModalField>
+
+          <ModalField label="Controls" labelStyle={modalLabelStyle}>
+            {selectedDeviceIds.length === 0 ? (
+              <Text style={modalHintStyle}>
+                Select devices to configure scene controls.
+              </Text>
+            ) : (
+              <View style={styles.controlsStack}>
+                {selectedDeviceIds.map((id) => {
+                  const device = deviceMap.get(id);
+                  if (!device) return null;
+                  return (
+                    <DeviceControlCard
+                      key={id}
+                      device={device}
+                      override={overrides[id]}
+                      onPatch={(patch) => updateOverride(device.id, patch)}
+                    />
+                  );
+                })}
+              </View>
+            )}
+          </ModalField>
+                <Text style={modalHintStyle}>
                   Scenes capture the current device settings.
                 </Text>
 
-                <View style={styles.modalRow}>
-                  <Pressable
-                    style={[
-                      styles.modalGhost,
-                      {
-                        height: modalBtnHeight,
-                        borderRadius: Math.round(modalBtnHeight * 0.28),
-                      },
-                    ]}
-                    onPress={() => {
-                      setShowCreate(false);
-                      setEditingSceneId(null);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.modalGhostText,
-                        { fontSize: modalLabelSize },
-                      ]}
-                    >
-                      Cancel
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.modalPrimary,
-                      {
-                        height: modalBtnHeight,
-                        borderRadius: Math.round(modalBtnHeight * 0.28),
-                      },
-                      !canCreate && styles.modalPrimaryDisabled,
-                    ]}
-                    onPress={handleCreate}
-                    disabled={!canCreate}
-                  >
-                    <Text
-                      style={[
-                        styles.modalPrimaryText,
-                        { fontSize: modalLabelSize },
-                      ]}
-                    >
-                      {editingSceneId ? "Save" : "Create"}
-                    </Text>
-                  </Pressable>
-                </View>
-              </ScrollView>
-            </LinearGradient>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+        <ModalActionRow
+          style={styles.modalRow}
+          actions={[
+            {
+              label: "Cancel",
+              onPress: () => {
+                setShowCreate(false);
+                setEditingSceneId(null);
+              },
+              style: modalGhostStyle,
+              textStyle: modalGhostTextStyle,
+            },
+            {
+              label: editingSceneId ? "Save" : "Create",
+              onPress: handleCreate,
+              style: modalPrimaryStyle,
+              textStyle: modalPrimaryTextStyle,
+              disabled: !canCreate,
+            },
+          ]}
+        />
+        </ScrollView>
+      </ModalCard>
 
-      <Modal
-        transparent
+      <ModalCard
         visible={Boolean(detailScene)}
-        animationType="fade"
         onRequestClose={() => setDetailSceneId(null)}
+        onBackdropPress={() => setDetailSceneId(null)}
+        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.92)"]}
+        cardStyle={modalCardStyle}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setDetailSceneId(null)}
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.select({ ios: "padding", android: undefined })}
-          >
-            <LinearGradient
-              colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.92)"]}
-              start={{ x: 0.1, y: 0.1 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.modalCard,
-                {
-                  borderRadius: modalRadius,
-                  maxWidth: isTablet ? 640 : undefined,
-                  width: isTablet
-                    ? Math.min(contentWidth - gutter * 2, 640)
-                    : undefined,
-                  alignSelf: isTablet ? "center" : "stretch",
-                },
-              ]}
-            >
-              <ScrollView
-                contentContainerStyle={[
-                  styles.modalContent,
-                  { padding: modalPad },
-                ]}
-                showsVerticalScrollIndicator={false}
-              >
-                <Text style={[styles.modalTitle, { fontSize: modalTitleSize }]}>
-                  {detailScene?.name ?? "Scene details"}
-                </Text>
-                <Text style={[styles.modalSub, { fontSize: modalSubSize }]}>
-                  {detailRoom?.name ?? "Room"} •{" "}
-                  {detailScene?.actions.length ?? 0} actions •{" "}
-                  {detailDevices.length} devices
-                </Text>
+        <ScrollView
+          contentContainerStyle={modalContentStyle}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={modalTitleStyle}>
+            {detailScene?.name ?? "Scene details"}
+          </Text>
+          <Text style={modalSubStyle}>
+            {detailRoom?.name ?? "Room"} • {detailScene?.actions.length ?? 0}{" "}
+            actions • {detailDevices.length} devices
+          </Text>
 
                 <View
-                  style={[
-                    styles.detailStatusPill,
-                    {
-                      height: roomPillHeight,
-                      borderRadius: Math.round(roomPillHeight / 2),
-                    },
-                    detailScene?.id === activeSceneId &&
-                      styles.detailStatusPillActive,
-                  ]}
+                  style={detailStatusPillStyle(
+                    detailScene?.id === activeSceneId,
+                  )}
                 >
                   <Ionicons
                     name={
@@ -659,163 +736,96 @@ export default function ScenesScreen() {
                     size={Math.round(14 * scale)}
                     color="rgba(12,12,18,0.75)"
                   />
-                  <Text
-                    style={[
-                      styles.detailStatusText,
-                      { fontSize: modalLabelSize },
-                    ]}
-                  >
+                  <Text style={detailStatusTextStyle}>
                     {detailScene?.id === activeSceneId ? "Active" : "Idle"}
                   </Text>
                 </View>
 
-                <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                  Actions
-                </Text>
-                {detailActionLabels.length === 0 ? (
-                  <Text style={[styles.modalHint, { fontSize: modalSubSize }]}>
-                    No actions saved for this scene.
-                  </Text>
-                ) : (
-                  <View style={styles.detailActionRow}>
-                    {detailActionLabels.map((label, index) => (
-                      <View
-                        key={`${label}-${index}`}
-                        style={styles.detailActionChip}
-                      >
-                        <Text
-                          style={[
-                            styles.detailActionText,
-                            { fontSize: modalLabelSize },
-                          ]}
-                        >
-                          {label}
-                        </Text>
-                      </View>
-                    ))}
+          <ModalField label="Actions" labelStyle={modalLabelStyle}>
+            {detailActionLabels.length === 0 ? (
+              <Text style={modalHintStyle}>
+                No actions saved for this scene.
+              </Text>
+            ) : (
+              <View style={styles.detailActionRow}>
+                {detailActionLabels.map((label, index) => (
+                  <View
+                    key={`${label}-${index}`}
+                    style={styles.detailActionChip}
+                  >
+                    <Text style={detailActionTextStyle}>{label}</Text>
                   </View>
-                )}
+                ))}
+              </View>
+            )}
+          </ModalField>
 
-                <Text style={[styles.modalLabel, { fontSize: modalLabelSize }]}>
-                  Devices
-                </Text>
-                {detailDevices.length === 0 ? (
-                  <Text style={[styles.modalHint, { fontSize: modalSubSize }]}>
-                    No devices linked yet.
-                  </Text>
-                ) : (
-                  <View style={styles.deviceGrid}>
-                    {detailDevices.map((device) => (
-                      <View
-                        key={device.id}
-                        style={[
-                          styles.deviceChip,
-                          {
-                            height: deviceChipHeight,
-                            borderRadius: Math.round(deviceChipHeight * 0.4),
-                          },
-                        ]}
-                      >
-                        <View style={styles.deviceIcon}>
-                          <DeviceIcon
-                            kind={device.kind}
-                            size={Math.round(14 * scale)}
-                            color="rgba(12,12,18,0.85)"
-                          />
-                        </View>
-                        <Text
-                          style={[
-                            styles.deviceText,
-                            { fontSize: modalLabelSize },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {device.name}
-                        </Text>
-                      </View>
-                    ))}
+          <ModalField label="Devices" labelStyle={modalLabelStyle}>
+            {detailDevices.length === 0 ? (
+              <Text style={modalHintStyle}>No devices linked yet.</Text>
+            ) : (
+              <View style={styles.deviceGrid}>
+                {detailDevices.map((device) => (
+                  <View key={device.id} style={deviceChipStyle(false)}>
+                    <View style={deviceIconStyle(false)}>
+                      <DeviceIcon
+                        kind={device.kind}
+                        size={Math.round(14 * scale)}
+                        color="rgba(12,12,18,0.85)"
+                      />
+                    </View>
+                    <Text style={deviceTextStyle(false)} numberOfLines={1}>
+                      {device.name}
+                    </Text>
                   </View>
-                )}
+                ))}
+              </View>
+            )}
+          </ModalField>
 
-                <View style={styles.modalRow}>
-                  <Pressable
-                    style={[
-                      styles.modalGhost,
-                      {
-                        height: modalBtnHeight,
-                        borderRadius: Math.round(modalBtnHeight * 0.28),
-                      },
-                    ]}
-                    onPress={() => setDetailSceneId(null)}
-                  >
-                    <Text
-                      style={[
-                        styles.modalGhostText,
-                        { fontSize: modalLabelSize },
-                      ]}
-                    >
-                      Close
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.modalGhost,
-                      {
-                        height: modalBtnHeight,
-                        borderRadius: Math.round(modalBtnHeight * 0.28),
-                      },
-                    ]}
-                    onPress={() => {
-                      if (!detailScene) return;
-                      setDetailSceneId(null);
-                      openEdit(detailScene);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.modalGhostText,
-                        { fontSize: modalLabelSize },
-                      ]}
-                    >
-                      Edit
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.modalPrimary,
-                      {
-                        height: modalBtnHeight,
-                        borderRadius: Math.round(modalBtnHeight * 0.28),
-                      },
-                    ]}
-                    onPress={() => {
-                      if (!detailScene) return;
-                      runScene(detailScene.id);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.modalPrimaryText,
-                        { fontSize: modalLabelSize },
-                      ]}
-                    >
-                      Run scene
-                    </Text>
-                  </Pressable>
-                </View>
-              </ScrollView>
-            </LinearGradient>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
+          <ModalActionRow
+            style={styles.modalRow}
+            actions={[
+              {
+                label: "Close",
+                onPress: () => setDetailSceneId(null),
+                style: modalGhostStyle,
+                textStyle: modalGhostTextStyle,
+              },
+              {
+                label: "Edit",
+                onPress: () => {
+                  if (!detailScene) return;
+                  setDetailSceneId(null);
+                  openEdit(detailScene);
+                },
+                style: modalGhostStyle,
+                textStyle: modalGhostTextStyle,
+              },
+              {
+                label: "Run scene",
+                onPress: () => {
+                  if (!detailScene) return;
+                  runScene(detailScene.id);
+                },
+                style: modalPrimaryBaseStyle,
+                textStyle: modalPrimaryTextStyle,
+              },
+            ]}
+          />
+        </ScrollView>
+      </ModalCard>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { alignItems: "center" },
+  content: { flex: 1, alignItems: "center" },
+  sectionsScroll: { flex: 1 },
   sectionsGrid: { gap: 12 },
+  sectionsGridLandscape: { flexDirection: "row", alignItems: "flex-start" },
+  sectionsColumn: { flex: 1, minWidth: 0 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -848,7 +858,24 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
   },
   addText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
+  clearPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: theme.colors.stroke,
+  },
+  clearText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
   section: { marginTop: 18 },
+  roomPanel: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -952,13 +979,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
   },
   actionText: { color: theme.colors.subtext, fontWeight: "800", fontSize: 11 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    padding: 18,
-  },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject },
   modalCard: {
     borderRadius: 24,
     borderWidth: 1,
@@ -1238,6 +1258,79 @@ function DeviceControlCard({
   const stepIconSize = Math.round((isTablet ? 18 : 16) * scale);
   const hintSize = Math.round((isTablet ? 12 : 11) * scale);
   const isOn = override?.isOn ?? device.isOn ?? true;
+  const cardStyle: StyleProp<ViewStyle> = [
+    styles.deviceControlCard,
+    { padding: cardPad, borderRadius: cardRadius },
+  ];
+  const iconStyle: StyleProp<ViewStyle> = [
+    styles.deviceControlIcon,
+    { width: iconWrap, height: iconWrap, borderRadius: iconRadius },
+  ];
+  const headerBodyStyle: ViewStyle = { flex: 1 };
+  const titleStyle: StyleProp<TextStyle> = [
+    styles.deviceControlTitle,
+    { fontSize: titleSize },
+  ];
+  const subStyle: StyleProp<TextStyle> = [
+    styles.deviceControlSub,
+    { fontSize: subSize },
+  ];
+  const inlinePillStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.inlineTogglePill,
+    { height: toggleHeight, borderRadius: toggleRadius },
+    active && styles.inlineTogglePillActive,
+  ];
+  const inlineTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.inlineToggleText,
+    { fontSize: toggleText },
+    active && styles.inlineToggleTextActive,
+  ];
+  const sliderLabelStyle: StyleProp<TextStyle> = [
+    styles.sliderLabel,
+    { fontSize: sliderLabelSize },
+  ];
+  const sliderValueStyle: StyleProp<TextStyle> = [
+    styles.sliderValue,
+    { fontSize: sliderValueSize },
+  ];
+  const sliderTopStyle: ViewStyle = {
+    marginTop: Math.round(6 * scale),
+  };
+  const choicePillStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.choicePill,
+    { height: choiceHeight, borderRadius: choiceRadius },
+    active && styles.choicePillActive,
+  ];
+  const choiceTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.choiceText,
+    { fontSize: choiceTextSize },
+    active && styles.choiceTextActive,
+  ];
+  const colorDotStyle = (
+    color: string,
+    active: boolean,
+  ): StyleProp<ViewStyle> => [
+    styles.colorDot,
+    {
+      backgroundColor: color,
+      width: colorDotSize,
+      height: colorDotSize,
+      borderRadius: Math.round(colorDotSize / 2),
+    },
+    active && styles.colorDotActive,
+  ];
+  const stepBtnStyle: StyleProp<ViewStyle> = [
+    styles.stepBtn,
+    { width: stepBtnSize, height: stepBtnSize, borderRadius: stepBtnRadius },
+  ];
+  const stepValueStyle: StyleProp<TextStyle> = [
+    styles.stepValue,
+    { fontSize: sliderValueSize },
+  ];
+  const controlHintStyle: StyleProp<TextStyle> = [
+    styles.controlHint,
+    { fontSize: hintSize },
+  ];
 
   const renderControls = () => {
     switch (device.kind) {
@@ -1247,15 +1340,15 @@ function DeviceControlCard({
         return (
           <>
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLabel, { fontSize: sliderLabelSize }]}>
+              <Text style={sliderLabelStyle}>
                 Temperature
               </Text>
-              <Text style={[styles.sliderValue, { fontSize: sliderValueSize }]}>
+              <Text style={sliderValueStyle}>
                 {temp}°C
               </Text>
             </View>
             <Slider
-              style={{ marginTop: Math.round(6 * scale) }}
+              style={sliderTopStyle}
               minimumValue={AC_TEMP_MIN_C}
               maximumValue={AC_TEMP_MAX_C}
               value={temp}
@@ -1268,20 +1361,10 @@ function DeviceControlCard({
               {(["cold", "fan", "dry"] as const).map((m) => (
                 <Pressable
                   key={m}
-                  style={[
-                    styles.choicePill,
-                    { height: choiceHeight, borderRadius: choiceRadius },
-                    mode === m && styles.choicePillActive,
-                  ]}
+                  style={choicePillStyle(mode === m)}
                   onPress={() => onPatch({ mode: m })}
                 >
-                  <Text
-                    style={[
-                      styles.choiceText,
-                      { fontSize: choiceTextSize },
-                      mode === m && styles.choiceTextActive,
-                    ]}
-                  >
+                  <Text style={choiceTextStyle(mode === m)}>
                     {m[0].toUpperCase() + m.slice(1)}
                   </Text>
                 </Pressable>
@@ -1296,15 +1379,15 @@ function DeviceControlCard({
         return (
           <>
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLabel, { fontSize: sliderLabelSize }]}>
+              <Text style={sliderLabelStyle}>
                 Brightness
               </Text>
-              <Text style={[styles.sliderValue, { fontSize: sliderValueSize }]}>
+              <Text style={sliderValueStyle}>
                 {Math.round(brightness)}%
               </Text>
             </View>
             <Slider
-              style={{ marginTop: Math.round(6 * scale) }}
+              style={sliderTopStyle}
               minimumValue={0}
               maximumValue={100}
               value={brightness}
@@ -1316,18 +1399,7 @@ function DeviceControlCard({
             <View style={styles.colorRow}>
               {LIGHT_COLORS.map((c) => (
                 <Pressable key={c} onPress={() => onPatch({ color: c })}>
-                  <View
-                    style={[
-                      styles.colorDot,
-                      {
-                        backgroundColor: c,
-                        width: colorDotSize,
-                        height: colorDotSize,
-                        borderRadius: Math.round(colorDotSize / 2),
-                      },
-                      color === c && styles.colorDotActive,
-                    ]}
-                  />
+                  <View style={colorDotStyle(c, color === c)} />
                 </Pressable>
               ))}
             </View>
@@ -1341,15 +1413,15 @@ function DeviceControlCard({
         return (
           <>
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLabel, { fontSize: sliderLabelSize }]}>
+              <Text style={sliderLabelStyle}>
                 Volume
               </Text>
-              <Text style={[styles.sliderValue, { fontSize: sliderValueSize }]}>
+              <Text style={sliderValueStyle}>
                 {Math.round(volume)}
               </Text>
             </View>
             <Slider
-              style={{ marginTop: Math.round(6 * scale) }}
+              style={sliderTopStyle}
               minimumValue={0}
               maximumValue={100}
               value={volume}
@@ -1360,14 +1432,7 @@ function DeviceControlCard({
             />
             <View style={styles.stepRow}>
               <Pressable
-                style={[
-                  styles.stepBtn,
-                  {
-                    width: stepBtnSize,
-                    height: stepBtnSize,
-                    borderRadius: stepBtnRadius,
-                  },
-                ]}
+                style={stepBtnStyle}
                 onPress={() => onPatch({ channel: clamp(channel - 1, 1, 99) })}
               >
                 <Ionicons
@@ -1376,18 +1441,9 @@ function DeviceControlCard({
                   color="rgba(12,12,18,0.75)"
                 />
               </Pressable>
-              <Text style={[styles.stepValue, { fontSize: sliderValueSize }]}>
-                Ch {channel}
-              </Text>
+              <Text style={stepValueStyle}>Ch {channel}</Text>
               <Pressable
-                style={[
-                  styles.stepBtn,
-                  {
-                    width: stepBtnSize,
-                    height: stepBtnSize,
-                    borderRadius: stepBtnRadius,
-                  },
-                ]}
+                style={stepBtnStyle}
                 onPress={() => onPatch({ channel: clamp(channel + 1, 1, 99) })}
               >
                 <Ionicons
@@ -1399,38 +1455,18 @@ function DeviceControlCard({
             </View>
             <View style={styles.choiceRow}>
               <Pressable
-                style={[
-                  styles.choicePill,
-                  { height: choiceHeight, borderRadius: choiceRadius },
-                  !muted && styles.choicePillActive,
-                ]}
+                style={choicePillStyle(!muted)}
                 onPress={() => onPatch({ muted: false })}
               >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    { fontSize: choiceTextSize },
-                    !muted && styles.choiceTextActive,
-                  ]}
-                >
+                <Text style={choiceTextStyle(!muted)}>
                   Sound
                 </Text>
               </Pressable>
               <Pressable
-                style={[
-                  styles.choicePill,
-                  { height: choiceHeight, borderRadius: choiceRadius },
-                  muted && styles.choicePillActive,
-                ]}
+                style={choicePillStyle(muted)}
                 onPress={() => onPatch({ muted: true })}
               >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    { fontSize: choiceTextSize },
-                    muted && styles.choiceTextActive,
-                  ]}
-                >
+                <Text style={choiceTextStyle(muted)}>
                   Muted
                 </Text>
               </Pressable>
@@ -1443,15 +1479,15 @@ function DeviceControlCard({
         return (
           <>
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLabel, { fontSize: sliderLabelSize }]}>
+              <Text style={sliderLabelStyle}>
                 Speed
               </Text>
-              <Text style={[styles.sliderValue, { fontSize: sliderValueSize }]}>
+              <Text style={sliderValueStyle}>
                 {Math.round(speed)}%
               </Text>
             </View>
             <Slider
-              style={{ marginTop: Math.round(6 * scale) }}
+              style={sliderTopStyle}
               minimumValue={0}
               maximumValue={100}
               value={speed}
@@ -1471,15 +1507,15 @@ function DeviceControlCard({
         return (
           <>
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLabel, { fontSize: sliderLabelSize }]}>
+              <Text style={sliderLabelStyle}>
                 Open
               </Text>
-              <Text style={[styles.sliderValue, { fontSize: sliderValueSize }]}>
+              <Text style={sliderValueStyle}>
                 {Math.round(openPercent)}%
               </Text>
             </View>
             <Slider
-              style={{ marginTop: Math.round(6 * scale) }}
+              style={sliderTopStyle}
               minimumValue={0}
               maximumValue={100}
               value={openPercent}
@@ -1498,20 +1534,10 @@ function DeviceControlCard({
             {VACUUM_STATES.map((state) => (
               <Pressable
                 key={state}
-                style={[
-                  styles.choicePill,
-                  { height: choiceHeight, borderRadius: choiceRadius },
-                  status === state && styles.choicePillActive,
-                ]}
+                style={choicePillStyle(status === state)}
                 onPress={() => onPatch({ status: state })}
               >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    { fontSize: choiceTextSize },
-                    status === state && styles.choiceTextActive,
-                  ]}
-                >
+                <Text style={choiceTextStyle(status === state)}>
                   {state[0].toUpperCase() + state.slice(1)}
                 </Text>
               </Pressable>
@@ -1526,76 +1552,36 @@ function DeviceControlCard({
           <>
             <View style={styles.choiceRow}>
               <Pressable
-                style={[
-                  styles.choicePill,
-                  { height: choiceHeight, borderRadius: choiceRadius },
-                  armed && styles.choicePillActive,
-                ]}
+                style={choicePillStyle(armed)}
                 onPress={() => onPatch({ armed: true })}
               >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    { fontSize: choiceTextSize },
-                    armed && styles.choiceTextActive,
-                  ]}
-                >
+                <Text style={choiceTextStyle(armed)}>
                   Armed
                 </Text>
               </Pressable>
               <Pressable
-                style={[
-                  styles.choicePill,
-                  { height: choiceHeight, borderRadius: choiceRadius },
-                  !armed && styles.choicePillActive,
-                ]}
+                style={choicePillStyle(!armed)}
                 onPress={() => onPatch({ armed: false })}
               >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    { fontSize: choiceTextSize },
-                    !armed && styles.choiceTextActive,
-                  ]}
-                >
+                <Text style={choiceTextStyle(!armed)}>
                   Disarmed
                 </Text>
               </Pressable>
             </View>
             <View style={styles.choiceRow}>
               <Pressable
-                style={[
-                  styles.choicePill,
-                  { height: choiceHeight, borderRadius: choiceRadius },
-                  recording && styles.choicePillActive,
-                ]}
+                style={choicePillStyle(recording)}
                 onPress={() => onPatch({ recording: true })}
               >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    { fontSize: choiceTextSize },
-                    recording && styles.choiceTextActive,
-                  ]}
-                >
+                <Text style={choiceTextStyle(recording)}>
                   Recording
                 </Text>
               </Pressable>
               <Pressable
-                style={[
-                  styles.choicePill,
-                  { height: choiceHeight, borderRadius: choiceRadius },
-                  !recording && styles.choicePillActive,
-                ]}
+                style={choicePillStyle(!recording)}
                 onPress={() => onPatch({ recording: false })}
               >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    { fontSize: choiceTextSize },
-                    !recording && styles.choiceTextActive,
-                  ]}
-                >
+                <Text style={choiceTextStyle(!recording)}>
                   Idle
                 </Text>
               </Pressable>
@@ -1608,15 +1594,15 @@ function DeviceControlCard({
         return (
           <>
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLabel, { fontSize: sliderLabelSize }]}>
+              <Text style={sliderLabelStyle}>
                 Heat
               </Text>
-              <Text style={[styles.sliderValue, { fontSize: sliderValueSize }]}>
+              <Text style={sliderValueStyle}>
                 {Math.round(burnerLevel)}
               </Text>
             </View>
             <Slider
-              style={{ marginTop: Math.round(6 * scale) }}
+              style={sliderTopStyle}
               minimumValue={0}
               maximumValue={5}
               value={burnerLevel}
@@ -1636,20 +1622,10 @@ function DeviceControlCard({
             {WASH_CYCLES.map((c) => (
               <Pressable
                 key={c}
-                style={[
-                  styles.choicePill,
-                  { height: choiceHeight, borderRadius: choiceRadius },
-                  cycle === c && styles.choicePillActive,
-                ]}
+                style={choicePillStyle(cycle === c)}
                 onPress={() => onPatch({ cycle: c })}
               >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    { fontSize: choiceTextSize },
-                    cycle === c && styles.choiceTextActive,
-                  ]}
-                >
+                <Text style={choiceTextStyle(cycle === c)}>
                   {c}
                 </Text>
               </Pressable>
@@ -1664,15 +1640,15 @@ function DeviceControlCard({
         return (
           <>
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLabel, { fontSize: sliderLabelSize }]}>
+              <Text style={sliderLabelStyle}>
                 Timer
               </Text>
-              <Text style={[styles.sliderValue, { fontSize: sliderValueSize }]}>
+              <Text style={sliderValueStyle}>
                 {minutes}m
               </Text>
             </View>
             <Slider
-              style={{ marginTop: Math.round(6 * scale) }}
+              style={sliderTopStyle}
               minimumValue={60}
               maximumValue={900}
               value={timeRemainingSec}
@@ -1691,15 +1667,15 @@ function DeviceControlCard({
         return (
           <>
             <View style={styles.sliderRow}>
-              <Text style={[styles.sliderLabel, { fontSize: sliderLabelSize }]}>
+              <Text style={sliderLabelStyle}>
                 Temperature
               </Text>
-              <Text style={[styles.sliderValue, { fontSize: sliderValueSize }]}>
+              <Text style={sliderValueStyle}>
                 {temp}°C
               </Text>
             </View>
             <Slider
-              style={{ marginTop: Math.round(6 * scale) }}
+              style={sliderTopStyle}
               minimumValue={1}
               maximumValue={8}
               value={temp}
@@ -1713,13 +1689,13 @@ function DeviceControlCard({
       }
       case "coffee":
         return (
-          <Text style={[styles.controlHint, { fontSize: hintSize }]}>
+          <Text style={controlHintStyle}>
             Brew uses the On/Off state.
           </Text>
         );
       default:
         return (
-          <Text style={[styles.controlHint, { fontSize: hintSize }]}>
+          <Text style={controlHintStyle}>
             No extra controls for this device.
           </Text>
         );
@@ -1727,65 +1703,27 @@ function DeviceControlCard({
   };
 
   return (
-    <View
-      style={[
-        styles.deviceControlCard,
-        { padding: cardPad, borderRadius: cardRadius },
-      ]}
-    >
+    <View style={cardStyle}>
       <View style={styles.deviceControlHeader}>
-        <View
-          style={[
-            styles.deviceControlIcon,
-            { width: iconWrap, height: iconWrap, borderRadius: iconRadius },
-          ]}
-        >
+        <View style={iconStyle}>
           <DeviceIcon kind={device.kind} size={iconSize} color="#6B3CFF" />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.deviceControlTitle, { fontSize: titleSize }]}>
-            {device.name}
-          </Text>
-          <Text style={[styles.deviceControlSub, { fontSize: subSize }]}>
-            {labelForKind(device.kind)}
-          </Text>
+        <View style={headerBodyStyle}>
+          <Text style={titleStyle}>{device.name}</Text>
+          <Text style={subStyle}>{labelForKind(device.kind)}</Text>
         </View>
         <View style={styles.inlineToggleRow}>
           <Pressable
-            style={[
-              styles.inlineTogglePill,
-              { height: toggleHeight, borderRadius: toggleRadius },
-              isOn && styles.inlineTogglePillActive,
-            ]}
+            style={inlinePillStyle(isOn)}
             onPress={() => onPatch({ isOn: true })}
           >
-            <Text
-              style={[
-                styles.inlineToggleText,
-                { fontSize: toggleText },
-                isOn && styles.inlineToggleTextActive,
-              ]}
-            >
-              On
-            </Text>
+            <Text style={inlineTextStyle(isOn)}>On</Text>
           </Pressable>
           <Pressable
-            style={[
-              styles.inlineTogglePill,
-              { height: toggleHeight, borderRadius: toggleRadius },
-              !isOn && styles.inlineTogglePillActive,
-            ]}
+            style={inlinePillStyle(!isOn)}
             onPress={() => onPatch({ isOn: false })}
           >
-            <Text
-              style={[
-                styles.inlineToggleText,
-                { fontSize: toggleText },
-                !isOn && styles.inlineToggleTextActive,
-              ]}
-            >
-              Off
-            </Text>
+            <Text style={inlineTextStyle(!isOn)}>Off</Text>
           </Pressable>
         </View>
       </View>
@@ -1825,6 +1763,63 @@ function SceneCard({
   const actionChipPad = Math.round((isTablet ? 10 : 8) * scaleFactor);
   const chips = actionLabels.slice(0, 3);
   const extra = actionLabels.length - chips.length;
+  const pressScaleStyle = { transform: [{ scale: pressScale }] };
+  const sceneCardStyle: StyleProp<ViewStyle> = [
+    styles.sceneCard,
+    { padding: cardPad, borderRadius: cardRadius },
+    isActive && styles.sceneCardActive,
+  ];
+  const sceneTitleStyle: StyleProp<TextStyle> = [
+    styles.sceneTitle,
+    { fontSize: titleSize },
+  ];
+  const sceneSubStyle: StyleProp<TextStyle> = [
+    styles.sceneSub,
+    { fontSize: subSize },
+  ];
+  const runPillStyle: StyleProp<ViewStyle> = [
+    styles.runPill,
+    { height: runHeight, borderRadius: runRadius },
+    isActive && styles.runPillActive,
+  ];
+  const runTextStyle: StyleProp<TextStyle> = [
+    styles.runText,
+    { fontSize: runText },
+    isActive && styles.runTextActive,
+  ];
+  const headerBodyStyle: ViewStyle = { flex: 1 };
+  const iconChipStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.iconChip,
+    {
+      width: iconChipSize,
+      height: iconChipSize,
+      borderRadius: iconChipRadius,
+    },
+    active && styles.iconChipOn,
+  ];
+  const moreChipStyle: StyleProp<ViewStyle> = [
+    styles.moreChip,
+    {
+      height: iconChipSize,
+      borderRadius: iconChipRadius,
+      paddingHorizontal: Math.round(iconChipSize * 0.3),
+    },
+  ];
+  const moreTextStyle: StyleProp<TextStyle> = [
+    styles.moreText,
+    { fontSize: actionText },
+  ];
+  const actionChipStyle: StyleProp<ViewStyle> = [
+    styles.actionChip,
+    {
+      paddingHorizontal: actionChipPad,
+      paddingVertical: Math.round(actionChipPad * 0.6),
+    },
+  ];
+  const actionTextStyle: StyleProp<TextStyle> = [
+    styles.actionText,
+    { fontSize: actionText },
+  ];
 
   const handleOpen = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -1850,30 +1845,20 @@ function SceneCard({
   };
 
   return (
-    <Animated.View style={{ transform: [{ scale: pressScale }] }}>
+    <Animated.View style={pressScaleStyle}>
       <Pressable
-        style={[
-          styles.sceneCard,
-          { padding: cardPad, borderRadius: cardRadius },
-          isActive && styles.sceneCardActive,
-        ]}
+        style={sceneCardStyle}
         onPress={handleOpen}
       >
         <View style={styles.sceneHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.sceneTitle, { fontSize: titleSize }]}>
-              {scene.name}
-            </Text>
-            <Text style={[styles.sceneSub, { fontSize: subSize }]}>
+          <View style={headerBodyStyle}>
+            <Text style={sceneTitleStyle}>{scene.name}</Text>
+            <Text style={sceneSubStyle}>
               {scene.actions.length} actions • {devices.length} devices
             </Text>
           </View>
           <Pressable
-            style={[
-              styles.runPill,
-              { height: runHeight, borderRadius: runRadius },
-              isActive && styles.runPillActive,
-            ]}
+            style={runPillStyle}
             onPress={handleRun}
             hitSlop={8}
           >
@@ -1882,15 +1867,7 @@ function SceneCard({
               size={Math.round(14 * scaleFactor)}
               color={theme.colors.text}
             />
-            <Text
-              style={[
-                styles.runText,
-                { fontSize: runText },
-                isActive && styles.runTextActive,
-              ]}
-            >
-              {isActive ? "Active" : "Run"}
-            </Text>
+            <Text style={runTextStyle}>{isActive ? "Active" : "Run"}</Text>
           </Pressable>
         </View>
 
@@ -1898,15 +1875,7 @@ function SceneCard({
           {devices.slice(0, 4).map((device) => (
             <View
               key={device.id}
-              style={[
-                styles.iconChip,
-                {
-                  width: iconChipSize,
-                  height: iconChipSize,
-                  borderRadius: iconChipRadius,
-                },
-                device.isOn && styles.iconChipOn,
-              ]}
+              style={iconChipStyle(Boolean(device.isOn))}
             >
               <DeviceIcon
                 kind={device.kind}
@@ -1916,53 +1885,21 @@ function SceneCard({
             </View>
           ))}
           {devices.length > 4 && (
-            <View
-              style={[
-                styles.moreChip,
-                {
-                  height: iconChipSize,
-                  borderRadius: iconChipRadius,
-                  paddingHorizontal: Math.round(iconChipSize * 0.3),
-                },
-              ]}
-            >
-              <Text style={[styles.moreText, { fontSize: actionText }]}>
-                +{devices.length - 4}
-              </Text>
+            <View style={moreChipStyle}>
+              <Text style={moreTextStyle}>+{devices.length - 4}</Text>
             </View>
           )}
         </View>
 
         <View style={styles.chipRow}>
           {chips.map((label) => (
-            <View
-              key={label}
-              style={[
-                styles.actionChip,
-                {
-                  paddingHorizontal: actionChipPad,
-                  paddingVertical: Math.round(actionChipPad * 0.6),
-                },
-              ]}
-            >
-              <Text style={[styles.actionText, { fontSize: actionText }]}>
-                {label}
-              </Text>
+            <View key={label} style={actionChipStyle}>
+              <Text style={actionTextStyle}>{label}</Text>
             </View>
           ))}
           {extra > 0 && (
-            <View
-              style={[
-                styles.actionChip,
-                {
-                  paddingHorizontal: actionChipPad,
-                  paddingVertical: Math.round(actionChipPad * 0.6),
-                },
-              ]}
-            >
-              <Text style={[styles.actionText, { fontSize: actionText }]}>
-                +{extra} more
-              </Text>
+            <View style={actionChipStyle}>
+              <Text style={actionTextStyle}>+{extra} more</Text>
             </View>
           )}
         </View>
