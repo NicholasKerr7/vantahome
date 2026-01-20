@@ -52,7 +52,7 @@ export default function SettingsScreen() {
   const titleSize = Math.round((isTablet ? 30 : 26) * scale);
   const cardPad = Math.round((isTablet ? 20 : 16) * scale);
   const cardRadius = Math.round((isTablet ? 30 : 28) * scale);
-  const heroOuterPad = Math.round(cardPad * (isWide ? 1 : 0.9));
+  const heroOuterPad = Math.round(cardPad * (isWide ? 0.78 : 0.9));
   const heroPanelPad = Math.round((isTablet ? 18 : 14) * scale);
   const heroPanelRadius = Math.round((isTablet ? 22 : 20) * scale);
   const heroGap = Math.round((isTablet ? 18 : 12) * scale);
@@ -176,6 +176,7 @@ export default function SettingsScreen() {
     styles.card,
     styles.heroCard,
     { borderRadius: cardRadius },
+    isWide && styles.heroCardLandscape,
   ];
   const headerWrapStyle: StyleProp<ViewStyle> = {
     paddingHorizontal: innerGutter,
@@ -252,11 +253,16 @@ export default function SettingsScreen() {
   const heroPanelStyle: StyleProp<ViewStyle> = [
     styles.heroPanel,
     { padding: heroPanelPad, borderRadius: heroPanelRadius },
+    isWide && styles.heroPanelLandscape,
   ];
   const heroIdentityPanelStyle: StyleProp<ViewStyle> = [
     heroPanelStyle,
     heroColumnStyle,
     styles.heroIdentity,
+  ];
+  const heroIdentityMetaStyle: StyleProp<ViewStyle> = [
+    styles.heroIdentityMeta,
+    isWide && styles.heroIdentityMetaLandscape,
   ];
   const heroMetaPanelStyle: StyleProp<ViewStyle> = [
     heroPanelStyle,
@@ -275,6 +281,7 @@ export default function SettingsScreen() {
       height: heroIconWrap,
       borderRadius: Math.round(heroIconWrap * 0.35),
     },
+    isWide && styles.heroIconWrapLandscape,
   ];
   const heroTitleStyle: StyleProp<TextStyle> = [
     styles.heroTitle,
@@ -299,6 +306,32 @@ export default function SettingsScreen() {
   const heroProgressTrackStyle: StyleProp<ViewStyle> = [
     styles.heroProgressTrack,
     { height: heroProgressHeight },
+  ];
+  const heroBackdropColors = isWide
+    ? [
+        "rgba(122,92,255,0.32)",
+        "rgba(210,180,255,0.18)",
+        "rgba(255,255,255,0.06)",
+      ]
+    : ["rgba(122,92,255,0.22)", "rgba(255,255,255,0.06)"];
+  const heroBackdropStart = isWide ? { x: 0.02, y: 0.08 } : { x: 0.1, y: 0.1 };
+  const heroBackdropEnd = isWide ? { x: 1, y: 0.95 } : { x: 1, y: 1 };
+  const heroGlowStyle: StyleProp<ViewStyle> = [
+    styles.heroGlow,
+    isWide && styles.heroGlowLandscape,
+  ];
+  const heroGlowSecondaryStyle: StyleProp<ViewStyle> = [
+    styles.heroGlowSecondary,
+    isWide && styles.heroGlowSecondaryLandscape,
+  ];
+  const heroIntegrationListStyle: StyleProp<ViewStyle> = [
+    styles.heroIntegrationList,
+  ];
+  const heroIntegrationColumnsStyle: StyleProp<ViewStyle> = [
+    styles.heroIntegrationColumns,
+  ];
+  const heroIntegrationColumnStyle: StyleProp<ViewStyle> = [
+    styles.heroIntegrationColumn,
   ];
   const integrationLabelStyle: StyleProp<TextStyle> = [
     styles.integrationLabel,
@@ -499,10 +532,10 @@ export default function SettingsScreen() {
     const state = integrations[provider];
     const linked = state?.status === "linked";
     const linking = state?.status === "linking";
-  const integrationRowStyle: StyleProp<ViewStyle> = [
-    styles.integrationRow,
-    { paddingVertical: integrationPad, borderRadius: integrationRadius },
-  ];
+    const integrationRowStyle: StyleProp<ViewStyle> = [
+      styles.integrationRow,
+      { paddingVertical: integrationPad, borderRadius: integrationRadius },
+    ];
     const integrationIconStyle: StyleProp<ViewStyle> = [
       styles.integrationIcon,
       {
@@ -662,21 +695,100 @@ export default function SettingsScreen() {
   const heroHint = voiceAuthorizeUrl
     ? "Connect assistants and bridges to trigger routines and scenes."
     : "Voice linking needs a configured functions URL.";
+  const integrationItems: IntegrationRowProps[] = [
+    {
+      provider: "alexa",
+      label: "Amazon Alexa",
+      description: "Control devices with Alexa voice routines.",
+      icon: "logo-amazon",
+    },
+    {
+      provider: "google",
+      label: "Google Home",
+      description: "Use Assistant to trigger scenes & devices.",
+      icon: "logo-google",
+    },
+    {
+      provider: "homekit",
+      label: "Apple HomeKit",
+      description: "Expose devices to Home via a bridge (stub).",
+      icon: "logo-apple",
+    },
+    {
+      provider: "matter",
+      label: "Matter Bridge",
+      description: "Multi-ecosystem bridge (stub).",
+      icon: "link-outline",
+    },
+  ];
+  const integrationSplitIndex = Math.ceil(integrationItems.length / 2);
+  const integrationColumns = isWide
+    ? [
+        integrationItems.slice(0, integrationSplitIndex),
+        integrationItems.slice(integrationSplitIndex),
+      ]
+    : [];
+  const heroMetaContent = (
+    <>
+      <View style={styles.heroStatsRow}>
+        {[
+          { label: "Linked", value: linkedCount },
+          { label: "Pending", value: pendingCount },
+          { label: "Available", value: availableCount },
+        ].map((stat) => (
+          <View style={styles.heroStatPill} key={stat.label}>
+            <Text style={heroStatTextStyle}>
+              {stat.label} {stat.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+      <View style={styles.heroProgressWrap}>
+        <View style={heroProgressTrackStyle}>
+          <View style={heroProgressFillStyle} />
+        </View>
+        <View style={styles.heroProgressMeta}>
+          <Text style={heroStatTextStyle}>
+            Connected {linkedCount}/{availableCount}
+          </Text>
+          <Text style={heroStatTextStyle}>
+            {Math.round(integrationProgress * 100)}%
+          </Text>
+        </View>
+      </View>
+      <Text style={heroHintTextStyle}>{heroHint}</Text>
+    </>
+  );
 
   const integrationsCard = (
     <View style={heroCardStyle} key="integrations">
       <LinearGradient
-        colors={[
-          "rgba(122,92,255,0.22)",
-          "rgba(255,255,255,0.06)",
-        ]}
-        start={{ x: 0.1, y: 0.1 }}
-        end={{ x: 1, y: 1 }}
+        colors={heroBackdropColors}
+        start={heroBackdropStart}
+        end={heroBackdropEnd}
         style={styles.heroBackdrop}
         pointerEvents="none"
       />
-      <View style={styles.heroGlow} pointerEvents="none" />
-      <View style={styles.heroGlowSecondary} pointerEvents="none" />
+      {isWide && (
+        <LinearGradient
+          colors={["rgba(255,255,255,0.4)", "rgba(255,255,255,0)"]}
+          start={{ x: 0.05, y: 0 }}
+          end={{ x: 0.95, y: 1 }}
+          style={styles.heroSheen}
+          pointerEvents="none"
+        />
+      )}
+      {isWide && (
+        <LinearGradient
+          colors={["rgba(255,255,255,0.6)", "rgba(122,92,255,0.1)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.heroAccentBar}
+          pointerEvents="none"
+        />
+      )}
+      <View style={heroGlowStyle} pointerEvents="none" />
+      <View style={heroGlowSecondaryStyle} pointerEvents="none" />
       <View style={heroContentStyle}>
         <View style={heroLayoutStyle}>
           <View style={heroIdentityPanelStyle}>
@@ -707,65 +819,36 @@ export default function SettingsScreen() {
                 </View>
               </View>
             </View>
+            {isWide && (
+              <View style={heroIdentityMetaStyle}>
+                {heroMetaContent}
+              </View>
+            )}
           </View>
 
-          <View style={heroMetaPanelStyle}>
-            <View style={styles.heroStatsRow}>
-              {[
-                { label: "Linked", value: linkedCount },
-                { label: "Pending", value: pendingCount },
-                { label: "Available", value: availableCount },
-              ].map((stat) => (
-                <View style={styles.heroStatPill} key={stat.label}>
-                  <Text style={heroStatTextStyle}>
-                    {stat.label} {stat.value}
-                  </Text>
-                </View>
-              ))}
+          {!isWide && (
+            <View style={heroMetaPanelStyle}>
+              {heroMetaContent}
             </View>
-            <View style={styles.heroProgressWrap}>
-              <View style={heroProgressTrackStyle}>
-                <View style={heroProgressFillStyle} />
-              </View>
-              <View style={styles.heroProgressMeta}>
-                <Text style={heroStatTextStyle}>
-                  Connected {linkedCount}/{availableCount}
-                </Text>
-                <Text style={heroStatTextStyle}>
-                  {Math.round(integrationProgress * 100)}%
-                </Text>
-              </View>
-            </View>
-            <Text style={heroHintTextStyle}>{heroHint}</Text>
-          </View>
+          )}
 
           <View style={heroActionsPanelStyle}>
-            <View style={styles.heroIntegrationList}>
-              {renderIntegration({
-                provider: "alexa",
-                label: "Amazon Alexa",
-                description: "Control devices with Alexa voice routines.",
-                icon: "logo-amazon",
-              })}
-              {renderIntegration({
-                provider: "google",
-                label: "Google Home",
-                description: "Use Assistant to trigger scenes & devices.",
-                icon: "logo-google",
-              })}
-              {renderIntegration({
-                provider: "homekit",
-                label: "Apple HomeKit",
-                description: "Expose devices to Home via a bridge (stub).",
-                icon: "logo-apple",
-              })}
-              {renderIntegration({
-                provider: "matter",
-                label: "Matter Bridge",
-                description: "Multi-ecosystem bridge (stub).",
-                icon: "link-outline",
-              })}
-            </View>
+            {isWide ? (
+              <View style={heroIntegrationColumnsStyle}>
+                {integrationColumns.map((column, columnIndex) => (
+                  <View
+                    key={`integration-column-${columnIndex}`}
+                    style={heroIntegrationColumnStyle}
+                  >
+                    {column.map((item) => renderIntegration(item))}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={heroIntegrationListStyle}>
+                {integrationItems.map((item) => renderIntegration(item))}
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -1005,9 +1088,34 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
+  heroCardLandscape: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+    borderColor: "rgba(122,92,255,0.5)",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
   heroBackdrop: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.9,
+  },
+  heroSheen: {
+    position: "absolute",
+    top: -70,
+    left: -80,
+    width: "140%",
+    height: 190,
+    transform: [{ rotate: "-8deg" }],
+    opacity: 0.7,
+  },
+  heroAccentBar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 8,
   },
   heroGlow: {
     position: "absolute",
@@ -1018,6 +1126,13 @@ const styles = StyleSheet.create({
     borderRadius: 120,
     backgroundColor: "rgba(122,92,255,0.35)",
   },
+  heroGlowLandscape: {
+    top: -120,
+    right: -150,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+  },
   heroGlowSecondary: {
     position: "absolute",
     bottom: -110,
@@ -1026,6 +1141,13 @@ const styles = StyleSheet.create({
     height: 240,
     borderRadius: 120,
     backgroundColor: "rgba(180,107,255,0.25)",
+  },
+  heroGlowSecondaryLandscape: {
+    bottom: -140,
+    left: -160,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
   },
   heroContent: { position: "relative", zIndex: 1 },
   heroLayout: {
@@ -1049,6 +1171,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 2,
   },
+  heroPanelLandscape: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderColor: "rgba(255,255,255,0.32)",
+    shadowColor: "rgba(70,50,130,0.3)",
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
+  },
   heroIdentity: {
     alignItems: "flex-start",
     justifyContent: "flex-start",
@@ -1066,6 +1197,15 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.35)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  heroIconWrapLandscape: {
+    backgroundColor: "rgba(255,255,255,0.98)",
+    borderColor: "rgba(255,255,255,0.6)",
+    shadowColor: "rgba(122,92,255,0.45)",
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   heroTitle: { color: theme.colors.text, fontWeight: "900" },
   heroSub: {
@@ -1095,6 +1235,16 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "flex-start",
     gap: 12,
+  },
+  heroIdentityMeta: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.18)",
+    gap: 12,
+  },
+  heroIdentityMetaLandscape: {
+    borderTopColor: "rgba(255,255,255,0.28)",
   },
   heroStatsRow: {
     marginTop: 6,
@@ -1145,6 +1295,12 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   heroIntegrationList: { width: "100%" },
+  heroIntegrationColumns: {
+    width: "100%",
+    flexDirection: "row",
+    gap: 12,
+  },
+  heroIntegrationColumn: { flex: 1, gap: 12 },
   sectionTitle: {
     color: theme.colors.text,
     fontWeight: "900",
