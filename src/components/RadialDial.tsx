@@ -152,6 +152,7 @@ export default function RadialDial({
   const safeValue = Number.isFinite(value)
     ? clamp(value, safeMin, safeMax)
     : safeMin;
+  void formatValue;
   const range = safeMax - safeMin;
   const dialSize = size;
   const bubbleSize = Math.max(22, dialSize * 0.095);
@@ -254,36 +255,39 @@ export default function RadialDial({
 
   const gesture = Gesture.Simultaneous(pan, tap);
 
-  const knobPos = useAnimatedProps(() => {
-    const angle = start + sweep * knobT.value;
-    const p = polarToCartesian(cx, cy, r, angle);
-    return { cx: p.x, cy: p.y };
-  });
-
-  const progressArcProps = useAnimatedProps(() => {
-    const endAngle = start + sweep * knobT.value;
-    return { d: arcPath(cx, cy, r, start, endAngle) };
-  });
+  const progressArcProps = useAnimatedProps(
+    () => {
+      const endAngle = start + sweep * knobT.value;
+      return { d: arcPath(cx, cy, r, start, endAngle) };
+    },
+    [start, sweep, cx, cy, r],
+  );
 
   const bubbleCenterR = r + innerTrackWidth * 0.25;
-  const bubbleStyle = useAnimatedStyle(() => {
-    const angle = start + sweep * knobT.value;
-    const p = polarToCartesian(cx, cy, bubbleCenterR, angle);
-    const scale = knobScale.value;
-    return {
-      transform: [
-        { scale },
-        { translateX: p.x - (bubbleSize * scale) / 2 },
-        { translateY: p.y - (bubbleSize * scale) / 2 },
-      ],
-    };
-  });
+  const bubbleStyle = useAnimatedStyle(
+    () => {
+      const angle = start + sweep * knobT.value;
+      const p = polarToCartesian(cx, cy, bubbleCenterR, angle);
+      const scale = knobScale.value;
+      return {
+        transform: [
+          { scale },
+          { translateX: p.x - (bubbleSize * scale) / 2 },
+          { translateY: p.y - (bubbleSize * scale) / 2 },
+        ],
+      };
+    },
+    [start, sweep, bubbleCenterR, bubbleSize],
+  );
 
-  const bubbleHaloPos = useAnimatedProps(() => {
-    const angle = start + sweep * knobT.value;
-    const p = polarToCartesian(cx, cy, bubbleCenterR, angle);
-    return { cx: p.x, cy: p.y };
-  });
+  const bubbleHaloPos = useAnimatedProps(
+    () => {
+      const angle = start + sweep * knobT.value;
+      const p = polarToCartesian(cx, cy, bubbleCenterR, angle);
+      return { cx: p.x, cy: p.y };
+    },
+    [start, sweep, cx, cy, bubbleCenterR],
+  );
 
   const tickRadius = r + Math.max(2, innerTrackWidth * 0.15);
   const ticks = useMemo(() => {

@@ -35,7 +35,7 @@ import { deviceClient } from "../services/deviceClient";
 import Voice from "@react-native-voice/voice";
 
 export default function HomeScreen() {
-  const { contentWidth, gutter, isTablet, isLandscape, topPad, scale } =
+  const { contentWidth, gutter, isTablet, isLandscape, topPad, scale, height } =
     useResponsive(720);
   const greetingSize = Math.round((isTablet ? 22 : 16) * scale);
   const bellSize = Math.round((isTablet ? 44 : 38) * scale);
@@ -132,6 +132,43 @@ export default function HomeScreen() {
   const roomsSectionStyle: StyleProp<ViewStyle> = [
     styles.roomsSection,
     { marginTop: heroGap },
+  ];
+  const roomsHeaderStyle: StyleProp<ViewStyle> = [
+    styles.roomsHeader,
+    isLandscape && {
+      marginTop: Math.round((isTablet ? 2 : 0) * scale),
+    },
+  ];
+  const topSectionStyle: StyleProp<ViewStyle> = [
+    styles.topSection,
+    {
+      minHeight: Math.max(0, Math.round(height - tabBarPad)),
+    },
+  ];
+  const heroStackStyle: StyleProp<ViewStyle> = [
+    styles.heroStack,
+    {
+      flex: 1,
+      justifyContent: "space-between",
+    },
+    isLandscape && {
+      paddingBottom: Math.round((isTablet ? 18 : 12) * scale),
+    },
+  ];
+  const heroOrbWrapStyle: StyleProp<ViewStyle> = [
+    styles.heroOrbWrap,
+    (!isLandscape || !isTablet) && {
+      flex: 1,
+      justifyContent: "center",
+    },
+  ];
+  const roomsCarouselWrapStyle: StyleProp<ViewStyle> = [
+    styles.roomsCarouselWrap,
+    {
+      marginTop: Math.round(
+        (isTablet ? (isLandscape ? 40 : 44) : isLandscape ? 28 : 30) * scale,
+      ),
+    },
   ];
   const roomsTitleStyle: StyleProp<TextStyle> = [
     styles.roomsTitle,
@@ -706,7 +743,7 @@ export default function HomeScreen() {
         contentContainerStyle={scrollContentStyle}
       >
         <View style={pageStyle}>
-          <View style={styles.topSection}>
+          <View style={topSectionStyle}>
             <View style={headerPadStyle}>
               <View style={styles.topBar}>
                 <Text
@@ -744,8 +781,8 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <View style={styles.heroStack}>
-              <View>
+            <View style={heroStackStyle}>
+              <View style={heroOrbWrapStyle}>
                 <GradientOrb
                   outdoor={outdoor}
                   indoor={indoor}
@@ -758,7 +795,7 @@ export default function HomeScreen() {
               <View
                 style={roomsSectionStyle}
               >
-                <View style={styles.roomsHeader}>
+                <View style={roomsHeaderStyle}>
                   <Text style={roomsTitleStyle}>Rooms</Text>
                   <View style={roomsActionsStyle}>
                     <HeaderPill
@@ -780,7 +817,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <View style={styles.roomsCarouselWrap}>
+                <View style={roomsCarouselWrapStyle}>
                   <RoomCarousel
                     rooms={rooms}
                     devices={devicesAll}
@@ -883,6 +920,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     width: "100%",
   },
+  heroOrbWrap: { width: "100%", alignItems: "center" },
   roomsActions: { flexDirection: "row", gap: 8, alignItems: "center" },
   roomsTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 16 },
   roomsAdd: {

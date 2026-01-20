@@ -18,7 +18,6 @@ import {
   getDeviceCapabilities,
   type ActionCapability,
   type CapabilityContext,
-  type DeviceCapability,
   type EnumCapability,
   type RangeCapability,
   type StatCapability,

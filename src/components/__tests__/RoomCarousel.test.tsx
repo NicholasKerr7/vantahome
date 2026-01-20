@@ -64,7 +64,7 @@ const devices: Device[] = [
 ];
 
 describe("RoomCarousel", () => {
-  it("snaps between cards (swipe carousel)", () => {
+  it("renders a stacked deck with up to three cards", () => {
     let tree: ReactTestRenderer;
     act(() => {
       tree = renderer.create(
@@ -75,35 +75,24 @@ describe("RoomCarousel", () => {
         />,
       );
     });
-    const list = tree.root.findByProps({ testID: "room-carousel-list" });
-    const { width, isTablet, isLandscape, gutter } = mockLayout;
-    const listWidth = Math.min(
-      width,
-      isTablet ? (isLandscape ? 980 : 880) : width,
-    );
-    const sidePad = isTablet ? (isLandscape ? 56 : 40) : gutter;
-    const gap = 0;
-    const minCard = isTablet ? 360 : 260;
-    const cardW = Math.max(minCard, Math.round(listWidth - sidePad * 2 - gap));
-    const snap = cardW + gap;
-    expect(list.props.horizontal).toBe(true);
-    expect(list.props.snapToInterval).toBe(snap);
-    expect(list.props.decelerationRate).toBe("fast");
+    const deck = tree.root.findByProps({ testID: "room-carousel-deck" });
+    expect(deck).toBeTruthy();
+    const cards = tree.root.findAllByProps({ testID: "room-carousel-card" });
+    expect(cards.length).toBeLessThanOrEqual(3);
     act(() => {
       tree.unmount();
     });
   });
 
-  it("renders stacked layers for the active card", () => {
+  it("renders peek cards behind the active card", () => {
     let tree: ReactTestRenderer;
     act(() => {
       tree = renderer.create(<RoomCarousel rooms={rooms} devices={devices} />);
     });
-    const stacks = tree.root.findAllByProps({ testID: "room-card-stack-1" });
-    expect(stacks.length).toBeGreaterThan(0);
-    expect(
-      tree.root.findAllByProps({ testID: "room-card-stack-2" }).length,
-    ).toBe(0);
+    const peeks = tree.root.findAllByProps({
+      testID: "room-carousel-card-peek",
+    });
+    expect(peeks.length).toBeGreaterThan(0);
     act(() => {
       tree.unmount();
     });

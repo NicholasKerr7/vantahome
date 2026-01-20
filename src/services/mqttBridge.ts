@@ -1,6 +1,7 @@
 import type { Buffer } from "buffer";
 import type { Device } from "../store/useHomeStore";
 import { deviceClient } from "./deviceClient";
+import { reportRoomPresence } from "./roomPresence";
 import mqtt from "mqtt";
 
 type MqttBridgeOptions = {
@@ -26,6 +27,14 @@ type MqttBatchPayload = {
 type MqttSnapshotPayload = {
   devices: Device[];
   ts?: number;
+};
+
+type MqttPresencePayload = {
+  type: "presence";
+  roomId?: string | null;
+  deviceId?: string | null;
+  kind?: "known" | "unknown";
+  source?: "camera" | "motion" | "sensor";
 };
 
 export function startMqttBridge(options: MqttBridgeOptions = {}) {
@@ -64,6 +73,17 @@ export function startMqttBridge(options: MqttBridgeOptions = {}) {
     if (topic !== topicState) return;
     const data = parseMessage(payload);
     if (!data) return;
+
+    if (data.type === "presence") {
+      const evt = data as MqttPresencePayload;
+      reportRoomPresence({
+        roomId: evt.roomId ?? undefined,
+        deviceId: evt.deviceId ?? undefined,
+        kind: evt.kind ?? "unknown",
+        source: evt.source ?? "motion",
+      });
+      return;
+    }
 
     if (data.type === "state") {
       const evt = data as MqttStatePayload & { type?: string };

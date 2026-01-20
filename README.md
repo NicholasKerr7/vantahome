@@ -43,6 +43,26 @@ npm run realtime:server
 
 Use `ws://<your-ip>:8088` for physical devices or simulators that cannot reach `localhost`.
 
+## MQTT presence simulator
+
+Send a one-off presence event over MQTT (useful for motion/camera sensor flows):
+
+```bash
+npm run mqtt:presence -- --url mqtt://localhost:1883 --room-name "Drawing Room"
+```
+
+Options:
+
+- `--url` (or `EXPO_PUBLIC_MQTT_URL`)
+- `--topic` (or `EXPO_PUBLIC_MQTT_TOPIC_STATE`, default: `vantahome/devices/state`)
+- `--room` / `--room-name` (room is resolved from `roomsSeed` when possible)
+- `--device` (fallback if no room id)
+- `--kind` (known | unknown)
+- `--source` (motion | camera | sensor)
+
+If your broker requires auth, set `EXPO_PUBLIC_MQTT_USERNAME` and
+`EXPO_PUBLIC_MQTT_PASSWORD`.
+
 ## Data and configuration
 
 Seed data (devices, scenes, automations) lives in `src/store/useHomeStore.ts`.

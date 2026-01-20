@@ -44,7 +44,6 @@ const AnimatedLinearGradient =
 
 export default function TabBar({
   state,
-  descriptors,
   navigation,
 }: BottomTabBarProps) {
   const { width, isTablet, isLandscape, scale, gutter } = useResponsive();

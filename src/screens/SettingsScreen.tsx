@@ -344,13 +344,13 @@ export default function SettingsScreen() {
           toValue: 0.5,
           duration: 500,
           easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(pulse, {
           toValue: 1,
           duration: 500,
           easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
     );

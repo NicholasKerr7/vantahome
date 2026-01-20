@@ -1827,11 +1827,11 @@ function SceneCard({
       Animated.timing(pressScale, {
         toValue: 0.97,
         duration: 90,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.spring(pressScale, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: false,
         friction: 5,
       }),
     ]).start();

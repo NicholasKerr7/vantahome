@@ -1,23 +1,21 @@
-import React, { useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   View,
   Text,
   StyleSheet,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
+  PanResponder,
+  type LayoutChangeEvent,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
 import Pressable from "./Pressable";
-import Animated, {
-  useSharedValue,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  interpolate,
-  Extrapolation,
-  type SharedValue,
-} from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../theme/theme";
 import type { Device, Room } from "../store/useHomeStore";
@@ -54,6 +52,89 @@ const CARD_SHADOW = "rgba(120,80,200,0.28)";
 const CARD_SHADOW_TABLET = "rgba(120,140,255,0.28)";
 const STACK_BORDER = "rgba(210,200,255,0.45)";
 const STACK_BORDER_TABLET = "rgba(196,212,255,0.4)";
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(n, max));
+}
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+function mapDeck(value: number, keys: number[], vals: number[]) {
+  const idx = keys.indexOf(value);
+  if (idx >= 0) return vals[idx];
+  if (value <= keys[0]) return vals[0];
+  if (value >= keys[keys.length - 1]) return vals[vals.length - 1];
+
+  let lo = 0;
+  for (let i = 0; i < keys.length; i += 1) {
+    if (keys[i] <= value) lo = i;
+  }
+  const hi = Math.min(lo + 1, keys.length - 1);
+  if (lo === hi) return vals[lo];
+
+  const t = (value - keys[lo]) / (keys[hi] - keys[lo]);
+  return lerp(vals[lo], vals[hi], t);
+}
+
+function getNextIndexFromSwipe(
+  dx: number,
+  threshold: number,
+  activeIndex: number,
+  length: number,
+) {
+  let next = activeIndex;
+  if (dx < -threshold) next = activeIndex + 1;
+  if (dx > threshold) next = activeIndex - 1;
+  return clamp(next, 0, Math.max(0, length - 1));
+}
+
+function getNextIndexFromSwipeWithVelocity(
+  dx: number,
+  vxPxPerMs: number,
+  threshold: number,
+  velocityThreshold: number,
+  activeIndex: number,
+  length: number,
+) {
+  const isFlick =
+    Math.abs(vxPxPerMs) >= velocityThreshold && Math.abs(dx) >= 10;
+  if (isFlick) {
+    const dir = vxPxPerMs < 0 ? 1 : -1;
+    return clamp(activeIndex + dir, 0, Math.max(0, length - 1));
+  }
+  return getNextIndexFromSwipe(dx, threshold, activeIndex, length);
+}
+
+function getVisibleIndices(
+  activeIndex: number,
+  length: number,
+  visibleCount: number,
+  dx: number,
+) {
+  const count = Math.max(1, visibleCount || 3);
+  const start = dx > 0 ? activeIndex - 1 : activeIndex;
+  const out: number[] = [];
+
+  for (let i = 0; i < count; i += 1) {
+    const idx = start + i;
+    if (idx >= 0 && idx < length) out.push(idx);
+  }
+
+  if (out.indexOf(activeIndex) === -1) out.unshift(activeIndex);
+  return out.slice(0, count);
+}
+
+function scaleRgbaAlpha(color: string, scale: number) {
+  const match = color.match(
+    /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)/,
+  );
+  if (!match) return color;
+  const baseAlpha = match[4] ? Number(match[4]) : 1;
+  const nextAlpha = clamp(baseAlpha * scale, 0, 1);
+  return `rgba(${match[1]},${match[2]},${match[3]},${nextAlpha})`;
+}
 
 function labelFor(kind: Device["kind"]) {
   switch (kind) {
@@ -143,10 +224,7 @@ function colorFor(kind: Device["kind"]) {
 
 type RoomCardProps = {
   item: Room;
-  index: number;
-  x: SharedValue<number>;
   devices: Device[];
-  itemWidth: number;
   layout: {
     cardWidth: number;
     cardHeight: number;
@@ -158,22 +236,14 @@ type RoomCardProps = {
     iconSize: number;
     iconLabelSize: number;
     iconRowTop: number;
-    stackInset1: number;
-    stackGap: number;
-    stackRadius: number;
     cardRadius: number;
     iconGap: number;
     bubbleSize: number;
     bubbleRadius: number;
-    stackTitleSize: number;
-    inactiveScale: number;
-    inactiveOpacity: number;
   };
   isTablet: boolean;
-  isActive: boolean;
   isWholeHome: boolean;
   wholeHomeDevices?: Device[];
-  stackTitle?: string;
   onRoomPress?: (roomId: string) => void;
   onWholeHomePress?: () => void;
   onDevicePress?: (deviceId: string) => void;
@@ -181,16 +251,11 @@ type RoomCardProps = {
 
 function RoomCard({
   item,
-  index,
-  x,
   devices,
-  itemWidth,
   layout,
   isTablet,
-  isActive,
   isWholeHome,
   wholeHomeDevices,
-  stackTitle,
   onRoomPress,
   onWholeHomePress,
   onDevicePress,
@@ -212,66 +277,10 @@ function RoomCard({
   const remaining = Math.max(0, allDevices.length - iconTiles.length);
   const runningLabel = running === 1 ? "Running Device" : "Running Devices";
 
-  const animStyle = useAnimatedStyle(() => {
-    const pos = index * itemWidth;
-    const dist = (x.value - pos) / itemWidth;
-    const absDist = Math.min(1, Math.abs(dist));
-
-    // Subtle motion only (like reference)
-    const scale = interpolate(
-      absDist,
-      [0, 1],
-      [1, layout.inactiveScale],
-      Extrapolation.CLAMP,
-    );
-    const opacity = interpolate(
-      absDist,
-      [0, 1],
-      [1, layout.inactiveOpacity],
-      Extrapolation.CLAMP,
-    );
-
-    return {
-      transform: [{ scale }],
-      opacity: isActive ? 1 : opacity,
-    };
-  }, [index, isActive, itemWidth, layout]);
-
-  const cardGradient = isActive
-    ? isTablet
-      ? ACTIVE_GRADIENT_TABLET
-      : ACTIVE_GRADIENT
-    : isTablet
-      ? STACKED_GRADIENT_TABLET
-      : STACKED_GRADIENT;
+  const cardGradient = isTablet ? ACTIVE_GRADIENT_TABLET : ACTIVE_GRADIENT;
   const borderColor = isTablet ? CARD_BORDER_TABLET : CARD_BORDER;
   const shadowColor = isTablet ? CARD_SHADOW_TABLET : CARD_SHADOW;
-  const titleSize = isActive ? layout.titleSize : layout.titleSizeInactive;
-  const itemStyle: StyleProp<ViewStyle> = [
-    styles.item,
-    {
-      width: layout.cardWidth,
-      height: layout.cardHeight + layout.stackGap,
-    },
-    animStyle,
-  ];
-  const stackBackStyle: StyleProp<ViewStyle> = [
-    styles.stackBack1,
-    {
-      height: layout.cardHeight,
-      left: layout.stackInset1,
-      right: layout.stackInset1,
-      borderRadius: layout.stackRadius,
-      borderColor: isTablet ? STACK_BORDER_TABLET : STACK_BORDER,
-      backgroundColor: isTablet
-        ? "rgba(255,255,255,0.7)"
-        : "rgba(255,255,255,0.68)",
-    },
-  ];
-  const stackTitleStyle: StyleProp<TextStyle> = [
-    styles.stackTitle,
-    { fontSize: layout.stackTitleSize },
-  ];
+  const titleSize = layout.titleSize;
   const cardShellStyle: StyleProp<ViewStyle> = [
     styles.cardShell,
     {
@@ -292,7 +301,6 @@ function RoomCard({
   const titleTextStyle: StyleProp<TextStyle> = [
     styles.title,
     { fontSize: titleSize },
-    !isActive && styles.titleInactive,
   ];
   const subTextStyle: StyleProp<TextStyle> = [
     styles.sub,
@@ -329,79 +337,115 @@ function RoomCard({
   ];
 
   return (
-    <Animated.View style={itemStyle}>
-      {/* ✅ Fix: only ACTIVE card has stacked layers (prevents “3 cards” look) */}
-      {isActive && (
-        <>
-          <View style={stackBackStyle} testID="room-card-stack-1">
-            {stackTitle ? (
-              <Text style={stackTitleStyle} numberOfLines={1}>
-                {stackTitle}
-              </Text>
-            ) : null}
-          </View>
-        </>
-      )}
-
-      <Pressable
-        style={cardShellStyle}
-        onPress={() => {
-          if (isWholeHome) onWholeHomePress?.();
-          else onRoomPress?.(item.id);
-        }}
+    <Pressable
+      style={cardShellStyle}
+      onPress={() => {
+        if (isWholeHome) onWholeHomePress?.();
+        else onRoomPress?.(item.id);
+      }}
+    >
+      <LinearGradient
+        colors={cardGradient}
+        start={{ x: 0.1, y: 0.1 }}
+        end={{ x: 1, y: 1 }}
+        style={cardSurfaceStyle}
       >
-        <LinearGradient
-          colors={cardGradient}
-          start={{ x: 0.1, y: 0.1 }}
-          end={{ x: 1, y: 1 }}
-          style={cardSurfaceStyle}
-        >
-          <Text style={titleTextStyle} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {isActive ? (
-            <Text style={subTextStyle}>{running} {runningLabel}</Text>
-          ) : null}
+        <Text style={titleTextStyle} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={subTextStyle}>
+          {running} {runningLabel}
+        </Text>
 
-          {isActive ? (
-            <View style={iconRowStyle}>
-              {iconTiles.map((d) => (
-                <Pressable
-                  key={d.id}
-                  style={iconTileStyle}
-                  disabled={!onDevicePress}
-                  onPress={(event) => {
-                    // Prevent the card press from firing when tapping a device.
-                    event.stopPropagation?.();
-                    onDevicePress?.(d.id);
-                  }}
-                >
-                  <View style={iconBubbleStyle}>
-                    <DeviceIcon
-                      kind={d.kind}
-                      size={layout.iconSize}
-                      color={colorFor(d.kind)}
-                    />
-                  </View>
-                  <Text style={iconLabelStyle}>
-                    {labelFor(d.kind)}
-                  </Text>
-                </Pressable>
-              ))}
-
-              <View style={iconTileStyle}>
-                <View style={moreBubbleStyle}>
-                  <Text style={styles.moreCount}>+{remaining}</Text>
-                </View>
-                <Text style={iconLabelStyle}>
-                  More
-                </Text>
+        <View style={iconRowStyle}>
+          {iconTiles.map((d) => (
+            <Pressable
+              key={d.id}
+              style={iconTileStyle}
+              disabled={!onDevicePress}
+              onPress={(event) => {
+                event.stopPropagation?.();
+                onDevicePress?.(d.id);
+              }}
+            >
+              <View style={iconBubbleStyle}>
+                <DeviceIcon
+                  kind={d.kind}
+                  size={layout.iconSize}
+                  color={colorFor(d.kind)}
+                />
               </View>
+              <Text style={iconLabelStyle}>{labelFor(d.kind)}</Text>
+            </Pressable>
+          ))}
+
+          <View style={iconTileStyle}>
+            <View style={moreBubbleStyle}>
+              <Text style={styles.moreCount}>+{remaining}</Text>
             </View>
-          ) : null}
-        </LinearGradient>
-      </Pressable>
-    </Animated.View>
+            <Text style={iconLabelStyle}>More</Text>
+          </View>
+        </View>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+type RoomPeekCardProps = {
+  item: Room;
+  layout: RoomCardProps["layout"];
+  isTablet: boolean;
+  backBgAlpha: number;
+};
+
+function RoomPeekCard({
+  item,
+  layout,
+  isTablet,
+  backBgAlpha,
+}: RoomPeekCardProps) {
+  const baseGradient = isTablet ? STACKED_GRADIENT_TABLET : STACKED_GRADIENT;
+  const peekGradient = baseGradient.map((color) =>
+    scaleRgbaAlpha(color, backBgAlpha),
+  ) as [string, string, string];
+  const borderColor = isTablet ? STACK_BORDER_TABLET : STACK_BORDER;
+  const peekPad = Math.max(6, Math.round(layout.cardPad * 0.35));
+  const cardShellStyle: StyleProp<ViewStyle> = [
+    styles.cardShell,
+    styles.cardShellBack,
+    {
+      height: layout.cardHeight,
+      borderRadius: layout.cardRadius,
+    },
+  ];
+  const cardSurfaceStyle: StyleProp<ViewStyle> = [
+    styles.cardSurface,
+    styles.cardSurfaceBack,
+    {
+      borderRadius: layout.cardRadius,
+      paddingTop: peekPad,
+      paddingHorizontal: layout.cardPad,
+      borderColor,
+    },
+  ];
+  const titleStyle: StyleProp<TextStyle> = [
+    styles.peekTitle,
+    { fontSize: layout.titleSizeInactive },
+  ];
+
+  return (
+    <View style={cardShellStyle}>
+      <LinearGradient
+        colors={peekGradient}
+        start={{ x: 0.1, y: 0.1 }}
+        end={{ x: 1, y: 1 }}
+        style={cardSurfaceStyle}
+      >
+        <Text style={titleStyle} numberOfLines={1}>
+          {item.name}
+        </Text>
+      </LinearGradient>
+    </View>
   );
 }
 
@@ -434,7 +478,6 @@ export default function RoomCarousel({
     isTablet ? (isLandscape ? 980 : 880) : width,
   );
   const sidePad = isTablet ? (isLandscape ? 56 : 40) : gutter;
-  const gap = 0;
   const cardPad = Math.round((isTablet ? (isLandscape ? 26 : 24) : 16) * scale);
   const cardHeight = Math.round(
     (isTablet ? (isLandscape ? 234 : 242) : 170) * scale,
@@ -442,9 +485,8 @@ export default function RoomCarousel({
   const minCard = isTablet ? 360 : 260;
   const cardWidth = Math.max(
     minCard,
-    Math.round(listWidth - sidePad * 2 - gap),
+    Math.round(listWidth - sidePad * 2),
   );
-  const itemWidth = cardWidth + gap;
   const layout = useMemo(
     () => ({
       cardWidth,
@@ -457,152 +499,324 @@ export default function RoomCarousel({
       iconSize: Math.round((isTablet ? 26 : 22) * scale),
       iconLabelSize: Math.round((isTablet ? 12 : 11) * scale),
       iconRowTop: Math.round((isTablet ? 16 : 12) * scale),
-      stackInset1: Math.round((isTablet ? 16 : 12) * scale),
-      stackGap: Math.round((isTablet ? 34 : 20) * scale),
-      stackRadius: Math.round((isTablet ? 32 : 26) * scale),
       cardRadius: Math.round((isTablet ? 36 : 28) * scale),
       iconGap: Math.round((isTablet ? 12 : 8) * scale),
       bubbleSize: Math.round((isTablet ? 52 : 42) * scale),
       bubbleRadius: Math.round((isTablet ? 18 : 14) * scale),
-      stackTitleSize: Math.round((isTablet ? 12 : 10) * scale),
-      inactiveScale: isTablet ? 0.992 : 0.982,
-      inactiveOpacity: isTablet ? 0.93 : 0.88,
     }),
     [cardWidth, cardHeight, cardPad, isTablet, isLandscape, scale],
   );
-  const listStyle: StyleProp<ViewStyle> = {
-    width: listWidth,
-    alignSelf: "center",
-  };
-  const listContentStyle: StyleProp<ViewStyle> = [
-    styles.listContent,
-    {
-      paddingHorizontal: sidePad,
-      paddingTop: Math.round((isTablet ? 16 : 10) * scale),
-      paddingBottom: Math.round((isTablet ? 6 : 2) * scale),
-    },
-  ];
-  const separatorStyle: StyleProp<ViewStyle> = { width: gap };
+  const stackDepth = Math.round(cardHeight * (isTablet ? 0.28 : 0.24));
+  const containerHeight = cardHeight + stackDepth;
+  const centerY = Math.round((containerHeight - cardHeight) / 2);
+  const baseLift = Math.round(stackDepth * 0.18);
+  const peekLift = Math.round(stackDepth * 0.5);
+  const deepLift = Math.round(stackDepth * 1);
+  const insetBase = Math.round(cardWidth * 0.05);
+  const insetDeep = Math.round(cardWidth * 0.1);
 
   const [activeIndex, setActiveIndex] = useState(0);
-  const x = useSharedValue(0);
-
-  const updateIndex = (next: number) => {
-    const clamped = Math.max(0, Math.min(next, data.length - 1));
-    setActiveIndex(clamped);
-    onIndexChange?.(clamped);
-  };
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (e) => {
-      x.value = e.contentOffset.x;
-    },
+  const [deckWidth, setDeckWidth] = useState(cardWidth);
+  const drag = useRef({
+    down: false,
+    startX: 0,
+    dx: 0,
+    anim: 0,
+    intent: 0 as -1 | 0 | 1,
+    vx: 0,
   });
+  const [, force] = useState(0);
 
-  const onMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    updateIndex(
-      Math.max(0, Math.round(e.nativeEvent.contentOffset.x / itemWidth)),
-    );
-  };
+  useEffect(() => {
+    return () => cancelAnimationFrame(drag.current.anim);
+  }, []);
 
-  const onEndDrag = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    updateIndex(
-      Math.max(0, Math.round(e.nativeEvent.contentOffset.x / itemWidth)),
-    );
-  };
+  useEffect(() => {
+    setActiveIndex((prev) => clamp(prev, 0, data.length - 1));
+  }, [data.length]);
+
+  const onDeckLayout = useCallback((event: LayoutChangeEvent) => {
+    const next = Math.max(260, Math.round(event.nativeEvent.layout.width));
+    setDeckWidth(next);
+  }, []);
+
+  const swipeThreshold = useCallback(
+    () => Math.max(60, deckWidth * 0.22),
+    [deckWidth],
+  );
+
+  const commitIndex = useCallback(
+    (index: number) => {
+      const next = clamp(index, 0, data.length - 1);
+      setActiveIndex(next);
+      onIndexChange?.(next);
+    },
+    [data.length, onIndexChange],
+  );
+
+  const animateTo = useCallback((toDx: number, onDone?: () => void) => {
+    const start = drag.current.dx;
+    const startTime = Date.now();
+    const distance = Math.abs(toDx - start);
+    const duration = clamp(140 + distance * 0.25, 140, 260);
+
+    const step = () => {
+      const now = Date.now();
+      const p = clamp((now - startTime) / duration, 0, 1);
+      const e = 1 - Math.pow(1 - p, 4);
+      drag.current.dx = start + (toDx - start) * e;
+      force((n) => n + 1);
+
+      if (p < 1) {
+        drag.current.anim = requestAnimationFrame(step);
+      } else {
+        drag.current.dx = toDx;
+        force((n) => n + 1);
+        onDone?.();
+      }
+    };
+
+    cancelAnimationFrame(drag.current.anim);
+    drag.current.anim = requestAnimationFrame(step);
+  }, []);
+
+  const finishSwipe = useCallback(
+    (vx: number) => {
+      const dxNow = drag.current.dx;
+      const th = swipeThreshold();
+      const velocityThreshold = 0.75;
+      const nextIndex = getNextIndexFromSwipeWithVelocity(
+        dxNow,
+        vx,
+        th,
+        velocityThreshold,
+        activeIndex,
+        data.length,
+      );
+
+      if (nextIndex !== activeIndex) {
+        const w = deckWidth || cardWidth;
+        const dir = nextIndex > activeIndex ? -1 : 1;
+        animateTo(dir * w * 0.55, () => {
+          commitIndex(nextIndex);
+          drag.current.dx = 0;
+          drag.current.intent = 0;
+          drag.current.vx = 0;
+          force((n) => n + 1);
+        });
+      } else {
+        animateTo(0, () => {
+          drag.current.intent = 0;
+          drag.current.vx = 0;
+        });
+      }
+    },
+    [
+      activeIndex,
+      animateTo,
+      cardWidth,
+      commitIndex,
+      data.length,
+      deckWidth,
+      swipeThreshold,
+    ],
+  );
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > Math.abs(gesture.dy) &&
+          Math.abs(gesture.dx) > 4,
+        onPanResponderGrant: () => {
+          cancelAnimationFrame(drag.current.anim);
+          drag.current.down = true;
+          drag.current.intent = 0;
+          drag.current.vx = 0;
+        },
+        onPanResponderMove: (_event, gesture) => {
+          const hasPrev = activeIndex > 0;
+          const hasNext = activeIndex < data.length - 1;
+          const deltaX = gesture.dx;
+          if (drag.current.intent === 0 && Math.abs(deltaX) >= 8) {
+            drag.current.intent = deltaX > 0 ? 1 : -1;
+          }
+          const maxDx = deckWidth || cardWidth;
+          let nextDx = clamp(deltaX, -maxDx, maxDx);
+          if (!hasPrev && nextDx > 0) nextDx *= 0.35;
+          if (!hasNext && nextDx < 0) nextDx *= 0.35;
+          drag.current.dx = nextDx;
+          drag.current.vx = gesture.vx;
+          force((n) => n + 1);
+        },
+        onPanResponderRelease: (_event, gesture) => {
+          drag.current.down = false;
+          drag.current.vx = gesture.vx;
+          finishSwipe(gesture.vx);
+        },
+        onPanResponderTerminate: (_event, gesture) => {
+          drag.current.down = false;
+          drag.current.vx = gesture.vx;
+          finishSwipe(gesture.vx);
+        },
+      }),
+    [activeIndex, cardWidth, data.length, deckWidth, finishSwipe],
+  );
+
+  const dxNow = drag.current.dx;
+  const w = deckWidth || cardWidth;
+  const dragProgress = w ? clamp(dxNow / w, -1, 1) : 0;
+  const dragPower = Math.abs(dragProgress);
+  const dragEase = 1 - Math.pow(1 - dragPower, 3);
+  const activeTilt = dragProgress * -4;
+  const activeScale = 1;
+  const activeLift = dragEase * Math.round(stackDepth * 0.3);
+  const intentSign = drag.current.intent === 0 ? dxNow : drag.current.intent;
+  const towardNext = w ? clamp(-dxNow / w, 0, 1) : 0;
+  const towardPrev = w ? clamp(dxNow / w, 0, 1) : 0;
+  const visible = getVisibleIndices(activeIndex, data.length, 3, intentSign);
 
   return (
     <View style={styles.wrap}>
-      <Animated.FlatList
-        testID="room-carousel-list"
-        horizontal
-        data={data}
-        keyExtractor={(r) => r.id}
-        showsHorizontalScrollIndicator={false}
-        style={listStyle}
-        // ✅ Fix: one card per swipe (no extra cards peeking)
-        pagingEnabled
-        snapToInterval={itemWidth}
-        snapToAlignment="start"
-        disableIntervalMomentum
-        decelerationRate="fast"
-        bounces={false}
-        scrollEventThrottle={16}
-        onScroll={scrollHandler}
-        onMomentumScrollEnd={onMomentumEnd}
-        onScrollEndDrag={onEndDrag}
-        removeClippedSubviews={false} // ✅ fixes top/bottom clipping
-        contentContainerStyle={listContentStyle}
-        ItemSeparatorComponent={() => <View style={separatorStyle} />}
-        renderItem={({ item, index }) => {
-          const stackTitle =
-            index === activeIndex ? data[index + 1]?.name : undefined;
-          return (
-            <RoomCard
-              item={item}
-              index={index}
-              x={x}
-              devices={devices}
-              itemWidth={itemWidth}
-              layout={layout}
-              isTablet={isTablet}
-              isActive={index === activeIndex}
-              isWholeHome={item.id === WHOLE_HOME_ID}
-              wholeHomeDevices={wholeHomeDevices}
-              stackTitle={stackTitle}
-              onRoomPress={onRoomPress}
-              onWholeHomePress={onWholeHomePress}
-              onDevicePress={onDevicePress}
-            />
+      <View
+        testID="room-carousel-deck"
+        onLayout={onDeckLayout}
+        style={[styles.deck, { width: cardWidth, height: containerHeight }]}
+        {...panResponder.panHandlers}
+      >
+        {visible.map((index) => {
+          const item = data[index];
+          const rel = index - activeIndex;
+          const clampedRel = clamp(rel, -1, 2);
+          const isActive = rel === 0;
+          const baseY = mapDeck(
+            clampedRel,
+            [-1, 0, 1, 2],
+            [-baseLift, 0, -peekLift, -deepLift],
           );
-        }}
-      />
+          const baseScale = mapDeck(
+            clampedRel,
+            [-1, 0, 1, 2],
+            [1, 1, 1, 1],
+          );
+          const backBgAlpha = mapDeck(
+            clampedRel,
+            [-1, 0, 1, 2],
+            [0, 1, 0.92, 0.86],
+          );
+          const focusProgress = rel === 1 ? towardNext : rel === -1 ? towardPrev : 0;
+          const focusEase = 1 - Math.pow(1 - focusProgress, 2);
+          const focusLift = focusEase * Math.round(stackDepth * 0.38);
+          const focusScale = 0;
+          const translateY =
+            centerY +
+            baseY -
+            (isActive ? activeLift : focusLift);
+          const insetX = mapDeck(
+            clampedRel,
+            [-1, 0, 1, 2],
+            [insetBase, 0, insetBase, insetDeep],
+          );
+          const scale = isActive
+            ? baseScale * activeScale
+            : baseScale + focusScale;
+          const zIndex = rel === 0 ? 1000 : 990 - Math.abs(rel);
+          const focusShift = focusEase * Math.round(cardWidth * 0.02);
+          const translateX = isActive
+            ? dxNow
+            : rel === 1
+              ? -focusShift
+              : rel === -1
+                ? focusShift
+                : 0;
+          const rotateZ = isActive
+            ? `${activeTilt}deg`
+            : `${(rel === 1 ? -1 : 1) * focusEase * 1.4}deg`;
+
+          return (
+            <View
+              key={item.id}
+              testID="room-carousel-card"
+              pointerEvents={isActive ? "auto" : "none"}
+              style={[
+                styles.cardWrap,
+                {
+                  height: cardHeight,
+                  paddingLeft: insetX,
+                  paddingRight: insetX,
+                  overflow: "visible",
+                  borderRadius: layout.cardRadius,
+                  transform: [
+                    { perspective: 1200 },
+                    { translateX },
+                    { translateY },
+                    { scale },
+                    { rotateZ },
+                  ],
+                  zIndex,
+                },
+              ]}
+            >
+              {isActive ? (
+                <RoomCard
+                  item={item}
+                  devices={devices}
+                  layout={layout}
+                  isTablet={isTablet}
+                  isWholeHome={item.id === WHOLE_HOME_ID}
+                  wholeHomeDevices={wholeHomeDevices}
+                  onRoomPress={onRoomPress}
+                  onWholeHomePress={onWholeHomePress}
+                  onDevicePress={onDevicePress}
+                />
+              ) : (
+                <View testID="room-carousel-card-peek">
+                  <RoomPeekCard
+                    item={item}
+                    layout={layout}
+                    isTablet={isTablet}
+                    backBgAlpha={backBgAlpha}
+                  />
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginTop: 6, overflow: "visible" },
-
-  listContent: {
-    paddingHorizontal: 0,
-    paddingTop: 16,
-    paddingBottom: 6, // ✅ avoids bottom cut-off
-  },
-
-  item: {
+  wrap: { marginTop: 6, alignItems: "center", width: "100%" },
+  deck: {
+    position: "relative",
     overflow: "visible",
+    alignItems: "stretch",
   },
-
-  // ✅ stacked caps behind active card (like reference)
-  stackBack1: {
+  cardWrap: {
     position: "absolute",
-    top: 8,
-    backgroundColor: "rgba(255,255,255,0.68)",
-    borderWidth: 1,
-    borderColor: STACK_BORDER,
-    transform: [{ translateY: -26 }],
-    alignItems: "center",
-    paddingTop: 8,
-    paddingHorizontal: 14,
-    shadowColor: "rgba(120,80,200,0.16)",
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 3,
-  },
-  stackTitle: {
-    color: "rgba(90,80,130,0.4)",
-    fontWeight: "800",
-    textAlign: "center",
+    left: 0,
+    right: 0,
+    top: 0,
+    alignItems: "stretch",
+    justifyContent: "center",
   },
 
   cardShell: {
+    width: "100%",
     shadowOpacity: 0.16,
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 20 },
     overflow: "visible",
     elevation: 10,
+  },
+  cardShellBack: {
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 7,
   },
   cardSurface: {
     flex: 1,
@@ -610,6 +824,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "rgba(255,255,255,0.98)",
     backfaceVisibility: "hidden",
+  },
+  cardSurfaceBack: {
+    justifyContent: "flex-start",
   },
 
   title: {
@@ -621,6 +838,12 @@ const styles = StyleSheet.create({
   titleInactive: {
     color: "rgba(30,30,42,0.6)",
     fontWeight: "800",
+  },
+  peekTitle: {
+    textAlign: "center",
+    color: "rgba(20,20,28,0.92)",
+    fontWeight: "900",
+    letterSpacing: -0.2,
   },
   sub: {
     textAlign: "center",

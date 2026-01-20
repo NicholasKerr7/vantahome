@@ -28,21 +28,40 @@ const MODES: Array<{
 export default function ModeTiles({
   value,
   onChange,
+  maxWidth,
+  columns = 3,
 }: {
   value: ModeKey;
   onChange: (m: ModeKey) => void;
+  maxWidth?: number;
+  columns?: number;
 }) {
   const { isTablet, isLandscape, scale } = useResponsive();
-  const tileSize = Math.round(
+  const baseTileSize = Math.round(
     (isTablet ? (isLandscape ? 104 : 112) : 92) * scale,
+  );
+  const gap = Math.round((isTablet ? 16 : 14) * scale);
+  const paddingHorizontal = 6;
+  const maxTileSize =
+    maxWidth && columns > 0
+      ? Math.floor(
+          (maxWidth - paddingHorizontal * 2 - gap * (columns - 1)) / columns,
+        )
+      : undefined;
+  const tileSize = Math.max(
+    0,
+    Math.min(baseTileSize, maxTileSize ?? baseTileSize),
   );
   const tileRadius = Math.round(tileSize * 0.24);
   const iconBubble = Math.round(tileSize * 0.48);
   const iconBubbleRadius = Math.round(iconBubble / 2);
   const iconSize = Math.round((isTablet ? 22 : 20) * scale);
   const textSize = Math.round((isTablet ? 13 : 12) * scale);
-  const gap = Math.round((isTablet ? 16 : 14) * scale);
-  const modesStyle: StyleProp<ViewStyle> = [styles.modes, { gap }];
+  const modesStyle: StyleProp<ViewStyle> = [
+    styles.modes,
+    { gap },
+    maxWidth ? { width: maxWidth, alignSelf: "flex-start" } : null,
+  ];
   const modeTileStyle = (active: boolean): StyleProp<ViewStyle> => [
     styles.modeTile,
     { width: tileSize, height: tileSize, borderRadius: tileRadius },
