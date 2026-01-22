@@ -26,6 +26,26 @@ jest.mock("@react-native-community/slider", () => {
   return View;
 });
 
+jest.mock("expo-av", () => {
+  class Recording {
+    prepareToRecordAsync = jest.fn(async () => undefined);
+    startAsync = jest.fn(async () => undefined);
+    stopAndUnloadAsync = jest.fn(async () => undefined);
+    setOnRecordingStatusUpdate = jest.fn();
+    setProgressUpdateInterval = jest.fn();
+  }
+  return {
+    Audio: {
+      requestPermissionsAsync: jest.fn(async () => ({ status: "granted" })),
+      setAudioModeAsync: jest.fn(async () => undefined),
+      Recording,
+      RecordingOptionsPresets: { LOW_QUALITY: {} },
+    },
+    InterruptionModeIOS: { MixWithOthers: "MixWithOthers" },
+    InterruptionModeAndroid: { DuckOthers: "DuckOthers" },
+  };
+});
+
 // Extend Jest with @testing-library/jest-native matchers.
 require("@testing-library/jest-native/extend-expect");
 

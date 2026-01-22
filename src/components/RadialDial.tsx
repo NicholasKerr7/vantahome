@@ -18,7 +18,6 @@ import Svg, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
-  runOnJS,
   useAnimatedProps,
   useAnimatedStyle,
   withTiming,
@@ -155,9 +154,9 @@ export default function RadialDial({
   void formatValue;
   const range = safeMax - safeMin;
   const dialSize = size;
-  const bubbleSize = Math.max(22, dialSize * 0.095);
-  const bubbleHaloOuter = bubbleSize * 0.52;
-  const bubbleHaloInner = bubbleSize * 0.38;
+  const bubbleSize = Math.max(18, dialSize * 0.075);
+  const bubbleHaloOuter = bubbleSize * 0.45;
+  const bubbleHaloInner = bubbleSize * 0.32;
   const trackWidth = Math.max(20, dialSize * 0.1);
   const innerTrackWidth = Math.max(16, dialSize * 0.0714);
   const r = dialSize * 0.39;
@@ -209,7 +208,6 @@ export default function RadialDial({
   };
 
   const updateFromPoint = (x: number, y: number) => {
-    "worklet";
     if (!Number.isFinite(x) || !Number.isFinite(y) || range <= 0) return;
     const dx = x - cx;
     const dy = y - cy;
@@ -228,8 +226,8 @@ export default function RadialDial({
     const next = valueFromT(norm);
     if (next !== lastSent.value) {
       lastSent.value = next;
-      runOnJS(onChange)(next);
-      runOnJS(haptic)();
+      onChange(next);
+      haptic();
     }
   };
 
@@ -243,6 +241,7 @@ export default function RadialDial({
     .onFinalize(() => {
       knobScale.value = withTiming(1, { duration: 160 });
     });
+  pan.runOnJS(true);
 
   const tap = Gesture.Tap()
     .onStart((e) => {
@@ -252,6 +251,7 @@ export default function RadialDial({
     .onFinalize(() => {
       knobScale.value = withTiming(1, { duration: 160 });
     });
+  tap.runOnJS(true);
 
   const gesture = Gesture.Simultaneous(pan, tap);
 
@@ -263,7 +263,7 @@ export default function RadialDial({
     [start, sweep, cx, cy, r],
   );
 
-  const bubbleCenterR = r + innerTrackWidth * 0.25;
+  const bubbleCenterR = r;
   const bubbleStyle = useAnimatedStyle(
     () => {
       const angle = start + sweep * knobT.value;

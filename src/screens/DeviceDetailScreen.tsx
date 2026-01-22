@@ -236,6 +236,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const compactDialSize = Math.round((isTablet ? 280 : 240) * scale);
   const fanDialSize = isPortrait ? dialSize : compactDialSize;
+  const fridgeDialSize = isPortrait ? dialSize : compactDialSize;
+  const microwaveDialSize = isPortrait ? dialSize : compactDialSize;
+  const sprinklerDialSize = isPortrait ? dialSize : compactDialSize;
   const gateAutoOpenPortraitTop = Math.round(
     (isTablet ? 36 : 28) * scale,
   );
@@ -374,6 +377,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const fanModeBubbleSize = Math.round(fanModeTileSize * 0.48);
   const fanModeBubbleRadius = Math.round(fanModeBubbleSize / 2);
   const fanModeIconSize = Math.round((isTablet ? 22 : 20) * scale);
+  const presetTileIconSize = Math.round((isTablet ? 22 : 20) * scale);
   const fanModeTextSize = Math.round((isTablet ? 13 : 12) * scale);
   const cameraFeedHeight = Math.round(
     Math.min(
@@ -442,6 +446,54 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const landscapeSurfaceRadius = Math.round((isTablet ? 30 : 26) * scale);
   const landscapeColumnPad = Math.round((isTablet ? 14 : 12) * scale);
   const landscapeColumnRadius = Math.max(18, landscapeSurfaceRadius - 6);
+  const stovePresetTilesMaxWidth = isLandscape
+    ? Math.max(
+        0,
+        (isLandscapeSplit
+          ? (panelInnerWidth - landscapeSurfacePad * 2 - landscapeGridGap) / 2 -
+            landscapeColumnPad * 2
+          : panelInnerWidth) -
+          utilityHeroPad * 2,
+      )
+    : isTablet
+      ? Math.max(
+          0,
+          panelInnerWidth -
+            utilityHeroPad * 2 -
+            compactDialSize -
+            utilityHeroGap,
+        )
+      : Math.max(0, panelInnerWidth - utilityHeroPad * 2);
+  const stovePresetTilesWidth =
+    stovePresetTilesMaxWidth && stovePresetTilesMaxWidth > 0
+      ? stovePresetTilesMaxWidth
+      : undefined;
+  const stovePresetTileBase = Math.round(
+    (isTablet ? (isLandscape ? 104 : 112) : 92) * scale,
+  );
+  const stovePresetTileGap = Math.round((isTablet ? 16 : 14) * scale);
+  const stovePresetTilePadding = 6;
+  const stovePresetTileMax =
+    stovePresetTilesWidth && stovePresetTilesWidth > 0
+      ? Math.floor(
+          (stovePresetTilesWidth -
+            stovePresetTilePadding * 2 -
+            stovePresetTileGap * 3) /
+            4,
+        )
+      : undefined;
+  const stovePresetTileSize = Math.max(
+    0,
+    Math.min(stovePresetTileBase, stovePresetTileMax ?? stovePresetTileBase),
+  );
+  const stovePresetTileRadius = Math.round(stovePresetTileSize * 0.24);
+  const stovePresetBubbleSize = Math.round(stovePresetTileSize * 0.48);
+  const stovePresetBubbleRadius = Math.round(stovePresetBubbleSize / 2);
+  const stovePresetTextSize = Math.round((isTablet ? 13 : 12) * scale);
+  const stovePresetIconSize = Math.min(
+    presetTileIconSize,
+    Math.max(16, Math.round(stovePresetBubbleSize * 0.6)),
+  );
   const sectionTopMargin = isTabletLandscape
     ? Math.round(12 * scale)
     : Math.round(28 * scale);
@@ -2089,6 +2141,18 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     utilityHeroCardStyle,
     isLandscapeSplit && styles.fanHeroCardFill,
   ];
+  const fridgeHeroCardStyle: StyleProp<ViewStyle> = [
+    utilityHeroCardStyle,
+    isLandscapeSplit && styles.fanHeroCardFill,
+  ];
+  const microwaveHeroCardStyle: StyleProp<ViewStyle> = [
+    utilityHeroCardStyle,
+    isLandscapeSplit && styles.fanHeroCardFill,
+  ];
+  const sprinklerHeroCardStyle: StyleProp<ViewStyle> = [
+    utilityHeroCardStyle,
+    isLandscapeSplit && styles.fanHeroCardFill,
+  ];
   const fanHeroBodyStyle: StyleProp<ViewStyle> = [
     utilityHeroBodyStyle,
     isLandscapeSplit && styles.fanHeroBodyFill,
@@ -2218,6 +2282,90 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       alignSelf: isLandscape ? "stretch" : isTablet ? "auto" : "stretch",
     },
   ];
+  const fridgeDialWrapStyle: StyleProp<ViewStyle> = [
+    styles.acDialWrap,
+    isPortrait && isTablet && {
+      flex: 1,
+      justifyContent: "center",
+    },
+    isPortrait && !isTablet && { width: "100%" },
+  ];
+  const microwaveDialWrapStyle: StyleProp<ViewStyle> = [
+    styles.acDialWrap,
+    isPortrait && isTablet && {
+      flex: 1,
+      justifyContent: "center",
+    },
+    isPortrait && !isTablet && { width: "100%" },
+  ];
+  const sprinklerDialWrapStyle: StyleProp<ViewStyle> = [
+    styles.acDialWrap,
+    isPortrait && isTablet && {
+      flex: 1,
+      justifyContent: "center",
+    },
+    isPortrait && !isTablet && { width: "100%" },
+  ];
+  const fridgeHeroBodyLayoutStyle: StyleProp<ViewStyle> = isPortrait
+    ? [
+        styles.utilityHeroBody,
+        {
+          flexDirection: isTablet ? "row" : "column",
+          alignItems: "stretch",
+          gap: utilityHeroGap,
+        },
+      ]
+    : [
+        styles.utilityHeroBody,
+        {
+          flexDirection: "column",
+          alignItems: "center",
+          gap: utilityHeroGap,
+        },
+      ];
+  const fridgeHeroLandscapeInfoStyle: StyleProp<ViewStyle> = [
+    styles.utilityHeroInfo,
+    { alignItems: "center", alignSelf: "stretch" },
+  ];
+  const microwaveHeroBodyLayoutStyle: StyleProp<ViewStyle> = isLandscape
+    ? [
+        styles.utilityHeroBody,
+        {
+          flexDirection: "column",
+          alignItems: "center",
+          gap: utilityHeroGap,
+        },
+      ]
+    : utilityHeroBodyStyle;
+  const microwaveHeroInfoStyle: StyleProp<ViewStyle> = isLandscape
+    ? [styles.utilityHeroInfo, { alignItems: "center", alignSelf: "stretch" }]
+    : utilityHeroInfoStyle;
+  const sprinklerHeroBodyLayoutStyle: StyleProp<ViewStyle> = isLandscape
+    ? [
+        styles.utilityHeroBody,
+        {
+          flexDirection: "column",
+          alignItems: "center",
+          gap: utilityHeroGap,
+        },
+      ]
+    : utilityHeroBodyStyle;
+  const sprinklerHeroInfoStyle: StyleProp<ViewStyle> = isLandscape
+    ? [styles.utilityHeroInfo, { alignItems: "center", alignSelf: "stretch" }]
+    : utilityHeroInfoStyle;
+  const stoveHeroBodyLayoutStyle: StyleProp<ViewStyle> = isLandscape
+    ? [
+        styles.utilityHeroBody,
+        {
+          flexDirection: "column",
+          alignItems: "center",
+          gap: utilityHeroGap,
+        },
+      ]
+    : utilityHeroBodyStyle;
+  const stoveHeroInfoStyle: StyleProp<ViewStyle> = isLandscape
+    ? [styles.utilityHeroInfo, { alignItems: "center", alignSelf: "stretch" }]
+    : utilityHeroInfoStyle;
   const vacuumHeroBodyStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroBody,
     {
@@ -2264,6 +2412,22 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const fanHeroMetricRowStyle: StyleProp<ViewStyle> = [
     utilityHeroMetricRowStyle,
     !isPortrait && { alignSelf: "stretch", width: "100%" },
+  ];
+  const fridgeHeroMetricRowStyle: StyleProp<ViewStyle> = [
+    utilityHeroMetricRowStyle,
+    !isPortrait && { justifyContent: "center", width: "100%" },
+  ];
+  const microwaveHeroMetricRowStyle: StyleProp<ViewStyle> = [
+    utilityHeroMetricRowStyle,
+    !isPortrait && { justifyContent: "center", width: "100%" },
+  ];
+  const sprinklerHeroMetricRowStyle: StyleProp<ViewStyle> = [
+    utilityHeroMetricRowStyle,
+    !isPortrait && { justifyContent: "center", width: "100%" },
+  ];
+  const fridgeHeroAlertStyle: StyleProp<ViewStyle> = [
+    styles.alertRow,
+    { alignSelf: "center" },
   ];
   const garageActionRowStyle: StyleProp<ViewStyle> = [
     styles.actionRow,
@@ -3288,6 +3452,28 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.modeTile,
     Boolean(active) && styles.modeTileActive,
   ];
+  const fridgePresetRowStyle: StyleProp<ViewStyle> = [
+    styles.actionRow,
+    styles.utilityHeroActionRow,
+    (isTablet || isLandscape) && styles.utilityHeroActionRowLeft,
+    { marginTop: 0 },
+  ];
+  const stovePresetRowStyle: StyleProp<ViewStyle> = [
+    styles.actionRow,
+    styles.utilityHeroActionRow,
+    {
+      marginTop: 0,
+      gap: stovePresetTileGap,
+      paddingHorizontal: stovePresetTilePadding,
+    },
+    stovePresetTilesWidth
+      ? { width: stovePresetTilesWidth, alignSelf: "center" }
+      : undefined,
+    {
+      justifyContent: "center",
+      flexWrap: "nowrap",
+    },
+  ];
   const fanModeRowStyle: StyleProp<ViewStyle> = [
     styles.actionRow,
     isTablet && isPortrait && styles.utilityHeroActionRowLeft,
@@ -3323,6 +3509,36 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const fanModeTextStyle = (active: boolean): StyleProp<TextStyle> => [
     styles.modeText,
     { fontSize: fanModeTextSize },
+    active && styles.modeTextActive,
+  ];
+  const stovePresetTileStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.modeTile,
+    {
+      width: stovePresetTileSize,
+      height: stovePresetTileSize,
+      borderRadius: stovePresetTileRadius,
+    },
+    active && styles.modeTileActive,
+  ];
+  const stovePresetBubbleStyle: StyleProp<ViewStyle> = [
+    styles.modeIconBubble,
+    {
+      width: stovePresetBubbleSize,
+      height: stovePresetBubbleSize,
+      borderRadius: stovePresetBubbleRadius,
+    },
+  ];
+  const stovePresetBubbleActiveStyle: StyleProp<ViewStyle> = [
+    styles.modeIconBubbleActive,
+    {
+      width: stovePresetBubbleSize,
+      height: stovePresetBubbleSize,
+      borderRadius: stovePresetBubbleRadius,
+    },
+  ];
+  const stovePresetTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.modeText,
+    { fontSize: stovePresetTextSize },
     active && styles.modeTextActive,
   ];
   const lightModeTileStyle = (active?: boolean): StyleProp<ViewStyle> => [
@@ -5741,6 +5957,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     stoveModeOptions.find((option) => option.value === stoveMode)?.label ??
     stoveMode;
   const microwaveTimeLabel = formatClock(microwaveSeconds);
+  const sprinklerZoneLabel = device.zone ?? "Front Yard";
+  const sprinklerScheduleCount = (device.schedule ?? []).length;
   const waterStatusLabel = waterLeakDetected
     ? "Leak detected"
     : highPressure
@@ -5749,6 +5967,134 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         ? "Low pressure"
         : "Flow steady";
   const speakerStatusLabel = device.isOn ? speakerTrackTitle : "Speaker idle";
+  const stovePresetOptions: Array<{
+    label: string;
+    value: number;
+    icon: keyof typeof Ionicons.glyphMap;
+  }> = [
+    { label: "Off", value: 0, icon: "power" },
+    { label: "Low", value: 3, icon: "flame-outline" },
+    { label: "Med", value: 6, icon: "flame" },
+    { label: "High", value: 9, icon: "flash" },
+  ];
+  const stovePresetsRow = (
+    <>
+      <Text style={styles.cardLabel}>Presets</Text>
+      <View style={stovePresetRowStyle}>
+        {stovePresetOptions.map((preset) => {
+          const active = stoveLevel === preset.value;
+          return (
+            <Pressable
+              key={preset.label}
+              style={stovePresetTileStyle(active)}
+              onPress={() =>
+                sendPatch({
+                  burnerLevel: preset.value,
+                  isOn: preset.value > 0,
+                })
+              }
+            >
+              {active ? (
+                <LinearGradient
+                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={stovePresetBubbleActiveStyle}
+                >
+                  <Ionicons
+                    name={preset.icon}
+                    size={stovePresetIconSize}
+                    color="#FFFFFF"
+                  />
+                </LinearGradient>
+              ) : (
+                <View style={stovePresetBubbleStyle}>
+                  <Ionicons
+                    name={preset.icon}
+                    size={stovePresetIconSize}
+                    color="rgba(12,12,18,0.65)"
+                  />
+                </View>
+              )}
+              <Text style={stovePresetTextStyle(active)}>{preset.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </>
+  );
+  const fridgePresetOptions: Array<{
+    label: string;
+    value: number;
+    icon: keyof typeof Ionicons.glyphMap;
+  }> = [
+    { label: "Eco", value: 5, icon: "leaf" },
+    { label: "Normal", value: 4, icon: "thermometer" },
+    { label: "Boost", value: 2, icon: "flash" },
+  ];
+  const fridgePresetsRow = (
+    <>
+      <Text style={styles.cardLabel}>Presets</Text>
+      <View style={fridgePresetRowStyle}>
+        {fridgePresetOptions.map((preset) => {
+          const active = fridgeTemp === preset.value;
+          return (
+            <Pressable
+              key={preset.label}
+              style={modeTileStyle(active)}
+              onPress={() => sendPatch({ tempC: preset.value, isOn: true })}
+            >
+              {active ? (
+                <LinearGradient
+                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modeIconBubbleActive}
+                >
+                  <Ionicons
+                    name={preset.icon}
+                    size={presetTileIconSize}
+                    color="#FFFFFF"
+                  />
+                </LinearGradient>
+              ) : (
+                <View style={styles.modeIconBubble}>
+                  <Ionicons
+                    name={preset.icon}
+                    size={presetTileIconSize}
+                    color="rgba(12,12,18,0.65)"
+                  />
+                </View>
+              )}
+              <Text style={modeTextStyle(active)}>{preset.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </>
+  );
+  const fridgeHeroMetrics = (
+    <View style={fridgeHeroMetricRowStyle}>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{freezerTemp}°C</Text>
+        <Text style={styles.metricLabel}>Freezer</Text>
+      </View>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{fridgeHumidity}%</Text>
+        <Text style={styles.metricLabel}>Humidity</Text>
+      </View>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{fridgeFilterLife}%</Text>
+        <Text style={styles.metricLabel}>Filter life</Text>
+      </View>
+    </View>
+  );
+  const fridgeHeroAlert = fridgeDoorOpen ? (
+    <View style={fridgeHeroAlertStyle}>
+      <Ionicons name="warning" size={14} color="#D8465B" />
+      <Text style={styles.alertText}>Door left open</Text>
+    </View>
+  ) : null;
   const fridgeHeroCard = (
     <LinearGradient
       colors={[
@@ -5758,7 +6104,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       ]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
-      style={utilityHeroCardStyle}
+      style={fridgeHeroCardStyle}
     >
       <View style={styles.utilityHeroHeader}>
         <View style={styles.utilityHeroTitleWrap}>
@@ -5798,55 +6144,199 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
       </View>
-      <View style={fanHeroBodyStyle}>
-        <RadialDial
-          size={compactDialSize}
-          value={fridgeTemp}
-          min={1}
-          max={8}
-          tickValues={[1, 3, 5, 7, 8]}
-          centerLabel="Fridge Temp"
-          centerIcon={
-            <View style={marginBottom6Style}>
-              <Ionicons
-                name="thermometer"
-                size={28}
-                color={stylesVars.ink}
-              />
-            </View>
-          }
-          formatTick={(v) => `${v}`}
-          formatValue={(v) => `${v}`}
-          formatCenterValue={(v) => `${v}°C`}
-          dimmed={!device.isOn}
-          onChange={(v) =>
-            sendPatch({ tempC: clamp(v, 1, 8), isOn: true })
-          }
-        />
-        <View style={utilityHeroInfoStyle}>
-          <View style={utilityHeroMetricRowStyle}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{freezerTemp}°C</Text>
-              <Text style={styles.metricLabel}>Freezer</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{fridgeHumidity}%</Text>
-              <Text style={styles.metricLabel}>Humidity</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{fridgeFilterLife}%</Text>
-              <Text style={styles.metricLabel}>Filter life</Text>
-            </View>
-          </View>
-          {fridgeDoorOpen && (
-            <View style={styles.alertRow}>
-              <Ionicons name="warning" size={14} color="#D8465B" />
-              <Text style={styles.alertText}>Door left open</Text>
-            </View>
-          )}
+      <View style={fridgeHeroBodyLayoutStyle}>
+        <View style={fridgeDialWrapStyle}>
+          <RadialDial
+            size={fridgeDialSize}
+            value={fridgeTemp}
+            min={1}
+            max={8}
+            tickValues={[1, 3, 5, 7, 8]}
+            centerLabel="Fridge Temp"
+            centerIcon={
+              <View style={marginBottom6Style}>
+                <Ionicons
+                  name="thermometer"
+                  size={28}
+                  color={stylesVars.ink}
+                />
+              </View>
+            }
+            formatTick={(v) => `${v}`}
+            formatValue={(v) => `${v}`}
+            formatCenterValue={(v) => `${v}°C`}
+            dimmed={!device.isOn}
+            onChange={(v) =>
+              sendPatch({ tempC: clamp(v, 1, 8), isOn: true })
+            }
+          />
         </View>
+        {isPortrait ? (
+          <View style={utilityHeroInfoStyle}>
+            {fridgePresetsRow}
+            {fridgeHeroMetrics}
+            {fridgeHeroAlert}
+          </View>
+        ) : (
+          <View style={fridgeHeroLandscapeInfoStyle}>
+            {fridgePresetsRow}
+            {fridgeHeroMetrics}
+            {fridgeHeroAlert}
+          </View>
+        )}
       </View>
     </LinearGradient>
+  );
+  const fridgeFreezerCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Freezer</Text>
+      <View style={styles.pressureSliderRow}>
+        <Text style={styles.pressureSliderLabel}>Temp</Text>
+        <Text style={styles.pressureSliderValue}>{freezerTemp}°C</Text>
+      </View>
+      <Slider
+        value={freezerTemp}
+        minimumValue={-24}
+        maximumValue={-12}
+        step={1}
+        onSlidingComplete={(value) =>
+          sendPatch({
+            freezerTempC: Math.round(value),
+            isOn: true,
+          })
+        }
+        minimumTrackTintColor="rgba(122,92,255,0.9)"
+        maximumTrackTintColor="rgba(12,12,18,0.12)"
+        thumbTintColor="rgba(255,255,255,0.92)"
+        style={styles.pressureSlider}
+      />
+    </View>
+  );
+  const fridgeModesCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Modes</Text>
+      <View style={styles.chipRow}>
+        {[
+          { label: "Eco", value: "eco" },
+          { label: "Normal", value: "normal" },
+          { label: "Boost", value: "boost" },
+          { label: "Vacation", value: "vacation" },
+        ].map((option) => {
+          const active = fridgeMode === option.value;
+          return (
+            <Pressable
+              key={option.value}
+              style={chipStyle(active)}
+              onPress={() =>
+                sendPatch({
+                  fridgeMode: option.value as Device["fridgeMode"],
+                  isOn: true,
+                })
+              }
+            >
+              <Text style={chipTextStyle(active)}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+  const fridgeQuickActionsCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Quick actions</Text>
+      <View style={controlCardRowTopStyle}>
+        <Pressable
+          style={controlPillStyle(fridgeQuickCool)}
+          onPress={() =>
+            sendPatch({
+              fridgeQuickCool: !fridgeQuickCool,
+              isOn: true,
+            })
+          }
+        >
+          <Text style={controlPillTextStyle(fridgeQuickCool)}>
+            {fridgeQuickCool ? "Quick cool" : "Cool Off"}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={controlPillStyle(fridgeQuickFreeze)}
+          onPress={() =>
+            sendPatch({
+              fridgeQuickFreeze: !fridgeQuickFreeze,
+              isOn: true,
+            })
+          }
+        >
+          <Text style={controlPillTextStyle(fridgeQuickFreeze)}>
+            {fridgeQuickFreeze ? "Quick freeze" : "Freeze Off"}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+  const fridgeHardwareCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Hardware</Text>
+      <View style={controlCardRowTopStyle}>
+        <Pressable
+          style={controlPillStyle(fridgeIceMaker)}
+          onPress={() =>
+            sendPatch({
+              fridgeIceMaker: !fridgeIceMaker,
+              isOn: true,
+            })
+          }
+        >
+          <Text style={controlPillTextStyle(fridgeIceMaker)}>
+            {fridgeIceMaker ? "Ice maker" : "Ice Off"}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={controlPillStyle(fridgeDoorAlarm)}
+          onPress={() =>
+            sendPatch({
+              fridgeDoorAlarm: !fridgeDoorAlarm,
+            })
+          }
+        >
+          <Text style={controlPillTextStyle(fridgeDoorAlarm)}>
+            {fridgeDoorAlarm ? "Door alarm" : "Alarm Off"}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={controlPillStyle(fridgeEnergySaver)}
+          onPress={() =>
+            sendPatch({
+              fridgeEnergySaver: !fridgeEnergySaver,
+              isOn: true,
+            })
+          }
+        >
+          <Text style={controlPillTextStyle(fridgeEnergySaver)}>
+            {fridgeEnergySaver ? "Energy saver" : "Saver Off"}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+  const fridgeHumidityCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Humidity drawers</Text>
+      <View style={styles.chipRow}>
+        {[40, 50, 60].map((value) => {
+          const active = fridgeHumidity === value;
+          return (
+            <Pressable
+              key={value}
+              style={chipStyle(active)}
+              onPress={() => sendPatch({ fridgeHumidity: value })}
+            >
+              <Text style={chipTextStyle(active)}>{value}%</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
   const fanHeroModes = (
     <>
@@ -6024,7 +6514,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
       </View>
-      <View style={utilityHeroBodyStyle}>
+      <View style={stoveHeroBodyLayoutStyle}>
         {device.isOn ? (
           <RadialDial
             size={compactDialSize}
@@ -6056,7 +6546,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         ) : (
           renderDeviceLottie(STOVE_LOTTIE_SOURCE, compactDialSize)
         )}
-        <View style={utilityHeroInfoStyle}>
+        <View style={stoveHeroInfoStyle}>
+          {stovePresetsRow}
           <View style={utilityHeroMetricRowStyle}>
             <View style={styles.metricCard}>
               <Text style={styles.metricValue}>
@@ -6081,6 +6572,52 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       </View>
     </LinearGradient>
   );
+  const microwaveHeroMetrics = (
+    <View style={microwaveHeroMetricRowStyle}>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{microwaveMode}</Text>
+        <Text style={styles.metricLabel}>Mode</Text>
+      </View>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{microwavePower}/10</Text>
+        <Text style={styles.metricLabel}>Power</Text>
+      </View>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{microwaveTimeLabel}</Text>
+        <Text style={styles.metricLabel}>Time</Text>
+      </View>
+    </View>
+  );
+  const microwaveQuickAddRow = (
+    <>
+      <Text style={styles.cardLabel}>Quick add</Text>
+      <View style={chipRowTopStyle}>
+        {[
+          { label: "+30s", value: 30 },
+          { label: "+1m", value: 60 },
+          { label: "+2m", value: 120 },
+        ].map((preset) => (
+          <Pressable
+            key={preset.label}
+            style={styles.chip}
+            onPress={() => {
+              const next = clamp(
+                microwaveSeconds + preset.value,
+                0,
+                900,
+              );
+              sendPatch({
+                timeRemainingSec: next,
+                isOn: next > 0,
+              });
+            }}
+          >
+            <Text style={styles.chipText}>{preset.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </>
+  );
   const microwaveHeroCard = (
     <LinearGradient
       colors={[
@@ -6090,7 +6627,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       ]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
-      style={utilityHeroCardStyle}
+      style={microwaveHeroCardStyle}
     >
       <View style={styles.utilityHeroHeader}>
         <View style={styles.utilityHeroTitleWrap}>
@@ -6126,45 +6663,229 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
       </View>
-      <View style={utilityHeroBodyStyle}>
-        <RadialDial
-          size={compactDialSize}
-          value={Math.round(microwaveSeconds)}
-          min={0}
-          max={900}
-          tickValues={[0, 300, 600, 900]}
-          centerLabel="Time"
-          centerIcon={
-            <View style={marginBottom6Style}>
-              <DeviceIcon kind="microwave" size={28} color={stylesVars.ink} />
-            </View>
-          }
-          formatTick={(v) => `${Math.round(v / 60)}`}
-          formatValue={(v) => formatClock(v)}
-          formatCenterValue={(v) => formatClock(v)}
-          dimmed={!device.isOn}
-          onChange={(v) =>
-            sendPatch({
-              timeRemainingSec: clamp(v, 0, 900),
-              isOn: v > 0,
-            })
-          }
-        />
-        <View style={utilityHeroInfoStyle}>
-          <View style={utilityHeroMetricRowStyle}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{microwaveMode}</Text>
-              <Text style={styles.metricLabel}>Mode</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{microwavePower}/10</Text>
-              <Text style={styles.metricLabel}>Power</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{microwaveTimeLabel}</Text>
-              <Text style={styles.metricLabel}>Time</Text>
-            </View>
+      <View style={microwaveHeroBodyLayoutStyle}>
+        <View style={microwaveDialWrapStyle}>
+          <RadialDial
+            size={microwaveDialSize}
+            value={Math.round(microwaveSeconds)}
+            min={0}
+            max={900}
+            tickValues={[0, 300, 600, 900]}
+            centerLabel="Time"
+            centerIcon={
+              <View style={marginBottom6Style}>
+                <DeviceIcon kind="microwave" size={28} color={stylesVars.ink} />
+              </View>
+            }
+            formatTick={(v) => `${Math.round(v / 60)}`}
+            formatValue={(v) => formatClock(v)}
+            formatCenterValue={(v) => formatClock(v)}
+            dimmed={!device.isOn}
+            onChange={(v) =>
+              sendPatch({
+                timeRemainingSec: clamp(v, 0, 900),
+                isOn: v > 0,
+              })
+            }
+          />
+        </View>
+        <View style={microwaveHeroInfoStyle}>
+          {microwaveHeroMetrics}
+          <View style={utilityHeroActionRowStyle}>
+            <Pressable
+              style={modeTileStyle(device.isOn)}
+              onPress={() => sendPatch({ isOn: true })}
+            >
+              {device.isOn ? (
+                <LinearGradient
+                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modeIconBubbleActive}
+                >
+                  <Ionicons name="play" size={18} color="#FFFFFF" />
+                </LinearGradient>
+              ) : (
+                <View style={styles.modeIconBubble}>
+                  <Ionicons
+                    name="play"
+                    size={18}
+                    color="rgba(12,12,18,0.65)"
+                  />
+                </View>
+              )}
+              <Text style={modeTextStyle(device.isOn)}>Start</Text>
+            </Pressable>
+            <Pressable
+              style={modeTileStyle(!device.isOn)}
+              onPress={() => sendPatch({ isOn: false })}
+            >
+              {!device.isOn ? (
+                <LinearGradient
+                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.modeIconBubbleActive}
+                >
+                  <Ionicons name="stop" size={18} color="#FFFFFF" />
+                </LinearGradient>
+              ) : (
+                <View style={styles.modeIconBubble}>
+                  <Ionicons
+                    name="stop"
+                    size={18}
+                    color="rgba(12,12,18,0.65)"
+                  />
+                </View>
+              )}
+              <Text style={modeTextStyle(!device.isOn)}>Stop</Text>
+            </Pressable>
           </View>
+          {microwaveQuickAddRow}
+        </View>
+      </View>
+    </LinearGradient>
+  );
+  const microwaveModeCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Mode</Text>
+      <View style={styles.chipRow}>
+        {microwaveModeOptions.map((label) => {
+          const active = microwaveMode === label;
+          return (
+            <Pressable
+              key={label}
+              style={chipStyle(active)}
+              onPress={() => sendPatch({ microwaveMode: label })}
+            >
+              <Text style={chipTextStyle(active)}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+  const microwavePowerCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Power</Text>
+      <View style={styles.chipRow}>
+        {[
+          { label: "Low", value: 3 },
+          { label: "Med", value: 6 },
+          { label: "High", value: 10 },
+        ].map((preset) => {
+          const active = microwavePower === preset.value;
+          return (
+            <Pressable
+              key={preset.label}
+              style={chipStyle(active)}
+              onPress={() => sendPatch({ microwavePower: preset.value })}
+            >
+              <Text style={chipTextStyle(active)}>{preset.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+  const sprinklerHeroMetrics = (
+    <View style={sprinklerHeroMetricRowStyle}>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{sprinklerZoneLabel}</Text>
+        <Text style={styles.metricLabel}>Zone</Text>
+      </View>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>
+          {sprinklerDuration ? `${sprinklerDuration}m` : "Off"}
+        </Text>
+        <Text style={styles.metricLabel}>Duration</Text>
+      </View>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>
+          {sprinklerScheduleCount ? sprinklerScheduleCount : "None"}
+        </Text>
+        <Text style={styles.metricLabel}>Schedules</Text>
+      </View>
+    </View>
+  );
+  const sprinklerHeroCard = (
+    <LinearGradient
+      colors={[
+        "rgba(255,255,255,0.96)",
+        "rgba(232,246,240,0.92)",
+        "rgba(212,238,228,0.86)",
+      ]}
+      start={{ x: 0.1, y: 0.05 }}
+      end={{ x: 1, y: 1 }}
+      style={sprinklerHeroCardStyle}
+    >
+      <View style={styles.utilityHeroHeader}>
+        <View style={styles.utilityHeroTitleWrap}>
+          <Text style={styles.utilityHeroTitle}>{device.name}</Text>
+          <Text style={styles.utilityHeroSub}>
+            {device.isOn ? `Watering · ${sprinklerZoneLabel}` : "Ready"}
+          </Text>
+        </View>
+        <View style={styles.utilityHeroPillRow}>
+          <View style={utilityHeroPillStyle(device.isOn)}>
+            <Ionicons
+              name={device.isOn ? "rainy" : "rainy-outline"}
+              size={14}
+              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+            />
+            <Text style={utilityHeroPillTextStyle(device.isOn)}>
+              {device.isOn ? "Running" : "Idle"}
+            </Text>
+          </View>
+          <View style={utilityHeroPillStyle(sprinklerScheduleCount > 0)}>
+            <Ionicons
+              name={
+                sprinklerScheduleCount > 0
+                  ? "calendar"
+                  : "calendar-outline"
+              }
+              size={14}
+              color={
+                sprinklerScheduleCount > 0
+                  ? theme.colors.accent2
+                  : stylesVars.subtext
+              }
+            />
+            <Text style={utilityHeroPillTextStyle(sprinklerScheduleCount > 0)}>
+              {sprinklerScheduleCount === 0
+                ? "No schedule"
+                : sprinklerScheduleCount === 1
+                  ? "1 schedule"
+                  : `${sprinklerScheduleCount} schedules`}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View style={sprinklerHeroBodyLayoutStyle}>
+        <View style={sprinklerDialWrapStyle}>
+          <RadialDial
+            size={sprinklerDialSize}
+            value={sprinklerDuration}
+            min={0}
+            max={60}
+            tickValues={[0, 15, 30, 45, 60]}
+            centerLabel="Minutes"
+            centerIcon={
+              <View style={marginBottom6Style}>
+                <Ionicons name="rainy" size={28} color={stylesVars.ink} />
+              </View>
+            }
+            formatTick={(v) => `${v}`}
+            formatValue={(v) => `${v}`}
+            formatCenterValue={(v) => `${v} min`}
+            dimmed={!device.isOn}
+            onChange={(v) =>
+              sendPatch({ durationMin: clamp(v, 0, 60) })
+            }
+          />
+        </View>
+        <View style={sprinklerHeroInfoStyle}>
+          {sprinklerHeroMetrics}
           <View style={utilityHeroActionRowStyle}>
             <Pressable
               style={modeTileStyle(device.isOn)}
@@ -6218,6 +6939,68 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
     </LinearGradient>
+  );
+  const sprinklerZoneCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Zone</Text>
+      <View style={styles.chipRow}>
+        {["Front Yard", "Back Yard", "Garden"].map((zone) => {
+          const active = sprinklerZoneLabel === zone;
+          return (
+            <Pressable
+              key={zone}
+              style={chipStyle(active)}
+              onPress={() => sendPatch({ zone })}
+            >
+              <Text style={chipTextStyle(active)}>{zone}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+  const sprinklerScheduleCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Schedule</Text>
+      {(device.schedule ?? []).length === 0 ? (
+        <Text style={styles.scheduleEmpty}>No schedules yet</Text>
+      ) : (
+        (device.schedule ?? []).map((s) => (
+          <View key={s.id} style={styles.scheduleRow}>
+            <View>
+              <Text style={styles.scheduleTime}>
+                {String(s.hour).padStart(2, "0")}:
+                {String(s.minute).padStart(2, "0")}
+              </Text>
+              <Text style={styles.scheduleDays}>{s.days.join(" • ")}</Text>
+            </View>
+            <Pressable
+              style={scheduleToggleStyle(s.enabled)}
+              onPress={() => {
+                const next = (device.schedule ?? []).map((row) =>
+                  row.id === s.id
+                    ? { ...row, enabled: !row.enabled }
+                    : row,
+                );
+                sendPatch({ schedule: next });
+              }}
+            >
+              <Text style={scheduleToggleTextStyle(s.enabled)}>
+                {s.enabled ? "On" : "Off"}
+              </Text>
+            </Pressable>
+          </View>
+        ))
+      )}
+
+      <Pressable
+        style={styles.addSchedule}
+        onPress={() => setShowSchedule(true)}
+      >
+        <Ionicons name="add" size={16} color={stylesVars.ink} />
+        <Text style={styles.addScheduleText}>Add schedule</Text>
+      </Pressable>
+    </View>
   );
   const waterHeroCard = (
     <LinearGradient
@@ -8508,208 +9291,29 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "fridge" && (
                     <>
-                      {fridgeHeroCard}
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Presets</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Eco", value: 5 },
-                            { label: "Normal", value: 4 },
-                            { label: "Boost", value: 2 },
-                          ].map((preset) => {
-                            const active = fridgeTemp === preset.value;
-                            return (
-                              <Pressable
-                                key={preset.label}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ tempC: preset.value, isOn: true })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {preset.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                      {isLandscapeSplit ? (
+                        <View style={landscapeGridStyle}>
+                          <View style={landscapeColumnPrimaryStyle}>
+                            {fridgeHeroCard}
+                          </View>
+                          <View style={landscapeColumnSecondaryStyle}>
+                            {fridgeFreezerCard}
+                            {fridgeModesCard}
+                            {fridgeQuickActionsCard}
+                            {fridgeHardwareCard}
+                            {fridgeHumidityCard}
+                          </View>
                         </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Freezer</Text>
-                        <View style={styles.pressureSliderRow}>
-                          <Text style={styles.pressureSliderLabel}>Temp</Text>
-                          <Text style={styles.pressureSliderValue}>
-                            {freezerTemp}°C
-                          </Text>
-                        </View>
-                        <Slider
-                          value={freezerTemp}
-                          minimumValue={-24}
-                          maximumValue={-12}
-                          step={1}
-                          onSlidingComplete={(value) =>
-                            sendPatch({
-                              freezerTempC: Math.round(value),
-                              isOn: true,
-                            })
-                          }
-                          minimumTrackTintColor="rgba(122,92,255,0.9)"
-                          maximumTrackTintColor="rgba(12,12,18,0.12)"
-                          thumbTintColor="rgba(255,255,255,0.92)"
-                          style={styles.pressureSlider}
-                        />
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Modes</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Eco", value: "eco" },
-                            { label: "Normal", value: "normal" },
-                            { label: "Boost", value: "boost" },
-                            { label: "Vacation", value: "vacation" },
-                          ].map((option) => {
-                            const active = fridgeMode === option.value;
-                            return (
-                              <Pressable
-                                key={option.value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({
-                                    fridgeMode:
-                                      option.value as Device["fridgeMode"],
-                                    isOn: true,
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {option.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Quick actions</Text>
-                        <View style={controlCardRowTopStyle}>
-                          <Pressable
-                            style={controlPillStyle(fridgeQuickCool)}
-                            onPress={() =>
-                              sendPatch({
-                                fridgeQuickCool: !fridgeQuickCool,
-                                isOn: true,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fridgeQuickCool)}
-                            >
-                              {fridgeQuickCool ? "Quick cool" : "Cool Off"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={controlPillStyle(fridgeQuickFreeze)}
-                            onPress={() =>
-                              sendPatch({
-                                fridgeQuickFreeze: !fridgeQuickFreeze,
-                                isOn: true,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fridgeQuickFreeze)}
-                            >
-                              {fridgeQuickFreeze
-                                ? "Quick freeze"
-                                : "Freeze Off"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Hardware</Text>
-                        <View style={controlCardRowTopStyle}>
-                          <Pressable
-                            style={controlPillStyle(fridgeIceMaker)}
-                            onPress={() =>
-                              sendPatch({
-                                fridgeIceMaker: !fridgeIceMaker,
-                                isOn: true,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fridgeIceMaker)}
-                            >
-                              {fridgeIceMaker ? "Ice maker" : "Ice Off"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={controlPillStyle(fridgeDoorAlarm)}
-                            onPress={() =>
-                              sendPatch({
-                                fridgeDoorAlarm: !fridgeDoorAlarm,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fridgeDoorAlarm)}
-                            >
-                              {fridgeDoorAlarm ? "Door alarm" : "Alarm Off"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={controlPillStyle(fridgeEnergySaver)}
-                            onPress={() =>
-                              sendPatch({
-                                fridgeEnergySaver: !fridgeEnergySaver,
-                                isOn: true,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fridgeEnergySaver)}
-                            >
-                              {fridgeEnergySaver
-                                ? "Energy saver"
-                                : "Saver Off"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Humidity drawers</Text>
-                        <View style={styles.chipRow}>
-                          {[40, 50, 60].map((value) => {
-                            const active = fridgeHumidity === value;
-                            return (
-                              <Pressable
-                                key={value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ fridgeHumidity: value })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {value}%
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
+                      ) : (
+                        <>
+                          {fridgeHeroCard}
+                          {fridgeFreezerCard}
+                          {fridgeModesCard}
+                          {fridgeQuickActionsCard}
+                          {fridgeHardwareCard}
+                          {fridgeHumidityCard}
+                        </>
+                      )}
                     </>
                   )}
 
@@ -8915,109 +9519,164 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "stove" && (
                     <>
-                      {stoveHeroCard}
+                      {isLandscapeSplit ? (
+                        <View style={landscapeGridStyle}>
+                          <View style={landscapeColumnPrimaryStyle}>
+                            {stoveHeroCard}
+                          </View>
+                          <View style={landscapeColumnSecondaryStyle}>
+                            <View style={controlCardStyle}>
+                              <Text style={styles.cardLabel}>Mode</Text>
+                              <View style={styles.chipRow}>
+                                {stoveModeOptions.map((preset) => {
+                                  const active = stoveMode === preset.value;
+                                  return (
+                                    <Pressable
+                                      key={preset.value}
+                                      style={chipStyle(active)}
+                                      onPress={() =>
+                                        sendPatch({ stoveMode: preset.value })
+                                      }
+                                    >
+                                      <Text
+                                        style={chipTextStyle(active)}
+                                      >
+                                        {preset.label}
+                                      </Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                            </View>
 
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Presets</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Off", value: 0 },
-                            { label: "Low", value: 3 },
-                            { label: "Med", value: 6 },
-                            { label: "High", value: 9 },
-                          ].map((preset) => {
-                            const active = stoveLevel === preset.value;
-                            return (
-                              <Pressable
-                                key={preset.label}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({
-                                    burnerLevel: preset.value,
-                                    isOn: preset.value > 0,
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
+                            <View style={controlCardStyle}>
+                              <Text style={styles.cardLabel}>Timer</Text>
+                              <View style={styles.chipRow}>
+                                {[0, 5, 10, 20, 30].map((value) => {
+                                  const active = stoveTimer === value;
+                                  const label =
+                                    value === 0 ? "Off" : `${value} min`;
+                                  return (
+                                    <Pressable
+                                      key={value}
+                                      style={chipStyle(active)}
+                                      onPress={() =>
+                                        sendPatch({ stoveTimerMin: value })
+                                      }
+                                    >
+                                      <Text
+                                        style={chipTextStyle(active)}
+                                      >
+                                        {label}
+                                      </Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                              <Text style={styles.budgetHint}>
+                                {stoveTimer
+                                  ? `Auto-off in ${stoveTimer} min`
+                                  : "No timer set"}
+                              </Text>
+                            </View>
+
+                            <View style={controlCardStyle}>
+                              <Text style={styles.cardLabel}>Safety</Text>
+                              <View style={controlCardRowTopStyle}>
+                                <Pressable
+                                  style={controlPillStyle(stoveLock)}
+                                  onPress={() =>
+                                    sendPatch({ stoveLock: !stoveLock })
+                                  }
                                 >
-                                  {preset.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                                  <Text
+                                    style={controlPillTextStyle(stoveLock)}
+                                  >
+                                    {stoveLock ? "Child Lock" : "Lock Off"}
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            </View>
+                          </View>
                         </View>
-                      </View>
+                      ) : (
+                        <>
+                          {stoveHeroCard}
 
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Mode</Text>
-                        <View style={styles.chipRow}>
-                          {stoveModeOptions.map((preset) => {
-                            const active = stoveMode === preset.value;
-                            return (
-                              <Pressable
-                                key={preset.value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ stoveMode: preset.value })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {preset.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Mode</Text>
+                            <View style={styles.chipRow}>
+                              {stoveModeOptions.map((preset) => {
+                                const active = stoveMode === preset.value;
+                                return (
+                                  <Pressable
+                                    key={preset.value}
+                                    style={chipStyle(active)}
+                                    onPress={() =>
+                                      sendPatch({ stoveMode: preset.value })
+                                    }
+                                  >
+                                    <Text
+                                      style={chipTextStyle(active)}
+                                    >
+                                      {preset.label}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
 
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Timer</Text>
-                        <View style={styles.chipRow}>
-                          {[0, 5, 10, 20, 30].map((value) => {
-                            const active = stoveTimer === value;
-                            const label = value === 0 ? "Off" : `${value} min`;
-                            return (
-                              <Pressable
-                                key={value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ stoveTimerMin: value })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                        <Text style={styles.budgetHint}>
-                          {stoveTimer
-                            ? `Auto-off in ${stoveTimer} min`
-                            : "No timer set"}
-                        </Text>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Safety</Text>
-                        <View style={controlCardRowTopStyle}>
-                          <Pressable
-                            style={controlPillStyle(stoveLock)}
-                            onPress={() => sendPatch({ stoveLock: !stoveLock })}
-                          >
-                            <Text
-                              style={controlPillTextStyle(stoveLock)}
-                            >
-                              {stoveLock ? "Child Lock" : "Lock Off"}
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Timer</Text>
+                            <View style={styles.chipRow}>
+                              {[0, 5, 10, 20, 30].map((value) => {
+                                const active = stoveTimer === value;
+                                const label =
+                                  value === 0 ? "Off" : `${value} min`;
+                                return (
+                                  <Pressable
+                                    key={value}
+                                    style={chipStyle(active)}
+                                    onPress={() =>
+                                      sendPatch({ stoveTimerMin: value })
+                                    }
+                                  >
+                                    <Text
+                                      style={chipTextStyle(active)}
+                                    >
+                                      {label}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                            <Text style={styles.budgetHint}>
+                              {stoveTimer
+                                ? `Auto-off in ${stoveTimer} min`
+                                : "No timer set"}
                             </Text>
-                          </Pressable>
-                        </View>
-                      </View>
+                          </View>
+
+                          <View style={controlCardStyle}>
+                            <Text style={styles.cardLabel}>Safety</Text>
+                            <View style={controlCardRowTopStyle}>
+                              <Pressable
+                                style={controlPillStyle(stoveLock)}
+                                onPress={() =>
+                                  sendPatch({ stoveLock: !stoveLock })
+                                }
+                              >
+                                <Text
+                                  style={controlPillTextStyle(stoveLock)}
+                                >
+                                  {stoveLock ? "Child Lock" : "Lock Off"}
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        </>
+                      )}
                     </>
                   )}
 
@@ -9049,90 +9708,23 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "microwave" && (
                     <>
-                      {microwaveHeroCard}
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Mode</Text>
-                        <View style={styles.chipRow}>
-                          {microwaveModeOptions.map((label) => {
-                            const active = microwaveMode === label;
-                            return (
-                              <Pressable
-                                key={label}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ microwaveMode: label })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                      {isLandscapeSplit ? (
+                        <View style={landscapeGridStyle}>
+                          <View style={landscapeColumnPrimaryStyle}>
+                            {microwaveHeroCard}
+                          </View>
+                          <View style={landscapeColumnSecondaryStyle}>
+                            {microwaveModeCard}
+                            {microwavePowerCard}
+                          </View>
                         </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Power</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Low", value: 3 },
-                            { label: "Med", value: 6 },
-                            { label: "High", value: 10 },
-                          ].map((preset) => {
-                            const active = microwavePower === preset.value;
-                            return (
-                              <Pressable
-                                key={preset.label}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ microwavePower: preset.value })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {preset.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Quick add</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "+30s", value: 30 },
-                            { label: "+1m", value: 60 },
-                            { label: "+2m", value: 120 },
-                          ].map((preset) => (
-                            <Pressable
-                              key={preset.label}
-                              style={styles.chip}
-                              onPress={() => {
-                                const next = clamp(
-                                  microwaveSeconds + preset.value,
-                                  0,
-                                  900,
-                                );
-                                sendPatch({
-                                  timeRemainingSec: next,
-                                  isOn: next > 0,
-                                });
-                              }}
-                            >
-                              <Text style={styles.chipText}>
-                                {preset.label}
-                              </Text>
-                            </Pressable>
-                          ))}
-                        </View>
-                      </View>
+                      ) : (
+                        <>
+                          {microwaveHeroCard}
+                          {microwaveModeCard}
+                          {microwavePowerCard}
+                        </>
+                      )}
                     </>
                   )}
 
@@ -10162,173 +10754,23 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "sprinkler" && (
                     <>
-                      <RadialDial
-                        size={compactDialSize}
-                        value={sprinklerDuration}
-                        min={0}
-                        max={60}
-                        tickValues={[0, 15, 30, 45, 60]}
-                        centerLabel="Minutes"
-                        centerIcon={
-                          <View style={marginBottom6Style}>
-                            <Ionicons
-                              name="rainy"
-                              size={28}
-                              color={stylesVars.ink}
-                            />
+                      {isLandscapeSplit ? (
+                        <View style={landscapeGridStyle}>
+                          <View style={landscapeColumnPrimaryStyle}>
+                            {sprinklerHeroCard}
                           </View>
-                        }
-                        formatTick={(v) => `${v}`}
-                        formatValue={(v) => `${v}`}
-                        formatCenterValue={(v) => `${v} min`}
-                        dimmed={!device.isOn}
-                        onChange={(v) =>
-                          sendPatch({ durationMin: clamp(v, 0, 60) })
-                        }
-                      />
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Zone</Text>
-                        <View style={styles.chipRow}>
-                          {["Front Yard", "Back Yard", "Garden"].map((zone) => {
-                            const active =
-                              (device.zone ?? "Front Yard") === zone;
-                            return (
-                              <Pressable
-                                key={zone}
-                                style={chipStyle(active)}
-                                onPress={() => sendPatch({ zone })}
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {zone}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                          <View style={landscapeColumnSecondaryStyle}>
+                            {sprinklerZoneCard}
+                            {sprinklerScheduleCard}
+                          </View>
                         </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Schedule</Text>
-                        {(device.schedule ?? []).length === 0 ? (
-                          <Text style={styles.scheduleEmpty}>
-                            No schedules yet
-                          </Text>
-                        ) : (
-                          (device.schedule ?? []).map((s) => (
-                            <View key={s.id} style={styles.scheduleRow}>
-                              <View>
-                                <Text style={styles.scheduleTime}>
-                                  {String(s.hour).padStart(2, "0")}:
-                                  {String(s.minute).padStart(2, "0")}
-                                </Text>
-                                <Text style={styles.scheduleDays}>
-                                  {s.days.join(" • ")}
-                                </Text>
-                              </View>
-                              <Pressable
-                                style={scheduleToggleStyle(s.enabled)}
-                                onPress={() => {
-                                  const next = (device.schedule ?? []).map(
-                                    (row) =>
-                                      row.id === s.id
-                                        ? { ...row, enabled: !row.enabled }
-                                        : row,
-                                  );
-                                  sendPatch({ schedule: next });
-                                }}
-                              >
-                                <Text
-                                  style={scheduleToggleTextStyle(s.enabled)}
-                                >
-                                  {s.enabled ? "On" : "Off"}
-                                </Text>
-                              </Pressable>
-                            </View>
-                          ))
-                        )}
-
-                        <Pressable
-                          style={styles.addSchedule}
-                          onPress={() => setShowSchedule(true)}
-                        >
-                          <Ionicons
-                            name="add"
-                            size={16}
-                            color={stylesVars.ink}
-                          />
-                          <Text style={styles.addScheduleText}>
-                            Add schedule
-                          </Text>
-                        </Pressable>
-                      </View>
-
-                      <View style={styles.actionRow}>
-                        <Pressable
-                          style={modeTileStyle(device.isOn)}
-                          onPress={() => sendPatch({ isOn: true })}
-                        >
-                          {device.isOn ? (
-                            <LinearGradient
-                              colors={[
-                                theme.colors.accent2,
-                                theme.colors.accent,
-                              ]}
-                              start={{ x: 0.1, y: 0 }}
-                              end={{ x: 1, y: 1 }}
-                              style={styles.modeIconBubbleActive}
-                            >
-                              <Ionicons name="play" size={18} color="#FFFFFF" />
-                            </LinearGradient>
-                          ) : (
-                            <View style={styles.modeIconBubble}>
-                              <Ionicons
-                                name="play"
-                                size={18}
-                                color="rgba(12,12,18,0.65)"
-                              />
-                            </View>
-                          )}
-                          <Text
-                            style={modeTextStyle(device.isOn)}
-                          >
-                            Start
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          style={modeTileStyle(!device.isOn)}
-                          onPress={() => sendPatch({ isOn: false })}
-                        >
-                          {!device.isOn ? (
-                            <LinearGradient
-                              colors={[
-                                theme.colors.accent2,
-                                theme.colors.accent,
-                              ]}
-                              start={{ x: 0.1, y: 0 }}
-                              end={{ x: 1, y: 1 }}
-                              style={styles.modeIconBubbleActive}
-                            >
-                              <Ionicons name="stop" size={18} color="#FFFFFF" />
-                            </LinearGradient>
-                          ) : (
-                            <View style={styles.modeIconBubble}>
-                              <Ionicons
-                                name="stop"
-                                size={18}
-                                color="rgba(12,12,18,0.65)"
-                              />
-                            </View>
-                          )}
-                          <Text
-                            style={modeTextStyle(!device.isOn)}
-                          >
-                            Stop
-                          </Text>
-                        </Pressable>
-                      </View>
+                      ) : (
+                        <>
+                          {sprinklerHeroCard}
+                          {sprinklerZoneCard}
+                          {sprinklerScheduleCard}
+                        </>
+                      )}
                     </>
                   )}
 
