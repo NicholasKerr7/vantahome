@@ -11,6 +11,7 @@ import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Slider from "@react-native-community/slider";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import LottieView from "lottie-react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -120,7 +121,7 @@ const LIGHT_EFFECTS: Array<{
   value: NonNullable<Device["lightEffect"]>;
   icon: keyof typeof Ionicons.glyphMap;
 }> = [
-  { label: "Focus", value: "focus", icon: "flash" as const },
+  { label: "Focus FX", value: "focus", icon: "flash" as const },
   { label: "Relax", value: "relax", icon: "moon" as const },
   { label: "Sunset", value: "sunset", icon: "sunny" as const },
   { label: "Party", value: "party", icon: "color-palette" as const },
@@ -234,6 +235,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     (isTablet ? (isLandscape ? 320 : 340) : 280) * scale,
   );
   const compactDialSize = Math.round((isTablet ? 280 : 240) * scale);
+  const fanDialSize = isPortrait ? dialSize : compactDialSize;
   const gateAutoOpenPortraitTop = Math.round(
     (isTablet ? 36 : 28) * scale,
   );
@@ -336,6 +338,43 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     acModeTilesMaxWidth && acModeTilesMaxWidth > 0
       ? acModeTilesMaxWidth
       : undefined;
+  const fanModeTilesMaxWidth =
+    isTablet && isPortrait
+      ? Math.max(
+          0,
+          panelInnerWidth -
+            utilityHeroPad * 2 -
+            fanDialSize -
+            utilityHeroGap,
+        )
+      : undefined;
+  const fanModeTilesWidth =
+    fanModeTilesMaxWidth && fanModeTilesMaxWidth > 0
+      ? fanModeTilesMaxWidth
+      : undefined;
+  const fanModeTileBase = Math.round(
+    (isTablet ? (isLandscape ? 104 : 112) : 92) * scale,
+  );
+  const fanModeTileGap = Math.round((isTablet ? 16 : 14) * scale);
+  const fanModeTilePadding = 6;
+  const fanModeTileMax =
+    fanModeTilesWidth && fanModeTilesWidth > 0
+      ? Math.floor(
+          (fanModeTilesWidth -
+            fanModeTilePadding * 2 -
+            fanModeTileGap * 2) /
+            3,
+        )
+      : undefined;
+  const fanModeTileSize = Math.max(
+    0,
+    Math.min(fanModeTileBase, fanModeTileMax ?? fanModeTileBase),
+  );
+  const fanModeTileRadius = Math.round(fanModeTileSize * 0.24);
+  const fanModeBubbleSize = Math.round(fanModeTileSize * 0.48);
+  const fanModeBubbleRadius = Math.round(fanModeBubbleSize / 2);
+  const fanModeIconSize = Math.round((isTablet ? 22 : 20) * scale);
+  const fanModeTextSize = Math.round((isTablet ? 13 : 12) * scale);
   const cameraFeedHeight = Math.round(
     Math.min(
       compactDialSize,
@@ -463,6 +502,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightSwatchRadius = Math.round(lightSwatchSize * 0.35);
   const lightSceneItemHeight = Math.round((isTablet ? 54 : 40) * scale);
   const lightSceneItemRadius = Math.round(lightSceneItemHeight * 0.28);
+  const lightSceneTileSize = Math.round((isTablet ? 92 : 80) * scale);
+  const lightSceneTileRadius = Math.round(lightSceneTileSize * 0.24);
+  const lightSceneTileLandscapeSize = Math.round(
+    lightSceneTileSize * (isTablet ? 0.92 : 0.9),
+  );
+  const lightSceneTileLandscapeRadius = Math.round(
+    lightSceneTileLandscapeSize * 0.24,
+  );
   const lightSceneIconSize = Math.round((isTablet ? 16 : 12) * scale);
   const lightSubLabelSize = Math.round((isTablet ? 12 : 9) * scale);
   const lightCardPad = controlCardPad;
@@ -513,16 +560,41 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       gap: lightCardGap,
     },
   ];
-  const lightHeroInfoStyle: StyleProp<ViewStyle> = lightPortraitSplit
-    ? [
-        styles.utilityHeroInfo,
-        {
+  const lightHeroInfoStyle: StyleProp<ViewStyle> = [
+    styles.utilityHeroInfo,
+    isLandscape
+      ? { alignItems: "stretch", alignSelf: "stretch" }
+      : {
           alignItems: "flex-start",
-          alignSelf: "stretch",
-          justifyContent: "center",
+          alignSelf: isTablet ? "auto" : "stretch",
+          justifyContent: lightPortraitSplit ? "center" : "flex-start",
         },
-      ]
-    : { alignItems: "center", alignSelf: "stretch" };
+  ];
+  const lightHeroInfoStackStyle: StyleProp<ViewStyle> = [
+    lightHeroInfoStyle,
+    {
+      gap: Math.max(
+        8,
+        Math.round(lightCardGap * (isLandscape ? 0.6 : 0.75)),
+      ),
+    },
+  ];
+  const lightHeroMetaCardStyle: StyleProp<ViewStyle> = [
+    styles.lightHeroMetaCard,
+    {
+      padding: Math.max(10, Math.round(lightCardPad * 0.75)),
+      borderRadius: Math.round(lightCardRadius * 0.9),
+      alignSelf: isLandscape ? "stretch" : isTablet ? "auto" : "stretch",
+    },
+  ];
+  const lightHeroMetaTitleStyle: StyleProp<TextStyle> = [
+    styles.cardHint,
+    { fontSize: lightSubLabelSize },
+    !isLandscape && { marginTop: 0, marginBottom: 4 },
+  ];
+  const lightColumnStackStyle: StyleProp<ViewStyle> = !lightLayoutRow
+    ? { flex: 0, width: "100%", alignSelf: "stretch" }
+    : undefined;
   const lightControlCardStyle = [
     styles.controlCard,
     lightCardBaseStyle,
@@ -532,6 +604,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightControlsColumnStyle = [
     styles.lightControlsColumn,
     { gap: lightCardGap },
+    lightColumnStackStyle,
   ];
   const lightSwatchStyle = {
     width: lightSwatchSize,
@@ -545,7 +618,35 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightSceneMinWidth = Math.round((isTablet ? 92 : 78) * scale);
   const lightControlsCompact = isLightMobile;
   const lightEffectsUseTiles = isLandscapeSplit;
-  const lightScenesUseTiles = isLandscapeSplit;
+  const lightScenesUseTiles = isLandscapeSplit || isPortrait;
+  const lightSwatches = [
+    "#FFD166",
+    "#A0E9FF",
+    "#FF9AA2",
+    "#B69CFF",
+    "#A5FF9B",
+    "#FFFFFF",
+  ];
+  const lightSceneOptions = [
+    {
+      label: "Warm",
+      brightness: 60,
+      color: "#FFD166",
+      icon: "sunny" as const,
+    },
+    {
+      label: "Cool",
+      brightness: 70,
+      color: "#A0E9FF",
+      icon: "snow" as const,
+    },
+    {
+      label: "Focus",
+      brightness: 80,
+      color: "#FFFFFF",
+      icon: "flash" as const,
+    },
+  ];
   const outerStyle: StyleProp<ViewStyle> = [
     styles.outer,
     { padding: gutter },
@@ -728,6 +829,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const openProgress = useRef(new Animated.Value(0)).current;
   const openDeviceIdRef = useRef<string | null>(null);
   const openPercentRef = useRef<number | null>(null);
+  const lightEffectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lightEffectStep = useRef(0);
+  const lightAudioRecording = useRef<Audio.Recording | null>(null);
+  const lightAudioLastSent = useRef(0);
+  const lightAudioLastColorShift = useRef(0);
+  const lightAudioColorIndex = useRef(0);
+  const lightAudioLastBrightness = useRef<number | null>(null);
+  const lightAudioLastColor = useRef<string | null>(null);
 
   if (!device) return null;
 
@@ -742,7 +851,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     Math.max(min, Math.min(max, v));
   const brightness = clamp(device.brightness ?? 60, 0, 100);
   const colorTempK = clamp(device.colorTempK ?? 3200, 2000, 6500);
-  const lightEffect = device.lightEffect ?? "focus";
+  const lightEffect = device.lightEffect;
   const adaptiveLighting = device.adaptiveLighting ?? false;
   const motionBoost = device.motionBoost ?? false;
   const nightShift = device.nightShift ?? false;
@@ -812,6 +921,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const fanAutoMode = device.fanAutoMode ?? false;
   const fanLightOn = device.fanLightOn ?? true;
   const fanSleepMode = device.fanSleepMode ?? false;
+  const fanModeLabel =
+    fanSpeed <= 45 ? "Breeze" : fanSpeed <= 75 ? "Standard" : "Turbo";
+  const fanModePresets = [
+    { label: "Breeze", value: 35, icon: "leaf" as const },
+    { label: "Standard", value: 60, icon: "speedometer" as const },
+    { label: "Turbo", value: 90, icon: "flash" as const },
+  ];
   const isOpenable = ["garage", "gate", "door", "window"].includes(device.kind);
   const openPercent = isOpenable
     ? clamp(
@@ -1969,6 +2085,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     utilityHeroCardStyle,
     isLandscape && { flex: 1, alignSelf: "stretch" },
   ];
+  const fanHeroCardStyle: StyleProp<ViewStyle> = [
+    utilityHeroCardStyle,
+    isLandscapeSplit && styles.fanHeroCardFill,
+  ];
+  const fanHeroBodyStyle: StyleProp<ViewStyle> = [
+    utilityHeroBodyStyle,
+    isLandscapeSplit && styles.fanHeroBodyFill,
+  ];
   const waterHeroBodyStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroBody,
     {
@@ -2062,6 +2186,38 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       alignSelf: isLandscape ? "stretch" : isTablet ? "auto" : "stretch",
     },
   ];
+  const fanDialWrapStyle: StyleProp<ViewStyle> = [
+    styles.acDialWrap,
+    isTablet && isPortrait && {
+      flex: 1,
+      justifyContent: "center",
+    },
+    !isTablet && { width: "100%" },
+  ];
+  const fanHeroBodyLayoutStyle: StyleProp<ViewStyle> = isPortrait
+    ? [
+        styles.utilityHeroBody,
+        {
+          flexDirection: isTablet ? "row" : "column",
+          alignItems: "stretch",
+          gap: utilityHeroGap,
+        },
+      ]
+    : [
+        styles.utilityHeroBody,
+        {
+          flexDirection: "column",
+          alignItems: "center",
+          gap: utilityHeroGap,
+        },
+      ];
+  const fanHeroInfoLayoutStyle: StyleProp<ViewStyle> = [
+    styles.utilityHeroInfo,
+    {
+      alignItems: isLandscape ? "center" : isTablet ? "flex-start" : "center",
+      alignSelf: isLandscape ? "stretch" : isTablet ? "auto" : "stretch",
+    },
+  ];
   const vacuumHeroBodyStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroBody,
     {
@@ -2104,6 +2260,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.metricRow,
     styles.utilityHeroMetricRow,
     (isTablet || isLandscape) && styles.utilityHeroMetricRowLeft,
+  ];
+  const fanHeroMetricRowStyle: StyleProp<ViewStyle> = [
+    utilityHeroMetricRowStyle,
+    !isPortrait && { alignSelf: "stretch", width: "100%" },
   ];
   const garageActionRowStyle: StyleProp<ViewStyle> = [
     styles.actionRow,
@@ -2570,6 +2730,238 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     ]).start();
   };
 
+  useEffect(() => {
+    if (device.kind !== "light") return;
+
+    let cancelled = false;
+    const stopLightEffectTimer = () => {
+      if (lightEffectTimer.current) {
+        clearTimeout(lightEffectTimer.current);
+        lightEffectTimer.current = null;
+      }
+    };
+    const stopPartyAudio = async () => {
+      if (lightAudioRecording.current) {
+        const recording = lightAudioRecording.current;
+        lightAudioRecording.current = null;
+        try {
+          recording.setOnRecordingStatusUpdate(null);
+        } catch {
+          // ignore
+        }
+        try {
+          await recording.stopAndUnloadAsync();
+        } catch {
+          // ignore
+        }
+      }
+      lightAudioLastSent.current = 0;
+      lightAudioLastColorShift.current = 0;
+      lightAudioColorIndex.current = 0;
+      lightAudioLastBrightness.current = null;
+      lightAudioLastColor.current = null;
+    };
+
+    if (!device.isOn || !device.lightEffect) {
+      stopLightEffectTimer();
+      void stopPartyAudio();
+      return;
+    }
+
+    const partyPalette = Array.from(
+      new Set([
+        ...lightSwatches,
+        "#FF4D6D",
+        "#4D96FF",
+        "#6BCB77",
+        "#FF7A00",
+      ]),
+    );
+    const sunsetSteps = [
+      { color: "#FFD166", brightness: 60, delay: 1800 },
+      { color: "#FFB570", brightness: 54, delay: 1800 },
+      { color: "#FF9AA2", brightness: 46, delay: 2000 },
+      { color: "#B69CFF", brightness: 38, delay: 2200 },
+      { color: "#FFD166", brightness: 52, delay: 2000 },
+    ];
+
+    const startTimerEffect = (effect: NonNullable<Device["lightEffect"]>) => {
+      const baseBrightness = clamp(device.brightness ?? 70, 20, 95);
+      const focusHigh = clamp(baseBrightness + 10, 35, 100);
+      const focusLow = clamp(baseBrightness - 8, 20, 90);
+      const relaxHigh = clamp(baseBrightness - 6, 35, 70);
+      const relaxLow = clamp(baseBrightness - 18, 20, 60);
+
+      lightEffectStep.current = 0;
+      const run = () => {
+        if (cancelled) return;
+        const step = lightEffectStep.current;
+        lightEffectStep.current = step + 1;
+
+        let nextColor = device.color ?? "#FFD166";
+        let nextBrightness = baseBrightness;
+        let delay = 1500;
+
+        switch (effect) {
+          case "focus": {
+            nextColor = "#FFFFFF";
+            nextBrightness = step % 2 === 0 ? focusHigh : focusLow;
+            delay = 1400;
+            break;
+          }
+          case "relax": {
+            nextColor = "#FFD6A5";
+            nextBrightness = step % 2 === 0 ? relaxHigh : relaxLow;
+            delay = 2200;
+            break;
+          }
+          case "sunset": {
+            const frame = sunsetSteps[step % sunsetSteps.length];
+            nextColor = frame.color;
+            nextBrightness = frame.brightness;
+            delay = frame.delay;
+            break;
+          }
+          case "party": {
+            const paletteColor = partyPalette[step % partyPalette.length];
+            nextColor = paletteColor;
+            nextBrightness = clamp(
+              60 + Math.round(Math.random() * 35),
+              40,
+              100,
+            );
+            delay = 700;
+            break;
+          }
+          default:
+            break;
+        }
+
+        sendPatch({ brightness: nextBrightness, color: nextColor });
+        lightEffectTimer.current = setTimeout(run, delay);
+      };
+
+      run();
+    };
+
+    const startPartyAudio = async () => {
+      try {
+        const permission = await Audio.requestPermissionsAsync();
+        if (permission.status !== "granted") return false;
+      } catch {
+        return false;
+      }
+
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+          interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+          shouldDuckAndroid: true,
+          interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch {
+        return false;
+      }
+
+      const recording = new Audio.Recording();
+      const recordingOptions: Audio.RecordingOptions = {
+        ...Audio.RecordingOptionsPresets.LOW_QUALITY,
+        isMeteringEnabled: true,
+      };
+      try {
+        await recording.prepareToRecordAsync(recordingOptions);
+      } catch {
+        return false;
+      }
+
+      recording.setProgressUpdateInterval(180);
+      recording.setOnRecordingStatusUpdate((status) => {
+        if (cancelled) return;
+        if (!status.isRecording) return;
+        const metering =
+          typeof status.metering === "number" ? status.metering : -160;
+        const level =
+          metering >= 0 && metering <= 1
+            ? metering
+            : clamp((metering + 80) / 80, 0, 1);
+        const now = Date.now();
+        if (now - lightAudioLastSent.current < 180) return;
+
+        if (
+          lightAudioLastColorShift.current === 0 ||
+          now - lightAudioLastColorShift.current > 650
+        ) {
+          lightAudioColorIndex.current =
+            (lightAudioColorIndex.current + 1) % partyPalette.length;
+          lightAudioLastColorShift.current = now;
+        }
+
+        const nextBrightness = clamp(
+          Math.round(30 + level * 70),
+          20,
+          100,
+        );
+        const nextColor =
+          partyPalette[lightAudioColorIndex.current] ?? partyPalette[0];
+        const lastBrightness = lightAudioLastBrightness.current;
+        const lastColor = lightAudioLastColor.current;
+        if (
+          lastBrightness !== null &&
+          lastColor !== null &&
+          Math.abs(lastBrightness - nextBrightness) < 2 &&
+          lastColor === nextColor
+        ) {
+          return;
+        }
+
+        lightAudioLastSent.current = now;
+        lightAudioLastBrightness.current = nextBrightness;
+        lightAudioLastColor.current = nextColor;
+        sendPatch({ brightness: nextBrightness, color: nextColor, isOn: true });
+      });
+
+      try {
+        await recording.startAsync();
+      } catch {
+        return false;
+      }
+
+      lightAudioRecording.current = recording;
+      return true;
+    };
+
+    if (device.lightEffect === "party") {
+      stopLightEffectTimer();
+      void (async () => {
+        const started = await startPartyAudio();
+        if (!started && !cancelled) {
+          startTimerEffect("party");
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+        stopLightEffectTimer();
+        void stopPartyAudio();
+      };
+    }
+
+    void stopPartyAudio();
+    stopLightEffectTimer();
+    startTimerEffect(device.lightEffect);
+
+    return () => {
+      cancelled = true;
+      stopLightEffectTimer();
+    };
+  }, [
+    device.kind,
+    device.isOn,
+    device.lightEffect,
+  ]);
+
   const animateCoffee = (on: boolean) => {
     if (device.kind !== "coffee") return;
 
@@ -2767,6 +3159,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightDialColumnStyle: StyleProp<ViewStyle> = [
     styles.lightDialColumn,
     { minWidth: 0 },
+    lightColumnStackStyle,
     isLandscapeSplit && landscapeColumnPrimaryStyle,
   ];
   const lightCardHintStyle: StyleProp<TextStyle> = [
@@ -2780,12 +3173,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightColorRowStyle: StyleProp<ViewStyle> = [
     styles.colorRow,
     { gap: lightCardGap },
-    lightPortraitSplit && { justifyContent: "flex-start" },
+    !isLandscape && { justifyContent: "flex-start" },
   ];
   const lightSceneRowStyle: StyleProp<ViewStyle> = [
     styles.sceneRow,
     { gap: lightCardGap },
-    lightPortraitSplit && { justifyContent: "flex-start" },
+    !isLandscape && { justifyContent: "flex-start" },
   ];
   const lightSceneIconWrapSize = lightSceneIconSize + 16;
   const lightSceneIconWrapStyle: StyleProp<ViewStyle> = [
@@ -2821,6 +3214,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.actionRow,
     styles.utilityHeroActionRow,
     { marginTop: 6 },
+    !isLandscape && {
+      width: "100%",
+      alignSelf: "stretch",
+      justifyContent: "space-between",
+      flexWrap: "nowrap",
+      gap: lightCardGap,
+    },
   ];
   const lightControlCompactStyle: StyleProp<ViewStyle> = [
     lightControlCardStyle,
@@ -2860,6 +3260,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       marginTop: lightCenterRoomMargin,
     },
   ];
+  const lightDialWrapStyle: StyleProp<ViewStyle> = [
+    {
+      width: lightDialSize,
+      height: lightDialSize,
+      alignSelf: "center",
+      flexShrink: 0,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  ];
   const lightSwatchStyleFor = (
     color: string,
     active: boolean,
@@ -2876,6 +3286,64 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   ];
   const modeTileStyle = (active?: boolean): StyleProp<ViewStyle> => [
     styles.modeTile,
+    Boolean(active) && styles.modeTileActive,
+  ];
+  const fanModeRowStyle: StyleProp<ViewStyle> = [
+    styles.actionRow,
+    isTablet && isPortrait && styles.utilityHeroActionRowLeft,
+    fanModeTilesWidth
+      ? { width: fanModeTilesWidth, alignSelf: "flex-start" }
+      : undefined,
+  ];
+  const fanModeTileStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.modeTile,
+    {
+      width: fanModeTileSize,
+      height: fanModeTileSize,
+      borderRadius: fanModeTileRadius,
+    },
+    active && styles.modeTileActive,
+  ];
+  const fanModeBubbleStyle: StyleProp<ViewStyle> = [
+    styles.modeIconBubble,
+    {
+      width: fanModeBubbleSize,
+      height: fanModeBubbleSize,
+      borderRadius: fanModeBubbleRadius,
+    },
+  ];
+  const fanModeBubbleActiveStyle: StyleProp<ViewStyle> = [
+    styles.modeIconBubbleActive,
+    {
+      width: fanModeBubbleSize,
+      height: fanModeBubbleSize,
+      borderRadius: fanModeBubbleRadius,
+    },
+  ];
+  const fanModeTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.modeText,
+    { fontSize: fanModeTextSize },
+    active && styles.modeTextActive,
+  ];
+  const lightModeTileStyle = (active?: boolean): StyleProp<ViewStyle> => [
+    styles.lightModeTileBase,
+    isLandscape
+      ? {
+          width: lightSceneTileLandscapeSize,
+          height: lightSceneTileLandscapeSize,
+          borderRadius: lightSceneTileLandscapeRadius,
+        }
+      : {
+          flexGrow: 1,
+          flexBasis: 0,
+          minWidth: 0,
+          width: undefined,
+          height: undefined,
+          aspectRatio: 1,
+          borderRadius: lightSceneTileRadius,
+          maxWidth: lightSceneTileSize,
+          maxHeight: lightSceneTileSize,
+        },
     Boolean(active) && styles.modeTileActive,
   ];
   const openActionTileDims =
@@ -3309,7 +3777,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       ]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
-      style={utilityHeroCardStyle}
+      style={fanHeroCardStyle}
     >
       <View style={styles.utilityHeroHeader}>
         <View style={styles.utilityHeroTitleWrap}>
@@ -3389,6 +3857,96 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
     </LinearGradient>
+  );
+  const fanOscillationCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Oscillation</Text>
+      <View style={controlCardRowTopStyle}>
+        <Pressable
+          style={controlPillStyle(fanOscillation)}
+          onPress={() =>
+            sendPatch({
+              fanOscillation: !fanOscillation,
+              isOn: true,
+            })
+          }
+        >
+          <Text style={controlPillTextStyle(fanOscillation)}>
+            {fanOscillation ? "Oscillate" : "Fixed"}
+          </Text>
+        </Pressable>
+      </View>
+      <Text style={styles.cardHint}>Direction</Text>
+      <View style={styles.chipRow}>
+        {[
+          { label: "Forward", value: "forward" },
+          { label: "Reverse", value: "reverse" },
+        ].map((option) => {
+          const active = fanDirection === option.value;
+          return (
+            <Pressable
+              key={option.value}
+              style={chipStyle(active)}
+              onPress={() =>
+                sendPatch({
+                  fanDirection: option.value as Device["fanDirection"],
+                  isOn: true,
+                })
+              }
+            >
+              <Text style={chipTextStyle(active)}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+  const fanTimerCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Timer & light</Text>
+      <View style={styles.chipRow}>
+        {[0, 30, 60, 120].map((value) => {
+          const active = fanTimerMin === value;
+          return (
+            <Pressable
+              key={value}
+              style={chipStyle(active)}
+              onPress={() => sendPatch({ fanTimerMin: value, isOn: true })}
+            >
+              <Text style={chipTextStyle(active)}>
+                {value === 0 ? "Off" : `${value}m`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={controlCardRowTopStyle}>
+        <Pressable
+          style={controlPillStyle(fanLightOn)}
+          onPress={() => sendPatch({ fanLightOn: !fanLightOn, isOn: true })}
+        >
+          <Text style={controlPillTextStyle(fanLightOn)}>
+            {fanLightOn ? "Light on" : "Light off"}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={controlPillStyle(fanAutoMode)}
+          onPress={() => sendPatch({ fanAutoMode: !fanAutoMode, isOn: true })}
+        >
+          <Text style={controlPillTextStyle(fanAutoMode)}>
+            {fanAutoMode ? "Auto" : "Auto off"}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={controlPillStyle(fanSleepMode)}
+          onPress={() => sendPatch({ fanSleepMode: !fanSleepMode, isOn: true })}
+        >
+          <Text style={controlPillTextStyle(fanSleepMode)}>
+            {fanSleepMode ? "Sleep" : "Sleep off"}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
   );
   const acHeroNodes = acHeroCard;
 
@@ -5240,7 +5798,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
       </View>
-      <View style={utilityHeroBodyStyle}>
+      <View style={fanHeroBodyStyle}>
         <RadialDial
           size={compactDialSize}
           value={fridgeTemp}
@@ -5290,6 +5848,66 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       </View>
     </LinearGradient>
   );
+  const fanHeroModes = (
+    <>
+      <Text style={moodLabelStyle}>Mode</Text>
+      <Text style={moodValueStyle}>{fanModeLabel}</Text>
+      <View style={fanModeRowStyle}>
+        {fanModePresets.map((preset) => {
+          const active = fanSpeed === preset.value;
+          return (
+            <Pressable
+              key={preset.label}
+              style={fanModeTileStyle(active)}
+              onPress={() => sendPatch({ speed: preset.value, isOn: true })}
+            >
+              {active ? (
+                <LinearGradient
+                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={fanModeBubbleActiveStyle}
+                >
+                  <Ionicons
+                    name={preset.icon}
+                    size={fanModeIconSize}
+                    color="#FFFFFF"
+                  />
+                </LinearGradient>
+              ) : (
+                <View style={fanModeBubbleStyle}>
+                  <Ionicons
+                    name={preset.icon}
+                    size={fanModeIconSize}
+                    color="rgba(12,12,18,0.65)"
+                  />
+                </View>
+              )}
+              <Text style={fanModeTextStyle(active)}>{preset.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </>
+  );
+  const fanHeroMetrics = (
+    <View style={fanHeroMetricRowStyle}>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{fanDirectionLabel}</Text>
+        <Text style={styles.metricLabel}>Direction</Text>
+      </View>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>
+          {fanTimerMin ? `${fanTimerMin}m` : "Off"}
+        </Text>
+        <Text style={styles.metricLabel}>Timer</Text>
+      </View>
+      <View style={styles.metricCard}>
+        <Text style={styles.metricValue}>{fanLightOn ? "On" : "Off"}</Text>
+        <Text style={styles.metricLabel}>Light</Text>
+      </View>
+    </View>
+  );
   const fanHeroCard = (
     <LinearGradient
       colors={[
@@ -5299,7 +5917,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       ]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
-      style={utilityHeroCardStyle}
+      style={fanHeroCardStyle}
     >
       <View style={styles.utilityHeroHeader}>
         <View style={styles.utilityHeroTitleWrap}>
@@ -5331,50 +5949,36 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
       </View>
-      <View style={utilityHeroBodyStyle}>
-        <RadialDial
-          size={compactDialSize}
-          value={fanSpeed}
-          min={0}
-          max={100}
-          tickValues={[0, 25, 50, 75, 100]}
-          centerLabel="Fan Speed"
-          centerIcon={
-            <View style={marginBottom6Style}>
-              <Ionicons
-                name="aperture"
-                size={28}
-                color={stylesVars.ink}
-              />
-            </View>
-          }
-          formatTick={(v) => `${v}`}
-          formatValue={(v) => `${v}%`}
-          formatCenterValue={(v) => `${v}%`}
-          dimmed={!device.isOn}
-          onChange={(v) =>
-            sendPatch({ speed: clamp(v, 0, 100), isOn: v > 0 })
-          }
-        />
-        <View style={utilityHeroInfoStyle}>
-          <View style={utilityHeroMetricRowStyle}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{fanDirectionLabel}</Text>
-              <Text style={styles.metricLabel}>Direction</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>
-                {fanTimerMin ? `${fanTimerMin}m` : "Off"}
-              </Text>
-              <Text style={styles.metricLabel}>Timer</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>
-                {fanLightOn ? "On" : "Off"}
-              </Text>
-              <Text style={styles.metricLabel}>Light</Text>
-            </View>
-          </View>
+      <View style={fanHeroBodyLayoutStyle}>
+        <View style={fanDialWrapStyle}>
+          <RadialDial
+            size={fanDialSize}
+            value={fanSpeed}
+            min={0}
+            max={100}
+            tickValues={[0, 25, 50, 75, 100]}
+            centerLabel="Fan Speed"
+            centerIcon={
+              <View style={marginBottom6Style}>
+                <Ionicons
+                  name="aperture"
+                  size={28}
+                  color={stylesVars.ink}
+                />
+              </View>
+            }
+            formatTick={(v) => `${v}`}
+            formatValue={(v) => `${v}%`}
+            formatCenterValue={(v) => `${v}%`}
+            dimmed={!device.isOn}
+            onChange={(v) =>
+              sendPatch({ speed: clamp(v, 0, 100), isOn: v > 0 })
+            }
+          />
+        </View>
+        <View style={fanHeroInfoLayoutStyle}>
+          {fanHeroModes}
+          {fanHeroMetrics}
         </View>
       </View>
     </LinearGradient>
@@ -7042,172 +7646,167 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                             </View>
                           </View>
                           <View style={lightHeroBodyStyle}>
-                            <RadialDial
-                              size={lightDialSize}
-                              value={brightness}
-                              min={0}
-                              max={100}
-                              tickValues={[0, 25, 50, 75, 100]}
-                              centerContent={
-                                <Animated.View
-                                  style={lightCenterOrbStyle}
-                                >
-                                  <LinearGradient
-                                    colors={bulbGradient}
-                                    start={{ x: 0.2, y: 0.1 }}
-                                    end={{ x: 0.9, y: 1 }}
-                                    style={lightCenterInnerStyle}
+                            <View style={lightDialWrapStyle}>
+                              <RadialDial
+                                size={lightDialSize}
+                                value={brightness}
+                                min={0}
+                                max={100}
+                                tickValues={[0, 25, 50, 75, 100]}
+                                centerContent={
+                                  <Animated.View
+                                    style={lightCenterOrbStyle}
                                   >
-                                    <Ionicons
-                                      name="bulb"
-                                      size={lightCenterIcon}
-                                      color={bulbIconColor}
+                                    <LinearGradient
+                                      colors={bulbGradient}
+                                      start={{ x: 0.2, y: 0.1 }}
+                                      end={{ x: 0.9, y: 1 }}
+                                      style={lightCenterInnerStyle}
+                                    >
+                                      <Ionicons
+                                        name="bulb"
+                                        size={lightCenterIcon}
+                                        color={bulbIconColor}
+                                      />
+                                      <Text
+                                        style={lightCenterValueStyle}
+                                      >
+                                        {device.brightness ?? 60}%
+                                      </Text>
+                                      <Text
+                                        style={lightCenterRoomStyle}
+                                      >
+                                        {roomName || "Light"}
+                                      </Text>
+                                    </LinearGradient>
+                                  </Animated.View>
+                                }
+                                formatTick={(v) => `${v}`}
+                                formatValue={(v) => `${v}%`}
+                                formatCenterValue={(v) => `${v}%`}
+                                dimmed={!device.isOn}
+                                onChange={(v) => {
+                                  animateBulb();
+                                  sendPatch({
+                                    brightness: clamp(v, 0, 100),
+                                    lightEffect: undefined,
+                                    isOn: v > 0,
+                                  });
+                                }}
+                              />
+                            </View>
+                            <View style={lightHeroInfoStackStyle}>
+                              <View style={lightHeroMetaCardStyle}>
+                                <Text style={lightHeroMetaTitleStyle}>
+                                  Color
+                                </Text>
+                                <View style={lightColorRowStyle}>
+                                  {lightSwatches.map((c) => (
+                                    <Pressable
+                                      key={c}
+                                      onPress={() =>
+                                        sendPatch({
+                                          color: c,
+                                          lightEffect: undefined,
+                                          isOn: true,
+                                        })
+                                      }
+                                      style={lightSwatchStyleFor(
+                                        c,
+                                        device.color === c,
+                                      )}
                                     />
-                                    <Text
-                                      style={lightCenterValueStyle}
-                                    >
-                                      {device.brightness ?? 60}%
-                                    </Text>
-                                    <Text
-                                      style={lightCenterRoomStyle}
-                                    >
-                                      {roomName || "Light"}
-                                    </Text>
-                                  </LinearGradient>
-                                </Animated.View>
-                              }
-                              formatTick={(v) => `${v}`}
-                              formatValue={(v) => `${v}%`}
-                              formatCenterValue={(v) => `${v}%`}
-                              dimmed={!device.isOn}
-                              onChange={(v) => {
-                                animateBulb();
-                                sendPatch({
-                                  brightness: clamp(v, 0, 100),
-                                  isOn: v > 0,
-                                });
-                              }}
-                            />
-                            <View style={lightHeroInfoStyle}>
-                              <Text style={lightCardHintStyle}>Color</Text>
-                              <View style={lightColorRowStyle}>
-                                {[
-                                  "#FFD166",
-                                  "#A0E9FF",
-                                  "#FF9AA2",
-                                  "#B69CFF",
-                                  "#A5FF9B",
-                                  "#FFFFFF",
-                                ].map((c) => (
-                                  <Pressable
-                                    key={c}
-                                    onPress={() =>
-                                      sendPatch({ color: c, isOn: true })
-                                    }
-                                    style={lightSwatchStyleFor(
-                                      c,
-                                      device.color === c,
-                                    )}
-                                  />
-                                ))}
+                                  ))}
+                                </View>
                               </View>
 
-                              <Text style={lightCardHintStyle}>Scenes</Text>
-                              <View
-                                style={
-                                  lightScenesUseTiles
-                                    ? lightSceneActionRowStyle
-                                    : lightSceneRowStyle
-                                }
-                              >
-                                {[
-                                  {
-                                    label: "Warm",
-                                    brightness: 60,
-                                    color: "#FFD166",
-                                    icon: "sunny" as const,
-                                  },
-                                  {
-                                    label: "Cool",
-                                    brightness: 70,
-                                    color: "#A0E9FF",
-                                    icon: "snow" as const,
-                                  },
-                                  {
-                                    label: "Focus",
-                                    brightness: 80,
-                                    color: "#FFFFFF",
-                                    icon: "flash" as const,
-                                  },
-                                ].map((scene) => {
-                                  const active =
-                                    lightSceneColor ===
-                                      scene.color.toLowerCase() &&
-                                    Math.abs(brightness - scene.brightness) <= 2;
-                                  return (
-                                    <Pressable
-                                      key={scene.label}
-                                      style={
-                                        lightScenesUseTiles
-                                          ? modeTileStyle(active)
-                                          : lightSceneCardStyle
-                                      }
-                                      onPress={() => {
-                                        animateBulb();
-                                        sendPatch({
-                                          brightness: scene.brightness,
-                                          color: scene.color,
-                                          isOn: true,
-                                        });
-                                      }}
-                                    >
-                                      {lightScenesUseTiles ? (
-                                        active ? (
-                                          <LinearGradient
-                                            colors={[
-                                              theme.colors.accent2,
-                                              theme.colors.accent,
-                                            ]}
-                                            start={{ x: 0.1, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                            style={styles.modeIconBubbleActive}
+                              <View style={lightHeroMetaCardStyle}>
+                                <Text style={lightHeroMetaTitleStyle}>
+                                  Scenes
+                                </Text>
+                                <View
+                                  style={
+                                    lightScenesUseTiles
+                                      ? lightSceneActionRowStyle
+                                      : lightSceneRowStyle
+                                  }
+                                >
+                                  {lightSceneOptions.map((scene) => {
+                                    const active =
+                                      lightSceneColor ===
+                                        scene.color.toLowerCase() &&
+                                      Math.abs(brightness - scene.brightness) <=
+                                        2;
+                                    return (
+                                      <Pressable
+                                        key={scene.label}
+                                        style={
+                                          lightScenesUseTiles
+                                            ? lightModeTileStyle(active)
+                                            : lightSceneCardStyle
+                                        }
+                                        onPress={() => {
+                                          animateBulb();
+                                          sendPatch({
+                                            brightness: scene.brightness,
+                                            color: scene.color,
+                                            lightEffect: undefined,
+                                            isOn: true,
+                                          });
+                                        }}
+                                      >
+                                        {lightScenesUseTiles ? (
+                                          active ? (
+                                            <LinearGradient
+                                              colors={[
+                                                theme.colors.accent2,
+                                                theme.colors.accent,
+                                              ]}
+                                              start={{ x: 0.1, y: 0 }}
+                                              end={{ x: 1, y: 1 }}
+                                              style={styles.modeIconBubbleActive}
+                                            >
+                                              <Ionicons
+                                                name={scene.icon}
+                                                size={lightSceneIconSize}
+                                                color="#FFFFFF"
+                                              />
+                                            </LinearGradient>
+                                          ) : (
+                                            <View
+                                              style={styles.modeIconBubble}
+                                            >
+                                              <Ionicons
+                                                name={scene.icon}
+                                                size={lightSceneIconSize}
+                                                color="rgba(12,12,18,0.65)"
+                                              />
+                                            </View>
+                                          )
+                                        ) : (
+                                          <View
+                                            style={lightSceneIconWrapStyle}
                                           >
                                             <Ionicons
                                               name={scene.icon}
                                               size={lightSceneIconSize}
-                                              color="#FFFFFF"
-                                            />
-                                          </LinearGradient>
-                                        ) : (
-                                          <View style={styles.modeIconBubble}>
-                                            <Ionicons
-                                              name={scene.icon}
-                                              size={lightSceneIconSize}
-                                              color="rgba(12,12,18,0.65)"
+                                              color={stylesVars.ink}
                                             />
                                           </View>
-                                        )
-                                      ) : (
-                                        <View style={lightSceneIconWrapStyle}>
-                                          <Ionicons
-                                            name={scene.icon}
-                                            size={lightSceneIconSize}
-                                            color={stylesVars.ink}
-                                          />
-                                        </View>
-                                      )}
-                                      <Text
-                                        style={
-                                          lightScenesUseTiles
-                                            ? modeTextStyle(active)
-                                            : lightSceneTextStyle
-                                        }
-                                      >
-                                        {scene.label}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
+                                        )}
+                                        <Text
+                                          style={
+                                            lightScenesUseTiles
+                                              ? modeTextStyle(active)
+                                              : lightSceneTextStyle
+                                          }
+                                        >
+                                          {scene.label}
+                                        </Text>
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
                               </View>
                             </View>
                           </View>
@@ -7235,6 +7834,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                                       onPress={() =>
                                         sendPatch({
                                           colorTempK: preset.value,
+                                          lightEffect: undefined,
                                           isOn: true,
                                         })
                                       }
@@ -7429,6 +8029,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                                       onPress={() =>
                                         sendPatch({
                                           colorTempK: preset.value,
+                                          lightEffect: undefined,
                                           isOn: true,
                                         })
                                       }
@@ -7618,6 +8219,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                                     onPress={() =>
                                       sendPatch({
                                         colorTempK: preset.value,
+                                        lightEffect: undefined,
                                         isOn: true,
                                       })
                                     }
@@ -8113,155 +8715,23 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "fan" && (
                     <>
-                      {fanHeroCard}
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Modes</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Breeze", value: 35 },
-                            { label: "Standard", value: 60 },
-                            { label: "Turbo", value: 90 },
-                          ].map((preset) => {
-                            const active = fanSpeed === preset.value;
-                            return (
-                              <Pressable
-                                key={preset.label}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ speed: preset.value, isOn: true })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {preset.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                      {isLandscapeSplit ? (
+                        <View style={landscapeGridStyle}>
+                          <View style={landscapeColumnPrimaryStyle}>
+                            {fanHeroCard}
+                          </View>
+                        <View style={landscapeColumnSecondaryStyle}>
+                          {fanOscillationCard}
+                          {fanTimerCard}
                         </View>
                       </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Oscillation</Text>
-                        <View style={controlCardRowTopStyle}>
-                          <Pressable
-                            style={controlPillStyle(fanOscillation)}
-                            onPress={() =>
-                              sendPatch({
-                                fanOscillation: !fanOscillation,
-                                isOn: true,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fanOscillation)}
-                            >
-                              {fanOscillation ? "Oscillate" : "Fixed"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                        <Text style={styles.cardHint}>Direction</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Forward", value: "forward" },
-                            { label: "Reverse", value: "reverse" },
-                          ].map((option) => {
-                            const active = fanDirection === option.value;
-                            return (
-                              <Pressable
-                                key={option.value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({
-                                    fanDirection:
-                                      option.value as Device["fanDirection"],
-                                    isOn: true,
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {option.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Timer & light</Text>
-                        <View style={styles.chipRow}>
-                          {[0, 30, 60, 120].map((value) => {
-                            const active = fanTimerMin === value;
-                            return (
-                              <Pressable
-                                key={value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ fanTimerMin: value, isOn: true })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {value === 0 ? "Off" : `${value}m`}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                        <View style={controlCardRowTopStyle}>
-                          <Pressable
-                            style={controlPillStyle(fanLightOn)}
-                            onPress={() =>
-                              sendPatch({
-                                fanLightOn: !fanLightOn,
-                                isOn: true,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fanLightOn)}
-                            >
-                              {fanLightOn ? "Light on" : "Light off"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={controlPillStyle(fanAutoMode)}
-                            onPress={() =>
-                              sendPatch({
-                                fanAutoMode: !fanAutoMode,
-                                isOn: true,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fanAutoMode)}
-                            >
-                              {fanAutoMode ? "Auto" : "Auto off"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={controlPillStyle(fanSleepMode)}
-                            onPress={() =>
-                              sendPatch({
-                                fanSleepMode: !fanSleepMode,
-                                isOn: true,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(fanSleepMode)}
-                            >
-                              {fanSleepMode ? "Sleep" : "Sleep off"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </View>
+                    ) : (
+                      <>
+                        {fanHeroCard}
+                        {fanOscillationCard}
+                        {fanTimerCard}
+                      </>
+                      )}
                     </>
                   )}
 
@@ -11625,6 +12095,8 @@ const styles = StyleSheet.create({
   },
   modeText: { color: "rgba(12,12,18,0.58)", fontWeight: "900", fontSize: 12 },
   modeTextActive: { color: "rgba(12,12,18,0.86)" },
+  fanHeroCardFill: { flex: 1, alignSelf: "stretch", marginTop: 0 },
+  fanHeroBodyFill: { flex: 1 },
   gateAutoLabel: { marginBottom: 4 },
   gateAutoHint: { marginBottom: 4 },
   gateAutoChipRow: { marginTop: 4 },
@@ -11669,6 +12141,20 @@ const styles = StyleSheet.create({
   // Light UI
   lightLayout: { gap: 12 },
   lightLayoutRow: { flexDirection: "row", alignItems: "stretch" },
+  lightHeroMetaCard: {
+    backgroundColor: "rgba(255,255,255,0.28)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+    gap: 8,
+  },
+  lightModeTileBase: {
+    backgroundColor: "rgba(255,255,255,0.70)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
   lightDialColumn: { flex: 1 },
   lightDialCard: { alignItems: "center" },
   lightControlsColumn: { flex: 1, minWidth: 0 },

@@ -307,7 +307,7 @@ export default function SettingsScreen() {
     styles.heroProgressTrack,
     { height: heroProgressHeight },
   ];
-  const heroBackdropColors = isWide
+  const heroBackdropColors: [string, string, ...string[]] = isWide
     ? [
         "rgba(122,92,255,0.32)",
         "rgba(210,180,255,0.18)",
