@@ -36,41 +36,91 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function ScenesScreen() {
   const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
+  const minSize = Math.min(width, contentWidth);
+  const isCompactPhone = !isTablet && minSize < 360;
   const isWide = isTablet && isLandscape;
   const isPortrait = !isLandscape;
-  const titleSize = Math.round((isTablet ? 32 : 28) * scale);
-  const subtitleSize = Math.round((isTablet ? 15 : 13) * scale);
-  const pillHeight = Math.round((isTablet ? 36 : 32) * scale);
-  const pillText = Math.round((isTablet ? 13 : 12) * scale);
-  const sectionTitleSize = Math.round((isTablet ? 18 : 16) * scale);
-  const sectionSubSize = Math.round((isTablet ? 13 : 12) * scale);
-  const cardPad = Math.round((isTablet ? 18 : 16) * scale);
-  const cardRadius = Math.round((isTablet ? 24 : 22) * scale);
-  const framePad = Math.round((isTablet ? 14 : 10) * scale);
-  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
-  const outerGutter = isWide ? Math.round(gutter * 0.6) : isTablet ? gutter : 0;
-  const innerGutter = isWide ? Math.round(gutter * 0.75) : gutter;
-  const gridGap = Math.round((isTablet ? 18 : 12) * scale);
-  const dividerPad = Math.round((isTablet ? 16 : 12) * scale);
+  const titleSize = Math.round(
+    (isTablet ? 32 : isCompactPhone ? 24 : 26) * scale,
+  );
+  const subtitleSize = Math.round(
+    (isTablet ? 15 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const pillHeight = Math.round(
+    (isTablet ? 36 : isCompactPhone ? 28 : 30) * scale,
+  );
+  const pillText = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 10 : 11) * scale,
+  );
+  const sectionTitleSize = Math.round(
+    (isTablet ? 18 : isCompactPhone ? 14 : 15) * scale,
+  );
+  const sectionSubSize = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const cardPad = Math.round((isTablet ? 18 : isCompactPhone ? 12 : 14) * scale);
+  const cardRadius = Math.round(
+    (isTablet ? 24 : isCompactPhone ? 18 : 20) * scale,
+  );
+  const framePad = Math.round((isTablet ? 14 : isCompactPhone ? 8 : 10) * scale);
+  const frameRadius = Math.round(
+    (isTablet ? 30 : isCompactPhone ? 22 : 26) * scale,
+  );
+  const outerGutter = isWide
+    ? Math.round(gutter * 0.6)
+    : isTablet
+      ? gutter
+      : gutter;
+  const innerGutter = isWide
+    ? Math.round(gutter * 0.75)
+    : isTablet
+      ? gutter
+      : Math.round(gutter * 0.6);
+  const gridGap = Math.round(
+    (isTablet ? 18 : isCompactPhone ? 10 : 12) * scale,
+  );
+  const dividerPad = Math.round(
+    (isTablet ? 16 : isCompactPhone ? 10 : 12) * scale,
+  );
   const scrollTopPad = 0;
   const scrollBottomPad = Math.round(gridGap * 1.2);
-  const panelPad = Math.round((isTablet ? 18 : 14) * scale);
-  const panelRadius = Math.round((isTablet ? 26 : 22) * scale);
-  const minSectionWidth = Math.round((isTablet ? 320 : 280) * scale);
-  const modalPad = Math.round((isTablet ? 20 : 18) * scale);
-  const modalRadius = Math.round((isTablet ? 26 : 24) * scale);
-  const modalTitleSize = Math.round((isTablet ? 20 : 18) * scale);
-  const modalSubSize = Math.round((isTablet ? 14 : 12) * scale);
-  const modalLabelSize = Math.round((isTablet ? 13 : 12) * scale);
-  const modalInputHeight = Math.round((isTablet ? 48 : 44) * scale);
-  const modalBtnHeight = Math.round((isTablet ? 46 : 44) * scale);
-  const roomPillHeight = Math.round((isTablet ? 36 : 34) * scale);
-  const deviceChipHeight = Math.round((isTablet ? 40 : 36) * scale);
+  const panelPad = Math.round((isTablet ? 18 : isCompactPhone ? 12 : 14) * scale);
+  const panelRadius = Math.round(
+    (isTablet ? 26 : isCompactPhone ? 18 : 22) * scale,
+  );
+  const minSectionWidth = Math.round(
+    (isTablet ? 320 : isCompactPhone ? 240 : 260) * scale,
+  );
+  const modalPad = Math.round((isTablet ? 20 : isCompactPhone ? 14 : 16) * scale);
+  const modalRadius = Math.round(
+    (isTablet ? 26 : isCompactPhone ? 20 : 22) * scale,
+  );
+  const modalTitleSize = Math.round(
+    (isTablet ? 20 : isCompactPhone ? 16 : 17) * scale,
+  );
+  const modalSubSize = Math.round(
+    (isTablet ? 14 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const modalLabelSize = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const modalInputHeight = Math.round(
+    (isTablet ? 48 : isCompactPhone ? 40 : 44) * scale,
+  );
+  const modalBtnHeight = Math.round(
+    (isTablet ? 46 : isCompactPhone ? 40 : 44) * scale,
+  );
+  const roomPillHeight = Math.round(
+    (isTablet ? 36 : isCompactPhone ? 30 : 32) * scale,
+  );
+  const deviceChipHeight = Math.round(
+    (isTablet ? 40 : isCompactPhone ? 32 : 34) * scale,
+  );
   const insets = useSafeAreaInsets();
   const tabInset = isTablet ? (isLandscape ? 28 : 24) : gutter;
   const tabBarInset = insets.bottom > 0 ? insets.bottom + 8 : tabInset;
   const tabBarHeight = Math.round(
-    (isTablet ? (isLandscape ? 74 : 72) : 68) * scale,
+    (isTablet ? (isLandscape ? 74 : 72) : isCompactPhone ? 62 : 66) * scale,
   );
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
@@ -128,6 +178,14 @@ export default function ScenesScreen() {
       })),
     [rooms, scenes],
   );
+  const frameEnabled = isPortrait || isWide;
+  const frameWidth = isWide
+    ? contentWidth
+    : Math.max(0, contentWidth - outerGutter * 2);
+  const frameInnerWidth = Math.max(
+    0,
+    frameWidth - (frameEnabled ? framePad * 2 : 0),
+  );
   const columnCount = useMemo(() => {
     if (!isWide) return 1;
     const availableWidth = width - outerGutter * 2 - innerGutter * 2;
@@ -154,8 +212,6 @@ export default function ScenesScreen() {
     return columns;
   }, [columnCount, sections]);
 
-  const frameEnabled = isPortrait || isWide;
-
   useEffect(() => {
     if (!rooms.length) {
       setRoomId("");
@@ -172,7 +228,7 @@ export default function ScenesScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
+      paddingHorizontal: outerGutter,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
@@ -180,6 +236,14 @@ export default function ScenesScreen() {
   const headerWrapStyle: StyleProp<ViewStyle> = {
     paddingHorizontal: innerGutter,
   };
+  const headerStyle: StyleProp<ViewStyle> = [
+    styles.header,
+    isCompactPhone && styles.headerCompact,
+  ];
+  const headerActionsStyle: StyleProp<ViewStyle> = [
+    styles.headerActions,
+    isCompactPhone && styles.headerActionsCompact,
+  ];
   const headerTitleStyle: StyleProp<TextStyle> = [
     styles.h1,
     { fontSize: titleSize },
@@ -191,6 +255,7 @@ export default function ScenesScreen() {
   const countPillStyle: StyleProp<ViewStyle> = [
     styles.countPill,
     { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+    isCompactPhone && { paddingHorizontal: 10 },
   ];
   const countTextStyle: StyleProp<TextStyle> = [
     styles.countText,
@@ -199,6 +264,7 @@ export default function ScenesScreen() {
   const clearPillStyle: StyleProp<ViewStyle> = [
     styles.clearPill,
     { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+    isCompactPhone && { paddingHorizontal: 10 },
   ];
   const clearTextStyle: StyleProp<TextStyle> = [
     styles.clearText,
@@ -207,6 +273,7 @@ export default function ScenesScreen() {
   const addPillStyle: StyleProp<ViewStyle> = [
     styles.addPill,
     { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+    isCompactPhone && { paddingHorizontal: 10 },
   ];
   const addTextStyle: StyleProp<TextStyle> = [
     styles.addText,
@@ -491,45 +558,46 @@ export default function ScenesScreen() {
           isWide={isWide}
           pad={framePad}
           radius={frameRadius}
+          width={frameWidth}
         >
           <ScreenSectionLayout
             header={
-              <View style={styles.header}>
+              <View style={headerStyle}>
                 <View>
                   <Text style={headerTitleStyle}>Scenes</Text>
                   <Text style={headerSubtitleStyle}>
                     One-tap moods for each room.
                   </Text>
                 </View>
-                <View style={styles.headerActions}>
-                <HeaderPill
-                  label={`${scenes.length} Scenes`}
-                  icon="sparkles"
-                  iconSize={Math.round(14 * scale)}
-                  style={countPillStyle}
-                  textStyle={countTextStyle}
-                />
-                {activeSceneId ? (
+                <View style={headerActionsStyle}>
                   <HeaderPill
-                    label="Clear active"
-                    icon="close-circle"
-                    iconSize={Math.round(16 * scale)}
-                    style={clearPillStyle}
-                    textStyle={clearTextStyle}
-                    onPress={clearActiveScene}
+                    label={`${scenes.length} Scenes`}
+                    icon="sparkles"
+                    iconSize={Math.round(14 * scale)}
+                    style={countPillStyle}
+                    textStyle={countTextStyle}
                   />
-                ) : null}
-                <HeaderPill
-                  label="Create"
-                  icon="add"
-                  iconSize={Math.round(16 * scale)}
-                  style={addPillStyle}
-                  textStyle={addTextStyle}
-                  onPress={openCreate}
-                />
+                  {activeSceneId ? (
+                    <HeaderPill
+                      label="Clear active"
+                      icon="close-circle"
+                      iconSize={Math.round(16 * scale)}
+                      style={clearPillStyle}
+                      textStyle={clearTextStyle}
+                      onPress={clearActiveScene}
+                    />
+                  ) : null}
+                  <HeaderPill
+                    label="Create"
+                    icon="add"
+                    iconSize={Math.round(16 * scale)}
+                    style={addPillStyle}
+                    textStyle={addTextStyle}
+                    onPress={openCreate}
+                  />
+                </View>
               </View>
-            </View>
-          }
+            }
             headerWrapStyle={headerWrapStyle}
             showDivider={isWide}
             dividerWrapStyle={headerDividerWrapStyle}
@@ -831,7 +899,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  headerCompact: {
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: 10,
+  },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerActionsCompact: {
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    alignSelf: "stretch",
+  },
   h1: { color: theme.colors.text, fontSize: 28, fontWeight: "900" },
   p: { marginTop: 8, color: theme.colors.subtext, fontWeight: "700" },
   countPill: {

@@ -32,47 +32,121 @@ import ModalField from "../components/ModalField";
 export default function AutomationsScreen() {
   const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
+  const minSize = Math.min(width, contentWidth);
+  const isCompactPhone = !isTablet && minSize < 360;
   const isWide = isTablet && isLandscape;
   const isPortrait = !isLandscape;
-  const titleSize = Math.round((isTablet ? 30 : 26) * scale);
-  const subtitleSize = Math.round((isTablet ? 15 : 13) * scale);
-  const badgeHeight = Math.round((isTablet ? 30 : 26) * scale);
-  const badgeText = Math.round((isTablet ? 12 : 11) * scale);
-  const actionHeight = Math.round((isTablet ? 34 : 30) * scale);
-  const actionText = Math.round((isTablet ? 13 : 12) * scale);
-  const sectionTitleSize = Math.round((isTablet ? 18 : 16) * scale);
-  const sectionSubSize = Math.round((isTablet ? 13 : 12) * scale);
-  const cardPad = Math.round((isTablet ? 18 : 16) * scale);
-  const cardRadius = Math.round((isTablet ? 24 : 22) * scale);
-  const sectionPad = Math.round((isTablet ? 20 : 16) * scale);
-  const sectionRadius = Math.round((isTablet ? 26 : 22) * scale);
-  const framePad = Math.round((isTablet ? 14 : 10) * scale);
-  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
-  const outerGutter = isWide ? Math.round(gutter * 0.6) : isTablet ? gutter : 0;
-  const innerGutter = isWide ? Math.round(gutter * 0.75) : gutter;
-  const cardTitleSize = Math.round((isTablet ? 16 : 14) * scale);
-  const cardSubSize = Math.round((isTablet ? 13 : 12) * scale);
-  const cardGap = Math.round((isTablet ? 16 : 12) * scale);
-  const sectionMinWidth = Math.round((isTablet ? 380 : 320) * scale);
-  const cardMinWidth = Math.round((isTablet ? 320 : 280) * scale);
-  const dividerPad = Math.round((isTablet ? 16 : 12) * scale);
+  const frameEnabled = isPortrait || isWide;
+  const titleSize = Math.round(
+    (isTablet ? 30 : isCompactPhone ? 22 : 24) * scale,
+  );
+  const subtitleSize = Math.round(
+    (isTablet ? 15 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const badgeHeight = Math.round(
+    (isTablet ? 30 : isCompactPhone ? 24 : 26) * scale,
+  );
+  const badgeText = Math.round(
+    (isTablet ? 12 : isCompactPhone ? 10 : 11) * scale,
+  );
+  const actionHeight = Math.round(
+    (isTablet ? 34 : isCompactPhone ? 28 : 30) * scale,
+  );
+  const actionText = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const sectionTitleSize = Math.round(
+    (isTablet ? 18 : isCompactPhone ? 14 : 15) * scale,
+  );
+  const sectionSubSize = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const cardPad = Math.round(
+    (isTablet ? 18 : isCompactPhone ? 12 : 14) * scale,
+  );
+  const cardRadius = Math.round(
+    (isTablet ? 24 : isCompactPhone ? 18 : 20) * scale,
+  );
+  const sectionPad = Math.round(
+    (isTablet ? 20 : isCompactPhone ? 12 : 14) * scale,
+  );
+  const sectionRadius = Math.round(
+    (isTablet ? 26 : isCompactPhone ? 18 : 20) * scale,
+  );
+  const framePad = Math.round(
+    (isTablet ? 14 : isCompactPhone ? 8 : 10) * scale,
+  );
+  const frameRadius = Math.round(
+    (isTablet ? 30 : isCompactPhone ? 22 : 24) * scale,
+  );
+  const outerGutter = isWide
+    ? Math.round(gutter * 0.6)
+    : isTablet
+      ? gutter
+      : gutter;
+  const innerGutter = isWide
+    ? Math.round(gutter * 0.75)
+    : isTablet
+      ? gutter
+      : Math.round(gutter * 0.6);
+  const cardTitleSize = Math.round(
+    (isTablet ? 16 : isCompactPhone ? 12 : 13) * scale,
+  );
+  const cardSubSize = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 10 : 11) * scale,
+  );
+  const cardGap = Math.round(
+    (isTablet ? 16 : isCompactPhone ? 8 : 10) * scale,
+  );
+  const sectionMinWidth = Math.round(
+    (isTablet ? 380 : isCompactPhone ? 260 : 280) * scale,
+  );
+  const cardMinWidth = Math.round(
+    (isTablet ? 320 : isCompactPhone ? 220 : 240) * scale,
+  );
+  const dividerPad = Math.round(
+    (isTablet ? 16 : isCompactPhone ? 10 : 12) * scale,
+  );
   const scrollBottomPad = Math.round(cardGap * 1.2);
-  const modalPad = Math.round((isTablet ? 20 : 18) * scale);
-  const modalRadius = Math.round((isTablet ? 24 : 22) * scale);
-  const modalTitleSize = Math.round((isTablet ? 20 : 18) * scale);
-  const modalSubSize = Math.round((isTablet ? 14 : 12) * scale);
-  const modalLabelSize = Math.round((isTablet ? 13 : 12) * scale);
-  const modalInputHeight = Math.round((isTablet ? 48 : 44) * scale);
-  const modalBtnHeight = Math.round((isTablet ? 46 : 42) * scale);
+  const modalPad = Math.round(
+    (isTablet ? 20 : isCompactPhone ? 14 : 16) * scale,
+  );
+  const modalRadius = Math.round(
+    (isTablet ? 24 : isCompactPhone ? 18 : 20) * scale,
+  );
+  const modalTitleSize = Math.round(
+    (isTablet ? 20 : isCompactPhone ? 16 : 17) * scale,
+  );
+  const modalSubSize = Math.round(
+    (isTablet ? 14 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const modalLabelSize = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const modalInputHeight = Math.round(
+    (isTablet ? 48 : isCompactPhone ? 40 : 42) * scale,
+  );
+  const modalBtnHeight = Math.round(
+    (isTablet ? 46 : isCompactPhone ? 40 : 42) * scale,
+  );
   const insets = useSafeAreaInsets();
   const tabInset = isTablet ? (isLandscape ? 28 : 24) : gutter;
   const tabBarInset = insets.bottom > 0 ? insets.bottom + 8 : tabInset;
   const tabBarHeight = Math.round(
-    (isTablet ? (isLandscape ? 74 : 72) : 68) * scale,
+    (isTablet ? (isLandscape ? 74 : 72) : isCompactPhone ? 62 : 66) * scale,
   );
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
-  const availableWidth = width - outerGutter * 2 - innerGutter * 2;
+  const frameWidth = isWide
+    ? contentWidth
+    : Math.max(0, contentWidth - outerGutter * 2);
+  const frameInnerWidth = Math.max(
+    0,
+    frameWidth - (frameEnabled ? framePad * 2 : 0),
+  );
+  const availableWidth = isTablet
+    ? width - outerGutter * 2 - innerGutter * 2
+    : Math.max(0, frameInnerWidth - innerGutter * 2);
   const sectionColumns = isWide
     ? Math.max(
         1,
@@ -142,7 +216,7 @@ export default function AutomationsScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
+      paddingHorizontal: outerGutter,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
@@ -150,6 +224,10 @@ export default function AutomationsScreen() {
   const headerWrapStyle: StyleProp<ViewStyle> = {
     paddingHorizontal: innerGutter,
   };
+  const headerStyle: StyleProp<ViewStyle> = [
+    styles.header,
+    isCompactPhone && styles.headerCompact,
+  ];
   const headerTitleStyle: StyleProp<TextStyle> = [
     styles.h1,
     { fontSize: titleSize },
@@ -161,10 +239,11 @@ export default function AutomationsScreen() {
   const headerPillStyle: StyleProp<ViewStyle> = [
     styles.headerPill,
     { height: badgeHeight, borderRadius: Math.round(badgeHeight / 2) },
+    isCompactPhone && { maxWidth: "100%" },
   ];
   const headerPillTextStyle: StyleProp<TextStyle> = [
     styles.headerPillText,
-    { fontSize: badgeText },
+    { fontSize: badgeText, flexShrink: 1 },
   ];
   const headerDividerWrapStyle: StyleProp<ViewStyle> = {
     paddingVertical: dividerPad,
@@ -196,6 +275,14 @@ export default function AutomationsScreen() {
   const sectionSubStyle: StyleProp<TextStyle> = [
     styles.sectionSub,
     { fontSize: sectionSubSize },
+  ];
+  const sectionHeaderStyle: StyleProp<ViewStyle> = [
+    styles.sectionHeader,
+    isCompactPhone && styles.sectionHeaderCompact,
+  ];
+  const sectionActionsStyle: StyleProp<ViewStyle> = [
+    styles.sectionActions,
+    isCompactPhone && styles.sectionActionsCompact,
   ];
   const sectionBadgeStyle: StyleProp<ViewStyle> = [
     styles.sectionBadge,
@@ -236,7 +323,7 @@ export default function AutomationsScreen() {
     { fontSize: cardSubSize },
   ];
   const switchScaleStyle: ViewStyle = {
-    transform: [{ scale: isTablet ? 1.05 : 1 }],
+    transform: [{ scale: isTablet ? 1.05 : isCompactPhone ? 0.94 : 0.98 }],
   };
   const modalCardStyle: StyleProp<ViewStyle> = [
     styles.modalCard,
@@ -270,6 +357,7 @@ export default function AutomationsScreen() {
   const timeInputStyle: StyleProp<ViewStyle> = [
     styles.timeInput,
     {
+      width: isCompactPhone ? 52 : 60,
       height: modalInputHeight,
       borderRadius: Math.round(modalInputHeight * 0.28),
     },
@@ -277,7 +365,7 @@ export default function AutomationsScreen() {
   const sliderStyle: ViewStyle = { flex: 1 };
   const sliderValueStyle: StyleProp<TextStyle> = [
     styles.sliderValue,
-    { fontSize: modalLabelSize },
+    { fontSize: modalLabelSize, width: isCompactPhone ? 52 : 64 },
   ];
   const modalGhostStyle: StyleProp<ViewStyle> = [
     styles.modalGhost,
@@ -487,12 +575,12 @@ export default function AutomationsScreen() {
   );
   const flowsPanel = (
     <View style={sectionCardStyle}>
-      <View style={styles.sectionHeader}>
+      <View style={sectionHeaderStyle}>
         <View>
           <Text style={sectionTitleStyle}>Flows</Text>
           <Text style={sectionSubStyle}>Triggers → Conditions → Actions</Text>
         </View>
-        <View style={styles.sectionActions}>
+        <View style={sectionActionsStyle}>
           <View style={sectionBadgeStyle}>
             <Text style={sectionBadgeTextStyle}>
               {flowSummary(flows.length, "Flow")}
@@ -516,12 +604,12 @@ export default function AutomationsScreen() {
   );
   const schedulesPanel = (
     <View style={sectionCardStyle}>
-      <View style={styles.sectionHeader}>
+      <View style={sectionHeaderStyle}>
         <View>
           <Text style={sectionTitleStyle}>Schedules</Text>
           <Text style={sectionSubStyle}>Time-based device rules</Text>
         </View>
-        <View style={styles.sectionActions}>
+        <View style={sectionActionsStyle}>
           <View style={sectionBadgeStyle}>
             <Text style={sectionBadgeTextStyle}>
               {flowSummary(rules.length, "Schedule")}
@@ -544,8 +632,6 @@ export default function AutomationsScreen() {
     </View>
   );
 
-  const frameEnabled = isPortrait || isWide;
-
   return (
     <LinearGradient
       colors={[theme.colors.bg1, theme.colors.bg0]}
@@ -559,10 +645,11 @@ export default function AutomationsScreen() {
           isWide={isWide}
           pad={framePad}
           radius={frameRadius}
+          width={frameWidth}
         >
           <ScreenSectionLayout
             header={
-              <View style={styles.header}>
+              <View style={headerStyle}>
                 <View>
                   <Text style={headerTitleStyle}>Automations</Text>
                   <Text style={headerSubtitleStyle}>
@@ -772,6 +859,10 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     marginBottom: 16,
   },
+  headerCompact: {
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
   h1: { color: theme.colors.text, fontSize: 28, fontWeight: "900" },
   p: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
   headerPill: {
@@ -791,6 +882,10 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 14,
   },
+  sectionHeaderCompact: {
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
   sectionTitle: { color: theme.colors.text, fontWeight: "900" },
   sectionSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
   sectionActions: {
@@ -799,6 +894,11 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
     justifyContent: "flex-end",
+  },
+  sectionActionsCompact: {
+    alignSelf: "flex-start",
+    justifyContent: "flex-start",
+    gap: 6,
   },
   sectionBadge: {
     paddingHorizontal: 10,

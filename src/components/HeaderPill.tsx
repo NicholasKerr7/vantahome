@@ -39,7 +39,13 @@ export default function HeaderPill({
           color={iconColor ?? theme.colors.text}
         />
       ) : null}
-      <Text style={[styles.label, textStyle]}>{label}</Text>
+      <Text
+        style={[styles.label, textStyle]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {label}
+      </Text>
     </>
   );
 
@@ -56,5 +62,5 @@ export default function HeaderPill({
 
 const styles = StyleSheet.create({
   base: { flexDirection: "row", alignItems: "center", gap: 6 },
-  label: { color: theme.colors.text, fontWeight: "800" },
+  label: { color: theme.colors.text, fontWeight: "800", flexShrink: 1 },
 });

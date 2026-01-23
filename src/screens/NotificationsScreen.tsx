@@ -117,24 +117,44 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
 export default function NotificationsScreen() {
   const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(900);
+  const isCompactPhone = !isTablet && contentWidth < 360;
   const isWide = isTablet && isLandscape;
   const isPortrait = !isLandscape;
-  const iconBtnSize = Math.round((isTablet ? 46 : 40) * scale);
+  const iconBtnSize = Math.round(
+    (isTablet ? 46 : isCompactPhone ? 34 : 38) * scale,
+  );
   const iconBtnRadius = Math.round(iconBtnSize * 0.4);
-  const titleSize = Math.round((isTablet ? 26 : 24) * scale);
-  const cardPad = Math.round((isTablet ? 18 : 14) * scale);
-  const cardRadius = Math.round((isTablet ? 22 : 18) * scale);
-  const framePad = Math.round((isTablet ? 14 : 10) * scale);
-  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
+  const titleSize = Math.round(
+    (isTablet ? 26 : isCompactPhone ? 20 : 22) * scale,
+  );
+  const cardPad = Math.round((isTablet ? 18 : isCompactPhone ? 10 : 12) * scale);
+  const cardRadius = Math.round(
+    (isTablet ? 22 : isCompactPhone ? 14 : 16) * scale,
+  );
+  const framePad = Math.round((isTablet ? 14 : isCompactPhone ? 8 : 10) * scale);
+  const frameRadius = Math.round(
+    (isTablet ? 30 : isCompactPhone ? 22 : 26) * scale,
+  );
+  const frameWidth = isWide
+    ? contentWidth
+    : Math.max(0, contentWidth - gutter * 2);
   const listWidth = isWide
     ? Math.max(0, contentWidth - framePad * 2)
-    : contentWidth;
-  const iconWrapSize = Math.round((isTablet ? 40 : 36) * scale);
+    : frameWidth;
+  const iconWrapSize = Math.round(
+    (isTablet ? 40 : isCompactPhone ? 30 : 34) * scale,
+  );
   const iconWrapRadius = Math.round(iconWrapSize * 0.34);
-  const iconSize = Math.round((isTablet ? 20 : 18) * scale);
-  const textSize = Math.round((isTablet ? 14 : 13) * scale);
-  const bodySize = Math.round((isTablet ? 13 : 12) * scale);
-  const gap = Math.round((isTablet ? 16 : 10) * scale);
+  const iconSize = Math.round(
+    (isTablet ? 20 : isCompactPhone ? 16 : 18) * scale,
+  );
+  const textSize = Math.round(
+    (isTablet ? 14 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const bodySize = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 10 : 11) * scale,
+  );
+  const gap = Math.round((isTablet ? 16 : isCompactPhone ? 8 : 10) * scale);
   const listBottomPad = Math.round(
     (isTablet ? (isLandscape ? 120 : 140) : 24) * scale,
   );
@@ -157,8 +177,13 @@ export default function NotificationsScreen() {
   const frameStyle: StyleProp<ViewStyle> = isWide
     ? { marginTop: Math.round(8 * scale) }
     : undefined;
+  const innerGutter = isWide
+    ? 0
+    : isTablet
+      ? gutter
+      : Math.round(gutter * 0.6);
   const filtersRowLayout: ViewStyle = {
-    paddingHorizontal: isWide ? 0 : gutter,
+    paddingHorizontal: innerGutter,
     width: "100%",
     alignSelf: "center",
   };
@@ -169,13 +194,13 @@ export default function NotificationsScreen() {
   const listWrapStyle: ViewStyle = {
     width: "100%",
     alignSelf: "center",
-    paddingHorizontal: isWide ? 0 : gutter,
+    paddingHorizontal: innerGutter,
   };
   const listContentStyle: ViewStyle = {
-    paddingTop: 12,
+    paddingTop: isCompactPhone ? 8 : 12,
     paddingBottom: listBottomPad,
     gap,
-    paddingHorizontal: isWide ? 0 : isTablet ? gutter : 0,
+    paddingHorizontal: isWide ? 0 : innerGutter,
   };
   const listStyle: ViewStyle = { width: "100%" };
   const titleTextStyle: StyleProp<TextStyle> = [
@@ -236,6 +261,14 @@ export default function NotificationsScreen() {
   ): StyleProp<ViewStyle> => [
     styles.newPill,
     { borderColor: accent, backgroundColor: soft },
+  ];
+  const newPillTextStyle: StyleProp<TextStyle> = [
+    styles.newPillText,
+    { fontSize: Math.round((isTablet ? 10 : isCompactPhone ? 8 : 9) * scale) },
+  ];
+  const topBarTitleWrapStyle: StyleProp<ViewStyle> = [
+    styles.titleWrap,
+    isCompactPhone && styles.titleWrapCompact,
   ];
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [filter, setFilter] = useState<NotificationFilter>("all");
@@ -378,6 +411,7 @@ export default function NotificationsScreen() {
   );
   const clearButtonStyle = [
     styles.clearBtn,
+    isCompactPhone && styles.clearBtnCompact,
     !canClearAll && styles.clearBtnDisabled,
   ];
   const clearButtonTextStyle = [
@@ -419,7 +453,7 @@ export default function NotificationsScreen() {
         >
           <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
         </Pressable>
-        <View style={styles.titleWrap}>
+        <View style={topBarTitleWrapStyle}>
           <Text style={titleTextStyle}>Notifications</Text>
         </View>
         <Pressable
@@ -439,7 +473,7 @@ export default function NotificationsScreen() {
       </View>
       <FrameComponent
         enabled={frameEnabled}
-        width={contentWidth}
+        width={frameWidth}
         pad={framePad}
         radius={frameRadius}
         style={frameStyle}
@@ -514,7 +548,7 @@ export default function NotificationsScreen() {
                     <View style={styles.cardMeta}>
                       {item.isNew && (
                         <View style={newPillStyleFor(meta.accent, meta.soft)}>
-                          <Text style={styles.newPillText}>NEW</Text>
+                          <Text style={newPillTextStyle}>NEW</Text>
                         </View>
                       )}
                       <Text style={timeTextStyle}>{item.time}</Text>
@@ -558,6 +592,10 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
   },
+  titleWrapCompact: {
+    left: 44,
+    right: 92,
+  },
   iconBtn: {
     width: 40,
     height: 40,
@@ -581,6 +619,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.22)",
   },
   clearBtnDisabled: { opacity: 0.5 },
+  clearBtnCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
   clearBtnText: { color: theme.colors.text, fontWeight: "800" },
   clearBtnTextDisabled: { color: theme.colors.subtext },
   card: {

@@ -307,12 +307,21 @@ export default function RoomScreen({ route, navigation }: Props) {
   } = useResponsive(1200);
   const isWide = isTablet && isLandscape;
   const isPortrait = !isLandscape;
+  const isCompactPhone = !isTablet && contentWidth < 360;
   const frameEnabled = isPortrait || isWide;
   const FrameComponent = isPortrait ? PortraitFrame : LandscapeFrame;
   const framePad = Math.round((isTablet ? 14 : 10) * scale);
   const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
-  const outerGutter = isWide ? Math.round(gutter * 0.6) : isTablet ? gutter : 0;
-  const innerGutter = isWide ? Math.round(gutter * 0.75) : gutter;
+  const outerGutter = isWide
+    ? Math.round(gutter * 0.6)
+    : isTablet
+      ? gutter
+      : gutter;
+  const innerGutter = isWide
+    ? Math.round(gutter * 0.75)
+    : isTablet
+      ? gutter
+      : Math.round(gutter * 0.6);
   const listGap = Math.round((isTablet ? 18 : 12) * scale);
   const frameWidth = Math.max(0, width - outerGutter * 2);
   const frameInnerWidth = Math.max(
@@ -428,7 +437,7 @@ export default function RoomScreen({ route, navigation }: Props) {
   const undoBarStyle: StyleProp<ViewStyle> = [
     styles.undoBar,
     {
-      width: contentWidth - gutter * 2,
+      width: frameWidth,
       height: undoHeight,
       borderRadius: undoRadius,
       bottom: safeBottom,

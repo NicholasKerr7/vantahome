@@ -212,7 +212,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { gutter, isTablet, isLandscape, scale, contentWidth, height, width } =
     useResponsive(960);
+  const minSize = Math.min(width, height);
   const isPortrait = !isLandscape;
+  const isCompactPhone = !isTablet && minSize < 360;
+  const isWindowTabletPortrait = isTablet && isPortrait;
+  const tvStackedPortrait = isPortrait && !isTablet;
   const safeBottom = insets.bottom;
   // Scale all measurements together so layouts stay balanced across device sizes.
   const panelPad = Math.round((isTablet ? 22 : 18) * scale);
@@ -239,35 +243,72 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const fridgeDialSize = isPortrait ? dialSize : compactDialSize;
   const microwaveDialSize = isPortrait ? dialSize : compactDialSize;
   const sprinklerDialSize = isPortrait ? dialSize : compactDialSize;
+  const waterOrbSize = Math.round(compactDialSize * (isCompactPhone ? 0.86 : 1));
   const gateAutoOpenPortraitTop = Math.round(
     (isTablet ? 36 : 28) * scale,
   );
-  const tvDialSize = Math.round(compactDialSize * (isTablet ? 0.86 : 0.9));
+  const tvDialSize = Math.round(
+    compactDialSize * (isTablet ? 0.86 : isCompactPhone ? 0.78 : 0.84),
+  );
   const tvOrbSize = Math.round(tvDialSize * 0.79);
   const tvOrbRadius = Math.round(tvOrbSize / 2);
   const speakerOrbSize = Math.round(compactDialSize * 0.79);
-  const tvHeroPad = Math.round((isTablet ? 18 : 14) * scale);
-  const tvHeroPillHeight = Math.round((isTablet ? 28 : 24) * scale);
-  const tvHeroPillTextSize = Math.round((isTablet ? 12 : 11) * scale);
-  const tvScreenHeight = Math.round((isTablet ? 200 : 170) * scale);
-  const tvScreenRadius = Math.round((isTablet ? 24 : 20) * scale);
-  const tvScreenInset = Math.round((isTablet ? 14 : 12) * scale);
-  const tvScreenBadgeHeight = Math.round((isTablet ? 24 : 22) * scale);
-  const tvScreenBadgeTextSize = Math.round((isTablet ? 11 : 10) * scale);
-  const tvScreenTitleSize = Math.round((isTablet ? 18 : 16) * scale);
-  const tvScreenSubtitleSize = Math.round((isTablet ? 12 : 11) * scale);
-  const tvScreenMetaSize = Math.round((isTablet ? 12 : 11) * scale);
-  const tvScreenFooterLabelSize = Math.round((isTablet ? 10 : 9) * scale);
-  const tvScreenFooterValueSize = Math.round((isTablet ? 12 : 11) * scale);
-  const tvVolumeValueSize = Math.round((isTablet ? 22 : 20) * scale);
-  const tvVolumeLabelSize = Math.round((isTablet ? 11 : 10) * scale);
-  const tvPortraitGap = Math.round((isTablet ? 12 : 10) * scale);
-  const tvPortraitFramePad = Math.round((isTablet ? 14 : 12) * scale);
+  const tvHeroPad = Math.round((isTablet ? 18 : isCompactPhone ? 12 : 14) * scale);
+  const tvHeroPillHeight = Math.round(
+    (isTablet ? 28 : isCompactPhone ? 22 : 24) * scale,
+  );
+  const tvHeroPillTextSize = Math.round(
+    (isTablet ? 12 : isCompactPhone ? 10 : 11) * scale,
+  );
+  const tvScreenHeight = Math.round(
+    (isTablet ? 200 : isCompactPhone ? 150 : 165) * scale,
+  );
+  const tvScreenRadius = Math.round(
+    (isTablet ? 24 : isCompactPhone ? 16 : 20) * scale,
+  );
+  const tvScreenInset = Math.round(
+    (isTablet ? 14 : isCompactPhone ? 10 : 12) * scale,
+  );
+  const tvScreenBadgeHeight = Math.round(
+    (isTablet ? 24 : isCompactPhone ? 20 : 22) * scale,
+  );
+  const tvScreenBadgeTextSize = Math.round(
+    (isTablet ? 11 : isCompactPhone ? 9 : 10) * scale,
+  );
+  const tvScreenTitleSize = Math.round(
+    (isTablet ? 18 : isCompactPhone ? 14 : 16) * scale,
+  );
+  const tvScreenSubtitleSize = Math.round(
+    (isTablet ? 12 : isCompactPhone ? 10 : 11) * scale,
+  );
+  const tvScreenMetaSize = Math.round(
+    (isTablet ? 12 : isCompactPhone ? 10 : 11) * scale,
+  );
+  const tvScreenFooterLabelSize = Math.round(
+    (isTablet ? 10 : isCompactPhone ? 8 : 9) * scale,
+  );
+  const tvScreenFooterValueSize = Math.round(
+    (isTablet ? 12 : isCompactPhone ? 10 : 11) * scale,
+  );
+  const tvVolumeValueSize = Math.round(
+    (isTablet ? 22 : isCompactPhone ? 18 : 20) * scale,
+  );
+  const tvVolumeLabelSize = Math.round(
+    (isTablet ? 11 : isCompactPhone ? 9 : 10) * scale,
+  );
+  const tvPortraitGap = Math.round((isTablet ? 12 : 8) * scale);
+  const tvPortraitFramePad = Math.round((isTablet ? 14 : 10) * scale);
   const tvPortraitFrameOuter = Math.round((isTablet ? 10 : 8) * scale);
-  const tvNavPadSize = Math.round((isTablet ? 170 : 150) * scale);
-  const tvNavBtnSize = Math.round((isTablet ? 46 : 42) * scale);
-  const tvNavCenterSize = Math.round((isTablet ? 64 : 58) * scale);
-  const tvNavInset = Math.round((isTablet ? 12 : 10) * scale);
+  const tvNavPadSize = Math.round(
+    (isTablet ? 170 : isCompactPhone ? 126 : 142) * scale,
+  );
+  const tvNavBtnSize = Math.round(
+    (isTablet ? 46 : isCompactPhone ? 34 : 40) * scale,
+  );
+  const tvNavCenterSize = Math.round(
+    (isTablet ? 64 : isCompactPhone ? 48 : 54) * scale,
+  );
+  const tvNavInset = Math.round((isTablet ? 12 : 8) * scale);
   const airOrbSize = Math.round((isTablet ? 220 : 190) * scale);
   const airHeroPad = Math.round((isTablet ? 20 : 16) * scale);
   const airHeroGap = Math.round((isTablet ? 20 : 14) * scale);
@@ -300,13 +341,19 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const laundryProgressHeight = Math.round((isTablet ? 10 : 8) * scale);
   const openStatusProgressHeight = Math.round((isTablet ? 10 : 8) * scale);
   const windowHeroSize = Math.round(
-    Math.min(compactDialSize, (isTablet ? 230 : 190) * scale),
+    Math.min(
+      compactDialSize,
+      (isTablet ? 230 : isCompactPhone ? 160 : 180) * scale,
+    ),
   );
   const windowHeroRadius = Math.round(windowHeroSize / 2);
-  const windowHeroPad = Math.round((isTablet ? 20 : 16) * scale);
-  const windowHeroGap = Math.round((isTablet ? 18 : 14) * scale);
-  const windowPillHeight = Math.round((isTablet ? 32 : 28) * scale);
-  const windowPillTextSize = Math.round((isTablet ? 12 : 11) * scale);
+  const windowHeroPad = Math.round((isTablet ? 20 : isCompactPhone ? 12 : 16) * scale);
+  const windowHeroGap = Math.round((isTablet ? 18 : isCompactPhone ? 10 : 14) * scale);
+  const windowPillHeight = Math.round((isTablet ? 32 : isCompactPhone ? 24 : 28) * scale);
+  const windowPillTextSize = Math.round((isTablet ? 12 : isCompactPhone ? 10 : 11) * scale);
+  const windowQuickSetHeight = Math.round((isTablet ? 44 : 40) * scale);
+  const windowQuickSetIconSize = Math.round((isTablet ? 18 : 16) * scale);
+  const windowQuickSetTextSize = Math.round((isTablet ? 12 : 11) * scale);
   const energyHeroSize = Math.round(
     Math.min(compactDialSize, (isTablet ? 240 : 200) * scale),
   );
@@ -415,10 +462,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const openPortraitInfoWidth = isPortrait
     ? Math.max(
         0,
-        panelInnerWidth - utilityHeroPad * 2 - doorHeroSize - utilityHeroGap,
+        panelInnerWidth -
+          utilityHeroPad * 2 -
+          (isTablet ? doorHeroSize + utilityHeroGap : 0),
       )
     : 0;
-  const openActionTileGap = Math.round((isTablet ? 12 : 10) * scale);
+  const openActionTileGap = Math.round(
+    (isTablet ? 12 : isCompactPhone ? 8 : 10) * scale,
+  );
   const openActionTileSize = isPortrait
     ? Math.max(
         64,
@@ -566,13 +617,25 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightSubLabelSize = Math.round((isTablet ? 12 : 9) * scale);
   const lightCardPad = controlCardPad;
   const lightCardRadius = controlCardRadius;
-  const editPad = Math.round((isTablet ? 20 : 16) * scale);
-  const editRadius = Math.round((isTablet ? 24 : 22) * scale);
-  const editTitleSize = Math.round((isTablet ? 20 : 18) * scale);
-  const editSubSize = Math.round((isTablet ? 14 : 12) * scale);
-  const editLabelSize = Math.round((isTablet ? 13 : 12) * scale);
-  const editInputHeight = Math.round((isTablet ? 48 : 44) * scale);
-  const editButtonHeight = Math.round((isTablet ? 46 : 44) * scale);
+  const editPad = Math.round((isTablet ? 20 : isCompactPhone ? 14 : 16) * scale);
+  const editRadius = Math.round(
+    (isTablet ? 24 : isCompactPhone ? 18 : 22) * scale,
+  );
+  const editTitleSize = Math.round(
+    (isTablet ? 20 : isCompactPhone ? 16 : 18) * scale,
+  );
+  const editSubSize = Math.round(
+    (isTablet ? 14 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const editLabelSize = Math.round(
+    (isTablet ? 13 : isCompactPhone ? 11 : 12) * scale,
+  );
+  const editInputHeight = Math.round(
+    (isTablet ? 48 : isCompactPhone ? 40 : 44) * scale,
+  );
+  const editButtonHeight = Math.round(
+    (isTablet ? 46 : isCompactPhone ? 40 : 44) * scale,
+  );
   const controlCardStyle = isTablet
     ? [
         styles.controlCard,
@@ -1927,7 +1990,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.windowHeroBody,
     {
       flexDirection: isTablet || isLandscape ? "row" : "column",
-      alignItems: "center",
+      alignItems: isTablet || isLandscape ? "center" : "stretch",
       gap: windowHeroGap,
     },
   ];
@@ -1948,9 +2011,50 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       width: isTablet || isLandscape ? undefined : "100%",
     },
   ];
+  const windowHeroHeaderStyle: StyleProp<ViewStyle> = [
+    styles.windowHeroHeader,
+    !isTablet && { flexWrap: "wrap", gap: Math.round(8 * scale) },
+  ];
+  const windowHeroMeterRowStyle: StyleProp<ViewStyle> = [
+    styles.windowHeroMeterRow,
+    !isTablet && { flexWrap: "wrap", rowGap: Math.round(4 * scale) },
+  ];
+  const windowHeroHintStyle: StyleProp<TextStyle> = [
+    styles.windowHeroHint,
+    { fontSize: Math.round((isTablet ? 12 : isCompactPhone ? 10 : 11) * scale) },
+  ];
+  const windowHeroMeterLabelStyle: StyleProp<TextStyle> = [
+    styles.windowHeroMeterLabel,
+    { fontSize: Math.round((isTablet ? 12 : isCompactPhone ? 10 : 11) * scale) },
+  ];
+  const windowHeroMeterValueStyle: StyleProp<TextStyle> = [
+    styles.windowHeroMeterValue,
+    { fontSize: Math.round((isTablet ? 18 : isCompactPhone ? 15 : 16) * scale) },
+  ];
   const windowHeroTrackFillStyle: StyleProp<ViewStyle> = [
     styles.windowHeroTrackFill,
     { width: `${openDisplayValue}%` },
+  ];
+  const windowQuickSetRowStyle: StyleProp<ViewStyle> = [
+    styles.windowQuickSetRow,
+    { marginTop: Math.round(8 * scale) },
+  ];
+  const windowQuickSetButtonStyle = (
+    active: boolean,
+  ): StyleProp<ViewStyle> => [
+    styles.windowQuickSetButton,
+    {
+      height: windowQuickSetHeight,
+      borderRadius: Math.round(windowQuickSetHeight * 0.35),
+    },
+    active && styles.windowQuickSetButtonActive,
+  ];
+  const windowQuickSetTextStyle = (
+    active: boolean,
+  ): StyleProp<TextStyle> => [
+    styles.windowQuickSetText,
+    { fontSize: windowQuickSetTextSize },
+    active && styles.windowQuickSetTextActive,
   ];
   const energyHeroCardStyle: StyleProp<ViewStyle> = [
     styles.energyHeroCard,
@@ -2160,7 +2264,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const waterHeroBodyStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroBody,
     {
-      flexDirection: isLandscape ? "column" : "row",
+      flexDirection: isTablet ? (isLandscape ? "column" : "row") : "column",
       alignItems: "center",
       gap: utilityHeroGap,
     },
@@ -2173,7 +2277,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const waterHeroInfoStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroInfo,
     {
-      alignItems: isLandscape ? "center" : "flex-start",
+      alignItems: isLandscape ? "center" : isTablet ? "flex-start" : "center",
       alignSelf: "stretch",
       justifyContent: "flex-end",
       paddingBottom: Math.round(utilityHeroGap * 0.3),
@@ -2182,7 +2286,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const waterHeroMetricRowStyle: StyleProp<ViewStyle> = [
     styles.metricRow,
     styles.utilityHeroMetricRow,
-    { justifyContent: isLandscape ? "center" : "flex-start" },
+    {
+      justifyContent: isLandscape ? "center" : isTablet ? "flex-start" : "center",
+    },
+    !isTablet && { flexWrap: "wrap", rowGap: Math.round(8 * scale) },
   ];
   const utilityHeroOrbStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroOrb,
@@ -2446,32 +2553,33 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const openHeroBodyRowPortraitStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroBody,
     {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: isTablet ? "row" : "column",
+      alignItems: isTablet ? "center" : "stretch",
       gap: utilityHeroGap,
     },
   ];
   const openHeroInfoPortraitStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroInfo,
     {
-      alignItems: "flex-start",
+      alignItems: isTablet ? "flex-start" : "center",
       alignSelf: "stretch",
       justifyContent: "center",
-      flex: 1,
+      flex: isTablet ? 1 : undefined,
       minWidth: 0,
     },
   ];
   const openPortraitMetaTextLeftStyle: StyleProp<TextStyle> = [
     styles.openPortraitMetaText,
-    { textAlign: "left" },
+    { textAlign: isTablet ? "left" : "center" },
   ];
   const openPortraitMetaRowLeftStyle: StyleProp<ViewStyle> = [
     styles.metricRow,
     {
       marginTop: Math.max(10, Math.round(utilityHeroGap * 0.6)),
-      justifyContent: "flex-start",
+      justifyContent: isTablet ? "flex-start" : "center",
       alignSelf: "stretch",
     },
+    !isTablet && { flexWrap: "wrap", rowGap: Math.round(8 * scale) },
   ];
   const openPortraitActionRowLeftStyle: StyleProp<ViewStyle> = [
     styles.actionRow,
@@ -2479,7 +2587,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     {
       marginTop: Math.max(10, Math.round(utilityHeroGap * 0.6)),
       paddingHorizontal: 0,
-      justifyContent: "flex-start",
+      justifyContent: isTablet ? "flex-start" : "center",
       gap: openActionTileGap,
     },
   ];
@@ -2533,10 +2641,36 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const waterOrbStyle: StyleProp<ViewStyle> = [
     styles.waterOrb,
     {
-      width: compactDialSize,
-      height: compactDialSize,
-      borderRadius: Math.round(compactDialSize / 2),
+      width: waterOrbSize,
+      height: waterOrbSize,
+      borderRadius: Math.round(waterOrbSize / 2),
     },
+  ];
+  const waterOrbOverlayStyle: StyleProp<ViewStyle> = [
+    styles.waterOrbOverlay,
+    isCompactPhone && { paddingHorizontal: 14 },
+  ];
+  const waterOrbValueStyle: StyleProp<TextStyle> = [
+    styles.waterOrbValue,
+    { fontSize: Math.round((isTablet ? 22 : isCompactPhone ? 18 : 20) * scale) },
+  ];
+  const waterOrbSubStyle: StyleProp<TextStyle> = [
+    styles.waterOrbSub,
+    { fontSize: Math.round((isTablet ? 12 : isCompactPhone ? 10 : 11) * scale) },
+  ];
+  const waterOrbPercentStyle: StyleProp<TextStyle> = [
+    styles.waterOrbPercent,
+    {
+      fontSize: Math.round((isTablet ? 12 : isCompactPhone ? 10 : 11) * scale),
+    },
+  ];
+  const waterMetricValueStyle: StyleProp<TextStyle> = [
+    styles.metricValue,
+    { fontSize: Math.round((isTablet ? 16 : isCompactPhone ? 13 : 14) * scale) },
+  ];
+  const waterMetricLabelStyle: StyleProp<TextStyle> = [
+    styles.metricLabel,
+    { fontSize: Math.round((isTablet ? 11 : isCompactPhone ? 9 : 10) * scale) },
   ];
   const airHeroCardStyle: StyleProp<ViewStyle> = [
     styles.airHeroCard,
@@ -3622,7 +3756,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const tvHeroCardStyle: StyleProp<ViewStyle> = [
     styles.tvHeroCard,
     { padding: tvHeroPad, borderRadius: controlCardRadius + 8 },
-    isPortrait && { marginTop: 0, flex: 1, alignSelf: "stretch" },
+    isPortrait && { marginTop: 0, alignSelf: "stretch" },
+    isPortrait && !tvStackedPortrait && { flex: 1 },
   ];
   const tvHeroPillStyle = (active: boolean): StyleProp<ViewStyle> => [
     styles.tvHeroPill,
@@ -3688,10 +3823,15 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.tvScreenFooterValue,
     { fontSize: tvScreenFooterValueSize },
   ];
+  const tvScreenFooterStyle: StyleProp<ViewStyle> = [
+    styles.tvScreenFooter,
+    isCompactPhone && { flexWrap: "wrap", justifyContent: "center" },
+  ];
   const tvVolumeCardStyle: StyleProp<ViewStyle> = [
     controlCardStyle,
     styles.tvVolumeCard,
-    isPortrait && { marginTop: 0, flex: 1, alignSelf: "stretch" },
+    isPortrait && { marginTop: 0, alignSelf: "stretch" },
+    isPortrait && !tvStackedPortrait && { flex: 1 },
   ];
   const tvVolumeMutePillStyle = (active: boolean): StyleProp<ViewStyle> => [
     styles.tvVolumeMutePill,
@@ -3737,6 +3877,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       marginBottom: tvPortraitFrameOuter,
     },
   ];
+  const tvPortraitStackStyle: StyleProp<ViewStyle> = [
+    tvStackedPortrait && { gap: tvPortraitGap },
+  ];
   const remoteCardStyle: StyleProp<ViewStyle> = [
     controlCardStyle,
     styles.remoteCard,
@@ -3778,7 +3921,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   ];
   const navPadStyle: StyleProp<ViewStyle> = [
     styles.navPad,
-    isLandscapeSplit && {
+    (isLandscapeSplit || !isTablet) && {
       width: tvNavPadSize,
       height: tvNavPadSize,
       borderRadius: Math.round(tvNavPadSize / 2),
@@ -3786,7 +3929,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   ];
   const navBtnBaseStyle: StyleProp<ViewStyle> = [
     styles.navBtn,
-    isLandscapeSplit && {
+    (isLandscapeSplit || !isTablet) && {
       width: tvNavBtnSize,
       height: tvNavBtnSize,
       borderRadius: Math.round(tvNavBtnSize * 0.35),
@@ -3814,7 +3957,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   ];
   const navCenterStyle: StyleProp<ViewStyle> = [
     styles.navCenter,
-    isLandscapeSplit && {
+    (isLandscapeSplit || !isTablet) && {
       width: tvNavCenterSize,
       height: tvNavCenterSize,
       borderRadius: Math.round(tvNavCenterSize * 0.34),
@@ -3944,6 +4087,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const timeInputStyle: StyleProp<ViewStyle> = [
     styles.timeInput,
     {
+      width: isCompactPhone ? 52 : 60,
       height: editInputHeight,
       borderRadius: Math.round(editInputHeight * 0.28),
     },
@@ -7051,15 +7195,15 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             resizeMode="contain"
             style={styles.deviceLottie}
           />
-          <View style={styles.waterOrbOverlay}>
-            <Text style={styles.waterOrbValue}>{waterFlow} L/min</Text>
-            <Text style={styles.waterOrbSub}>
+          <View style={waterOrbOverlayStyle}>
+            <Text style={waterOrbValueStyle}>{waterFlow} L/min</Text>
+            <Text style={waterOrbSubStyle}>
               {waterBudget > 0
                 ? `${waterToday} / ${waterBudget} L`
                 : `${waterToday} L today`}
             </Text>
             {waterBudget > 0 && (
-              <Text style={styles.waterOrbPercent}>
+              <Text style={waterOrbPercentStyle}>
                 {Math.round(waterBudgetProgress * 100)}% used
               </Text>
             )}
@@ -7068,16 +7212,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={waterHeroInfoStyle}>
           <View style={waterHeroMetricRowStyle}>
             <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{waterFlow} L/min</Text>
-              <Text style={styles.metricLabel}>Flow</Text>
+              <Text style={waterMetricValueStyle}>{waterFlow} L/min</Text>
+              <Text style={waterMetricLabelStyle}>Flow</Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{waterPressure} psi</Text>
-              <Text style={styles.metricLabel}>Pressure</Text>
+              <Text style={waterMetricValueStyle}>{waterPressure} psi</Text>
+              <Text style={waterMetricLabelStyle}>Pressure</Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{waterTemp}C</Text>
-              <Text style={styles.metricLabel}>Temp</Text>
+              <Text style={waterMetricValueStyle}>{waterTemp}C</Text>
+              <Text style={waterMetricLabelStyle}>Temp</Text>
             </View>
           </View>
         </View>
@@ -7859,7 +8003,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               </Text>
               <Text style={tvScreenSubtitleStyle}>Now playing</Text>
             </View>
-            <View style={styles.tvScreenFooter}>
+            <View style={tvScreenFooterStyle}>
               <View style={styles.tvScreenFooterItem}>
                 <Text style={tvScreenFooterLabelStyle}>Volume</Text>
                 <Text style={tvScreenFooterValueStyle}>
@@ -9351,7 +9495,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         end={{ x: 1, y: 1 }}
                         style={windowHeroCardStyle}
                       >
-                        <View style={styles.windowHeroHeader}>
+                        <View style={windowHeroHeaderStyle}>
                           <View style={styles.windowHeroTitleWrap}>
                             <Text style={styles.windowHeroTitle}>
                               {device.name}
@@ -9408,14 +9552,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                               style={styles.windowHeroLottie}
                             />
                           </View>
-                          <View
-                            style={windowHeroControlsStyle}
-                          >
-                            <View style={styles.windowHeroMeterRow}>
-                              <Text style={styles.windowHeroMeterLabel}>
+                          <View style={windowHeroControlsStyle}>
+                            <View style={windowHeroMeterRowStyle}>
+                              <Text style={windowHeroMeterLabelStyle}>
                                 Ventilation
                               </Text>
-                              <Text style={styles.windowHeroMeterValue}>
+                              <Text style={windowHeroMeterValueStyle}>
                                 {openDisplayValue}%
                               </Text>
                             </View>
@@ -9442,43 +9584,96 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                                 style={styles.windowHeroSlider}
                               />
                             </View>
-                            <Text style={styles.windowHeroHint}>
+                            <Text style={windowHeroHintStyle}>
                               {windowFlowHint}
                             </Text>
+                            {isWindowTabletPortrait && (
+                              <View style={styles.windowQuickSetWrap}>
+                                <View style={styles.windowQuickSetHeader}>
+                                  <Ionicons
+                                    name="flash"
+                                    size={14}
+                                    color={stylesVars.subtext}
+                                  />
+                                  <Text style={styles.windowQuickSetLabel}>
+                                    Quick set
+                                  </Text>
+                                </View>
+                                <View style={windowQuickSetRowStyle}>
+                                  {[
+                                    { label: "Open", value: 100, icon: "arrow-up-circle" },
+                                    { label: "Vent", value: 25, icon: "leaf" },
+                                    { label: "Close", value: 0, icon: "lock-closed" },
+                                  ].map((preset) => {
+                                    const active = openPercent === preset.value;
+                                    return (
+                                      <Pressable
+                                        key={preset.label}
+                                        style={windowQuickSetButtonStyle(active)}
+                                        onPress={() =>
+                                          sendPatch({
+                                            openPercent: preset.value,
+                                            isOn: preset.value > 0,
+                                          })
+                                        }
+                                      >
+                                        <Ionicons
+                                          name={preset.icon as any}
+                                          size={windowQuickSetIconSize}
+                                          color={
+                                            active ? "#fff" : stylesVars.subtext
+                                          }
+                                        />
+                                        <Text style={windowQuickSetTextStyle(active)}>
+                                          {preset.label}
+                                        </Text>
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
+                              </View>
+                            )}
                           </View>
                         </View>
                       </LinearGradient>
 
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Quick set</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Open", value: 100 },
-                            { label: "Vent", value: 25 },
-                            { label: "Close", value: 0 },
-                          ].map((preset) => {
-                            const active = openPercent === preset.value;
-                            return (
-                              <Pressable
-                                key={preset.label}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({
-                                    openPercent: preset.value,
-                                    isOn: preset.value > 0,
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
+                      {!isWindowTabletPortrait && (
+                        <View style={controlCardStyle}>
+                          <Text style={styles.cardLabel}>Quick set</Text>
+                          <View style={windowQuickSetRowStyle}>
+                            {[
+                              { label: "Open", value: 100, icon: "arrow-up-circle" },
+                              { label: "Vent", value: 25, icon: "leaf" },
+                              { label: "Close", value: 0, icon: "lock-closed" },
+                            ].map((preset) => {
+                              const active = openPercent === preset.value;
+                              return (
+                                <Pressable
+                                  key={preset.label}
+                                  style={windowQuickSetButtonStyle(active)}
+                                  onPress={() =>
+                                    sendPatch({
+                                      openPercent: preset.value,
+                                      isOn: preset.value > 0,
+                                    })
+                                  }
                                 >
-                                  {preset.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                                  <Ionicons
+                                    name={preset.icon as any}
+                                    size={windowQuickSetIconSize}
+                                    color={
+                                      active ? "#fff" : stylesVars.subtext
+                                    }
+                                  />
+                                  <Text style={windowQuickSetTextStyle(active)}>
+                                    {preset.label}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
                         </View>
-                      </View>
+                      )}
                     </>
                   )}
 
@@ -11037,16 +11232,28 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       </View>
                     ) : isPortrait ? (
                       <>
-                        <View style={tvPortraitFrameStyle}>
-                          <View style={tvPortraitRowStyle}>
-                            <View style={tvPortraitColumnStyle}>
-                              {tvHeroCard}
-                            </View>
-                            <View style={tvPortraitColumnStyle}>
-                              {tvVolumeCard}
+                        {tvStackedPortrait ? (
+                          <View
+                            style={[
+                              tvPortraitFrameStyle,
+                              tvPortraitStackStyle,
+                            ]}
+                          >
+                            {tvHeroCard}
+                            {tvVolumeCard}
+                          </View>
+                        ) : (
+                          <View style={tvPortraitFrameStyle}>
+                            <View style={tvPortraitRowStyle}>
+                              <View style={tvPortraitColumnStyle}>
+                                {tvHeroCard}
+                              </View>
+                              <View style={tvPortraitColumnStyle}>
+                                {tvVolumeCard}
+                              </View>
                             </View>
                           </View>
-                        </View>
+                        )}
                         {tvRemoteCard}
                       </>
                     ) : (
@@ -13129,6 +13336,32 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
+  windowQuickSetWrap: {
+    marginTop: 10,
+    width: "100%",
+  },
+  windowQuickSetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  windowQuickSetLabel: { color: stylesVars.subtext, fontWeight: "800" },
+  windowQuickSetRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  windowQuickSetButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    backgroundColor: "rgba(255,255,255,0.82)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+  },
+  windowQuickSetButtonActive: {
+    backgroundColor: "rgba(122,92,255,0.85)",
+    borderColor: "rgba(122,92,255,0.9)",
+  },
+  windowQuickSetText: { color: stylesVars.subtext, fontWeight: "800" },
+  windowQuickSetTextActive: { color: "#fff" },
   orbActionBtn: {
     width: 40,
     height: 40,
