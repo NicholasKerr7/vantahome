@@ -27,9 +27,33 @@ import {
 import RadialDial from "../components/RadialDial";
 import DeviceEditModal from "./device-detail/DeviceEditModal";
 import DeviceScheduleModal from "./device-detail/DeviceScheduleModal";
+import WindowDetailSection from "./device-detail/devices/WindowDetailSection";
+import FridgeDetailSection from "./device-detail/devices/FridgeDetailSection";
+import FanDetailSection from "./device-detail/devices/FanDetailSection";
+import GateDetailSection from "./device-detail/devices/GateDetailSection";
+import WaterDetailSection from "./device-detail/devices/WaterDetailSection";
+import WaterHeaterDetailSection from "./device-detail/devices/WaterHeaterDetailSection";
+import MicrowaveDetailSection from "./device-detail/devices/MicrowaveDetailSection";
+import SprinklerDetailSection from "./device-detail/devices/SprinklerDetailSection";
+import StoveDetailSection from "./device-detail/devices/StoveDetailSection";
+import TvDetailSection from "./device-detail/devices/TvDetailSection";
+import EnergyDetailSection from "./device-detail/devices/EnergyDetailSection";
+import CoffeeDetailSection from "./device-detail/devices/CoffeeDetailSection";
+import LaundryDetailSection from "./device-detail/devices/LaundryDetailSection";
+import VacuumDetailSection from "./device-detail/devices/VacuumDetailSection";
+import CameraDetailSection from "./device-detail/devices/CameraDetailSection";
+import AirDetailSection from "./device-detail/devices/AirDetailSection";
+import SpeakerDetailSection from "./device-detail/devices/SpeakerDetailSection";
+import AcDetailSection from "./device-detail/devices/AcDetailSection";
+import LightDetailSection from "./device-detail/devices/LightDetailSection";
+import SmokeDetailSection from "./device-detail/devices/SmokeDetailSection";
+import GarageDetailSection from "./device-detail/devices/GarageDetailSection";
+import DoorDetailSection from "./device-detail/devices/DoorDetailSection";
+import GenericHeroSection from "./device-detail/GenericHeroSection";
+import CapabilitiesSection from "./device-detail/CapabilitiesSection";
+import OptionChips from "../components/OptionChips";
 import BackgroundLines from "../components/BackgroundLines";
 import ModeTiles from "../components/ModeTiles";
-import DeviceCapabilityControls from "../components/DeviceCapabilityControls";
 import AvatarChip from "../components/AvatarChip";
 import {
   SafeAreaView,
@@ -650,6 +674,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const controlCardRowStyle = isTablet
     ? [styles.controlCardRow, { gap: controlCardRowGap }]
     : styles.controlCardRow;
+  const chipRowStyle = styles.chipRow;
+  const coffeeDescaleNotice = coffeeDescaleNeeded ? (
+    <View style={styles.alertRow}>
+      <Ionicons name="warning" size={14} color="#D8465B" />
+      <Text style={styles.alertText}>Descale cycle recommended</Text>
+    </View>
+  ) : null;
   const lightCardBaseStyle = {
     padding: lightCardPad,
     borderRadius: lightCardRadius,
@@ -1571,6 +1602,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     () => new Map(rooms.map((room) => [room.id, room.name])),
     [rooms],
   );
+  const airRoomLabel = roomLookup.get(device.roomId) ?? "Room";
   const formatMetric = (
     value: number | null | undefined,
     unit?: string,
@@ -1583,6 +1615,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     return unit ? `${formatted} ${unit}` : formatted;
   };
   const airMetricWidth = isTablet ? "23%" : "31%";
+  const airChartMaxHeight = isTablet ? 80 : 64;
   const airTrendIcon =
     airTrendDelta > 2 ? "trending-up" : airTrendDelta < -2 ? "trending-down" : "remove";
   const airTrendLabel = `${airTrendDelta >= 0 ? "+" : ""}${Math.round(
@@ -1673,46 +1706,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     deviceClient
       .sendCommand({ op: "patch", deviceId: device.id, patch })
       .catch(() => {});
-  };
-  const renderAirAlertSlider = (
-    label: string,
-    value: number,
-    min: number,
-    max: number,
-    step: number,
-    valueText: string,
-    onChange: (value: number) => void,
-  ) => {
-    const pct =
-      max > min ? clamp((value - min) / (max - min), 0, 1) : 0;
-    const trackFillStyle: StyleProp<ViewStyle> = [
-      styles.airAlertTrackFill,
-      { width: `${Math.round(pct * 100)}%` },
-    ];
-    return (
-      <View style={styles.airAlertSliderBlock}>
-        <View style={styles.airAlertSliderRow}>
-          <Text style={styles.airAlertSliderLabel}>{label}</Text>
-          <Text style={styles.airAlertSliderValue}>{valueText}</Text>
-        </View>
-        <View style={styles.airAlertSliderWrap}>
-          <View style={styles.airAlertTrack}>
-            <View style={trackFillStyle} />
-          </View>
-          <Slider
-            value={value}
-            minimumValue={min}
-            maximumValue={max}
-            step={step}
-            onSlidingComplete={onChange}
-            minimumTrackTintColor="transparent"
-            maximumTrackTintColor="transparent"
-            thumbTintColor="rgba(255,255,255,0.92)"
-            style={styles.airAlertSlider}
-          />
-        </View>
-      </View>
-    );
   };
   const setOpenTarget = (target: number) => {
     sendPatch({
@@ -4237,49 +4230,38 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         </Pressable>
       </View>
       <Text style={styles.cardHint}>Direction</Text>
-      <View style={styles.chipRow}>
-        {[
+      <OptionChips
+        options={[
           { label: "Forward", value: "forward" },
           { label: "Reverse", value: "reverse" },
-        ].map((option) => {
-          const active = fanDirection === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              style={chipStyle(active)}
-              onPress={() =>
-                sendPatch({
-                  fanDirection: option.value as Device["fanDirection"],
-                  isOn: true,
-                })
-              }
-            >
-              <Text style={chipTextStyle(active)}>{option.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        ]}
+        value={fanDirection}
+        onSelect={(value) =>
+          sendPatch({
+            fanDirection: value as Device["fanDirection"],
+            isOn: true,
+          })
+        }
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   );
   const fanTimerCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Timer & light</Text>
-      <View style={styles.chipRow}>
-        {[0, 30, 60, 120].map((value) => {
-          const active = fanTimerMin === value;
-          return (
-            <Pressable
-              key={value}
-              style={chipStyle(active)}
-              onPress={() => sendPatch({ fanTimerMin: value, isOn: true })}
-            >
-              <Text style={chipTextStyle(active)}>
-                {value === 0 ? "Off" : `${value}m`}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <OptionChips
+        options={[0, 30, 60, 120].map((value) => ({
+          value,
+          label: value === 0 ? "Off" : `${value}m`,
+        }))}
+        value={fanTimerMin}
+        onSelect={(value) => sendPatch({ fanTimerMin: value, isOn: true })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
       <View style={controlCardRowTopStyle}>
         <Pressable
           style={controlPillStyle(fanLightOn)}
@@ -4335,30 +4317,24 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           style={styles.pressureSlider}
         />
         <Text style={styles.cardHint}>Swing</Text>
-        <View style={styles.chipRow}>
-          {[
+        <OptionChips
+          options={[
             { label: "Off", value: "off" },
             { label: "Vertical", value: "vertical" },
             { label: "Horizontal", value: "horizontal" },
             { label: "Both", value: "both" },
-          ].map((option) => {
-            const active = acSwingMode === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                style={chipStyle(active)}
-                onPress={() =>
-                  sendPatch({
-                    acSwingMode: option.value as Device["acSwingMode"],
-                    isOn: true,
-                  })
-                }
-              >
-                <Text style={chipTextStyle(active)}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          ]}
+          value={acSwingMode}
+          onSelect={(value) =>
+            sendPatch({
+              acSwingMode: value as Device["acSwingMode"],
+              isOn: true,
+            })
+          }
+          rowStyle={styles.chipRow}
+          chipStyle={chipStyle}
+          chipTextStyle={chipTextStyle}
+        />
       </View>
 
       <View style={controlCardStyle}>
@@ -4422,6 +4398,205 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         </Text>
       </View>
     </>
+  );
+
+  const energyHeroCard = (
+    <LinearGradient
+      colors={[
+        "rgba(255,255,255,0.96)",
+        "rgba(224,236,255,0.9)",
+        "rgba(204,218,255,0.86)",
+      ]}
+      start={{ x: 0.1, y: 0.05 }}
+      end={{ x: 1, y: 1 }}
+      style={energyHeroCardStyle}
+    >
+      <View style={energyHeroHeaderStyle}>
+        <View style={styles.energyHeroTitleWrap}>
+          <Text style={styles.energyHeroTitle}>{device.name}</Text>
+          <Text style={styles.energyHeroSub}>
+            {powerOutage ? "Grid outage detected" : "Live energy flow"}
+          </Text>
+        </View>
+        <View style={styles.energyHeroPillRow}>
+          <View style={energyHeroPillStyle(!powerOutage)}>
+            <Ionicons
+              name={powerOutage ? "alert-circle" : "flash"}
+              size={14}
+              color={powerOutage ? "#D8465B" : theme.colors.accent2}
+            />
+            <Text style={energyHeroPillTextStyle(!powerOutage)}>
+              {powerOutage ? "Outage" : "Grid Online"}
+            </Text>
+          </View>
+          <View style={energyHeroPillStyle(solarActive)}>
+            <Ionicons
+              name={solarActive ? "sunny" : "sunny-outline"}
+              size={14}
+              color={solarActive ? "#D6A545" : stylesVars.subtext}
+            />
+            <Text style={energyHeroPillTextStyle(solarActive)}>
+              {solarActive ? "Solar Active" : "Solar Idle"}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={energyHeroBodyStyle}>
+        <View style={energyHeroOrbStyle}>
+          <LinearGradient
+            colors={[
+              "rgba(122,92,255,0.24)",
+              "rgba(180,107,255,0.18)",
+              "rgba(255,255,255,0.9)",
+            ]}
+            start={{ x: 0.2, y: 0.1 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.energyHeroOrbGlow}
+          />
+          <View pointerEvents="none" style={styles.energyLottieLayer}>
+            <LottieView
+              source={ENERGY_LOTTIE_SOURCE}
+              autoPlay
+              loop
+              resizeMode="contain"
+              style={styles.energyLottie}
+            />
+          </View>
+        </View>
+        <View style={energyHeroInfoStyle}>
+          <View style={energyHeroStatsRowStyle}>
+            {[
+              { label: "Now", value: `${energyPower}W` },
+              { label: "Today", value: `${energyToday} kWh` },
+              { label: "Peak", value: `${energyPeak}W` },
+            ].map((stat) => (
+              <View key={stat.label} style={styles.energyHeroStat}>
+                <Text style={energyHeroStatValueStyle}>{stat.value}</Text>
+                <Text style={energyHeroStatLabelStyle}>{stat.label}</Text>
+              </View>
+            ))}
+          </View>
+          <View
+            style={[
+              energyHeroStatsRowStyle,
+              styles.energyHeroStatsRowCompact,
+            ]}
+          >
+            {[
+              { label: "Solar now", value: `${solarW}W`, active: solarW > 0 },
+              {
+                label: "Solar today",
+                value: `${solarToday} kWh`,
+                active: solarToday > 0,
+              },
+              { label: "Grid", value: `${gridToday} kWh`, active: !powerOutage },
+            ].map((stat) => (
+              <View
+                key={stat.label}
+                style={[
+                  styles.energyHeroStat,
+                  stat.active && styles.energyHeroStatActive,
+                ]}
+              >
+                <Text style={energyHeroStatValueStyle}>{stat.value}</Text>
+                <Text style={energyHeroStatLabelStyle}>{stat.label}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.energyHeroProgressWrap}>
+            <View style={energyHeroProgressTrackStyle}>
+              <View style={energyHeroProgressFillStyle} />
+            </View>
+            <View style={styles.energyHeroProgressMeta}>
+              <Text style={energyHeroMetaTextStyle}>
+                {energyBudget
+                  ? `${energyMonth} / ${energyBudget} kWh`
+                  : `${energyMonth} kWh this month`}
+              </Text>
+              <Text style={energyHeroMetaTextStyle}>
+                ${energyCostToday.toFixed(2)} today
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.energyHeroHint}>
+            {solarActive ? "Solar feeding the home" : "Solar idle"}
+          </Text>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+
+  const energySideColumn = (
+    <View style={styles.energySideColumn}>
+      <View style={controlCardStyle}>
+        <Text style={styles.cardLabel}>Main power</Text>
+        <View style={controlCardRowTopStyle}>
+          <Pressable
+            style={controlPillStyle(gridAvailable)}
+            onPress={() => sendPatch({ gridAvailable: true })}
+          >
+            <Text style={controlPillTextStyle(gridAvailable)}>Online</Text>
+          </Pressable>
+          <Pressable
+            style={controlPillStyle(!gridAvailable)}
+            onPress={() => sendPatch({ gridAvailable: false })}
+          >
+            <Text style={controlPillTextStyle(!gridAvailable)}>Outage</Text>
+          </Pressable>
+          <Pressable
+            style={controlPillStyle(gridOutageAlerts)}
+            onPress={() =>
+              sendPatch({ gridOutageAlerts: !gridOutageAlerts })
+            }
+          >
+            <Text style={controlPillTextStyle(gridOutageAlerts)}>
+              {gridOutageAlerts ? "Alerts On" : "Alerts Off"}
+            </Text>
+          </Pressable>
+        </View>
+        {powerOutage && (
+          <View style={styles.alertRow}>
+            <Ionicons name="alert-circle" size={14} color="#D8465B" />
+            <Text style={styles.alertText}>Main power offline</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const energyBudgetCard = (
+    <View style={energyBudgetCardStyle}>
+      <Text style={styles.cardLabel}>Monthly budget</Text>
+      <OptionChips
+        options={[80, 120, 160].map((value) => ({
+          value,
+          label: `${value} kWh`,
+        }))}
+        value={energyBudget}
+        onSelect={(value) => sendPatch({ energyBudgetKwh: value })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
+      <Text style={styles.budgetHint}>
+        {energyBudget
+          ? `${energyMonth} / ${energyBudget} kWh used`
+          : `${energyMonth} kWh this month`}
+      </Text>
+      <View style={styles.metricRow}>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricValue}>{energyMonth} kWh</Text>
+          <Text style={styles.metricLabel}>This month</Text>
+        </View>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricValue}>
+            ${energyCostToday.toFixed(2)}
+          </Text>
+          <Text style={styles.metricLabel}>Today cost</Text>
+        </View>
+      </View>
+    </View>
   );
 
   const coffeeHeroCard = (
@@ -4571,58 +4746,44 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <View style={controlCardStyle}>
         <Text style={styles.cardLabel}>Brew profile</Text>
         <Text style={styles.cardHint}>Size</Text>
-        <View style={styles.chipRow}>
-          {[6, 8, 10, 12].map((value) => {
-            const active = coffeeSizeOz === value;
-            return (
-              <Pressable
-                key={value}
-                style={chipStyle(active)}
-                onPress={() => sendPatch({ coffeeSizeOz: value })}
-              >
-                <Text style={chipTextStyle(active)}>{value} oz</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <OptionChips
+          options={[6, 8, 10, 12].map((value) => ({
+            value,
+            label: `${value} oz`,
+          }))}
+          value={coffeeSizeOz}
+          onSelect={(value) => sendPatch({ coffeeSizeOz: value })}
+          rowStyle={styles.chipRow}
+          chipStyle={chipStyle}
+          chipTextStyle={chipTextStyle}
+        />
         <Text style={styles.cardHint}>Strength</Text>
-        <View style={styles.chipRow}>
-          {[
+        <OptionChips
+          options={[
             { label: "Mild", value: "mild" },
             { label: "Normal", value: "normal" },
             { label: "Strong", value: "strong" },
-          ].map((option) => {
-            const active = coffeeStrength === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                style={chipStyle(active)}
-                onPress={() =>
-                  sendPatch({
-                    coffeeStrength: option.value as Device["coffeeStrength"],
-                  })
-                }
-              >
-                <Text style={chipTextStyle(active)}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          ]}
+          value={coffeeStrength}
+          onSelect={(value) =>
+            sendPatch({ coffeeStrength: value as Device["coffeeStrength"] })
+          }
+          rowStyle={styles.chipRow}
+          chipStyle={chipStyle}
+          chipTextStyle={chipTextStyle}
+        />
         <Text style={styles.cardHint}>Cups</Text>
-        <View style={styles.chipRow}>
-          {[1, 2, 4, 6].map((value) => {
-            const active = coffeeCupCount === value;
-            return (
-              <Pressable
-                key={value}
-                style={chipStyle(active)}
-                onPress={() => sendPatch({ coffeeCupCount: value })}
-              >
-                <Text style={chipTextStyle(active)}>{value}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <OptionChips
+          options={[1, 2, 4, 6].map((value) => ({
+            value,
+            label: `${value}`,
+          }))}
+          value={coffeeCupCount}
+          onSelect={(value) => sendPatch({ coffeeCupCount: value })}
+          rowStyle={styles.chipRow}
+          chipStyle={chipStyle}
+          chipTextStyle={chipTextStyle}
+        />
       </View>
 
       <View style={controlCardStyle}>
@@ -4645,22 +4806,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           style={styles.pressureSlider}
         />
         <Text style={styles.cardHint}>Keep warm</Text>
-        <View style={styles.chipRow}>
-          {[0, 10, 20, 30].map((value) => {
-            const active = coffeeKeepWarmMin === value;
-            return (
-              <Pressable
-                key={value}
-                style={chipStyle(active)}
-                onPress={() => sendPatch({ coffeeKeepWarmMin: value })}
-              >
-                <Text style={chipTextStyle(active)}>
-                  {value === 0 ? "Off" : `${value}m`}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <OptionChips
+          options={[0, 10, 20, 30].map((value) => ({
+            value,
+            label: value === 0 ? "Off" : `${value}m`,
+          }))}
+          value={coffeeKeepWarmMin}
+          onSelect={(value) => sendPatch({ coffeeKeepWarmMin: value })}
+          rowStyle={styles.chipRow}
+          chipStyle={chipStyle}
+          chipTextStyle={chipTextStyle}
+        />
       </View>
 
       <View style={controlCardStyle}>
@@ -4686,20 +4842,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
         <Text style={styles.cardHint}>Auto brew</Text>
-        <View style={styles.chipRow}>
-          {["06:30", "07:00", "07:30", "08:00"].map((time) => {
-            const active = coffeeAutoBrewTime === time;
-            return (
-              <Pressable
-                key={time}
-                style={chipStyle(active)}
-                onPress={() => sendPatch({ coffeeAutoBrewTime: time })}
-              >
-                <Text style={chipTextStyle(active)}>{time}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <OptionChips
+          options={["06:30", "07:00", "07:30", "08:00"].map((time) => ({
+            value: time,
+            label: time,
+          }))}
+          value={coffeeAutoBrewTime}
+          onSelect={(value) => sendPatch({ coffeeAutoBrewTime: value })}
+          rowStyle={styles.chipRow}
+          chipStyle={chipStyle}
+          chipTextStyle={chipTextStyle}
+        />
       </View>
     </>
   );
@@ -4842,30 +4995,24 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     <>
       <View style={controlCardStyle}>
         <Text style={styles.cardLabel}>Cleaning mode</Text>
-        <View style={styles.chipRow}>
-          {[
+        <OptionChips
+          options={[
             { label: "Auto", value: "auto" },
             { label: "Spot", value: "spot" },
             { label: "Edge", value: "edge" },
             { label: "Room", value: "room" },
-          ].map((option) => {
-            const active = vacuumMode === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                style={chipStyle(active)}
-                onPress={() =>
-                  sendPatch({
-                    vacuumMode: option.value as Device["vacuumMode"],
-                    isOn: true,
-                  })
-                }
-              >
-                <Text style={chipTextStyle(active)}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          ]}
+          value={vacuumMode}
+          onSelect={(value) =>
+            sendPatch({
+              vacuumMode: value as Device["vacuumMode"],
+              isOn: true,
+            })
+          }
+          rowStyle={styles.chipRow}
+          chipStyle={chipStyle}
+          chipTextStyle={chipTextStyle}
+        />
         <View style={styles.pressureSliderRow}>
           <Text style={styles.pressureSliderLabel}>Suction</Text>
           <Text style={styles.pressureSliderValue}>{vacuumSuction}%</Text>
@@ -5057,20 +5204,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const laundryCycleCard = (
     <View style={laundryCardStyle(1)}>
       <Text style={styles.cardLabel}>Cycle</Text>
-      <View style={styles.chipRow}>
-        {laundryCycles.map((label) => {
-          const active = (device.cycle ?? "Normal") === label;
-          return (
-            <Pressable
-              key={label}
-              style={chipStyle(active)}
-              onPress={() => sendPatch({ cycle: label })}
-            >
-              <Text style={chipTextStyle(active)}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <OptionChips
+        options={laundryCycles.map((label) => ({ label, value: label }))}
+        value={device.cycle ?? "Normal"}
+        onSelect={(value) => sendPatch({ cycle: value })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   );
 
@@ -5078,22 +5219,19 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     device.kind === "washer" ? (
       <View style={laundryCardStyle(6)}>
         <Text style={styles.cardLabel}>Load size</Text>
-        <View style={styles.chipRow}>
-          {["Small", "Medium", "Large"].map((label) => {
-            const active = loadSize === label;
-            return (
-              <Pressable
-                key={label}
-                style={chipStyle(active)}
-                onPress={() =>
-                  sendPatch({ loadSize: label as Device["loadSize"] })
-                }
-              >
-                <Text style={chipTextStyle(active)}>{label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <OptionChips
+          options={["Small", "Medium", "Large"].map((label) => ({
+            label,
+            value: label,
+          }))}
+          value={loadSize}
+          onSelect={(value) =>
+            sendPatch({ loadSize: value as Device["loadSize"] })
+          }
+          rowStyle={styles.chipRow}
+          chipStyle={chipStyle}
+          chipTextStyle={chipTextStyle}
+        />
       </View>
     ) : null;
 
@@ -5105,78 +5243,66 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <>
           <View style={laundryCardStyle(3)}>
             <Text style={styles.cardLabel}>Temperature</Text>
-            <View style={styles.chipRow}>
-              {washTempOptions.map((label) => {
-                const active = washTemp === label;
-                return (
-                  <Pressable
-                    key={label}
-                    style={chipStyle(active)}
-                    onPress={() => sendPatch({ washTemp: label })}
-                  >
-                    <Text style={chipTextStyle(active)}>{label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <OptionChips
+              options={washTempOptions.map((label) => ({
+                label,
+                value: label,
+              }))}
+              value={washTemp}
+              onSelect={(value) => sendPatch({ washTemp: value })}
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
           </View>
 
           <View style={laundryCardStyle(4)}>
             <Text style={styles.cardLabel}>Spin speed</Text>
-            <View style={styles.chipRow}>
-              {[800, 1000, 1200].map((value) => {
-                const active = spinSpeed === value;
-                return (
-                  <Pressable
-                    key={value}
-                    style={chipStyle(active)}
-                    onPress={() => sendPatch({ spinSpeedRpm: value })}
-                  >
-                    <Text style={chipTextStyle(active)}>{value} rpm</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <OptionChips
+              options={[800, 1000, 1200].map((value) => ({
+                value,
+                label: `${value} rpm`,
+              }))}
+              value={spinSpeed}
+              onSelect={(value) => sendPatch({ spinSpeedRpm: value })}
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
           </View>
 
           <View style={laundryCardStyle(5)}>
             <Text style={styles.cardLabel}>Soil level</Text>
-            <View style={styles.chipRow}>
-              {soilLevelOptions.map((label) => {
-                const active = soilLevel === label;
-                return (
-                  <Pressable
-                    key={label}
-                    style={chipStyle(active)}
-                    onPress={() => sendPatch({ soilLevel: label })}
-                  >
-                    <Text style={chipTextStyle(active)}>{label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <OptionChips
+              options={soilLevelOptions.map((label) => ({
+                label,
+                value: label,
+              }))}
+              value={soilLevel}
+              onSelect={(value) => sendPatch({ soilLevel: value })}
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
           </View>
 
           {!isTabletLandscape && laundryLoadSizeCard}
 
           <View style={laundryCardStyle(7)}>
             <Text style={styles.cardLabel}>Rinse</Text>
-            <View style={styles.chipRow}>
-              {[1, 2, 3].map((value) => {
-                const active = rinseCount === value;
-                return (
-                  <Pressable
-                    key={value}
-                    style={chipStyle(active)}
-                    onPress={() =>
-                      sendPatch({ rinseCount: value as Device["rinseCount"] })
-                    }
-                  >
-                    <Text style={chipTextStyle(active)}>{value}x</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <OptionChips
+              options={[1, 2, 3].map((value) => ({
+                value,
+                label: `${value}x`,
+              }))}
+              value={rinseCount}
+              onSelect={(value) =>
+                sendPatch({ rinseCount: value as Device["rinseCount"] })
+              }
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
           </View>
 
           <View style={laundryCardStyle(8)}>
@@ -5237,38 +5363,32 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <>
           <View style={laundryCardStyle(3)}>
             <Text style={styles.cardLabel}>Heat</Text>
-            <View style={styles.chipRow}>
-              {heatLevelOptions.map((label) => {
-                const active = heatLevel === label;
-                return (
-                  <Pressable
-                    key={label}
-                    style={chipStyle(active)}
-                    onPress={() => sendPatch({ heatLevel: label })}
-                  >
-                    <Text style={chipTextStyle(active)}>{label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <OptionChips
+              options={heatLevelOptions.map((label) => ({
+                label,
+                value: label,
+              }))}
+              value={heatLevel}
+              onSelect={(value) => sendPatch({ heatLevel: value })}
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
           </View>
 
           <View style={laundryCardStyle(4)}>
             <Text style={styles.cardLabel}>Dryness</Text>
-            <View style={styles.chipRow}>
-              {drynessOptions.map((label) => {
-                const active = drynessLevel === label;
-                return (
-                  <Pressable
-                    key={label}
-                    style={chipStyle(active)}
-                    onPress={() => sendPatch({ drynessLevel: label })}
-                  >
-                    <Text style={chipTextStyle(active)}>{label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <OptionChips
+              options={drynessOptions.map((label) => ({
+                label,
+                value: label,
+              }))}
+              value={drynessLevel}
+              onSelect={(value) => sendPatch({ drynessLevel: value })}
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
           </View>
 
           <View style={laundryCardStyle(5)}>
@@ -5349,40 +5469,38 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
       <View style={laundryCardStyle(2)}>
         <Text style={styles.cardLabel}>Time remaining</Text>
-        <View style={styles.chipRow}>
-          {[
-            { label: "-10", value: -10 },
-            { label: "+10", value: 10 },
-            { label: "+20", value: 20 },
-          ].map((preset) => (
-            <Pressable
-              key={preset.label}
-              style={styles.chip}
-              onPress={() => {
-                const next = clamp(
-                  laundryRemainingMin + preset.value,
-                  0,
-                  laundryTotalMin,
-                );
-                const nextProgress =
-                  laundryTotalMin > 0
-                    ? clamp(
-                        Math.round(100 - (next / laundryTotalMin) * 100),
-                        0,
-                        100,
-                      )
-                    : 0;
-                sendPatch({
-                  progress: nextProgress,
-                  remainingMin: next,
-                  isOn: device.isOn && next > 0,
-                });
-              }}
-            >
-              <Text style={styles.chipText}>{preset.label} min</Text>
-            </Pressable>
-          ))}
-        </View>
+        <OptionChips
+          options={[
+            { label: "-10 min", value: -10 },
+            { label: "+10 min", value: 10 },
+            { label: "+20 min", value: 20 },
+          ]}
+          value={0}
+          isActive={() => false}
+          onSelect={(delta) => {
+            const next = clamp(
+              laundryRemainingMin + delta,
+              0,
+              laundryTotalMin,
+            );
+            const nextProgress =
+              laundryTotalMin > 0
+                ? clamp(
+                    Math.round(100 - (next / laundryTotalMin) * 100),
+                    0,
+                    100,
+                  )
+                : 0;
+            sendPatch({
+              progress: nextProgress,
+              remainingMin: next,
+              isOn: device.isOn && next > 0,
+            });
+          }}
+          rowStyle={styles.chipRow}
+          chipStyle={() => styles.chip}
+          chipTextStyle={() => styles.chipText}
+        />
         <Text style={styles.budgetHint}>
           {washerProgress >= 100
             ? "Done"
@@ -5911,6 +6029,24 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <View style={doorActionRowStyle}>{gateActionButtons}</View>
     </View>
   );
+  const gateAutoOpenCard = (
+    <View style={gateAutoCardStyle}>
+      <Text style={gateAutoLabelStyle}>Auto-open</Text>
+      <Text style={gateAutoHintStyle}>
+        Use recognition + proximity to unlock for known faces.
+      </Text>
+      <View style={gateAutoChipRowStyle}>
+        <Pressable
+          style={chipStyle(gateAutoOpen)}
+          onPress={() => sendPatch({ autoOpenEnabled: !gateAutoOpen })}
+        >
+          <Text style={chipTextStyle(gateAutoOpen)}>
+            {gateAutoOpen ? "Enabled" : "Disabled"}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
   const gateStatusCard = (
     <View style={openStatusCardStyle}>
       <Text style={styles.cardLabel}>Status</Text>
@@ -6060,30 +6196,26 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const smokeStatusCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Status</Text>
-      <View style={styles.chipRow}>
-        {["ok", "warning", "error"].map((status) => {
-          const active = smokeSensorStatus === status;
-          const label =
+      <OptionChips
+        options={["ok", "warning", "error"].map((status) => ({
+          value: status,
+          label:
             status === "ok"
               ? "OK"
               : status === "warning"
                 ? "Warning"
-                : "Error";
-          return (
-            <Pressable
-              key={status}
-              style={chipStyle(active)}
-              onPress={() =>
-                sendPatch({
-                  smokeSensorStatus: status as Device["smokeSensorStatus"],
-                })
-              }
-            >
-              <Text style={chipTextStyle(active)}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                : "Error",
+        }))}
+        value={smokeSensorStatus}
+        onSelect={(status) =>
+          sendPatch({
+            smokeSensorStatus: status as Device["smokeSensorStatus"],
+          })
+        }
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
       <Text style={styles.budgetHint}>
         Last test:{" "}
         {smokeLastTestAt ? formatTimeAgo(smokeLastTestAt) : "Not yet"}
@@ -6359,30 +6491,24 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const fridgeModesCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Modes</Text>
-      <View style={styles.chipRow}>
-        {[
+      <OptionChips
+        options={[
           { label: "Eco", value: "eco" },
           { label: "Normal", value: "normal" },
           { label: "Boost", value: "boost" },
           { label: "Vacation", value: "vacation" },
-        ].map((option) => {
-          const active = fridgeMode === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              style={chipStyle(active)}
-              onPress={() =>
-                sendPatch({
-                  fridgeMode: option.value as Device["fridgeMode"],
-                  isOn: true,
-                })
-              }
-            >
-              <Text style={chipTextStyle(active)}>{option.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        ]}
+        value={fridgeMode}
+        onSelect={(value) =>
+          sendPatch({
+            fridgeMode: value as Device["fridgeMode"],
+            isOn: true,
+          })
+        }
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   );
   const fridgeQuickActionsCard = (
@@ -6466,20 +6592,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const fridgeHumidityCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Humidity drawers</Text>
-      <View style={styles.chipRow}>
-        {[40, 50, 60].map((value) => {
-          const active = fridgeHumidity === value;
-          return (
-            <Pressable
-              key={value}
-              style={chipStyle(active)}
-              onPress={() => sendPatch({ fridgeHumidity: value })}
-            >
-              <Text style={chipTextStyle(active)}>{value}%</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <OptionChips
+        options={[40, 50, 60].map((value) => ({
+          value,
+          label: `${value}%`,
+        }))}
+        value={fridgeHumidity}
+        onSelect={(value) => sendPatch({ fridgeHumidity: value })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   );
   const fanHeroModes = (
@@ -6893,43 +7016,34 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const microwaveModeCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Mode</Text>
-      <View style={styles.chipRow}>
-        {microwaveModeOptions.map((label) => {
-          const active = microwaveMode === label;
-          return (
-            <Pressable
-              key={label}
-              style={chipStyle(active)}
-              onPress={() => sendPatch({ microwaveMode: label })}
-            >
-              <Text style={chipTextStyle(active)}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <OptionChips
+        options={microwaveModeOptions.map((label) => ({
+          label,
+          value: label,
+        }))}
+        value={microwaveMode}
+        onSelect={(value) => sendPatch({ microwaveMode: value })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   );
   const microwavePowerCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Power</Text>
-      <View style={styles.chipRow}>
-        {[
+      <OptionChips
+        options={[
           { label: "Low", value: 3 },
           { label: "Med", value: 6 },
           { label: "High", value: 10 },
-        ].map((preset) => {
-          const active = microwavePower === preset.value;
-          return (
-            <Pressable
-              key={preset.label}
-              style={chipStyle(active)}
-              onPress={() => sendPatch({ microwavePower: preset.value })}
-            >
-              <Text style={chipTextStyle(active)}>{preset.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        ]}
+        value={microwavePower}
+        onSelect={(value) => sendPatch({ microwavePower: value })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   );
   const sprinklerHeroMetrics = (
@@ -7087,20 +7201,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const sprinklerZoneCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Zone</Text>
-      <View style={styles.chipRow}>
-        {["Front Yard", "Back Yard", "Garden"].map((zone) => {
-          const active = sprinklerZoneLabel === zone;
-          return (
-            <Pressable
-              key={zone}
-              style={chipStyle(active)}
-              onPress={() => sendPatch({ zone })}
-            >
-              <Text style={chipTextStyle(active)}>{zone}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <OptionChips
+        options={["Front Yard", "Back Yard", "Garden"].map((zone) => ({
+          label: zone,
+          value: zone,
+        }))}
+        value={sprinklerZoneLabel}
+        onSelect={(value) => sendPatch({ zone: value })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   );
   const sprinklerScheduleCard = (
@@ -7231,20 +7342,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const waterBudgetCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Daily budget</Text>
-      <View style={styles.chipRow}>
-        {[150, 220, 280].map((value) => {
-          const active = waterBudget === value;
-          return (
-            <Pressable
-              key={value}
-              style={chipStyle(active)}
-              onPress={() => sendPatch({ waterBudgetL: value })}
-            >
-              <Text style={chipTextStyle(active)}>{value} L</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <OptionChips
+        options={[150, 220, 280].map((value) => ({
+          value,
+          label: `${value} L`,
+        }))}
+        value={waterBudget}
+        onSelect={(value) => sendPatch({ waterBudgetL: value })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
       <Text style={styles.budgetHint}>
         {waterBudget
           ? `${waterToday} / ${waterBudget} L used`
@@ -7653,24 +7761,18 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const cameraMotionCard = (
     <View style={cameraControlCardStyle}>
       <Text style={styles.cardLabel}>Motion sensitivity</Text>
-      <View style={styles.chipRow}>
-        {[
+      <OptionChips
+        options={[
           { label: "Low", value: 3 },
           { label: "Med", value: 6 },
           { label: "High", value: 9 },
-        ].map((preset) => {
-          const active = motionSensitivity === preset.value;
-          return (
-            <Pressable
-              key={preset.label}
-              style={chipStyle(active)}
-              onPress={() => sendPatch({ motionSensitivity: preset.value })}
-            >
-              <Text style={chipTextStyle(active)}>{preset.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        ]}
+        value={motionSensitivity}
+        onSelect={(value) => sendPatch({ motionSensitivity: value })}
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   );
   const cameraGateCard = gateDevice ? (
@@ -7684,24 +7786,28 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           <Text style={styles.controlPillText}>Close gate</Text>
         </Pressable>
       </View>
-      <View style={styles.chipRow}>
-        <Pressable
-          style={chipStyle(gateAutoOpen)}
-          onPress={() =>
-            deviceClient
-              .sendCommand({
-                op: "patch",
-                deviceId: gateDevice.id,
-                patch: { autoOpenEnabled: !gateAutoOpen },
-              })
-              .catch(() => {})
-          }
-        >
-          <Text style={chipTextStyle(gateAutoOpen)}>
-            Auto-open {gateAutoOpen ? "On" : "Off"}
-          </Text>
-        </Pressable>
-      </View>
+      <OptionChips
+        options={[
+          {
+            label: `Auto-open ${gateAutoOpen ? "On" : "Off"}`,
+            value: "toggle",
+          },
+        ]}
+        value="toggle"
+        isActive={() => gateAutoOpen}
+        onSelect={() =>
+          deviceClient
+            .sendCommand({
+              op: "patch",
+              deviceId: gateDevice.id,
+              patch: { autoOpenEnabled: !gateAutoOpen },
+            })
+            .catch(() => {})
+        }
+        rowStyle={styles.chipRow}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
     </View>
   ) : null;
   const cameraControlCards = (
@@ -8466,2844 +8572,566 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             >
               {renderLandscapeContent(
                 showCapabilities ? (
-                  <View style={sectionTopStyle}>
-                    <View style={styles.genericHero}>
-                      <View style={styles.genericIcon}>
-                        <DeviceIcon
-                          kind={device.kind}
-                          size={32}
-                          color={stylesVars.ink}
-                        />
-                      </View>
-                      <View style={flex1Style}>
-                        <Text style={styles.heroTitle}>{device.name}</Text>
-                        <Text style={styles.heroSub}>
-                          {device.isOn ? "Running" : "Off"}
-                          {roomName ? ` • ${roomName}` : ""}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.capabilitiesWrap}>
-                      <DeviceCapabilityControls
-                        device={device}
-                        context="detail"
-                        variant="light"
-                        layout="cards"
-                      />
-                    </View>
-                  </View>
+                  <CapabilitiesSection
+                    device={device}
+                    statusText={`${device.isOn ? "Running" : "Off"}${
+                      roomName ? ` • ${roomName}` : ""
+                    }`}
+                    iconColor={stylesVars.ink}
+                    iconSize={32}
+                    containerStyle={sectionTopStyle}
+                    heroStyle={styles.genericHero}
+                    iconWrapStyle={styles.genericIcon}
+                    titleStyle={styles.heroTitle}
+                    subtitleStyle={styles.heroSub}
+                    flex1Style={flex1Style}
+                    capabilitiesWrapStyle={styles.capabilitiesWrap}
+                  />
                 ) : isAC ? (
-                  isTabletLandscape ? (
-                    <>
-                      <View style={landscapeColumnGapStyle}>
-                        {acHeroNodes}
-                      </View>
-                      <View style={landscapeColumnGapStyle}>
-                        {acControlNodes}
-                      </View>
-                    </>
-                  ) : (
-                    <>
-                      {acHeroNodes}
-                      {acControlNodes}
-                    </>
-                  )
+                  <AcDetailSection
+                    isTabletLandscape={isTabletLandscape}
+                    landscapeColumnGapStyle={landscapeColumnGapStyle}
+                    acHeroNodes={acHeroNodes}
+                    acControlNodes={acControlNodes}
+                  />
                 ) : (
                 <View style={sectionTopStyle}>
                   {!hasCustom && (
-                    <View style={styles.genericHero}>
-                      <View style={styles.genericIcon}>
-                        <DeviceIcon
-                          kind={device.kind}
-                          size={32}
-                          color={stylesVars.ink}
-                        />
-                      </View>
-                      <View style={flex1Style}>
-                        <Text style={styles.heroTitle}>{device.name}</Text>
-                        <Text style={styles.heroSub}>
-                          {device.isOn ? "Running" : "Off"}
-                        </Text>
-                      </View>
-                    </View>
+                    <GenericHeroSection
+                      deviceKind={device.kind}
+                      title={device.name}
+                      subtitle={device.isOn ? "Running" : "Off"}
+                      iconColor={stylesVars.ink}
+                      iconSize={32}
+                      containerStyle={styles.genericHero}
+                      iconWrapStyle={styles.genericIcon}
+                      titleStyle={styles.heroTitle}
+                      subtitleStyle={styles.heroSub}
+                      flex1Style={flex1Style}
+                    />
                   )}
 
                   {device.kind === "light" && (
-                    <View
-                      style={lightLayoutStyle}
-                    >
-                      <View
-                        style={lightDialColumnStyle}
-                      >
-                        <LinearGradient
-                          colors={lightHeroGradient}
-                          start={{ x: 0.1, y: 0.05 }}
-                          end={{ x: 1, y: 1 }}
-                          style={lightHeroCardStyle}
-                        >
-                          <View style={styles.utilityHeroHeader}>
-                            <View style={styles.utilityHeroTitleWrap}>
-                              <Text style={styles.utilityHeroTitle}>
-                                {device.name}
-                              </Text>
-                              <Text style={styles.utilityHeroSub}>
-                                {roomName || "Light"}
-                              </Text>
-                            </View>
-                            <View style={styles.utilityHeroPillRow}>
-                              <View
-                                style={utilityHeroPillStyle(device.isOn)}
-                              >
-                                <Ionicons
-                                  name={device.isOn ? "bulb" : "bulb-outline"}
-                                  size={14}
-                                  color={
-                                    device.isOn
-                                      ? theme.colors.accent2
-                                      : stylesVars.subtext
-                                  }
-                                />
-                                <Text
-                                  style={utilityHeroPillTextStyle(device.isOn)}
-                                >
-                                  {device.isOn ? "On" : "Off"}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                          <View style={lightHeroBodyStyle}>
-                            <View style={lightDialWrapStyle}>
-                              <RadialDial
-                                size={lightDialSize}
-                                value={brightness}
-                                min={0}
-                                max={100}
-                                tickValues={[0, 25, 50, 75, 100]}
-                                centerContent={
-                                  <Animated.View
-                                    style={lightCenterOrbStyle}
-                                  >
-                                    <LinearGradient
-                                      colors={bulbGradient}
-                                      start={{ x: 0.2, y: 0.1 }}
-                                      end={{ x: 0.9, y: 1 }}
-                                      style={lightCenterInnerStyle}
-                                    >
-                                      <Ionicons
-                                        name="bulb"
-                                        size={lightCenterIcon}
-                                        color={bulbIconColor}
-                                      />
-                                      <Text
-                                        style={lightCenterValueStyle}
-                                      >
-                                        {device.brightness ?? 60}%
-                                      </Text>
-                                      <Text
-                                        style={lightCenterRoomStyle}
-                                      >
-                                        {roomName || "Light"}
-                                      </Text>
-                                    </LinearGradient>
-                                  </Animated.View>
-                                }
-                                formatTick={(v) => `${v}`}
-                                formatValue={(v) => `${v}%`}
-                                formatCenterValue={(v) => `${v}%`}
-                                dimmed={!device.isOn}
-                                onChange={(v) => {
-                                  animateBulb();
-                                  sendPatch({
-                                    brightness: clamp(v, 0, 100),
-                                    lightEffect: undefined,
-                                    isOn: v > 0,
-                                  });
-                                }}
-                              />
-                            </View>
-                            <View style={lightHeroInfoStackStyle}>
-                              <View style={lightHeroMetaCardStyle}>
-                                <Text style={lightHeroMetaTitleStyle}>
-                                  Color
-                                </Text>
-                                <View style={lightColorRowStyle}>
-                                  {lightSwatches.map((c) => (
-                                    <Pressable
-                                      key={c}
-                                      onPress={() =>
-                                        sendPatch({
-                                          color: c,
-                                          lightEffect: undefined,
-                                          isOn: true,
-                                        })
-                                      }
-                                      style={lightSwatchStyleFor(
-                                        c,
-                                        device.color === c,
-                                      )}
-                                    />
-                                  ))}
-                                </View>
-                              </View>
-
-                              <View style={lightHeroMetaCardStyle}>
-                                <Text style={lightHeroMetaTitleStyle}>
-                                  Scenes
-                                </Text>
-                                <View
-                                  style={
-                                    lightScenesUseTiles
-                                      ? lightSceneActionRowStyle
-                                      : lightSceneRowStyle
-                                  }
-                                >
-                                  {lightSceneOptions.map((scene) => {
-                                    const active =
-                                      lightSceneColor ===
-                                        scene.color.toLowerCase() &&
-                                      Math.abs(brightness - scene.brightness) <=
-                                        2;
-                                    return (
-                                      <Pressable
-                                        key={scene.label}
-                                        style={
-                                          lightScenesUseTiles
-                                            ? lightModeTileStyle(active)
-                                            : lightSceneCardStyle
-                                        }
-                                        onPress={() => {
-                                          animateBulb();
-                                          sendPatch({
-                                            brightness: scene.brightness,
-                                            color: scene.color,
-                                            lightEffect: undefined,
-                                            isOn: true,
-                                          });
-                                        }}
-                                      >
-                                        {lightScenesUseTiles ? (
-                                          active ? (
-                                            <LinearGradient
-                                              colors={[
-                                                theme.colors.accent2,
-                                                theme.colors.accent,
-                                              ]}
-                                              start={{ x: 0.1, y: 0 }}
-                                              end={{ x: 1, y: 1 }}
-                                              style={styles.modeIconBubbleActive}
-                                            >
-                                              <Ionicons
-                                                name={scene.icon}
-                                                size={lightSceneIconSize}
-                                                color="#FFFFFF"
-                                              />
-                                            </LinearGradient>
-                                          ) : (
-                                            <View
-                                              style={styles.modeIconBubble}
-                                            >
-                                              <Ionicons
-                                                name={scene.icon}
-                                                size={lightSceneIconSize}
-                                                color="rgba(12,12,18,0.65)"
-                                              />
-                                            </View>
-                                          )
-                                        ) : (
-                                          <View
-                                            style={lightSceneIconWrapStyle}
-                                          >
-                                            <Ionicons
-                                              name={scene.icon}
-                                              size={lightSceneIconSize}
-                                              color={stylesVars.ink}
-                                            />
-                                          </View>
-                                        )}
-                                        <Text
-                                          style={
-                                            lightScenesUseTiles
-                                              ? modeTextStyle(active)
-                                              : lightSceneTextStyle
-                                          }
-                                        >
-                                          {scene.label}
-                                        </Text>
-                                      </Pressable>
-                                    );
-                                  })}
-                                </View>
-                              </View>
-                            </View>
-                          </View>
-                        </LinearGradient>
-                      </View>
-
-                      <View style={lightControlsColumnLayoutStyle}>
-                        {isTablet ? (
-                          <>
-                            <View style={lightControlCardStyle}>
-                              <Text style={styles.cardLabel}>Temperature</Text>
-                              <Text
-                                style={lightCardHintStyle}
-                              >
-                                {colorTempK}K
-                              </Text>
-                              <View style={styles.chipRow}>
-                                {LIGHT_TEMP_PRESETS.map((preset) => {
-                                  const active =
-                                    Math.abs(colorTempK - preset.value) <= 200;
-                                  return (
-                                    <Pressable
-                                      key={preset.label}
-                                      style={chipStyle(active)}
-                                      onPress={() =>
-                                        sendPatch({
-                                          colorTempK: preset.value,
-                                          lightEffect: undefined,
-                                          isOn: true,
-                                        })
-                                      }
-                                    >
-                                      <Text
-                                        style={chipTextStyle(active)}
-                                      >
-                                        {preset.label}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
-                              </View>
-
-                              <Text
-                                style={lightCardHintTopStyle}
-                              >
-                                Effects
-                              </Text>
-                              {lightEffectsUseTiles ? (
-                                <View style={lightEffectActionRowStyle}>
-                                  {LIGHT_EFFECTS.map((effect) => {
-                                    const active = lightEffect === effect.value;
-                                    return (
-                                      <Pressable
-                                        key={effect.value}
-                                        style={modeTileStyle(active)}
-                                        onPress={() =>
-                                          sendPatch({
-                                            lightEffect: effect.value,
-                                            isOn: true,
-                                          })
-                                        }
-                                      >
-                                        {active ? (
-                                          <LinearGradient
-                                            colors={[
-                                              theme.colors.accent2,
-                                              theme.colors.accent,
-                                            ]}
-                                            start={{ x: 0.1, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                            style={styles.modeIconBubbleActive}
-                                          >
-                                            <Ionicons
-                                              name={effect.icon}
-                                              size={lightSceneIconSize}
-                                              color="#FFFFFF"
-                                            />
-                                          </LinearGradient>
-                                        ) : (
-                                          <View style={styles.modeIconBubble}>
-                                            <Ionicons
-                                              name={effect.icon}
-                                              size={lightSceneIconSize}
-                                              color="rgba(12,12,18,0.65)"
-                                            />
-                                          </View>
-                                        )}
-                                        <Text style={modeTextStyle(active)}>
-                                          {effect.label}
-                                        </Text>
-                                      </Pressable>
-                                    );
-                                  })}
-                                </View>
-                              ) : (
-                                <View style={chipRowTopStyle}>
-                                  {LIGHT_EFFECTS.map((effect) => {
-                                    const active = lightEffect === effect.value;
-                                    return (
-                                      <Pressable
-                                        key={effect.value}
-                                        style={chipRowItemStyle(active)}
-                                        onPress={() =>
-                                          sendPatch({
-                                            lightEffect: effect.value,
-                                            isOn: true,
-                                          })
-                                        }
-                                      >
-                                        <Ionicons
-                                          name={effect.icon}
-                                          size={lightSceneIconSize}
-                                          color={
-                                            active
-                                              ? stylesVars.ink
-                                              : stylesVars.subtext
-                                          }
-                                        />
-                                        <Text
-                                          style={chipTextStyle(active)}
-                                        >
-                                          {effect.label}
-                                        </Text>
-                                      </Pressable>
-                                    );
-                                  })}
-                                </View>
-                              )}
-                            </View>
-
-                            <View style={lightControlCardStyle}>
-                              <Text style={styles.cardLabel}>Automation</Text>
-                              <View style={styles.chipRow}>
-                                <Pressable
-                                  style={chipStyle(adaptiveLighting)}
-                                  onPress={() =>
-                                    sendPatch({
-                                      adaptiveLighting: !adaptiveLighting,
-                                    })
-                                  }
-                                >
-                                  <Text
-                                    style={chipTextStyle(adaptiveLighting)}
-                                  >
-                                    Adaptive
-                                  </Text>
-                                </Pressable>
-                                <Pressable
-                                  style={chipStyle(motionBoost)}
-                                  onPress={() =>
-                                    sendPatch({ motionBoost: !motionBoost })
-                                  }
-                                >
-                                  <Text
-                                    style={chipTextStyle(motionBoost)}
-                                  >
-                                    Motion
-                                  </Text>
-                                </Pressable>
-                                <Pressable
-                                  style={chipStyle(nightShift)}
-                                  onPress={() =>
-                                    sendPatch({ nightShift: !nightShift })
-                                  }
-                                >
-                                  <Text
-                                    style={chipTextStyle(nightShift)}
-                                  >
-                                    Night Shift
-                                  </Text>
-                                </Pressable>
-                              </View>
-
-                              <Text
-                                style={lightCardHintTopStyle}
-                              >
-                                Auto-off
-                              </Text>
-                              <View style={chipRowTopStyle}>
-                                {LIGHT_AUTO_OFF.map((minutes) => {
-                                  const active = autoOffMin === minutes;
-                                  return (
-                                    <Pressable
-                                      key={minutes}
-                                      style={chipStyle(active)}
-                                      onPress={() =>
-                                        sendPatch({ autoOffMin: minutes })
-                                      }
-                                    >
-                                      <Text
-                                        style={chipTextStyle(active)}
-                                      >
-                                        {minutes === 0 ? "Off" : `${minutes}m`}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
-                              </View>
-                            </View>
-                          </>
-                        ) : lightControlsCompact ? (
-                          <View style={lightControlsGridStyle}>
-                            <View style={lightControlCompactStyle}>
-                              <View style={styles.lightControlHeaderRow}>
-                                <Text style={styles.cardLabel}>
-                                  Temperature
-                                </Text>
-                                <Text style={lightCardHintStyle}>
-                                  {colorTempK}K
-                                </Text>
-                              </View>
-                              <View style={styles.chipRow}>
-                                {LIGHT_TEMP_PRESETS.map((preset) => {
-                                  const active =
-                                    Math.abs(colorTempK - preset.value) <= 200;
-                                  return (
-                                    <Pressable
-                                      key={preset.label}
-                                      style={chipStyle(active)}
-                                      onPress={() =>
-                                        sendPatch({
-                                          colorTempK: preset.value,
-                                          lightEffect: undefined,
-                                          isOn: true,
-                                        })
-                                      }
-                                    >
-                                      <Text style={chipTextStyle(active)}>
-                                        {preset.label}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
-                              </View>
-
-                              <Text
-                                style={lightCardHintTopStyle}
-                              >
-                                Effects
-                              </Text>
-                              {lightEffectsUseTiles ? (
-                                <View style={lightEffectActionRowStyle}>
-                                  {LIGHT_EFFECTS.map((effect) => {
-                                    const active = lightEffect === effect.value;
-                                    return (
-                                      <Pressable
-                                        key={effect.value}
-                                        style={modeTileStyle(active)}
-                                        onPress={() =>
-                                          sendPatch({
-                                            lightEffect: effect.value,
-                                            isOn: true,
-                                          })
-                                        }
-                                      >
-                                        {active ? (
-                                          <LinearGradient
-                                            colors={[
-                                              theme.colors.accent2,
-                                              theme.colors.accent,
-                                            ]}
-                                            start={{ x: 0.1, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                            style={styles.modeIconBubbleActive}
-                                          >
-                                            <Ionicons
-                                              name={effect.icon}
-                                              size={lightSceneIconSize}
-                                              color="#FFFFFF"
-                                            />
-                                          </LinearGradient>
-                                        ) : (
-                                          <View style={styles.modeIconBubble}>
-                                            <Ionicons
-                                              name={effect.icon}
-                                              size={lightSceneIconSize}
-                                              color="rgba(12,12,18,0.65)"
-                                            />
-                                          </View>
-                                        )}
-                                        <Text style={modeTextStyle(active)}>
-                                          {effect.label}
-                                        </Text>
-                                      </Pressable>
-                                    );
-                                  })}
-                                </View>
-                              ) : (
-                                <View style={chipRowTopStyle}>
-                                  {LIGHT_EFFECTS.map((effect) => {
-                                    const active = lightEffect === effect.value;
-                                    return (
-                                      <Pressable
-                                        key={effect.value}
-                                        style={chipRowItemStyle(active)}
-                                        onPress={() =>
-                                          sendPatch({
-                                            lightEffect: effect.value,
-                                            isOn: true,
-                                          })
-                                        }
-                                      >
-                                        <Ionicons
-                                          name={effect.icon}
-                                          size={lightSceneIconSize}
-                                          color={
-                                            active
-                                              ? stylesVars.ink
-                                              : stylesVars.subtext
-                                          }
-                                        />
-                                        <Text
-                                          style={chipTextStyle(active)}
-                                        >
-                                          {effect.label}
-                                        </Text>
-                                      </Pressable>
-                                    );
-                                  })}
-                                </View>
-                              )}
-                            </View>
-
-                            <View style={lightControlCompactStyle}>
-                              <Text style={styles.cardLabel}>Automation</Text>
-                              <View style={styles.chipRow}>
-                                <Pressable
-                                  style={chipStyle(adaptiveLighting)}
-                                  onPress={() =>
-                                    sendPatch({
-                                      adaptiveLighting: !adaptiveLighting,
-                                    })
-                                  }
-                                >
-                                  <Text
-                                    style={chipTextStyle(adaptiveLighting)}
-                                  >
-                                    Adaptive
-                                  </Text>
-                                </Pressable>
-                                <Pressable
-                                  style={chipStyle(motionBoost)}
-                                  onPress={() =>
-                                    sendPatch({ motionBoost: !motionBoost })
-                                  }
-                                >
-                                  <Text
-                                    style={chipTextStyle(motionBoost)}
-                                  >
-                                    Motion
-                                  </Text>
-                                </Pressable>
-                                <Pressable
-                                  style={chipStyle(nightShift)}
-                                  onPress={() =>
-                                    sendPatch({ nightShift: !nightShift })
-                                  }
-                                >
-                                  <Text
-                                    style={chipTextStyle(nightShift)}
-                                  >
-                                    Night Shift
-                                  </Text>
-                                </Pressable>
-                              </View>
-
-                              <Text
-                                style={lightCardHintTopStyle}
-                              >
-                                Auto-off
-                              </Text>
-                              <View style={chipRowTopStyle}>
-                                {LIGHT_AUTO_OFF.map((minutes) => {
-                                  const active = autoOffMin === minutes;
-                                  return (
-                                    <Pressable
-                                      key={minutes}
-                                      style={chipStyle(active)}
-                                      onPress={() =>
-                                        sendPatch({ autoOffMin: minutes })
-                                      }
-                                    >
-                                      <Text
-                                        style={chipTextStyle(active)}
-                                      >
-                                        {minutes === 0 ? "Off" : `${minutes}m`}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
-                              </View>
-                            </View>
-                          </View>
-                        ) : (
-                          <View style={lightControlCardStyle}>
-                            <Text style={styles.cardLabel}>Temperature</Text>
-                            <Text
-                              style={lightCardHintStyle}
-                            >
-                              {colorTempK}K
-                            </Text>
-                            <View style={styles.chipRow}>
-                              {LIGHT_TEMP_PRESETS.map((preset) => {
-                                const active =
-                                  Math.abs(colorTempK - preset.value) <= 200;
-                                return (
-                                  <Pressable
-                                    key={preset.label}
-                                    style={chipStyle(active)}
-                                    onPress={() =>
-                                      sendPatch({
-                                        colorTempK: preset.value,
-                                        lightEffect: undefined,
-                                        isOn: true,
-                                      })
-                                    }
-                                  >
-                                    <Text
-                                      style={chipTextStyle(active)}
-                                    >
-                                      {preset.label}
-                                    </Text>
-                                  </Pressable>
-                                );
-                              })}
-                            </View>
-
-                            <Text
-                              style={lightCardHintTopStyle}
-                            >
-                              Effects
-                            </Text>
-                            {lightEffectsUseTiles ? (
-                              <View style={lightEffectActionRowStyle}>
-                                {LIGHT_EFFECTS.map((effect) => {
-                                  const active = lightEffect === effect.value;
-                                  return (
-                                    <Pressable
-                                      key={effect.value}
-                                      style={modeTileStyle(active)}
-                                      onPress={() =>
-                                        sendPatch({
-                                          lightEffect: effect.value,
-                                          isOn: true,
-                                        })
-                                      }
-                                    >
-                                      {active ? (
-                                        <LinearGradient
-                                          colors={[
-                                            theme.colors.accent2,
-                                            theme.colors.accent,
-                                          ]}
-                                          start={{ x: 0.1, y: 0 }}
-                                          end={{ x: 1, y: 1 }}
-                                          style={styles.modeIconBubbleActive}
-                                        >
-                                          <Ionicons
-                                            name={effect.icon}
-                                            size={lightSceneIconSize}
-                                            color="#FFFFFF"
-                                          />
-                                        </LinearGradient>
-                                      ) : (
-                                        <View style={styles.modeIconBubble}>
-                                          <Ionicons
-                                            name={effect.icon}
-                                            size={lightSceneIconSize}
-                                            color="rgba(12,12,18,0.65)"
-                                          />
-                                        </View>
-                                      )}
-                                      <Text style={modeTextStyle(active)}>
-                                        {effect.label}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
-                              </View>
-                            ) : (
-                              <View style={chipRowTopStyle}>
-                                {LIGHT_EFFECTS.map((effect) => {
-                                  const active = lightEffect === effect.value;
-                                  return (
-                                    <Pressable
-                                      key={effect.value}
-                                      style={chipRowItemStyle(active)}
-                                      onPress={() =>
-                                        sendPatch({
-                                          lightEffect: effect.value,
-                                          isOn: true,
-                                        })
-                                      }
-                                    >
-                                      <Ionicons
-                                        name={effect.icon}
-                                        size={lightSceneIconSize}
-                                        color={
-                                          active
-                                            ? stylesVars.ink
-                                            : stylesVars.subtext
-                                        }
-                                      />
-                                      <Text
-                                        style={chipTextStyle(active)}
-                                      >
-                                        {effect.label}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
-                              </View>
-                            )}
-
-                            <Text
-                              style={lightCardHintTopStyle}
-                            >
-                              Automation
-                            </Text>
-                            <View style={styles.chipRow}>
-                              <Pressable
-                                style={chipStyle(adaptiveLighting)}
-                                onPress={() =>
-                                  sendPatch({
-                                    adaptiveLighting: !adaptiveLighting,
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(adaptiveLighting)}
-                                >
-                                  Adaptive
-                                </Text>
-                              </Pressable>
-                              <Pressable
-                                style={chipStyle(motionBoost)}
-                                onPress={() =>
-                                  sendPatch({ motionBoost: !motionBoost })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(motionBoost)}
-                                >
-                                  Motion
-                                </Text>
-                              </Pressable>
-                              <Pressable
-                                style={chipStyle(nightShift)}
-                                onPress={() =>
-                                  sendPatch({ nightShift: !nightShift })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(nightShift)}
-                                >
-                                  Night Shift
-                                </Text>
-                              </Pressable>
-                            </View>
-
-                            <Text
-                              style={lightCardHintTopStyle}
-                            >
-                              Auto-off
-                            </Text>
-                            <View style={chipRowTopStyle}>
-                              {LIGHT_AUTO_OFF.map((minutes) => {
-                                const active = autoOffMin === minutes;
-                                return (
-                                  <Pressable
-                                    key={minutes}
-                                    style={chipStyle(active)}
-                                    onPress={() =>
-                                      sendPatch({ autoOffMin: minutes })
-                                    }
-                                  >
-                                    <Text
-                                      style={chipTextStyle(active)}
-                                    >
-                                      {minutes === 0 ? "Off" : `${minutes}m`}
-                                    </Text>
-                                  </Pressable>
-                                );
-                              })}
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    </View>
+                    <LightDetailSection
+                      device={device}
+                      roomName={roomName}
+                      theme={theme}
+                      styles={styles}
+                      stylesVars={stylesVars}
+                      lightLayoutStyle={lightLayoutStyle}
+                      lightDialColumnStyle={lightDialColumnStyle}
+                      lightHeroGradient={lightHeroGradient}
+                      lightHeroCardStyle={lightHeroCardStyle}
+                      utilityHeroPillStyle={utilityHeroPillStyle}
+                      utilityHeroPillTextStyle={utilityHeroPillTextStyle}
+                      lightHeroBodyStyle={lightHeroBodyStyle}
+                      lightDialWrapStyle={lightDialWrapStyle}
+                      lightDialSize={lightDialSize}
+                      brightness={brightness}
+                      lightCenterOrbStyle={lightCenterOrbStyle}
+                      lightCenterInnerStyle={lightCenterInnerStyle}
+                      bulbGradient={bulbGradient}
+                      lightCenterIcon={lightCenterIcon}
+                      bulbIconColor={bulbIconColor}
+                      lightCenterValueStyle={lightCenterValueStyle}
+                      lightCenterRoomStyle={lightCenterRoomStyle}
+                      lightHeroInfoStackStyle={lightHeroInfoStackStyle}
+                      lightHeroMetaCardStyle={lightHeroMetaCardStyle}
+                      lightHeroMetaTitleStyle={lightHeroMetaTitleStyle}
+                      lightColorRowStyle={lightColorRowStyle}
+                      lightSwatches={lightSwatches}
+                      lightSwatchStyleFor={lightSwatchStyleFor}
+                      lightSceneOptions={lightSceneOptions}
+                      lightSceneColor={lightSceneColor}
+                      lightScenesUseTiles={lightScenesUseTiles}
+                      lightSceneActionRowStyle={lightSceneActionRowStyle}
+                      lightSceneRowStyle={lightSceneRowStyle}
+                      lightModeTileStyle={lightModeTileStyle}
+                      lightSceneCardStyle={lightSceneCardStyle}
+                      lightSceneIconSize={lightSceneIconSize}
+                      lightSceneIconWrapStyle={lightSceneIconWrapStyle}
+                      lightSceneTextStyle={lightSceneTextStyle}
+                      modeTextStyle={modeTextStyle}
+                      lightControlsColumnLayoutStyle={lightControlsColumnLayoutStyle}
+                      isTablet={isTablet}
+                      lightControlCardStyle={lightControlCardStyle}
+                      lightCardHintStyle={lightCardHintStyle}
+                      colorTempK={colorTempK}
+                      lightTempPresets={LIGHT_TEMP_PRESETS}
+                      chipStyle={chipStyle}
+                      chipTextStyle={chipTextStyle}
+                      lightCardHintTopStyle={lightCardHintTopStyle}
+                      lightEffectsUseTiles={lightEffectsUseTiles}
+                      lightEffectActionRowStyle={lightEffectActionRowStyle}
+                      lightEffects={LIGHT_EFFECTS}
+                      lightEffect={lightEffect}
+                      modeTileStyle={modeTileStyle}
+                      chipRowTopStyle={chipRowTopStyle}
+                      chipRowItemStyle={chipRowItemStyle}
+                      lightControlsCompact={lightControlsCompact}
+                      lightControlsGridStyle={lightControlsGridStyle}
+                      lightControlCompactStyle={lightControlCompactStyle}
+                      adaptiveLighting={adaptiveLighting}
+                      motionBoost={motionBoost}
+                      nightShift={nightShift}
+                      autoOffMin={autoOffMin}
+                      lightAutoOffOptions={LIGHT_AUTO_OFF}
+                      onPatch={sendPatch}
+                      onAnimateBulb={animateBulb}
+                    />
                   )}
 
                   {device.kind === "garage" &&
-                    (isLandscapeSplit ? (
-                      <>
-                        <View style={openColumnStyle}>
-                          {garageHeroCard}
-                        </View>
-                        <View style={openColumnStyle}>
-                          {garageStatusCard}
-                          {garageActionCard}
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {garageHeroCard}
-                      </>
-                    ))}
+                    (
+                      <GarageDetailSection
+                        isLandscapeSplit={isLandscapeSplit}
+                        openColumnStyle={openColumnStyle}
+                        garageHeroCard={garageHeroCard}
+                        garageStatusCard={garageStatusCard}
+                        garageActionCard={garageActionCard}
+                      />
+                    )}
 
 
                   {device.kind === "door" &&
-                    (isLandscapeSplit ? (
-                      <>
-                        <View style={openColumnStyle}>
-                          {doorHeroCard}
-                        </View>
-                        <View style={openColumnStyle}>
-                          {doorStatusCard}
-                          {doorActionCard}
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {doorHeroCard}
-                      </>
-                    ))}
+                    (
+                      <DoorDetailSection
+                        isLandscapeSplit={isLandscapeSplit}
+                        openColumnStyle={openColumnStyle}
+                        doorHeroCard={doorHeroCard}
+                        doorStatusCard={doorStatusCard}
+                        doorActionCard={doorActionCard}
+                      />
+                    )}
 
                   {device.kind === "gate" &&
-                    (isLandscapeSplit ? (
-                      <>
-                        <View style={openColumnStyle}>
-                          {gateHeroCard}
-                        </View>
-                        <View style={openColumnStyle}>
-                          {gateStatusCard}
-                          <View style={gateAutoCardStyle}>
-                            <Text
-                              style={gateAutoLabelStyle}
-                            >
-                              Auto-open
-                            </Text>
-                            <Text
-                              style={gateAutoHintStyle}
-                            >
-                              Use recognition + proximity to unlock for known faces.
-                            </Text>
-                            <View
-                              style={gateAutoChipRowStyle}
-                            >
-                              <Pressable
-                                style={chipStyle(gateAutoOpen)}
-                                onPress={() =>
-                                  sendPatch({ autoOpenEnabled: !gateAutoOpen })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(gateAutoOpen)}
-                                >
-                                  {gateAutoOpen ? "Enabled" : "Disabled"}
-                                </Text>
-                              </Pressable>
-                            </View>
-                          </View>
-                          {gateActionCard}
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {gateHeroCard}
-                        <View style={gateAutoCardStyle}>
-                          <Text
-                            style={gateAutoLabelStyle}
-                          >
-                            Auto-open
-                          </Text>
-                          <Text
-                            style={gateAutoHintStyle}
-                          >
-                            Use recognition + proximity to unlock for known faces.
-                          </Text>
-                          <View
-                            style={gateAutoChipRowStyle}
-                          >
-                            <Pressable
-                              style={chipStyle(gateAutoOpen)}
-                              onPress={() =>
-                                sendPatch({ autoOpenEnabled: !gateAutoOpen })
-                              }
-                            >
-                              <Text
-                                style={chipTextStyle(gateAutoOpen)}
-                              >
-                                {gateAutoOpen ? "Enabled" : "Disabled"}
-                              </Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                      </>
-                    ))}
+                    (
+                      <GateDetailSection
+                        isLandscapeSplit={isLandscapeSplit}
+                        openColumnStyle={openColumnStyle}
+                        gateHeroCard={gateHeroCard}
+                        gateStatusCard={gateStatusCard}
+                        gateActionCard={gateActionCard}
+                        gateAutoCard={gateAutoOpenCard}
+                      />
+                    )}
 
                   {device.kind === "fridge" && (
-                    <>
-                      {isLandscapeSplit ? (
-                        <View style={landscapeGridStyle}>
-                          <View style={landscapeColumnPrimaryStyle}>
-                            {fridgeHeroCard}
-                          </View>
-                          <View style={landscapeColumnSecondaryStyle}>
-                            {fridgeFreezerCard}
-                            {fridgeModesCard}
-                            {fridgeQuickActionsCard}
-                            {fridgeHardwareCard}
-                            {fridgeHumidityCard}
-                          </View>
-                        </View>
-                      ) : (
-                        <>
-                          {fridgeHeroCard}
-                          {fridgeFreezerCard}
-                          {fridgeModesCard}
-                          {fridgeQuickActionsCard}
-                          {fridgeHardwareCard}
-                          {fridgeHumidityCard}
-                        </>
-                      )}
-                    </>
+                    <FridgeDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                      fridgeHeroCard={fridgeHeroCard}
+                      fridgeFreezerCard={fridgeFreezerCard}
+                      fridgeModesCard={fridgeModesCard}
+                      fridgeQuickActionsCard={fridgeQuickActionsCard}
+                      fridgeHardwareCard={fridgeHardwareCard}
+                      fridgeHumidityCard={fridgeHumidityCard}
+                    />
                   )}
 
                   {device.kind === "fan" && (
-                    <>
-                      {isLandscapeSplit ? (
-                        <View style={landscapeGridStyle}>
-                          <View style={landscapeColumnPrimaryStyle}>
-                            {fanHeroCard}
-                          </View>
-                        <View style={landscapeColumnSecondaryStyle}>
-                          {fanOscillationCard}
-                          {fanTimerCard}
-                        </View>
-                      </View>
-                    ) : (
-                      <>
-                        {fanHeroCard}
-                        {fanOscillationCard}
-                        {fanTimerCard}
-                      </>
-                      )}
-                    </>
+                    <FanDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                      fanHeroCard={fanHeroCard}
+                      fanOscillationCard={fanOscillationCard}
+                      fanTimerCard={fanTimerCard}
+                    />
                   )}
 
                   {device.kind === "window" && (
                     <>
-                      <LinearGradient
-                        colors={[
-                          "rgba(255,255,255,0.95)",
-                          "rgba(226,236,255,0.9)",
-                          "rgba(214,224,255,0.86)",
-                        ]}
-                        start={{ x: 0.1, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={windowHeroCardStyle}
-                      >
-                        <View style={windowHeroHeaderStyle}>
-                          <View style={styles.windowHeroTitleWrap}>
-                            <Text style={styles.windowHeroTitle}>
-                              {device.name}
-                            </Text>
-                            <Text style={styles.windowHeroSub}>
-                              {openStatusText}
-                            </Text>
-                          </View>
-                          <View
-                            style={windowHeroPillStyle(openDisplayValue > 0)}
-                          >
-                            <Ionicons
-                              name={
-                                openDisplayValue > 0 ? "leaf" : "lock-closed"
-                              }
-                              size={14}
-                              color={
-                                openDisplayValue > 0
-                                  ? theme.colors.accent2
-                                  : stylesVars.subtext
-                              }
-                            />
-                            <Text
-                              style={windowHeroPillTextStyle(
-                                openDisplayValue > 0,
-                              )}
-                            >
-                              {windowFlowLabel}
-                            </Text>
-                          </View>
-                        </View>
-                        <View
-                          style={windowHeroBodyStyle}
-                        >
-                          <View
-                            style={windowHeroOrbStyle(isOpen)}
-                          >
-                            <LinearGradient
-                              colors={[
-                                "rgba(122,92,255,0.24)",
-                                "rgba(180,107,255,0.18)",
-                                "rgba(255,255,255,0.9)",
-                              ]}
-                              start={{ x: 0.2, y: 0.1 }}
-                              end={{ x: 1, y: 1 }}
-                              style={styles.windowHeroOrbGlow}
-                            />
-                            <AnimatedLottieView
-                              source={WINDOW_LOTTIE_SOURCE}
-                              progress={openProgress}
-                              autoPlay={false}
-                              loop={false}
-                              resizeMode="contain"
-                              style={styles.windowHeroLottie}
-                            />
-                          </View>
-                          <View style={windowHeroControlsStyle}>
-                            <View style={windowHeroMeterRowStyle}>
-                              <Text style={windowHeroMeterLabelStyle}>
-                                Ventilation
-                              </Text>
-                              <Text style={windowHeroMeterValueStyle}>
-                                {openDisplayValue}%
-                              </Text>
-                            </View>
-                            <View style={styles.windowHeroSliderWrap}>
-                              <View style={styles.windowHeroTrack}>
-                                <View
-                                  style={windowHeroTrackFillStyle}
-                                />
-                              </View>
-                              <Slider
-                                value={openDisplayValue}
-                                minimumValue={0}
-                                maximumValue={100}
-                                step={1}
-                                onSlidingComplete={(value) =>
-                                  sendPatch({
-                                    openPercent: clamp(value, 0, 100),
-                                    isOn: value > 0,
-                                  })
-                                }
-                                minimumTrackTintColor="transparent"
-                                maximumTrackTintColor="transparent"
-                                thumbTintColor="rgba(255,255,255,0.92)"
-                                style={styles.windowHeroSlider}
-                              />
-                            </View>
-                            <Text style={windowHeroHintStyle}>
-                              {windowFlowHint}
-                            </Text>
-                            {isWindowTabletPortrait && (
-                              <View style={styles.windowQuickSetWrap}>
-                                <View style={styles.windowQuickSetHeader}>
-                                  <Ionicons
-                                    name="flash"
-                                    size={14}
-                                    color={stylesVars.subtext}
-                                  />
-                                  <Text style={styles.windowQuickSetLabel}>
-                                    Quick set
-                                  </Text>
-                                </View>
-                                <View style={windowQuickSetRowStyle}>
-                                  {[
-                                    { label: "Open", value: 100, icon: "arrow-up-circle" },
-                                    { label: "Vent", value: 25, icon: "leaf" },
-                                    { label: "Close", value: 0, icon: "lock-closed" },
-                                  ].map((preset) => {
-                                    const active = openPercent === preset.value;
-                                    return (
-                                      <Pressable
-                                        key={preset.label}
-                                        style={windowQuickSetButtonStyle(active)}
-                                        onPress={() =>
-                                          sendPatch({
-                                            openPercent: preset.value,
-                                            isOn: preset.value > 0,
-                                          })
-                                        }
-                                      >
-                                        <Ionicons
-                                          name={preset.icon as any}
-                                          size={windowQuickSetIconSize}
-                                          color={
-                                            active ? "#fff" : stylesVars.subtext
-                                          }
-                                        />
-                                        <Text style={windowQuickSetTextStyle(active)}>
-                                          {preset.label}
-                                        </Text>
-                                      </Pressable>
-                                    );
-                                  })}
-                                </View>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                      </LinearGradient>
-
-                      {!isWindowTabletPortrait && (
-                        <View style={controlCardStyle}>
-                          <Text style={styles.cardLabel}>Quick set</Text>
-                          <View style={windowQuickSetRowStyle}>
-                            {[
-                              { label: "Open", value: 100, icon: "arrow-up-circle" },
-                              { label: "Vent", value: 25, icon: "leaf" },
-                              { label: "Close", value: 0, icon: "lock-closed" },
-                            ].map((preset) => {
-                              const active = openPercent === preset.value;
-                              return (
-                                <Pressable
-                                  key={preset.label}
-                                  style={windowQuickSetButtonStyle(active)}
-                                  onPress={() =>
-                                    sendPatch({
-                                      openPercent: preset.value,
-                                      isOn: preset.value > 0,
-                                    })
-                                  }
-                                >
-                                  <Ionicons
-                                    name={preset.icon as any}
-                                    size={windowQuickSetIconSize}
-                                    color={
-                                      active ? "#fff" : stylesVars.subtext
-                                    }
-                                  />
-                                  <Text style={windowQuickSetTextStyle(active)}>
-                                    {preset.label}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-                        </View>
-                      )}
+                      <WindowDetailSection
+                        device={device}
+                        isWindowTabletPortrait={isWindowTabletPortrait}
+                        isOpen={isOpen}
+                        openDisplayValue={openDisplayValue}
+                        openPercent={openPercent}
+                        openProgress={openProgress}
+                        openStatusText={openStatusText}
+                        windowFlowLabel={windowFlowLabel}
+                        windowFlowHint={windowFlowHint}
+                        windowHeroCardStyle={windowHeroCardStyle}
+                        windowHeroHeaderStyle={windowHeroHeaderStyle}
+                        windowHeroTitleWrapStyle={styles.windowHeroTitleWrap}
+                        windowHeroTitleStyle={styles.windowHeroTitle}
+                        windowHeroSubStyle={styles.windowHeroSub}
+                        windowHeroPillStyle={windowHeroPillStyle}
+                        windowHeroPillTextStyle={windowHeroPillTextStyle}
+                        windowHeroBodyStyle={windowHeroBodyStyle}
+                        windowHeroOrbStyle={windowHeroOrbStyle}
+                        windowHeroOrbGlowStyle={styles.windowHeroOrbGlow}
+                        windowHeroLottieStyle={styles.windowHeroLottie}
+                        windowHeroControlsStyle={windowHeroControlsStyle}
+                        windowHeroMeterRowStyle={windowHeroMeterRowStyle}
+                        windowHeroMeterLabelStyle={windowHeroMeterLabelStyle}
+                        windowHeroMeterValueStyle={windowHeroMeterValueStyle}
+                        windowHeroSliderWrapStyle={styles.windowHeroSliderWrap}
+                        windowHeroTrackStyle={styles.windowHeroTrack}
+                        windowHeroTrackFillStyle={windowHeroTrackFillStyle}
+                        windowHeroSliderStyle={styles.windowHeroSlider}
+                        windowHeroHintStyle={windowHeroHintStyle}
+                        windowQuickSetWrapStyle={styles.windowQuickSetWrap}
+                        windowQuickSetHeaderStyle={styles.windowQuickSetHeader}
+                        windowQuickSetLabelStyle={styles.windowQuickSetLabel}
+                        windowQuickSetRowStyle={windowQuickSetRowStyle}
+                        windowQuickSetButtonStyle={windowQuickSetButtonStyle}
+                        windowQuickSetTextStyle={windowQuickSetTextStyle}
+                        windowQuickSetIconSize={windowQuickSetIconSize}
+                        quickSetIconColor={stylesVars.subtext}
+                        quickSetIconActiveColor="#fff"
+                        pillIconColor={stylesVars.subtext}
+                        pillIconActiveColor={theme.colors.accent2}
+                        showQuickSetCard={!isWindowTabletPortrait}
+                        controlCardStyle={controlCardStyle}
+                        cardLabelStyle={styles.cardLabel}
+                        onSetOpenPercent={(value) =>
+                          sendPatch({
+                            openPercent: clamp(value, 0, 100),
+                            isOn: value > 0,
+                          })
+                        }
+                        onQuickSet={(value) =>
+                          sendPatch({
+                            openPercent: value,
+                            isOn: value > 0,
+                          })
+                        }
+                        windowLottieSource={WINDOW_LOTTIE_SOURCE}
+                      />
                     </>
                   )}
 
                   {device.kind === "vacuum" &&
-                    (isLandscapeSplit ? (
-                      <>
-                        <View style={landscapeColumnGapStyle}>
-                          {vacuumHeroCard}
-                        </View>
-                        <View style={landscapeColumnGapStyle}>
-                          {vacuumControlCards}
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {vacuumHeroCard}
-                        {vacuumControlCards}
-                      </>
-                    ))}
+                    (
+                      <VacuumDetailSection
+                        isLandscapeSplit={isLandscapeSplit}
+                        landscapeColumnGapStyle={landscapeColumnGapStyle}
+                        vacuumHeroCard={vacuumHeroCard}
+                        vacuumControlCards={vacuumControlCards}
+                      />
+                    )}
 
                   {device.kind === "camera" &&
-                    (isLandscapeSplit ? (
-                      <>
-                        <View style={landscapeColumnGapStyle}>
-                          {cameraHeroCard}
-                          {cameraRecognizeCard}
-                        </View>
-                        <View style={landscapeColumnGapStyle}>
-                          {cameraControlCardsLandscapeRight}
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {cameraHeroCard}
-                        {cameraControlCardsPortrait}
-                      </>
-                    ))}
+                    (
+                      <CameraDetailSection
+                        isLandscapeSplit={isLandscapeSplit}
+                        landscapeColumnGapStyle={landscapeColumnGapStyle}
+                        cameraHeroCard={cameraHeroCard}
+                        cameraRecognizeCard={cameraRecognizeCard}
+                        cameraControlCardsLandscapeRight={cameraControlCardsLandscapeRight}
+                        cameraControlCardsPortrait={cameraControlCardsPortrait}
+                      />
+                    )}
 
                   {device.kind === "stove" && (
-                    <>
-                      {isLandscapeSplit ? (
-                        <View style={landscapeGridStyle}>
-                          <View style={landscapeColumnPrimaryStyle}>
-                            {stoveHeroCard}
-                          </View>
-                          <View style={landscapeColumnSecondaryStyle}>
-                            <View style={controlCardStyle}>
-                              <Text style={styles.cardLabel}>Mode</Text>
-                              <View style={styles.chipRow}>
-                                {stoveModeOptions.map((preset) => {
-                                  const active = stoveMode === preset.value;
-                                  return (
-                                    <Pressable
-                                      key={preset.value}
-                                      style={chipStyle(active)}
-                                      onPress={() =>
-                                        sendPatch({ stoveMode: preset.value })
-                                      }
-                                    >
-                                      <Text
-                                        style={chipTextStyle(active)}
-                                      >
-                                        {preset.label}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
-                              </View>
-                            </View>
-
-                            <View style={controlCardStyle}>
-                              <Text style={styles.cardLabel}>Timer</Text>
-                              <View style={styles.chipRow}>
-                                {[0, 5, 10, 20, 30].map((value) => {
-                                  const active = stoveTimer === value;
-                                  const label =
-                                    value === 0 ? "Off" : `${value} min`;
-                                  return (
-                                    <Pressable
-                                      key={value}
-                                      style={chipStyle(active)}
-                                      onPress={() =>
-                                        sendPatch({ stoveTimerMin: value })
-                                      }
-                                    >
-                                      <Text
-                                        style={chipTextStyle(active)}
-                                      >
-                                        {label}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
-                              </View>
-                              <Text style={styles.budgetHint}>
-                                {stoveTimer
-                                  ? `Auto-off in ${stoveTimer} min`
-                                  : "No timer set"}
-                              </Text>
-                            </View>
-
-                            <View style={controlCardStyle}>
-                              <Text style={styles.cardLabel}>Safety</Text>
-                              <View style={controlCardRowTopStyle}>
-                                <Pressable
-                                  style={controlPillStyle(stoveLock)}
-                                  onPress={() =>
-                                    sendPatch({ stoveLock: !stoveLock })
-                                  }
-                                >
-                                  <Text
-                                    style={controlPillTextStyle(stoveLock)}
-                                  >
-                                    {stoveLock ? "Child Lock" : "Lock Off"}
-                                  </Text>
-                                </Pressable>
-                              </View>
-                            </View>
-                          </View>
-                        </View>
-                      ) : (
-                        <>
-                          {stoveHeroCard}
-
-                          <View style={controlCardStyle}>
-                            <Text style={styles.cardLabel}>Mode</Text>
-                            <View style={styles.chipRow}>
-                              {stoveModeOptions.map((preset) => {
-                                const active = stoveMode === preset.value;
-                                return (
-                                  <Pressable
-                                    key={preset.value}
-                                    style={chipStyle(active)}
-                                    onPress={() =>
-                                      sendPatch({ stoveMode: preset.value })
-                                    }
-                                  >
-                                    <Text
-                                      style={chipTextStyle(active)}
-                                    >
-                                      {preset.label}
-                                    </Text>
-                                  </Pressable>
-                                );
-                              })}
-                            </View>
-                          </View>
-
-                          <View style={controlCardStyle}>
-                            <Text style={styles.cardLabel}>Timer</Text>
-                            <View style={styles.chipRow}>
-                              {[0, 5, 10, 20, 30].map((value) => {
-                                const active = stoveTimer === value;
-                                const label =
-                                  value === 0 ? "Off" : `${value} min`;
-                                return (
-                                  <Pressable
-                                    key={value}
-                                    style={chipStyle(active)}
-                                    onPress={() =>
-                                      sendPatch({ stoveTimerMin: value })
-                                    }
-                                  >
-                                    <Text
-                                      style={chipTextStyle(active)}
-                                    >
-                                      {label}
-                                    </Text>
-                                  </Pressable>
-                                );
-                              })}
-                            </View>
-                            <Text style={styles.budgetHint}>
-                              {stoveTimer
-                                ? `Auto-off in ${stoveTimer} min`
-                                : "No timer set"}
-                            </Text>
-                          </View>
-
-                          <View style={controlCardStyle}>
-                            <Text style={styles.cardLabel}>Safety</Text>
-                            <View style={controlCardRowTopStyle}>
-                              <Pressable
-                                style={controlPillStyle(stoveLock)}
-                                onPress={() =>
-                                  sendPatch({ stoveLock: !stoveLock })
-                                }
-                              >
-                                <Text
-                                  style={controlPillTextStyle(stoveLock)}
-                                >
-                                  {stoveLock ? "Child Lock" : "Lock Off"}
-                                </Text>
-                              </Pressable>
-                            </View>
-                          </View>
-                        </>
-                      )}
-                    </>
+                    <StoveDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                      controlCardStyle={controlCardStyle}
+                      controlCardRowTopStyle={controlCardRowTopStyle}
+                      cardLabelStyle={styles.cardLabel}
+                      chipRowStyle={chipRowStyle}
+                      chipStyle={chipStyle}
+                      chipTextStyle={chipTextStyle}
+                      budgetHintStyle={styles.budgetHint}
+                      controlPillStyle={controlPillStyle}
+                      controlPillTextStyle={controlPillTextStyle}
+                      stoveHeroCard={stoveHeroCard}
+                      stoveModeOptions={stoveModeOptions}
+                      stoveMode={stoveMode}
+                      stoveTimer={stoveTimer}
+                      stoveLock={stoveLock}
+                      onSetMode={(value) =>
+                        sendPatch({ stoveMode: value as Device["stoveMode"] })
+                      }
+                      onSetTimer={(value) => sendPatch({ stoveTimerMin: value })}
+                      onToggleLock={() => sendPatch({ stoveLock: !stoveLock })}
+                    />
                   )}
 
                   {(device.kind === "washer" || device.kind === "dryer") &&
-                    (isTabletLandscape ? (
-                      <>
-                        <View style={landscapeColumnGapStyle}>
-                          {laundryHeroCard}
-                          {laundryActionRow}
-                          {laundryCycleCard}
-                          {laundryLoadSizeCard}
-                        </View>
-                        <View
-                          style={[
-                            landscapeColumnGapStyle,
-                            styles.laundryControlGrid,
-                          ]}
-                        >
-                          {laundryControlCards}
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {laundryHeroCard}
-                        {laundryControlCards}
-                        {laundryActionRow}
-                      </>
-                    ))}
+                    (
+                      <LaundryDetailSection
+                        isTabletLandscape={isTabletLandscape}
+                        landscapeColumnGapStyle={landscapeColumnGapStyle}
+                        laundryControlGridStyle={[
+                          landscapeColumnGapStyle,
+                          styles.laundryControlGrid,
+                        ]}
+                        laundryHeroCard={laundryHeroCard}
+                        laundryActionRow={laundryActionRow}
+                        laundryCycleCard={laundryCycleCard}
+                        laundryLoadSizeCard={laundryLoadSizeCard}
+                        laundryControlCards={laundryControlCards}
+                      />
+                    )}
 
                   {device.kind === "microwave" && (
-                    <>
-                      {isLandscapeSplit ? (
-                        <View style={landscapeGridStyle}>
-                          <View style={landscapeColumnPrimaryStyle}>
-                            {microwaveHeroCard}
-                          </View>
-                          <View style={landscapeColumnSecondaryStyle}>
-                            {microwaveModeCard}
-                            {microwavePowerCard}
-                          </View>
-                        </View>
-                      ) : (
-                        <>
-                          {microwaveHeroCard}
-                          {microwaveModeCard}
-                          {microwavePowerCard}
-                        </>
-                      )}
-                    </>
+                    <MicrowaveDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                      microwaveHeroCard={microwaveHeroCard}
+                      microwaveModeCard={microwaveModeCard}
+                      microwavePowerCard={microwavePowerCard}
+                    />
                   )}
 
                   {device.kind === "energy" && (
-                    <>
-                      <LinearGradient
-                        colors={[
-                          "rgba(255,255,255,0.96)",
-                          "rgba(224,236,255,0.9)",
-                          "rgba(204,218,255,0.86)",
-                        ]}
-                        start={{ x: 0.1, y: 0.05 }}
-                        end={{ x: 1, y: 1 }}
-                        style={energyHeroCardStyle}
-                      >
-                        <View style={energyHeroHeaderStyle}>
-                          <View style={styles.energyHeroTitleWrap}>
-                            <Text style={styles.energyHeroTitle}>
-                              {device.name}
-                            </Text>
-                            <Text style={styles.energyHeroSub}>
-                              {powerOutage
-                                ? "Grid outage detected"
-                                : "Live energy flow"}
-                            </Text>
-                          </View>
-                          <View style={styles.energyHeroPillRow}>
-                            <View style={energyHeroPillStyle(!powerOutage)}>
-                              <Ionicons
-                                name={powerOutage ? "alert-circle" : "flash"}
-                                size={14}
-                                color={
-                                  powerOutage
-                                    ? "#D8465B"
-                                    : theme.colors.accent2
-                                }
-                              />
-                              <Text
-                                style={energyHeroPillTextStyle(!powerOutage)}
-                              >
-                                {powerOutage ? "Outage" : "Grid Online"}
-                              </Text>
-                            </View>
-                            <View style={energyHeroPillStyle(solarActive)}>
-                              <Ionicons
-                                name={solarActive ? "sunny" : "sunny-outline"}
-                                size={14}
-                                color={
-                                  solarActive ? "#D6A545" : stylesVars.subtext
-                                }
-                              />
-                              <Text style={energyHeroPillTextStyle(solarActive)}>
-                                {solarActive ? "Solar Active" : "Solar Idle"}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-
-                        <View style={energyHeroBodyStyle}>
-                          <View style={energyHeroOrbStyle}>
-                            <LinearGradient
-                              colors={[
-                                "rgba(122,92,255,0.24)",
-                                "rgba(180,107,255,0.18)",
-                                "rgba(255,255,255,0.9)",
-                              ]}
-                              start={{ x: 0.2, y: 0.1 }}
-                              end={{ x: 1, y: 1 }}
-                              style={styles.energyHeroOrbGlow}
-                            />
-                            <View
-                              pointerEvents="none"
-                              style={styles.energyLottieLayer}
-                            >
-                              <LottieView
-                                source={ENERGY_LOTTIE_SOURCE}
-                                autoPlay
-                                loop
-                                resizeMode="contain"
-                                style={styles.energyLottie}
-                              />
-                            </View>
-                          </View>
-                          <View style={energyHeroInfoStyle}>
-                            <View style={energyHeroStatsRowStyle}>
-                              {[
-                                { label: "Now", value: `${energyPower}W` },
-                                { label: "Today", value: `${energyToday} kWh` },
-                                { label: "Peak", value: `${energyPeak}W` },
-                              ].map((stat) => (
-                                <View
-                                  key={stat.label}
-                                  style={styles.energyHeroStat}
-                                >
-                                  <Text style={energyHeroStatValueStyle}>
-                                    {stat.value}
-                                  </Text>
-                                  <Text style={energyHeroStatLabelStyle}>
-                                    {stat.label}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                            <View
-                              style={[
-                                energyHeroStatsRowStyle,
-                                styles.energyHeroStatsRowCompact,
-                              ]}
-                            >
-                              {[
-                                {
-                                  label: "Solar now",
-                                  value: `${solarW}W`,
-                                  active: solarW > 0,
-                                },
-                                {
-                                  label: "Solar today",
-                                  value: `${solarToday} kWh`,
-                                  active: solarToday > 0,
-                                },
-                                {
-                                  label: "Grid",
-                                  value: `${gridToday} kWh`,
-                                  active: !powerOutage,
-                                },
-                              ].map((stat) => (
-                                <View
-                                  key={stat.label}
-                                  style={[
-                                    styles.energyHeroStat,
-                                    stat.active && styles.energyHeroStatActive,
-                                  ]}
-                                >
-                                  <Text style={energyHeroStatValueStyle}>
-                                    {stat.value}
-                                  </Text>
-                                  <Text style={energyHeroStatLabelStyle}>
-                                    {stat.label}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                            <View style={styles.energyHeroProgressWrap}>
-                              <View style={energyHeroProgressTrackStyle}>
-                                <View style={energyHeroProgressFillStyle} />
-                              </View>
-                              <View style={styles.energyHeroProgressMeta}>
-                                <Text style={energyHeroMetaTextStyle}>
-                                  {energyBudget
-                                    ? `${energyMonth} / ${energyBudget} kWh`
-                                    : `${energyMonth} kWh this month`}
-                                </Text>
-                                <Text style={energyHeroMetaTextStyle}>
-                                  ${energyCostToday.toFixed(2)} today
-                                </Text>
-                              </View>
-                            </View>
-                            <Text style={styles.energyHeroHint}>
-                              {solarActive
-                                ? "Solar feeding the home"
-                                : "Solar idle"}
-                            </Text>
-                          </View>
-                        </View>
-                      </LinearGradient>
-
-                      <View style={styles.energySideColumn}>
-                        <View style={controlCardStyle}>
-                          <Text style={styles.cardLabel}>Main power</Text>
-                          <View style={controlCardRowTopStyle}>
-                            <Pressable
-                              style={controlPillStyle(gridAvailable)}
-                              onPress={() =>
-                                sendPatch({ gridAvailable: true })
-                              }
-                            >
-                              <Text
-                                style={controlPillTextStyle(gridAvailable)}
-                              >
-                                Online
-                              </Text>
-                            </Pressable>
-                            <Pressable
-                              style={controlPillStyle(!gridAvailable)}
-                              onPress={() =>
-                                sendPatch({ gridAvailable: false })
-                              }
-                            >
-                              <Text
-                                style={controlPillTextStyle(!gridAvailable)}
-                              >
-                                Outage
-                              </Text>
-                            </Pressable>
-                            <Pressable
-                              style={controlPillStyle(gridOutageAlerts)}
-                              onPress={() =>
-                                sendPatch({
-                                  gridOutageAlerts: !gridOutageAlerts,
-                                })
-                              }
-                            >
-                              <Text
-                                style={controlPillTextStyle(gridOutageAlerts)}
-                              >
-                                {gridOutageAlerts
-                                  ? "Alerts On"
-                                  : "Alerts Off"}
-                              </Text>
-                            </Pressable>
-                          </View>
-                        {powerOutage && (
-                          <View style={styles.alertRow}>
-                            <Ionicons
-                              name="alert-circle"
-                              size={14}
-                              color="#D8465B"
-                            />
-                            <Text style={styles.alertText}>
-                              Main power offline
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-
-                      {isLandscape && (
-                        <View style={{ height: energyCardGap }} />
-                      )}
-
-                      <View style={energyBudgetCardStyle}>
-                        <Text style={styles.cardLabel}>Monthly budget</Text>
-                        <View style={styles.chipRow}>
-                          {[80, 120, 160].map((value) => {
-                            const active = energyBudget === value;
-                            return (
-                                <Pressable
-                                  key={value}
-                                  style={chipStyle(active)}
-                                  onPress={() =>
-                                    sendPatch({ energyBudgetKwh: value })
-                                  }
-                                >
-                                  <Text style={chipTextStyle(active)}>
-                                    {value} kWh
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-                          <Text style={styles.budgetHint}>
-                            {energyBudget
-                              ? `${energyMonth} / ${energyBudget} kWh used`
-                              : `${energyMonth} kWh this month`}
-                          </Text>
-                        </View>
-
-                        <View style={styles.metricRow}>
-                          <View style={styles.metricCard}>
-                            <Text style={styles.metricValue}>
-                              {energyMonth} kWh
-                            </Text>
-                            <Text style={styles.metricLabel}>This month</Text>
-                          </View>
-                          <View style={styles.metricCard}>
-                            <Text style={styles.metricValue}>
-                              ${energyCostToday.toFixed(2)}
-                            </Text>
-                            <Text style={styles.metricLabel}>Today cost</Text>
-                          </View>
-                        </View>
-                      </View>
-                    </>
+                    <EnergyDetailSection
+                      energyHeroCard={energyHeroCard}
+                      energySideColumn={energySideColumn}
+                      energyBudgetCard={energyBudgetCard}
+                      isLandscape={isLandscape}
+                      energyCardGap={energyCardGap}
+                    />
                   )}
 
                   {device.kind === "water" &&
-                    (isLandscape ? (
-                      <View style={landscapeGridStyle}>
-                        <View style={landscapeColumnPrimaryStyle}>
-                          {waterHeroCard}
-                        </View>
-                        <View style={landscapeColumnSecondaryStyle}>
-                          {waterBudgetCard}
-                          {waterPressureCard}
-                          {waterSafetyCard}
-                        </View>
-                      </View>
-                    ) : (
-                      <>
-                        {waterHeroCard}
-                        {waterBudgetCard}
-                        {waterPressureCard}
-                        {waterSafetyCard}
-                      </>
-                    ))}
+                    (
+                      <WaterDetailSection
+                        isLandscape={isLandscape}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                        waterHeroCard={waterHeroCard}
+                        waterBudgetCard={waterBudgetCard}
+                        waterPressureCard={waterPressureCard}
+                        waterSafetyCard={waterSafetyCard}
+                      />
+                    )}
 
                   {device.kind === "water-heater" && (
-                    <>
-                      <RadialDial
-                        size={compactDialSize}
-                        value={heaterTemp}
-                        min={40}
-                        max={70}
-                        tickValues={[40, 45, 50, 55, 60, 65, 70]}
-                        centerLabel="Setpoint"
-                        centerIcon={
-                          <View style={marginBottom6Style}>
-                            <Ionicons
-                              name="thermometer"
-                              size={28}
-                              color={stylesVars.ink}
-                            />
-                          </View>
-                        }
-                        formatTick={(v) => `${v}`}
-                        formatValue={(v) => `${v}°C`}
-                        formatCenterValue={(v) => `${v}°C`}
-                        dimmed={!device.isOn}
-                        onChange={(v) =>
-                          sendPatch({ tempC: clamp(v, 40, 70), isOn: true })
-                        }
-                      />
-                      <Text style={styles.heaterStatusText}>{heaterStatus}</Text>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Heater type</Text>
-                        <View style={styles.chipRow}>
-                          {heaterTypeOptions.map((option) => {
-                            const active = heaterType === option.value;
-                            return (
-                              <Pressable
-                                key={option.value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ waterHeaterType: option.value })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {option.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Mode</Text>
-                        <View style={styles.chipRow}>
-                          {heaterModeOptions.map((option) => {
-                            const active = heaterMode === option.value;
-                            return (
-                              <Pressable
-                                key={option.value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ heaterMode: option.value })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {option.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Smart features</Text>
-                        <View style={controlCardRowTopStyle}>
-                          <Pressable
-                            style={controlPillStyle(heaterScheduleEnabled)}
-                            onPress={() =>
-                              sendPatch({
-                                heaterScheduleEnabled: !heaterScheduleEnabled,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(heaterScheduleEnabled)}
-                            >
-                              {heaterScheduleEnabled
-                                ? "Schedule"
-                                : "Schedule Off"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={controlPillStyle(heaterSanitize)}
-                            onPress={() =>
-                              sendPatch({ antiLegionella: !heaterSanitize })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(heaterSanitize)}
-                            >
-                              {heaterSanitize ? "Sanitize" : "Sanitize Off"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                        {showRecirculation && (
-                          <View
-                            style={controlCardRowTightStyle}
-                          >
-                            <Pressable
-                              style={controlPillStyle(heaterRecirculation)}
-                              onPress={() =>
-                                sendPatch({
-                                  recirculation: !heaterRecirculation,
-                                })
-                              }
-                            >
-                              <Text
-                                style={controlPillTextStyle(heaterRecirculation)}
-                              >
-                                {heaterRecirculation
-                                  ? "Recirculation"
-                                  : "Recirc Off"}
-                              </Text>
-                            </Pressable>
-                          </View>
-                        )}
-                        <Text style={styles.budgetHint}>
-                          {heaterType === "tankless"
-                            ? "Recirculation keeps hot water ready."
-                            : "Schedules reduce standby heat loss."}
-                        </Text>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Vacation</Text>
-                        <View style={styles.chipRow}>
-                          {[0, 3, 7, 14, 30].map((value) => {
-                            const active = heaterVacationDays === value;
-                            return (
-                              <Pressable
-                                key={value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({ vacationDays: value })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {value === 0 ? "Off" : `${value}d`}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                        <Text style={styles.budgetHint}>
-                          {heaterMode === "vacation"
-                            ? heaterVacationDays > 0
-                              ? `Vacation mode set for ${heaterVacationDays} days.`
-                              : "Vacation mode active."
-                            : "Set days, then enable Vacation mode."}
-                        </Text>
-                      </View>
-                    </>
+                    <WaterHeaterDetailSection
+                      isOn={device.isOn}
+                      compactDialSize={compactDialSize}
+                      heaterTemp={heaterTemp}
+                      heaterStatus={heaterStatus}
+                      heaterMode={heaterMode}
+                      heaterType={heaterType}
+                      heaterModeOptions={heaterModeOptions}
+                      heaterTypeOptions={heaterTypeOptions}
+                      heaterVacationDays={heaterVacationDays}
+                      heaterScheduleEnabled={heaterScheduleEnabled}
+                      heaterSanitize={heaterSanitize}
+                      heaterRecirculation={heaterRecirculation}
+                      showRecirculation={showRecirculation}
+                      controlCardStyle={controlCardStyle}
+                      controlCardRowTopStyle={controlCardRowTopStyle}
+                      controlCardRowTightStyle={controlCardRowTightStyle}
+                      cardLabelStyle={styles.cardLabel}
+                      chipRowStyle={styles.chipRow}
+                      chipStyle={chipStyle}
+                      chipTextStyle={chipTextStyle}
+                      controlPillStyle={controlPillStyle}
+                      controlPillTextStyle={controlPillTextStyle}
+                      heaterStatusTextStyle={styles.heaterStatusText}
+                      budgetHintStyle={styles.budgetHint}
+                      onSetTemp={(value) =>
+                        sendPatch({ tempC: clamp(value, 40, 70), isOn: true })
+                      }
+                      onSetType={(value) =>
+                        sendPatch({
+                          waterHeaterType: value as Device["waterHeaterType"],
+                        })
+                      }
+                      onSetMode={(value) =>
+                        sendPatch({ heaterMode: value as Device["heaterMode"] })
+                      }
+                      onToggleSchedule={() =>
+                        sendPatch({
+                          heaterScheduleEnabled: !heaterScheduleEnabled,
+                        })
+                      }
+                      onToggleSanitize={() =>
+                        sendPatch({ antiLegionella: !heaterSanitize })
+                      }
+                      onToggleRecirculation={() =>
+                        sendPatch({ recirculation: !heaterRecirculation })
+                      }
+                      onSetVacation={(value) =>
+                        sendPatch({ vacationDays: value })
+                      }
+                      marginBottom6Style={marginBottom6Style}
+                      iconColor={stylesVars.ink}
+                    />
                   )}
 
                   {device.kind === "air" && (
-                    <>
-                      <LinearGradient
-                        colors={[
-                          "rgba(255,255,255,0.98)",
-                          "rgba(236,242,255,0.92)",
-                          "rgba(222,230,255,0.88)",
-                        ]}
-                        start={{ x: 0.05, y: 0.05 }}
-                        end={{ x: 1, y: 1 }}
-                        style={airHeroCardStyle}
-                      >
-                        <View
-                          style={airHeroGlowStyle}
-                          pointerEvents="none"
-                        />
-                        <View style={styles.airHeroHeader}>
-                          <View>
-                            <Text style={styles.airHeroTitle}>Air Quality</Text>
-                            <Text style={styles.airHeroSub}>
-                              {(roomLookup.get(device.roomId) ?? "Room") +
-                                " Sensor"}
-                            </Text>
-                          </View>
-                          <View
-                            style={airHeroBadgeStyle}
-                          >
-                            <View
-                              style={airHeroBadgeDotStyle}
-                            />
-                            <Text
-                              style={airHeroBadgeTextStyle}
-                            >
-                              {airBand.label}
-                            </Text>
-                          </View>
-                        </View>
-                        <View
-                          style={airHeroBodyStyle}
-                        >
-                          <View
-                            style={airHeroScoreStyle}
-                          >
-                            <Text
-                              style={airHeroLabelStyle}
-                            >
-                              AQI
-                            </Text>
-                            <Text
-                              style={airHeroValueStyle}
-                            >
-                              {airQuality > 0 ? airQuality : "--"}
-                            </Text>
-                            <Text style={styles.airHeroDescriptor}>
-                              {airBand.label}
-                            </Text>
-                            <View style={styles.airHeroMetaRow}>
-                              <View style={styles.airHeroMetaPill}>
-                                <Ionicons
-                                  name="water"
-                                  size={12}
-                                  color={stylesVars.subtext}
-                                />
-                                <Text style={styles.airHeroMetaText}>
-                                  {formatMetric(humidity, "%")}
-                                </Text>
-                              </View>
-                              <View style={styles.airHeroMetaPill}>
-                                <Ionicons
-                                  name="thermometer"
-                                  size={12}
-                                  color={stylesVars.subtext}
-                                />
-                                <Text style={styles.airHeroMetaText}>
-                                  {formatMetric(
-                                    device.tempC ?? roomTemp,
-                                    "C",
-                                    1,
-                                  )}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                          <View style={styles.airHeroGaugeWrap}>
-                            <View
-                              style={airHeroGaugeRingStyle}
-                            >
-                              <LinearGradient
-                                colors={[airBand.color, "rgba(255,255,255,0.92)"]}
-                                start={{ x: 0.2, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.airHeroGaugeInner}
-                              >
-                                <Ionicons name="leaf" size={24} color="#fff" />
-                                <Text
-                                  style={airHeroGaugeValueStyle}
-                                >
-                                  {airConfidence}%
-                                </Text>
-                                <Text
-                                  style={airHeroGaugeLabelStyle}
-                                >
-                                  Confidence
-                                </Text>
-                              </LinearGradient>
-                            </View>
-                            <Text style={styles.airHeroUpdated}>
-                              Updated{" "}
-                              {airLastUpdatedAt
-                                ? formatTimeAgo(airLastUpdatedAt)
-                                : "just now"}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.airHeroMetricRow}>
-                          {[
-                            {
-                              label: "CO2",
-                              value: formatMetric(airCo2, "ppm"),
-                            },
-                            {
-                              label: "PM2.5",
-                              value: formatMetric(airPm25, "ug/m3"),
-                            },
-                            {
-                              label: "VOC",
-                              value: formatMetric(airVoc, "ppb"),
-                            },
-                          ].map((metric) => (
-                            <View
-                              key={`air-hero-${metric.label}`}
-                              style={styles.airHeroMetric}
-                            >
-                              <Text style={styles.airHeroMetricValue}>
-                                {metric.value}
-                              </Text>
-                              <Text style={styles.airHeroMetricLabel}>
-                                {metric.label}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      </LinearGradient>
-
-                      <View style={airTrendCardStyle}>
-                        <View style={styles.airTrendHeader}>
-                          <Text style={styles.cardLabel}>24h trend</Text>
-                          <View
-                            style={airTrendPillStyle}
-                          >
-                            <Ionicons
-                              name={airTrendIcon as keyof typeof Ionicons.glyphMap}
-                              size={14}
-                              color={airBand.color}
-                            />
-                            <Text style={styles.airTrendText}>
-                              {airTrendLabel}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.airTrendChartFrame}>
-                          <View style={styles.airChart}>
-                            {airSeriesAqi.map((value, index) => {
-                              const height = Math.max(
-                                6,
-                                Math.round(
-                                  (value / airChartMax) * (isTablet ? 80 : 64),
-                                ),
-                              );
-                              const band = resolveAirBand(value);
-                              return (
-                                <View
-                                  key={`air-bar-${index}`}
-                                  style={airChartBarStyle(
-                                    height,
-                                    band.color,
-                                    index === airSeriesAqi.length - 1 ? 1 : 0.6,
-                                  )}
-                                />
-                              );
-                            })}
-                          </View>
-                        </View>
-                        <View style={styles.airLegendRow}>
-                          {AIR_QUALITY_BANDS.slice(0, 3).map((band) => (
-                            <View
-                              key={`air-legend-${band.label}`}
-                              style={styles.airLegendItem}
-                            >
-                              <View
-                                style={airLegendDotStyle(band.color)}
-                              />
-                              <Text style={styles.airLegendText}>
-                                {band.label}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                        <Text style={styles.airTrendUpdated}>
-                          Updated{" "}
-                          {airLastUpdatedAt
-                            ? formatTimeAgo(airLastUpdatedAt)
-                            : "just now"}
-                        </Text>
-                      </View>
-
-                      <View style={styles.airMetricGrid}>
-                        {[
-                          {
-                            label: "PM2.5",
-                            value: formatMetric(airPm25, "ug/m3"),
-                          },
-                          {
-                            label: "PM10",
-                            value: formatMetric(airPm10, "ug/m3"),
-                          },
-                          {
-                            label: "CO2",
-                            value: formatMetric(airCo2, "ppm"),
-                          },
-                          {
-                            label: "VOC",
-                            value: formatMetric(airVoc, "ppb"),
-                          },
-                          {
-                            label: "HCHO",
-                            value: formatMetric(airFormaldehyde, "mg/m3", 2),
-                          },
-                          {
-                            label: "Pollen",
-                            value: formatMetric(airPollen, "idx", 1),
-                          },
-                          {
-                            label: "Temp",
-                            value: formatMetric(
-                              device.tempC ?? roomTemp,
-                              "C",
-                              1,
-                            ),
-                          },
-                          {
-                            label: "Humidity",
-                            value: formatMetric(humidity, "%"),
-                          },
-                          {
-                            label: "AQI",
-                            value: airQuality > 0 ? `${airQuality}` : "--",
-                          },
-                        ].map((metric) => (
-                          <View
-                            key={`air-metric-${metric.label}`}
-                            style={airMetricCardStyle}
-                          >
-                            <Text style={styles.airMetricValue}>
-                              {metric.value}
-                            </Text>
-                            <Text style={styles.airMetricLabel}>
-                              {metric.label}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-
-                      <View style={styles.airKpiRow}>
-                        <View style={styles.airKpiCard}>
-                          <Text style={styles.airKpiValue}>
-                            {airFilterLife}%
-                          </Text>
-                          <Text style={styles.airKpiLabel}>Filter life</Text>
-                        </View>
-                        <View style={styles.airKpiCard}>
-                          <Text style={styles.airKpiValue}>
-                            {airFilterDaysLeft} days
-                          </Text>
-                          <Text style={styles.airKpiLabel}>Replace in</Text>
-                        </View>
-                      </View>
-
-                      {airFilterLife <= 20 && (
-                        <View style={styles.airAlertCard}>
-                          <Ionicons name="warning" size={14} color="#D8465B" />
-                          <Text style={styles.airAlertText}>
-                            Replace filter soon
-                          </Text>
-                        </View>
-                      )}
-
-                      <View style={airSurfaceCardStyle}>
-                        <Text style={styles.cardLabel}>Purifier</Text>
-                        <View style={styles.chipRow}>
-                          {["auto", "manual", "sleep", "boost"].map((mode) => {
-                            const active = airPurifierMode === mode;
-                            const label =
-                              mode === "auto"
-                                ? "Auto"
-                                : mode === "manual"
-                                  ? "Manual"
-                                  : mode === "sleep"
-                                    ? "Sleep"
-                                    : "Boost";
-                            return (
-                              <Pressable
-                                key={mode}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({
-                                    airPurifierMode: mode as Device["airPurifierMode"],
-                                    isOn: true,
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                        <View style={styles.pressureSliderRow}>
-                          <Text style={styles.pressureSliderLabel}>Fan</Text>
-                          <Text style={styles.pressureSliderValue}>
-                            {airPurifierSpeed}%
-                          </Text>
-                        </View>
-                        <Slider
-                          value={airPurifierSpeed}
-                          minimumValue={0}
-                          maximumValue={100}
-                          step={1}
-                          onSlidingComplete={(value) =>
-                            sendPatch({
-                              airPurifierSpeed: Math.round(value),
-                              isOn: true,
-                            })
-                          }
-                          minimumTrackTintColor="rgba(122,92,255,0.9)"
-                          maximumTrackTintColor="rgba(12,12,18,0.12)"
-                          thumbTintColor="rgba(255,255,255,0.92)"
-                          style={styles.pressureSlider}
-                        />
-                        <View style={controlCardRowTopStyle}>
-                          <Pressable
-                            style={controlPillStyle(airIonizerEnabled)}
-                            onPress={() =>
-                              sendPatch({
-                                airIonizerEnabled: !airIonizerEnabled,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(airIonizerEnabled)}
-                            >
-                              {airIonizerEnabled ? "Ionizer" : "Ionizer Off"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={controlPillStyle(airAutoVentilation)}
-                            onPress={() =>
-                              sendPatch({
-                                airAutoVentilation: !airAutoVentilation,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(airAutoVentilation)}
-                            >
-                              {airAutoVentilation
-                                ? "Auto Vent"
-                                : "Vent Off"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </View>
-
-                      <View style={airSurfaceCardStyle}>
-                        <Text style={styles.cardLabel}>Recommendations</Text>
-                        {airRecommendations.map((item, index) => (
-                          <View
-                            key={`air-rec-${index}`}
-                            style={styles.airRecommendationRow}
-                          >
-                            <Ionicons
-                              name="sparkles"
-                              size={14}
-                              color={stylesVars.ink}
-                            />
-                            <Text style={styles.airRecommendationText}>
-                              {item}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-
-                      <View style={styles.airCompareRow}>
-                        <View style={styles.airCompareCard}>
-                          <Text style={styles.airCompareTitle}>Indoor</Text>
-                          <Text style={styles.airCompareValue}>
-                            AQI {airQuality > 0 ? airQuality : "--"}
-                          </Text>
-                          <Text style={styles.airCompareSub}>
-                            CO2 {formatMetric(airCo2, "ppm")}
-                          </Text>
-                          <Text style={styles.airCompareSub}>
-                            PM2.5 {formatMetric(airPm25, "ug/m3")}
-                          </Text>
-                          <Text style={styles.airCompareSub}>
-                            Humidity {formatMetric(humidity, "%")}
-                          </Text>
-                          <Text style={styles.airCompareSub}>
-                            Temp{" "}
-                            {formatMetric(device.tempC ?? roomTemp, "C", 1)}
-                          </Text>
-                        </View>
-                        <View style={styles.airCompareCard}>
-                          <Text style={styles.airCompareTitle}>Outdoor</Text>
-                          <Text style={styles.airCompareValue}>
-                            AQI {airOutdoorAqi > 0 ? airOutdoorAqi : "--"}
-                          </Text>
-                          <Text style={styles.airCompareSub}>
-                            CO2 {formatMetric(airOutdoorCo2, "ppm")}
-                          </Text>
-                          <Text style={styles.airCompareSub}>
-                            PM2.5 {formatMetric(airOutdoorPm25, "ug/m3")}
-                          </Text>
-                          <Text style={styles.airCompareSub}>
-                            Humidity {formatMetric(airOutdoorHumidity, "%")}
-                          </Text>
-                          <Text style={styles.airCompareSub}>
-                            Temp {formatMetric(airOutdoorTempC, "C", 1)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={airSurfaceCardStyle}>
-                        <Text style={styles.cardLabel}>Alerts</Text>
-                        <View style={controlCardRowTopStyle}>
-                          <Pressable
-                            style={controlPillStyle(airAlertsEnabled)}
-                            onPress={() =>
-                              sendPatch({ airAlertsEnabled: !airAlertsEnabled })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(airAlertsEnabled)}
-                            >
-                              {airAlertsEnabled ? "Alerts on" : "Alerts off"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                        {renderAirAlertSlider(
-                          "AQI",
-                          airAlertAqi,
-                          50,
-                          200,
-                          1,
-                          `${airAlertAqi}`,
-                          (value) =>
-                            sendPatch({ airAlertAqi: Math.round(value) }),
-                        )}
-                        {renderAirAlertSlider(
-                          "CO2",
-                          airAlertCo2,
-                          600,
-                          2000,
-                          10,
-                          `${airAlertCo2} ppm`,
-                          (value) =>
-                            sendPatch({ airAlertCo2: Math.round(value) }),
-                        )}
-                        {renderAirAlertSlider(
-                          "PM2.5",
-                          airAlertPm25,
-                          10,
-                          120,
-                          1,
-                          `${airAlertPm25} ug/m3`,
-                          (value) =>
-                            sendPatch({ airAlertPm25: Math.round(value) }),
-                        )}
-                        {renderAirAlertSlider(
-                          "PM10",
-                          airAlertPm10,
-                          20,
-                          160,
-                          1,
-                          `${airAlertPm10} ug/m3`,
-                          (value) =>
-                            sendPatch({ airAlertPm10: Math.round(value) }),
-                        )}
-                        {renderAirAlertSlider(
-                          "VOC",
-                          airAlertVoc,
-                          80,
-                          800,
-                          10,
-                          `${airAlertVoc} ppb`,
-                          (value) =>
-                            sendPatch({ airAlertVoc: Math.round(value) }),
-                        )}
-                        {renderAirAlertSlider(
-                          "Pollen",
-                          airAlertPollen,
-                          1,
-                          5,
-                          1,
-                          `${airAlertPollen} idx`,
-                          (value) =>
-                            sendPatch({ airAlertPollen: Math.round(value) }),
-                        )}
-                      </View>
-
-                      <View style={airSurfaceCardStyle}>
-                        <Text style={styles.cardLabel}>Sensor map</Text>
-                        {airSensors.length === 0 ? (
-                          <Text style={styles.scheduleEmpty}>
-                            No air sensors yet
-                          </Text>
-                        ) : (
-                          <View style={styles.airSensorList}>
-                            {airSensors.map((sensor) => {
-                              const sensorBand = resolveAirBand(
-                                sensor.airQualityIndex ?? 0,
-                              );
-                              const isActive = sensor.id === device.id;
-                              return (
-                                <Pressable
-                                  key={sensor.id}
-                                  style={airSensorRowStyle(isActive)}
-                                  onPress={() =>
-                                    navigation.navigate("DeviceDetail", {
-                                      deviceId: sensor.id,
-                                    })
-                                  }
-                                >
-                                  <View
-                                    style={airSensorDotStyle(sensorBand.color)}
-                                  />
-                                  <View style={flex1Style}>
-                                    <Text style={styles.airSensorName}>
-                                      {sensor.name}
-                                    </Text>
-                                    <Text style={styles.airSensorSub}>
-                                      {roomLookup.get(sensor.roomId) ?? ""}
-                                    </Text>
-                                  </View>
-                                  <Text style={styles.airSensorValue}>
-                                    AQI{" "}
-                                    {sensor.airQualityIndex
-                                      ? sensor.airQualityIndex
-                                      : "--"}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-                        )}
-                      </View>
-                    </>
+                    <AirDetailSection
+                      styles={styles}
+                      stylesVars={stylesVars}
+                      airHeroCardStyle={airHeroCardStyle}
+                      airHeroGlowStyle={airHeroGlowStyle}
+                      airHeroBadgeStyle={airHeroBadgeStyle}
+                      airHeroBadgeDotStyle={airHeroBadgeDotStyle}
+                      airHeroBadgeTextStyle={airHeroBadgeTextStyle}
+                      airHeroBodyStyle={airHeroBodyStyle}
+                      airHeroScoreStyle={airHeroScoreStyle}
+                      airHeroLabelStyle={airHeroLabelStyle}
+                      airHeroValueStyle={airHeroValueStyle}
+                      airHeroGaugeRingStyle={airHeroGaugeRingStyle}
+                      airHeroGaugeValueStyle={airHeroGaugeValueStyle}
+                      airHeroGaugeLabelStyle={airHeroGaugeLabelStyle}
+                      airTrendCardStyle={airTrendCardStyle}
+                      airTrendPillStyle={airTrendPillStyle}
+                      airChartBarStyle={airChartBarStyle}
+                      airChartMaxHeight={airChartMaxHeight}
+                      airLegendDotStyle={airLegendDotStyle}
+                      airLegendBands={AIR_QUALITY_BANDS.slice(0, 3)}
+                      airMetricCardStyle={airMetricCardStyle}
+                      airSurfaceCardStyle={airSurfaceCardStyle}
+                      airSensorRowStyle={airSensorRowStyle}
+                      airSensorDotStyle={airSensorDotStyle}
+                      chipStyle={chipStyle}
+                      chipTextStyle={chipTextStyle}
+                      controlPillStyle={controlPillStyle}
+                      controlPillTextStyle={controlPillTextStyle}
+                      controlCardRowTopStyle={controlCardRowTopStyle}
+                      flex1Style={flex1Style}
+                      formatMetric={formatMetric}
+                      formatTimeAgo={formatTimeAgo}
+                      resolveAirBand={resolveAirBand}
+                      roomLabel={airRoomLabel}
+                      airBand={airBand}
+                      airQuality={airQuality}
+                      humidity={humidity}
+                      deviceTempC={device.tempC}
+                      roomTemp={roomTemp}
+                      airConfidence={airConfidence}
+                      airLastUpdatedAt={airLastUpdatedAt}
+                      airTrendIcon={airTrendIcon as keyof typeof Ionicons.glyphMap}
+                      airTrendLabel={airTrendLabel}
+                      airSeriesAqi={airSeriesAqi}
+                      airChartMax={airChartMax}
+                      airRecommendations={airRecommendations}
+                      airCo2={airCo2}
+                      airPm25={airPm25}
+                      airPm10={airPm10}
+                      airVoc={airVoc}
+                      airFormaldehyde={airFormaldehyde}
+                      airPollen={airPollen}
+                      airFilterLife={airFilterLife}
+                      airFilterDaysLeft={airFilterDaysLeft}
+                      airPurifierMode={airPurifierMode}
+                      airPurifierSpeed={airPurifierSpeed}
+                      airIonizerEnabled={airIonizerEnabled}
+                      airAutoVentilation={airAutoVentilation}
+                      airAlertsEnabled={airAlertsEnabled}
+                      airAlertAqi={airAlertAqi}
+                      airAlertCo2={airAlertCo2}
+                      airAlertPm25={airAlertPm25}
+                      airAlertPm10={airAlertPm10}
+                      airAlertVoc={airAlertVoc}
+                      airAlertPollen={airAlertPollen}
+                      airOutdoorAqi={airOutdoorAqi}
+                      airOutdoorCo2={airOutdoorCo2}
+                      airOutdoorPm25={airOutdoorPm25}
+                      airOutdoorHumidity={airOutdoorHumidity}
+                      airOutdoorTempC={airOutdoorTempC}
+                      airSensors={airSensors}
+                      activeSensorId={device.id}
+                      roomLookup={roomLookup}
+                      onSelectSensor={(id) =>
+                        navigation.navigate("DeviceDetail", { deviceId: id })
+                      }
+                      onPatch={sendPatch}
+                    />
                   )}
 
                   {device.kind === "sprinkler" && (
-                    <>
-                      {isLandscapeSplit ? (
-                        <View style={landscapeGridStyle}>
-                          <View style={landscapeColumnPrimaryStyle}>
-                            {sprinklerHeroCard}
-                          </View>
-                          <View style={landscapeColumnSecondaryStyle}>
-                            {sprinklerZoneCard}
-                            {sprinklerScheduleCard}
-                          </View>
-                        </View>
-                      ) : (
-                        <>
-                          {sprinklerHeroCard}
-                          {sprinklerZoneCard}
-                          {sprinklerScheduleCard}
-                        </>
-                      )}
-                    </>
+                    <SprinklerDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                      sprinklerHeroCard={sprinklerHeroCard}
+                      sprinklerZoneCard={sprinklerZoneCard}
+                      sprinklerScheduleCard={sprinklerScheduleCard}
+                    />
                   )}
 
                   {device.kind === "speaker" && (
-                    <>
-                      {speakerHeroCard}
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Source</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            "Spotify",
-                            "AirPlay",
-                            "Bluetooth",
-                            "AUX",
-                            "TV",
-                          ].map((value) => {
-                            const active = speakerSource === value;
-                            return (
-                              <Pressable
-                                key={value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({
-                                    speakerSource:
-                                      value as Device["speakerSource"],
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {value}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>EQ Preset</Text>
-                        <View style={styles.chipRow}>
-                          {["Flat", "Warm", "Bright", "Bass", "Vocal"].map(
-                            (value) => {
-                              const active = speakerPreset === value;
-                              return (
-                                <Pressable
-                                  key={value}
-                                  style={chipStyle(active)}
-                                  onPress={() =>
-                                    sendPatch({
-                                      speakerPreset:
-                                        value as Device["speakerPreset"],
-                                    })
-                                  }
-                                >
-                                  <Text
-                                    style={chipTextStyle(active)}
-                                  >
-                                    {value}
-                                  </Text>
-                                </Pressable>
-                              );
-                            },
-                          )}
-                        </View>
-
-                        <View style={styles.speakerSliderRow}>
-                          <Text style={styles.speakerSliderLabel}>Bass</Text>
-                          <Text style={styles.speakerSliderValue}>
-                            {speakerBassDraft}%
-                          </Text>
-                        </View>
-                        <Slider
-                          value={speakerBassDraft}
-                          minimumValue={0}
-                          maximumValue={100}
-                          step={1}
-                          onValueChange={(value) =>
-                            setSpeakerBassDraft(Math.round(value))
-                          }
-                          onSlidingComplete={(value) =>
-                            sendPatch({ bass: Math.round(value) })
-                          }
-                          minimumTrackTintColor="rgba(122,92,255,0.9)"
-                          maximumTrackTintColor="rgba(12,12,18,0.12)"
-                          thumbTintColor="rgba(255,255,255,0.92)"
-                          style={styles.speakerSlider}
-                        />
-
-                        <View style={styles.speakerSliderRow}>
-                          <Text style={styles.speakerSliderLabel}>Treble</Text>
-                          <Text style={styles.speakerSliderValue}>
-                            {speakerTrebleDraft}%
-                          </Text>
-                        </View>
-                        <Slider
-                          value={speakerTrebleDraft}
-                          minimumValue={0}
-                          maximumValue={100}
-                          step={1}
-                          onValueChange={(value) =>
-                            setSpeakerTrebleDraft(Math.round(value))
-                          }
-                          onSlidingComplete={(value) =>
-                            sendPatch({ treble: Math.round(value) })
-                          }
-                          minimumTrackTintColor="rgba(122,92,255,0.9)"
-                          maximumTrackTintColor="rgba(12,12,18,0.12)"
-                          thumbTintColor="rgba(255,255,255,0.92)"
-                          style={styles.speakerSlider}
-                        />
-                      </View>
-
-                      <View style={controlCardStyle}>
-                        <Text style={styles.cardLabel}>Smart modes</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Spatial", field: "spatialAudio" },
-                            { label: "Party", field: "partyMode" },
-                            { label: "Night", field: "nightMode" },
-                            { label: "Shuffle", field: "shuffle" },
-                          ].map((item) => {
-                            const active =
-                              item.field === "spatialAudio"
-                                ? speakerSpatial
-                                : item.field === "partyMode"
-                                  ? speakerParty
-                                  : item.field === "nightMode"
-                                    ? speakerNight
-                                    : speakerShuffle;
-                            return (
-                              <Pressable
-                                key={item.label}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({
-                                    [item.field]: !active,
-                                  } as Partial<Device>)
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {item.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                        <View style={controlCardRowTightStyle}>
-                          <Pressable
-                            style={controlPillStyle(speakerMic)}
-                            onPress={() =>
-                              sendPatch({ micEnabled: !speakerMic })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(speakerMic)}
-                            >
-                              {speakerMic ? "Mic On" : "Mic Off"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={controlPillStyle(speakerAssistant)}
-                            onPress={() =>
-                              sendPatch({
-                                voiceAssistantEnabled: !speakerAssistant,
-                              })
-                            }
-                          >
-                            <Text
-                              style={controlPillTextStyle(speakerAssistant)}
-                            >
-                              {speakerAssistant ? "Assistant" : "Assistant Off"}
-                            </Text>
-                          </Pressable>
-                        </View>
-                        <Text style={styles.cardHint}>Repeat</Text>
-                        <View style={styles.chipRow}>
-                          {[
-                            { label: "Off", value: "off" },
-                            { label: "All", value: "all" },
-                            { label: "One", value: "one" },
-                          ].map((option) => {
-                            const active = speakerRepeat === option.value;
-                            return (
-                              <Pressable
-                                key={option.value}
-                                style={chipStyle(active)}
-                                onPress={() =>
-                                  sendPatch({
-                                    repeat: option.value as Device["repeat"],
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={chipTextStyle(active)}
-                                >
-                                  {option.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-                    </>
+                    <SpeakerDetailSection
+                      styles={styles}
+                      speakerHeroCard={speakerHeroCard}
+                      controlCardStyle={controlCardStyle}
+                      controlCardRowTightStyle={controlCardRowTightStyle}
+                      chipStyle={chipStyle}
+                      chipTextStyle={chipTextStyle}
+                      controlPillStyle={controlPillStyle}
+                      controlPillTextStyle={controlPillTextStyle}
+                      speakerSource={speakerSource}
+                      speakerPreset={speakerPreset}
+                      speakerBassDraft={speakerBassDraft}
+                      speakerTrebleDraft={speakerTrebleDraft}
+                      speakerSpatial={speakerSpatial}
+                      speakerParty={speakerParty}
+                      speakerNight={speakerNight}
+                      speakerShuffle={speakerShuffle}
+                      speakerMic={speakerMic}
+                      speakerAssistant={speakerAssistant}
+                      speakerRepeat={speakerRepeat}
+                      onPatch={sendPatch}
+                      onChangeBassDraft={setSpeakerBassDraft}
+                      onChangeTrebleDraft={setSpeakerTrebleDraft}
+                    />
                   )}
 
                   {device.kind === "smoke" &&
-                    (isLandscapeSplit ? (
-                      <>
-                        <View style={landscapeColumnGapStyle}>
-                          {smokeHeroCard}
-                        </View>
-                        <View style={landscapeColumnGapStyle}>
-                          {smokeStatusCard}
-                          {smokeMetricsRow}
-                          {smokeActionRow}
-                          {smokeSilenced && (
-                            <View style={styles.alertRow}>
-                              <Ionicons
-                                name="alert"
-                                size={14}
-                                color="#B7791F"
-                              />
-                              <Text style={styles.alertTextWarn}>
-                                Alarm silenced
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        {smokeHeroCard}
-                        {smokeStatusCard}
-                        {smokeSilenced && (
-                          <View style={styles.alertRow}>
-                            <Ionicons
-                              name="alert"
-                              size={14}
-                              color="#B7791F"
-                            />
-                            <Text style={styles.alertTextWarn}>
-                              Alarm silenced
-                            </Text>
-                          </View>
-                        )}
-                      </>
-                    ))}
+                    (
+                      <SmokeDetailSection
+                        isLandscapeSplit={isLandscapeSplit}
+                        landscapeColumnGapStyle={landscapeColumnGapStyle}
+                        smokeHeroCard={smokeHeroCard}
+                        smokeStatusCard={smokeStatusCard}
+                        smokeMetricsRow={smokeMetricsRow}
+                        smokeActionRow={smokeActionRow}
+                        smokeSilenced={smokeSilenced}
+                        alertRowStyle={styles.alertRow}
+                        alertTextWarnStyle={styles.alertTextWarn}
+                      />
+                    )}
 
                   {device.kind === "tv" &&
-                    (isLandscapeSplit ? (
-                      <View style={landscapeGridStyle}>
-                        <View style={landscapeColumnPrimaryStyle}>
-                          {tvHeroCard}
-                          {tvVolumeCard}
-                        </View>
-                        <View style={landscapeColumnSecondaryStyle}>
-                          {tvRemoteCard}
-                        </View>
-                      </View>
-                    ) : isPortrait ? (
-                      <>
-                        {tvStackedPortrait ? (
-                          <View
-                            style={[
-                              tvPortraitFrameStyle,
-                              tvPortraitStackStyle,
-                            ]}
-                          >
-                            {tvHeroCard}
-                            {tvVolumeCard}
-                          </View>
-                        ) : (
-                          <View style={tvPortraitFrameStyle}>
-                            <View style={tvPortraitRowStyle}>
-                              <View style={tvPortraitColumnStyle}>
-                                {tvHeroCard}
-                              </View>
-                              <View style={tvPortraitColumnStyle}>
-                                {tvVolumeCard}
-                              </View>
-                            </View>
-                          </View>
-                        )}
-                        {tvRemoteCard}
-                      </>
-                    ) : (
-                      <>
-                        {tvHeroCard}
-                        {tvVolumeCard}
-                        {tvRemoteCard}
-                      </>
-                    ))}
+                    (
+                      <TvDetailSection
+                        isLandscapeSplit={isLandscapeSplit}
+                        isPortrait={isPortrait}
+                        tvStackedPortrait={tvStackedPortrait}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                        tvPortraitFrameStyle={tvPortraitFrameStyle}
+                        tvPortraitRowStyle={tvPortraitRowStyle}
+                        tvPortraitColumnStyle={tvPortraitColumnStyle}
+                        tvPortraitStackStyle={tvPortraitStackStyle}
+                        tvHeroCard={tvHeroCard}
+                        tvVolumeCard={tvVolumeCard}
+                        tvRemoteCard={tvRemoteCard}
+                      />
+                    )}
 
                   {device.kind === "coffee" &&
-                    (isLandscapeSplit ? (
-                      <View style={landscapeGridStyle}>
-                        <View style={landscapeColumnPrimaryStyle}>
-                          {coffeeHeroCard}
-                          {coffeeDescaleNeeded && (
-                            <View style={styles.alertRow}>
-                              <Ionicons
-                                name="warning"
-                                size={14}
-                                color="#D8465B"
-                              />
-                              <Text style={styles.alertText}>
-                                Descale cycle recommended
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        <View style={landscapeColumnSecondaryStyle}>
-                          {coffeeControlCards}
-                        </View>
-                      </View>
-                    ) : (
-                      <>
-                        {coffeeHeroCard}
-                        {coffeeDescaleNeeded && (
-                          <View style={styles.alertRow}>
-                            <Ionicons
-                              name="warning"
-                              size={14}
-                              color="#D8465B"
-                            />
-                            <Text style={styles.alertText}>
-                              Descale cycle recommended
-                            </Text>
-                          </View>
-                        )}
-                        {coffeeControlCards}
-                      </>
-                    ))}
+                    (
+                      <CoffeeDetailSection
+                        isLandscapeSplit={isLandscapeSplit}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                        coffeeHeroCard={coffeeHeroCard}
+                        coffeeControlCards={coffeeControlCards}
+                        coffeeDescaleNotice={coffeeDescaleNotice}
+                      />
+                    )}
                 </View>
               ))}
             </ScrollView>

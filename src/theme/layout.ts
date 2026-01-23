@@ -1,4 +1,5 @@
 import { useWindowDimensions } from "react-native";
+import { getLayoutTokens } from "./layoutTokens";
 
 export const TABLET_MIN_SIZE = 768;
 export const DEFAULT_MAX_WIDTH = 860;
@@ -36,6 +37,13 @@ export function useResponsive(maxWidth = DEFAULT_MAX_WIDTH) {
       ? 12
       : 14;
   const scale = isTablet ? (isLandscape ? 1.08 : 1.14) : phoneScale;
+  const tokens = getLayoutTokens({
+    isTablet,
+    scale,
+    gutter,
+    topPad,
+    blockGap,
+  });
 
   return {
     width,
@@ -47,5 +55,6 @@ export function useResponsive(maxWidth = DEFAULT_MAX_WIDTH) {
     topPad,
     blockGap,
     scale,
+    tokens,
   };
 }

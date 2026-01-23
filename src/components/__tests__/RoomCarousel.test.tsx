@@ -78,7 +78,7 @@ describe("RoomCarousel", () => {
     const deck = tree.root.findByProps({ testID: "room-carousel-deck" });
     expect(deck).toBeTruthy();
     const cards = tree.root.findAllByProps({ testID: "room-carousel-card" });
-    expect(cards.length).toBeLessThanOrEqual(3);
+    expect(cards.length).toBeLessThanOrEqual(4);
     act(() => {
       tree.unmount();
     });

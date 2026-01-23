@@ -17,6 +17,7 @@ import { theme } from "../theme/theme";
 import BackgroundLines from "../components/BackgroundLines";
 import ScreenFrame from "../components/ScreenFrame";
 import ScreenSectionLayout from "../components/ScreenSectionLayout";
+import SectionHeader from "../components/layout/SectionHeader";
 import HeaderPill from "../components/HeaderPill";
 import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
@@ -180,7 +181,7 @@ export default function ScenesScreen() {
   );
   const frameEnabled = isPortrait || isWide;
   const frameWidth = isWide
-    ? contentWidth
+    ? undefined
     : Math.max(0, contentWidth - outerGutter * 2);
   const frameInnerWidth = Math.max(
     0,
@@ -228,7 +229,7 @@ export default function ScenesScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: outerGutter,
+      paddingHorizontal: isWide ? outerGutter : outerGutter,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
@@ -505,10 +506,13 @@ export default function ScenesScreen() {
   }: (typeof sections)[number]) => (
     <View key={room.id} style={sectionStyle}>
       <View style={roomPanelStyle}>
-        <View style={styles.sectionHeader}>
-          <Text style={sectionTitleStyle}>{room.name}</Text>
-          <Text style={sectionSubStyle}>{roomScenes.length} presets</Text>
-        </View>
+        <SectionHeader
+          title={room.name}
+          subtitle={`${roomScenes.length} presets`}
+          style={styles.sectionHeader}
+          titleStyle={sectionTitleStyle}
+          subtitleStyle={sectionSubStyle}
+        />
 
         {roomScenes.length === 0 ? (
           <View style={emptyCardStyle}>

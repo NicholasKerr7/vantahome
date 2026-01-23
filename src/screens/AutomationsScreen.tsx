@@ -138,7 +138,7 @@ export default function AutomationsScreen() {
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
   const frameWidth = isWide
-    ? contentWidth
+    ? undefined
     : Math.max(0, contentWidth - outerGutter * 2);
   const frameInnerWidth = Math.max(
     0,
@@ -172,13 +172,14 @@ export default function AutomationsScreen() {
       ),
     ),
   );
-  const cardWidth = Math.max(
-    0,
+  const cardWidthValue =
     cardColumns > 1
-      ? (sectionContentWidth - cardGap * (cardColumns - 1)) / cardColumns
-      : sectionContentWidth,
-  );
-  const emptyCardWidth = sectionContentWidth;
+      ? Math.max(
+          0,
+          (sectionContentWidth - cardGap * (cardColumns - 1)) / cardColumns,
+        )
+      : "100%";
+  const emptyCardWidth = cardColumns > 1 ? sectionContentWidth : "100%";
   const rules = useHomeStore((s) => s.rules);
   const flows = useHomeStore((s) => s.flows);
   const toggleRule = useHomeStore((s) => s.toggleRule);
@@ -216,7 +217,7 @@ export default function AutomationsScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: outerGutter,
+      paddingHorizontal: isWide ? outerGutter : outerGutter,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
@@ -254,7 +255,7 @@ export default function AutomationsScreen() {
   };
   const sectionsGridLandscapeStyle: StyleProp<ViewStyle> = [
     styles.sectionsGridLandscape,
-    { gap: cardGap },
+    { gap: cardGap, width: "100%" },
   ];
   const sectionsColumnStyle: StyleProp<ViewStyle> = [
     styles.sectionsColumn,
@@ -266,7 +267,7 @@ export default function AutomationsScreen() {
   ];
   const sectionCardStyle: StyleProp<ViewStyle> = [
     styles.sectionCard,
-    { padding: sectionPad, borderRadius: sectionRadius },
+    { padding: sectionPad, borderRadius: sectionRadius, width: "100%" },
   ];
   const sectionTitleStyle: StyleProp<TextStyle> = [
     styles.sectionTitle,
@@ -278,10 +279,12 @@ export default function AutomationsScreen() {
   ];
   const sectionHeaderStyle: StyleProp<ViewStyle> = [
     styles.sectionHeader,
+    isSplit && styles.sectionHeaderWrap,
     isCompactPhone && styles.sectionHeaderCompact,
   ];
   const sectionActionsStyle: StyleProp<ViewStyle> = [
     styles.sectionActions,
+    isSplit && styles.sectionActionsFull,
     isCompactPhone && styles.sectionActionsCompact,
   ];
   const sectionBadgeStyle: StyleProp<ViewStyle> = [
@@ -295,6 +298,8 @@ export default function AutomationsScreen() {
   const sectionActionStyle: StyleProp<ViewStyle> = [
     styles.sectionAction,
     { height: actionHeight, borderRadius: Math.round(actionHeight / 2) },
+    isSplit && styles.sectionActionWide,
+    isCompactPhone && styles.sectionActionCompact,
   ];
   const sectionActionTextStyle: StyleProp<TextStyle> = [
     styles.sectionActionText,
@@ -302,7 +307,7 @@ export default function AutomationsScreen() {
   ];
   const cardStyle: StyleProp<ViewStyle> = [
     styles.card,
-    { padding: cardPad, borderRadius: cardRadius, width: cardWidth },
+    { padding: cardPad, borderRadius: cardRadius, width: cardWidthValue },
   ];
   const emptyCardStyle: StyleProp<ViewStyle> = [
     styles.emptyCard,
@@ -311,7 +316,7 @@ export default function AutomationsScreen() {
   const gridStyle: StyleProp<ViewStyle> = [
     styles.grid,
     cardColumns > 1 && styles.gridMulti,
-    { gap: cardGap },
+    { gap: cardGap, width: "100%" },
   ];
   const cardBodyStyle: ViewStyle = { flex: 1 };
   const cardNameStyle: StyleProp<TextStyle> = [
@@ -882,6 +887,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 14,
   },
+  sectionHeaderWrap: {
+    flexWrap: "wrap",
+  },
   sectionHeaderCompact: {
     alignItems: "flex-start",
     marginBottom: 10,
@@ -895,10 +903,18 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "flex-end",
   },
+  sectionActionsFull: {
+    width: "100%",
+    justifyContent: "flex-start",
+  },
   sectionActionsCompact: {
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
     justifyContent: "flex-start",
     gap: 6,
+  },
+  sectionActionCompact: {
+    maxWidth: "100%",
+    flexShrink: 1,
   },
   sectionBadge: {
     paddingHorizontal: 10,
@@ -907,8 +923,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.22)",
+    maxWidth: "100%",
   },
-  sectionBadgeText: { color: theme.colors.text, fontWeight: "800" },
+  sectionBadgeText: {
+    color: theme.colors.text,
+    fontWeight: "800",
+    flexShrink: 1,
+  },
   sectionAction: {
     flexDirection: "row",
     alignItems: "center",
@@ -918,7 +939,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(180,107,255,0.35)",
   },
-  sectionActionText: { color: theme.colors.text, fontWeight: "800" },
+  sectionActionWide: {
+    maxWidth: "100%",
+    flexShrink: 1,
+  },
+  sectionActionText: {
+    color: theme.colors.text,
+    fontWeight: "800",
+    flexShrink: 1,
+  },
   grid: { gap: 12 },
   gridMulti: { flexDirection: "row", flexWrap: "wrap" },
   card: {
