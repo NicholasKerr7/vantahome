@@ -15,7 +15,13 @@ import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
-import { type IntegrationProvider, useHomeStore } from "../store/useHomeStore";
+import {
+  selectActiveMember,
+  selectVisibleDevices,
+  selectVisibleRooms,
+  type IntegrationProvider,
+  useHomeStore,
+} from "../store/useHomeStore";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import AvatarChip from "../components/AvatarChip";
@@ -23,6 +29,10 @@ import { useResponsive } from "../theme/layout";
 import * as ImagePicker from "expo-image-picker";
 import LandscapeFrame from "../components/LandscapeFrame";
 import PortraitFrame from "../components/PortraitFrame";
+import {
+  setRoomMembershipRemote,
+  type RoomMemberRole,
+} from "../services/roomMembers";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -407,9 +417,15 @@ export default function ProfileScreen({ navigation }: Props) {
   const prefs = useHomeStore((s) => s.preferences);
   const setPreferences = useHomeStore((s) => s.setPreferences);
   const integrations = useHomeStore((s) => s.integrations);
-  const roomsCount = useHomeStore((s) => s.rooms.length);
-  const devicesCount = useHomeStore((s) => s.devices.length);
+  const roomsCount = useHomeStore((s) => selectVisibleRooms(s).length);
+  const devicesCount = useHomeStore((s) => selectVisibleDevices(s).length);
   const household = useHomeStore((s) => s.household);
+  const rooms = useHomeStore(selectVisibleRooms);
+  const activeMember = useHomeStore(selectActiveMember);
+  const activeMemberId = useHomeStore((s) => s.activeMemberId);
+  const setActiveMember = useHomeStore((s) => s.setActiveMember);
+  const roomMembers = useHomeStore((s) => s.roomMembers);
+  const setRoomMembership = useHomeStore((s) => s.setRoomMembership);
   const addHouseholdMember = useHomeStore((s) => s.addHouseholdMember);
   const removeHouseholdMember = useHomeStore((s) => s.removeHouseholdMember);
 
@@ -426,9 +442,41 @@ export default function ProfileScreen({ navigation }: Props) {
   const [timezone, setTimezone] = useState(profile.timezone ?? "Auto");
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<
-    "Owner" | "Admin" | "Guest"
+    "Owner" | "Admin" | "Member" | "Guest" | "Tenant"
   >("Guest");
   const [newMemberAvatar, setNewMemberAvatar] = useState("");
+  const canManageRooms = activeMember
+    ? ["Owner", "Admin"].includes(activeMember.role)
+    : false;
+  const canManageHousehold = canManageRooms;
+  const resolveRoomRole = (
+    role: typeof household[number]["role"],
+  ): RoomMemberRole | null => {
+    if (role === "Member") return "member";
+    if (role === "Guest") return "guest";
+    if (role === "Tenant") return "tenant";
+    return null;
+  };
+  const updateRoomAccess = async (
+    memberId: string,
+    userId: string | undefined,
+    role: typeof household[number]["role"],
+    prevRoomIds: string[],
+    nextRoomIds: string[],
+  ) => {
+    setRoomMembership(memberId, nextRoomIds);
+    const roomRole = resolveRoomRole(role);
+    if (!userId || !roomRole) return;
+    try {
+      await setRoomMembershipRemote(userId, nextRoomIds, roomRole);
+    } catch (err) {
+      setRoomMembership(memberId, prevRoomIds);
+      Alert.alert(
+        "Room access update failed",
+        (err as Error).message ?? "Unable to update room access.",
+      );
+    }
+  };
   const [biometricLock, setBiometricLock] = useState(true);
   const [locationSharing, setLocationSharing] = useState(true);
   const [activitySharing, setActivitySharing] = useState(false);
@@ -947,54 +995,137 @@ export default function ProfileScreen({ navigation }: Props) {
           color={theme.colors.subtext}
         />
       </View>
+      {household.length > 1 ? (
+        <View style={styles.memberSwitcher}>
+          <Text style={cardHintTextStyle}>Viewing as</Text>
+          <View style={styles.chipRow}>
+            {household.map((member) => {
+              const active = activeMemberId === member.id;
+              return (
+                <Pressable
+                  key={`view-${member.id}`}
+                  style={chipStyle(active)}
+                  onPress={() => setActiveMember(member.id)}
+                >
+                  <Text style={chipTextStyle(active)}>
+                    {member.name.split(" ")[0]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
       {household.map((member) => (
-        <View key={member.id} style={styles.memberRow}>
-          <AvatarChip
-            name={member.name}
-            size={Math.round(36 * scale)}
-            color={member.avatarColor}
-            uri={member.avatarUri}
-          />
-          <View style={flex1Style}>
-            <Text style={memberNameTextStyle}>{member.name}</Text>
-            <Text style={memberRoleTextStyle}>{member.role}</Text>
-          </View>
-          <View style={styles.memberBadge}>
-            <Text style={memberBadgeTextStyle}>
-              {member.status === "home" ? "Home" : "Away"}
-            </Text>
-          </View>
-          <Pressable
-            style={styles.memberRemove}
-            onPress={() => removeHouseholdMember(member.id)}
-            hitSlop={8}
-          >
-            <Ionicons
-              name="close"
-              size={Math.round(14 * scale)}
-              color={theme.colors.subtext}
+        <View key={member.id} style={styles.memberBlock}>
+          <View style={styles.memberRow}>
+            <AvatarChip
+              name={member.name}
+              size={Math.round(36 * scale)}
+              color={member.avatarColor}
+              uri={member.avatarUri}
             />
-          </Pressable>
+            <View style={flex1Style}>
+              <Text style={memberNameTextStyle}>{member.name}</Text>
+              <Text style={memberRoleTextStyle}>{member.role}</Text>
+            </View>
+            <View style={styles.memberBadge}>
+              <Text style={memberBadgeTextStyle}>
+                {member.status === "home" ? "Home" : "Away"}
+              </Text>
+            </View>
+            <Pressable
+              style={styles.memberRemove}
+              onPress={() => {
+                if (!canManageHousehold || member.role === "Owner") return;
+                removeHouseholdMember(member.id);
+              }}
+              hitSlop={8}
+              disabled={!canManageHousehold || member.role === "Owner"}
+            >
+              <Ionicons
+                name="close"
+                size={Math.round(14 * scale)}
+                color={theme.colors.subtext}
+              />
+            </Pressable>
+          </View>
+          {member.role === "Guest" || member.role === "Tenant" ? (
+            <View style={styles.memberAccess}>
+              <Text style={cardHintTextStyle}>Room access</Text>
+              {canManageRooms ? (
+                <View style={styles.chipRow}>
+                  {rooms.map((room) => {
+                    const currentRoomIds =
+                      roomMembers.find((entry) => entry.memberId === member.id)
+                        ?.roomIds ?? [];
+                    const assigned = currentRoomIds.includes(room.id);
+                    return (
+                      <Pressable
+                        key={`${member.id}-${room.id}`}
+                        style={chipStyle(Boolean(assigned))}
+                        onPress={() => {
+                          if (!canManageRooms) return;
+                          const nextRoomIds = assigned
+                            ? currentRoomIds.filter((id) => id !== room.id)
+                            : [...currentRoomIds, room.id];
+                          void updateRoomAccess(
+                            member.id,
+                            member.userId,
+                            member.role,
+                            currentRoomIds,
+                            nextRoomIds,
+                          );
+                        }}
+                        disabled={!canManageRooms}
+                      >
+                        <Text style={chipTextStyle(Boolean(assigned))}>
+                          {room.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={styles.memberAccessText}>
+                  {(roomMembers
+                    .find((entry) => entry.memberId === member.id)
+                    ?.roomIds.map(
+                      (id) => rooms.find((room) => room.id === id)?.name,
+                    )
+                    .filter(Boolean) as string[]).join(", ") || "No rooms"}
+                </Text>
+              )}
+            </View>
+          ) : null}
         </View>
       ))}
 
       <View style={styles.addMemberCard}>
         <Text style={cardHintTextStyle}>Add person</Text>
+        {!canManageHousehold ? (
+          <Text style={styles.readOnlyNote}>
+            Only admins can add or remove members.
+          </Text>
+        ) : null}
         <TextInput
           value={newMemberName}
           onChangeText={setNewMemberName}
           placeholder="Full name"
           placeholderTextColor="rgba(255,255,255,0.45)"
           style={inputFieldStyle}
+          editable={canManageHousehold}
         />
         <View style={styles.chipRow}>
-          {(["Owner", "Admin", "Guest"] as const).map((role) => {
+          {(["Owner", "Admin", "Member", "Guest", "Tenant"] as const).map(
+            (role) => {
             const active = newMemberRole === role;
             return (
               <Pressable
                 key={role}
                 style={chipStyle(active)}
                 onPress={() => setNewMemberRole(role)}
+                disabled={!canManageHousehold}
               >
                 <Text style={chipTextStyle(active)}>
                   {role}
@@ -1004,7 +1135,11 @@ export default function ProfileScreen({ navigation }: Props) {
           })}
         </View>
         <View style={styles.avatarActions}>
-          <Pressable style={styles.avatarBtn} onPress={pickHouseholdAvatar}>
+          <Pressable
+            style={styles.avatarBtn}
+            onPress={pickHouseholdAvatar}
+            disabled={!canManageHousehold}
+          >
             <Ionicons
               name="image-outline"
               size={Math.round(16 * scale)}
@@ -1018,6 +1153,7 @@ export default function ProfileScreen({ navigation }: Props) {
             <Pressable
               style={avatarBtnGhostStyle}
               onPress={() => setNewMemberAvatar("")}
+              disabled={!canManageHousehold}
             >
               <Ionicons
                 name="close"
@@ -1029,9 +1165,11 @@ export default function ProfileScreen({ navigation }: Props) {
           ) : null}
         </View>
         <Pressable
-          style={secondaryButtonStyle(!newMemberName.trim())}
+          style={secondaryButtonStyle(
+            !canManageHousehold || !newMemberName.trim(),
+          )}
           onPress={handleAddMember}
-          disabled={!newMemberName.trim()}
+          disabled={!canManageHousehold || !newMemberName.trim()}
         >
           <Ionicons
             name="person-add"
@@ -1722,6 +1860,7 @@ const styles = StyleSheet.create({
   },
   servicePillText: { color: theme.colors.subtext, fontWeight: "800" },
   servicePillTextActive: { color: theme.colors.text },
+  memberBlock: { marginTop: 6 },
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1729,6 +1868,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.12)",
+  },
+  memberAccess: {
+    paddingBottom: 8,
+    paddingLeft: 48,
+  },
+  memberAccessText: {
+    color: theme.colors.subtext,
+    marginTop: 6,
+    fontWeight: "700",
+  },
+  memberSwitcher: { marginTop: 10 },
+  readOnlyNote: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
+    marginTop: 6,
   },
   memberRemove: {
     marginLeft: 6,

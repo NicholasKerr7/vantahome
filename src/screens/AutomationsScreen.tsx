@@ -15,6 +15,7 @@ import { theme } from "../theme/theme";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
+  selectVisibleDevices,
   useHomeStore,
 } from "../store/useHomeStore";
 import BackgroundLines from "../components/BackgroundLines";
@@ -180,14 +181,14 @@ export default function AutomationsScreen() {
         )
       : "100%";
   const emptyCardWidth = cardColumns > 1 ? sectionContentWidth : "100%";
-  const rules = useHomeStore((s) => s.rules);
-  const flows = useHomeStore((s) => s.flows);
+  const allRules = useHomeStore((s) => s.rules);
+  const allFlows = useHomeStore((s) => s.flows);
   const toggleRule = useHomeStore((s) => s.toggleRule);
   const addRule = useHomeStore((s) => s.addRule);
   const updateRule = useHomeStore((s) => s.updateRule);
   const removeRule = useHomeStore((s) => s.removeRule);
   const toggleFlow = useHomeStore((s) => s.toggleFlow);
-  const devices = useHomeStore((s) => s.devices);
+  const devices = useHomeStore(selectVisibleDevices);
   const navigation = useNavigation<any>();
 
   const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
@@ -206,6 +207,34 @@ export default function AutomationsScreen() {
     [devices, selectedDeviceId],
   );
   const isAC = selectedDevice?.kind === "ac";
+
+  const visibleDeviceIds = useMemo(
+    () => new Set(devices.map((device) => device.id)),
+    [devices],
+  );
+  const rules = useMemo(
+    () =>
+      allRules.filter((rule) => visibleDeviceIds.has(rule.action.deviceId)),
+    [allRules, visibleDeviceIds],
+  );
+  const flows = useMemo(() => {
+    const hasAccess = (deviceId?: string) =>
+      deviceId ? visibleDeviceIds.has(deviceId) : true;
+    return allFlows.filter((flow) => {
+      const actionDevices = flow.actions
+        .filter((action) => "deviceId" in action)
+        .map((action) => (action as { deviceId: string }).deviceId);
+      const triggerDevices = flow.triggers
+        .filter((trigger) => "deviceId" in trigger)
+        .map((trigger) => (trigger as { deviceId: string }).deviceId);
+      const conditionDevices = flow.conditions
+        .filter((condition) => "deviceId" in condition)
+        .map((condition) => (condition as { deviceId: string }).deviceId);
+      return [...actionDevices, ...triggerDevices, ...conditionDevices].every(
+        (id) => hasAccess(id),
+      );
+    });
+  }, [allFlows, visibleDeviceIds]);
 
   const canCreate =
     selectedDevice && /^\d{1,2}$/.test(hour) && /^\d{1,2}$/.test(minute);

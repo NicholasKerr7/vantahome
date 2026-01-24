@@ -18,7 +18,12 @@ import BackgroundLines from "../components/BackgroundLines";
 import ScreenFrame from "../components/ScreenFrame";
 import ScreenSectionLayout from "../components/ScreenSectionLayout";
 import { theme } from "../theme/theme";
-import { type IntegrationProvider, useHomeStore } from "../store/useHomeStore";
+import {
+  selectVisibleDevices,
+  selectVisibleRooms,
+  type IntegrationProvider,
+  useHomeStore,
+} from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import { deviceClient, type ConnectionStatus } from "../services/deviceClient";
 import {
@@ -93,9 +98,9 @@ export default function SettingsScreen() {
   );
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
-  const roomsCount = useHomeStore((s) => s.rooms.length);
-  const devicesCount = useHomeStore((s) => s.devices.length);
-  const devices = useHomeStore((s) => s.devices);
+  const roomsCount = useHomeStore((s) => selectVisibleRooms(s).length);
+  const devicesCount = useHomeStore((s) => selectVisibleDevices(s).length);
+  const devices = useHomeStore(selectVisibleDevices);
   const profile = useHomeStore((s) => s.profile);
   const integrations = useHomeStore((s) => s.integrations);
   const prefs = useHomeStore((s) => s.preferences);

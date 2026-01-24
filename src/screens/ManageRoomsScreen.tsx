@@ -18,7 +18,12 @@ import PortraitFrame from "../components/PortraitFrame";
 import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
 import { theme } from "../theme/theme";
-import { useHomeStore } from "../store/useHomeStore";
+import {
+  selectActiveMember,
+  selectVisibleDevices,
+  selectVisibleRooms,
+  useHomeStore,
+} from "../store/useHomeStore";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import { useResponsive } from "../theme/layout";
@@ -241,8 +246,12 @@ export default function ManageRoomsScreen({ navigation }: Props) {
     styles.modalPrimaryText,
     { fontSize: labelSize },
   ];
-  const rooms = useHomeStore((s) => s.rooms);
-  const devices = useHomeStore((s) => s.devices);
+  const rooms = useHomeStore(selectVisibleRooms);
+  const devices = useHomeStore(selectVisibleDevices);
+  const activeMember = useHomeStore(selectActiveMember);
+  const canManageRooms = activeMember
+    ? ["Owner", "Admin"].includes(activeMember.role)
+    : false;
   const addRoom = useHomeStore((s) => s.addRoom);
   const renameRoom = useHomeStore((s) => s.renameRoom);
   const moveRoom = useHomeStore((s) => s.moveRoom);
@@ -263,6 +272,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
   }, [rooms, devices]);
 
   const handleCreate = () => {
+    if (!canManageRooms) return;
     const trimmed = roomName.trim();
     if (!trimmed) return;
     addRoom(trimmed);
@@ -289,10 +299,16 @@ export default function ManageRoomsScreen({ navigation }: Props) {
           <Pressable
             style={iconButtonStyle}
             onPress={() => setShowAdd(true)}
+            disabled={!canManageRooms}
           >
             <Ionicons name="add" size={20} color={theme.colors.text} />
           </Pressable>
         </View>
+        {!canManageRooms ? (
+          <Text style={styles.readOnlyNote}>
+            Room changes require an admin account.
+          </Text>
+        ) : null}
 
         <FrameComponent
           enabled={frameEnabled}
@@ -328,6 +344,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                           placeholder="Room name"
                           placeholderTextColor="rgba(255,255,255,0.45)"
                           style={inputStyle}
+                          editable={canManageRooms}
                         />
                         <Text style={metaTextStyle}>
                           {deviceCountByRoom[room.id] ?? 0} devices
@@ -336,9 +353,9 @@ export default function ManageRoomsScreen({ navigation }: Props) {
 
                       <View style={styles.actions}>
                         <Pressable
-                          style={actionButtonStyle(idx === 0)}
+                          style={actionButtonStyle(!canManageRooms || idx === 0)}
                           onPress={() => moveRoom(room.id, -1)}
-                          disabled={idx === 0}
+                          disabled={!canManageRooms || idx === 0}
                         >
                           <Ionicons
                             name="chevron-up"
@@ -347,9 +364,11 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                           />
                         </Pressable>
                         <Pressable
-                          style={actionButtonStyle(idx === rooms.length - 1)}
+                          style={actionButtonStyle(
+                            !canManageRooms || idx === rooms.length - 1,
+                          )}
                           onPress={() => moveRoom(room.id, 1)}
-                          disabled={idx === rooms.length - 1}
+                          disabled={!canManageRooms || idx === rooms.length - 1}
                         >
                           <Ionicons
                             name="chevron-down"
@@ -362,22 +381,24 @@ export default function ManageRoomsScreen({ navigation }: Props) {
 
                     <View style={rowBottomStyle}>
                       <Pressable
-                        style={primaryButtonStyle(!canSave)}
+                        style={primaryButtonStyle(!canManageRooms || !canSave)}
                         onPress={() => {
-                          if (!canSave) return;
+                          if (!canManageRooms || !canSave) return;
                           renameRoom(room.id, draft.trim());
                         }}
-                        disabled={!canSave}
+                        disabled={!canManageRooms || !canSave}
                       >
                         <Text style={primaryTextStyle}>Save</Text>
                       </Pressable>
                       <Pressable
-                        style={deleteButtonStyle(isLastRoom)}
+                        style={deleteButtonStyle(
+                          !canManageRooms || isLastRoom,
+                        )}
                         onPress={() => {
-                          if (isLastRoom) return;
+                          if (!canManageRooms || isLastRoom) return;
                           removeRoom(room.id);
                         }}
-                        disabled={isLastRoom}
+                        disabled={!canManageRooms || isLastRoom}
                       >
                         <Text style={deleteTextStyle}>
                           {isLastRoom ? "Keep at least 1 room" : "Delete"}
@@ -450,6 +471,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
+    marginBottom: 12,
+  },
+  readOnlyNote: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
     marginBottom: 12,
   },
   iconBtn: {

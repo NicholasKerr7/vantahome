@@ -1,6 +1,7 @@
 # Supabase Edge Functions (Phase 2)
 
 These functions sit alongside the PostgREST API and handle bootstrapping + state ingest.
+Room-level access is enforced via the `room_members` table and RLS policies.
 
 ## Functions
 
@@ -38,4 +39,5 @@ supabase functions deploy device-state-batch
 ## Auth
 
 Pass the user JWT in `Authorization: Bearer <token>`.
-RLS policies enforce access on `homes`, `home_members`, `rooms`, `devices`, and `device_state`.
+RLS policies enforce access on `homes`, `home_members`, `room_members`, `rooms`,
+`devices`, and `device_state` (room-scoped for guests/tenants).

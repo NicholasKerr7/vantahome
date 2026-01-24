@@ -268,13 +268,28 @@ export type AmbientReading = {
 
 export type HouseholdMember = {
   id: string;
+  userId?: string;
   name: string;
-  role: "Owner" | "Admin" | "Guest";
+  role: "Owner" | "Admin" | "Member" | "Guest" | "Tenant";
   avatarColor?: string;
   avatarUri?: string;
   status: "home" | "away";
   lastSeenAt?: number;
 };
+
+export type RoomMembership = {
+  memberId: string;
+  roomIds: string[];
+};
+
+const FULL_ACCESS_ROLES: HouseholdMember["role"][] = [
+  "Owner",
+  "Admin",
+  "Member",
+];
+
+const roleHasFullAccess = (role?: HouseholdMember["role"]) =>
+  !!role && FULL_ACCESS_ROLES.includes(role);
 
 export type SceneAction =
   | { type: "patch"; deviceId: string; patch: Partial<Device> }
@@ -392,6 +407,8 @@ type State = {
   preferences: Preferences;
   realtime: RealtimeSettings;
   household: HouseholdMember[];
+  roomMembers: RoomMembership[];
+  activeMemberId: string;
 
   addRoom: (name: string) => void;
   renameRoom: (roomId: string, name: string) => void;
@@ -419,6 +436,10 @@ type State = {
     memberId: string,
     status: HouseholdMember["status"],
   ) => void;
+  setActiveMember: (memberId: string) => void;
+  setRoomMembership: (memberId: string, roomIds: string[]) => void;
+  grantRoomAccess: (memberId: string, roomId: string) => void;
+  revokeRoomAccess: (memberId: string, roomId: string) => void;
 
   addRule: (rule: Omit<AutomationRule, "id">) => void;
   toggleRule: (ruleId: string) => void;
@@ -447,6 +468,55 @@ type State = {
   ) => void;
   unlinkIntegration: (provider: IntegrationProvider) => void;
   resyncIntegration: (provider: IntegrationProvider) => void;
+};
+
+type AccessScope = {
+  member: HouseholdMember | undefined;
+  fullAccess: boolean;
+  roomIds: Set<string>;
+};
+
+const getAccessScope = (state: Pick<
+  State,
+  "rooms" | "household" | "roomMembers" | "activeMemberId"
+>): AccessScope => {
+  const member =
+    state.household.find((m) => m.id === state.activeMemberId) ??
+    state.household[0];
+  const fullAccess = roleHasFullAccess(member?.role);
+  if (fullAccess) {
+    return {
+      member,
+      fullAccess,
+      roomIds: new Set(state.rooms.map((room) => room.id)),
+    };
+  }
+  const membership = state.roomMembers.find(
+    (entry) => entry.memberId === member?.id,
+  );
+  return {
+    member,
+    fullAccess,
+    roomIds: new Set(membership?.roomIds ?? []),
+  };
+};
+
+export const selectActiveMember = (state: State) =>
+  state.household.find((m) => m.id === state.activeMemberId) ??
+  state.household[0];
+
+export const selectVisibleRooms = (state: State) => {
+  const scope = getAccessScope(state);
+  if (scope.fullAccess) return state.rooms;
+  return state.rooms.filter((room) => scope.roomIds.has(room.id));
+};
+
+export const selectVisibleDevices = (state: State) => {
+  const scope = getAccessScope(state);
+  if (scope.fullAccess) return state.devices;
+  return state.devices.filter(
+    (device) => device.roomId && scope.roomIds.has(device.roomId),
+  );
 };
 
 // Demo data to keep the UI populated before a real backend is wired up.
@@ -504,7 +574,21 @@ const householdSeed: HouseholdMember[] = [
     status: "away",
     avatarColor: "#A0E9FF",
   },
+  {
+    id: "m4",
+    name: "Taylor Quinn",
+    role: "Tenant",
+    status: "away",
+    avatarColor: "#F0C27B",
+  },
 ];
+
+const roomMembersSeed: RoomMembership[] = [
+  { memberId: "m3", roomIds: ["r5"] },
+  { memberId: "m4", roomIds: ["r2"] },
+];
+
+const activeMemberSeed = householdSeed[0]?.id ?? "";
 
 const devicesSeed: Device[] = [
   {
@@ -1467,6 +1551,8 @@ export const useHomeStore = create<State>()(
       preferences: { haptics: true, notifications: true },
       realtime: realtimeSeed,
       household: householdSeed,
+      roomMembers: roomMembersSeed,
+      activeMemberId: activeMemberSeed,
 
       addRoom: (name) => {
         const trimmed = name.trim();
@@ -1506,7 +1592,11 @@ export const useHomeStore = create<State>()(
             d.roomId === roomId ? { ...d, roomId: fallbackRoom.id } : d,
           );
           const scenes = state.scenes.filter((s) => s.roomId !== roomId);
-          return { rooms: remaining, devices, scenes };
+          const roomMembers = state.roomMembers.map((entry) => ({
+            ...entry,
+            roomIds: entry.roomIds.filter((id) => id !== roomId),
+          }));
+          return { rooms: remaining, devices, scenes, roomMembers };
         });
       },
 
@@ -1629,22 +1719,59 @@ export const useHomeStore = create<State>()(
 
       addHouseholdMember: (member) => {
         const id = member.id ?? `m${Date.now()}`;
-        set((state) => ({
-          household: [...state.household, { ...member, id }],
-        }));
+        set((state) => {
+          const nextMember = { ...member, id };
+          const shouldAssignRooms = !roleHasFullAccess(nextMember.role);
+          const firstRoomId = state.rooms[0]?.id;
+          const roomMembers = shouldAssignRooms && firstRoomId
+            ? [
+                ...state.roomMembers,
+                { memberId: id, roomIds: [firstRoomId] },
+              ]
+            : state.roomMembers;
+          return {
+            household: [...state.household, nextMember],
+            roomMembers,
+          };
+        });
       },
 
       updateHouseholdMember: (memberId, patch) =>
-        set((state) => ({
-          household: state.household.map((m) =>
+        set((state) => {
+          const nextHousehold = state.household.map((m) =>
             m.id === memberId ? { ...m, ...patch } : m,
-          ),
-        })),
+          );
+          const updated = nextHousehold.find((m) => m.id === memberId);
+          if (!updated) return { household: nextHousehold };
+          if (roleHasFullAccess(updated.role)) {
+            return { household: nextHousehold };
+          }
+          const hasEntry = state.roomMembers.some(
+            (entry) => entry.memberId === memberId,
+          );
+          if (hasEntry) return { household: nextHousehold };
+          const fallbackRoom = state.rooms[0]?.id;
+          const roomMembers = fallbackRoom
+            ? [
+                ...state.roomMembers,
+                { memberId, roomIds: [fallbackRoom] },
+              ]
+            : state.roomMembers;
+          return { household: nextHousehold, roomMembers };
+        }),
 
       removeHouseholdMember: (memberId) =>
-        set((state) => ({
-          household: state.household.filter((m) => m.id !== memberId),
-        })),
+        set((state) => {
+          const household = state.household.filter((m) => m.id !== memberId);
+          const roomMembers = state.roomMembers.filter(
+            (entry) => entry.memberId !== memberId,
+          );
+          const activeMemberId =
+            state.activeMemberId === memberId
+              ? household[0]?.id ?? ""
+              : state.activeMemberId;
+          return { household, roomMembers, activeMemberId };
+        }),
 
       setHouseholdPresence: (memberId, status) =>
         set((state) => ({
@@ -1652,6 +1779,54 @@ export const useHomeStore = create<State>()(
             m.id === memberId ? { ...m, status, lastSeenAt: Date.now() } : m,
           ),
         })),
+
+      setActiveMember: (memberId) =>
+        set((state) => {
+          const exists = state.household.some((m) => m.id === memberId);
+          return { activeMemberId: exists ? memberId : state.activeMemberId };
+        }),
+
+      setRoomMembership: (memberId, roomIds) =>
+        set((state) => {
+          const nextRoomIds = Array.from(new Set(roomIds));
+          const others = state.roomMembers.filter(
+            (entry) => entry.memberId !== memberId,
+          );
+          return {
+            roomMembers: [
+              ...others,
+              { memberId, roomIds: nextRoomIds },
+            ],
+          };
+        }),
+
+      grantRoomAccess: (memberId, roomId) =>
+        set((state) => {
+          const entry = state.roomMembers.find(
+            (item) => item.memberId === memberId,
+          );
+          const roomIds = entry?.roomIds ?? [];
+          if (roomIds.includes(roomId)) return {};
+          const next = [...roomIds, roomId];
+          const others = state.roomMembers.filter(
+            (item) => item.memberId !== memberId,
+          );
+          return { roomMembers: [...others, { memberId, roomIds: next }] };
+        }),
+
+      revokeRoomAccess: (memberId, roomId) =>
+        set((state) => {
+          const entry = state.roomMembers.find(
+            (item) => item.memberId === memberId,
+          );
+          const roomIds = entry?.roomIds ?? [];
+          if (!roomIds.includes(roomId)) return {};
+          const next = roomIds.filter((id) => id !== roomId);
+          const others = state.roomMembers.filter(
+            (item) => item.memberId !== memberId,
+          );
+          return { roomMembers: [...others, { memberId, roomIds: next }] };
+        }),
 
       addRule: (rule) =>
         set((state) => ({
@@ -1819,18 +1994,30 @@ export const useHomeStore = create<State>()(
     }),
     {
       name: "vantahome-store",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState, version) => {
         if (!persistedState || typeof persistedState !== "object")
           return {} as State;
         const state = persistedState as State;
-        if (version && version >= 2) return state;
+        if (version && version >= 3) return state;
+        const base =
+          version && version >= 2
+            ? state
+            : {
+                ...state,
+                rooms: mergeById(state.rooms, roomsSeed),
+                devices: mergeById(state.devices, devicesSeed),
+                scenes: mergeById(state.scenes, scenesSeed),
+              };
         return {
-          ...state,
-          rooms: mergeById(state.rooms, roomsSeed),
-          devices: mergeById(state.devices, devicesSeed),
-          scenes: mergeById(state.scenes, scenesSeed),
+          ...base,
+          household: base.household ?? householdSeed,
+          roomMembers: base.roomMembers ?? roomMembersSeed,
+          activeMemberId:
+            base.activeMemberId ??
+            base.household?.[0]?.id ??
+            activeMemberSeed,
         };
       },
       // Only persist user-facing state to keep storage light and migration-safe.
@@ -1848,6 +2035,9 @@ export const useHomeStore = create<State>()(
         integrations: state.integrations,
         preferences: state.preferences,
         realtime: state.realtime,
+        household: state.household,
+        roomMembers: state.roomMembers,
+        activeMemberId: state.activeMemberId,
       }),
     },
   ),

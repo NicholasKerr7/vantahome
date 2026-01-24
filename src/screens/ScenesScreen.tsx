@@ -26,6 +26,8 @@ import DeviceIcon from "../components/DeviceIcon";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
+  selectVisibleDevices,
+  selectVisibleRooms,
   useHomeStore,
   type Device,
   type Scene,
@@ -125,9 +127,9 @@ export default function ScenesScreen() {
   );
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
-  const rooms = useHomeStore((s) => s.rooms);
+  const rooms = useHomeStore(selectVisibleRooms);
   const scenes = useHomeStore((s) => s.scenes);
-  const devices = useHomeStore((s) => s.devices);
+  const devices = useHomeStore(selectVisibleDevices);
   const runScene = useHomeStore((s) => s.runScene);
   const clearActiveScene = useHomeStore((s) => s.clearActiveScene);
   const activeSceneId = useHomeStore((s) => s.activeSceneId);

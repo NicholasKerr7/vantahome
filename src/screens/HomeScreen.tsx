@@ -23,6 +23,8 @@ import HeaderPill from "../components/HeaderPill";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
+  selectVisibleDevices,
+  selectVisibleRooms,
   useHomeStore,
 } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
@@ -75,8 +77,8 @@ export default function HomeScreen() {
   const profile = useHomeStore((s) => s.profile);
   const tempUnit = profile.tempUnit ?? "C";
   const outdoor = useHomeStore((s) => s.outdoor);
-  const rooms = useHomeStore((s) => s.rooms);
-  const devicesAll = useHomeStore((s) => s.devices);
+  const rooms = useHomeStore(selectVisibleRooms);
+  const devicesAll = useHomeStore(selectVisibleDevices);
   const prefs = useHomeStore((s) => s.preferences);
   const addRoom = useHomeStore((s) => s.addRoom);
   const indoorFallback = useHomeStore((s) => s.indoor);

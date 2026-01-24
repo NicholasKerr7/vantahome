@@ -28,7 +28,12 @@ import LandscapeFrame from "../components/LandscapeFrame";
 import PortraitFrame from "../components/PortraitFrame";
 import { theme } from "../theme/theme";
 import { deviceClient } from "../services/deviceClient";
-import { useHomeStore, type Device } from "../store/useHomeStore";
+import {
+  selectVisibleDevices,
+  selectVisibleRooms,
+  useHomeStore,
+  type Device,
+} from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -517,10 +522,11 @@ export default function RoomScreen({ route, navigation }: Props) {
   const { roomId, showAll } = route.params;
   const isWholeHome = Boolean(showAll);
 
-  const room = useHomeStore((s) =>
-    roomId ? s.rooms.find((r) => r.id === roomId) : undefined,
-  );
-  const devicesAll = useHomeStore((s) => s.devices);
+  const visibleRooms = useHomeStore(selectVisibleRooms);
+  const room = roomId
+    ? visibleRooms.find((r) => r.id === roomId)
+    : undefined;
+  const devicesAll = useHomeStore(selectVisibleDevices);
   const scenesAll = useHomeStore((s) => s.scenes);
   const runScene = useHomeStore((s) => s.runScene);
 
@@ -535,11 +541,15 @@ export default function RoomScreen({ route, navigation }: Props) {
       isWholeHome ? devicesAll : devicesAll.filter((d) => d.roomId === roomId),
     [devicesAll, roomId, isWholeHome],
   );
-  const scenes = useMemo(
-    () =>
-      isWholeHome ? scenesAll : scenesAll.filter((s) => s.roomId === roomId),
-    [scenesAll, roomId, isWholeHome],
-  );
+  const scenes = useMemo(() => {
+    const allowedRoomIds = new Set(visibleRooms.map((r) => r.id));
+    const visibleScenes = scenesAll.filter((scene) =>
+      allowedRoomIds.has(scene.roomId),
+    );
+    return isWholeHome
+      ? visibleScenes
+      : visibleScenes.filter((scene) => scene.roomId === roomId);
+  }, [scenesAll, visibleRooms, roomId, isWholeHome]);
   const running = devices.filter((d) => d.isOn).length;
 
   // Bottom sheet state: we keep only the selected ID and derive the device

@@ -20,6 +20,8 @@ import { theme } from "../theme/theme";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
+  selectVisibleDevices,
+  selectVisibleRooms,
   useHomeStore,
   type Device,
   type SprinklerSchedule,
@@ -947,9 +949,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     );
   };
   const { deviceId } = route.params;
-  const device = useHomeStore((s) => s.devices.find((d) => d.id === deviceId));
+  const device = useHomeStore((s) =>
+    selectVisibleDevices(s).find((d) => d.id === deviceId),
+  );
   const roomName = useHomeStore(
-    (s) => s.rooms.find((r) => r.id === device?.roomId)?.name ?? "",
+    (s) =>
+      selectVisibleRooms(s).find((r) => r.id === device?.roomId)?.name ?? "",
   );
   const removeDevice = useHomeStore((s) => s.removeDevice);
   const household = useHomeStore((s) => s.household);
@@ -961,8 +966,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const roomTemp = useHomeStore((s) => s.indoor.tempC);
   const outdoor = useHomeStore((s) => s.outdoor);
-  const rooms = useHomeStore((s) => s.rooms);
-  const devicesAll = useHomeStore((s) => s.devices);
+  const rooms = useHomeStore(selectVisibleRooms);
+  const devicesAll = useHomeStore(selectVisibleDevices);
   const coffeeFill = useRef(
     new Animated.Value(device?.kind === "coffee" && device.isOn ? 1 : 0),
   ).current;
@@ -984,7 +989,22 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightAudioLastBrightness = useRef<number | null>(null);
   const lightAudioLastColor = useRef<string | null>(null);
 
-  if (!device) return null;
+  if (!device) {
+    return (
+      <LinearGradient
+        colors={[theme.colors.bg1, theme.colors.bg0]}
+        style={styles.root}
+      >
+        <BackgroundLines />
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyTitle}>No access to this device</Text>
+          <Text style={styles.emptySub}>
+            This device is not available for your account.
+          </Text>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   const isAC = device.kind === "ac";
   const showCapabilities = false;
@@ -9243,9 +9263,23 @@ const stylesVars = {
 };
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   outer: { flex: 1, padding: 18 },
   outerTablet: { paddingTop: 24 },
   safe: { flex: 1 },
+  emptyWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  emptyTitle: { color: theme.colors.text, fontSize: 20, fontWeight: "800" },
+  emptySub: {
+    color: theme.colors.subtext,
+    textAlign: "center",
+    marginTop: 8,
+    fontWeight: "600",
+  },
   panel: {
     flex: 1,
     borderRadius: 42,

@@ -1,5 +1,7 @@
 # macOS
 .DS_Store
+.supabase
+supabase/.temp
 
 # Expo
 .expo/

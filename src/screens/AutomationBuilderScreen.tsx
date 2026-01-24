@@ -21,6 +21,8 @@ import { theme } from "../theme/theme";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
+  selectVisibleDevices,
+  selectVisibleRooms,
   useHomeStore,
   type AutomationFlow,
   type Device,
@@ -214,7 +216,8 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
   const addFlow = useHomeStore((s) => s.addFlow);
   const updateFlow = useHomeStore((s) => s.updateFlow);
   const removeFlow = useHomeStore((s) => s.removeFlow);
-  const devices = useHomeStore((s) => s.devices);
+  const devices = useHomeStore(selectVisibleDevices);
+  const visibleRooms = useHomeStore(selectVisibleRooms);
   const scenes = useHomeStore((s) => s.scenes);
   const household = useHomeStore((s) => s.household);
 
@@ -274,9 +277,13 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     () => new Map(devices.map((d) => [d.id, d])),
     [devices],
   );
+  const accessibleScenes = useMemo(() => {
+    const roomIds = new Set(visibleRooms.map((room) => room.id));
+    return scenes.filter((scene) => roomIds.has(scene.roomId));
+  }, [scenes, visibleRooms]);
   const sceneMap = useMemo(
-    () => new Map(scenes.map((s) => [s.id, s])),
-    [scenes],
+    () => new Map(accessibleScenes.map((s) => [s.id, s])),
+    [accessibleScenes],
   );
   const memberMap = useMemo(
     () => new Map(household.map((m) => [m.id, m])),
@@ -321,7 +328,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     setDraftMessage("Someone arrived.");
 
     const firstDevice = devices[0]?.id ?? "";
-    const firstScene = scenes[0]?.id ?? "";
+    const firstScene = accessibleScenes[0]?.id ?? "";
     const firstMember = household[0]?.id ?? "";
     setDraftDeviceId(firstDevice);
     setDraftSceneId(firstScene);
@@ -859,7 +866,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.chipRow}
                 >
-                  {scenes.map((s) => (
+                  {accessibleScenes.map((s) => (
                     <Pressable
                       key={s.id}
                       style={choiceChipStyle(draftSceneId === s.id)}
@@ -1127,7 +1134,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.chipRow}
                 >
-                  {scenes.map((s) => (
+                  {accessibleScenes.map((s) => (
                     <Pressable
                       key={s.id}
                       style={choiceChipStyle(draftSceneId === s.id)}
