@@ -54,6 +54,19 @@ export async function bootstrapHome(name: string) {
   });
 }
 
+export type InviteMemberPayload = {
+  email: string;
+  name?: string;
+  role?: "admin" | "member" | "guest" | "tenant";
+  roomIds?: string[];
+};
+
+export async function inviteHomeMember(payload: InviteMemberPayload) {
+  return callEdge<{
+    member: { userId: string; email: string; name: string; role: string };
+  }>("home-invite", payload);
+}
+
 export async function pushDeviceState(
   deviceId: string,
   state: Record<string, unknown>,

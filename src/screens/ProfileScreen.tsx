@@ -33,6 +33,7 @@ import {
   setRoomMembershipRemote,
   type RoomMemberRole,
 } from "../services/roomMembers";
+import { inviteHomeMember } from "../services/cloudRegistry";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -441,6 +442,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const [tempUnit, setTempUnit] = useState(profile.tempUnit ?? "C");
   const [timezone, setTimezone] = useState(profile.timezone ?? "Auto");
   const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<
     "Owner" | "Admin" | "Member" | "Guest" | "Tenant"
   >("Guest");
@@ -651,20 +653,52 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   };
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     const trimmed = newMemberName.trim();
+    const email = newMemberEmail.trim().toLowerCase();
     if (!trimmed) return;
-    // New members default to away until recognition/proximity updates them.
-    addHouseholdMember({
-      name: trimmed,
-      role: newMemberRole,
-      status: "away",
-      avatarUri: newMemberAvatar,
-      avatarColor: avatarColor,
-    });
-    setNewMemberName("");
-    setNewMemberRole("Guest");
-    setNewMemberAvatar("");
+    if (!email) {
+      Alert.alert("Email required", "Add an email to invite this member.");
+      return;
+    }
+    try {
+      const roleLower = newMemberRole.toLowerCase() as
+        | "admin"
+        | "member"
+        | "guest"
+        | "tenant";
+      const initialRoomIds =
+        newMemberRole === "Guest" || newMemberRole === "Tenant"
+          ? rooms.map((room) => room.id).slice(0, 1)
+          : [];
+      const { member } = await inviteHomeMember({
+        email,
+        name: trimmed,
+        role: roleLower,
+        roomIds: initialRoomIds.length ? initialRoomIds : undefined,
+      });
+      addHouseholdMember({
+        id: member.userId,
+        userId: member.userId,
+        name: member.name,
+        role: newMemberRole,
+        status: "away",
+        avatarUri: newMemberAvatar,
+        avatarColor: avatarColor,
+      });
+      if (initialRoomIds.length) {
+        setRoomMembership(member.userId, initialRoomIds);
+      }
+      setNewMemberName("");
+      setNewMemberEmail("");
+      setNewMemberRole("Guest");
+      setNewMemberAvatar("");
+    } catch (err) {
+      Alert.alert(
+        "Invite failed",
+        (err as Error).message ?? "Unable to invite member.",
+      );
+    }
   };
 
   const openSettings = () => {
@@ -1116,6 +1150,16 @@ export default function ProfileScreen({ navigation }: Props) {
           style={inputFieldStyle}
           editable={canManageHousehold}
         />
+        <TextInput
+          value={newMemberEmail}
+          onChangeText={setNewMemberEmail}
+          placeholder="Email address"
+          placeholderTextColor="rgba(255,255,255,0.45)"
+          style={inputFieldStyle}
+          editable={canManageHousehold}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
         <View style={styles.chipRow}>
           {(["Owner", "Admin", "Member", "Guest", "Tenant"] as const).map(
             (role) => {
@@ -1166,10 +1210,16 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
         <Pressable
           style={secondaryButtonStyle(
-            !canManageHousehold || !newMemberName.trim(),
+            !canManageHousehold ||
+              !newMemberName.trim() ||
+              !newMemberEmail.trim(),
           )}
           onPress={handleAddMember}
-          disabled={!canManageHousehold || !newMemberName.trim()}
+          disabled={
+            !canManageHousehold ||
+            !newMemberName.trim() ||
+            !newMemberEmail.trim()
+          }
         >
           <Ionicons
             name="person-add"
