@@ -440,6 +440,8 @@ type State = {
   setRoomMembership: (memberId: string, roomIds: string[]) => void;
   grantRoomAccess: (memberId: string, roomId: string) => void;
   revokeRoomAccess: (memberId: string, roomId: string) => void;
+  setHouseholdFromRemote: (members: HouseholdMember[]) => void;
+  setRoomMembersFromRemote: (members: RoomMembership[]) => void;
 
   addRule: (rule: Omit<AutomationRule, "id">) => void;
   toggleRule: (ruleId: string) => void;
@@ -1778,6 +1780,20 @@ export const useHomeStore = create<State>()(
           household: state.household.map((m) =>
             m.id === memberId ? { ...m, status, lastSeenAt: Date.now() } : m,
           ),
+        })),
+
+      setHouseholdFromRemote: (members) =>
+        set((state) => ({
+          household: members,
+          activeMemberId:
+            members.find((m) => m.id === state.activeMemberId)?.id ??
+            members[0]?.id ??
+            state.activeMemberId,
+        })),
+
+      setRoomMembersFromRemote: (members) =>
+        set(() => ({
+          roomMembers: members,
         })),
 
       setActiveMember: (memberId) =>
