@@ -231,7 +231,7 @@ export default function ScenesScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
+      paddingHorizontal: outerGutter,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
@@ -241,10 +241,12 @@ export default function ScenesScreen() {
   };
   const headerStyle: StyleProp<ViewStyle> = [
     styles.header,
+    !isTablet && styles.headerPhone,
     isCompactPhone && styles.headerCompact,
   ];
   const headerActionsStyle: StyleProp<ViewStyle> = [
     styles.headerActions,
+    !isTablet && styles.headerActionsPhone,
     isCompactPhone && styles.headerActionsCompact,
   ];
   const headerTitleStyle: StyleProp<TextStyle> = [
@@ -258,6 +260,7 @@ export default function ScenesScreen() {
   const countPillStyle: StyleProp<ViewStyle> = [
     styles.countPill,
     { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+    !isTablet && styles.headerActionPillPhone,
     isCompactPhone && { paddingHorizontal: 10 },
   ];
   const countTextStyle: StyleProp<TextStyle> = [
@@ -267,6 +270,7 @@ export default function ScenesScreen() {
   const clearPillStyle: StyleProp<ViewStyle> = [
     styles.clearPill,
     { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+    !isTablet && styles.headerActionPillPhoneFull,
     isCompactPhone && { paddingHorizontal: 10 },
   ];
   const clearTextStyle: StyleProp<TextStyle> = [
@@ -276,6 +280,7 @@ export default function ScenesScreen() {
   const addPillStyle: StyleProp<ViewStyle> = [
     styles.addPill,
     { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
+    !isTablet && styles.headerActionPillPhone,
     isCompactPhone && { paddingHorizontal: 10 },
   ];
   const addTextStyle: StyleProp<TextStyle> = [
@@ -583,6 +588,14 @@ export default function ScenesScreen() {
                     style={countPillStyle}
                     textStyle={countTextStyle}
                   />
+                  <HeaderPill
+                    label="Create"
+                    icon="add"
+                    iconSize={Math.round(16 * scale)}
+                    style={addPillStyle}
+                    textStyle={addTextStyle}
+                    onPress={openCreate}
+                  />
                   {activeSceneId ? (
                     <HeaderPill
                       label="Clear active"
@@ -593,14 +606,6 @@ export default function ScenesScreen() {
                       onPress={clearActiveScene}
                     />
                   ) : null}
-                  <HeaderPill
-                    label="Create"
-                    icon="add"
-                    iconSize={Math.round(16 * scale)}
-                    style={addPillStyle}
-                    textStyle={addTextStyle}
-                    onPress={openCreate}
-                  />
                 </View>
               </View>
             }
@@ -905,12 +910,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  headerPhone: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    gap: 10,
+    width: "100%",
+  },
   headerCompact: {
     alignItems: "flex-start",
     flexWrap: "wrap",
     gap: 10,
   },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerActionsPhone: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  headerActionPillPhone: {
+    justifyContent: "center",
+    width: "48%",
+  },
+  headerActionPillPhoneFull: {
+    justifyContent: "center",
+    width: "100%",
+  },
   headerActionsCompact: {
     flexWrap: "wrap",
     justifyContent: "flex-start",

@@ -820,19 +820,27 @@ export default function HomeScreen() {
               >
                 <View style={roomsHeaderStyle}>
                   <Text style={roomsTitleStyle}>Rooms</Text>
-                  <View style={roomsActionsStyle}>
-                    <HeaderPill
-                      label="Manage"
-                      icon="settings-outline"
-                      iconSize={Math.round(14 * scale)}
-                      style={roomsAddStyle}
-                      textStyle={roomsAddTextStyle}
-                      onPress={() => goRoot("ManageRooms")}
-                    />
-                    <HeaderPill
-                      label="Add room"
-                      icon="add"
-                      iconSize={Math.round(16 * scale)}
+                <View style={roomsActionsStyle}>
+                  <HeaderPill
+                    label="Manage"
+                    icon="settings-outline"
+                    iconSize={Math.round(14 * scale)}
+                    style={roomsAddStyle}
+                    textStyle={roomsAddTextStyle}
+                    onPress={() => goRoot("ManageRooms")}
+                  />
+                  <HeaderPill
+                    label="Cameras"
+                    icon="videocam-outline"
+                    iconSize={Math.round(14 * scale)}
+                    style={roomsAddStyle}
+                    textStyle={roomsAddTextStyle}
+                    onPress={() => goRoot("Cameras")}
+                  />
+                  <HeaderPill
+                    label="Add room"
+                    icon="add"
+                    iconSize={Math.round(16 * scale)}
                       style={roomsAddStyle}
                       textStyle={roomsAddTextStyle}
                       onPress={() => setShowAddRoom(true)}

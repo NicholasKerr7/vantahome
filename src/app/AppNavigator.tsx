@@ -15,6 +15,7 @@ import NotificationsScreen from "../screens/NotificationsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ManageRoomsScreen from "../screens/ManageRoomsScreen";
 import AutomationBuilderScreen from "../screens/AutomationBuilderScreen";
+import CamerasScreen from "../screens/CamerasScreen";
 import { theme } from "../theme/theme";
 
 /**
@@ -36,6 +37,7 @@ export type RootStackParamList = {
   Profile: undefined;
   ManageRooms: undefined;
   AutomationBuilder: { flowId?: string };
+  Cameras: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,6 +61,7 @@ export default function AppNavigator() {
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="ManageRooms" component={ManageRoomsScreen} />
+          <Stack.Screen name="Cameras" component={CamerasScreen} />
           <Stack.Screen
             name="AutomationBuilder"
             component={AutomationBuilderScreen}

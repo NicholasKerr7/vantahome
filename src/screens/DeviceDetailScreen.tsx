@@ -477,13 +477,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     : utilityHeroSize;
   const smokeHeroRadius = Math.round(smokeHeroSize / 2);
   const smokeHeroIconSize = Math.round(smokeHeroSize * 0.18);
-  const garageHeroSize = isLandscapeSplit
+  const openableHeroBaseSize = isLandscapeSplit
     ? Math.min(compactDialSize, Math.round(utilityHeroSize * 1.35))
     : utilityHeroSize;
+  const openableHeroSize =
+    !isTablet && isPortrait
+      ? Math.round(openableHeroBaseSize * (isCompactPhone ? 0.85 : 0.92))
+      : openableHeroBaseSize;
+  const garageHeroSize = openableHeroSize;
   const garageHeroRadius = Math.round(garageHeroSize / 2);
-  const doorHeroSize = isLandscapeSplit
-    ? Math.min(compactDialSize, Math.round(utilityHeroSize * 1.35))
-    : utilityHeroSize;
+  const doorHeroSize = openableHeroSize;
   const doorHeroRadius = Math.round(doorHeroSize / 2);
   const openPortraitInfoWidth = isPortrait
     ? Math.max(
@@ -977,9 +980,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     Array.from({ length: 10 }, () => new Animated.Value(0.2)),
   ).current;
   const coffeeLoop = useRef<Animated.CompositeAnimation | null>(null);
-  const openProgress = useRef(new Animated.Value(0)).current;
   const openDeviceIdRef = useRef<string | null>(null);
   const openPercentRef = useRef<number | null>(null);
+  const openMotionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const lightEffectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lightEffectStep = useRef(0);
   const lightAudioRecording = useRef<Audio.Recording | null>(null);
@@ -2003,7 +2008,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.windowHeroBody,
     {
       flexDirection: isTablet || isLandscape ? "row" : "column",
-      alignItems: isTablet || isLandscape ? "center" : "stretch",
+      alignItems: "center",
       gap: windowHeroGap,
     },
   ];
@@ -2020,9 +2025,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.windowHeroControls,
     {
       alignItems: isTablet || isLandscape ? "stretch" : "center",
-      alignSelf: isTablet || isLandscape ? "auto" : "stretch",
+      alignSelf: isTablet || isLandscape ? "auto" : "center",
       width: isTablet || isLandscape ? undefined : "100%",
     },
+    !isTablet &&
+      !isLandscape && {
+        maxWidth: Math.round(windowHeroSize * 1.55),
+      },
   ];
   const windowHeroHeaderStyle: StyleProp<ViewStyle> = [
     styles.windowHeroHeader,
@@ -2031,6 +2040,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const windowHeroMeterRowStyle: StyleProp<ViewStyle> = [
     styles.windowHeroMeterRow,
     !isTablet && { flexWrap: "wrap", rowGap: Math.round(4 * scale) },
+    !isTablet &&
+      !isLandscape && {
+        justifyContent: "center",
+        columnGap: Math.round(8 * scale),
+      },
   ];
   const windowHeroHintStyle: StyleProp<TextStyle> = [
     styles.windowHeroHint,
@@ -2048,9 +2062,26 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.windowHeroTrackFill,
     { width: `${openDisplayValue}%` },
   ];
+  const windowHeroSliderWrapStyle: StyleProp<ViewStyle> = [
+    styles.windowHeroSliderWrap,
+    !isTablet &&
+      !isLandscape && {
+        alignSelf: "center",
+        maxWidth: Math.round(windowHeroSize * 1.6),
+      },
+  ];
+  const windowQuickSetWrapStyle: StyleProp<ViewStyle> = [
+    styles.windowQuickSetWrap,
+    !isTablet &&
+      !isLandscape && {
+        alignSelf: "center",
+        maxWidth: Math.round(windowHeroSize * 1.6),
+      },
+  ];
   const windowQuickSetRowStyle: StyleProp<ViewStyle> = [
     styles.windowQuickSetRow,
     { marginTop: Math.round(8 * scale) },
+    !isTablet && !isLandscape && { justifyContent: "center" },
   ];
   const windowQuickSetButtonStyle = (
     active: boolean,
@@ -2156,6 +2187,41 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       gap: utilityHeroGap,
     },
   ];
+  const cameraHeroHeaderStyle: StyleProp<ViewStyle> = [
+    energyHeroHeaderStyle,
+    !isTablet &&
+      !isLandscape && {
+        alignItems: "center",
+        flexDirection: "column",
+        gap: Math.round(10 * scale),
+      },
+  ];
+  const cameraHeroTitleWrapStyle: StyleProp<ViewStyle> = [
+    styles.energyHeroTitleWrap,
+    !isTablet &&
+      !isLandscape && {
+        alignItems: "center",
+        alignSelf: "center",
+        width: "100%",
+      },
+  ];
+  const cameraHeroTitleStyle: StyleProp<TextStyle> = [
+    styles.energyHeroTitle,
+    !isTablet && !isLandscape && { textAlign: "center" },
+  ];
+  const cameraHeroSubStyle: StyleProp<TextStyle> = [
+    styles.energyHeroSub,
+    !isTablet && !isLandscape && { textAlign: "center" },
+  ];
+  const cameraHeroPillRowStyle: StyleProp<ViewStyle> = [
+    styles.energyHeroPillRow,
+    !isTablet &&
+      !isLandscape && {
+        justifyContent: "center",
+        alignSelf: "center",
+        width: "100%",
+      },
+  ];
   const cameraFeedCardStyle: StyleProp<ViewStyle> = [
     styles.cameraFeed,
     { height: cameraFeedHeight, borderRadius: controlCardRadius + 8 },
@@ -2187,6 +2253,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const cameraHeroStatsRowStyle: StyleProp<ViewStyle> = [
     styles.energyHeroStatsRow,
     isLandscape && styles.energyHeroStatsRowCentered,
+    !isTablet && !isLandscape && styles.energyHeroStatsRowCentered,
   ];
   const cameraHeroActionRowStyle: StyleProp<ViewStyle> = [
     styles.actionRow,
@@ -2194,7 +2261,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     {
       marginTop: Math.max(12, Math.round(utilityHeroGap * 0.7)),
       paddingHorizontal: 0,
-      justifyContent: isLandscape ? "center" : "flex-start",
+      justifyContent: !isTablet && !isLandscape ? "center" : "flex-start",
     },
   ];
   const cameraPortraitGridEnabled = isPortrait && isTablet;
@@ -2567,7 +2634,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.utilityHeroBody,
     {
       flexDirection: isTablet ? "row" : "column",
-      alignItems: isTablet ? "center" : "stretch",
+      alignItems: "center",
       gap: utilityHeroGap,
     },
   ];
@@ -2895,19 +2962,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   }, [showSchedule]);
 
   useEffect(() => {
-    const listenerId = openProgress.addListener(({ value }) => {
-      setOpenDisplayPercent(Math.round(value * 100));
-    });
-    return () => {
-      openProgress.removeListener(listenerId);
-    };
-  }, [openProgress]);
-
-  useEffect(() => {
     if (!isOpenable) {
+      if (openMotionTimeoutRef.current) {
+        clearTimeout(openMotionTimeoutRef.current);
+        openMotionTimeoutRef.current = null;
+      }
       openDeviceIdRef.current = device.id;
       openPercentRef.current = null;
-      openProgress.setValue(0);
       setOpenDisplayPercent(0);
       setOpenMotion(null);
       setOpenLastActivityAt(null);
@@ -2917,10 +2978,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     if (openDeviceIdRef.current !== device.id) {
       openDeviceIdRef.current = device.id;
       openPercentRef.current = openPercent;
-      openProgress.setValue(openPercent / 100);
       setOpenDisplayPercent(Math.round(openPercent));
       setOpenMotion(null);
       setOpenLastActivityAt(null);
+      if (openMotionTimeoutRef.current) {
+        clearTimeout(openMotionTimeoutRef.current);
+        openMotionTimeoutRef.current = null;
+      }
       return;
     }
 
@@ -2930,21 +2994,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     setOpenMotion(openPercent > prev ? "opening" : "closing");
     setOpenLastActivityAt(Date.now());
     openPercentRef.current = openPercent;
+    setOpenDisplayPercent(Math.round(openPercent));
+    if (openMotionTimeoutRef.current) {
+      clearTimeout(openMotionTimeoutRef.current);
+    }
     const distance = Math.abs(openPercent - prev);
     const duration = Math.max(600, Math.min(2400, Math.round(distance * 18)));
-
-    openProgress.stopAnimation();
-    Animated.timing(openProgress, {
-      toValue: openPercent / 100,
-      duration,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) {
-        setOpenMotion(null);
-      }
-    });
-  }, [device.id, isOpenable, openPercent, openProgress]);
+    openMotionTimeoutRef.current = setTimeout(() => {
+      setOpenMotion(null);
+      openMotionTimeoutRef.current = null;
+    }, duration);
+  }, [device.id, isOpenable, openPercent]);
 
   const logCameraEvent = (label: string, kind: "known" | "unknown") => {
     // Maintain a short, most-recent-first log for the UI preview.
@@ -4433,7 +4493,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     >
       <View style={energyHeroHeaderStyle}>
         <View style={styles.energyHeroTitleWrap}>
-          <Text style={styles.energyHeroTitle}>{device.name}</Text>
+          <Text style={cameraHeroTitleStyle}>{device.name}</Text>
           <Text style={styles.energyHeroSub}>
             {powerOutage ? "Grid outage detected" : "Live energy flow"}
           </Text>
@@ -5671,9 +5731,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         end={{ x: 1, y: 1 }}
         style={styles.utilityHeroOrbGlow}
       />
-      <AnimatedLottieView
+      <LottieView
         source={GARAGE_LOTTIE_SOURCE}
-        progress={openProgress}
+        progress={openPercent / 100}
         autoPlay={false}
         loop={false}
         resizeMode="contain"
@@ -5838,9 +5898,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         end={{ x: 1, y: 1 }}
         style={styles.utilityHeroOrbGlow}
       />
-      <AnimatedLottieView
+      <LottieView
         source={DOOR_LOTTIE_SOURCE}
-        progress={openProgress}
+        progress={openPercent / 100}
         autoPlay={false}
         loop={false}
         resizeMode="contain"
@@ -5968,9 +6028,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         end={{ x: 1, y: 1 }}
         style={styles.utilityHeroOrbGlow}
       />
-      <AnimatedLottieView
+      <LottieView
         source={GATE_LOTTIE_SOURCE}
-        progress={openProgress}
+        progress={openPercent / 100}
         autoPlay={false}
         loop={false}
         resizeMode="contain"
@@ -7517,14 +7577,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       end={{ x: 1, y: 1 }}
       style={cameraHeroCardStyle}
     >
-      <View style={energyHeroHeaderStyle}>
-        <View style={styles.energyHeroTitleWrap}>
+      <View style={cameraHeroHeaderStyle}>
+        <View style={cameraHeroTitleWrapStyle}>
           <Text style={styles.energyHeroTitle}>{device.name}</Text>
-          <Text style={styles.energyHeroSub}>
+          <Text style={cameraHeroSubStyle}>
             {roomName || "Camera"} • {device.isOn ? "Live view" : "Standby"}
           </Text>
         </View>
-        <View style={styles.energyHeroPillRow}>
+        <View style={cameraHeroPillRowStyle}>
           <View style={energyHeroPillStyle(device.isOn)}>
             <Ionicons
               name={device.isOn ? "videocam" : "videocam-off"}
@@ -8771,7 +8831,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         isOpen={isOpen}
                         openDisplayValue={openDisplayValue}
                         openPercent={openPercent}
-                        openProgress={openProgress}
                         openStatusText={openStatusText}
                         windowFlowLabel={windowFlowLabel}
                         windowFlowHint={windowFlowHint}
@@ -8790,12 +8849,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         windowHeroMeterRowStyle={windowHeroMeterRowStyle}
                         windowHeroMeterLabelStyle={windowHeroMeterLabelStyle}
                         windowHeroMeterValueStyle={windowHeroMeterValueStyle}
-                        windowHeroSliderWrapStyle={styles.windowHeroSliderWrap}
+                        windowHeroSliderWrapStyle={windowHeroSliderWrapStyle}
                         windowHeroTrackStyle={styles.windowHeroTrack}
                         windowHeroTrackFillStyle={windowHeroTrackFillStyle}
                         windowHeroSliderStyle={styles.windowHeroSlider}
                         windowHeroHintStyle={windowHeroHintStyle}
-                        windowQuickSetWrapStyle={styles.windowQuickSetWrap}
+                        windowQuickSetWrapStyle={windowQuickSetWrapStyle}
                         windowQuickSetHeaderStyle={styles.windowQuickSetHeader}
                         windowQuickSetLabelStyle={styles.windowQuickSetLabel}
                         windowQuickSetRowStyle={windowQuickSetRowStyle}

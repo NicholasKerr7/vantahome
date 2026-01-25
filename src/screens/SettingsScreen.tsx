@@ -70,7 +70,11 @@ export default function SettingsScreen() {
   const heroProgressHeight = Math.max(4, Math.round(6 * scale));
   const framePad = Math.round((isTablet ? 14 : 10) * scale);
   const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
-  const outerGutter = isWide ? Math.round(gutter * 0.6) : isTablet ? gutter : 0;
+  const outerGutter = isWide
+    ? Math.round(gutter * 0.6)
+    : isTablet
+      ? gutter
+      : gutter;
   const innerGutter = isWide ? Math.round(gutter * 0.75) : gutter;
   const minCardWidth = Math.round((isTablet ? 300 : 260) * scale);
   const sectionTitleSize = Math.round((isTablet ? 16 : 14) * scale);
@@ -167,7 +171,7 @@ export default function SettingsScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
+      paddingHorizontal: outerGutter,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },

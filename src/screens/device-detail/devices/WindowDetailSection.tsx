@@ -1,11 +1,6 @@
 import React from "react";
 import { View, Text } from "react-native";
-import type {
-  Animated,
-  StyleProp,
-  TextStyle,
-  ViewStyle,
-} from "react-native";
+import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Slider from "@react-native-community/slider";
@@ -19,7 +14,6 @@ type WindowDetailSectionProps = {
   isOpen: boolean;
   openDisplayValue: number;
   openPercent: number;
-  openProgress: Animated.Value;
   openStatusText: string;
   windowFlowLabel: string;
   windowFlowHint: string;
@@ -68,7 +62,6 @@ export default function WindowDetailSection({
   isOpen,
   openDisplayValue,
   openPercent,
-  openProgress,
   windowFlowLabel,
   windowFlowHint,
   openStatusText,
@@ -152,7 +145,7 @@ export default function WindowDetailSection({
             />
             <AnimatedLottieView
               source={windowLottieSource}
-              progress={openProgress}
+              progress={openPercent / 100}
               autoPlay={false}
               loop={false}
               resizeMode="contain"

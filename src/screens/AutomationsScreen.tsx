@@ -246,7 +246,7 @@ export default function AutomationsScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
+      paddingHorizontal: outerGutter,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
@@ -306,19 +306,23 @@ export default function AutomationsScreen() {
     styles.sectionSub,
     { fontSize: sectionSubSize },
   ];
+  const isPhone = !isTablet;
   const sectionHeaderStyle: StyleProp<ViewStyle> = [
     styles.sectionHeader,
     isSplit && styles.sectionHeaderWrap,
+    isPhone && styles.sectionHeaderPhone,
     isCompactPhone && styles.sectionHeaderCompact,
   ];
   const sectionActionsStyle: StyleProp<ViewStyle> = [
     styles.sectionActions,
     isSplit && styles.sectionActionsFull,
+    isPhone && styles.sectionActionsPhone,
     isCompactPhone && styles.sectionActionsCompact,
   ];
   const sectionBadgeStyle: StyleProp<ViewStyle> = [
     styles.sectionBadge,
     { height: badgeHeight, borderRadius: Math.round(badgeHeight / 2) },
+    isPhone && styles.sectionHeaderPillPhone,
   ];
   const sectionBadgeTextStyle: StyleProp<TextStyle> = [
     styles.sectionBadgeText,
@@ -328,6 +332,7 @@ export default function AutomationsScreen() {
     styles.sectionAction,
     { height: actionHeight, borderRadius: Math.round(actionHeight / 2) },
     isSplit && styles.sectionActionWide,
+    isPhone && styles.sectionActionPhone,
     isCompactPhone && styles.sectionActionCompact,
   ];
   const sectionActionTextStyle: StyleProp<TextStyle> = [
@@ -923,6 +928,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 10,
   },
+  sectionHeaderPhone: {
+    alignItems: "flex-start",
+    flexDirection: "column",
+    flexWrap: "wrap",
+    width: "100%",
+  },
   sectionTitle: { color: theme.colors.text, fontWeight: "900" },
   sectionSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
   sectionActions: {
@@ -931,6 +942,13 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
     justifyContent: "flex-end",
+  },
+  sectionActionsPhone: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    maxWidth: "100%",
   },
   sectionActionsFull: {
     width: "100%",
@@ -944,6 +962,10 @@ const styles = StyleSheet.create({
   sectionActionCompact: {
     maxWidth: "100%",
     flexShrink: 1,
+  },
+  sectionActionPhone: {
+    justifyContent: "center",
+    width: "48%",
   },
   sectionBadge: {
     paddingHorizontal: 10,
@@ -976,6 +998,11 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontWeight: "800",
     flexShrink: 1,
+    textAlign: "center",
+  },
+  sectionHeaderPillPhone: {
+    justifyContent: "center",
+    width: "48%",
   },
   grid: { gap: 12 },
   gridMulti: { flexDirection: "row", flexWrap: "wrap" },
