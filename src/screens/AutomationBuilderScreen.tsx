@@ -607,7 +607,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               </Pressable>
             </View>
             {triggers.length === 0 ? (
-              <Text style={styles.emptyText}>No triggers yet.</Text>
+              <Text style={styles.emptyText}>Add a trigger to get started.</Text>
             ) : (
               triggers.map((trigger, index) =>
                 renderRow(
@@ -639,7 +639,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               </Pressable>
             </View>
             {conditions.length === 0 ? (
-              <Text style={styles.emptyText}>No conditions (optional).</Text>
+              <Text style={styles.emptyText}>Optional: add a condition.</Text>
             ) : (
               conditions.map((condition, index) =>
                 renderRow(
@@ -671,7 +671,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               </Pressable>
             </View>
             {actions.length === 0 ? (
-              <Text style={styles.emptyText}>Add at least one action.</Text>
+              <Text style={styles.emptyText}>Add at least one action to run.</Text>
             ) : (
               actions.map((action, index) =>
                 renderRow(

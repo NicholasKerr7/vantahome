@@ -520,7 +520,7 @@ export default function ScenesScreen() {
           <View style={emptyCardStyle}>
             <Text style={styles.emptyTitle}>No scenes yet</Text>
             <Text style={styles.emptySub}>
-              Create a quick mood from your devices.
+              Create a scene to run multiple actions at once.
             </Text>
           </View>
         ) : (

@@ -564,9 +564,9 @@ export default function NotificationsScreen() {
                   size={28}
                   color="rgba(255,255,255,0.65)"
                 />
-                <Text style={styles.emptyTitle}>All caught up</Text>
+                <Text style={styles.emptyTitle}>You are all caught up</Text>
                 <Text style={styles.emptySub}>
-                  No notifications for this filter.
+                  No notifications match this filter.
                 </Text>
               </View>
             )}

@@ -431,7 +431,7 @@ export default function DeviceCapabilityControls({
   };
 
   if (!capabilities.length) {
-    return <Text style={styles.emptyHint}>No controls yet.</Text>;
+    return <Text style={styles.emptyHint}>No controls available.</Text>;
   }
 
   return (

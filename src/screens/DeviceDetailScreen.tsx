@@ -997,9 +997,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       >
         <BackgroundLines />
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyTitle}>No access to this device</Text>
+          <Text style={styles.emptyTitle}>Device unavailable</Text>
           <Text style={styles.emptySub}>
-            This device is not available for your account.
+            You do not have permission to view this device.
           </Text>
         </View>
       </LinearGradient>
