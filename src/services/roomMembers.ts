@@ -15,21 +15,33 @@ export async function setRoomMembershipRemote(
 ) {
   assertSupabaseReady();
 
-  const { error: deleteError } = await supabase!
-    .from("room_members")
-    .delete()
-    .eq("user_id", userId);
-  if (deleteError) throw new Error(deleteError.message);
-
-  if (!roomIds.length) return;
+  if (!roomIds.length) {
+    const { error } = await supabase!
+      .from("room_members")
+      .delete()
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return;
+  }
 
   const payload = roomIds.map((roomId) => ({
     room_id: roomId,
     user_id: userId,
     role,
   }));
-  const { error: insertError } = await supabase!
+  const { error: upsertError } = await supabase!
     .from("room_members")
-    .insert(payload);
-  if (insertError) throw new Error(insertError.message);
+    .upsert(payload, { onConflict: "room_id,user_id" });
+  if (upsertError) throw new Error(upsertError.message);
+
+  const { error: deleteError } = await supabase!
+    .from("room_members")
+    .delete()
+    .eq("user_id", userId)
+    .not(
+      "room_id",
+      "in",
+      `(${roomIds.map((id) => `"${id}"`).join(",")})`,
+    );
+  if (deleteError) throw new Error(deleteError.message);
 }

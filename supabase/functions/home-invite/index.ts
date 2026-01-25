@@ -83,19 +83,27 @@ Deno.serve(async (req) => {
         data: name ? { name } : undefined,
       });
 
-    if (inviteError || !inviteData?.user) {
-      return new Response(
-        JSON.stringify({
-          error: inviteError?.message ?? "Unable to invite member.",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    let invitedUserId = inviteData?.user?.id ?? "";
+    if (!invitedUserId) {
+      const { data: existingUsers, error: listError } =
+        await admin.auth.admin.listUsers({
+          filter: `email=eq.${email}`,
+          perPage: 1,
+          page: 1,
+        });
+      if (listError || !existingUsers?.users?.length) {
+        return new Response(
+          JSON.stringify({
+            error: inviteError?.message ?? "Unable to invite member.",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+      invitedUserId = existingUsers.users[0].id;
     }
-
-    const invitedUserId = inviteData.user.id;
     const { error: memberError } = await admin
       .from("home_members")
       .upsert({
@@ -126,7 +134,7 @@ Deno.serve(async (req) => {
         }));
         const { error: roomError } = await admin
           .from("room_members")
-          .insert(payload);
+          .upsert(payload);
         if (roomError) {
           return new Response(JSON.stringify({ error: roomError.message }), {
             status: 400,
