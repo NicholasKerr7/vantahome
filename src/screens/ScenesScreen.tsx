@@ -182,12 +182,12 @@ export default function ScenesScreen() {
     [rooms, scenes],
   );
   const frameEnabled = isPortrait || isWide;
-  const frameWidth = isWide
+  const frameWidth = isTablet
     ? undefined
     : Math.max(0, contentWidth - outerGutter * 2);
   const frameInnerWidth = Math.max(
     0,
-    frameWidth - (frameEnabled ? framePad * 2 : 0),
+    (frameWidth ?? contentWidth) - (frameEnabled ? framePad * 2 : 0),
   );
   const columnCount = useMemo(() => {
     if (!isWide) return 1;
@@ -231,7 +231,7 @@ export default function ScenesScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: isWide ? outerGutter : outerGutter,
+      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },

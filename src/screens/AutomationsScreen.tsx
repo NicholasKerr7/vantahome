@@ -138,12 +138,12 @@ export default function AutomationsScreen() {
   );
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
-  const frameWidth = isWide
+  const frameWidth = isTablet
     ? undefined
     : Math.max(0, contentWidth - outerGutter * 2);
   const frameInnerWidth = Math.max(
     0,
-    frameWidth - (frameEnabled ? framePad * 2 : 0),
+    (frameWidth ?? contentWidth) - (frameEnabled ? framePad * 2 : 0),
   );
   const availableWidth = isTablet
     ? width - outerGutter * 2 - innerGutter * 2
@@ -246,7 +246,7 @@ export default function AutomationsScreen() {
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
-      paddingHorizontal: isWide ? outerGutter : outerGutter,
+      paddingHorizontal: isWide ? outerGutter : isTablet ? gutter : 0,
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
