@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -8,6 +8,7 @@ import ScreenSectionLayout from "../components/ScreenSectionLayout";
 import HeaderPill from "../components/HeaderPill";
 import BackgroundLines from "../components/BackgroundLines";
 import Pressable from "../components/Pressable";
+import LiveVideoPlayer from "../components/LiveVideoPlayer";
 import { useResponsive } from "../theme/layout";
 import { theme } from "../theme/theme";
 import {
@@ -194,6 +195,17 @@ export default function CamerasScreen({ navigation }: Props) {
     styles.statText,
     { fontSize: pillTextSize },
   ];
+  const maxLiveStreams = isWide ? 6 : isTabletPortrait ? 4 : 2;
+  const [liveStreams, setLiveStreams] = useState<string[]>([]);
+  const toggleLive = (deviceId: string) => {
+    setLiveStreams((current) => {
+      if (current.includes(deviceId)) {
+        return current.filter((id) => id !== deviceId);
+      }
+      if (current.length >= maxLiveStreams) return current;
+      return [...current, deviceId];
+    });
+  };
 
   const headerSummary = `${cameraDevices.length} Camera${cameraDevices.length === 1 ? "" : "s"}`;
   const showLimitedNote = !canViewAll && cameraDevices.length > 0;
@@ -352,36 +364,71 @@ export default function CamerasScreen({ navigation }: Props) {
                   const armed = Boolean(camera.armed);
                   const recording = Boolean(camera.recording);
                   const statusLabel = isOnline ? "Online" : "Offline";
+                  const isLive = liveStreams.includes(camera.id);
+                  const hasStream = Boolean(camera.streamUrl);
+                  const canStart =
+                    isOnline &&
+                    hasStream &&
+                    (isLive || liveStreams.length < maxLiveStreams);
+                  const previewButtonLabel = isLive
+                    ? "Stop"
+                    : !canStart
+                      ? "Limit reached"
+                      : "Go live";
                   return (
-                    <Pressable
+                    <View
                       key={camera.id}
                       style={cardStyle}
-                      onPress={() =>
-                        navigation.navigate("DeviceDetail", {
-                          deviceId: camera.id,
-                        })
-                      }
                     >
                       <View style={previewStyle}>
-                        <LinearGradient
-                          colors={[
-                            "rgba(255,255,255,0.08)",
-                            "rgba(255,255,255,0.02)",
-                            "rgba(0,0,0,0.08)",
-                          ]}
-                          start={{ x: 0.1, y: 0.1 }}
-                          end={{ x: 1, y: 1 }}
-                          style={StyleSheet.absoluteFillObject}
-                        />
-                        <View style={styles.previewContent}>
-                          <Ionicons
-                            name={isOnline ? "videocam" : "videocam-off"}
-                            size={Math.round(18 * scale)}
-                            color="rgba(255,255,255,0.9)"
-                          />
-                          <Text style={styles.previewText}>
-                            {isOnline ? "Live feed" : "Offline"}
-                          </Text>
+                        {isLive && camera.streamUrl ? (
+                          <LiveVideoPlayer sourceUri={camera.streamUrl} />
+                        ) : (
+                          <>
+                            <LinearGradient
+                              colors={[
+                                "rgba(255,255,255,0.08)",
+                                "rgba(255,255,255,0.02)",
+                                "rgba(0,0,0,0.08)",
+                              ]}
+                              start={{ x: 0.1, y: 0.1 }}
+                              end={{ x: 1, y: 1 }}
+                              style={StyleSheet.absoluteFillObject}
+                            />
+                            <View style={styles.previewContent}>
+                              <Ionicons
+                                name={isOnline ? "videocam" : "videocam-off"}
+                                size={Math.round(18 * scale)}
+                                color="rgba(255,255,255,0.9)"
+                              />
+                              <Text style={styles.previewText}>
+                                {isOnline ? "Live feed" : "Offline"}
+                              </Text>
+                            </View>
+                          </>
+                        )}
+                        <View style={styles.previewOverlay}>
+                          <Pressable
+                            style={[
+                              styles.previewButton,
+                              !canStart && styles.previewButtonDisabled,
+                            ]}
+                            onPress={() => toggleLive(camera.id)}
+                            disabled={!canStart && !isLive}
+                          >
+                            <Ionicons
+                              name={isLive ? "stop" : "play"}
+                              size={Math.round(14 * scale)}
+                              color={
+                                !canStart && !isLive
+                                  ? "rgba(255,255,255,0.7)"
+                                  : "rgba(255,255,255,0.95)"
+                              }
+                            />
+                            <Text style={styles.previewButtonText}>
+                              {previewButtonLabel}
+                            </Text>
+                          </Pressable>
                         </View>
                       </View>
                       <View style={styles.cardHeader}>
@@ -413,15 +460,22 @@ export default function CamerasScreen({ navigation }: Props) {
                           {recording ? "Recording" : "Standby"}
                         </Text>
                       </View>
-                      <View style={styles.cardActionRow}>
+                      <Pressable
+                        style={styles.cardActionRow}
+                        onPress={() =>
+                          navigation.navigate("DeviceDetail", {
+                            deviceId: camera.id,
+                          })
+                        }
+                      >
                         <Ionicons
                           name="open-outline"
                           size={Math.round(16 * scale)}
                           color="rgba(255,255,255,0.8)"
                         />
                         <Text style={styles.cardActionText}>View details</Text>
-                      </View>
-                    </Pressable>
+                      </Pressable>
+                    </View>
                   );
                 })}
               </View>
@@ -579,6 +633,28 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   cardActionText: { color: theme.colors.text, fontWeight: "800" },
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    alignItems: "flex-start",
+    padding: 12,
+  },
+  previewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(122,92,255,0.75)",
+  },
+  previewButtonDisabled: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+  previewButtonText: {
+    color: "rgba(255,255,255,0.95)",
+    fontWeight: "800",
+  },
   statRow: {
     flexDirection: "row",
     alignItems: "center",

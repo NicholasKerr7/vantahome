@@ -34,6 +34,7 @@ import {
   type RoomMemberRole,
 } from "../services/roomMembers";
 import { inviteHomeMember } from "../services/cloudRegistry";
+import { supabase } from "../services/supabaseClient";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -425,6 +426,8 @@ export default function ProfileScreen({ navigation }: Props) {
   const activeMember = useHomeStore(selectActiveMember);
   const activeMemberId = useHomeStore((s) => s.activeMemberId);
   const setActiveMember = useHomeStore((s) => s.setActiveMember);
+  const demoMode = useHomeStore((s) => s.demoMode);
+  const setDemoMode = useHomeStore((s) => s.setDemoMode);
   const roomMembers = useHomeStore((s) => s.roomMembers);
   const setRoomMembership = useHomeStore((s) => s.setRoomMembership);
   const addHouseholdMember = useHomeStore((s) => s.addHouseholdMember);
@@ -703,6 +706,25 @@ export default function ProfileScreen({ navigation }: Props) {
 
   const openSettings = () => {
     navigation.navigate("Main", { screen: "Settings" });
+  };
+
+  const handleSignOut = () => {
+    Alert.alert("Sign out", "You will need to sign in again to access the home.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            if (supabase) {
+              await supabase.auth.signOut();
+            }
+          } finally {
+            setDemoMode(false);
+          }
+        },
+      },
+    ]);
   };
 
   const profileCards = [
@@ -1029,7 +1051,7 @@ export default function ProfileScreen({ navigation }: Props) {
           color={theme.colors.subtext}
         />
       </View>
-      {household.length > 1 ? (
+      {demoMode && household.length > 1 ? (
         <View style={styles.memberSwitcher}>
           <Text style={cardHintTextStyle}>Viewing as</Text>
           <View style={styles.chipRow}>
@@ -1230,10 +1252,36 @@ export default function ProfileScreen({ navigation }: Props) {
         </Pressable>
       </View>
     </View>,
+    <View key="sign-out" style={cardBaseStyle}>
+      <View style={styles.cardHeader}>
+        <View>
+          <Text style={sectionTitleTextStyle}>Account</Text>
+          <Text style={sectionSubTextStyle}>
+            End your current session
+          </Text>
+        </View>
+        <Ionicons
+          name="log-out-outline"
+          size={Math.round(18 * scale)}
+          color={theme.colors.subtext}
+        />
+      </View>
+      <Pressable
+        style={[styles.rowAction, styles.signOutAction]}
+        onPress={handleSignOut}
+      >
+        <Text style={[rowActionTextStyle, styles.signOutText]}>Sign out</Text>
+        <Ionicons
+          name="log-out-outline"
+          size={Math.round(16 * scale)}
+          color="#B74B5A"
+        />
+      </Pressable>
+    </View>,
   ];
 
-  const cardWeights = [3, 2, 1, 2, 2, 1, 3];
-  const cardOrder = [0, 6, 1, 3, 4, 2, 5];
+  const cardWeights = [3, 2, 1, 2, 2, 1, 3, 1];
+  const cardOrder = [0, 6, 1, 3, 4, 2, 5, 7];
   const orderedCards =
     columnCount > 1
       ? [
@@ -1879,6 +1927,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.16)",
   },
   rowActionText: { color: theme.colors.text, fontWeight: "800" },
+  signOutAction: {
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderColor: "rgba(183,75,90,0.35)",
+  },
+  signOutText: { color: "#B74B5A" },
   serviceRow: {
     flexDirection: "row",
     alignItems: "center",

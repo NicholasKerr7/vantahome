@@ -1,6 +1,6 @@
 import type { Buffer } from "buffer";
 import type { Device } from "../store/useHomeStore";
-import { deviceClient } from "./deviceClient";
+import { deviceClient, type ConnectionStatus } from "./deviceClient";
 import { reportRoomPresence } from "./roomPresence";
 import mqtt from "mqtt";
 
@@ -12,6 +12,7 @@ type MqttBridgeOptions = {
   topicState?: string;
   topicCommand?: string;
   publishState?: boolean;
+  onStatus?: (status: ConnectionStatus, error?: string) => void;
 };
 
 type MqttStatePayload = {
@@ -65,8 +66,23 @@ export function startMqttBridge(options: MqttBridgeOptions = {}) {
     connectTimeout: 10000,
   });
 
+  options.onStatus?.("connecting");
+
   client.on("connect", () => {
     client.subscribe(topicState);
+    options.onStatus?.("connected");
+  });
+
+  client.on("reconnect", () => {
+    options.onStatus?.("connecting");
+  });
+
+  client.on("close", () => {
+    options.onStatus?.("disconnected");
+  });
+
+  client.on("error", (err) => {
+    options.onStatus?.("error", err?.message ?? "MQTT error");
   });
 
   client.on("message", (topic, payload) => {

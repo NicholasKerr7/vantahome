@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { ConnectionStatus } from "../services/deviceClient";
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -23,6 +24,7 @@ export type DeviceKind =
   | "stove"
   | "washer"
   | "dryer"
+  | "dishwasher"
   | "microwave"
   | "energy"
   | "water"
@@ -109,6 +111,7 @@ export type Device = {
   motionSensitivity?: number; // camera
   micMuted?: boolean; // camera
   twoWayAudio?: boolean; // camera
+  streamUrl?: string; // camera
   burnerLevel?: number; // stove
   stoveMode?: "simmer" | "boil" | "sear" | "keep-warm"; // stove
   stoveTimerMin?: number; // stove
@@ -377,6 +380,9 @@ const AIR_HISTORY_MAX = 144;
 type RealtimeSettings = {
   enabled: boolean;
   wsUrl: string;
+  useMqtt: boolean;
+  mqttStatus?: ConnectionStatus;
+  mqttError?: string;
 };
 
 type Profile = {
@@ -396,6 +402,7 @@ type State = {
   profile: Profile;
   outdoor: AmbientReading;
   indoor: AmbientReading;
+  demoMode: boolean;
   rooms: Room[];
   devices: Device[];
   scenes: Scene[];
@@ -409,6 +416,7 @@ type State = {
   household: HouseholdMember[];
   roomMembers: RoomMembership[];
   activeMemberId: string;
+  setDemoMode: (enabled: boolean) => void;
 
   addRoom: (name: string) => void;
   renameRoom: (roomId: string, name: string) => void;
@@ -801,6 +809,7 @@ const devicesSeed: Device[] = [
     motionSensitivity: 6,
     micMuted: false,
     twoWayAudio: true,
+    streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
   },
   {
     id: "d37",
@@ -815,6 +824,7 @@ const devicesSeed: Device[] = [
     motionSensitivity: 5,
     micMuted: false,
     twoWayAudio: true,
+    streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
   },
   {
     id: "d38",
@@ -829,6 +839,7 @@ const devicesSeed: Device[] = [
     motionSensitivity: 4,
     micMuted: true,
     twoWayAudio: false,
+    streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
   },
   {
     id: "d39",
@@ -843,6 +854,7 @@ const devicesSeed: Device[] = [
     motionSensitivity: 7,
     micMuted: false,
     twoWayAudio: true,
+    streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
   },
   {
     id: "d16",
@@ -880,6 +892,25 @@ const devicesSeed: Device[] = [
     prewash: false,
     steamWash: false,
     sanitizeWash: false,
+    smartDispense: true,
+    extraSpin: false,
+    ecoWash: false,
+  },
+  {
+    id: "d18b",
+    name: "Dishwasher",
+    kind: "dishwasher",
+    roomId: "r3",
+    isOn: false,
+    cycle: "Auto",
+    progress: 0,
+    washTemp: "Hot",
+    soilLevel: "Normal",
+    remainingMin: 58,
+    rinseCount: 2,
+    prewash: false,
+    steamWash: false,
+    sanitizeWash: true,
     smartDispense: true,
     extraSpin: false,
     ecoWash: false,
@@ -1170,6 +1201,7 @@ const integrationsSeed: Record<IntegrationProvider, IntegrationState> = {
 const realtimeSeed: RealtimeSettings = {
   enabled: false,
   wsUrl: "ws://localhost:8088",
+  useMqtt: !!process.env.EXPO_PUBLIC_MQTT_URL,
 };
 
 const mergeById = <T extends { id: string }>(
@@ -1594,9 +1626,11 @@ export const useHomeStore = create<State>()(
       integrations: integrationsSeed,
       preferences: { haptics: true, notifications: true },
       realtime: realtimeSeed,
+      demoMode: false,
       household: householdSeed,
       roomMembers: roomMembersSeed,
       activeMemberId: activeMemberSeed,
+      setDemoMode: (enabled) => set({ demoMode: enabled }),
 
       addRoom: (name) => {
         const trimmed = name.trim();

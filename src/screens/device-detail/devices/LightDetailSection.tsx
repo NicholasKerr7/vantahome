@@ -64,6 +64,9 @@ type LightDetailSectionProps = {
   lightSceneTextStyle: StyleProp<TextStyle>;
   modeTextStyle: (active: boolean) => StyleProp<TextStyle>;
   lightControlsColumnLayoutStyle: StyleProp<ViewStyle>;
+  useTabletPortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
+  portraitCardStyle: StyleProp<ViewStyle>;
   isTablet: boolean;
   lightControlCardStyle: StyleProp<ViewStyle>;
   lightCardHintStyle: StyleProp<TextStyle>;
@@ -135,6 +138,9 @@ export default function LightDetailSection({
   lightSceneTextStyle,
   modeTextStyle,
   lightControlsColumnLayoutStyle,
+  useTabletPortraitGrid,
+  portraitGridStyle,
+  portraitCardStyle,
   isTablet,
   lightControlCardStyle,
   lightCardHintStyle,
@@ -161,6 +167,9 @@ export default function LightDetailSection({
   onPatch,
   onAnimateBulb,
 }: LightDetailSectionProps) {
+  const tabletControlCardStyle = useTabletPortraitGrid
+    ? [lightControlCardStyle, portraitCardStyle]
+    : lightControlCardStyle;
   const temperatureOptions = lightTempPresets.map((preset) => ({
     label: preset.label,
     value: preset.value,
@@ -350,8 +359,148 @@ export default function LightDetailSection({
 
       <View style={lightControlsColumnLayoutStyle}>
         {isTablet ? (
-          <>
-            <View style={lightControlCardStyle}>
+          useTabletPortraitGrid ? (
+            <View style={portraitGridStyle}>
+              <View style={tabletControlCardStyle}>
+                <Text style={styles.cardLabel}>Temperature</Text>
+                <Text style={lightCardHintStyle}>{colorTempK}K</Text>
+                <OptionChips
+                  options={temperatureOptions}
+                  value={colorTempK}
+                  isActive={(option) =>
+                    Math.abs(colorTempK - option.value) <= 200
+                  }
+                  onSelect={(value) =>
+                    onPatch({
+                      colorTempK: value,
+                      lightEffect: undefined,
+                      isOn: true,
+                    })
+                  }
+                  rowStyle={styles.chipRow}
+                  chipStyle={chipStyle}
+                  chipTextStyle={chipTextStyle}
+                />
+
+                <Text style={lightCardHintTopStyle}>Effects</Text>
+                {lightEffectsUseTiles ? (
+                  <View style={lightEffectActionRowStyle}>
+                    {lightEffects.map((effect) => {
+                      const active = lightEffect === effect.value;
+                      return (
+                        <Pressable
+                          key={effect.value}
+                          style={modeTileStyle(active)}
+                          onPress={() =>
+                            onPatch({
+                              lightEffect: effect.value,
+                              isOn: true,
+                            })
+                          }
+                        >
+                          {active ? (
+                            <LinearGradient
+                              colors={[
+                                theme.colors.accent2,
+                                theme.colors.accent,
+                              ]}
+                              start={{ x: 0.1, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.modeIconBubbleActive}
+                            >
+                              <Ionicons
+                                name={effect.icon}
+                                size={lightSceneIconSize}
+                                color="#FFFFFF"
+                              />
+                            </LinearGradient>
+                          ) : (
+                            <View style={styles.modeIconBubble}>
+                              <Ionicons
+                                name={effect.icon}
+                                size={lightSceneIconSize}
+                                color="rgba(12,12,18,0.65)"
+                              />
+                            </View>
+                          )}
+                          <Text style={modeTextStyle(active)}>
+                            {effect.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={chipRowTopStyle}>
+                    {lightEffects.map((effect) => {
+                      const active = lightEffect === effect.value;
+                      return (
+                        <Pressable
+                          key={effect.value}
+                          style={chipRowItemStyle(active)}
+                          onPress={() =>
+                            onPatch({
+                              lightEffect: effect.value,
+                              isOn: true,
+                            })
+                          }
+                        >
+                          <Ionicons
+                            name={effect.icon}
+                            size={lightSceneIconSize}
+                            color={active ? stylesVars.ink : stylesVars.subtext}
+                          />
+                          <Text style={chipTextStyle(active)}>
+                            {effect.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+
+              <View style={tabletControlCardStyle}>
+                <Text style={styles.cardLabel}>Automation</Text>
+                <View style={styles.chipRow}>
+                  <Pressable
+                    style={chipStyle(adaptiveLighting)}
+                    onPress={() =>
+                      onPatch({ adaptiveLighting: !adaptiveLighting })
+                    }
+                  >
+                    <Text style={chipTextStyle(adaptiveLighting)}>
+                      Adaptive
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={chipStyle(motionBoost)}
+                    onPress={() => onPatch({ motionBoost: !motionBoost })}
+                  >
+                    <Text style={chipTextStyle(motionBoost)}>Motion</Text>
+                  </Pressable>
+                  <Pressable
+                    style={chipStyle(nightShift)}
+                    onPress={() => onPatch({ nightShift: !nightShift })}
+                  >
+                    <Text style={chipTextStyle(nightShift)}>Night Shift</Text>
+                  </Pressable>
+                </View>
+
+                <Text style={lightCardHintTopStyle}>Auto-off</Text>
+                <OptionChips
+                  options={autoOffOptions}
+                  value={autoOffMin}
+                  onSelect={(value) => onPatch({ autoOffMin: value })}
+                  rowStyle={chipRowTopStyle}
+                  chipStyle={chipStyle}
+                  chipTextStyle={chipTextStyle}
+                />
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={tabletControlCardStyle}>
               <Text style={styles.cardLabel}>Temperature</Text>
               <Text style={lightCardHintStyle}>{colorTempK}K</Text>
               <OptionChips
@@ -448,7 +597,7 @@ export default function LightDetailSection({
               )}
             </View>
 
-            <View style={lightControlCardStyle}>
+              <View style={tabletControlCardStyle}>
               <Text style={styles.cardLabel}>Automation</Text>
               <View style={styles.chipRow}>
                 <Pressable
@@ -482,8 +631,9 @@ export default function LightDetailSection({
                 chipStyle={chipStyle}
                 chipTextStyle={chipTextStyle}
               />
-            </View>
-          </>
+              </View>
+            </>
+          )
         ) : lightControlsCompact ? (
           <View style={lightControlsGridStyle}>
             <View style={lightControlCompactStyle}>

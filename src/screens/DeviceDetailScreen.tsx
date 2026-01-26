@@ -57,6 +57,7 @@ import OptionChips from "../components/OptionChips";
 import BackgroundLines from "../components/BackgroundLines";
 import ModeTiles from "../components/ModeTiles";
 import AvatarChip from "../components/AvatarChip";
+import LiveVideoPlayer from "../components/LiveVideoPlayer";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -470,6 +471,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const gateAutoOpenCardRadius = Math.round(controlCardRadius * 0.8);
   const controlCardRowGap = Math.round((isTablet ? 12 : 10) * scale);
   const isTabletLandscape = isTablet && isLandscape;
+  const isTabletPortrait = isTablet && isPortrait;
   const isLandscapeSplit =
     isTabletLandscape || (isLandscape && contentWidth >= 700);
   const smokeHeroSize = isLandscapeSplit
@@ -665,6 +667,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const editButtonHeight = Math.round(
     (isTablet ? 46 : isCompactPhone ? 40 : 44) * scale,
   );
+  const portraitGridStyle: StyleProp<ViewStyle> = [
+    { marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  ];
+  const portraitGridCardStyle: StyleProp<ViewStyle> = [
+    { flexBasis: "48%", flexGrow: 1, marginTop: 0 },
+  ];
   const controlCardStyle = isTablet
     ? [
         styles.controlCard,
@@ -676,6 +684,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         isTabletLandscape && styles.controlCardLandscape,
       ]
     : styles.controlCard;
+  const portraitControlCardStyle: StyleProp<ViewStyle> = isTabletPortrait
+    ? [controlCardStyle, portraitGridCardStyle]
+    : controlCardStyle;
   const controlCardRowStyle = isTablet
     ? [styles.controlCardRow, { gap: controlCardRowGap }]
     : styles.controlCardRow;
@@ -850,12 +861,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const landscapeColumnGapStyle: ViewStyle = { gap: landscapeColumnGap };
   const flex1Style: ViewStyle = { flex: 1 };
   const marginBottom6Style: ViewStyle = { marginBottom: 6 };
-  const openColumnStyle: ViewStyle = {
-    flex: 1,
-    gap: landscapeColumnGap,
-    justifyContent: "center",
-    alignItems: "stretch",
-  };
   const landscapeGridStyle = isLandscapeSplit
     ? [
         styles.landscapeGrid,
@@ -1002,10 +1007,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       >
         <BackgroundLines />
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyTitle}>Device unavailable</Text>
-          <Text style={styles.emptySub}>
-            You do not have permission to view this device.
-          </Text>
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Access limited</Text>
+            <Text style={styles.emptySub}>
+              This device is in a room you do not have access to. Ask the owner
+              to share the room with you.
+            </Text>
+            <Pressable style={styles.emptyAction} onPress={navigation.goBack}>
+              <Text style={styles.emptyActionText}>Go back</Text>
+            </Pressable>
+          </View>
         </View>
       </LinearGradient>
     );
@@ -1163,10 +1174,30 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     1,
   );
   const coffeeAutoBrewActive = Boolean(coffeeAutoBrewTime);
+  const isLaundryStackable =
+    device.kind === "washer" || device.kind === "dryer";
+  const isDishwasher = device.kind === "dishwasher";
+  const isLaundryDevice = isLaundryStackable || isDishwasher;
+  const dishwasherBubbleSpecs = useMemo(
+    () => [
+      { sizeRatio: 0.16, leftRatio: 0.18, delay: 0 },
+      { sizeRatio: 0.1, leftRatio: 0.62, delay: 400 },
+      { sizeRatio: 0.12, leftRatio: 0.42, delay: 750 },
+      { sizeRatio: 0.08, leftRatio: 0.72, delay: 1100 },
+      { sizeRatio: 0.14, leftRatio: 0.3, delay: 1500 },
+      { sizeRatio: 0.09, leftRatio: 0.52, delay: 1900 },
+    ],
+    [],
+  );
+  const dishwasherBubbleAnims = useRef(
+    dishwasherBubbleSpecs.map(() => new Animated.Value(0)),
+  ).current;
   const laundryCycles =
     device.kind === "dryer"
       ? ["Normal", "Quick", "Delicate", "Bedding", "Towels", "Air Fluff"]
-      : ["Normal", "Quick", "Delicate", "Bedding", "Eco"];
+      : isDishwasher
+        ? ["Auto", "Normal", "Quick", "Eco", "Intensive", "Rinse"]
+        : ["Normal", "Quick", "Delicate", "Bedding", "Eco"];
   const stoveModeOptions: Array<{
     label: string;
     value: NonNullable<Device["stoveMode"]>;
@@ -1212,6 +1243,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           : washerProgress > 0 || device.isOn
             ? "Washing"
             : "Ready";
+  const dishwasherPhaseNotice =
+    washerProgress >= 100
+      ? "Done"
+      : washerProgress >= 75
+        ? "Drying"
+        : washerProgress >= 45
+          ? "Rinsing"
+          : washerProgress > 0 || device.isOn
+            ? "Washing"
+            : "Ready";
   const dryerPhaseNotice =
     washerProgress >= 100
       ? "Done"
@@ -1221,7 +1262,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           ? "Drying"
           : "Ready";
   const laundryPhaseNotice =
-    device.kind === "dryer" ? dryerPhaseNotice : washerPhaseNotice;
+    device.kind === "dryer"
+      ? dryerPhaseNotice
+      : isDishwasher
+        ? dishwasherPhaseNotice
+        : washerPhaseNotice;
   const laundryOverlayLabel =
     laundryPhaseNotice === "Ready" || laundryPhaseNotice === "Done"
       ? ""
@@ -1239,14 +1284,24 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     ? `Stack ${device.stackPosition === "top" ? "Top" : "Bottom"}`
     : device.kind === "dryer"
       ? "Dryer"
-      : "Washer";
-  const laundryCycleLabel = device.cycle ?? "Normal";
+      : isDishwasher
+        ? "Dishwasher"
+        : "Washer";
+  const laundryCycleLabel = device.cycle ?? (isDishwasher ? "Auto" : "Normal");
   const washerCycleMinutes: Record<string, number> = {
     Normal: 45,
     Quick: 25,
     Delicate: 35,
     Bedding: 60,
     Eco: 55,
+  };
+  const dishwasherCycleMinutes: Record<string, number> = {
+    Auto: 75,
+    Normal: 70,
+    Quick: 40,
+    Eco: 85,
+    Intensive: 95,
+    Rinse: 25,
   };
   const dryerCycleMinutes: Record<string, number> = {
     Normal: 50,
@@ -1257,6 +1312,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     "Air Fluff": 20,
   };
   const washerCycleBase = washerCycleMinutes[laundryCycleLabel] ?? 45;
+  const dishwasherCycleBase = dishwasherCycleMinutes[laundryCycleLabel] ?? 70;
   const dryerCycleBase = dryerCycleMinutes[laundryCycleLabel] ?? 45;
   const washerAdjustMinutes =
     (loadSize === "Small" ? -6 : loadSize === "Large" ? 8 : 0) +
@@ -1270,6 +1326,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     (smartDispense ? 3 : 0) +
     (extraSpin ? 8 : 0) +
     (ecoWash ? 6 : 0);
+  const dishwasherAdjustMinutes =
+    (washTemp === "Cold" ? -6 : washTemp === "Hot" ? 6 : 0) +
+    (soilLevel === "Light" ? -5 : soilLevel === "Heavy" ? 10 : 0) +
+    (rinseCount - 1) * 6 +
+    (prewash ? 12 : 0) +
+    (steamWash ? 10 : 0) +
+    (sanitizeWash ? 12 : 0) +
+    (smartDispense ? 4 : 0) +
+    (extraSpin ? 10 : 0) +
+    (ecoWash ? 8 : 0);
   const dryerAdjustMinutes =
     (heatLevel === "Low" ? 10 : heatLevel === "High" ? -6 : 0) +
     (drynessLevel === "Damp" ? -6 : drynessLevel === "Extra" ? 10 : 0) +
@@ -1282,10 +1348,18 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     (!lintFilterOk ? 6 : 0) +
     (antiStatic ? 4 : 0);
   const laundryBaseMin =
-    device.kind === "dryer" ? dryerCycleBase : washerCycleBase;
+    device.kind === "dryer"
+      ? dryerCycleBase
+      : isDishwasher
+        ? dishwasherCycleBase
+        : washerCycleBase;
   const laundryTotalMin = clamp(
     laundryBaseMin +
-      (device.kind === "dryer" ? dryerAdjustMinutes : washerAdjustMinutes),
+      (device.kind === "dryer"
+        ? dryerAdjustMinutes
+        : isDishwasher
+          ? dishwasherAdjustMinutes
+          : washerAdjustMinutes),
     15,
     180,
   );
@@ -1306,11 +1380,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           { label: "Dry", value: drynessLevel },
           { label: "Cool", value: coolDown ? "On" : "Off" },
         ]
-      : [
-          { label: "Temp", value: washTemp },
-          { label: "Spin", value: `${spinSpeed} rpm` },
-          { label: "Load", value: loadSize },
-        ];
+      : isDishwasher
+        ? [
+            { label: "Temp", value: washTemp },
+            { label: "Soil", value: soilLevel },
+            { label: "Rinse", value: `${rinseCount}x` },
+          ]
+        : [
+            { label: "Temp", value: washTemp },
+            { label: "Spin", value: `${spinSpeed} rpm` },
+            { label: "Load", value: loadSize },
+          ];
   const laundryHeroCardStyle: StyleProp<ViewStyle> = [
     styles.laundryHeroCard,
     { padding: laundryHeroPad, borderRadius: controlCardRadius + 6 },
@@ -1381,7 +1461,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   ];
   const laundryHeroLeftColumnStyle: StyleProp<ViewStyle> = [
     styles.laundryHeroLeftColumn,
-    { width: laundryHeroSize },
+    { width: isLandscape ? "100%" : laundryHeroSize },
   ];
   const laundryHeroStackStyle: StyleProp<ViewStyle> = [
     styles.laundryHeroStack,
@@ -1425,6 +1505,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       gap: Math.max(8, Math.round(laundryStatGap * 0.7)),
       marginTop: Math.max(14, Math.round(laundryHeroGap * 0.75)),
     },
+  ];
+  const laundryHeroActionRowStyle: StyleProp<ViewStyle> = [
+    laundryActionRowStyle,
+    { marginTop: Math.max(12, Math.round(laundryHeroGap * 0.8)) },
   ];
   const laundryStatValueStyle: StyleProp<TextStyle> = [
     styles.laundryStatValue,
@@ -1649,6 +1733,15 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const heaterTemp = clamp(device.tempC ?? 52, 40, 70);
   const heaterType = device.waterHeaterType ?? "electric-tank";
   const heaterMode = device.heaterMode ?? "eco";
+  const heaterModeLabel = heaterMode[0].toUpperCase() + heaterMode.slice(1);
+  const heaterTypeLabel =
+    heaterType === "tankless"
+      ? "Tankless"
+      : heaterType === "heat-pump"
+        ? "Heat Pump"
+        : heaterType === "gas-tank"
+          ? "Gas Tank"
+          : "Tank";
   const heaterRecirculation = device.recirculation ?? false;
   const heaterScheduleEnabled = device.heaterScheduleEnabled ?? true;
   const heaterSanitize = device.antiLegionella ?? false;
@@ -1690,7 +1783,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             { label: "Boost", value: "boost" },
             { label: "Vacation", value: "vacation" },
           ];
-  const isLaundry = device.kind === "washer" || device.kind === "dryer";
   const stackPartnerKind =
     device.kind === "washer"
       ? "dryer"
@@ -1717,7 +1809,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       ) ?? null
     );
   }, [devicesAll, device.id, device.stackId]);
-  const canStackSave = !isLaundry || !stackEnabled || Boolean(stackTargetId);
+  const canStackSave =
+    !isLaundryStackable || !stackEnabled || Boolean(stackTargetId);
   const formatClock = (sec: number) => {
     const mins = Math.floor(sec / 60);
     const secs = Math.floor(sec % 60);
@@ -1777,6 +1870,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     "stove",
     "washer",
     "dryer",
+    "dishwasher",
     "microwave",
     "energy",
     "water",
@@ -1824,7 +1918,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       name: draftName.trim(),
       roomId: draftRoomId,
     };
-    if (!isLaundry) {
+    if (!isLaundryStackable) {
       sendPatch(basePatch);
       setShowEdit(false);
       return;
@@ -1979,6 +2073,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         : openDisplayValue === 100
           ? "Open"
           : `${openDisplayValue}% open`;
+  const handleWindowSetOpenPercent = (value: number) =>
+    sendPatch({
+      openPercent: clamp(value, 0, 100),
+      isOn: value > 0,
+    });
+  const handleWindowQuickSet = (value: number) =>
+    sendPatch({
+      openPercent: value,
+      isOn: value > 0,
+    });
   const openBatteryLabel =
     typeof device.battery === "number"
       ? `${Math.round(device.battery)}%`
@@ -2100,6 +2204,36 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     { fontSize: windowQuickSetTextSize },
     active && styles.windowQuickSetTextActive,
   ];
+  const windowQuickSetCard = (
+    <View style={controlCardStyle}>
+      <Text style={styles.cardLabel}>Quick set</Text>
+      <View style={windowQuickSetRowStyle}>
+        {[
+          { label: "Open", value: 100, icon: "arrow-up-circle" },
+          { label: "Vent", value: 25, icon: "leaf" },
+          { label: "Close", value: 0, icon: "lock-closed" },
+        ].map((preset) => {
+          const active = openPercent === preset.value;
+          return (
+            <Pressable
+              key={preset.label}
+              style={windowQuickSetButtonStyle(active)}
+              onPress={() => handleWindowQuickSet(preset.value)}
+            >
+              <Ionicons
+                name={preset.icon as keyof typeof Ionicons.glyphMap}
+                size={windowQuickSetIconSize}
+                color={active ? "#fff" : stylesVars.subtext}
+              />
+              <Text style={windowQuickSetTextStyle(active)}>
+                {preset.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
   const energyHeroCardStyle: StyleProp<ViewStyle> = [
     styles.energyHeroCard,
     { padding: energyHeroPad, borderRadius: controlCardRadius + 6 },
@@ -2187,41 +2321,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       gap: utilityHeroGap,
     },
   ];
-  const cameraHeroHeaderStyle: StyleProp<ViewStyle> = [
-    energyHeroHeaderStyle,
-    !isTablet &&
-      !isLandscape && {
-        alignItems: "center",
-        flexDirection: "column",
-        gap: Math.round(10 * scale),
-      },
-  ];
-  const cameraHeroTitleWrapStyle: StyleProp<ViewStyle> = [
-    styles.energyHeroTitleWrap,
-    !isTablet &&
-      !isLandscape && {
-        alignItems: "center",
-        alignSelf: "center",
-        width: "100%",
-      },
-  ];
-  const cameraHeroTitleStyle: StyleProp<TextStyle> = [
-    styles.energyHeroTitle,
-    !isTablet && !isLandscape && { textAlign: "center" },
-  ];
-  const cameraHeroSubStyle: StyleProp<TextStyle> = [
-    styles.energyHeroSub,
-    !isTablet && !isLandscape && { textAlign: "center" },
-  ];
-  const cameraHeroPillRowStyle: StyleProp<ViewStyle> = [
-    styles.energyHeroPillRow,
-    !isTablet &&
-      !isLandscape && {
-        justifyContent: "center",
-        alignSelf: "center",
-        width: "100%",
-      },
-  ];
   const cameraFeedCardStyle: StyleProp<ViewStyle> = [
     styles.cameraFeed,
     { height: cameraFeedHeight, borderRadius: controlCardRadius + 8 },
@@ -2253,7 +2352,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const cameraHeroStatsRowStyle: StyleProp<ViewStyle> = [
     styles.energyHeroStatsRow,
     isLandscape && styles.energyHeroStatsRowCentered,
-    !isTablet && !isLandscape && styles.energyHeroStatsRowCentered,
   ];
   const cameraHeroActionRowStyle: StyleProp<ViewStyle> = [
     styles.actionRow,
@@ -2261,10 +2359,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     {
       marginTop: Math.max(12, Math.round(utilityHeroGap * 0.7)),
       paddingHorizontal: 0,
-      justifyContent: !isTablet && !isLandscape ? "center" : "flex-start",
+      justifyContent: isLandscape ? "center" : "flex-start",
     },
   ];
-  const cameraPortraitGridEnabled = isPortrait && isTablet;
+  const cameraPortraitGridEnabled = isTablet;
   const cameraPortraitGridStyle: StyleProp<ViewStyle> = cameraPortraitGridEnabled
     ? {
         marginTop: 14,
@@ -2289,6 +2387,47 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     cameraPortraitGridEnabled
       ? [controlCardStyle, cameraPortraitCardStyle]
       : controlCardStyle;
+  const waterPortraitGridEnabled = isTablet && isPortrait;
+  const waterPortraitGridGap = Math.max(10, Math.round(controlCardRowGap * 0.7));
+  const waterPortraitGridStyle: StyleProp<ViewStyle> = waterPortraitGridEnabled
+    ? {
+        marginTop: 14,
+        width: "100%",
+        gap: waterPortraitGridGap,
+      }
+    : undefined;
+  const waterPortraitRowStyle: StyleProp<ViewStyle> = waterPortraitGridEnabled
+    ? {
+        flexDirection: "row",
+        gap: waterPortraitGridGap,
+        alignItems: "stretch",
+      }
+    : undefined;
+  const waterPortraitCellStyle: StyleProp<ViewStyle> = waterPortraitGridEnabled
+    ? { flex: 1, minWidth: 0, alignItems: "stretch" }
+    : undefined;
+  const waterControlCardStyle: StyleProp<ViewStyle> = waterPortraitGridEnabled
+    ? [controlCardStyle, { marginTop: 0, alignSelf: "stretch", width: "100%" }]
+    : controlCardStyle;
+  const energyPortraitGridEnabled = isTablet && isPortrait;
+  const energyPortraitGridGap = Math.max(10, Math.round(controlCardRowGap * 0.7));
+  const energyPortraitGridStyle: StyleProp<ViewStyle> = energyPortraitGridEnabled
+    ? {
+        marginTop: 14,
+        width: "100%",
+        gap: energyPortraitGridGap,
+      }
+    : undefined;
+  const energyPortraitRowStyle: StyleProp<ViewStyle> = energyPortraitGridEnabled
+    ? {
+        flexDirection: "row",
+        gap: energyPortraitGridGap,
+        alignItems: "stretch",
+      }
+    : undefined;
+  const energyPortraitCellStyle: StyleProp<ViewStyle> = energyPortraitGridEnabled
+    ? { flex: 1, minWidth: 0, alignItems: "stretch" }
+    : undefined;
   const utilityHeroCardStyle: StyleProp<ViewStyle> = [
     styles.utilityHeroCard,
     { padding: utilityHeroPad, borderRadius: controlCardRadius + 6 },
@@ -2876,6 +3015,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       width: `${Math.round(speakerTrackProgressPct * 100)}%`,
     },
   ];
+  const speakerPortraitGridStyle: StyleProp<ViewStyle> = portraitGridStyle;
+  const speakerPortraitCardStyle: StyleProp<ViewStyle> = portraitGridCardStyle;
+  const laundryPortraitGridStyle: StyleProp<ViewStyle> = portraitGridStyle;
   const speakerVisualizerRowStyle: StyleProp<ViewStyle> = [
     styles.speakerVisualizerRow,
     { height: speakerBarMax },
@@ -2937,22 +3079,22 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     if (!showEdit) return;
-    if (!isLaundry) {
+    if (!isLaundryStackable) {
       setStackEnabled(false);
       setStackTargetId(null);
       return;
     }
     setStackEnabled(Boolean(device.stackId));
     setStackTargetId(currentStackPartner?.id ?? null);
-  }, [showEdit, isLaundry, device.stackId, currentStackPartner?.id]);
+  }, [showEdit, isLaundryStackable, device.stackId, currentStackPartner?.id]);
 
   useEffect(() => {
-    if (!showEdit || !isLaundry || !stackEnabled) return;
+    if (!showEdit || !isLaundryStackable || !stackEnabled) return;
     const hasTarget =
       stackTargetId && stackCandidates.some((d) => d.id === stackTargetId);
     if (hasTarget) return;
     setStackTargetId(stackCandidates[0]?.id ?? null);
-  }, [showEdit, isLaundry, stackEnabled, stackTargetId, stackCandidates]);
+  }, [showEdit, isLaundryStackable, stackEnabled, stackTargetId, stackCandidates]);
 
   useEffect(() => {
     if (!showSchedule) return;
@@ -3459,6 +3601,33 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     setSpeakerTrebleDraft(speakerTreble);
   }, [device.kind, speakerBass, speakerTreble]);
 
+  useEffect(() => {
+    if (!isDishwasher) return;
+    const loops = dishwasherBubbleAnims.map((anim, index) => {
+      anim.setValue(0);
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(dishwasherBubbleSpecs[index]?.delay ?? 0),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 2400 + index * 180,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+    });
+    loops.forEach((loop) => loop.start());
+    return () => {
+      loops.forEach((loop) => loop.stop());
+    };
+  }, [dishwasherBubbleAnims, dishwasherBubbleSpecs, isDishwasher]);
+
   const moodLabelStyle: StyleProp<TextStyle> = [
     styles.moodLabel,
     { fontSize: moodLabelSize },
@@ -3503,6 +3672,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     isTabletLandscape && ({ order } as ViewStyle),
     isTabletLandscape && styles.laundryGridItem,
     isTabletLandscape && fullWidth && styles.laundryGridItemFull,
+    !isLandscapeSplit && isPortrait && {
+      flexBasis: "48%",
+      flexGrow: 1,
+      marginTop: 0,
+    },
   ];
   const laundryActionRowStyle: StyleProp<ViewStyle> = [
     styles.actionRow,
@@ -4292,7 +4466,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </LinearGradient>
   );
   const fanOscillationCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Oscillation</Text>
       <View style={controlCardRowTopStyle}>
         <Pressable
@@ -4329,7 +4503,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const fanTimerCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Timer & light</Text>
       <OptionChips
         options={[0, 30, 60, 120].map((value) => ({
@@ -4374,7 +4548,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   const acControlNodes = (
     <>
-      <View style={controlCardStyle}>
+      <View style={portraitControlCardStyle}>
         <Text style={styles.cardLabel}>Airflow</Text>
         <View style={styles.pressureSliderRow}>
           <Text style={styles.pressureSliderLabel}>Fan</Text>
@@ -4417,7 +4591,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         />
       </View>
 
-      <View style={controlCardStyle}>
+      <View style={portraitControlCardStyle}>
         <Text style={styles.cardLabel}>Efficiency</Text>
         <View style={controlCardRowTopStyle}>
           <Pressable
@@ -4451,7 +4625,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
-      <View style={controlCardStyle}>
+      <View style={portraitControlCardStyle}>
         <Text style={styles.cardLabel}>Humidity target</Text>
         <View style={styles.pressureSliderRow}>
           <Text style={styles.pressureSliderLabel}>Target</Text>
@@ -4493,7 +4667,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     >
       <View style={energyHeroHeaderStyle}>
         <View style={styles.energyHeroTitleWrap}>
-          <Text style={cameraHeroTitleStyle}>{device.name}</Text>
+          <Text style={styles.energyHeroTitle}>{device.name}</Text>
           <Text style={styles.energyHeroSub}>
             {powerOutage ? "Grid outage detected" : "Live energy flow"}
           </Text>
@@ -4823,7 +4997,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   const coffeeControlCards = (
     <>
-      <View style={controlCardStyle}>
+      <View style={portraitControlCardStyle}>
         <Text style={styles.cardLabel}>Brew profile</Text>
         <Text style={styles.cardHint}>Size</Text>
         <OptionChips
@@ -4866,7 +5040,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         />
       </View>
 
-      <View style={controlCardStyle}>
+      <View style={portraitControlCardStyle}>
         <Text style={styles.cardLabel}>Temperature</Text>
         <View style={styles.pressureSliderRow}>
           <Text style={styles.pressureSliderLabel}>Brew</Text>
@@ -4899,7 +5073,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         />
       </View>
 
-      <View style={controlCardStyle}>
+      <View style={portraitControlCardStyle}>
         <Text style={styles.cardLabel}>Extras</Text>
         <View style={controlCardRowTopStyle}>
           <Pressable
@@ -5073,7 +5247,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   const vacuumControlCards = (
     <>
-      <View style={controlCardStyle}>
+      <View style={portraitControlCardStyle}>
         <Text style={styles.cardLabel}>Cleaning mode</Text>
         <OptionChips
           options={[
@@ -5143,7 +5317,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
-      <View style={controlCardStyle}>
+      <View style={portraitControlCardStyle}>
         <Text style={styles.cardLabel}>Maintenance</Text>
         <View style={styles.metricRow}>
           <View style={styles.metricCard}>
@@ -5169,6 +5343,51 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </>
   );
 
+  const renderLaundryActionRow = () => (
+    <View style={laundryActionRowStyle}>
+      <Pressable
+        style={modeTileStyle(device.isOn)}
+        onPress={() => sendPatch({ isOn: true })}
+      >
+        {device.isOn ? (
+          <LinearGradient
+            colors={[theme.colors.accent2, theme.colors.accent]}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.modeIconBubbleActive}
+          >
+            <Ionicons name="play" size={18} color="#FFFFFF" />
+          </LinearGradient>
+        ) : (
+          <View style={styles.modeIconBubble}>
+            <Ionicons name="play" size={18} color="rgba(12,12,18,0.65)" />
+          </View>
+        )}
+        <Text style={modeTextStyle(device.isOn)}>Start</Text>
+      </Pressable>
+      <Pressable
+        style={modeTileStyle(!device.isOn)}
+        onPress={() => sendPatch({ isOn: false })}
+      >
+        {!device.isOn ? (
+          <LinearGradient
+            colors={[theme.colors.accent2, theme.colors.accent]}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.modeIconBubbleActive}
+          >
+            <Ionicons name="pause" size={18} color="#FFFFFF" />
+          </LinearGradient>
+        ) : (
+          <View style={styles.modeIconBubble}>
+            <Ionicons name="pause" size={18} color="rgba(12,12,18,0.65)" />
+          </View>
+        )}
+        <Text style={modeTextStyle(!device.isOn)}>Pause</Text>
+      </Pressable>
+    </View>
+  );
+
   const laundryHeroStats = laundryStats.map((stat) => (
     <View key={stat.label} style={styles.laundryStat}>
       <Text style={laundryStatValueStyle}>{stat.value}</Text>
@@ -5187,22 +5406,72 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const laundryHeroOrb = (
     <View style={laundryHeroLottieWrapStyle}>
       <LinearGradient
-        colors={[
-          "rgba(180,107,255,0.35)",
-          "rgba(122,92,255,0.2)",
-          "rgba(255,255,255,0.92)",
-        ]}
+        colors={
+          isDishwasher
+            ? [
+                "rgba(120,200,255,0.35)",
+                "rgba(122,92,255,0.18)",
+                "rgba(255,255,255,0.95)",
+              ]
+            : [
+                "rgba(180,107,255,0.35)",
+                "rgba(122,92,255,0.2)",
+                "rgba(255,255,255,0.92)",
+              ]
+        }
         start={{ x: 0.2, y: 0.1 }}
         end={{ x: 1, y: 1 }}
         style={styles.laundryHeroLottieGlow}
       />
-      <LottieView
-        source={DRYER_LOTTIE_SOURCE}
-        autoPlay
-        loop
-        resizeMode="contain"
-        style={laundryHeroLottieStyle}
-      />
+      {isDishwasher ? (
+        <View style={styles.dishwasherBubbleWrap} pointerEvents="none">
+          {dishwasherBubbleAnims.map((anim, index) => {
+            const spec = dishwasherBubbleSpecs[index];
+            const size = Math.round(laundryHeroSize * spec.sizeRatio);
+            const left = Math.round(laundryHeroSize * spec.leftRatio);
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [
+                Math.round(laundryHeroSize * 0.45),
+                Math.round(laundryHeroSize * -0.55),
+              ],
+            });
+            const opacity = anim.interpolate({
+              inputRange: [0, 0.12, 0.75, 1],
+              outputRange: [0, 0.85, 0.75, 0],
+            });
+            const scale = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.6, 1.15],
+            });
+            return (
+              <Animated.View
+                key={`dish-bubble-${index}`}
+                style={[
+                  styles.dishwasherBubble,
+                  {
+                    width: size,
+                    height: size,
+                    borderRadius: Math.round(size / 2),
+                    left,
+                    bottom: Math.round(laundryHeroSize * -0.05),
+                    opacity,
+                    transform: [{ translateY }, { scale }],
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+      ) : (
+        <LottieView
+          source={DRYER_LOTTIE_SOURCE}
+          autoPlay
+          loop
+          resizeMode="contain"
+          style={laundryHeroLottieStyle}
+        />
+      )}
       {laundryOverlayLabel ? (
         <View style={styles.laundryHeroOverlay} pointerEvents="none">
           <Text style={laundryHeroPhaseStyle}>{laundryOverlayLabel}</Text>
@@ -5263,6 +5532,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <View style={laundryHeroMetricsStyle}>
               {laundryHeroStatsLandscape}
             </View>
+            <View style={laundryHeroActionRowStyle}>
+              {renderLaundryActionRow()}
+            </View>
           </View>
         ) : (
           <>
@@ -5274,6 +5546,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 <View style={laundryProgressFillStyle} />
               </View>
               <View style={laundryStatsRowStyle}>{laundryHeroStats}</View>
+              <View style={laundryHeroActionRowStyle}>
+                {renderLaundryActionRow()}
+              </View>
             </View>
           </>
         )}
@@ -5439,6 +5714,109 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         </>
       )}
 
+      {device.kind === "dishwasher" && (
+        <>
+          <View style={laundryCardStyle(3)}>
+            <Text style={styles.cardLabel}>Temperature</Text>
+            <OptionChips
+              options={washTempOptions.map((label) => ({
+                label,
+                value: label,
+              }))}
+              value={washTemp}
+              onSelect={(value) => sendPatch({ washTemp: value })}
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
+          </View>
+
+          <View style={laundryCardStyle(4)}>
+            <Text style={styles.cardLabel}>Soil level</Text>
+            <OptionChips
+              options={soilLevelOptions.map((label) => ({
+                label,
+                value: label,
+              }))}
+              value={soilLevel}
+              onSelect={(value) => sendPatch({ soilLevel: value })}
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
+          </View>
+
+          <View style={laundryCardStyle(5)}>
+            <Text style={styles.cardLabel}>Rinse</Text>
+            <OptionChips
+              options={[1, 2, 3].map((value) => ({
+                value,
+                label: `${value}x`,
+              }))}
+              value={rinseCount}
+              onSelect={(value) =>
+                sendPatch({ rinseCount: value as Device["rinseCount"] })
+              }
+              rowStyle={styles.chipRow}
+              chipStyle={chipStyle}
+              chipTextStyle={chipTextStyle}
+            />
+          </View>
+
+          <View style={laundryCardStyle(7)}>
+            <Text style={styles.cardLabel}>Dish options</Text>
+            <View style={controlCardRowStyle}>
+              <Pressable
+                style={controlPillStyle(prewash)}
+                onPress={() => sendPatch({ prewash: !prewash })}
+              >
+                <Text style={controlPillTextStyle(prewash)}>Prewash</Text>
+              </Pressable>
+              <Pressable
+                style={controlPillStyle(steamWash)}
+                onPress={() => sendPatch({ steamWash: !steamWash })}
+              >
+                <Text style={controlPillTextStyle(steamWash)}>Steam</Text>
+              </Pressable>
+            </View>
+            <View style={controlCardRowStyle}>
+              <Pressable
+                style={controlPillStyle(sanitizeWash)}
+                onPress={() => sendPatch({ sanitizeWash: !sanitizeWash })}
+              >
+                <Text style={controlPillTextStyle(sanitizeWash)}>
+                  Sanitize
+                </Text>
+              </Pressable>
+              <Pressable
+                style={controlPillStyle(extraSpin)}
+                onPress={() => sendPatch({ extraSpin: !extraSpin })}
+              >
+                <Text style={controlPillTextStyle(extraSpin)}>
+                  Dry Boost
+                </Text>
+              </Pressable>
+            </View>
+            <View style={controlCardRowStyle}>
+              <Pressable
+                style={controlPillStyle(smartDispense)}
+                onPress={() => sendPatch({ smartDispense: !smartDispense })}
+              >
+                <Text style={controlPillTextStyle(smartDispense)}>
+                  Auto Dose
+                </Text>
+              </Pressable>
+              <Pressable
+                style={controlPillStyle(ecoWash)}
+                onPress={() => sendPatch({ ecoWash: !ecoWash })}
+              >
+                <Text style={controlPillTextStyle(ecoWash)}>Eco Wash</Text>
+              </Pressable>
+            </View>
+          </View>
+        </>
+      )}
+
       {device.kind === "dryer" && (
         <>
           <View style={laundryCardStyle(3)}>
@@ -5592,50 +5970,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </>
   );
 
-  const laundryActionRow = (
-    <View style={laundryActionRowStyle}>
-      <Pressable
-        style={modeTileStyle(device.isOn)}
-        onPress={() => sendPatch({ isOn: true })}
-      >
-        {device.isOn ? (
-          <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.modeIconBubbleActive}
-          >
-            <Ionicons name="play" size={18} color="#FFFFFF" />
-          </LinearGradient>
-        ) : (
-          <View style={styles.modeIconBubble}>
-            <Ionicons name="play" size={18} color="rgba(12,12,18,0.65)" />
-          </View>
-        )}
-        <Text style={modeTextStyle(device.isOn)}>Start</Text>
-      </Pressable>
-      <Pressable
-        style={modeTileStyle(!device.isOn)}
-        onPress={() => sendPatch({ isOn: false })}
-      >
-        {!device.isOn ? (
-          <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.modeIconBubbleActive}
-          >
-            <Ionicons name="pause" size={18} color="#FFFFFF" />
-          </LinearGradient>
-        ) : (
-          <View style={styles.modeIconBubble}>
-            <Ionicons name="pause" size={18} color="rgba(12,12,18,0.65)" />
-          </View>
-        )}
-        <Text style={modeTextStyle(!device.isOn)}>Pause</Text>
-      </Pressable>
-    </View>
-  );
+  const laundryActionRowForSection = null;
   const garageActionButtons = (
     <>
       <Pressable
@@ -6544,7 +6879,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </LinearGradient>
   );
   const fridgeFreezerCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Freezer</Text>
       <View style={styles.pressureSliderRow}>
         <Text style={styles.pressureSliderLabel}>Temp</Text>
@@ -6569,7 +6904,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const fridgeModesCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Modes</Text>
       <OptionChips
         options={[
@@ -6592,7 +6927,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const fridgeQuickActionsCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Quick actions</Text>
       <View style={controlCardRowTopStyle}>
         <Pressable
@@ -6625,7 +6960,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const fridgeHardwareCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Hardware</Text>
       <View style={controlCardRowTopStyle}>
         <Pressable
@@ -6670,7 +7005,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const fridgeHumidityCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Humidity drawers</Text>
       <OptionChips
         options={[40, 50, 60].map((value) => ({
@@ -6816,6 +7151,87 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={fanHeroInfoLayoutStyle}>
           {fanHeroModes}
           {fanHeroMetrics}
+        </View>
+      </View>
+    </LinearGradient>
+  );
+  const waterHeaterHeroCard = (
+    <LinearGradient
+      colors={[
+        "rgba(255,255,255,0.96)",
+        "rgba(230,242,255,0.92)",
+        "rgba(208,232,255,0.86)",
+      ]}
+      start={{ x: 0.1, y: 0.05 }}
+      end={{ x: 1, y: 1 }}
+      style={fanHeroCardStyle}
+    >
+      <View style={styles.utilityHeroHeader}>
+        <View style={styles.utilityHeroTitleWrap}>
+          <Text style={styles.utilityHeroTitle}>{device.name}</Text>
+          <Text style={styles.utilityHeroSub}>
+            {device.isOn ? `${heaterStatus} • ${heaterTemp}°C` : "Standby"}
+          </Text>
+        </View>
+        <View style={styles.utilityHeroPillRow}>
+          <View style={utilityHeroPillStyle(device.isOn)}>
+            <Ionicons
+              name={device.isOn ? "flame" : "power"}
+              size={14}
+              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+            />
+            <Text style={utilityHeroPillTextStyle(device.isOn)}>
+              {device.isOn ? heaterModeLabel : "Off"}
+            </Text>
+          </View>
+          <View style={utilityHeroPillStyle(true)}>
+            <Ionicons
+              name="water"
+              size={14}
+              color={theme.colors.accent2}
+            />
+            <Text style={utilityHeroPillTextStyle(true)}>
+              {heaterTypeLabel}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View style={acHeroBodyStyle}>
+        <View style={acDialWrapStyle}>
+          <RadialDial
+            size={compactDialSize}
+            value={heaterTemp}
+            min={40}
+            max={70}
+            tickValues={[40, 45, 50, 55, 60, 65, 70]}
+            centerLabel="Setpoint"
+            centerIcon={
+              <View style={marginBottom6Style}>
+                <Ionicons name="thermometer" size={28} color={stylesVars.ink} />
+              </View>
+            }
+            formatTick={(v) => `${v}`}
+            formatValue={(v) => `${v}°C`}
+            formatCenterValue={(v) => `${v}°C`}
+            dimmed={!device.isOn}
+            onChange={(v) => sendPatch({ tempC: clamp(v, 40, 70), isOn: true })}
+          />
+        </View>
+        <View style={utilityHeroInfoStyle}>
+          <View style={styles.metricRow}>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricValue}>{heaterTemp}°C</Text>
+              <Text style={styles.metricLabel}>Setpoint</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricValue}>{heaterModeLabel}</Text>
+              <Text style={styles.metricLabel}>Mode</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricValue}>{heaterTypeLabel}</Text>
+              <Text style={styles.metricLabel}>Type</Text>
+            </View>
+          </View>
         </View>
       </View>
     </LinearGradient>
@@ -7279,7 +7695,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </LinearGradient>
   );
   const sprinklerZoneCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Zone</Text>
       <OptionChips
         options={["Front Yard", "Back Yard", "Garden"].map((zone) => ({
@@ -7295,7 +7711,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const sprinklerScheduleCard = (
-    <View style={controlCardStyle}>
+    <View style={portraitControlCardStyle}>
       <Text style={styles.cardLabel}>Schedule</Text>
       {(device.schedule ?? []).length === 0 ? (
         <Text style={styles.scheduleEmpty}>No schedules yet</Text>
@@ -7420,7 +7836,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </LinearGradient>
   );
   const waterBudgetCard = (
-    <View style={controlCardStyle}>
+    <View style={waterControlCardStyle}>
       <Text style={styles.cardLabel}>Daily budget</Text>
       <OptionChips
         options={[150, 220, 280].map((value) => ({
@@ -7465,7 +7881,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const waterSafetyCard = (
-    <View style={controlCardStyle}>
+    <View style={waterControlCardStyle}>
       <Text style={styles.cardLabel}>Safety</Text>
       <View style={controlCardRowTopStyle}>
         <Pressable
@@ -7488,7 +7904,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const waterPressureCard = (
-    <View style={controlCardStyle}>
+    <View style={waterControlCardStyle}>
       <Text style={styles.cardLabel}>Pressure alerts</Text>
       <View style={styles.pressureSliderRow}>
         <Text style={styles.pressureSliderLabel}>Low</Text>
@@ -7541,6 +7957,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       </Text>
     </View>
   );
+  const cameraStreamUrl =
+    device.kind === "camera" ? device.streamUrl : undefined;
+  const showCameraStream = Boolean(device.isOn && cameraStreamUrl);
   const cameraArmed = Boolean(device.armed);
   const cameraRecording = Boolean(device.recording);
   const cameraStats = [
@@ -7577,14 +7996,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       end={{ x: 1, y: 1 }}
       style={cameraHeroCardStyle}
     >
-      <View style={cameraHeroHeaderStyle}>
-        <View style={cameraHeroTitleWrapStyle}>
+      <View style={energyHeroHeaderStyle}>
+        <View style={styles.energyHeroTitleWrap}>
           <Text style={styles.energyHeroTitle}>{device.name}</Text>
-          <Text style={cameraHeroSubStyle}>
+          <Text style={styles.energyHeroSub}>
             {roomName || "Camera"} • {device.isOn ? "Live view" : "Standby"}
           </Text>
         </View>
-        <View style={cameraHeroPillRowStyle}>
+        <View style={styles.energyHeroPillRow}>
           <View style={energyHeroPillStyle(device.isOn)}>
             <Ionicons
               name={device.isOn ? "videocam" : "videocam-off"}
@@ -7650,7 +8069,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             ) : null}
           </View>
           <View style={styles.cameraFeedBody}>
-            {device.isOn ? (
+            {showCameraStream ? (
+              <LiveVideoPlayer
+                sourceUri={cameraStreamUrl as string}
+                style={styles.cameraLivePlayer}
+              />
+            ) : device.isOn ? (
               <>
                 <Ionicons
                   name="videocam"
@@ -7748,6 +8172,22 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           <Ionicons name="alert" size={16} color="#C4384C" />
           <Text style={cameraDetectAlertTextStyle}>Unknown</Text>
         </Pressable>
+      </View>
+    </View>
+  );
+  const waterUsageCard = (
+    <View style={waterControlCardStyle}>
+      <Text style={styles.cardLabel}>Usage history</Text>
+      <Text style={styles.waterUsageHint}>
+        Last 7 days · {waterToday} L today
+      </Text>
+      <View style={styles.waterUsageBars}>
+        {[18, 28, 22, 36, 26, 30, 20].map((height, index) => (
+          <View
+            key={`water-usage-${index}`}
+            style={[styles.waterUsageBar, { height }]}
+          />
+        ))}
       </View>
     </View>
   );
@@ -8669,8 +9109,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   />
                 ) : isAC ? (
                   <AcDetailSection
-                    isTabletLandscape={isTabletLandscape}
-                    landscapeColumnGapStyle={landscapeColumnGapStyle}
+                    isLandscapeSplit={isLandscapeSplit}
+                    usePortraitGrid={isTabletPortrait}
+                    portraitGridStyle={portraitGridStyle}
+                    landscapeGridStyle={landscapeGridStyle}
+                    landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                    landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                     acHeroNodes={acHeroNodes}
                     acControlNodes={acControlNodes}
                   />
@@ -8734,6 +9178,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       modeTextStyle={modeTextStyle}
                       lightControlsColumnLayoutStyle={lightControlsColumnLayoutStyle}
                       isTablet={isTablet}
+                      useTabletPortraitGrid={isTabletPortrait}
+                      portraitGridStyle={portraitGridStyle}
+                      portraitCardStyle={portraitGridCardStyle}
                       lightControlCardStyle={lightControlCardStyle}
                       lightCardHintStyle={lightCardHintStyle}
                       colorTempK={colorTempK}
@@ -8765,7 +9212,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     (
                       <GarageDetailSection
                         isLandscapeSplit={isLandscapeSplit}
-                        openColumnStyle={openColumnStyle}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                         garageHeroCard={garageHeroCard}
                         garageStatusCard={garageStatusCard}
                         garageActionCard={garageActionCard}
@@ -8777,7 +9226,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     (
                       <DoorDetailSection
                         isLandscapeSplit={isLandscapeSplit}
-                        openColumnStyle={openColumnStyle}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                         doorHeroCard={doorHeroCard}
                         doorStatusCard={doorStatusCard}
                         doorActionCard={doorActionCard}
@@ -8788,7 +9239,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     (
                       <GateDetailSection
                         isLandscapeSplit={isLandscapeSplit}
-                        openColumnStyle={openColumnStyle}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                         gateHeroCard={gateHeroCard}
                         gateStatusCard={gateStatusCard}
                         gateActionCard={gateActionCard}
@@ -8799,6 +9252,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   {device.kind === "fridge" && (
                     <FridgeDetailSection
                       isLandscapeSplit={isLandscapeSplit}
+                      usePortraitGrid={isTabletPortrait}
+                      portraitGridStyle={portraitGridStyle}
                       landscapeGridStyle={landscapeGridStyle}
                       landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
                       landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
@@ -8814,6 +9269,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   {device.kind === "fan" && (
                     <FanDetailSection
                       isLandscapeSplit={isLandscapeSplit}
+                      usePortraitGrid={isTabletPortrait}
+                      portraitGridStyle={portraitGridStyle}
                       landscapeGridStyle={landscapeGridStyle}
                       landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
                       landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
@@ -8827,6 +9284,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     <>
                       <WindowDetailSection
                         device={device}
+                        isLandscapeSplit={isLandscapeSplit}
                         isWindowTabletPortrait={isWindowTabletPortrait}
                         isOpen={isOpen}
                         openDisplayValue={openDisplayValue}
@@ -8865,21 +9323,15 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         quickSetIconActiveColor="#fff"
                         pillIconColor={stylesVars.subtext}
                         pillIconActiveColor={theme.colors.accent2}
-                        showQuickSetCard={!isWindowTabletPortrait}
+                        showQuickSetCard={!isWindowTabletPortrait && !isLandscapeSplit}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                        windowQuickSetCard={isLandscapeSplit ? windowQuickSetCard : undefined}
                         controlCardStyle={controlCardStyle}
                         cardLabelStyle={styles.cardLabel}
-                        onSetOpenPercent={(value) =>
-                          sendPatch({
-                            openPercent: clamp(value, 0, 100),
-                            isOn: value > 0,
-                          })
-                        }
-                        onQuickSet={(value) =>
-                          sendPatch({
-                            openPercent: value,
-                            isOn: value > 0,
-                          })
-                        }
+                        onSetOpenPercent={handleWindowSetOpenPercent}
+                        onQuickSet={handleWindowQuickSet}
                         windowLottieSource={WINDOW_LOTTIE_SOURCE}
                       />
                     </>
@@ -8889,7 +9341,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     (
                       <VacuumDetailSection
                         isLandscapeSplit={isLandscapeSplit}
-                        landscapeColumnGapStyle={landscapeColumnGapStyle}
+                        usePortraitGrid={isTabletPortrait}
+                        portraitGridStyle={portraitGridStyle}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                         vacuumHeroCard={vacuumHeroCard}
                         vacuumControlCards={vacuumControlCards}
                       />
@@ -8899,7 +9355,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     (
                       <CameraDetailSection
                         isLandscapeSplit={isLandscapeSplit}
-                        landscapeColumnGapStyle={landscapeColumnGapStyle}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                         cameraHeroCard={cameraHeroCard}
                         cameraRecognizeCard={cameraRecognizeCard}
                         cameraControlCardsLandscapeRight={cameraControlCardsLandscapeRight}
@@ -8910,6 +9368,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   {device.kind === "stove" && (
                     <StoveDetailSection
                       isLandscapeSplit={isLandscapeSplit}
+                      usePortraitGrid={isTabletPortrait}
+                      portraitGridStyle={portraitGridStyle}
+                      portraitCardStyle={portraitGridCardStyle}
                       landscapeGridStyle={landscapeGridStyle}
                       landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
                       landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
@@ -8935,22 +9396,25 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     />
                   )}
 
-                  {(device.kind === "washer" || device.kind === "dryer") &&
-                    (
-                      <LaundryDetailSection
-                        isTabletLandscape={isTabletLandscape}
-                        landscapeColumnGapStyle={landscapeColumnGapStyle}
-                        laundryControlGridStyle={[
-                          landscapeColumnGapStyle,
-                          styles.laundryControlGrid,
-                        ]}
-                        laundryHeroCard={laundryHeroCard}
-                        laundryActionRow={laundryActionRow}
-                        laundryCycleCard={laundryCycleCard}
-                        laundryLoadSizeCard={laundryLoadSizeCard}
-                        laundryControlCards={laundryControlCards}
-                      />
-                    )}
+                  {isLaundryDevice && (
+                    <LaundryDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      usePortraitGrid={!isLandscapeSplit}
+                      portraitGridStyle={laundryPortraitGridStyle}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                      laundryControlGridStyle={[
+                        landscapeColumnGapStyle,
+                        styles.laundryControlGrid,
+                      ]}
+                      laundryHeroCard={laundryHeroCard}
+                      laundryActionRow={laundryActionRowForSection}
+                      laundryCycleCard={laundryCycleCard}
+                      laundryLoadSizeCard={laundryLoadSizeCard}
+                      laundryControlCards={laundryControlCards}
+                    />
+                  )}
 
                   {device.kind === "microwave" && (
                     <MicrowaveDetailSection
@@ -8971,6 +9435,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       energyBudgetCard={energyBudgetCard}
                       isLandscape={isLandscape}
                       energyCardGap={energyCardGap}
+                      isTabletPortrait={isTablet && isPortrait}
+                      portraitGridStyle={energyPortraitGridStyle}
+                      portraitRowStyle={energyPortraitRowStyle}
+                      portraitCellStyle={energyPortraitCellStyle}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                     />
                   )}
 
@@ -8978,18 +9449,31 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     (
                       <WaterDetailSection
                         isLandscape={isLandscape}
+                        isTabletPortrait={isTablet && isPortrait}
                         landscapeGridStyle={landscapeGridStyle}
                         landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
                         landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                        portraitGridStyle={waterPortraitGridStyle}
+                        portraitRowStyle={waterPortraitRowStyle}
+                        portraitCellStyle={waterPortraitCellStyle}
                         waterHeroCard={waterHeroCard}
                         waterBudgetCard={waterBudgetCard}
                         waterPressureCard={waterPressureCard}
                         waterSafetyCard={waterSafetyCard}
+                        waterUsageCard={waterUsageCard}
                       />
                     )}
 
                   {device.kind === "water-heater" && (
                     <WaterHeaterDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      usePortraitGrid={isTabletPortrait}
+                      portraitGridStyle={portraitGridStyle}
+                      portraitCardStyle={portraitGridCardStyle}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
+                      waterHeaterHeroCard={waterHeaterHeroCard}
                       isOn={device.isOn}
                       compactDialSize={compactDialSize}
                       heaterTemp={heaterTemp}
@@ -9046,6 +9530,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "air" && (
                     <AirDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      isTabletPortrait={isTabletPortrait}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                       styles={styles}
                       stylesVars={stylesVars}
                       airHeroCardStyle={airHeroCardStyle}
@@ -9129,6 +9618,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   {device.kind === "sprinkler" && (
                     <SprinklerDetailSection
                       isLandscapeSplit={isLandscapeSplit}
+                      usePortraitGrid={isTabletPortrait}
+                      portraitGridStyle={portraitGridStyle}
                       landscapeGridStyle={landscapeGridStyle}
                       landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
                       landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
@@ -9140,6 +9631,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
                   {device.kind === "speaker" && (
                     <SpeakerDetailSection
+                      isLandscapeSplit={isLandscapeSplit}
+                      usePortraitGrid={!isLandscapeSplit}
+                      portraitGridStyle={speakerPortraitGridStyle}
+                      portraitCardStyle={speakerPortraitCardStyle}
+                      landscapeGridStyle={landscapeGridStyle}
+                      landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                      landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                       styles={styles}
                       speakerHeroCard={speakerHeroCard}
                       controlCardStyle={controlCardStyle}
@@ -9169,7 +9667,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     (
                       <SmokeDetailSection
                         isLandscapeSplit={isLandscapeSplit}
-                        landscapeColumnGapStyle={landscapeColumnGapStyle}
+                        landscapeGridStyle={landscapeGridStyle}
+                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
+                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                         smokeHeroCard={smokeHeroCard}
                         smokeStatusCard={smokeStatusCard}
                         smokeMetricsRow={smokeMetricsRow}
@@ -9203,6 +9703,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     (
                       <CoffeeDetailSection
                         isLandscapeSplit={isLandscapeSplit}
+                        usePortraitGrid={isTabletPortrait}
+                        portraitGridStyle={portraitGridStyle}
                         landscapeGridStyle={landscapeGridStyle}
                         landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
                         landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
@@ -9258,7 +9760,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         roomRowStyle={styles.roomRow}
         roomPillStyle={roomPillStyle}
         roomPillTextStyle={roomPillTextStyle}
-        isLaundry={isLaundry}
+        isLaundry={isLaundryStackable}
         stackEnabled={stackEnabled}
         onToggleStack={setStackEnabled}
         stackPartnerKind={stackPartnerKind}
@@ -9332,6 +9834,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
   },
+  emptyCard: {
+    width: "100%",
+    maxWidth: 320,
+    padding: 20,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.6)",
+    shadowColor: "rgba(12,12,18,0.12)",
+    shadowOpacity: 0.6,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    alignItems: "center",
+  },
   emptyTitle: { color: theme.colors.text, fontSize: 20, fontWeight: "800" },
   emptySub: {
     color: theme.colors.subtext,
@@ -9339,6 +9855,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: "600",
   },
+  emptyAction: {
+    marginTop: 16,
+    paddingHorizontal: 18,
+    height: 42,
+    borderRadius: 16,
+    backgroundColor: "rgba(180,107,255,0.22)",
+    borderWidth: 1,
+    borderColor: "rgba(180,107,255,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyActionText: { color: theme.colors.text, fontWeight: "800" },
   panel: {
     flex: 1,
     borderRadius: 42,
@@ -10396,7 +10924,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
+  cameraLivePlayer: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 14,
+  },
   cameraPreviewText: { color: stylesVars.subtext, fontWeight: "800" },
+  waterUsageHint: {
+    color: stylesVars.subtext,
+    fontWeight: "700",
+    marginTop: 6,
+  },
+  waterUsageBars: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 6,
+    marginTop: 12,
+  },
+  waterUsageBar: {
+    width: 10,
+    borderRadius: 8,
+    backgroundColor: "rgba(122,92,255,0.6)",
+  },
   cameraDetectRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   cameraDetectPill: {
     flexDirection: "row",
@@ -11077,6 +11626,19 @@ const styles = StyleSheet.create({
     left: 0,
   },
   laundryHeroLottie: { width: "100%", height: "100%" },
+  dishwasherBubbleWrap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  dishwasherBubble: {
+    position: "absolute",
+    backgroundColor: "rgba(120,200,255,0.45)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.85)",
+    shadowColor: "rgba(120,200,255,0.6)",
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
   laundryHeroOverlay: {
     position: "absolute",
     alignItems: "center",

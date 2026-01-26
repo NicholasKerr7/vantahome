@@ -4,7 +4,9 @@ import type { StyleProp, ViewStyle } from "react-native";
 
 type CameraDetailSectionProps = {
   isLandscapeSplit: boolean;
-  landscapeColumnGapStyle: StyleProp<ViewStyle>;
+  landscapeGridStyle: StyleProp<ViewStyle>;
+  landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
+  landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
   cameraHeroCard: React.ReactNode;
   cameraRecognizeCard: React.ReactNode;
   cameraControlCardsLandscapeRight: React.ReactNode;
@@ -13,20 +15,24 @@ type CameraDetailSectionProps = {
 
 export default function CameraDetailSection({
   isLandscapeSplit,
-  landscapeColumnGapStyle,
+  landscapeGridStyle,
+  landscapeColumnPrimaryStyle,
+  landscapeColumnSecondaryStyle,
   cameraHeroCard,
   cameraRecognizeCard,
   cameraControlCardsLandscapeRight,
   cameraControlCardsPortrait,
 }: CameraDetailSectionProps) {
   return isLandscapeSplit ? (
-    <>
-      <View style={landscapeColumnGapStyle}>
+    <View style={landscapeGridStyle}>
+      <View style={landscapeColumnPrimaryStyle}>
         {cameraHeroCard}
         {cameraRecognizeCard}
       </View>
-      <View style={landscapeColumnGapStyle}>{cameraControlCardsLandscapeRight}</View>
-    </>
+      <View style={landscapeColumnSecondaryStyle}>
+        {cameraControlCardsLandscapeRight}
+      </View>
+    </View>
   ) : (
     <>
       {cameraHeroCard}

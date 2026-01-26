@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   NavigationContainer,
   DefaultTheme,
@@ -6,6 +6,7 @@ import {
 } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import type { Session } from "@supabase/supabase-js";
 import AuthScreen from "../screens/AuthScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import BottomTabs, { type BottomTabParamList } from "../components/BottomTabs";
@@ -17,6 +18,10 @@ import ManageRoomsScreen from "../screens/ManageRoomsScreen";
 import AutomationBuilderScreen from "../screens/AutomationBuilderScreen";
 import CamerasScreen from "../screens/CamerasScreen";
 import { theme } from "../theme/theme";
+import { supabase } from "../services/supabaseClient";
+import { syncMembershipFromSupabase } from "../services/membership";
+import { bootstrapHome } from "../services/cloudRegistry";
+import { useHomeStore } from "../store/useHomeStore";
 
 /**
  * Root stack for the app.
@@ -43,6 +48,85 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(!supabase);
+  const setHouseholdFromRemote = useHomeStore((s) => s.setHouseholdFromRemote);
+  const setRoomMembersFromRemote = useHomeStore(
+    (s) => s.setRoomMembersFromRemote,
+  );
+  const setActiveMember = useHomeStore((s) => s.setActiveMember);
+  const demoMode = useHomeStore((s) => s.demoMode);
+  const setDemoMode = useHomeStore((s) => s.setDemoMode);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let mounted = true;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted) return;
+        setSession(data.session ?? null);
+        setAuthReady(true);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setSession(null);
+        setAuthReady(true);
+      });
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession ?? null);
+    });
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      setDemoMode(false);
+    }
+  }, [session, setDemoMode]);
+
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    const ensureMembership = async () => {
+      let result = await syncMembershipFromSupabase();
+      if (!result) {
+        const meta = session.user.user_metadata ?? {};
+        const baseName =
+          meta.full_name ||
+          meta.name ||
+          meta.preferred_username ||
+          meta.nickname ||
+          meta.given_name ||
+          session.user.email?.split("@")[0] ||
+          "Home";
+        const homeName = `${String(baseName).trim() || "Home"}'s Home`;
+        try {
+          await bootstrapHome(homeName);
+        } catch {
+          return;
+        }
+        result = await syncMembershipFromSupabase();
+      }
+      if (!active || !result) return;
+      setHouseholdFromRemote(result.household);
+      setRoomMembersFromRemote(result.roomMembers);
+      setActiveMember(result.activeMemberId);
+    };
+    void ensureMembership();
+    return () => {
+      active = false;
+    };
+  }, [session, setActiveMember, setHouseholdFromRemote, setRoomMembersFromRemote]);
+
+  if (!authReady) {
+    return null;
+  }
+
+  const isAuthed = Boolean(session) || demoMode || !supabase;
   return (
     <BottomSheetModalProvider>
       <NavigationContainer
@@ -53,19 +137,27 @@ export default function AppNavigator() {
         }}
       >
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Auth" component={AuthScreen} />
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          <Stack.Screen name="Main" component={BottomTabs} />
-          <Stack.Screen name="Room" component={RoomScreen} />
-          <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} />
-          <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="ManageRooms" component={ManageRoomsScreen} />
-          <Stack.Screen name="Cameras" component={CamerasScreen} />
-          <Stack.Screen
-            name="AutomationBuilder"
-            component={AutomationBuilderScreen}
-          />
+          {isAuthed ? (
+            <>
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              <Stack.Screen name="Main" component={BottomTabs} />
+              <Stack.Screen name="Room" component={RoomScreen} />
+              <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="ManageRooms" component={ManageRoomsScreen} />
+              <Stack.Screen name="Cameras" component={CamerasScreen} />
+              <Stack.Screen
+                name="AutomationBuilder"
+                component={AutomationBuilderScreen}
+              />
+            </>
+          ) : (
+            <Stack.Screen name="Auth" component={AuthScreen} />
+          )}
         </Stack.Navigator>
       </NavigationContainer>
     </BottomSheetModalProvider>

@@ -5,7 +5,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 type SmokeDetailSectionProps = {
   isLandscapeSplit: boolean;
-  landscapeColumnGapStyle: StyleProp<ViewStyle>;
+  landscapeGridStyle: StyleProp<ViewStyle>;
+  landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
+  landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
   smokeHeroCard: React.ReactNode;
   smokeStatusCard: React.ReactNode;
   smokeMetricsRow: React.ReactNode;
@@ -17,7 +19,9 @@ type SmokeDetailSectionProps = {
 
 export default function SmokeDetailSection({
   isLandscapeSplit,
-  landscapeColumnGapStyle,
+  landscapeGridStyle,
+  landscapeColumnPrimaryStyle,
+  landscapeColumnSecondaryStyle,
   smokeHeroCard,
   smokeStatusCard,
   smokeMetricsRow,
@@ -34,15 +38,15 @@ export default function SmokeDetailSection({
   ) : null;
 
   return isLandscapeSplit ? (
-    <>
-      <View style={landscapeColumnGapStyle}>{smokeHeroCard}</View>
-      <View style={landscapeColumnGapStyle}>
+    <View style={landscapeGridStyle}>
+      <View style={landscapeColumnPrimaryStyle}>{smokeHeroCard}</View>
+      <View style={landscapeColumnSecondaryStyle}>
         {smokeStatusCard}
         {smokeMetricsRow}
         {smokeActionRow}
         {alertNode}
       </View>
-    </>
+    </View>
   ) : (
     <>
       {smokeHeroCard}

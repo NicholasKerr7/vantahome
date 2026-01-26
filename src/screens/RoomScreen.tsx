@@ -57,6 +57,7 @@ const DEVICE_OPTIONS: Array<{
   { kind: "stove", label: "Stove", defaultName: "Smart Stove" },
   { kind: "washer", label: "Washer", defaultName: "Washer" },
   { kind: "dryer", label: "Dryer", defaultName: "Dryer" },
+  { kind: "dishwasher", label: "Dishwasher", defaultName: "Dishwasher" },
   { kind: "microwave", label: "Microwave", defaultName: "Microwave" },
   { kind: "energy", label: "Energy", defaultName: "Energy Monitor" },
   { kind: "water", label: "Water", defaultName: "Water Meter" },

@@ -4,7 +4,9 @@ import type { StyleProp, ViewStyle } from "react-native";
 
 type GateDetailSectionProps = {
   isLandscapeSplit: boolean;
-  openColumnStyle: StyleProp<ViewStyle>;
+  landscapeGridStyle: StyleProp<ViewStyle>;
+  landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
+  landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
   gateHeroCard: React.ReactNode;
   gateStatusCard: React.ReactNode;
   gateActionCard: React.ReactNode;
@@ -13,21 +15,23 @@ type GateDetailSectionProps = {
 
 export default function GateDetailSection({
   isLandscapeSplit,
-  openColumnStyle,
+  landscapeGridStyle,
+  landscapeColumnPrimaryStyle,
+  landscapeColumnSecondaryStyle,
   gateHeroCard,
   gateStatusCard,
   gateActionCard,
   gateAutoCard,
 }: GateDetailSectionProps) {
   return isLandscapeSplit ? (
-    <>
-      <View style={openColumnStyle}>{gateHeroCard}</View>
-      <View style={openColumnStyle}>
+    <View style={landscapeGridStyle}>
+      <View style={landscapeColumnPrimaryStyle}>{gateHeroCard}</View>
+      <View style={landscapeColumnSecondaryStyle}>
         {gateStatusCard}
         {gateAutoCard}
         {gateActionCard}
       </View>
-    </>
+    </View>
   ) : (
     <>
       {gateHeroCard}

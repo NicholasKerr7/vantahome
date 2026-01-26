@@ -4,7 +4,9 @@ import type { StyleProp, ViewStyle } from "react-native";
 
 type DoorDetailSectionProps = {
   isLandscapeSplit: boolean;
-  openColumnStyle: StyleProp<ViewStyle>;
+  landscapeGridStyle: StyleProp<ViewStyle>;
+  landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
+  landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
   doorHeroCard: React.ReactNode;
   doorStatusCard: React.ReactNode;
   doorActionCard: React.ReactNode;
@@ -12,19 +14,21 @@ type DoorDetailSectionProps = {
 
 export default function DoorDetailSection({
   isLandscapeSplit,
-  openColumnStyle,
+  landscapeGridStyle,
+  landscapeColumnPrimaryStyle,
+  landscapeColumnSecondaryStyle,
   doorHeroCard,
   doorStatusCard,
   doorActionCard,
 }: DoorDetailSectionProps) {
   return isLandscapeSplit ? (
-    <>
-      <View style={openColumnStyle}>{doorHeroCard}</View>
-      <View style={openColumnStyle}>
+    <View style={landscapeGridStyle}>
+      <View style={landscapeColumnPrimaryStyle}>{doorHeroCard}</View>
+      <View style={landscapeColumnSecondaryStyle}>
         {doorStatusCard}
         {doorActionCard}
       </View>
-    </>
+    </View>
   ) : (
     <>{doorHeroCard}</>
   );

@@ -26,7 +26,7 @@ import {
 import type { Device } from "../store/useHomeStore";
 
 type Variant = "dark" | "light";
-type Layout = "compact" | "cards";
+type Layout = "compact" | "cards" | "grid";
 
 type Props = {
   device: Device;
@@ -104,6 +104,11 @@ const createStyles = (
       fontWeight: "800",
       marginBottom: Math.round(8 * scale),
     },
+    gridTitle: {
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+      fontSize: Math.round(10 * scale),
+    },
     card: {
       marginTop: Math.round(12 * scale),
       padding: Math.round(12 * scale),
@@ -111,6 +116,11 @@ const createStyles = (
       backgroundColor: palette.cardBg,
       borderWidth: 1,
       borderColor: palette.cardBorder,
+    },
+    gridCard: {
+      marginTop: 0,
+      minWidth: 0,
+      padding: Math.round(11 * scale),
     },
     dialWrap: {
       marginTop: Math.round(6 * scale),
@@ -196,7 +206,7 @@ export default function DeviceCapabilityControls({
   layout = "compact",
   enableHaptics = false,
 }: Props) {
-  const { isTablet, isLandscape, scale } = useResponsive();
+  const { isTablet, isLandscape, scale, width } = useResponsive();
   const palette = useMemo(() => paletteFor(variant), [variant]);
   const styles = useMemo(
     () => createStyles(palette, scale, isTablet),
@@ -209,6 +219,43 @@ export default function DeviceCapabilityControls({
   const dialSize = Math.round(
     (isTablet ? (isLandscape ? 280 : 300) : 240) * scale,
   );
+  const gridColumns = layout === "grid" ? (width < 360 ? 1 : 2) : 1;
+  const gridGap = Math.round(12 * scale);
+  const isGridLayout = layout === "grid";
+  const gridRowStyle: StyleProp<ViewStyle> = isGridLayout
+    ? { flexDirection: "row", gap: gridGap }
+    : undefined;
+  const gridColumnStyle: StyleProp<ViewStyle> = isGridLayout
+    ? { flex: 1, minWidth: 0, gap: gridGap }
+    : undefined;
+  const gridColumnLeftStyle: StyleProp<ViewStyle> = isGridLayout
+    ? [gridColumnStyle, { flexGrow: 4 }]
+    : undefined;
+  const gridColumnRightStyle: StyleProp<ViewStyle> = isGridLayout
+    ? [gridColumnStyle, { flexGrow: 6 }]
+    : undefined;
+  const gridCardStyle: StyleProp<ViewStyle> =
+    isGridLayout
+      ? [
+          styles.card,
+          styles.gridCard,
+          {
+            flexBasis: gridColumns === 1 ? "100%" : "48%",
+            flexGrow: 1,
+          },
+        ]
+      : styles.card;
+  const gridTitleStyle: StyleProp<TextStyle> =
+    isGridLayout ? [styles.groupTitle, styles.gridTitle] : styles.groupTitle;
+  const gridToggleGridStyle: StyleProp<ViewStyle> = isGridLayout
+    ? { gap: gridGap }
+    : undefined;
+  const gridToggleRowStyle: StyleProp<ViewStyle> = isGridLayout
+    ? { flexDirection: "row", gap: gridGap }
+    : styles.toggleRow;
+  const gridToggleCellStyle: StyleProp<ViewStyle> = isGridLayout
+    ? { flex: 1, minWidth: 0 }
+    : undefined;
 
   const ranges = capabilities.filter(
     (cap): cap is RangeCapability => cap.type === "range",
@@ -333,73 +380,94 @@ export default function DeviceCapabilityControls({
     );
   };
 
+  const renderPillRows = (nodes: React.ReactElement[]) => {
+    if (!isGridLayout) {
+      return <View style={styles.toggleRow}>{nodes}</View>;
+    }
+    const rows: Array<[React.ReactElement, React.ReactElement | null]> = [];
+    for (let index = 0; index < nodes.length; index += 2) {
+      rows.push([nodes[index], nodes[index + 1] ?? null]);
+    }
+    return (
+      <View style={gridToggleGridStyle}>
+        {rows.map((row, rowIndex) => (
+          <View key={`grid-row-${rowIndex}`} style={gridToggleRowStyle}>
+            <View style={gridToggleCellStyle}>{row[0]}</View>
+            <View style={gridToggleCellStyle}>{row[1] ?? null}</View>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const renderToggle = (cap: ToggleCapability) => {
     const current = Boolean(device[cap.field]);
+    const toggleNodes = [
+      <Pressable
+        key={`${cap.id}-on`}
+        style={pillButtonStyle(current)}
+        onPress={() => sendPatch({ [cap.field]: true } as Partial<Device>)}
+      >
+        <Text style={pillButtonTextStyle(current)}>
+          {cap.onLabel ?? "On"}
+        </Text>
+      </Pressable>,
+      <Pressable
+        key={`${cap.id}-off`}
+        style={pillButtonStyle(!current)}
+        onPress={() => sendPatch({ [cap.field]: false } as Partial<Device>)}
+      >
+        <Text style={pillButtonTextStyle(!current)}>
+          {cap.offLabel ?? "Off"}
+        </Text>
+      </Pressable>,
+    ];
     return (
       <View key={cap.id} style={toggleGroupStyle}>
         <Text style={styles.controlLabel}>{cap.label}</Text>
-        <View style={styles.toggleRow}>
-          <Pressable
-            style={pillButtonStyle(current)}
-            onPress={() => sendPatch({ [cap.field]: true } as Partial<Device>)}
-          >
-            <Text style={pillButtonTextStyle(current)}>
-              {cap.onLabel ?? "On"}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={pillButtonStyle(!current)}
-            onPress={() => sendPatch({ [cap.field]: false } as Partial<Device>)}
-          >
-            <Text style={pillButtonTextStyle(!current)}>
-              {cap.offLabel ?? "Off"}
-            </Text>
-          </Pressable>
-        </View>
+        {renderPillRows(toggleNodes)}
       </View>
     );
   };
 
   const renderEnum = (cap: EnumCapability) => {
     const current = device[cap.field];
+    const optionNodes = cap.options.map((opt) => {
+      const active = current === opt.value;
+      return (
+        <Pressable
+          key={`${cap.id}-${opt.value}`}
+          style={pillButtonStyle(active)}
+          onPress={() =>
+            sendPatch({ [cap.field]: opt.value } as Partial<Device>)
+          }
+        >
+          <Text style={pillButtonTextStyle(active)}>{opt.label}</Text>
+        </Pressable>
+      );
+    });
     return (
       <View key={cap.id} style={toggleGroupStyle}>
         <Text style={styles.controlLabel}>{cap.label}</Text>
-        <View style={styles.toggleRow}>
-          {cap.options.map((opt) => {
-            const active = current === opt.value;
-            return (
-              <Pressable
-                key={`${cap.id}-${opt.value}`}
-                style={pillButtonStyle(active)}
-                onPress={() =>
-                  sendPatch({ [cap.field]: opt.value } as Partial<Device>)
-                }
-              >
-                <Text style={pillButtonTextStyle(active)}>
-                  {opt.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {renderPillRows(optionNodes)}
       </View>
     );
   };
 
   const renderActions = () => {
     if (!actions.length) return null;
+    const actionNodes = actions.map((cap) => (
+      <Pressable
+        key={cap.id}
+        style={styles.pillBtn}
+        onPress={() => sendPatch(cap.patch)}
+      >
+        <Text style={styles.pillBtnText}>{cap.label}</Text>
+      </Pressable>
+    ));
     return (
-      <View style={styles.toggleRow}>
-        {actions.map((cap) => (
-          <Pressable
-            key={cap.id}
-            style={styles.pillBtn}
-            onPress={() => sendPatch(cap.patch)}
-          >
-            <Text style={styles.pillBtnText}>{cap.label}</Text>
-          </Pressable>
-        ))}
+      <View>
+        {renderPillRows(actionNodes)}
       </View>
     );
   };
@@ -419,10 +487,12 @@ export default function DeviceCapabilityControls({
 
   const renderGroup = (title: string, content: React.ReactNode) => {
     if (!content || React.Children.count(content) === 0) return null;
-    if (layout === "cards") {
+    if (layout === "cards" || layout === "grid") {
       return (
-        <View style={styles.card}>
-          <Text style={styles.groupTitle}>{title}</Text>
+        <View style={layout === "grid" ? gridCardStyle : styles.card}>
+          <Text style={layout === "grid" ? gridTitleStyle : styles.groupTitle}>
+            {title}
+          </Text>
           {content}
         </View>
       );
@@ -432,6 +502,22 @@ export default function DeviceCapabilityControls({
 
   if (!capabilities.length) {
     return <Text style={styles.emptyHint}>No controls available.</Text>;
+  }
+
+  if (isGridLayout) {
+    return (
+      <View style={gridRowStyle}>
+        <View style={gridColumnLeftStyle}>
+          {renderGroup("Controls", ranges.map(renderRange))}
+          {renderGroup("Status", renderStats())}
+        </View>
+        <View style={gridColumnRightStyle}>
+          {renderGroup("Toggles", toggles.map(renderToggle))}
+          {renderGroup("Modes", enums.map(renderEnum))}
+          {renderGroup("Actions", renderActions())}
+        </View>
+      </View>
+    );
   }
 
   return (

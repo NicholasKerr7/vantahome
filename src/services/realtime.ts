@@ -43,6 +43,12 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
         topicState: options.mqttTopicState,
         topicCommand: options.mqttTopicCommand,
         publishState: options.mqttPublishState,
+        onStatus: (status, error) => {
+          useHomeStore.getState().setRealtime({
+            mqttStatus: status,
+            mqttError: error,
+          });
+        },
       })
     : undefined;
   const stopSupabase =
@@ -61,6 +67,12 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
     stopSupabase?.();
     disconnect?.();
     stopTelemetry?.();
+    if (useMqtt) {
+      useHomeStore.getState().setRealtime({
+        mqttStatus: "disconnected",
+        mqttError: undefined,
+      });
+    }
   };
 }
 

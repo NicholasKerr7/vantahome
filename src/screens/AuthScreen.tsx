@@ -52,7 +52,7 @@ const getAuthParams = (url: string) => {
 
 type Props = NativeStackScreenProps<RootStackParamList, "Auth">;
 
-export default function AuthScreen({ navigation }: Props) {
+export default function AuthScreen({}: Props) {
   const { contentWidth, gutter, isTablet, isLandscape, scale, height } =
     useResponsive(640);
   const useLandscapeFrame = isLandscape;
@@ -103,6 +103,7 @@ export default function AuthScreen({ navigation }: Props) {
   const scrollMinHeight = Math.max(0, height - gutter * 2);
   const setProfile = useHomeStore((s) => s.setProfile);
   const profile = useHomeStore((s) => s.profile);
+  const setDemoMode = useHomeStore((s) => s.setDemoMode);
   const [mode, setMode] = useState<"create" | "login">("create");
   const [name, setName] = useState(profile.name ?? "");
   const [email, setEmail] = useState(profile.email ?? "");
@@ -278,7 +279,7 @@ export default function AuthScreen({ navigation }: Props) {
     setProfile({ name: nextName, email: user?.email ?? safeEmail });
     const homeName = profile.homeName?.trim() || `${nextName}'s Home`;
     void bootstrapHome(homeName).catch(() => {});
-    navigation.replace("Onboarding");
+    setDemoMode(false);
   };
 
   const handleContinue = async () => {
@@ -430,7 +431,7 @@ export default function AuthScreen({ navigation }: Props) {
           profile.name ||
           "Vanta Home";
         setProfile({ name: userName, email: userEmail });
-        navigation.replace("Onboarding");
+        setDemoMode(false);
       } else {
         Alert.alert(
           "Sign-in failed",
@@ -708,7 +709,7 @@ export default function AuthScreen({ navigation }: Props) {
       </View>
 
       <Pressable
-        onPress={() => navigation.replace("Onboarding")}
+        onPress={() => setDemoMode(true)}
         style={styles.skip}
       >
         <Text style={skipTextStyle}>Skip for now</Text>

@@ -3,23 +3,40 @@ import { View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
 type AcDetailSectionProps = {
-  isTabletLandscape: boolean;
-  landscapeColumnGapStyle: StyleProp<ViewStyle>;
+  isLandscapeSplit: boolean;
+  usePortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
+  landscapeGridStyle: StyleProp<ViewStyle>;
+  landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
+  landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
   acHeroNodes: React.ReactNode;
   acControlNodes: React.ReactNode;
 };
 
 export default function AcDetailSection({
-  isTabletLandscape,
-  landscapeColumnGapStyle,
+  isLandscapeSplit,
+  usePortraitGrid,
+  portraitGridStyle,
+  landscapeGridStyle,
+  landscapeColumnPrimaryStyle,
+  landscapeColumnSecondaryStyle,
   acHeroNodes,
   acControlNodes,
 }: AcDetailSectionProps) {
-  return isTabletLandscape ? (
-    <>
-      <View style={landscapeColumnGapStyle}>{acHeroNodes}</View>
-      <View style={landscapeColumnGapStyle}>{acControlNodes}</View>
-    </>
+  if (usePortraitGrid && !isLandscapeSplit) {
+    return (
+      <>
+        {acHeroNodes}
+        <View style={portraitGridStyle}>{acControlNodes}</View>
+      </>
+    );
+  }
+
+  return isLandscapeSplit ? (
+    <View style={landscapeGridStyle}>
+      <View style={landscapeColumnPrimaryStyle}>{acHeroNodes}</View>
+      <View style={landscapeColumnSecondaryStyle}>{acControlNodes}</View>
+    </View>
   ) : (
     <>
       {acHeroNodes}

@@ -3,8 +3,12 @@ import { View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
 type LaundryDetailSectionProps = {
-  isTabletLandscape: boolean;
-  landscapeColumnGapStyle: StyleProp<ViewStyle>;
+  isLandscapeSplit: boolean;
+  usePortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
+  landscapeGridStyle: StyleProp<ViewStyle>;
+  landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
+  landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
   laundryControlGridStyle: StyleProp<ViewStyle>;
   laundryHeroCard: React.ReactNode;
   laundryActionRow: React.ReactNode;
@@ -14,8 +18,12 @@ type LaundryDetailSectionProps = {
 };
 
 export default function LaundryDetailSection({
-  isTabletLandscape,
-  landscapeColumnGapStyle,
+  isLandscapeSplit,
+  usePortraitGrid,
+  portraitGridStyle,
+  landscapeGridStyle,
+  landscapeColumnPrimaryStyle,
+  landscapeColumnSecondaryStyle,
   laundryControlGridStyle,
   laundryHeroCard,
   laundryActionRow,
@@ -23,16 +31,31 @@ export default function LaundryDetailSection({
   laundryLoadSizeCard,
   laundryControlCards,
 }: LaundryDetailSectionProps) {
-  return isTabletLandscape ? (
+  const leftColumn = (
     <>
-      <View style={landscapeColumnGapStyle}>
-        {laundryHeroCard}
-        {laundryActionRow}
-        {laundryCycleCard}
-        {laundryLoadSizeCard}
-      </View>
-      <View style={laundryControlGridStyle}>{laundryControlCards}</View>
+      {laundryHeroCard}
+      {laundryActionRow}
+      {laundryCycleCard}
+      {laundryLoadSizeCard}
     </>
+  );
+
+  if (usePortraitGrid && !isLandscapeSplit) {
+    return (
+      <>
+        {laundryHeroCard}
+        <View style={portraitGridStyle}>{laundryControlCards}</View>
+      </>
+    );
+  }
+
+  return isLandscapeSplit ? (
+    <View style={landscapeGridStyle}>
+      <View style={landscapeColumnPrimaryStyle}>{leftColumn}</View>
+      <View style={landscapeColumnSecondaryStyle}>
+        <View style={laundryControlGridStyle}>{laundryControlCards}</View>
+      </View>
+    </View>
   ) : (
     <>
       {laundryHeroCard}

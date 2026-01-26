@@ -46,6 +46,30 @@ jest.mock("expo-av", () => {
   };
 });
 
+jest.mock("expo-video", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  class MockVideoView extends React.Component {
+    enterFullscreen = jest.fn();
+    exitFullscreen = jest.fn();
+    startPictureInPicture = jest.fn();
+    stopPictureInPicture = jest.fn();
+    render() {
+      return <View {...this.props} />;
+    }
+  }
+  return {
+    VideoView: MockVideoView,
+    useVideoPlayer: jest.fn(() => ({
+      play: jest.fn(),
+      pause: jest.fn(),
+      loop: false,
+      muted: false,
+    })),
+    isPictureInPictureSupported: jest.fn(() => false),
+  };
+});
+
 // Extend Jest with @testing-library/jest-native matchers.
 require("@testing-library/jest-native/extend-expect");
 

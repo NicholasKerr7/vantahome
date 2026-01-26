@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import Pressable from "./Pressable";
+import SheetSection from "./SheetSection";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -267,19 +268,25 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     </Pressable>
                   </View>
 
-                  <View style={sectionStyle}>
-                    <Text style={sectionTitleStyle}>Quick controls</Text>
+                  <SheetSection
+                    title="Quick controls"
+                    sectionStyle={sectionStyle}
+                    titleStyle={sectionTitleStyle}
+                  >
                     <DeviceCapabilityControls
                       device={device}
                       context="quick"
                       variant="dark"
-                      layout="compact"
+                      layout="grid"
                       enableHaptics
                     />
-                  </View>
+                  </SheetSection>
 
-                  <View style={sectionStyle}>
-                    <Text style={sectionTitleStyle}>Schedule</Text>
+                  <SheetSection
+                    title="Schedule"
+                    sectionStyle={sectionStyle}
+                    titleStyle={sectionTitleStyle}
+                  >
                     <View style={scheduleRowStyle}>
                       <Pressable
                         style={chipStyle}
@@ -319,7 +326,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                         Create automation for this device
                       </Text>
                     </Pressable>
-                  </View>
+                  </SheetSection>
 
                   <View style={footerRowStyle}>
                     <Pressable

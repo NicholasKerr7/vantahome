@@ -7,6 +7,13 @@ import type { Device } from "../../../store/useHomeStore";
 import OptionChips from "../../../components/OptionChips";
 
 type SpeakerDetailSectionProps = {
+  isLandscapeSplit: boolean;
+  usePortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
+  portraitCardStyle: StyleProp<ViewStyle>;
+  landscapeGridStyle: StyleProp<ViewStyle>;
+  landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
+  landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
   styles: Record<string, any>;
   speakerHeroCard: React.ReactNode;
   controlCardStyle: StyleProp<ViewStyle>;
@@ -32,6 +39,13 @@ type SpeakerDetailSectionProps = {
 };
 
 export default function SpeakerDetailSection({
+  isLandscapeSplit,
+  usePortraitGrid,
+  portraitGridStyle,
+  portraitCardStyle,
+  landscapeGridStyle,
+  landscapeColumnPrimaryStyle,
+  landscapeColumnSecondaryStyle,
   styles,
   speakerHeroCard,
   controlCardStyle,
@@ -55,11 +69,12 @@ export default function SpeakerDetailSection({
   onChangeBassDraft,
   onChangeTrebleDraft,
 }: SpeakerDetailSectionProps) {
-  return (
+  const cardStyle = usePortraitGrid
+    ? [controlCardStyle, portraitCardStyle]
+    : controlCardStyle;
+  const controlCards = (
     <>
-      {speakerHeroCard}
-
-      <View style={controlCardStyle}>
+      <View style={cardStyle}>
         <Text style={styles.cardLabel}>Source</Text>
         <OptionChips
           options={["Spotify", "AirPlay", "Bluetooth", "AUX", "TV"].map(
@@ -80,7 +95,7 @@ export default function SpeakerDetailSection({
         />
       </View>
 
-      <View style={controlCardStyle}>
+      <View style={cardStyle}>
         <Text style={styles.cardLabel}>EQ Preset</Text>
         <OptionChips
           options={["Flat", "Warm", "Bright", "Bass", "Vocal"].map((value) => ({
@@ -108,9 +123,7 @@ export default function SpeakerDetailSection({
           maximumValue={100}
           step={1}
           onValueChange={(value) => onChangeBassDraft(Math.round(value))}
-          onSlidingComplete={(value) =>
-            onPatch({ bass: Math.round(value) })
-          }
+          onSlidingComplete={(value) => onPatch({ bass: Math.round(value) })}
           minimumTrackTintColor="rgba(122,92,255,0.9)"
           maximumTrackTintColor="rgba(12,12,18,0.12)"
           thumbTintColor="rgba(255,255,255,0.92)"
@@ -127,9 +140,7 @@ export default function SpeakerDetailSection({
           maximumValue={100}
           step={1}
           onValueChange={(value) => onChangeTrebleDraft(Math.round(value))}
-          onSlidingComplete={(value) =>
-            onPatch({ treble: Math.round(value) })
-          }
+          onSlidingComplete={(value) => onPatch({ treble: Math.round(value) })}
           minimumTrackTintColor="rgba(122,92,255,0.9)"
           maximumTrackTintColor="rgba(12,12,18,0.12)"
           thumbTintColor="rgba(255,255,255,0.92)"
@@ -137,7 +148,7 @@ export default function SpeakerDetailSection({
         />
       </View>
 
-      <View style={controlCardStyle}>
+      <View style={cardStyle}>
         <Text style={styles.cardLabel}>Smart modes</Text>
         <View style={styles.chipRow}>
           {[
@@ -209,6 +220,27 @@ export default function SpeakerDetailSection({
           chipTextStyle={chipTextStyle}
         />
       </View>
+    </>
+  );
+
+  if (usePortraitGrid && !isLandscapeSplit) {
+    return (
+      <>
+        {speakerHeroCard}
+        <View style={portraitGridStyle}>{controlCards}</View>
+      </>
+    );
+  }
+
+  return isLandscapeSplit ? (
+    <View style={landscapeGridStyle}>
+      <View style={landscapeColumnPrimaryStyle}>{speakerHeroCard}</View>
+      <View style={landscapeColumnSecondaryStyle}>{controlCards}</View>
+    </View>
+  ) : (
+    <>
+      {speakerHeroCard}
+      {controlCards}
     </>
   );
 }

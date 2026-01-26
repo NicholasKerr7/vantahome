@@ -6,6 +6,9 @@ import OptionChips from "../../../components/OptionChips";
 
 type StoveDetailSectionProps = {
   isLandscapeSplit: boolean;
+  usePortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
+  portraitCardStyle: StyleProp<ViewStyle>;
   landscapeGridStyle: StyleProp<ViewStyle>;
   landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
   landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
@@ -30,6 +33,9 @@ type StoveDetailSectionProps = {
 
 export default function StoveDetailSection({
   isLandscapeSplit,
+  usePortraitGrid,
+  portraitGridStyle,
+  portraitCardStyle,
   landscapeGridStyle,
   landscapeColumnPrimaryStyle,
   landscapeColumnSecondaryStyle,
@@ -52,8 +58,11 @@ export default function StoveDetailSection({
   onToggleLock,
 }: StoveDetailSectionProps) {
   const timerOptions = [0, 5, 10, 20, 30];
+  const cardStyle = usePortraitGrid
+    ? [controlCardStyle, portraitCardStyle]
+    : controlCardStyle;
   const modeCard = (
-    <View style={controlCardStyle}>
+    <View style={cardStyle}>
       <Text style={cardLabelStyle}>Mode</Text>
       <OptionChips
         options={stoveModeOptions}
@@ -66,7 +75,7 @@ export default function StoveDetailSection({
     </View>
   );
   const timerCard = (
-    <View style={controlCardStyle}>
+    <View style={cardStyle}>
       <Text style={cardLabelStyle}>Timer</Text>
       <OptionChips
         options={timerOptions.map((value) => ({
@@ -85,7 +94,7 @@ export default function StoveDetailSection({
     </View>
   );
   const safetyCard = (
-    <View style={controlCardStyle}>
+    <View style={cardStyle}>
       <Text style={cardLabelStyle}>Safety</Text>
       <View style={controlCardRowTopStyle}>
         <Pressable style={controlPillStyle(stoveLock)} onPress={onToggleLock}>
@@ -96,6 +105,19 @@ export default function StoveDetailSection({
       </View>
     </View>
   );
+
+  if (usePortraitGrid && !isLandscapeSplit) {
+    return (
+      <>
+        {stoveHeroCard}
+        <View style={portraitGridStyle}>
+          {modeCard}
+          {timerCard}
+          {safetyCard}
+        </View>
+      </>
+    );
+  }
 
   return isLandscapeSplit ? (
     <View style={landscapeGridStyle}>

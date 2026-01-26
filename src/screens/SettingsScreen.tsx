@@ -167,6 +167,10 @@ export default function SettingsScreen() {
   }>({
     status: "disconnected",
   });
+  const [retryStatus, setRetryStatus] = useState<{
+    pending: number;
+    nextAttemptAt?: number;
+  }>({ pending: 0 });
   const [cloudSyncLoading, setCloudSyncLoading] = useState(false);
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
@@ -404,17 +408,45 @@ export default function SettingsScreen() {
     const unsubscribe = deviceClient.subscribeConnection((evt) =>
       setConnection({ status: evt.status, error: evt.error }),
     );
+    const unsubscribeRetry = deviceClient.subscribeRetry((status) =>
+      setRetryStatus(status),
+    );
     return () => {
       unsubscribe();
+      unsubscribeRetry();
     };
   }, []);
 
-  const realtimeActive = realtime.enabled && realtime.wsUrl.trim().length > 0;
+  const mqttUrl = process.env.EXPO_PUBLIC_MQTT_URL?.trim() ?? "";
+  const mqttStateTopic =
+    process.env.EXPO_PUBLIC_MQTT_TOPIC_STATE ?? "vantahome/devices/state";
+  const mqttCommandTopic =
+    process.env.EXPO_PUBLIC_MQTT_TOPIC_COMMAND ?? "vantahome/devices/command";
+  const mqttPublishState =
+    (process.env.EXPO_PUBLIC_MQTT_PUBLISH_STATE ?? "").toLowerCase() === "true";
+  const realtimeActive =
+    realtime.enabled &&
+    (realtime.useMqtt
+      ? mqttUrl.trim().length > 0
+      : realtime.wsUrl.trim().length > 0);
   const realtimeStatus = useMemo(() => {
     if (!realtime.enabled)
       return { label: "Disabled", status: "disabled" as const };
     if (!realtimeActive)
-      return { label: "Add URL", status: "offline" as const };
+      return {
+        label: realtime.useMqtt ? "Add MQTT URL" : "Add URL",
+        status: "offline" as const,
+      };
+    if (realtime.useMqtt) {
+      const mqttStatus = realtime.mqttStatus ?? "connecting";
+      if (mqttStatus === "connected")
+        return { label: "MQTT connected", status: "connected" as const };
+      if (mqttStatus === "error")
+        return { label: "MQTT error", status: "error" as const };
+      if (mqttStatus === "connecting")
+        return { label: "MQTT connecting", status: "connecting" as const };
+      return { label: "MQTT offline", status: "offline" as const };
+    }
     switch (connection.status) {
       case "connected":
         return { label: "Connected", status: "connected" as const };
@@ -425,7 +457,14 @@ export default function SettingsScreen() {
       default:
         return { label: "Offline", status: "offline" as const };
     }
-  }, [connection.status, realtime.enabled, realtimeActive]);
+  }, [
+    connection.status,
+    mqttUrl,
+    realtime.enabled,
+    realtime.mqttStatus,
+    realtime.useMqtt,
+    realtimeActive,
+  ]);
   const realtimeStatusPillStyle: StyleProp<ViewStyle> = [
     styles.statusPill,
     statusPillBaseStyle,
@@ -443,6 +482,15 @@ export default function SettingsScreen() {
       ? styles.statusTextOn
       : styles.statusTextOff,
   ];
+  const retryStatusLabel = useMemo(() => {
+    if (retryStatus.pending === 0) return "None";
+    if (!retryStatus.nextAttemptAt) return `${retryStatus.pending} pending`;
+    const next = new Date(retryStatus.nextAttemptAt).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `${retryStatus.pending} pending • next ${next}`;
+  }, [retryStatus.nextAttemptAt, retryStatus.pending]);
 
   const handleCloudSync = async () => {
     if (cloudSyncLoading) return;
@@ -968,10 +1016,55 @@ export default function SettingsScreen() {
         />
       </View>
       <View style={styles.row}>
+        <Text style={rowLabelStyle}>Use MQTT bridge</Text>
+        <Switch
+          value={realtime.useMqtt}
+          onValueChange={(v) => setRealtime({ useMqtt: v })}
+          thumbColor={
+            realtime.useMqtt
+              ? theme.colors.accent
+              : "rgba(255,255,255,0.8)"
+          }
+          trackColor={{
+            true: "rgba(180,107,255,0.45)",
+            false: "rgba(255,255,255,0.24)",
+          }}
+          style={switchScaleStyle}
+        />
+      </View>
+      <View style={styles.row}>
         <Text style={rowLabelStyle}>Status</Text>
         <View style={realtimeStatusPillStyle}>
           <Text style={realtimeStatusTextStyle}>{realtimeStatus.label}</Text>
         </View>
+      </View>
+      {realtime.useMqtt && realtime.mqttError ? (
+        <View style={styles.row}>
+          <Text style={rowLabelStyle}>MQTT error</Text>
+          <Text style={rowValueStyle}>{realtime.mqttError}</Text>
+        </View>
+      ) : null}
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>MQTT endpoint</Text>
+        <Text style={rowValueStyle}>
+          {mqttUrl.length > 0 ? mqttUrl : "Not set"}
+        </Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>MQTT state topic</Text>
+        <Text style={rowValueStyle}>{mqttStateTopic}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>MQTT command topic</Text>
+        <Text style={rowValueStyle}>{mqttCommandTopic}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Publish state</Text>
+        <Text style={rowValueStyle}>{mqttPublishState ? "Yes" : "No"}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Command retries</Text>
+        <Text style={rowValueStyle}>{retryStatusLabel}</Text>
       </View>
       <Text style={rowLabelStyle}>WebSocket endpoint</Text>
       <TextInput

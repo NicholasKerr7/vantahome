@@ -7,6 +7,14 @@ import RadialDial from "../../../components/RadialDial";
 import OptionChips from "../../../components/OptionChips";
 
 type WaterHeaterDetailSectionProps = {
+  isLandscapeSplit: boolean;
+  usePortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
+  portraitCardStyle: StyleProp<ViewStyle>;
+  landscapeGridStyle: StyleProp<ViewStyle>;
+  landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
+  landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
+  waterHeaterHeroCard?: React.ReactNode;
   isOn: boolean;
   compactDialSize: number;
   heaterTemp: number;
@@ -43,6 +51,14 @@ type WaterHeaterDetailSectionProps = {
 };
 
 export default function WaterHeaterDetailSection({
+  isLandscapeSplit,
+  usePortraitGrid,
+  portraitGridStyle,
+  portraitCardStyle,
+  landscapeGridStyle,
+  landscapeColumnPrimaryStyle,
+  landscapeColumnSecondaryStyle,
+  waterHeaterHeroCard,
   isOn,
   compactDialSize,
   heaterTemp,
@@ -77,7 +93,10 @@ export default function WaterHeaterDetailSection({
   marginBottom6Style,
   iconColor,
 }: WaterHeaterDetailSectionProps) {
-  return (
+  const cardStyle = usePortraitGrid
+    ? [controlCardStyle, portraitCardStyle]
+    : controlCardStyle;
+  const heroTop = waterHeaterHeroCard ?? (
     <>
       <RadialDial
         size={compactDialSize}
@@ -98,40 +117,52 @@ export default function WaterHeaterDetailSection({
         onChange={(v) => onSetTemp(v)}
       />
       <Text style={heaterStatusTextStyle}>{heaterStatus}</Text>
-
-      <View style={controlCardStyle}>
-        <Text style={cardLabelStyle}>Heater type</Text>
-        <OptionChips
-          options={heaterTypeOptions}
+    </>
+  );
+  const typeCard = (
+    <View style={cardStyle}>
+      <Text style={cardLabelStyle}>Heater type</Text>
+      <OptionChips
+        options={heaterTypeOptions}
           value={heaterType}
           onSelect={onSetType}
           rowStyle={chipRowStyle}
-          chipStyle={chipStyle}
-          chipTextStyle={chipTextStyle}
-        />
-      </View>
-
-      <View style={controlCardStyle}>
-        <Text style={cardLabelStyle}>Mode</Text>
-        <OptionChips
-          options={heaterModeOptions}
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
+    </View>
+  );
+  const modeCard = (
+    <View style={cardStyle}>
+      <Text style={cardLabelStyle}>Mode</Text>
+      <OptionChips
+        options={heaterModeOptions}
           value={heaterMode}
           onSelect={onSetMode}
           rowStyle={chipRowStyle}
-          chipStyle={chipStyle}
-          chipTextStyle={chipTextStyle}
-        />
-      </View>
+        chipStyle={chipStyle}
+        chipTextStyle={chipTextStyle}
+      />
+    </View>
+  );
 
-      <View style={controlCardStyle}>
+  const detailColumn = (
+    <>
+      <View style={cardStyle}>
         <Text style={cardLabelStyle}>Smart features</Text>
         <View style={controlCardRowTopStyle}>
-          <Pressable style={controlPillStyle(heaterScheduleEnabled)} onPress={onToggleSchedule}>
+          <Pressable
+            style={controlPillStyle(heaterScheduleEnabled)}
+            onPress={onToggleSchedule}
+          >
             <Text style={controlPillTextStyle(heaterScheduleEnabled)}>
               {heaterScheduleEnabled ? "Schedule" : "Schedule Off"}
             </Text>
           </Pressable>
-          <Pressable style={controlPillStyle(heaterSanitize)} onPress={onToggleSanitize}>
+          <Pressable
+            style={controlPillStyle(heaterSanitize)}
+            onPress={onToggleSanitize}
+          >
             <Text style={controlPillTextStyle(heaterSanitize)}>
               {heaterSanitize ? "Sanitize" : "Sanitize Off"}
             </Text>
@@ -156,7 +187,7 @@ export default function WaterHeaterDetailSection({
         </Text>
       </View>
 
-      <View style={controlCardStyle}>
+      <View style={cardStyle}>
         <Text style={cardLabelStyle}>Vacation</Text>
         <OptionChips
           options={[0, 3, 7, 14, 30].map((value) => ({
@@ -177,6 +208,33 @@ export default function WaterHeaterDetailSection({
             : "Set days, then enable Vacation mode."}
         </Text>
       </View>
+    </>
+  );
+
+  return isLandscapeSplit ? (
+    <View style={landscapeGridStyle}>
+      <View style={landscapeColumnPrimaryStyle}>
+        {heroTop}
+        {typeCard}
+        {modeCard}
+      </View>
+      <View style={landscapeColumnSecondaryStyle}>{detailColumn}</View>
+    </View>
+  ) : usePortraitGrid ? (
+    <>
+      {heroTop}
+      <View style={portraitGridStyle}>
+        {typeCard}
+        {modeCard}
+        {detailColumn}
+      </View>
+    </>
+  ) : (
+    <>
+      {heroTop}
+      {typeCard}
+      {modeCard}
+      {detailColumn}
     </>
   );
 }

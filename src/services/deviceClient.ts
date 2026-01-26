@@ -46,6 +46,11 @@ type ConnectionEvent = {
   error?: string;
 };
 
+type RetryStatus = {
+  pending: number;
+  nextAttemptAt?: number;
+};
+
 type DeviceStateMessage = {
   type: "state";
   deviceId: string;
@@ -68,6 +73,7 @@ type DeviceSnapshotMessage = {
 
 type Listener = (evt: DeviceStateEvent) => void;
 type ConnectionListener = (evt: ConnectionEvent) => void;
+type RetryListener = (status: RetryStatus) => void;
 
 type ConnectOptions = {
   protocols?: string | string[];
@@ -92,6 +98,19 @@ type CommandTransport = (
   patch: Partial<Device> | null,
 ) => Promise<void> | void;
 
+type RetryEntry = {
+  cmd: DeviceCommand;
+  patch: Partial<Device> | null;
+  attempts: number;
+  nextAttemptAt: number;
+};
+
+type RetryOptions = {
+  maxRetries: number;
+  baseDelayMs: number;
+  maxDelayMs: number;
+};
+
 /**
  * Mock device client that simulates a backend bridge.
  *
@@ -102,9 +121,17 @@ type CommandTransport = (
 class DeviceClient {
   private listeners = new Set<Listener>();
   private connectionListeners = new Set<ConnectionListener>();
+  private retryListeners = new Set<RetryListener>();
   private socket: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
+  private retryQueue: RetryEntry[] = [];
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryOptions: RetryOptions = {
+    maxRetries: 3,
+    baseDelayMs: 800,
+    maxDelayMs: 8000,
+  };
   private connection: {
     url: string;
     options: ResolvedConnectOptions;
@@ -127,8 +154,24 @@ class DeviceClient {
     return () => this.connectionListeners.delete(fn);
   }
 
+  subscribeRetry(fn: RetryListener) {
+    this.retryListeners.add(fn);
+    fn(this.getRetryStatus());
+    return () => this.retryListeners.delete(fn);
+  }
+
   getConnectionStatus() {
     return this.connectionStatus;
+  }
+
+  getRetryStatus(): RetryStatus {
+    if (this.retryQueue.length === 0) {
+      return { pending: 0 };
+    }
+    const nextAttemptAt = Math.min(
+      ...this.retryQueue.map((entry) => entry.nextAttemptAt),
+    );
+    return { pending: this.retryQueue.length, nextAttemptAt };
   }
 
   connect(url: string, options: ConnectOptions = {}) {
@@ -160,6 +203,9 @@ class DeviceClient {
 
   setCommandTransport(fn: CommandTransport | null) {
     this.commandTransport = fn;
+    if (fn) {
+      this.scheduleRetry();
+    }
     return () => {
       if (this.commandTransport === fn) {
         this.commandTransport = null;
@@ -180,33 +226,12 @@ class DeviceClient {
       this.emit(evt);
     }
 
-    if (this.commandTransport) {
-      try {
-        await this.commandTransport(cmd, patch);
-        return;
-      } catch {
-        // Fall through to other transports.
-      }
-    }
-
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      try {
-        this.socket.send(JSON.stringify({ type: "command", payload: cmd }));
-        return;
-      } catch {
-        // Fall back to mock behavior below.
-      }
-    }
-
-    // Simulate round-trip; in production call your API here.
-    await new Promise((r) => setTimeout(r, 80));
-    if (!optimistic && patch) {
-      const evt: DeviceStateEvent = {
-        deviceId: cmd.deviceId,
-        patch,
-        ts: Date.now(),
-      };
-      this.emit(evt);
+    const sent = await this.attemptSend(cmd, patch, {
+      allowMock: this.commandTransport === null,
+      optimistic,
+    });
+    if (!sent) {
+      this.enqueueRetry(cmd, patch);
     }
   }
 
@@ -228,6 +253,9 @@ class DeviceClient {
       error,
     };
     this.connectionListeners.forEach((fn) => fn(event));
+    if (status === "connected") {
+      this.scheduleRetry();
+    }
   }
 
   private openSocket() {
@@ -334,6 +362,108 @@ class DeviceClient {
       };
       this.emit(evt);
     }
+  }
+
+  private enqueueRetry(cmd: DeviceCommand, patch: Partial<Device> | null) {
+    const now = Date.now();
+    this.retryQueue.push({
+      cmd,
+      patch,
+      attempts: 0,
+      nextAttemptAt: now + this.retryOptions.baseDelayMs,
+    });
+    this.emitRetryStatus();
+    this.scheduleRetry();
+  }
+
+  private scheduleRetry() {
+    if (this.retryTimer || this.retryQueue.length === 0) return;
+    const now = Date.now();
+    const nextAttemptAt = Math.min(
+      ...this.retryQueue.map((entry) => entry.nextAttemptAt),
+    );
+    const delay = Math.max(0, nextAttemptAt - now);
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.flushRetryQueue();
+    }, delay);
+    this.emitRetryStatus();
+  }
+
+  private async flushRetryQueue() {
+    if (this.retryQueue.length === 0) return;
+    const now = Date.now();
+    const pending = this.retryQueue;
+    this.retryQueue = [];
+    for (const entry of pending) {
+      if (entry.nextAttemptAt > now) {
+        this.retryQueue.push(entry);
+        continue;
+      }
+      const sent = await this.attemptSend(entry.cmd, entry.patch, {
+        allowMock: false,
+        optimistic: true,
+      });
+      if (!sent) {
+        const attempts = entry.attempts + 1;
+        if (attempts <= this.retryOptions.maxRetries) {
+          const delay = Math.min(
+            this.retryOptions.baseDelayMs * 2 ** (attempts - 1),
+            this.retryOptions.maxDelayMs,
+          );
+          this.retryQueue.push({
+            ...entry,
+            attempts,
+            nextAttemptAt: now + delay,
+          });
+        }
+      }
+    }
+    this.emitRetryStatus();
+    this.scheduleRetry();
+  }
+
+  private async attemptSend(
+    cmd: DeviceCommand,
+    patch: Partial<Device> | null,
+    options: { allowMock: boolean; optimistic: boolean },
+  ) {
+    if (this.commandTransport) {
+      try {
+        await this.commandTransport(cmd, patch);
+        return true;
+      } catch {
+        // Fall through to other transports.
+      }
+    }
+
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      try {
+        this.socket.send(JSON.stringify({ type: "command", payload: cmd }));
+        return true;
+      } catch {
+        // Fall back to mock behavior below.
+      }
+    }
+
+    if (!options.allowMock) return false;
+
+    // Simulate round-trip; in production call your API here.
+    await new Promise((r) => setTimeout(r, 80));
+    if (!options.optimistic && patch) {
+      const evt: DeviceStateEvent = {
+        deviceId: cmd.deviceId,
+        patch,
+        ts: Date.now(),
+      };
+      this.emit(evt);
+    }
+    return true;
+  }
+
+  private emitRetryStatus() {
+    const status = this.getRetryStatus();
+    this.retryListeners.forEach((fn) => fn(status));
   }
 
   private parseMessage(raw: unknown) {

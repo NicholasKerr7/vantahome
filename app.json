@@ -40,7 +40,13 @@
       "expo-font",
       "expo-image-picker",
       "expo-web-browser",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-video",
+        {
+          "supportsPictureInPicture": true
+        }
+      ]
     ]
   }
 }

@@ -4,6 +4,8 @@ import type { StyleProp, ViewStyle } from "react-native";
 
 type FanDetailSectionProps = {
   isLandscapeSplit: boolean;
+  usePortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
   landscapeGridStyle: StyleProp<ViewStyle>;
   landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
   landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
@@ -14,6 +16,8 @@ type FanDetailSectionProps = {
 
 export default function FanDetailSection({
   isLandscapeSplit,
+  usePortraitGrid,
+  portraitGridStyle,
   landscapeGridStyle,
   landscapeColumnPrimaryStyle,
   landscapeColumnSecondaryStyle,
@@ -21,6 +25,18 @@ export default function FanDetailSection({
   fanOscillationCard,
   fanTimerCard,
 }: FanDetailSectionProps) {
+  if (usePortraitGrid && !isLandscapeSplit) {
+    return (
+      <>
+        {fanHeroCard}
+        <View style={portraitGridStyle}>
+          {fanOscillationCard}
+          {fanTimerCard}
+        </View>
+      </>
+    );
+  }
+
   return isLandscapeSplit ? (
     <View style={landscapeGridStyle}>
       <View style={landscapeColumnPrimaryStyle}>{fanHeroCard}</View>

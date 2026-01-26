@@ -4,6 +4,8 @@ import type { StyleProp, ViewStyle } from "react-native";
 
 type FridgeDetailSectionProps = {
   isLandscapeSplit: boolean;
+  usePortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
   landscapeGridStyle: StyleProp<ViewStyle>;
   landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
   landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
@@ -17,6 +19,8 @@ type FridgeDetailSectionProps = {
 
 export default function FridgeDetailSection({
   isLandscapeSplit,
+  usePortraitGrid,
+  portraitGridStyle,
   landscapeGridStyle,
   landscapeColumnPrimaryStyle,
   landscapeColumnSecondaryStyle,
@@ -27,6 +31,21 @@ export default function FridgeDetailSection({
   fridgeHardwareCard,
   fridgeHumidityCard,
 }: FridgeDetailSectionProps) {
+  if (usePortraitGrid && !isLandscapeSplit) {
+    return (
+      <>
+        {fridgeHeroCard}
+        <View style={portraitGridStyle}>
+          {fridgeFreezerCard}
+          {fridgeModesCard}
+          {fridgeQuickActionsCard}
+          {fridgeHardwareCard}
+          {fridgeHumidityCard}
+        </View>
+      </>
+    );
+  }
+
   return isLandscapeSplit ? (
     <View style={landscapeGridStyle}>
       <View style={landscapeColumnPrimaryStyle}>{fridgeHeroCard}</View>

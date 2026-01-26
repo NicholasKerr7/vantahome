@@ -4,6 +4,8 @@ import type { StyleProp, ViewStyle } from "react-native";
 
 type CoffeeDetailSectionProps = {
   isLandscapeSplit: boolean;
+  usePortraitGrid: boolean;
+  portraitGridStyle: StyleProp<ViewStyle>;
   landscapeGridStyle: StyleProp<ViewStyle>;
   landscapeColumnPrimaryStyle: StyleProp<ViewStyle>;
   landscapeColumnSecondaryStyle: StyleProp<ViewStyle>;
@@ -14,6 +16,8 @@ type CoffeeDetailSectionProps = {
 
 export default function CoffeeDetailSection({
   isLandscapeSplit,
+  usePortraitGrid,
+  portraitGridStyle,
   landscapeGridStyle,
   landscapeColumnPrimaryStyle,
   landscapeColumnSecondaryStyle,
@@ -21,6 +25,16 @@ export default function CoffeeDetailSection({
   coffeeControlCards,
   coffeeDescaleNotice,
 }: CoffeeDetailSectionProps) {
+  if (usePortraitGrid && !isLandscapeSplit) {
+    return (
+      <>
+        {coffeeHeroCard}
+        {coffeeDescaleNotice}
+        <View style={portraitGridStyle}>{coffeeControlCards}</View>
+      </>
+    );
+  }
+
   return isLandscapeSplit ? (
     <View style={landscapeGridStyle}>
       <View style={landscapeColumnPrimaryStyle}>
