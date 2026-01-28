@@ -381,6 +381,9 @@ export default function AuthScreen({}: Props) {
         redirectUri,
       );
       if (result.type !== "success" || !result.url) {
+        if (result.type === "dismiss" || result.type === "cancel") {
+          Alert.alert("Sign-in cancelled", "OAuth flow was canceled.");
+        }
         return;
       }
 
@@ -432,6 +435,13 @@ export default function AuthScreen({}: Props) {
           "Vanta Home";
         setProfile({ name: userName, email: userEmail });
         setDemoMode(false);
+        try {
+          const homeName = profile.homeName?.trim() || `${userName}'s Home`;
+          await bootstrapHome(homeName);
+        } catch {
+          // Ignore bootstrap errors (e.g., already has a home).
+        }
+        Alert.alert("Signed in", `Welcome back, ${userName}!`);
       } else {
         Alert.alert(
           "Sign-in failed",

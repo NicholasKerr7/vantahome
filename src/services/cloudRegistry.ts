@@ -64,7 +64,43 @@ export type InviteMemberPayload = {
 export async function inviteHomeMember(payload: InviteMemberPayload) {
   return callEdge<{
     member: { userId: string; email: string; name: string; role: string };
+    status?: "invited" | "already_member";
   }>("home-invite", payload);
+}
+
+export type HomeInvite = {
+  id: string;
+  home_id: string;
+  email: string;
+  invited_user_id: string | null;
+  role: string;
+  room_ids: string[];
+  status: "pending" | "accepted" | "declined" | "cancelled";
+  created_at: string;
+};
+
+export async function listPendingInvites() {
+  assertSupabaseReady();
+  const { data: userData, error: userError } = await supabase!.auth.getUser();
+  if (userError || !userData?.user) throw new Error("Missing auth session.");
+  const email = userData.user.email ?? "";
+  const userId = userData.user.id;
+  const { data, error } = await supabase!
+    .from("home_invites")
+    .select(
+      "id, home_id, email, invited_user_id, role, room_ids, status, created_at",
+    )
+    .eq("status", "pending")
+    .or(`invited_user_id.eq.${userId},email.eq.${email}`);
+  if (error) throw new Error(error.message);
+  return (data as HomeInvite[]) ?? [];
+}
+
+export async function respondHomeInvite(inviteId: string, action: "accept" | "decline") {
+  return callEdge<{ status: "accepted" | "declined"; inviteId: string }>(
+    "home-invite-respond",
+    { inviteId, action },
+  );
 }
 
 export async function pushDeviceState(

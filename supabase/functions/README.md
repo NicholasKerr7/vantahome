@@ -17,6 +17,7 @@ Room-level access is enforced via the `room_members` table and RLS policies.
   - Body: `{ "events": [{ "deviceId": "<uuid>", "state": { ... } }] }`
   - Batch upsert for multiple devices.
 - `home-invite` (POST)
+- `home-invite-respond` (POST)
   - Body: `{ "email": "user@example.com", "name": "Jane", "role": "guest", "roomIds": ["<room_uuid>"] }`
   - Invites a user and inserts them into `home_members` (+ optional `room_members`).
 

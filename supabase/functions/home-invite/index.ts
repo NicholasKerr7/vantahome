@@ -104,43 +104,38 @@ Deno.serve(async (req) => {
       }
       invitedUserId = existingUsers.users[0].id;
     }
-    const { error: memberError } = await admin
+    const { data: existingMember } = await admin
       .from("home_members")
-      .upsert({
-        home_id: membership.home_id,
-        user_id: invitedUserId,
-        role,
-      });
-
-    if (memberError) {
-      return new Response(JSON.stringify({ error: memberError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (roomIds.length && ["guest", "tenant", "member"].includes(role)) {
+      .select("user_id, role")
+      .eq("home_id", membership.home_id)
+      .eq("user_id", invitedUserId)
+      .limit(1)
+      .maybeSingle();
+    if (!existingMember) {
       const { data: rooms } = await admin
         .from("rooms")
         .select("id")
         .eq("home_id", membership.home_id)
         .in("id", roomIds);
       const validRoomIds = rooms?.map((r) => r.id) ?? [];
-      if (validRoomIds.length) {
-        const payload = validRoomIds.map((roomId) => ({
-          room_id: roomId,
-          user_id: invitedUserId,
+      const { error: inviteRecordError } = await admin
+        .from("home_invites")
+        .upsert({
+          home_id: membership.home_id,
+          email,
+          invited_user_id: invitedUserId || null,
           role,
-        }));
-        const { error: roomError } = await admin
-          .from("room_members")
-          .upsert(payload);
-        if (roomError) {
-          return new Response(JSON.stringify({ error: roomError.message }), {
+          room_ids: validRoomIds,
+          status: "pending",
+        });
+      if (inviteRecordError) {
+        return new Response(
+          JSON.stringify({ error: inviteRecordError.message }),
+          {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+          },
+        );
       }
     }
 
@@ -152,6 +147,7 @@ Deno.serve(async (req) => {
           name: name || inviteData.user.user_metadata?.name || email,
           role,
         },
+        status: existingMember ? "already_member" : "invited",
       }),
       {
         status: 200,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -33,7 +33,13 @@ import {
   setRoomMembershipRemote,
   type RoomMemberRole,
 } from "../services/roomMembers";
-import { inviteHomeMember } from "../services/cloudRegistry";
+import {
+  inviteHomeMember,
+  listPendingInvites,
+  respondHomeInvite,
+  type HomeInvite,
+} from "../services/cloudRegistry";
+import { syncMembershipFromSupabase } from "../services/membership";
 import { supabase } from "../services/supabaseClient";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
@@ -426,6 +432,10 @@ export default function ProfileScreen({ navigation }: Props) {
   const activeMember = useHomeStore(selectActiveMember);
   const activeMemberId = useHomeStore((s) => s.activeMemberId);
   const setActiveMember = useHomeStore((s) => s.setActiveMember);
+  const setHouseholdFromRemote = useHomeStore((s) => s.setHouseholdFromRemote);
+  const setRoomMembersFromRemote = useHomeStore(
+    (s) => s.setRoomMembersFromRemote,
+  );
   const demoMode = useHomeStore((s) => s.demoMode);
   const setDemoMode = useHomeStore((s) => s.setDemoMode);
   const roomMembers = useHomeStore((s) => s.roomMembers);
@@ -450,6 +460,8 @@ export default function ProfileScreen({ navigation }: Props) {
     "Owner" | "Admin" | "Member" | "Guest" | "Tenant"
   >("Guest");
   const [newMemberAvatar, setNewMemberAvatar] = useState("");
+  const [pendingInvites, setPendingInvites] = useState<HomeInvite[]>([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
   const canManageRooms = activeMember
     ? ["Owner", "Admin"].includes(activeMember.role)
     : false;
@@ -462,6 +474,10 @@ export default function ProfileScreen({ navigation }: Props) {
     if (role === "Tenant") return "tenant";
     return null;
   };
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    );
   const updateRoomAccess = async (
     memberId: string,
     userId: string | undefined,
@@ -471,7 +487,13 @@ export default function ProfileScreen({ navigation }: Props) {
   ) => {
     setRoomMembership(memberId, nextRoomIds);
     const roomRole = resolveRoomRole(role);
-    if (!userId || !roomRole) return;
+    if (
+      !userId ||
+      !roomRole ||
+      !isUuid(userId) ||
+      !nextRoomIds.every(isUuid)
+    )
+      return;
     try {
       await setRoomMembershipRemote(userId, nextRoomIds, roomRole);
     } catch (err) {
@@ -482,6 +504,21 @@ export default function ProfileScreen({ navigation }: Props) {
       );
     }
   };
+  const refreshInvites = async () => {
+    if (!supabase || demoMode) {
+      setPendingInvites([]);
+      return;
+    }
+    try {
+      const invites = await listPendingInvites();
+      setPendingInvites(invites);
+    } catch {
+      setPendingInvites([]);
+    }
+  };
+  useEffect(() => {
+    refreshInvites();
+  }, [demoMode]);
   const [biometricLock, setBiometricLock] = useState(true);
   const [locationSharing, setLocationSharing] = useState(true);
   const [activitySharing, setActivitySharing] = useState(false);
@@ -664,7 +701,57 @@ export default function ProfileScreen({ navigation }: Props) {
       Alert.alert("Email required", "Add an email to invite this member.");
       return;
     }
+    const addMemberLocally = () => {
+      const localId = `m${Date.now()}`;
+      const initialRoomIds =
+        newMemberRole === "Guest" || newMemberRole === "Tenant"
+          ? rooms.map((room) => room.id).slice(0, 1)
+          : [];
+      addHouseholdMember({
+        id: localId,
+        userId: localId,
+        name: trimmed,
+        role: newMemberRole,
+        status: "away",
+        avatarUri: newMemberAvatar,
+        avatarColor: avatarColor,
+      });
+      if (initialRoomIds.length) {
+        setRoomMembership(localId, initialRoomIds);
+      }
+      setNewMemberName("");
+      setNewMemberEmail("");
+      setNewMemberRole("Guest");
+      setNewMemberAvatar("");
+    };
+    if (demoMode || !supabase) {
+      addMemberLocally();
+      Alert.alert(
+        "Invite added locally",
+        "Sign in to send real invites from the cloud.",
+      );
+      return;
+    }
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session?.access_token) {
+        addMemberLocally();
+        Alert.alert(
+          "Invite added locally",
+          "Sign in to send real invites from the cloud.",
+        );
+        return;
+      }
+    } catch {
+      addMemberLocally();
+      Alert.alert(
+        "Invite added locally",
+        "Sign in to send real invites from the cloud.",
+      );
+      return;
+    }
+    try {
+      setInviteLoading(true);
       const roleLower = newMemberRole.toLowerCase() as
         | "admin"
         | "member"
@@ -696,10 +783,37 @@ export default function ProfileScreen({ navigation }: Props) {
       setNewMemberEmail("");
       setNewMemberRole("Guest");
       setNewMemberAvatar("");
+      await refreshInvites();
+    } catch (err) {
+      const message = (err as Error).message ?? "Unable to invite member.";
+      addMemberLocally();
+      Alert.alert(
+        "Invite added locally",
+        `Invite failed to send: ${message}. You can resend after signing in.`,
+      );
+    }
+    setInviteLoading(false);
+  };
+
+  const handleRespondInvite = async (
+    inviteId: string,
+    action: "accept" | "decline",
+  ) => {
+    try {
+      await respondHomeInvite(inviteId, action);
+      setPendingInvites((prev) => prev.filter((item) => item.id !== inviteId));
+      if (action === "accept") {
+        const result = await syncMembershipFromSupabase();
+        if (result) {
+          setHouseholdFromRemote(result.household);
+          setRoomMembersFromRemote(result.roomMembers);
+          setActiveMember(result.activeMemberId);
+        }
+      }
     } catch (err) {
       Alert.alert(
-        "Invite failed",
-        (err as Error).message ?? "Unable to invite member.",
+        "Invite response failed",
+        (err as Error).message ?? "Unable to respond to invite.",
       );
     }
   };
@@ -726,6 +840,53 @@ export default function ProfileScreen({ navigation }: Props) {
       },
     ]);
   };
+
+  const pendingInvitesCard =
+    !demoMode && pendingInvites.length >= 0 ? (
+      <View key="pending-invites" style={cardBaseStyle}>
+        <View style={styles.cardHeader}>
+          <View>
+            <Text style={sectionTitleTextStyle}>Pending invites</Text>
+            <Text style={sectionSubTextStyle}>
+              Accept or decline invitations
+            </Text>
+          </View>
+          <Ionicons
+            name="mail-unread-outline"
+            size={Math.round(18 * scale)}
+            color={theme.colors.subtext}
+          />
+        </View>
+        {pendingInvites.length ? (
+          pendingInvites.map((invite) => (
+            <View key={invite.id} style={styles.inviteRow}>
+              <View style={flex1Style}>
+                <Text style={styles.inviteTitle}>
+                  Invite to join as {invite.role}
+                </Text>
+                <Text style={styles.inviteSub}>{invite.email}</Text>
+              </View>
+              <View style={styles.inviteActions}>
+                <Pressable
+                  style={styles.inviteActionPrimary}
+                  onPress={() => handleRespondInvite(invite.id, "accept")}
+                >
+                  <Text style={styles.inviteActionText}>Accept</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.inviteActionSecondary}
+                  onPress={() => handleRespondInvite(invite.id, "decline")}
+                >
+                  <Text style={styles.inviteActionText}>Decline</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.memberAccessText}>No pending invites.</Text>
+        )}
+      </View>
+    ) : null;
 
   const profileCards = [
     <View key="profile-details" style={cardBaseStyle}>
@@ -1037,6 +1198,7 @@ export default function ProfileScreen({ navigation }: Props) {
         />
       </Pressable>
     </View>,
+    pendingInvitesCard,
     <View key="household" style={cardBaseStyle}>
       <View style={styles.cardHeader}>
         <View>
@@ -1232,12 +1394,14 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
         <Pressable
           style={secondaryButtonStyle(
-            !canManageHousehold ||
+            inviteLoading ||
+              !canManageHousehold ||
               !newMemberName.trim() ||
               !newMemberEmail.trim(),
           )}
           onPress={handleAddMember}
           disabled={
+            inviteLoading ||
             !canManageHousehold ||
             !newMemberName.trim() ||
             !newMemberEmail.trim()
@@ -1278,33 +1442,13 @@ export default function ProfileScreen({ navigation }: Props) {
         />
       </Pressable>
     </View>,
-  ];
+  ].filter(Boolean) as React.ReactNode[];
 
-  const cardWeights = [3, 2, 1, 2, 2, 1, 3, 1];
-  const cardOrder = [0, 6, 1, 3, 4, 2, 5, 7];
-  const orderedCards =
-    columnCount > 1
-      ? [
-          ...cardOrder
-            .map((index) => ({
-              card: profileCards[index],
-              weight: cardWeights[index] ?? 1,
-              index,
-            }))
-            .filter((item) => item.card),
-          ...profileCards
-            .map((card, index) => ({
-              card,
-              weight: cardWeights[index] ?? 1,
-              index,
-            }))
-            .filter((item) => !cardOrder.includes(item.index)),
-        ]
-      : profileCards.map((card, index) => ({
-          card,
-          weight: cardWeights[index] ?? 1,
-          index,
-        }));
+  const orderedCards = profileCards.map((card, index) => ({
+    card,
+    weight: 1,
+    index,
+  }));
   const cardColumnBuckets = Array.from({ length: columnCount }, () => ({
     weight: 0,
     cards: [] as React.ReactNode[],
