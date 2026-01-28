@@ -198,6 +198,14 @@ export default function CamerasScreen({ navigation }: Props) {
       borderRadius: Math.round((isTabletPortrait ? 20 : 16) * scale),
     },
   ];
+  const previewButtonCompactStyle: StyleProp<ViewStyle> = [
+    styles.previewButtonCompact,
+    { paddingHorizontal: Math.round(8 * scale), paddingVertical: Math.round(4 * scale) },
+  ];
+  const previewButtonCompactTextStyle: StyleProp<TextStyle> = [
+    styles.previewButtonText,
+    { fontSize: Math.round(11 * scale) },
+  ];
   const statPillStyle: StyleProp<ViewStyle> = [
     styles.statPill,
     {
@@ -418,6 +426,7 @@ export default function CamerasScreen({ navigation }: Props) {
                       : !canStart
                         ? "Limit reached"
                         : "Go live";
+                  const useCompactLimitPill = !isTablet && previewButtonLabel === "Limit reached";
                     return (
                       <View
                         key={camera.id}
@@ -466,20 +475,27 @@ export default function CamerasScreen({ navigation }: Props) {
                               style={[
                                 styles.previewButton,
                                 !canStart && styles.previewButtonDisabled,
+                                useCompactLimitPill && previewButtonCompactStyle,
                               ]}
                               onPress={() => toggleLive(camera.id)}
                               disabled={!canStart && !isLive}
                             >
-                              <Ionicons
-                                name={isLive ? "stop" : "play"}
-                                size={Math.round(14 * scale)}
-                                color={
-                                  !canStart && !isLive
-                                    ? "rgba(255,255,255,0.7)"
-                                    : "rgba(255,255,255,0.95)"
+                            <Ionicons
+                              name={isLive ? "stop" : "play"}
+                              size={Math.round((useCompactLimitPill ? 12 : 14) * scale)}
+                              color={
+                                !canStart && !isLive
+                                  ? "rgba(255,255,255,0.7)"
+                                  : "rgba(255,255,255,0.95)"
+                              }
+                            />
+                              <Text
+                                style={
+                                  useCompactLimitPill
+                                    ? previewButtonCompactTextStyle
+                                    : styles.previewButtonText
                                 }
-                              />
-                              <Text style={styles.previewButtonText}>
+                              >
                                 {previewButtonLabel}
                               </Text>
                             </Pressable>
@@ -723,6 +739,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: "rgba(122,92,255,0.75)",
+  },
+  previewButtonCompact: {
+    gap: 4,
   },
   previewButtonDisabled: {
     backgroundColor: "rgba(255,255,255,0.18)",

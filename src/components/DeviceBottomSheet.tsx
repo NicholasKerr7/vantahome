@@ -131,6 +131,14 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
         borderRadius: Math.round(sectionPad * 1.4),
       },
     ];
+    const quickControlsWrapStyle: StyleProp<ViewStyle> = [
+      styles.quickControlsWrap,
+      !isTablet && styles.quickControlsWrapMobile,
+      !isTablet && {
+        padding: Math.round(10 * scale),
+        borderRadius: Math.round(16 * scale),
+      },
+    ];
     const sectionTitleStyle: StyleProp<TextStyle> = [
       styles.sectionTitle,
       { fontSize: sectionTitleSize },
@@ -273,13 +281,15 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     sectionStyle={sectionStyle}
                     titleStyle={sectionTitleStyle}
                   >
-                    <DeviceCapabilityControls
-                      device={device}
-                      context="quick"
-                      variant="dark"
-                      layout="grid"
-                      enableHaptics
-                    />
+                    <View style={quickControlsWrapStyle}>
+                      <DeviceCapabilityControls
+                        device={device}
+                        context="quick"
+                        variant="dark"
+                        layout={isTablet ? "grid" : "compact"}
+                        enableHaptics
+                      />
+                    </View>
                   </SheetSection>
 
                   <SheetSection
@@ -460,6 +470,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   footerBtnText: { color: theme.colors.text, fontWeight: "900" },
+  quickControlsWrap: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  quickControlsWrapMobile: {
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
   deleteBtn: {
     marginTop: 10,
     backgroundColor: "rgba(255, 99, 132, 0.18)",

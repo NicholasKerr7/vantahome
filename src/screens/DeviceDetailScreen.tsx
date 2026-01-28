@@ -8012,6 +8012,22 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     ],
     [cameraArmed, cameraRecording, sendPatch],
   );
+  const cameraHeroHeaderStyle: StyleProp<ViewStyle> = isTablet
+    ? energyHeroHeaderStyle
+    : [
+        energyHeroHeaderStyle,
+        {
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 10,
+        },
+      ];
+  const cameraHeroTitleWrapStyle: StyleProp<ViewStyle> = isTablet
+    ? styles.energyHeroTitleWrap
+    : [styles.energyHeroTitleWrap, { alignItems: "center" }];
+  const cameraHeroPillRowStyle: StyleProp<ViewStyle> = isTablet
+    ? styles.energyHeroPillRow
+    : [styles.energyHeroPillRow, { justifyContent: "center", flexWrap: "wrap" }];
   const cameraHeroCard = (
     <LinearGradient
       colors={[
@@ -8023,14 +8039,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       end={{ x: 1, y: 1 }}
       style={cameraHeroCardStyle}
     >
-      <View style={energyHeroHeaderStyle}>
-        <View style={styles.energyHeroTitleWrap}>
+      <View style={cameraHeroHeaderStyle}>
+        <View style={cameraHeroTitleWrapStyle}>
           <Text style={styles.energyHeroTitle}>{device.name}</Text>
           <Text style={styles.energyHeroSub}>
             {roomName || "Camera"} • {device.isOn ? "Live view" : "Standby"}
           </Text>
         </View>
-        <View style={styles.energyHeroPillRow}>
+        <View style={cameraHeroPillRowStyle}>
           <View style={energyHeroPillStyle(device.isOn)}>
             <Ionicons
               name={device.isOn ? "videocam" : "videocam-off"}

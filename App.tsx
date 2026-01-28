@@ -14,7 +14,8 @@ import { syncMembershipFromSupabase } from "./src/services/membership";
 import * as Sentry from "@sentry/react-native";
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
-if (sentryDsn) {
+const sentryEnabled = Boolean(sentryDsn);
+if (sentryEnabled) {
   Sentry.init({
     dsn: sentryDsn,
     environment: process.env.EXPO_PUBLIC_SENTRY_ENV?.trim() || "production",
@@ -79,4 +80,4 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+export default sentryEnabled ? Sentry.wrap(App) : App;

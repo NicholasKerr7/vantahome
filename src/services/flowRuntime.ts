@@ -247,23 +247,23 @@ async function executeActions(actions: FlowAction[]) {
 
 function runRule(rule: AutomationRule) {
   if (rule.action.type === "set-ac") {
-    deviceClient
-      .sendCommand({
+    Promise.resolve(
+      deviceClient.sendCommand({
         op: "set-temp",
         deviceId: rule.action.deviceId,
         value: rule.action.tempC,
         mode: rule.action.mode,
-      })
-      .catch(() => {});
+      }),
+    ).catch(() => {});
     return;
   }
-  deviceClient
-    .sendCommand({
+  Promise.resolve(
+    deviceClient.sendCommand({
       op: "toggle",
       deviceId: rule.action.deviceId,
       on: rule.action.on,
-    })
-    .catch(() => {});
+    }),
+  ).catch(() => {});
 }
 
 function timeKey(now: Date) {

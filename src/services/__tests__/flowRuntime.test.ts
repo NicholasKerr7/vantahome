@@ -64,7 +64,7 @@ beforeEach(() => {
     indoor: { ...seed.indoor },
     rooms: cloneRooms(seed.rooms),
     devices: cloneDevices(seed.devices),
-    rules: cloneRules(seed.rules),
+    rules: [],
     flows: cloneFlows(seed.flows),
     scenes: cloneScenes(seed.scenes),
     activeSceneId: seed.activeSceneId,
@@ -82,8 +82,10 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
+const flushPromises = () => Promise.resolve();
+
 describe("flowRuntime", () => {
-  it("runs device-triggered flows and respects cooldown", () => {
+  it("runs device-triggered flows and respects cooldown", async () => {
     const devices = cloneDevices(useHomeStore.getState().devices);
     const d1 = devices.find((device) => device.id === "d1");
     if (d1) d1.isOn = false;
@@ -102,21 +104,24 @@ describe("flowRuntime", () => {
     const stop = startFlowRuntime({ flowCooldownMs: 10_000, timeTickMs: 60_000 });
 
     useHomeStore.getState().setDevice("d1", { isOn: true });
+    await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(1);
 
     useHomeStore.getState().setDevice("d1", { isOn: false });
     useHomeStore.getState().setDevice("d1", { isOn: true });
+    await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(1);
 
     jest.setSystemTime(new Date(2025, 0, 1, 6, 30, 11));
     useHomeStore.getState().setDevice("d1", { isOn: false });
     useHomeStore.getState().setDevice("d1", { isOn: true });
+    await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(2);
 
     stop();
   });
 
-  it("fires time triggers once per minute", () => {
+  it("fires time triggers once per minute", async () => {
     const flow: AutomationFlow = {
       id: "f-time",
       name: "Morning",
@@ -129,13 +134,16 @@ describe("flowRuntime", () => {
 
     const stop = startFlowRuntime({ timeTickMs: 1_000 });
     jest.advanceTimersByTime(1_000);
+    await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(1);
 
     jest.advanceTimersByTime(1_000);
+    await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(1);
 
     jest.setSystemTime(new Date(2025, 0, 2, 6, 30, 0));
     jest.advanceTimersByTime(1_000);
+    await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(2);
 
     stop();

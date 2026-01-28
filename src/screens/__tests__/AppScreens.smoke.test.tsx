@@ -145,6 +145,10 @@ jest.mock("../../services/deviceClient", () => ({
       return () => {};
     }),
     subscribeState: jest.fn(() => () => {}),
+    subscribeRetry: jest.fn((fn: any) => {
+      if (fn) fn({ pending: 0 });
+      return () => {};
+    }),
     sendCommand: jest.fn(() => Promise.resolve()),
     getConnectionStatus: jest.fn(() => "disconnected"),
     connect: jest.fn(() => () => {}),
