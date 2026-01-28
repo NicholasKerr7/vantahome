@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -436,8 +436,6 @@ export default function ProfileScreen({ navigation }: Props) {
   const setRoomMembersFromRemote = useHomeStore(
     (s) => s.setRoomMembersFromRemote,
   );
-  const demoMode = useHomeStore((s) => s.demoMode);
-  const setDemoMode = useHomeStore((s) => s.setDemoMode);
   const roomMembers = useHomeStore((s) => s.roomMembers);
   const setRoomMembership = useHomeStore((s) => s.setRoomMembership);
   const addHouseholdMember = useHomeStore((s) => s.addHouseholdMember);
@@ -504,8 +502,8 @@ export default function ProfileScreen({ navigation }: Props) {
       );
     }
   };
-  const refreshInvites = async () => {
-    if (!supabase || demoMode) {
+  const refreshInvites = useCallback(async () => {
+    if (!supabase) {
       setPendingInvites([]);
       return;
     }
@@ -515,10 +513,10 @@ export default function ProfileScreen({ navigation }: Props) {
     } catch {
       setPendingInvites([]);
     }
-  };
+  }, []);
   useEffect(() => {
     refreshInvites();
-  }, [demoMode]);
+  }, [refreshInvites]);
   const [biometricLock, setBiometricLock] = useState(true);
   const [locationSharing, setLocationSharing] = useState(true);
   const [activitySharing, setActivitySharing] = useState(false);
@@ -724,7 +722,7 @@ export default function ProfileScreen({ navigation }: Props) {
       setNewMemberRole("Guest");
       setNewMemberAvatar("");
     };
-    if (demoMode || !supabase) {
+    if (!supabase) {
       addMemberLocally();
       Alert.alert(
         "Invite added locally",
@@ -829,12 +827,8 @@ export default function ProfileScreen({ navigation }: Props) {
         text: "Sign out",
         style: "destructive",
         onPress: async () => {
-          try {
-            if (supabase) {
-              await supabase.auth.signOut();
-            }
-          } finally {
-            setDemoMode(false);
+          if (supabase) {
+            await supabase.auth.signOut();
           }
         },
       },
@@ -842,7 +836,7 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   const pendingInvitesCard =
-    !demoMode && pendingInvites.length >= 0 ? (
+    pendingInvites.length >= 0 ? (
       <View key="pending-invites" style={cardBaseStyle}>
         <View style={styles.cardHeader}>
           <View>
@@ -1213,27 +1207,6 @@ export default function ProfileScreen({ navigation }: Props) {
           color={theme.colors.subtext}
         />
       </View>
-      {demoMode && household.length > 1 ? (
-        <View style={styles.memberSwitcher}>
-          <Text style={cardHintTextStyle}>Viewing as</Text>
-          <View style={styles.chipRow}>
-            {household.map((member) => {
-              const active = activeMemberId === member.id;
-              return (
-                <Pressable
-                  key={`view-${member.id}`}
-                  style={chipStyle(active)}
-                  onPress={() => setActiveMember(member.id)}
-                >
-                  <Text style={chipTextStyle(active)}>
-                    {member.name.split(" ")[0]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      ) : null}
       {household.map((member) => (
         <View key={member.id} style={styles.memberBlock}>
           <View style={styles.memberRow}>
@@ -1766,6 +1739,31 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 1,
   },
+  inviteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.16)",
+  },
+  inviteTitle: { color: theme.colors.text, fontWeight: "800" },
+  inviteSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
+  inviteActions: { flexDirection: "row", gap: 8 },
+  inviteActionPrimary: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(122,92,255,0.85)",
+  },
+  inviteActionSecondary: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+  },
+  inviteActionText: { color: theme.colors.text, fontWeight: "800" },
   columnsGrid: { width: "100%", marginTop: 12 },
   columnsRow: { width: "100%", flexDirection: "row", alignItems: "flex-start" },
   columnStack: { alignItems: "stretch", flexShrink: 0 },

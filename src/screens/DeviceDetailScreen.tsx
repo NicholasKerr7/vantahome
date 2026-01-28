@@ -58,6 +58,8 @@ import BackgroundLines from "../components/BackgroundLines";
 import ModeTiles from "../components/ModeTiles";
 import AvatarChip from "../components/AvatarChip";
 import LiveVideoPlayer from "../components/LiveVideoPlayer";
+import CameraThumbnail from "../components/CameraThumbnail";
+import RenderProfiler from "../components/RenderProfiler";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -233,6 +235,18 @@ const buildAirSeries = (
   return downsampled.length
     ? downsampled
     : [{ ts: now, aqi: fallbackAqi }];
+};
+
+const formatLastSeen = (ts?: number) => {
+  if (!ts) return "";
+  const delta = Date.now() - ts;
+  if (delta < 30_000) return "Just now";
+  const mins = Math.floor(delta / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 };
 
 export default function DeviceDetailScreen({ route, navigation }: Props) {
@@ -691,12 +705,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     ? [styles.controlCardRow, { gap: controlCardRowGap }]
     : styles.controlCardRow;
   const chipRowStyle = styles.chipRow;
-  const coffeeDescaleNotice = coffeeDescaleNeeded ? (
-    <View style={styles.alertRow}>
-      <Ionicons name="warning" size={14} color="#D8465B" />
-      <Text style={styles.alertText}>Descale cycle recommended</Text>
-    </View>
-  ) : null;
   const lightCardBaseStyle = {
     padding: lightCardPad,
     borderRadius: lightCardRadius,
@@ -1162,6 +1170,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const coffeeWaterLevel = clamp(device.coffeeWaterLevel ?? 70, 0, 100);
   const coffeeBeanLevel = clamp(device.coffeeBeanLevel ?? 55, 0, 100);
   const coffeeDescaleNeeded = device.coffeeDescaleNeeded ?? false;
+  const coffeeDescaleNotice = coffeeDescaleNeeded ? (
+    <View style={styles.alertRow}>
+      <Ionicons name="warning" size={14} color="#D8465B" />
+      <Text style={styles.alertText}>Descale cycle recommended</Text>
+    </View>
+  ) : null;
   const coffeeAutoBrewTime = device.coffeeAutoBrewTime ?? "07:00";
   const coffeeStrengthLabel =
     coffeeStrength === "mild"
@@ -1492,6 +1506,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const laundryStatsRowStyle: StyleProp<ViewStyle> = [
     styles.laundryStatsRow,
     { gap: laundryStatGap },
+  ];
+  const laundryActionRowStyle: StyleProp<ViewStyle> = [
+    styles.actionRow,
+    isTabletLandscape && styles.laundryActionRow,
   ];
   const laundryHeroMetricsStyle: StyleProp<ViewStyle> = [
     laundryStatsRowStyle,
@@ -3677,10 +3695,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       flexGrow: 1,
       marginTop: 0,
     },
-  ];
-  const laundryActionRowStyle: StyleProp<ViewStyle> = [
-    styles.actionRow,
-    isTabletLandscape && styles.laundryActionRow,
   ];
   const controlPillStyle = (active: boolean): StyleProp<ViewStyle> => [
     styles.controlPill,
@@ -7959,32 +7973,45 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const cameraStreamUrl =
     device.kind === "camera" ? device.streamUrl : undefined;
+  const cameraThumbnailUrl =
+    device.kind === "camera" ? device.thumbnailUrl : undefined;
+  const cameraCachedThumbnail =
+    device.kind === "camera" ? device.lastThumbnailUrl : undefined;
+  const cameraLastSeenAt =
+    device.kind === "camera" ? device.lastSeenAt : undefined;
+  const cameraLastSeenLabel = formatLastSeen(cameraLastSeenAt);
   const showCameraStream = Boolean(device.isOn && cameraStreamUrl);
   const cameraArmed = Boolean(device.armed);
   const cameraRecording = Boolean(device.recording);
-  const cameraStats = [
-    { label: "Known", value: `${cameraKnownCount}` },
-    {
-      label: "Unknown",
-      value: `${cameraUnknownCount}`,
-      active: cameraUnknownCount > 0,
-    },
-    { label: "Sensitivity", value: `${motionSensitivity}` },
-  ];
-  const cameraActionButtons = [
-    {
-      label: cameraArmed ? "Armed" : "Arm",
-      icon: "eye" as const,
-      active: cameraArmed,
-      onPress: () => sendPatch({ armed: !cameraArmed }),
-    },
-    {
-      label: cameraRecording ? "Recording" : "Record",
-      icon: "radio-button-on" as const,
-      active: cameraRecording,
-      onPress: () => sendPatch({ recording: !cameraRecording }),
-    },
-  ];
+  const cameraStats = useMemo(
+    () => [
+      { label: "Known", value: `${cameraKnownCount}` },
+      {
+        label: "Unknown",
+        value: `${cameraUnknownCount}`,
+        active: cameraUnknownCount > 0,
+      },
+      { label: "Sensitivity", value: `${motionSensitivity}` },
+    ],
+    [cameraKnownCount, cameraUnknownCount, motionSensitivity],
+  );
+  const cameraActionButtons = useMemo(
+    () => [
+      {
+        label: cameraArmed ? "Armed" : "Arm",
+        icon: "eye" as const,
+        active: cameraArmed,
+        onPress: () => sendPatch({ armed: !cameraArmed }),
+      },
+      {
+        label: cameraRecording ? "Recording" : "Record",
+        icon: "radio-button-on" as const,
+        active: cameraRecording,
+        onPress: () => sendPatch({ recording: !cameraRecording }),
+      },
+    ],
+    [cameraArmed, cameraRecording, sendPatch],
+  );
   const cameraHeroCard = (
     <LinearGradient
       colors={[
@@ -8055,7 +8082,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               </Text>
             </View>
             <Text style={styles.cameraStatusText}>
-              {device.isOn ? "Connected" : "Offline"}
+              {device.isOn
+                ? "Connected"
+                : cameraLastSeenLabel
+                  ? `Last seen ${cameraLastSeenLabel}`
+                  : "Offline"}
             </Text>
             {gateDevice ? (
               <View style={styles.gateStatusPill}>
@@ -8073,6 +8104,26 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               <LiveVideoPlayer
                 sourceUri={cameraStreamUrl as string}
                 style={styles.cameraLivePlayer}
+                enableFullscreen={false}
+                onFullscreen={() =>
+                  navigation.navigate("CameraViewer", {
+                    deviceId: device.id,
+                  })
+                }
+              />
+            ) : cameraThumbnailUrl || cameraCachedThumbnail ? (
+              <CameraThumbnail
+                uri={cameraThumbnailUrl ?? cameraCachedThumbnail}
+                title={device.isOn ? "Live unavailable" : "Camera offline"}
+                subtitle={
+                  device.isOn
+                    ? "Tap to view"
+                    : cameraLastSeenLabel
+                      ? `Last seen ${cameraLastSeenLabel}`
+                      : "No signal detected"
+                }
+                titleStyle={styles.cameraPreviewText}
+                subtitleStyle={styles.cameraPreviewSubText}
               />
             ) : device.isOn ? (
               <>
@@ -9032,10 +9083,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
 
   return (
-    <LinearGradient
-      colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={outerStyle}
-    >
+    <RenderProfiler id="DeviceDetailScreen">
+      <LinearGradient
+        colors={[theme.colors.bg1, theme.colors.bg0]}
+        style={outerStyle}
+      >
       <BackgroundLines />
 
       <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -9813,7 +9865,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         canSave={schedDays.length > 0}
         onSave={handleScheduleSave}
       />
-    </LinearGradient>
+      </LinearGradient>
+    </RenderProfiler>
   );
 }
 
@@ -10930,6 +10983,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   cameraPreviewText: { color: stylesVars.subtext, fontWeight: "800" },
+  cameraPreviewSubText: { color: stylesVars.subtext, fontWeight: "700" },
   waterUsageHint: {
     color: stylesVars.subtext,
     fontWeight: "700",

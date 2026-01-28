@@ -1,4 +1,5 @@
 import type { Device } from "../store/useHomeStore";
+import { logDeviceAuditEvent } from "./cloudRegistry";
 
 export type DeviceCommand =
   | { op: "toggle"; deviceId: string; on?: boolean }
@@ -122,6 +123,7 @@ class DeviceClient {
   private listeners = new Set<Listener>();
   private connectionListeners = new Set<ConnectionListener>();
   private retryListeners = new Set<RetryListener>();
+  private commandListeners: Set<(cmd: DeviceCommand) => void> | null = null;
   private socket: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
@@ -158,6 +160,14 @@ class DeviceClient {
     this.retryListeners.add(fn);
     fn(this.getRetryStatus());
     return () => this.retryListeners.delete(fn);
+  }
+
+  subscribeCommand(fn: (cmd: DeviceCommand) => void) {
+    if (!this.commandListeners) {
+      this.commandListeners = new Set();
+    }
+    this.commandListeners.add(fn);
+    return () => this.commandListeners?.delete(fn);
   }
 
   getConnectionStatus() {
@@ -233,11 +243,19 @@ class DeviceClient {
     if (!sent) {
       this.enqueueRetry(cmd, patch);
     }
+
+    this.commandListeners?.forEach((fn) => fn(cmd));
+    void logDeviceAuditEvent({
+      deviceId: cmd.deviceId,
+      action: cmd.op,
+      payload: cmd as unknown as Record<string, unknown>,
+    }).catch(() => {});
   }
 
   pushState(deviceId: string, patch: Partial<Device>) {
     const evt: DeviceStateEvent = { deviceId, patch, ts: Date.now() };
     this.emit(evt);
+    this.logStateChange(deviceId, patch, "local");
   }
 
   private emit(evt: DeviceStateEvent) {
@@ -327,17 +345,20 @@ class DeviceClient {
         ts: data.ts ?? Date.now(),
       };
       this.emit(evt);
+      this.logStateChange(evt.deviceId, evt.patch, "realtime");
       return;
     }
 
     if (this.isDeviceStateBatchMessage(data)) {
       data.events.forEach((evt) => {
         if (!evt || typeof evt.deviceId !== "string" || !evt.patch) return;
-        this.emit({
+        const emitted: DeviceStateEvent = {
           deviceId: evt.deviceId,
           patch: evt.patch,
           ts: "ts" in evt && typeof evt.ts === "number" ? evt.ts : Date.now(),
-        });
+        };
+        this.emit(emitted);
+        this.logStateChange(emitted.deviceId, emitted.patch, "realtime");
       });
       return;
     }
@@ -361,7 +382,21 @@ class DeviceClient {
         ts: Date.now(),
       };
       this.emit(evt);
+      this.logStateChange(evt.deviceId, evt.patch, "realtime");
     }
+  }
+
+  private logStateChange(
+    deviceId: string,
+    patch: Partial<Device>,
+    source: "local" | "realtime",
+  ) {
+    if (!patch || Object.keys(patch).length === 0) return;
+    void logDeviceAuditEvent({
+      deviceId,
+      action: "state",
+      payload: { source, patch },
+    }).catch(() => {});
   }
 
   private enqueueRetry(cmd: DeviceCommand, patch: Partial<Device> | null) {

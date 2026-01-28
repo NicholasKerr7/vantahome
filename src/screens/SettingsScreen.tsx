@@ -768,13 +768,13 @@ export default function SettingsScreen() {
     {
       provider: "homekit",
       label: "Apple HomeKit",
-      description: "Expose devices to Home via a bridge (stub).",
+      description: "Sync devices to the Apple Home app.",
       icon: "logo-apple",
     },
     {
       provider: "matter",
       label: "Matter Bridge",
-      description: "Multi-ecosystem bridge (stub).",
+      description: "Matter-ready bridge for multi-ecosystem homes.",
       icon: "link-outline",
     },
   ];
@@ -1084,7 +1084,7 @@ export default function SettingsScreen() {
       <Text style={sectionTitleStyle}>Support</Text>
       <View style={styles.row}>
         <Text style={rowLabelStyle}>App Version</Text>
-        <Text style={rowValueStyle}>1.0.0 (stub)</Text>
+        <Text style={rowValueStyle}>1.0.0</Text>
       </View>
       <Pressable
         style={secondaryWideBtnStyle}
@@ -1099,9 +1099,41 @@ export default function SettingsScreen() {
       </Pressable>
     </View>
   );
+  const securityCard = (
+    <View style={cardStyle} key="security">
+      <Text style={sectionTitleStyle}>Remote access security</Text>
+      <Text style={sectionSubStyle}>
+        For access outside your home network, enable MQTT auth + TLS or use a
+        private VPN (Tailscale/WireGuard). Never expose an anonymous broker to
+        the public internet.
+      </Text>
+      <Text style={rowLabelStyle}>Recommended</Text>
+      <Text style={rowValueStyle}>
+        TLS + strong credentials + firewall or VPN.
+      </Text>
+      <Pressable
+        style={secondaryWideBtnStyle}
+        onPress={() => navigation.navigate("AuditLog")}
+      >
+        <Ionicons
+          name="time-outline"
+          size={Math.round(16 * scale)}
+          color="rgba(60,60,80,0.9)"
+        />
+        <Text style={secondaryWideBtnTextStyle}>View activity log</Text>
+      </Pressable>
+    </View>
+  );
+
   const cards = __DEV__
-    ? [homeProfileCard, preferencesCard, realtimeCard, supportCard]
-    : [homeProfileCard, preferencesCard, supportCard];
+    ? [
+        homeProfileCard,
+        preferencesCard,
+        realtimeCard,
+        securityCard,
+        supportCard,
+      ]
+    : [homeProfileCard, preferencesCard, securityCard, supportCard];
   const cardColumns = Array.from(
     { length: columnCount },
     () => [] as React.ReactNode[],

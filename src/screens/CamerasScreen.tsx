@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -9,6 +9,8 @@ import HeaderPill from "../components/HeaderPill";
 import BackgroundLines from "../components/BackgroundLines";
 import Pressable from "../components/Pressable";
 import LiveVideoPlayer from "../components/LiveVideoPlayer";
+import CameraThumbnail from "../components/CameraThumbnail";
+import RenderProfiler from "../components/RenderProfiler";
 import { useResponsive } from "../theme/layout";
 import { theme } from "../theme/theme";
 import {
@@ -16,13 +18,25 @@ import {
   selectVisibleDevices,
   selectVisibleRooms,
   useHomeStore,
-  type Device,
 } from "../store/useHomeStore";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Cameras">;
+
+const formatLastSeen = (ts?: number) => {
+  if (!ts) return "";
+  const delta = Date.now() - ts;
+  if (delta < 30_000) return "Just now";
+  const mins = Math.floor(delta / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
 
 export default function CamerasScreen({ navigation }: Props) {
   const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
@@ -197,15 +211,24 @@ export default function CamerasScreen({ navigation }: Props) {
   ];
   const maxLiveStreams = isWide ? 6 : isTabletPortrait ? 4 : 2;
   const [liveStreams, setLiveStreams] = useState<string[]>([]);
-  const toggleLive = (deviceId: string) => {
-    setLiveStreams((current) => {
-      if (current.includes(deviceId)) {
-        return current.filter((id) => id !== deviceId);
-      }
-      if (current.length >= maxLiveStreams) return current;
-      return [...current, deviceId];
-    });
-  };
+  const toggleLive = useCallback(
+    (deviceId: string) => {
+      setLiveStreams((current) => {
+        if (current.includes(deviceId)) {
+          return current.filter((id) => id !== deviceId);
+        }
+        if (current.length >= maxLiveStreams) return current;
+        return [...current, deviceId];
+      });
+    },
+    [maxLiveStreams],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => setLiveStreams([]);
+    }, []),
+  );
 
   const headerSummary = `${cameraDevices.length} Camera${cameraDevices.length === 1 ? "" : "s"}`;
   const showLimitedNote = !canViewAll && cameraDevices.length > 0;
@@ -214,150 +237,169 @@ export default function CamerasScreen({ navigation }: Props) {
   const recordingCount = cameraDevices.filter(
     (camera) => camera.recording,
   ).length;
-  const handleBack = () => {
+  const liveSummary = `${liveStreams.length}/${maxLiveStreams} live`;
+  const stopAllLive = useCallback(() => setLiveStreams([]), []);
+  const handleBack = useCallback(() => {
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
     }
     navigation.navigate("Main", { screen: "Home" } as never);
-  };
+  }, [navigation]);
 
   return (
-    <LinearGradient
-      colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={styles.root}
-    >
-      <BackgroundLines />
-      <View style={contentStyle}>
-        <ScreenFrame
-          isPortrait={isPortrait}
-          enabled={isPortrait || isWide}
-          isWide={isWide}
-          pad={framePad}
-          radius={frameRadius}
-        >
-          <ScreenSectionLayout
-            header={
-              <View style={styles.headerBlock}>
-                <View style={navRowStyle}>
-                  <Pressable
-                    style={navPillStyle}
-                    onPress={handleBack}
-                  >
-                    <Ionicons
-                      name="chevron-back"
-                      size={Math.round(16 * scale)}
-                      color={theme.colors.text}
-                    />
-                    <Text style={navPillTextStyle}>Back</Text>
-                  </Pressable>
-                  <Pressable
-                    style={navPillStyle}
-                    onPress={() =>
-                      navigation.navigate(
-                        "Main",
-                        { screen: "Home" } as never,
-                      )
-                    }
-                  >
-                    <Ionicons
-                      name="home-outline"
-                      size={Math.round(16 * scale)}
-                      color={theme.colors.text}
-                    />
-                    <Text style={navPillTextStyle}>Home</Text>
-                  </Pressable>
-                </View>
-                <View style={headerStyle}>
-                  <View>
-                    <Text style={headerTitleStyle}>Cameras</Text>
-                    <Text style={headerSubStyle}>
-                      {canViewAll
-                        ? "Monitor every camera in the home."
-                        : "Cameras assigned to your rooms."}
-                    </Text>
-                  </View>
-                  <HeaderPill
-                    label={headerSummary}
-                    icon="videocam-outline"
-                    iconSize={Math.round(14 * scale)}
-                    style={headerPillStyle}
-                    textStyle={headerPillTextStyle}
-                  />
-                </View>
-                {isTabletPortrait || isWide ? (
-                  <View style={styles.statRow}>
-                    <View style={statPillStyle}>
-                      <Ionicons
-                        name="wifi"
-                        size={Math.round(14 * scale)}
-                        color="rgba(255,255,255,0.92)"
-                      />
-                      <Text style={statTextStyle}>
-                        {onlineCount} online
-                      </Text>
-                    </View>
-                    <View style={statPillStyle}>
-                      <Ionicons
-                        name="shield-checkmark-outline"
-                        size={Math.round(14 * scale)}
-                        color="rgba(255,255,255,0.92)"
-                      />
-                      <Text style={statTextStyle}>
-                        {armedCount} armed
-                      </Text>
-                    </View>
-                    <View style={statPillStyle}>
-                      <Ionicons
-                        name="ellipse"
-                        size={Math.round(12 * scale)}
-                        color="rgba(255,118,118,0.95)"
-                      />
-                      <Text style={statTextStyle}>
-                        {recordingCount} rec
-                      </Text>
-                    </View>
-                  </View>
-                ) : null}
-              </View>
-            }
-            headerWrapStyle={headerWrapStyle}
-            showDivider={isWide}
-            dividerWrapStyle={dividerWrapStyle}
-            scrollStyle={styles.sectionsScroll}
-            contentContainerStyle={{ paddingHorizontal: innerGutter }}
-            showsVerticalScrollIndicator={false}
+    <RenderProfiler id="CamerasScreen">
+      <LinearGradient
+        colors={[theme.colors.bg1, theme.colors.bg0]}
+        style={styles.root}
+      >
+        <BackgroundLines />
+        <View style={contentStyle}>
+          <ScreenFrame
+            isPortrait={isPortrait}
+            enabled={isPortrait || isWide}
+            isWide={isWide}
+            pad={framePad}
+            radius={frameRadius}
           >
-            {showLimitedNote ? (
-              <View style={styles.noticeCard}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={Math.round(16 * scale)}
-                  color="rgba(255,255,255,0.8)"
-                />
-                <Text style={styles.noticeText}>
-                  Showing cameras you can access. Ask the owner for full access.
-                </Text>
-              </View>
-            ) : null}
+            <ScreenSectionLayout
+              header={
+                <View style={styles.headerBlock}>
+                  <View style={navRowStyle}>
+                    <Pressable
+                      style={navPillStyle}
+                      onPress={handleBack}
+                    >
+                      <Ionicons
+                        name="chevron-back"
+                        size={Math.round(16 * scale)}
+                        color={theme.colors.text}
+                      />
+                      <Text style={navPillTextStyle}>Back</Text>
+                    </Pressable>
+                    <Pressable
+                      style={navPillStyle}
+                      onPress={() =>
+                        navigation.navigate(
+                          "Main",
+                          { screen: "Home" } as never,
+                        )
+                      }
+                    >
+                      <Ionicons
+                        name="home-outline"
+                        size={Math.round(16 * scale)}
+                        color={theme.colors.text}
+                      />
+                      <Text style={navPillTextStyle}>Home</Text>
+                    </Pressable>
+                  </View>
+                  <View style={headerStyle}>
+                    <View>
+                      <Text style={headerTitleStyle}>Cameras</Text>
+                      <Text style={headerSubStyle}>
+                        {canViewAll
+                          ? "Monitor every camera in the home."
+                          : "Cameras assigned to your rooms."}
+                      </Text>
+                    </View>
+                    <HeaderPill
+                      label={headerSummary}
+                      icon="videocam-outline"
+                      iconSize={Math.round(14 * scale)}
+                      style={headerPillStyle}
+                      textStyle={headerPillTextStyle}
+                    />
+                  </View>
+                  <View style={styles.statRow}>
+                      <View style={statPillStyle}>
+                        <Ionicons
+                          name="wifi"
+                          size={Math.round(14 * scale)}
+                          color="rgba(255,255,255,0.92)"
+                        />
+                        <Text style={statTextStyle}>
+                          {onlineCount} online
+                        </Text>
+                      </View>
+                      <View style={statPillStyle}>
+                        <Ionicons
+                          name="shield-checkmark-outline"
+                          size={Math.round(14 * scale)}
+                          color="rgba(255,255,255,0.92)"
+                        />
+                        <Text style={statTextStyle}>
+                          {armedCount} armed
+                        </Text>
+                      </View>
+                      <View style={statPillStyle}>
+                        <Ionicons
+                          name="ellipse"
+                          size={Math.round(12 * scale)}
+                          color="rgba(255,118,118,0.95)"
+                        />
+                        <Text style={statTextStyle}>
+                          {recordingCount} rec
+                        </Text>
+                      </View>
+                      <View style={statPillStyle}>
+                        <Ionicons
+                          name="videocam-outline"
+                          size={Math.round(14 * scale)}
+                          color="rgba(255,255,255,0.9)"
+                        />
+                        <Text style={statTextStyle}>{liveSummary}</Text>
+                      </View>
+                      {liveStreams.length > 0 ? (
+                        <Pressable style={styles.stopAllPill} onPress={stopAllLive}>
+                          <Ionicons
+                            name="stop"
+                            size={Math.round(12 * scale)}
+                            color="rgba(255,255,255,0.95)"
+                          />
+                          <Text style={styles.stopAllText}>Stop all</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                </View>
+              }
+              headerWrapStyle={headerWrapStyle}
+              showDivider={isWide}
+              dividerWrapStyle={dividerWrapStyle}
+              scrollStyle={styles.sectionsScroll}
+              contentContainerStyle={{ paddingHorizontal: innerGutter }}
+              showsVerticalScrollIndicator={false}
+            >
+              {showLimitedNote ? (
+                <View style={styles.noticeCard}>
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={Math.round(16 * scale)}
+                    color="rgba(255,255,255,0.8)"
+                  />
+                  <Text style={styles.noticeText}>
+                    Showing cameras you can access. Ask the owner for full access.
+                  </Text>
+                </View>
+              ) : null}
 
-            {cameraDevices.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No cameras yet</Text>
-                <Text style={styles.emptySub}>
-                  Add a camera device to view a live overview.
-                </Text>
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.cardGrid,
-                  { gap: gridGap },
-                  isWide && styles.cardGridLandscape,
-                  isTabletPortrait && styles.cardGridTablet,
-                ]}
-              >
-                {cameraDevices.map((camera) => {
+              {cameraDevices.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyTitle}>No cameras yet</Text>
+                  <Text style={styles.emptySub}>
+                    Add a camera device to view a live overview.
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.cardGrid,
+                    { gap: gridGap },
+                    isWide && styles.cardGridLandscape,
+                    isTabletPortrait && styles.cardGridTablet,
+                  ]}
+                >
+                  {cameraDevices.map((camera) => {
                   const roomLabel =
                     (camera.roomId && roomMap.get(camera.roomId)) || "Home";
                   const isOnline = camera.isOn ?? false;
@@ -366,91 +408,103 @@ export default function CamerasScreen({ navigation }: Props) {
                   const statusLabel = isOnline ? "Online" : "Offline";
                   const isLive = liveStreams.includes(camera.id);
                   const hasStream = Boolean(camera.streamUrl);
+                  const lastSeenLabel = formatLastSeen(camera.lastSeenAt);
                   const canStart =
                     isOnline &&
                     hasStream &&
                     (isLive || liveStreams.length < maxLiveStreams);
                   const previewButtonLabel = isLive
-                    ? "Stop"
-                    : !canStart
-                      ? "Limit reached"
-                      : "Go live";
-                  return (
-                    <View
-                      key={camera.id}
-                      style={cardStyle}
-                    >
-                      <View style={previewStyle}>
-                        {isLive && camera.streamUrl ? (
-                          <LiveVideoPlayer sourceUri={camera.streamUrl} />
-                        ) : (
-                          <>
-                            <LinearGradient
-                              colors={[
-                                "rgba(255,255,255,0.08)",
-                                "rgba(255,255,255,0.02)",
-                                "rgba(0,0,0,0.08)",
-                              ]}
-                              start={{ x: 0.1, y: 0.1 }}
-                              end={{ x: 1, y: 1 }}
-                              style={StyleSheet.absoluteFillObject}
-                            />
-                            <View style={styles.previewContent}>
-                              <Ionicons
-                                name={isOnline ? "videocam" : "videocam-off"}
-                                size={Math.round(18 * scale)}
-                                color="rgba(255,255,255,0.9)"
-                              />
-                              <Text style={styles.previewText}>
-                                {isOnline ? "Live feed" : "Offline"}
-                              </Text>
-                            </View>
-                          </>
-                        )}
-                        <View style={styles.previewOverlay}>
-                          <Pressable
-                            style={[
-                              styles.previewButton,
-                              !canStart && styles.previewButtonDisabled,
-                            ]}
-                            onPress={() => toggleLive(camera.id)}
-                            disabled={!canStart && !isLive}
-                          >
-                            <Ionicons
-                              name={isLive ? "stop" : "play"}
-                              size={Math.round(14 * scale)}
-                              color={
-                                !canStart && !isLive
-                                  ? "rgba(255,255,255,0.7)"
-                                  : "rgba(255,255,255,0.95)"
+                      ? "Stop"
+                      : !canStart
+                        ? "Limit reached"
+                        : "Go live";
+                    return (
+                      <View
+                        key={camera.id}
+                        style={cardStyle}
+                      >
+                        <View style={previewStyle}>
+                          {isLive && camera.streamUrl ? (
+                            <LiveVideoPlayer
+                              sourceUri={camera.streamUrl}
+                              enableFullscreen={false}
+                              onFullscreen={() =>
+                                navigation.navigate("CameraViewer", {
+                                  deviceId: camera.id,
+                                })
                               }
                             />
-                            <Text style={styles.previewButtonText}>
-                              {previewButtonLabel}
+                          ) : (
+                            <CameraThumbnail
+                              uri={camera.thumbnailUrl ?? camera.lastThumbnailUrl}
+                              title={isOnline ? "Last snapshot" : "Offline"}
+                              subtitle={
+                                isOnline
+                                  ? "Tap to view"
+                                  : lastSeenLabel
+                                    ? `Last seen ${lastSeenLabel}`
+                                    : "No signal"
+                              }
+                            />
+                          )}
+                          <View style={styles.previewOverlay}>
+                            <Pressable
+                              style={styles.previewExpand}
+                              onPress={() =>
+                                navigation.navigate("CameraViewer", {
+                                  deviceId: camera.id,
+                                })
+                              }
+                            >
+                              <Ionicons
+                                name="expand-outline"
+                                size={Math.round(14 * scale)}
+                                color="rgba(255,255,255,0.95)"
+                              />
+                            </Pressable>
+                            <Pressable
+                              style={[
+                                styles.previewButton,
+                                !canStart && styles.previewButtonDisabled,
+                              ]}
+                              onPress={() => toggleLive(camera.id)}
+                              disabled={!canStart && !isLive}
+                            >
+                              <Ionicons
+                                name={isLive ? "stop" : "play"}
+                                size={Math.round(14 * scale)}
+                                color={
+                                  !canStart && !isLive
+                                    ? "rgba(255,255,255,0.7)"
+                                    : "rgba(255,255,255,0.95)"
+                                }
+                              />
+                              <Text style={styles.previewButtonText}>
+                                {previewButtonLabel}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                        <View style={styles.cardHeader}>
+                          <View style={styles.cardTitleWrap}>
+                            <Text style={cardTitleStyle}>{camera.name}</Text>
+                            <Text style={cardSubStyle}>{roomLabel}</Text>
+                          </View>
+                          <View style={statusPillStyle(isOnline)}>
+                            <Ionicons
+                              name={isOnline ? "wifi" : "wifi-outline"}
+                              size={Math.round(12 * scale)}
+                              color={
+                                isOnline
+                                  ? "rgba(36,28,72,0.9)"
+                                  : "rgba(30,30,40,0.7)"
+                              }
+                            />
+                            <Text style={statusTextStyle(isOnline)}>
+                              {statusLabel}
                             </Text>
-                          </Pressable>
+                          </View>
                         </View>
-                      </View>
-                      <View style={styles.cardHeader}>
-                        <View style={styles.cardTitleWrap}>
-                          <Text style={cardTitleStyle}>{camera.name}</Text>
-                          <Text style={cardSubStyle}>{roomLabel}</Text>
-                        </View>
-                        <View style={statusPillStyle(isOnline)}>
-                          <Ionicons
-                            name={isOnline ? "wifi" : "wifi-outline"}
-                            size={Math.round(12 * scale)}
-                            color={
-                              isOnline
-                                ? "rgba(36,28,72,0.9)"
-                                : "rgba(30,30,40,0.7)"
-                            }
-                          />
-                          <Text style={statusTextStyle(isOnline)}>
-                            {statusLabel}
-                          </Text>
-                        </View>
-                      </View>
                       <View style={styles.cardMetaRow}>
                         <Text style={metaTextStyle}>
                           {armed ? "Armed" : "Disarmed"}
@@ -459,31 +513,40 @@ export default function CamerasScreen({ navigation }: Props) {
                         <Text style={metaTextStyle}>
                           {recording ? "Recording" : "Standby"}
                         </Text>
+                        {!isOnline && lastSeenLabel ? (
+                          <>
+                            <View style={styles.metaDot} />
+                            <Text style={metaTextStyle}>
+                              Last seen {lastSeenLabel}
+                            </Text>
+                          </>
+                        ) : null}
                       </View>
-                      <Pressable
-                        style={styles.cardActionRow}
-                        onPress={() =>
-                          navigation.navigate("DeviceDetail", {
-                            deviceId: camera.id,
-                          })
-                        }
-                      >
-                        <Ionicons
-                          name="open-outline"
-                          size={Math.round(16 * scale)}
-                          color="rgba(255,255,255,0.8)"
-                        />
-                        <Text style={styles.cardActionText}>View details</Text>
-                      </Pressable>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </ScreenSectionLayout>
-        </ScreenFrame>
-      </View>
-    </LinearGradient>
+                        <Pressable
+                          style={styles.cardActionRow}
+                          onPress={() =>
+                            navigation.navigate("DeviceDetail", {
+                              deviceId: camera.id,
+                            })
+                          }
+                        >
+                          <Ionicons
+                            name="open-outline"
+                            size={Math.round(16 * scale)}
+                            color="rgba(255,255,255,0.8)"
+                          />
+                          <Text style={styles.cardActionText}>View details</Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </ScreenSectionLayout>
+          </ScreenFrame>
+        </View>
+      </LinearGradient>
+    </RenderProfiler>
   );
 }
 
@@ -639,6 +702,19 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     padding: 12,
   },
+  previewExpand: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(20,20,28,0.45)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
   previewButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -671,4 +747,18 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.25)",
   },
   statText: { color: theme.colors.text, fontWeight: "800" },
+  stopAllPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(255,118,118,0.22)",
+    borderWidth: 1,
+    borderColor: "rgba(255,118,118,0.45)",
+    borderRadius: 999,
+  },
+  stopAllText: {
+    color: "rgba(255,255,255,0.95)",
+    fontWeight: "800",
+  },
 });

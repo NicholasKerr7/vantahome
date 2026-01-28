@@ -8,6 +8,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import type { Session } from "@supabase/supabase-js";
 import AuthScreen from "../screens/AuthScreen";
+import AuthRequiredScreen from "../screens/AuthRequiredScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import BottomTabs, { type BottomTabParamList } from "../components/BottomTabs";
 import DeviceDetailScreen from "../screens/DeviceDetailScreen";
@@ -17,6 +18,8 @@ import ProfileScreen from "../screens/ProfileScreen";
 import ManageRoomsScreen from "../screens/ManageRoomsScreen";
 import AutomationBuilderScreen from "../screens/AutomationBuilderScreen";
 import CamerasScreen from "../screens/CamerasScreen";
+import AuditLogScreen from "../screens/AuditLogScreen";
+import CameraViewerScreen from "../screens/CameraViewerScreen";
 import { theme } from "../theme/theme";
 import { supabase } from "../services/supabaseClient";
 import { syncMembershipFromSupabase } from "../services/membership";
@@ -43,6 +46,8 @@ export type RootStackParamList = {
   ManageRooms: undefined;
   AutomationBuilder: { flowId?: string };
   Cameras: undefined;
+  AuditLog: undefined;
+  CameraViewer: { deviceId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -55,8 +60,6 @@ export default function AppNavigator() {
     (s) => s.setRoomMembersFromRemote,
   );
   const setActiveMember = useHomeStore((s) => s.setActiveMember);
-  const demoMode = useHomeStore((s) => s.demoMode);
-  const setDemoMode = useHomeStore((s) => s.setDemoMode);
 
   useEffect(() => {
     if (!supabase) return;
@@ -81,12 +84,6 @@ export default function AppNavigator() {
       data.subscription.unsubscribe();
     };
   }, []);
-
-  useEffect(() => {
-    if (session) {
-      setDemoMode(false);
-    }
-  }, [session, setDemoMode]);
 
   useEffect(() => {
     if (!session) return;
@@ -126,7 +123,8 @@ export default function AppNavigator() {
     return null;
   }
 
-  const isAuthed = Boolean(session) || demoMode || !supabase;
+  const hasSupabase = Boolean(supabase);
+  const isAuthed = Boolean(session);
   return (
     <BottomSheetModalProvider>
       <NavigationContainer
@@ -137,7 +135,9 @@ export default function AppNavigator() {
         }}
       >
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {isAuthed ? (
+          {!hasSupabase ? (
+            <Stack.Screen name="Auth" component={AuthRequiredScreen} />
+          ) : isAuthed ? (
             <>
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="Main" component={BottomTabs} />
@@ -150,6 +150,8 @@ export default function AppNavigator() {
               <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="ManageRooms" component={ManageRoomsScreen} />
               <Stack.Screen name="Cameras" component={CamerasScreen} />
+              <Stack.Screen name="CameraViewer" component={CameraViewerScreen} />
+              <Stack.Screen name="AuditLog" component={AuditLogScreen} />
               <Stack.Screen
                 name="AutomationBuilder"
                 component={AutomationBuilderScreen}

@@ -18,7 +18,7 @@ type ScreenSectionLayoutProps = PropsWithChildren<{
   showsVerticalScrollIndicator?: boolean;
 }>;
 
-export default function ScreenSectionLayout({
+function ScreenSectionLayout({
   header,
   headerWrapStyle,
   showDivider = false,
@@ -51,6 +51,8 @@ export default function ScreenSectionLayout({
     </>
   );
 }
+
+export default React.memo(ScreenSectionLayout);
 
 const styles = StyleSheet.create({
   headerWrap: { width: "100%" },

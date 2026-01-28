@@ -119,7 +119,7 @@ describe("RadialDial", () => {
 
     const texts = tree.root
       .findAllByType(Text)
-      .flatMap((node) => flattenText(node.props.children));
+      .flatMap((node: any) => flattenText(node.props.children));
 
     expect(texts).toContain("Target");
     expect(texts).toContain("21m");

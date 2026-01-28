@@ -11,8 +11,18 @@ import { useHomeStore } from "./src/store/useHomeStore";
 import { startFlowRuntime } from "./src/services/flowRuntime";
 import { ensureNotificationsReady } from "./src/services/notifications";
 import { syncMembershipFromSupabase } from "./src/services/membership";
+import * as Sentry from "@sentry/react-native";
 
-export default function App() {
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: process.env.EXPO_PUBLIC_SENTRY_ENV?.trim() || "production",
+    tracesSampleRate: 0.2,
+  });
+}
+
+function App() {
   const realtime = useHomeStore((s) => s.realtime);
   const notificationsEnabled = useHomeStore((s) => s.preferences.notifications);
   const setHouseholdFromRemote = useHomeStore((s) => s.setHouseholdFromRemote);
@@ -68,3 +78,5 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(App);

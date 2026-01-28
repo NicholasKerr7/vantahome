@@ -40,7 +40,7 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
     useHomeStore.getState().setDevice(evt.deviceId, evt.patch);
   });
 
-  let stopSupabase: (() => void) | undefined;
+  let stopSupabase: (() => void) | null | undefined;
   let disconnect: (() => void) | undefined;
   let stopTelemetry: (() => void) | undefined;
   let statusUnsub: (() => void) | undefined;

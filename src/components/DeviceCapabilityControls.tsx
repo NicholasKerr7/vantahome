@@ -199,7 +199,7 @@ const createStyles = (
     },
   });
 
-export default function DeviceCapabilityControls({
+function DeviceCapabilityControls({
   device,
   context,
   variant = "dark",
@@ -530,3 +530,5 @@ export default function DeviceCapabilityControls({
     </View>
   );
 }
+
+export default React.memo(DeviceCapabilityControls);

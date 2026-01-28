@@ -58,7 +58,7 @@ type WindowDetailSectionProps = {
   cardLabelStyle: StyleProp<TextStyle>;
   onSetOpenPercent: (value: number) => void;
   onQuickSet: (value: number) => void;
-  windowLottieSource: number;
+  windowLottieSource: React.ComponentProps<typeof AnimatedLottieView>["source"];
 };
 
 export default function WindowDetailSection({

@@ -103,6 +103,14 @@ export async function respondHomeInvite(inviteId: string, action: "accept" | "de
   );
 }
 
+export async function logDeviceAuditEvent(payload: {
+  deviceId: string;
+  action: string;
+  payload?: Record<string, unknown>;
+}) {
+  return callEdge<{ ok: boolean }>("device-audit", payload);
+}
+
 export async function pushDeviceState(
   deviceId: string,
   state: Record<string, unknown>,

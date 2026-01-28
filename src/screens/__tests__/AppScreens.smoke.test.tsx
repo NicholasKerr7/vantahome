@@ -228,12 +228,14 @@ describe("App screens smoke coverage", () => {
 
   it("renders AuthScreen", () => {
     const navigation = { replace: jest.fn(), goBack: jest.fn() } as any;
-    renderScreen(<AuthScreen navigation={navigation} />);
+    const route = { key: "Auth", name: "Auth" } as any;
+    renderScreen(<AuthScreen navigation={navigation} route={route} />);
   });
 
   it("renders OnboardingScreen", () => {
     const navigation = { replace: jest.fn(), goBack: jest.fn() } as any;
-    renderScreen(<OnboardingScreen navigation={navigation} />);
+    const route = { key: "Onboarding", name: "Onboarding" } as any;
+    renderScreen(<OnboardingScreen navigation={navigation} route={route} />);
   });
 
   it("renders SettingsScreen", () => {
@@ -262,7 +264,8 @@ describe("App screens smoke coverage", () => {
 
   it("renders ManageRoomsScreen", () => {
     const navigation = { goBack: jest.fn(), navigate: jest.fn() } as any;
-    renderScreen(<ManageRoomsScreen navigation={navigation} />);
+    const route = { key: "ManageRooms", name: "ManageRooms" } as any;
+    renderScreen(<ManageRoomsScreen navigation={navigation} route={route} />);
   });
 
   it("renders NotificationsScreen", () => {
@@ -271,7 +274,8 @@ describe("App screens smoke coverage", () => {
 
   it("renders ProfileScreen", () => {
     const navigation = { goBack: jest.fn(), navigate: jest.fn() } as any;
-    renderScreen(<ProfileScreen navigation={navigation} />);
+    const route = { key: "Profile", name: "Profile" } as any;
+    renderScreen(<ProfileScreen navigation={navigation} route={route} />);
   });
 
   it("renders RoomScreen", () => {

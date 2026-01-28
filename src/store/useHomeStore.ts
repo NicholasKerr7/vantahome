@@ -112,6 +112,9 @@ export type Device = {
   micMuted?: boolean; // camera
   twoWayAudio?: boolean; // camera
   streamUrl?: string; // camera
+  thumbnailUrl?: string; // camera
+  lastThumbnailUrl?: string; // camera
+  lastSeenAt?: number; // camera
   burnerLevel?: number; // stove
   stoveMode?: "simmer" | "boil" | "sear" | "keep-warm"; // stove
   stoveTimerMin?: number; // stove
@@ -402,7 +405,6 @@ type State = {
   profile: Profile;
   outdoor: AmbientReading;
   indoor: AmbientReading;
-  demoMode: boolean;
   rooms: Room[];
   devices: Device[];
   scenes: Scene[];
@@ -416,7 +418,6 @@ type State = {
   household: HouseholdMember[];
   roomMembers: RoomMembership[];
   activeMemberId: string;
-  setDemoMode: (enabled: boolean) => void;
 
   addRoom: (name: string) => void;
   renameRoom: (roomId: string, name: string) => void;
@@ -599,6 +600,19 @@ const roomMembersSeed: RoomMembership[] = [
 ];
 
 const activeMemberSeed = householdSeed[0]?.id ?? "";
+
+const cameraSnapshotBase = process.env.EXPO_PUBLIC_CAMERA_SNAPSHOT_BASE?.trim();
+const cameraStreamBase = process.env.EXPO_PUBLIC_CAMERA_STREAM_BASE?.trim();
+
+const buildCameraUrls = (id: string) => {
+  const snapshotUrl = cameraSnapshotBase
+    ? `${cameraSnapshotBase.replace(/\/$/, "")}/${id}/snapshot.jpg`
+    : undefined;
+  const streamUrl = cameraStreamBase
+    ? `${cameraStreamBase.replace(/\/$/, "")}/${id}/stream.m3u8`
+    : undefined;
+  return { streamUrl, thumbnailUrl: snapshotUrl };
+};
 
 const devicesSeed: Device[] = [
   {
@@ -809,7 +823,7 @@ const devicesSeed: Device[] = [
     motionSensitivity: 6,
     micMuted: false,
     twoWayAudio: true,
-    streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    ...buildCameraUrls("d15"),
   },
   {
     id: "d37",
@@ -824,7 +838,7 @@ const devicesSeed: Device[] = [
     motionSensitivity: 5,
     micMuted: false,
     twoWayAudio: true,
-    streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    ...buildCameraUrls("d37"),
   },
   {
     id: "d38",
@@ -839,7 +853,7 @@ const devicesSeed: Device[] = [
     motionSensitivity: 4,
     micMuted: true,
     twoWayAudio: false,
-    streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    ...buildCameraUrls("d38"),
   },
   {
     id: "d39",
@@ -854,7 +868,7 @@ const devicesSeed: Device[] = [
     motionSensitivity: 7,
     micMuted: false,
     twoWayAudio: true,
-    streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    ...buildCameraUrls("d39"),
   },
   {
     id: "d16",
@@ -1626,11 +1640,9 @@ export const useHomeStore = create<State>()(
       integrations: integrationsSeed,
       preferences: { haptics: true, notifications: true },
       realtime: realtimeSeed,
-      demoMode: false,
       household: householdSeed,
       roomMembers: roomMembersSeed,
       activeMemberId: activeMemberSeed,
-      setDemoMode: (enabled) => set({ demoMode: enabled }),
 
       addRoom: (name) => {
         const trimmed = name.trim();
@@ -1722,6 +1734,19 @@ export const useHomeStore = create<State>()(
             devices: state.devices.map((d) => {
               if (d.id !== deviceId) return d;
               const next = { ...d, ...patch };
+              if (d.kind === "camera") {
+                const isOnline =
+                  patch.isOn === true || (patch.isOn === undefined && d.isOn);
+                const lastSeenAt = isOnline
+                  ? patch.lastSeenAt ?? now
+                  : d.lastSeenAt;
+                const lastThumbnailUrl = patch.thumbnailUrl ?? d.lastThumbnailUrl;
+                return {
+                  ...next,
+                  lastSeenAt,
+                  lastThumbnailUrl,
+                };
+              }
               if (d.kind !== "air") return next;
 
               const hasSampleUpdate = AIR_SAMPLE_FIELDS.some(

@@ -62,7 +62,6 @@ beforeEach(() => {
     profile: { ...seed.profile },
     outdoor: { ...seed.outdoor },
     indoor: { ...seed.indoor },
-    demoMode: seed.demoMode,
     rooms: cloneRooms(seed.rooms),
     devices: cloneDevices(seed.devices),
     rules: cloneRules(seed.rules),

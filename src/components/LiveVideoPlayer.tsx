@@ -8,13 +8,17 @@ type LiveVideoPlayerProps = {
   style?: StyleProp<ViewStyle>;
   contentFit?: "contain" | "cover" | "fill";
   onFullscreen?: () => void;
+  enableFullscreen?: boolean;
+  enablePiP?: boolean;
 };
 
-export default function LiveVideoPlayer({
+function LiveVideoPlayer({
   sourceUri,
   style,
   contentFit = "cover",
   onFullscreen,
+  enableFullscreen = true,
+  enablePiP = true,
 }: LiveVideoPlayerProps) {
   const player = useVideoPlayer(sourceUri, (video) => {
     video.loop = true;
@@ -28,11 +32,14 @@ export default function LiveVideoPlayer({
   );
 
   const handlePress = async () => {
-    await viewRef.current?.enterFullscreen();
+    if (enableFullscreen) {
+      await viewRef.current?.enterFullscreen();
+    }
     onFullscreen?.();
   };
 
   const handleLongPress = async () => {
+    if (!enablePiP) return;
     try {
       await viewRef.current?.startPictureInPicture();
     } catch {
@@ -58,6 +65,8 @@ export default function LiveVideoPlayer({
     </Pressable>
   );
 }
+
+export default React.memo(LiveVideoPlayer);
 
 const styles = StyleSheet.create({
   root: {
