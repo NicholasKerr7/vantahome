@@ -41,6 +41,10 @@ type MqttPresencePayload = {
 export function startMqttBridge(options: MqttBridgeOptions = {}) {
   const url = options.url ?? process.env.EXPO_PUBLIC_MQTT_URL;
   if (!url) return null;
+  const isLocalTls =
+    url.startsWith("wss://localhost") ||
+    url.startsWith("wss://127.0.0.1") ||
+    url.startsWith("wss://0.0.0.0");
 
   // Bridge MQTT state messages into the local deviceClient and publish outgoing commands.
   const topicState =
@@ -64,11 +68,14 @@ export function startMqttBridge(options: MqttBridgeOptions = {}) {
     clean: true,
     reconnectPeriod: 2000,
     connectTimeout: 10000,
+    rejectUnauthorized: !isLocalTls,
   });
 
+  let hasConnected = false;
   options.onStatus?.("connecting");
 
   client.on("connect", () => {
+    hasConnected = true;
     client.subscribe(topicState);
     options.onStatus?.("connected");
   });
@@ -78,11 +85,16 @@ export function startMqttBridge(options: MqttBridgeOptions = {}) {
   });
 
   client.on("close", () => {
-    options.onStatus?.("disconnected");
+    // Avoid rapid offline/online flicker during reconnects.
+    options.onStatus?.(hasConnected ? "connecting" : "connecting");
   });
 
   client.on("error", (err) => {
     options.onStatus?.("error", err?.message ?? "MQTT error");
+  });
+
+  client.on("offline", () => {
+    options.onStatus?.("disconnected");
   });
 
   client.on("message", (topic, payload) => {

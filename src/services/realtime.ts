@@ -16,6 +16,7 @@ type RealtimeOptions = {
   mqttTopicCommand?: string;
   mqttPublishState?: boolean;
   useMqtt?: boolean;
+  mqttFallbackTimeoutMs?: number;
 };
 
 export function startDeviceRealtime(options: RealtimeOptions = {}) {
@@ -32,10 +33,44 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
   // Priority order: MQTT (local), then Supabase, then direct WS, then mock telemetry.
   const enableMockTelemetry =
     options.enableMockTelemetry ?? (!wsUrl && !useSupabase && !useMqtt);
+  const fallbackUseSupabase = options.useSupabase ?? !!supabase;
+  const fallbackTimeoutMs = options.mqttFallbackTimeoutMs ?? 6000;
 
   const unsubscribe = deviceClient.subscribeState((evt) => {
     useHomeStore.getState().setDevice(evt.deviceId, evt.patch);
   });
+
+  let stopSupabase: (() => void) | undefined;
+  let disconnect: (() => void) | undefined;
+  let stopTelemetry: (() => void) | undefined;
+  let statusUnsub: (() => void) | undefined;
+  let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const stopFallback = () => {
+    stopSupabase?.();
+    disconnect?.();
+    stopTelemetry?.();
+    stopSupabase = undefined;
+    disconnect = undefined;
+    stopTelemetry = undefined;
+  };
+
+  const startFallback = () => {
+    if (stopSupabase || disconnect || stopTelemetry) return;
+    if (fallbackUseSupabase && supabase) {
+      stopSupabase = startSupabaseDeviceRealtime({
+        channel: options.supabaseChannel,
+      });
+      return;
+    }
+    if (wsUrl) {
+      disconnect = deviceClient.connect(wsUrl);
+      return;
+    }
+    if (enableMockTelemetry) {
+      stopTelemetry = startMockTelemetry(options.telemetryIntervalMs);
+    }
+  };
 
   const stopMqtt = useMqtt
     ? startMqttBridge({
@@ -51,22 +86,43 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
         },
       })
     : undefined;
-  const stopSupabase =
-    !useMqtt && useSupabase
-      ? startSupabaseDeviceRealtime({ channel: options.supabaseChannel })
-      : undefined;
-  const disconnect =
-    !useMqtt && !useSupabase && wsUrl ? deviceClient.connect(wsUrl) : undefined;
-  const stopTelemetry = enableMockTelemetry
-    ? startMockTelemetry(options.telemetryIntervalMs)
-    : undefined;
+
+  if (!useMqtt && useSupabase) {
+    stopSupabase = startSupabaseDeviceRealtime({
+      channel: options.supabaseChannel,
+    });
+  }
+  if (!useMqtt && !useSupabase && wsUrl) {
+    disconnect = deviceClient.connect(wsUrl);
+  }
+  if (!useMqtt && enableMockTelemetry) {
+    stopTelemetry = startMockTelemetry(options.telemetryIntervalMs);
+  }
+
+  if (useMqtt) {
+    fallbackTimer = setTimeout(() => {
+      const status = useHomeStore.getState().realtime.mqttStatus;
+      if (status !== "connected") startFallback();
+    }, fallbackTimeoutMs);
+    statusUnsub = useHomeStore.subscribe((state, prev) => {
+      if (state.realtime.mqttStatus === prev.realtime.mqttStatus) return;
+      const status = state.realtime.mqttStatus;
+      if (status === "connected") {
+        stopFallback();
+        return;
+      }
+      if (status === "error" || status === "disconnected") {
+        startFallback();
+      }
+    });
+  }
 
   return () => {
     unsubscribe();
     stopMqtt?.();
-    stopSupabase?.();
-    disconnect?.();
-    stopTelemetry?.();
+    stopFallback();
+    statusUnsub?.();
+    if (fallbackTimer) clearTimeout(fallbackTimer);
     if (useMqtt) {
       useHomeStore.getState().setRealtime({
         mqttStatus: "disconnected",
