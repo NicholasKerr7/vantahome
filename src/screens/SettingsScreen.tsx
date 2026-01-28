@@ -1099,7 +1099,9 @@ export default function SettingsScreen() {
       </Pressable>
     </View>
   );
-  const cards = [homeProfileCard, preferencesCard, realtimeCard, supportCard];
+  const cards = __DEV__
+    ? [homeProfileCard, preferencesCard, realtimeCard, supportCard]
+    : [homeProfileCard, preferencesCard, supportCard];
   const cardColumns = Array.from(
     { length: columnCount },
     () => [] as React.ReactNode[],
