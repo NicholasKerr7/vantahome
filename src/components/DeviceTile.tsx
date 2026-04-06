@@ -9,6 +9,7 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 import Pressable from "./Pressable";
+import ButtonLabel from "./ButtonLabel";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
 import { deviceClient } from "../services/deviceClient";
@@ -214,7 +215,7 @@ function ControlPill({
       style={controlPillStyle(height)}
       hitSlop={6}
     >
-      <Text style={controlPillTextStyle(fontSize)}>{label}</Text>
+      <ButtonLabel style={controlPillTextStyle(fontSize)}>{label}</ButtonLabel>
     </Pressable>
   );
 }
@@ -616,6 +617,7 @@ const styles = StyleSheet.create({
 
   controlPill: {
     flex: 1,
+    minWidth: 0,
     height: 36,
     borderRadius: 16,
     backgroundColor: "rgba(180,107,255,0.18)",
@@ -628,5 +630,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontWeight: "900",
     fontSize: 12,
+    paddingHorizontal: 4,
   },
 });

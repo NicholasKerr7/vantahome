@@ -10,6 +10,7 @@ import {
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Slider from "@react-native-community/slider";
 import Pressable from "../components/Pressable";
+import ButtonLabel from "../components/ButtonLabel";
 import { LinearGradient } from "expo-linear-gradient";
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -68,6 +69,13 @@ import { deviceClient } from "../services/deviceClient";
 import { useResponsive } from "../theme/layout";
 import DeviceIcon from "../components/DeviceIcon";
 import { reportRoomPresence } from "../services/roomPresence";
+import {
+  estimateElectricityCost,
+  estimateWaterCost,
+  formatElectricityRate,
+  formatWaterRate,
+  getUtilityRatePreset,
+} from "../data/utilityRates";
 
 const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
 
@@ -984,6 +992,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const outdoor = useHomeStore((s) => s.outdoor);
   const rooms = useHomeStore(selectVisibleRooms);
   const devicesAll = useHomeStore(selectVisibleDevices);
+  const utilityLocation = useHomeStore((s) => s.profile.utilityLocation);
+  const utilityPreset = useMemo(
+    () => getUtilityRatePreset(utilityLocation),
+    [utilityLocation],
+  );
   const coffeeFill = useRef(
     new Animated.Value(device?.kind === "coffee" && device.isOn ? 1 : 0),
   ).current;
@@ -1585,7 +1598,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const energyToday = device.energyTodayKwh ?? 0;
   const energyPeak = device.energyPeakW ?? 0;
   const energyMonth = device.energyMonthKwh ?? 0;
-  const energyCostToday = device.energyCostToday ?? 0;
   const energyBudget = device.energyBudgetKwh ?? 0;
   const energyBudgetProgress =
     energyBudget > 0
@@ -1599,6 +1611,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const gridToday =
     device.gridTodayKwh ??
     Math.max(0, +Math.max(energyToday - solarToday, 0).toFixed(1));
+  const energyCostToday = estimateElectricityCost(gridToday, utilityPreset);
+  const energyRateLabel = `${utilityPreset.chipLabel} · ${formatElectricityRate(
+    utilityPreset.electricityUsdPerKwh,
+  )}`;
   const powerOutage = !gridAvailable;
   const waterFlow = device.waterLpm ?? 0;
   const waterToday = device.waterTodayL ?? 0;
@@ -1615,6 +1631,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     waterBudget > 0
       ? Math.min(Math.max(waterToday / waterBudget, 0), 1)
       : 0;
+  const waterCostToday = estimateWaterCost(waterToday, utilityPreset);
+  const waterRateLabel = `${utilityPreset.chipLabel} · ${formatWaterRate(
+    utilityPreset.waterUsdPerLiter,
+  )}`;
   const waterBudgetExceeded = waterBudget > 0 && waterToday >= waterBudget;
   const lowPressure =
     waterPressureAlerts &&
@@ -4783,12 +4803,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   : `${energyMonth} kWh this month`}
               </Text>
               <Text style={energyHeroMetaTextStyle}>
-                ${energyCostToday.toFixed(2)} today
+                ${energyCostToday.toFixed(2)} est. today
               </Text>
             </View>
           </View>
           <Text style={styles.energyHeroHint}>
-            {solarActive ? "Solar feeding the home" : "Solar idle"}
+            {solarActive ? "Solar feeding the home" : "Solar idle"} · {energyRateLabel}
           </Text>
         </View>
       </View>
@@ -4861,9 +4881,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           <Text style={styles.metricValue}>
             ${energyCostToday.toFixed(2)}
           </Text>
-          <Text style={styles.metricLabel}>Today cost</Text>
+          <Text style={styles.metricLabel}>Est. today</Text>
         </View>
       </View>
+      <Text style={styles.budgetHint}>Grid energy priced at {energyRateLabel}</Text>
     </View>
   );
 
@@ -5681,13 +5702,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(prewash)}
                 onPress={() => sendPatch({ prewash: !prewash })}
               >
-                <Text style={controlPillTextStyle(prewash)}>Prewash</Text>
+                <ButtonLabel style={controlPillTextStyle(prewash)}>
+                  Prewash
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(steamWash)}
                 onPress={() => sendPatch({ steamWash: !steamWash })}
               >
-                <Text style={controlPillTextStyle(steamWash)}>Steam</Text>
+                <ButtonLabel style={controlPillTextStyle(steamWash)}>
+                  Steam
+                </ButtonLabel>
               </Pressable>
             </View>
             <View style={controlCardRowStyle}>
@@ -5695,17 +5720,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(sanitizeWash)}
                 onPress={() => sendPatch({ sanitizeWash: !sanitizeWash })}
               >
-                <Text style={controlPillTextStyle(sanitizeWash)}>
+                <ButtonLabel style={controlPillTextStyle(sanitizeWash)}>
                   Sanitize
-                </Text>
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(extraSpin)}
                 onPress={() => sendPatch({ extraSpin: !extraSpin })}
               >
-                <Text style={controlPillTextStyle(extraSpin)}>
+                <ButtonLabel style={controlPillTextStyle(extraSpin)}>
                   Extra Spin
-                </Text>
+                </ButtonLabel>
               </Pressable>
             </View>
             <View style={controlCardRowStyle}>
@@ -5713,15 +5738,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(smartDispense)}
                 onPress={() => sendPatch({ smartDispense: !smartDispense })}
               >
-                <Text style={controlPillTextStyle(smartDispense)}>
+                <ButtonLabel style={controlPillTextStyle(smartDispense)}>
                   Smart Dose
-                </Text>
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(ecoWash)}
                 onPress={() => sendPatch({ ecoWash: !ecoWash })}
               >
-                <Text style={controlPillTextStyle(ecoWash)}>Eco Boost</Text>
+                <ButtonLabel style={controlPillTextStyle(ecoWash)}>
+                  Eco Boost
+                </ButtonLabel>
               </Pressable>
             </View>
           </View>
@@ -5784,13 +5811,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(prewash)}
                 onPress={() => sendPatch({ prewash: !prewash })}
               >
-                <Text style={controlPillTextStyle(prewash)}>Prewash</Text>
+                <ButtonLabel style={controlPillTextStyle(prewash)}>
+                  Prewash
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(steamWash)}
                 onPress={() => sendPatch({ steamWash: !steamWash })}
               >
-                <Text style={controlPillTextStyle(steamWash)}>Steam</Text>
+                <ButtonLabel style={controlPillTextStyle(steamWash)}>
+                  Steam
+                </ButtonLabel>
               </Pressable>
             </View>
             <View style={controlCardRowStyle}>
@@ -5798,17 +5829,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(sanitizeWash)}
                 onPress={() => sendPatch({ sanitizeWash: !sanitizeWash })}
               >
-                <Text style={controlPillTextStyle(sanitizeWash)}>
+                <ButtonLabel style={controlPillTextStyle(sanitizeWash)}>
                   Sanitize
-                </Text>
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(extraSpin)}
                 onPress={() => sendPatch({ extraSpin: !extraSpin })}
               >
-                <Text style={controlPillTextStyle(extraSpin)}>
+                <ButtonLabel style={controlPillTextStyle(extraSpin)}>
                   Dry Boost
-                </Text>
+                </ButtonLabel>
               </Pressable>
             </View>
             <View style={controlCardRowStyle}>
@@ -5816,15 +5847,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(smartDispense)}
                 onPress={() => sendPatch({ smartDispense: !smartDispense })}
               >
-                <Text style={controlPillTextStyle(smartDispense)}>
+                <ButtonLabel style={controlPillTextStyle(smartDispense)}>
                   Auto Dose
-                </Text>
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(ecoWash)}
                 onPress={() => sendPatch({ ecoWash: !ecoWash })}
               >
-                <Text style={controlPillTextStyle(ecoWash)}>Eco Wash</Text>
+                <ButtonLabel style={controlPillTextStyle(ecoWash)}>
+                  Eco Wash
+                </ButtonLabel>
               </Pressable>
             </View>
           </View>
@@ -5870,17 +5903,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(sensorDry)}
                 onPress={() => sendPatch({ sensorDry: !sensorDry })}
               >
-                <Text style={controlPillTextStyle(sensorDry)}>
+                <ButtonLabel style={controlPillTextStyle(sensorDry)}>
                   Sensor Dry
-                </Text>
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(wrinkleGuard)}
                 onPress={() => sendPatch({ wrinkleGuard: !wrinkleGuard })}
               >
-                <Text style={controlPillTextStyle(wrinkleGuard)}>
+                <ButtonLabel style={controlPillTextStyle(wrinkleGuard)}>
                   Wrinkle Guard
-                </Text>
+                </ButtonLabel>
               </Pressable>
             </View>
             <View style={controlCardRowStyle}>
@@ -5888,15 +5921,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(steamRefresh)}
                 onPress={() => sendPatch({ steamRefresh: !steamRefresh })}
               >
-                <Text style={controlPillTextStyle(steamRefresh)}>
+                <ButtonLabel style={controlPillTextStyle(steamRefresh)}>
                   Steam Refresh
-                </Text>
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(ecoDry)}
                 onPress={() => sendPatch({ ecoDry: !ecoDry })}
               >
-                <Text style={controlPillTextStyle(ecoDry)}>Eco Dry</Text>
+                <ButtonLabel style={controlPillTextStyle(ecoDry)}>
+                  Eco Dry
+                </ButtonLabel>
               </Pressable>
             </View>
             <View style={controlCardRowStyle}>
@@ -5904,13 +5939,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(airFluff)}
                 onPress={() => sendPatch({ airFluff: !airFluff })}
               >
-                <Text style={controlPillTextStyle(airFluff)}>Air Fluff</Text>
+                <ButtonLabel style={controlPillTextStyle(airFluff)}>
+                  Air Fluff
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(coolDown)}
                 onPress={() => sendPatch({ coolDown: !coolDown })}
               >
-                <Text style={controlPillTextStyle(coolDown)}>Cool Down</Text>
+                <ButtonLabel style={controlPillTextStyle(coolDown)}>
+                  Cool Down
+                </ButtonLabel>
               </Pressable>
             </View>
           </View>
@@ -5922,17 +5961,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(lintFilterOk)}
                 onPress={() => sendPatch({ lintFilterOk: !lintFilterOk })}
               >
-                <Text style={controlPillTextStyle(lintFilterOk)}>
+                <ButtonLabel style={controlPillTextStyle(lintFilterOk)}>
                   {lintFilterOk ? "Filter OK" : "Clean Filter"}
-                </Text>
+                </ButtonLabel>
               </Pressable>
               <Pressable
                 style={controlPillStyle(antiStatic)}
                 onPress={() => sendPatch({ antiStatic: !antiStatic })}
               >
-                <Text style={controlPillTextStyle(antiStatic)}>
+                <ButtonLabel style={controlPillTextStyle(antiStatic)}>
                   Anti-Static
-                </Text>
+                </ButtonLabel>
               </Pressable>
             </View>
           </View>
@@ -8246,7 +8285,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     <View style={waterControlCardStyle}>
       <Text style={styles.cardLabel}>Usage history</Text>
       <Text style={styles.waterUsageHint}>
-        Last 7 days · {waterToday} L today
+        Last 7 days · {waterToday} L today{"\n"}
+        Est. today · ${waterCostToday.toFixed(2)} at {waterRateLabel}
       </Text>
       <View style={styles.waterUsageBars}>
         {[18, 28, 22, 36, 26, 30, 20].map((height, index) => (
@@ -10139,6 +10179,7 @@ const styles = StyleSheet.create({
   },
   controlPill: {
     flex: 1,
+    minWidth: 0,
     height: 44,
     borderRadius: 16,
     backgroundColor: "rgba(180,107,255,0.20)",
@@ -10153,6 +10194,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     alignSelf: "stretch",
     paddingHorizontal: 6,
+    flexShrink: 1,
+    includeFontPadding: false,
   },
   controlPillActive: {
     backgroundColor: "rgba(122,92,255,0.28)",
@@ -10184,6 +10227,7 @@ const styles = StyleSheet.create({
   },
   pressureSlider: { marginTop: 6, marginBottom: 2 },
   chip: {
+    minWidth: 0,
     paddingHorizontal: 14,
     height: 36,
     borderRadius: 16,
@@ -10204,6 +10248,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     alignSelf: "stretch",
+    paddingHorizontal: 4,
+    flexShrink: 1,
+    includeFontPadding: false,
   },
   chipTextActive: { color: stylesVars.ink },
   infoOrb: {
@@ -11257,6 +11304,7 @@ const styles = StyleSheet.create({
   modeTile: {
     height: 92,
     width: 92,
+    minWidth: 0,
     borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.70)",
     borderWidth: 1,
@@ -11300,6 +11348,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     alignSelf: "stretch",
+    paddingHorizontal: 8,
+    flexShrink: 1,
+    includeFontPadding: false,
   },
   modeTextActive: { color: "rgba(12,12,18,0.86)" },
   fanHeroCardFill: { flex: 1, alignSelf: "stretch", marginTop: 0 },

@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { View } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "./Pressable";
+import ButtonLabel from "./ButtonLabel";
 
 type Option<T extends string | number> = {
   label: string;
@@ -37,7 +38,9 @@ export default function OptionChips<T extends string | number>({
             style={chipStyle(active)}
             onPress={() => onSelect(option.value)}
           >
-            <Text style={chipTextStyle(active)}>{option.label}</Text>
+            <ButtonLabel style={chipTextStyle(active)}>
+              {option.label}
+            </ButtonLabel>
           </Pressable>
         );
       })}

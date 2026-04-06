@@ -2,6 +2,10 @@ import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { ConnectionStatus } from "../services/deviceClient";
+import {
+  DEFAULT_UTILITY_LOCATION_ID,
+  type UtilityLocationId,
+} from "../data/utilityRates";
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -398,6 +402,7 @@ type Profile = {
   timeFormat?: "12h" | "24h";
   tempUnit?: "C" | "F";
   timezone?: string;
+  utilityLocation?: UtilityLocationId;
 };
 
 type State = {
@@ -541,6 +546,7 @@ const profileSeed: Profile = {
   timeFormat: "12h",
   tempUnit: "C",
   timezone: "Auto",
+  utilityLocation: DEFAULT_UTILITY_LOCATION_ID,
 };
 
 const outdoorSeed: AmbientReading = {

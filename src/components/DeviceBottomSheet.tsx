@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import Pressable from "./Pressable";
+import ButtonLabel from "./ButtonLabel";
 import SheetSection from "./SheetSection";
 import {
   BottomSheetBackdrop,
@@ -305,9 +306,9 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                           onQuickSchedule({ hour: 21, minute: 0 });
                         }}
                       >
-                        <Text style={chipTextStyle}>
+                        <ButtonLabel style={chipTextStyle}>
                           Tonight 9:00 PM
-                        </Text>
+                        </ButtonLabel>
                       </Pressable>
 
                       <Pressable
@@ -317,9 +318,9 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                           onQuickSchedule({ hour: 7, minute: 0 });
                         }}
                       >
-                        <Text style={chipTextStyle}>
+                        <ButtonLabel style={chipTextStyle}>
                           Tomorrow 7:00 AM
-                        </Text>
+                        </ButtonLabel>
                       </Pressable>
                     </View>
 
@@ -332,9 +333,9 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                         size={Math.round((isTablet ? 18 : 16) * scale)}
                         color={theme.colors.text}
                       />
-                      <Text style={linkButtonTextStyle}>
+                      <ButtonLabel style={linkButtonTextStyle}>
                         Create automation for this device
-                      </Text>
+                      </ButtonLabel>
                     </Pressable>
                   </SheetSection>
 
@@ -343,13 +344,17 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                       style={footerButtonStyle}
                       onPress={onOpenDetails}
                     >
-                      <Text style={footerButtonTextStyle}>Open details</Text>
+                      <ButtonLabel style={footerButtonTextStyle}>
+                        Open details
+                      </ButtonLabel>
                     </Pressable>
                     <Pressable
                       style={footerButtonStyle}
                       onPress={onClose}
                     >
-                      <Text style={footerButtonTextStyle}>Close</Text>
+                      <ButtonLabel style={footerButtonTextStyle}>
+                        Close
+                      </ButtonLabel>
                     </Pressable>
                   </View>
                   {onDelete ? (
@@ -436,6 +441,7 @@ const styles = StyleSheet.create({
 
   chip: {
     flex: 1,
+    minWidth: 0,
     height: 40,
     borderRadius: 18,
     backgroundColor: "rgba(180,107,255,0.18)",
@@ -444,7 +450,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  chipText: { color: theme.colors.text, fontWeight: "900", fontSize: 12 },
+  chipText: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    fontSize: 12,
+    paddingHorizontal: 6,
+  },
 
   linkBtn: {
     height: 44,
@@ -461,6 +472,7 @@ const styles = StyleSheet.create({
 
   footerBtn: {
     flex: 1,
+    minWidth: 0,
     height: 46,
     borderRadius: 18,
     backgroundColor: "rgba(255,255,255,0.10)",
@@ -469,7 +481,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  footerBtnText: { color: theme.colors.text, fontWeight: "900" },
+  footerBtnText: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    paddingHorizontal: 8,
+  },
   quickControlsWrap: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",

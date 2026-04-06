@@ -1,13 +1,13 @@
 import React from "react";
 import {
   View,
-  Text,
   StyleSheet,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
 import Pressable from "./Pressable";
+import ButtonLabel from "./ButtonLabel";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../theme/theme";
@@ -116,9 +116,9 @@ export default function ModeTiles({
                 />
               </View>
             )}
-            <Text style={modeTextStyle(active)}>
+            <ButtonLabel lines={2} style={modeTextStyle(active)}>
               {m.label}
-            </Text>
+            </ButtonLabel>
           </Pressable>
         );
       })}
@@ -137,6 +137,7 @@ const styles = StyleSheet.create({
   modeTile: {
     width: 92,
     height: 92,
+    minWidth: 0,
     borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.70)",
     borderWidth: 1,
@@ -174,6 +175,11 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
-  modeText: { color: "rgba(12,12,18,0.58)", fontWeight: "900", fontSize: 12 },
+  modeText: {
+    color: "rgba(12,12,18,0.58)",
+    fontWeight: "900",
+    fontSize: 12,
+    paddingHorizontal: 8,
+  },
   modeTextActive: { color: "rgba(12,12,18,0.86)" },
 });

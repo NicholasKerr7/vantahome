@@ -931,7 +931,7 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
     },
     {
       id: "energy-cost",
-      label: "Cost",
+      label: "Est. cost",
       type: "stat",
       field: "energyCostToday",
       format: (value) =>
@@ -1010,12 +1010,19 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       order: 2,
     },
     {
+      id: "water-cost",
+      label: "Est. cost",
+      type: "stat",
+      field: "waterTodayL",
+      order: 3,
+    },
+    {
       id: "water-pressure",
       label: "Pressure",
       type: "stat",
       field: "waterPressurePsi",
       unit: "psi",
-      order: 3,
+      order: 4,
     },
     {
       id: "water-temp",
@@ -1023,7 +1030,7 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       type: "stat",
       field: "waterTempC",
       unit: "C",
-      order: 4,
+      order: 5,
     },
     {
       id: "water-leak",
@@ -1031,7 +1038,7 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       type: "stat",
       field: "waterLeakDetected",
       format: (value) => (value ? "Detected" : "Clear"),
-      order: 5,
+      order: 6,
     },
     {
       id: "water-alerts",
@@ -1040,7 +1047,7 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       field: "waterLeakAlerts",
       onLabel: "On",
       offLabel: "Off",
-      order: 6,
+      order: 7,
     },
     {
       id: "water-shutoff",
@@ -1049,7 +1056,7 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       field: "waterAutoShutoff",
       onLabel: "On",
       offLabel: "Off",
-      order: 7,
+      order: 8,
     },
     {
       id: "water-budget",
@@ -1060,7 +1067,7 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       max: 400,
       step: 20,
       unit: "L",
-      order: 8,
+      order: 9,
     },
     {
       id: "water-pressure-low",
@@ -1071,7 +1078,7 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       max: 60,
       step: 5,
       unit: "psi",
-      order: 9,
+      order: 10,
     },
     {
       id: "water-pressure-high",
@@ -1082,7 +1089,7 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       max: 100,
       step: 5,
       unit: "psi",
-      order: 10,
+      order: 11,
     },
     {
       id: "water-pressure-alerts",

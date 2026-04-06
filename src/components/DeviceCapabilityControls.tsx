@@ -10,6 +10,7 @@ import {
 import Slider from "@react-native-community/slider";
 import * as Haptics from "expo-haptics";
 import Pressable from "./Pressable";
+import ButtonLabel from "./ButtonLabel";
 import RadialDial from "./RadialDial";
 import { theme } from "../theme/theme";
 import { deviceClient } from "../services/deviceClient";
@@ -23,7 +24,12 @@ import {
   type StatCapability,
   type ToggleCapability,
 } from "../data/deviceCapabilities";
-import type { Device } from "../store/useHomeStore";
+import { useHomeStore, type Device } from "../store/useHomeStore";
+import {
+  estimateElectricityCost,
+  estimateWaterCost,
+  getUtilityRatePreset,
+} from "../data/utilityRates";
 
 type Variant = "dark" | "light";
 type Layout = "compact" | "cards" | "grid";
@@ -152,6 +158,7 @@ const createStyles = (
     pillBtn: {
       paddingHorizontal: Math.round(14 * scale),
       height: Math.round((isTablet ? 44 : 40) * scale),
+      minWidth: 0,
       borderRadius: Math.round(16 * scale),
       backgroundColor: palette.pillBg,
       borderWidth: 1,
@@ -167,6 +174,7 @@ const createStyles = (
       color: palette.text,
       fontWeight: "900",
       fontSize: Math.round(12 * scale),
+      paddingHorizontal: Math.round(4 * scale),
     },
     pillBtnTextActive: { color: "#fff" },
     statRow: {
@@ -207,10 +215,15 @@ function DeviceCapabilityControls({
   enableHaptics = false,
 }: Props) {
   const { isTablet, isLandscape, scale, width } = useResponsive();
+  const utilityLocation = useHomeStore((s) => s.profile.utilityLocation);
   const palette = useMemo(() => paletteFor(variant), [variant]);
   const styles = useMemo(
     () => createStyles(palette, scale, isTablet),
     [palette, scale, isTablet],
+  );
+  const utilityPreset = useMemo(
+    () => getUtilityRatePreset(utilityLocation),
+    [utilityLocation],
   );
   const capabilities = useMemo(
     () => getDeviceCapabilities(device, context),
@@ -325,6 +338,18 @@ function DeviceCapabilityControls({
     cap.control === "dial" && context === "detail" && layout === "cards";
 
   const formatStatValue = (cap: StatCapability, value: unknown) => {
+    if (cap.id === "energy-cost") {
+      const gridToday =
+        device.gridTodayKwh ??
+        Math.max(
+          0,
+          (device.energyTodayKwh ?? 0) - (device.solarTodayKwh ?? 0),
+        );
+      return `$${estimateElectricityCost(gridToday, utilityPreset).toFixed(2)}`;
+    }
+    if (cap.id === "water-cost") {
+      return `$${estimateWaterCost(device.waterTodayL ?? 0, utilityPreset).toFixed(2)}`;
+    }
     if (cap.format) return cap.format(value as string | number | boolean);
     if (typeof value === "number" && cap.unit) {
       return joinUnit(formatNumber(value), formatUnit(cap.unit));
@@ -408,18 +433,18 @@ function DeviceCapabilityControls({
         style={pillButtonStyle(current)}
         onPress={() => sendPatch({ [cap.field]: true } as Partial<Device>)}
       >
-        <Text style={pillButtonTextStyle(current)}>
+        <ButtonLabel style={pillButtonTextStyle(current)}>
           {cap.onLabel ?? "On"}
-        </Text>
+        </ButtonLabel>
       </Pressable>,
       <Pressable
         key={`${cap.id}-off`}
         style={pillButtonStyle(!current)}
         onPress={() => sendPatch({ [cap.field]: false } as Partial<Device>)}
       >
-        <Text style={pillButtonTextStyle(!current)}>
+        <ButtonLabel style={pillButtonTextStyle(!current)}>
           {cap.offLabel ?? "Off"}
-        </Text>
+        </ButtonLabel>
       </Pressable>,
     ];
     return (
@@ -442,7 +467,9 @@ function DeviceCapabilityControls({
             sendPatch({ [cap.field]: opt.value } as Partial<Device>)
           }
         >
-          <Text style={pillButtonTextStyle(active)}>{opt.label}</Text>
+          <ButtonLabel style={pillButtonTextStyle(active)}>
+            {opt.label}
+          </ButtonLabel>
         </Pressable>
       );
     });
@@ -462,7 +489,7 @@ function DeviceCapabilityControls({
         style={styles.pillBtn}
         onPress={() => sendPatch(cap.patch)}
       >
-        <Text style={styles.pillBtnText}>{cap.label}</Text>
+        <ButtonLabel style={styles.pillBtnText}>{cap.label}</ButtonLabel>
       </Pressable>
     ));
     return (

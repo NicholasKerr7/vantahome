@@ -41,6 +41,14 @@ import {
 } from "../services/cloudRegistry";
 import { syncMembershipFromSupabase } from "../services/membership";
 import { supabase } from "../services/supabaseClient";
+import {
+  DEFAULT_UTILITY_LOCATION_ID,
+  UTILITY_RATE_OPTIONS,
+  formatElectricityRate,
+  formatWaterRate,
+  getUtilityRatePreset,
+  type UtilityLocationId,
+} from "../data/utilityRates";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -452,6 +460,9 @@ export default function ProfileScreen({ navigation }: Props) {
   const [timeFormat, setTimeFormat] = useState(profile.timeFormat ?? "12h");
   const [tempUnit, setTempUnit] = useState(profile.tempUnit ?? "C");
   const [timezone, setTimezone] = useState(profile.timezone ?? "Auto");
+  const [utilityLocation, setUtilityLocation] = useState<UtilityLocationId>(
+    profile.utilityLocation ?? DEFAULT_UTILITY_LOCATION_ID,
+  );
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<
@@ -568,6 +579,7 @@ export default function ProfileScreen({ navigation }: Props) {
     styles.progressText,
     { fontSize: hintSize },
   ];
+  const utilityPreset = getUtilityRatePreset(utilityLocation);
   const serviceItems: Array<{
     provider: IntegrationProvider;
     label: string;
@@ -645,6 +657,7 @@ export default function ProfileScreen({ navigation }: Props) {
       timeFormat,
       tempUnit,
       timezone: timezone.trim() || "Auto",
+      utilityLocation,
     });
     navigation.goBack();
   };
@@ -995,6 +1008,30 @@ export default function ProfileScreen({ navigation }: Props) {
         placeholderTextColor="rgba(255,255,255,0.45)"
         style={inputFieldStyle}
       />
+
+      <Text style={cardHintTopTextStyle}>Utility rates</Text>
+      <View style={styles.chipRow}>
+        {UTILITY_RATE_OPTIONS.map((option) => {
+          const active = utilityLocation === option.id;
+          return (
+            <Pressable
+              key={option.id}
+              style={chipStyle(active)}
+              onPress={() => setUtilityLocation(option.id)}
+            >
+              <Text style={chipTextStyle(active)}>{option.chipLabel}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={cardHintTextStyle}>
+        Used for estimated daily energy and water cost.
+      </Text>
+      <Text style={cardHintTextStyle}>
+        {formatElectricityRate(utilityPreset.electricityUsdPerKwh)} electricity
+        {" · "}
+        {formatWaterRate(utilityPreset.waterUsdPerLiter)} water
+      </Text>
     </View>,
     <View key="quick-preferences" style={cardBaseStyle}>
       <View style={styles.cardHeader}>
