@@ -3,6 +3,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { ConnectionStatus } from "../services/deviceClient";
 import {
+  notificationsSeed,
+  type AppNotification,
+} from "../data/appNotifications";
+import {
   DEFAULT_UTILITY_LOCATION_ID,
   type UtilityLocationId,
   type UtilityLocationMode,
@@ -414,6 +418,7 @@ type Profile = {
 type State = {
   userName: string;
   profile: Profile;
+  notifications: AppNotification[];
   outdoor: AmbientReading;
   indoor: AmbientReading;
   rooms: Room[];
@@ -435,6 +440,15 @@ type State = {
   moveRoom: (roomId: string, direction: -1 | 1) => void;
   removeRoom: (roomId: string) => void;
   setProfile: (patch: Partial<Profile>) => void;
+  addNotification: (
+    notification: Omit<AppNotification, "id" | "createdAt"> & {
+      id?: string;
+      createdAt?: number;
+    },
+  ) => void;
+  dismissNotification: (notificationId: string) => void;
+  clearNotifications: () => void;
+  markNotificationsSeen: () => void;
   setOutdoor: (patch: Partial<AmbientReading>) => void;
   setIndoor: (patch: Partial<AmbientReading>) => void;
   setPreferences: (patch: Partial<Preferences>) => void;
@@ -1642,6 +1656,7 @@ export const useHomeStore = create<State>()(
     (set, get) => ({
       userName: "Nick",
       profile: profileSeed,
+      notifications: notificationsSeed,
       outdoor: outdoorSeed,
       indoor: indoorSeed,
 
@@ -1714,6 +1729,39 @@ export const useHomeStore = create<State>()(
             userName: next.name || state.userName,
           };
         }),
+
+      addNotification: (notification) =>
+        set((state) => ({
+          notifications: [
+            {
+              ...notification,
+              id: notification.id ?? `n${Date.now()}`,
+              createdAt: notification.createdAt ?? Date.now(),
+            },
+            ...state.notifications,
+          ].slice(0, 100),
+        })),
+
+      dismissNotification: (notificationId) =>
+        set((state) => ({
+          notifications: state.notifications.filter(
+            (notification) => notification.id !== notificationId,
+          ),
+        })),
+
+      clearNotifications: () =>
+        set(() => ({
+          notifications: [],
+        })),
+
+      markNotificationsSeen: () =>
+        set((state) => ({
+          notifications: state.notifications.map((notification) =>
+            notification.isNew
+              ? { ...notification, isNew: false }
+              : notification,
+          ),
+        })),
 
       setOutdoor: (patch) =>
         set((state) => ({
@@ -2127,13 +2175,13 @@ export const useHomeStore = create<State>()(
     }),
     {
       name: "vantahome-store",
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState, version) => {
         if (!persistedState || typeof persistedState !== "object")
           return {} as State;
         const state = persistedState as State;
-        if (version && version >= 3) return state;
+        if (version && version >= 4) return state;
         const base =
           version && version >= 2
             ? state
@@ -2145,6 +2193,7 @@ export const useHomeStore = create<State>()(
               };
         return {
           ...base,
+          notifications: base.notifications ?? notificationsSeed,
           household: base.household ?? householdSeed,
           roomMembers: base.roomMembers ?? roomMembersSeed,
           activeMemberId:
@@ -2157,6 +2206,7 @@ export const useHomeStore = create<State>()(
       partialize: (state) => ({
         userName: state.userName,
         profile: state.profile,
+        notifications: state.notifications,
         outdoor: state.outdoor,
         indoor: state.indoor,
         rooms: state.rooms,

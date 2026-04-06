@@ -31,8 +31,11 @@ import { syncMembershipFromSupabase } from "../services/membership";
 import { useResponsive } from "../theme/layout";
 import {
   notifyAirAlert,
+  notifyEntryOpen,
   notifyPowerStatus,
+  notifySolarActive,
   notifyWaterAlert,
+  notifyWaterLeak,
 } from "../services/notifications";
 import { deviceClient } from "../services/deviceClient";
 import Voice from "@react-native-voice/voice";
@@ -90,11 +93,14 @@ export default function HomeScreen() {
   const setActiveMember = useHomeStore((s) => s.setActiveMember);
   const [activeRoomIndex, setActiveRoomIndex] = useState(0);
   const lastPowerOutage = useRef<boolean | null>(null);
+  const lastSolarActive = useRef<boolean | null>(null);
   const lastWaterAlert = useRef<{
     budgetExceeded: boolean;
     lowPressure: boolean;
     highPressure: boolean;
   } | null>(null);
+  const lastWaterLeak = useRef<boolean | null>(null);
+  const lastOpenEntryId = useRef<string | null | undefined>(undefined);
   const lastAirAlert = useRef<
     Record<
       string,
@@ -315,22 +321,29 @@ export default function HomeScreen() {
     const energy = devicesAll.find((device) => device.kind === "energy");
     if (!energy) return;
     const currentOutage = energy.gridAvailable === false;
+    const solarActive = (energy.solarW ?? 0) > 0;
     const alertsEnabled = energy.gridOutageAlerts ?? true;
     if (lastPowerOutage.current === null) {
       lastPowerOutage.current = currentOutage;
+      lastSolarActive.current = solarActive;
       return;
     }
     if (!prefs.notifications || !alertsEnabled) {
       lastPowerOutage.current = currentOutage;
+      lastSolarActive.current = solarActive;
       return;
     }
     if (currentOutage !== lastPowerOutage.current) {
       lastPowerOutage.current = currentOutage;
       notifyPowerStatus({
         isOutage: currentOutage,
-        solarActive: (energy.solarW ?? 0) > 0,
+        solarActive,
       }).catch(() => {});
     }
+    if (solarActive && !lastSolarActive.current) {
+      notifySolarActive(energy.solarW ?? 0).catch(() => {});
+    }
+    lastSolarActive.current = solarActive;
   }, [devicesAll, prefs.notifications]);
 
   useEffect(() => {
@@ -349,14 +362,17 @@ export default function HomeScreen() {
       pressureAlerts &&
       pressureHighLimit > 0 &&
       pressureValue > pressureHighLimit;
+    const leakDetected = water.waterLeakDetected ?? false;
 
     if (lastWaterAlert.current === null) {
       lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
+      lastWaterLeak.current = leakDetected;
       return;
     }
 
     if (!prefs.notifications) {
       lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
+      lastWaterLeak.current = leakDetected;
       return;
     }
 
@@ -381,8 +397,41 @@ export default function HomeScreen() {
         limit: pressureHighLimit,
       }).catch(() => {});
     }
+    if (leakDetected && !lastWaterLeak.current) {
+      notifyWaterLeak().catch(() => {});
+    }
 
     lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
+    lastWaterLeak.current = leakDetected;
+  }, [devicesAll, prefs.notifications]);
+
+  useEffect(() => {
+    const openEntry =
+      devicesAll.find(
+        (device) =>
+          ["door", "window", "garage", "gate"].includes(device.kind) &&
+          (device.openPercent ?? 0) > 0,
+      ) ?? null;
+    const currentEntryId = openEntry?.id ?? null;
+
+    if (typeof lastOpenEntryId.current === "undefined") {
+      lastOpenEntryId.current = currentEntryId;
+      return;
+    }
+
+    if (!prefs.notifications) {
+      lastOpenEntryId.current = currentEntryId;
+      return;
+    }
+
+    if (currentEntryId && currentEntryId !== lastOpenEntryId.current) {
+      notifyEntryOpen({
+        deviceName: openEntry?.name ?? "Entry",
+        openPercent: openEntry?.openPercent ?? 0,
+      }).catch(() => {});
+    }
+
+    lastOpenEntryId.current = currentEntryId;
   }, [devicesAll, prefs.notifications]);
 
   useEffect(() => {

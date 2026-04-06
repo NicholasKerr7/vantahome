@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -20,99 +20,17 @@ import type { RootStackParamList } from "../app/AppNavigator";
 import { useResponsive } from "../theme/layout";
 import { useHomeStore } from "../store/useHomeStore";
 import { Swipeable } from "react-native-gesture-handler";
-
-type NotificationItem = {
-  id: string;
-  title: string;
-  body: string;
-  time: string;
-  category: NotificationCategory;
-  isNew?: boolean;
-};
-
-type NotificationCategory =
-  | "alert"
-  | "device"
-  | "scene"
-  | "automation"
-  | "security"
-  | "info";
+import {
+  CATEGORY_META,
+  formatNotificationTime,
+  type NotificationCategory,
+} from "../data/appNotifications";
+import {
+  clearDeliveredNotifications,
+  dismissDeliveredNotification,
+} from "../services/notifications";
 
 type NotificationFilter = "all" | NotificationCategory;
-
-const CATEGORY_META: Record<
-  NotificationCategory,
-  { label: string; icon: keyof typeof Ionicons.glyphMap; accent: string; soft: string }
-> = {
-  alert: {
-    label: "Alerts",
-    icon: "warning",
-    accent: "#FFB4B4",
-    soft: "rgba(255,180,180,0.18)",
-  },
-  device: {
-    label: "Devices",
-    icon: "hardware-chip",
-    accent: "#9AD6FF",
-    soft: "rgba(154,214,255,0.18)",
-  },
-  scene: {
-    label: "Scenes",
-    icon: "sparkles",
-    accent: theme.colors.accent,
-    soft: "rgba(180,107,255,0.18)",
-  },
-  automation: {
-    label: "Automations",
-    icon: "timer",
-    accent: "#8DFFC9",
-    soft: "rgba(141,255,201,0.18)",
-  },
-  security: {
-    label: "Security",
-    icon: "shield-checkmark",
-    accent: "#FFD48A",
-    soft: "rgba(255,212,138,0.18)",
-  },
-  info: {
-    label: "Info",
-    icon: "information-circle",
-    accent: "#C4D4FF",
-    soft: "rgba(196,212,255,0.18)",
-  },
-};
-
-const MOCK_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "n1",
-    title: "Air Conditioner",
-    body: "Set to 22°C • Cool",
-    time: "Just now",
-    category: "device",
-    isNew: true,
-  },
-  {
-    id: "n2",
-    title: "Scene • Movie Time",
-    body: "Living room lights dimmed",
-    time: "5m ago",
-    category: "scene",
-  },
-  {
-    id: "n3",
-    title: "Automation",
-    body: "Night Cool scheduled for 9:00 PM",
-    time: "1h ago",
-    category: "automation",
-  },
-  {
-    id: "n4",
-    title: "Entry Door",
-    body: "Front door locked",
-    time: "2h ago",
-    category: "security",
-  },
-];
 
 export default function NotificationsScreen() {
   const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
@@ -272,34 +190,12 @@ export default function NotificationsScreen() {
   ];
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [filter, setFilter] = useState<NotificationFilter>("all");
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const notifications = useHomeStore((s) => s.notifications);
+  const dismissNotification = useHomeStore((s) => s.dismissNotification);
+  const clearNotifications = useHomeStore((s) => s.clearNotifications);
+  const markNotificationsSeen = useHomeStore((s) => s.markNotificationsSeen);
   const FrameComponent = isPortrait ? PortraitFrame : LandscapeFrame;
   const frameEnabled = isPortrait || isWide;
-  const energy = useHomeStore((s) =>
-    s.devices.find((device) => device.kind === "energy"),
-  );
-  const water = useHomeStore((s) =>
-    s.devices.find((device) => device.kind === "water"),
-  );
-  const openEntry = useHomeStore((s) =>
-    s.devices.find(
-      (device) =>
-        ["door", "window", "garage", "gate"].includes(device.kind) &&
-        (device.openPercent ?? 0) > 0,
-    ),
-  );
-  const powerOutage =
-    energy?.gridAvailable === false && (energy?.gridOutageAlerts ?? true);
-  const solarActive = (energy?.solarW ?? 0) > 0;
-  const waterPressureLow = water?.waterPressureLowPsi ?? 35;
-  const waterPressureHigh = water?.waterPressureHighPsi ?? 80;
-  const waterPressure = water?.waterPressurePsi ?? 0;
-  const waterLeak = water?.waterLeakDetected ?? false;
-  const waterBudget = water?.waterBudgetL ?? 0;
-  const waterToday = water?.waterTodayL ?? 0;
-  const waterOverBudget = waterBudget > 0 && waterToday > waterBudget;
   const filters: NotificationFilter[] = [
     "all",
     "alert",
@@ -309,106 +205,21 @@ export default function NotificationsScreen() {
     "security",
     "info",
   ];
-  const notifications = useMemo(() => {
-    const dynamicItems: NotificationItem[] = [];
-    if (powerOutage) {
-      dynamicItems.push({
-        id: "n-power-outage",
-        title: "Power outage",
-        body: solarActive
-          ? "Main power offline • Solar active"
-          : "Main power offline • Backup required",
-        time: "Just now",
-        category: "alert",
-        isNew: true,
-      });
-    }
-    if (solarActive) {
-      dynamicItems.push({
-        id: "n-solar-online",
-        title: "Solar active",
-        body: `Producing ${Math.round(energy?.solarW ?? 0)}W`,
-        time: "Just now",
-        category: "info",
-      });
-    }
-    if (waterLeak) {
-      dynamicItems.push({
-        id: "n-water-leak",
-        title: "Water leak detected",
-        body: "Auto shutoff recommended",
-        time: "Just now",
-        category: "alert",
-        isNew: true,
-      });
-    } else if (waterPressure > waterPressureHigh) {
-      dynamicItems.push({
-        id: "n-water-pressure-high",
-        title: "High water pressure",
-        body: `${Math.round(waterPressure)} PSI • Above ${
-          Math.round(waterPressureHigh)
-        }`,
-        time: "Just now",
-        category: "alert",
-      });
-    } else if (waterPressure > 0 && waterPressure < waterPressureLow) {
-      dynamicItems.push({
-        id: "n-water-pressure-low",
-        title: "Low water pressure",
-        body: `${Math.round(waterPressure)} PSI • Below ${
-          Math.round(waterPressureLow)
-        }`,
-        time: "Just now",
-        category: "alert",
-      });
-    }
-    if (waterOverBudget) {
-      dynamicItems.push({
-        id: "n-water-budget",
-        title: "Water budget exceeded",
-        body: `${Math.round(waterToday)}L used • Budget ${Math.round(
-          waterBudget,
-        )}L`,
-        time: "Today",
-        category: "alert",
-      });
-    }
-    if (openEntry) {
-      dynamicItems.push({
-        id: "n-entry-open",
-        title: `${openEntry.name} open`,
-        body: `${Math.round(openEntry.openPercent ?? 0)}% open`,
-        time: "Just now",
-        category: "security",
-      });
-    }
-    return [...dynamicItems, ...MOCK_NOTIFICATIONS];
-  }, [
-    energy?.solarW,
-    openEntry,
-    powerOutage,
-    solarActive,
-    waterBudget,
-    waterLeak,
-    waterOverBudget,
-    waterPressure,
-    waterPressureHigh,
-    waterPressureLow,
-    waterToday,
-  ]);
+  const sortedNotifications = useMemo(
+    () =>
+      [...notifications].sort((left, right) => right.createdAt - left.createdAt),
+    [notifications],
+  );
+
+  useEffect(() => {
+    markNotificationsSeen();
+  }, [markNotificationsSeen]);
 
   const filteredNotifications = useMemo(() => {
-    if (filter === "all") return notifications;
-    return notifications.filter((item) => item.category === filter);
-  }, [filter, notifications]);
-  const visibleNotifications = useMemo(
-    () => filteredNotifications.filter((item) => !dismissedIds.has(item.id)),
-    [dismissedIds, filteredNotifications],
-  );
-  const canClearAll = useMemo(
-    () => notifications.some((item) => !dismissedIds.has(item.id)),
-    [dismissedIds, notifications],
-  );
+    if (filter === "all") return sortedNotifications;
+    return sortedNotifications.filter((item) => item.category === filter);
+  }, [filter, sortedNotifications]);
+  const canClearAll = notifications.length > 0;
   const clearButtonStyle = [
     styles.clearBtn,
     isCompactPhone && styles.clearBtnCompact,
@@ -420,20 +231,14 @@ export default function NotificationsScreen() {
     !canClearAll && styles.clearBtnTextDisabled,
   ];
 
-  const dismissNotification = (id: string) => {
-    setDismissedIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
+  const handleDismissNotification = (notificationId: string, osNotificationId?: string) => {
+    dismissNotification(notificationId);
+    dismissDeliveredNotification(osNotificationId).catch(() => {});
   };
 
   const handleClearAll = () => {
-    setDismissedIds((prev) => {
-      const next = new Set(prev);
-      notifications.forEach((item) => next.add(item.id));
-      return next;
-    });
+    clearNotifications();
+    clearDeliveredNotifications().catch(() => {});
   };
 
   return (
@@ -498,7 +303,7 @@ export default function NotificationsScreen() {
         </View>
         <View style={listWrapStyle}>
           <FlatList
-            data={visibleNotifications}
+            data={filteredNotifications}
             keyExtractor={(item) => item.id}
             numColumns={isWide ? 2 : 1}
             columnWrapperStyle={listColumnStyle}
@@ -516,7 +321,9 @@ export default function NotificationsScreen() {
                     <View style={styles.swipeActions}>
                       <Pressable
                         style={styles.swipeButton}
-                        onPress={() => dismissNotification(item.id)}
+                        onPress={() =>
+                          handleDismissNotification(item.id, item.osNotificationId)
+                        }
                       >
                         <Ionicons
                           name="close"
@@ -527,7 +334,9 @@ export default function NotificationsScreen() {
                       </Pressable>
                     </View>
                   )}
-                  onSwipeableOpen={() => dismissNotification(item.id)}
+                  onSwipeableOpen={() =>
+                    handleDismissNotification(item.id, item.osNotificationId)
+                  }
                   rightThreshold={48}
                   overshootRight={false}
                   containerStyle={cardContainerStyle}
@@ -536,7 +345,7 @@ export default function NotificationsScreen() {
                     <View style={accentBarStyleFor(meta.accent)} />
                     <View style={iconWrapStyleFor(meta.accent, meta.soft)}>
                       <Ionicons
-                        name={meta.icon}
+                        name={meta.icon as keyof typeof Ionicons.glyphMap}
                         size={iconSize}
                         color={meta.accent}
                       />
@@ -551,7 +360,9 @@ export default function NotificationsScreen() {
                           <Text style={newPillTextStyle}>NEW</Text>
                         </View>
                       )}
-                      <Text style={timeTextStyle}>{item.time}</Text>
+                      <Text style={timeTextStyle}>
+                        {formatNotificationTime(item.createdAt)}
+                      </Text>
                     </View>
                   </View>
                 </Swipeable>

@@ -1,5 +1,7 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
+import type { NotificationCategory } from "../data/appNotifications";
+import { useHomeStore } from "../store/useHomeStore";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -47,17 +49,32 @@ export async function sendLocalNotification(
   title: string,
   body: string,
   data?: Record<string, unknown>,
+  options?: { category?: NotificationCategory; isNew?: boolean },
 ) {
-  const allowed = await ensureNotificationsReady();
-  if (!allowed) return;
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      sound: "default",
-      data,
-    },
-    trigger: null,
+  let osNotificationId: string | undefined;
+  try {
+    const allowed = await ensureNotificationsReady();
+    if (allowed) {
+      osNotificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: "default",
+          data,
+        },
+        trigger: null,
+      });
+    }
+  } catch {
+    osNotificationId = undefined;
+  }
+
+  useHomeStore.getState().addNotification({
+    title,
+    body,
+    category: options?.category ?? "info",
+    isNew: options?.isNew ?? true,
+    osNotificationId,
   });
 }
 
@@ -72,12 +89,22 @@ export async function notifyPowerStatus({
     const body = solarActive
       ? "Main power offline. Solar is supplying the home."
       : "Main power offline. Switch to backup if available.";
-    await sendLocalNotification("Power outage", body, { kind: "power-outage" });
+    await sendLocalNotification(
+      "Power outage",
+      body,
+      { kind: "power-outage" },
+      { category: "alert" },
+    );
     return;
   }
-  await sendLocalNotification("Power restored", "Main power is back online.", {
-    kind: "power-restored",
-  });
+  await sendLocalNotification(
+    "Power restored",
+    "Main power is back online.",
+    {
+      kind: "power-restored",
+    },
+    { category: "info" },
+  );
 }
 
 export async function notifyWaterAlert({
@@ -94,6 +121,7 @@ export async function notifyWaterAlert({
       "Water budget exceeded",
       `Today: ${current} L (budget ${limit} L).`,
       { kind: "water-budget" },
+      { category: "alert" },
     );
     return;
   }
@@ -102,6 +130,7 @@ export async function notifyWaterAlert({
       "Water pressure high",
       `Current: ${current} psi (limit ${limit} psi).`,
       { kind: "water-pressure-high" },
+      { category: "alert" },
     );
     return;
   }
@@ -109,6 +138,16 @@ export async function notifyWaterAlert({
     "Water pressure low",
     `Current: ${current} psi (limit ${limit} psi).`,
     { kind: "water-pressure-low" },
+    { category: "alert" },
+  );
+}
+
+export async function notifyWaterLeak() {
+  await sendLocalNotification(
+    "Water leak detected",
+    "Auto shutoff recommended.",
+    { kind: "water-leak" },
+    { category: "alert" },
   );
 }
 
@@ -129,6 +168,7 @@ export async function notifyAirAlert({
       `${prefix}Air quality`,
       `AQI ${current} (limit ${limit}).`,
       { kind: "air-aqi" },
+      { category: "alert" },
     );
     return;
   }
@@ -137,6 +177,7 @@ export async function notifyAirAlert({
       `${prefix}CO2 high`,
       `CO2 ${current} ppm (limit ${limit} ppm).`,
       { kind: "air-co2" },
+      { category: "alert" },
     );
     return;
   }
@@ -145,6 +186,7 @@ export async function notifyAirAlert({
       `${prefix}VOC high`,
       `VOC ${current} ppb (limit ${limit} ppb).`,
       { kind: "air-voc" },
+      { category: "alert" },
     );
     return;
   }
@@ -153,6 +195,7 @@ export async function notifyAirAlert({
       `${prefix}PM2.5 high`,
       `PM2.5 ${current} ug/m3 (limit ${limit} ug/m3).`,
       { kind: "air-pm25" },
+      { category: "alert" },
     );
     return;
   }
@@ -161,6 +204,7 @@ export async function notifyAirAlert({
       `${prefix}PM10 high`,
       `PM10 ${current} ug/m3 (limit ${limit} ug/m3).`,
       { kind: "air-pm10" },
+      { category: "alert" },
     );
     return;
   }
@@ -168,5 +212,45 @@ export async function notifyAirAlert({
     `${prefix}Pollen alert`,
     `Pollen index ${current} (limit ${limit}).`,
     { kind: "air-pollen" },
+    { category: "alert" },
   );
+}
+
+export async function notifySolarActive(productionW: number) {
+  await sendLocalNotification(
+    "Solar active",
+    `Producing ${Math.round(productionW)}W.`,
+    { kind: "solar-active" },
+    { category: "info" },
+  );
+}
+
+export async function notifyEntryOpen({
+  deviceName,
+  openPercent,
+}: {
+  deviceName: string;
+  openPercent: number;
+}) {
+  await sendLocalNotification(
+    `${deviceName} open`,
+    `${Math.round(openPercent)}% open.`,
+    { kind: "entry-open" },
+    { category: "security" },
+  );
+}
+
+export async function dismissDeliveredNotification(notificationId?: string) {
+  if (!notificationId) return;
+  await Promise.allSettled([
+    Notifications.dismissNotificationAsync(notificationId),
+    Notifications.cancelScheduledNotificationAsync(notificationId),
+  ]);
+}
+
+export async function clearDeliveredNotifications() {
+  await Promise.allSettled([
+    Notifications.dismissAllNotificationsAsync(),
+    Notifications.cancelAllScheduledNotificationsAsync(),
+  ]);
 }

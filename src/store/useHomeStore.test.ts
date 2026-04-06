@@ -57,6 +57,9 @@ beforeEach(() => {
   useHomeStore.setState({
     userName: seed.userName,
     profile: { ...seed.profile },
+    notifications: seed.notifications.map((notification) => ({
+      ...notification,
+    })),
     outdoor: { ...seed.outdoor },
     indoor: { ...seed.indoor },
     rooms: cloneRooms(seed.rooms),
@@ -201,6 +204,28 @@ describe("useHomeStore", () => {
     expect(
       useHomeStore.getState().devices.find((d) => d.id === "d3")?.isOn,
     ).toBe(initial!.isOn);
+  });
+
+  it("clearNotifications removes all inbox items", () => {
+    expect(useHomeStore.getState().notifications.length).toBeGreaterThan(0);
+    useHomeStore.getState().clearNotifications();
+    expect(useHomeStore.getState().notifications).toEqual([]);
+  });
+
+  it("addNotification prepends a new inbox item", () => {
+    const before = useHomeStore.getState().notifications.length;
+    const now = jest.spyOn(Date, "now").mockReturnValue(456);
+    useHomeStore.getState().addNotification({
+      title: "Power outage",
+      body: "Main power offline.",
+      category: "alert",
+    });
+    const [first] = useHomeStore.getState().notifications;
+    expect(useHomeStore.getState().notifications).toHaveLength(before + 1);
+    expect(first.id).toBe("n456");
+    expect(first.createdAt).toBe(456);
+    expect(first.title).toBe("Power outage");
+    now.mockRestore();
   });
 
   it("quickScheduleDevice creates a toggle rule for non-AC devices", () => {
