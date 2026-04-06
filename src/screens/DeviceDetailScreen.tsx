@@ -5864,7 +5864,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
 
           <View style={laundryCardStyle(5)}>
-            <Text style={styles.cardLabel}>Dryer options</Text>
+            <Text style={styles.cardLabel}>Enhancements</Text>
             <View style={controlCardRowStyle}>
               <Pressable
                 style={controlPillStyle(sensorDry)}
@@ -10147,7 +10147,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  controlPillText: { color: stylesVars.ink, fontWeight: "900" },
+  controlPillText: {
+    color: stylesVars.ink,
+    fontWeight: "900",
+    textAlign: "center",
+    alignSelf: "stretch",
+    paddingHorizontal: 6,
+  },
   controlPillActive: {
     backgroundColor: "rgba(122,92,255,0.28)",
     borderColor: "rgba(122,92,255,0.4)",
@@ -10192,7 +10198,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(180,107,255,0.24)",
     borderColor: "rgba(122,92,255,0.3)",
   },
-  chipText: { color: stylesVars.subtext, fontWeight: "900", fontSize: 12 },
+  chipText: {
+    color: stylesVars.subtext,
+    fontWeight: "900",
+    fontSize: 12,
+    textAlign: "center",
+    alignSelf: "stretch",
+  },
   chipTextActive: { color: stylesVars.ink },
   infoOrb: {
     alignSelf: "center",
@@ -11282,7 +11294,13 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
-  modeText: { color: "rgba(12,12,18,0.58)", fontWeight: "900", fontSize: 12 },
+  modeText: {
+    color: "rgba(12,12,18,0.58)",
+    fontWeight: "900",
+    fontSize: 12,
+    textAlign: "center",
+    alignSelf: "stretch",
+  },
   modeTextActive: { color: "rgba(12,12,18,0.86)" },
   fanHeroCardFill: { flex: 1, alignSelf: "stretch", marginTop: 0 },
   fanHeroBodyFill: { flex: 1 },
