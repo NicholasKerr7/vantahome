@@ -48,7 +48,13 @@ import {
   formatWaterRate,
   getUtilityRatePreset,
   type UtilityLocationId,
+  type UtilityLocationMode,
+  type UtilityLocationStatus,
 } from "../data/utilityRates";
+import {
+  buildUtilityLocationPatchFromDeviceResult,
+  requestUtilityLocationFromDevice,
+} from "../services/utilityLocation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -463,6 +469,19 @@ export default function ProfileScreen({ navigation }: Props) {
   const [utilityLocation, setUtilityLocation] = useState<UtilityLocationId>(
     profile.utilityLocation ?? DEFAULT_UTILITY_LOCATION_ID,
   );
+  const [utilityLocationManual, setUtilityLocationManual] =
+    useState<UtilityLocationId>(
+      profile.utilityLocationManual ??
+        profile.utilityLocation ??
+        DEFAULT_UTILITY_LOCATION_ID,
+    );
+  const [utilityLocationMode, setUtilityLocationMode] =
+    useState<UtilityLocationMode>(profile.utilityLocationMode ?? "manual");
+  const [utilityLocationResolvedLabel, setUtilityLocationResolvedLabel] =
+    useState(profile.utilityLocationResolvedLabel ?? "");
+  const [utilityLocationStatus, setUtilityLocationStatus] =
+    useState<UtilityLocationStatus>(profile.utilityLocationStatus ?? "fallback");
+  const [utilityLocationBusy, setUtilityLocationBusy] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<
@@ -580,6 +599,7 @@ export default function ProfileScreen({ navigation }: Props) {
     { fontSize: hintSize },
   ];
   const utilityPreset = getUtilityRatePreset(utilityLocation);
+  const manualUtilityPreset = getUtilityRatePreset(utilityLocationManual);
   const serviceItems: Array<{
     provider: IntegrationProvider;
     label: string;
@@ -646,6 +666,86 @@ export default function ProfileScreen({ navigation }: Props) {
     },
   ];
 
+  const setManualUtilityRates = (locationId: UtilityLocationId) => {
+    setUtilityLocation(locationId);
+    setUtilityLocationManual(locationId);
+    setUtilityLocationMode("manual");
+    setUtilityLocationResolvedLabel("");
+    setUtilityLocationStatus(locationId === "us-average" ? "fallback" : "matched");
+  };
+
+  const useManualUtilityMode = () => {
+    setUtilityLocation(utilityLocationManual);
+    setUtilityLocationMode("manual");
+    setUtilityLocationResolvedLabel("");
+    setUtilityLocationStatus(
+      utilityLocationManual === "us-average" ? "fallback" : "matched",
+    );
+  };
+
+  const handleUseCurrentLocation = async () => {
+    if (utilityLocationBusy) return;
+    setUtilityLocationBusy(true);
+    try {
+      const result = await requestUtilityLocationFromDevice();
+      if (result.kind === "permission-denied") {
+        Alert.alert(
+          "Location permission needed",
+          "Allow location access to match your utility rates automatically.",
+        );
+        return;
+      }
+      if (result.kind === "unavailable") {
+        Alert.alert(
+          "Location unavailable",
+          "VantaHome couldn't read your current location right now. Your manual rate will stay in place.",
+        );
+        return;
+      }
+
+      const patch = buildUtilityLocationPatchFromDeviceResult(
+        result,
+        utilityLocationManual,
+      );
+      setUtilityLocation(patch.utilityLocation);
+      setUtilityLocationMode("device");
+      setUtilityLocationResolvedLabel(patch.utilityLocationResolvedLabel);
+      setUtilityLocationStatus(patch.utilityLocationStatus);
+
+      if (patch.utilityLocationStatus === "unsupported") {
+        Alert.alert(
+          "Manual backup in use",
+          patch.utilityLocationResolvedLabel
+            ? `${patch.utilityLocationResolvedLabel} is not mapped to a local utility preset yet, so VantaHome is using your manual backup rate instead.`
+            : "Your current location is not mapped to a local utility preset yet, so VantaHome is using your manual backup rate instead.",
+        );
+      }
+    } finally {
+      setUtilityLocationBusy(false);
+    }
+  };
+
+  const utilitySummaryText =
+    utilityLocationMode === "device"
+      ? utilityLocationStatus === "matched"
+        ? utilityLocationResolvedLabel
+          ? `Auto mode is using ${utilityPreset.label} based on ${utilityLocationResolvedLabel}.`
+          : `Auto mode is using ${utilityPreset.label}.`
+        : utilityLocationStatus === "fallback"
+          ? utilityLocationResolvedLabel
+            ? `Auto mode is using ${utilityPreset.label} for ${utilityLocationResolvedLabel}.`
+            : `Auto mode is using ${utilityPreset.label}.`
+          : utilityLocationResolvedLabel
+            ? `${utilityLocationResolvedLabel} is not mapped yet, so VantaHome is using your manual backup rate: ${manualUtilityPreset.label}.`
+            : `Your current location is not mapped yet, so VantaHome is using your manual backup rate: ${manualUtilityPreset.label}.`
+      : `Manual mode is using ${manualUtilityPreset.label}.`;
+
+  const utilityActionLabel = utilityLocationBusy
+    ? "Locating..."
+    : utilityLocationMode === "device"
+      ? "Refresh current location"
+      : "Use current location";
+
   const onSave = () => {
     setProfile({
       name: name.trim(),
@@ -658,6 +758,10 @@ export default function ProfileScreen({ navigation }: Props) {
       tempUnit,
       timezone: timezone.trim() || "Auto",
       utilityLocation,
+      utilityLocationManual,
+      utilityLocationMode,
+      utilityLocationResolvedLabel,
+      utilityLocationStatus,
     });
     navigation.goBack();
   };
@@ -1012,20 +1116,56 @@ export default function ProfileScreen({ navigation }: Props) {
       <Text style={cardHintTopTextStyle}>Utility rates</Text>
       <View style={styles.chipRow}>
         {UTILITY_RATE_OPTIONS.map((option) => {
-          const active = utilityLocation === option.id;
+          const active = utilityLocationManual === option.id;
           return (
             <Pressable
               key={option.id}
               style={chipStyle(active)}
-              onPress={() => setUtilityLocation(option.id)}
+              onPress={() => setManualUtilityRates(option.id)}
             >
               <Text style={chipTextStyle(active)}>{option.chipLabel}</Text>
             </Pressable>
           );
         })}
       </View>
+      <View style={styles.utilityActionGroup}>
+        <Pressable
+          style={[styles.avatarBtn, utilityLocationBusy && secondaryButtonDisabledStyle]}
+          onPress={handleUseCurrentLocation}
+          disabled={utilityLocationBusy}
+        >
+          <Ionicons
+            name={
+              utilityLocationBusy
+                ? "time-outline"
+                : utilityLocationMode === "device"
+                  ? "refresh-outline"
+                  : "locate-outline"
+            }
+            size={Math.round(16 * scale)}
+            color={theme.colors.text}
+          />
+          <Text style={secondaryBtnTextStyle}>{utilityActionLabel}</Text>
+        </Pressable>
+        {utilityLocationMode === "device" ? (
+          <Pressable
+            style={[styles.avatarBtn, styles.avatarBtnGhost]}
+            onPress={useManualUtilityMode}
+          >
+            <Ionicons
+              name="options-outline"
+              size={Math.round(16 * scale)}
+              color={theme.colors.subtext}
+            />
+            <Text style={secondaryBtnTextStyle}>Use manual rates</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <Text style={cardHintTextStyle}>
         Used for estimated daily energy and water cost.
+      </Text>
+      <Text style={cardHintTextStyle}>
+        {utilitySummaryText}
       </Text>
       <Text style={cardHintTextStyle}>
         {formatElectricityRate(utilityPreset.electricityUsdPerKwh)} electricity
@@ -2056,6 +2196,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 6 },
+  utilityActionGroup: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 10,
+  },
   chip: {
     paddingHorizontal: 12,
     height: 34,

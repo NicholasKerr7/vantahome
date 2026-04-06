@@ -49,6 +49,8 @@
 	<string>Allow $(PRODUCT_NAME) to access your camera</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow VantaHome to capture voice commands.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Allow VantaHome to access your location to estimate local utility costs.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow VantaHome to access your photo library to set a profile avatar.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

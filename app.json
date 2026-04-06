@@ -17,7 +17,8 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow VantaHome to access your photo library to set a profile avatar.",
         "NSMicrophoneUsageDescription": "Allow VantaHome to capture voice commands.",
-        "NSSpeechRecognitionUsageDescription": "Allow VantaHome to recognize your voice commands."
+        "NSSpeechRecognitionUsageDescription": "Allow VantaHome to recognize your voice commands.",
+        "NSLocationWhenInUseUsageDescription": "Allow VantaHome to access your location to estimate local utility costs."
       },
       "bundleIdentifier": "com.nick007.vantahome"
     },
@@ -29,7 +30,9 @@
       "permissions": [
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -38,6 +41,12 @@
     "plugins": [
       "expo-font",
       "expo-image-picker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow VantaHome to access your location to estimate local utility costs."
+        }
+      ],
       "expo-web-browser",
       "sentry-expo",
       [

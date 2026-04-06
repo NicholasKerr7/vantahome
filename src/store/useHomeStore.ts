@@ -5,6 +5,8 @@ import type { ConnectionStatus } from "../services/deviceClient";
 import {
   DEFAULT_UTILITY_LOCATION_ID,
   type UtilityLocationId,
+  type UtilityLocationMode,
+  type UtilityLocationStatus,
 } from "../data/utilityRates";
 
 export const AC_TEMP_MIN_C = 15;
@@ -403,6 +405,10 @@ type Profile = {
   tempUnit?: "C" | "F";
   timezone?: string;
   utilityLocation?: UtilityLocationId;
+  utilityLocationManual?: UtilityLocationId;
+  utilityLocationMode?: UtilityLocationMode;
+  utilityLocationResolvedLabel?: string;
+  utilityLocationStatus?: UtilityLocationStatus;
 };
 
 type State = {
@@ -547,6 +553,10 @@ const profileSeed: Profile = {
   tempUnit: "C",
   timezone: "Auto",
   utilityLocation: DEFAULT_UTILITY_LOCATION_ID,
+  utilityLocationManual: DEFAULT_UTILITY_LOCATION_ID,
+  utilityLocationMode: "manual",
+  utilityLocationResolvedLabel: "",
+  utilityLocationStatus: "fallback",
 };
 
 const outdoorSeed: AmbientReading = {

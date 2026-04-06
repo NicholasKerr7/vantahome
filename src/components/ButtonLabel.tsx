@@ -3,13 +3,11 @@ import { Text, StyleSheet, type TextProps } from "react-native";
 
 type Props = TextProps & {
   lines?: number;
-  minScale?: number;
 };
 
 export default function ButtonLabel({
   style,
   lines = 1,
-  minScale = 0.78,
   allowFontScaling = false,
   maxFontSizeMultiplier = 1.05,
   children,
@@ -19,10 +17,8 @@ export default function ButtonLabel({
     <Text
       {...props}
       allowFontScaling={allowFontScaling}
-      adjustsFontSizeToFit
       ellipsizeMode="tail"
       maxFontSizeMultiplier={maxFontSizeMultiplier}
-      minimumFontScale={minScale}
       numberOfLines={lines}
       style={[styles.label, style]}
     >

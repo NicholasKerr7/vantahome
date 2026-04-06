@@ -7,6 +7,25 @@ export type UtilityLocationId =
   | "seattle-wa"
   | "austin-tx";
 
+export type UtilityLocationMode = "manual" | "device";
+
+export type UtilityLocationStatus = "matched" | "fallback" | "unsupported";
+
+export type UtilityGeoAddress = {
+  city?: string | null;
+  district?: string | null;
+  region?: string | null;
+  subregion?: string | null;
+  country?: string | null;
+  isoCountryCode?: string | null;
+};
+
+export type UtilityLocationResolution = {
+  locationId: UtilityLocationId | null;
+  resolvedLabel: string | null;
+  status: UtilityLocationStatus;
+};
+
 export type UtilityRatePreset = {
   id: UtilityLocationId;
   label: string;
@@ -99,6 +118,80 @@ export function getUtilityRatePreset(
   if (!locationId) return UTILITY_RATE_PRESETS[DEFAULT_UTILITY_LOCATION_ID];
   return UTILITY_RATE_PRESETS[locationId] ??
     UTILITY_RATE_PRESETS[DEFAULT_UTILITY_LOCATION_ID];
+}
+
+const normalizeUtilityGeoValue = (value?: string | null): string =>
+  value?.trim().toLowerCase() ?? "";
+
+const sameNormalizedValue = (
+  value: string,
+  candidates: readonly string[],
+): boolean => candidates.includes(value);
+
+export function formatUtilityGeoLabel(address: UtilityGeoAddress): string | null {
+  const primary = address.city ?? address.district ?? address.subregion ?? null;
+  const secondary = address.region ?? address.country ?? null;
+  if (primary && secondary && primary !== secondary) {
+    return `${primary}, ${secondary}`;
+  }
+  return primary ?? secondary ?? null;
+}
+
+export function resolveUtilityLocationFromGeo(
+  address: UtilityGeoAddress,
+): UtilityLocationResolution {
+  const countryCode = normalizeUtilityGeoValue(address.isoCountryCode);
+  const country = normalizeUtilityGeoValue(address.country);
+  const city = normalizeUtilityGeoValue(address.city);
+  const region = normalizeUtilityGeoValue(address.region);
+  const resolvedLabel = formatUtilityGeoLabel(address);
+  const isUnitedStates =
+    countryCode === "us" ||
+    sameNormalizedValue(country, [
+      "united states",
+      "united states of america",
+      "usa",
+      "u.s.a.",
+      "u.s.",
+    ]);
+
+  if (!isUnitedStates) {
+    return {
+      locationId: null,
+      resolvedLabel,
+      status: "unsupported",
+    };
+  }
+
+  if (city === "denver" && sameNormalizedValue(region, ["co", "colorado"])) {
+    return {
+      locationId: "denver-co",
+      resolvedLabel,
+      status: "matched",
+    };
+  }
+
+  if (city === "seattle" && sameNormalizedValue(region, ["wa", "washington"])) {
+    return {
+      locationId: "seattle-wa",
+      resolvedLabel,
+      status: "matched",
+    };
+  }
+
+  if (city === "austin" && sameNormalizedValue(region, ["tx", "texas"])) {
+    return {
+      locationId: "austin-tx",
+      resolvedLabel,
+      status: "matched",
+    };
+  }
+
+  return {
+    locationId: "us-average",
+    resolvedLabel,
+    status: "fallback",
+  };
 }
 
 export function estimateElectricityCost(

@@ -5702,7 +5702,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(prewash)}
                 onPress={() => sendPatch({ prewash: !prewash })}
               >
-                <ButtonLabel style={controlPillTextStyle(prewash)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(prewash)}>
                   Prewash
                 </ButtonLabel>
               </Pressable>
@@ -5710,7 +5710,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(steamWash)}
                 onPress={() => sendPatch({ steamWash: !steamWash })}
               >
-                <ButtonLabel style={controlPillTextStyle(steamWash)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(steamWash)}>
                   Steam
                 </ButtonLabel>
               </Pressable>
@@ -5720,7 +5720,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(sanitizeWash)}
                 onPress={() => sendPatch({ sanitizeWash: !sanitizeWash })}
               >
-                <ButtonLabel style={controlPillTextStyle(sanitizeWash)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(sanitizeWash)}>
                   Sanitize
                 </ButtonLabel>
               </Pressable>
@@ -5728,7 +5728,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(extraSpin)}
                 onPress={() => sendPatch({ extraSpin: !extraSpin })}
               >
-                <ButtonLabel style={controlPillTextStyle(extraSpin)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(extraSpin)}>
                   Extra Spin
                 </ButtonLabel>
               </Pressable>
@@ -5738,7 +5738,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(smartDispense)}
                 onPress={() => sendPatch({ smartDispense: !smartDispense })}
               >
-                <ButtonLabel style={controlPillTextStyle(smartDispense)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(smartDispense)}>
                   Smart Dose
                 </ButtonLabel>
               </Pressable>
@@ -5746,7 +5746,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(ecoWash)}
                 onPress={() => sendPatch({ ecoWash: !ecoWash })}
               >
-                <ButtonLabel style={controlPillTextStyle(ecoWash)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(ecoWash)}>
                   Eco Boost
                 </ButtonLabel>
               </Pressable>
@@ -5811,7 +5811,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(prewash)}
                 onPress={() => sendPatch({ prewash: !prewash })}
               >
-                <ButtonLabel style={controlPillTextStyle(prewash)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(prewash)}>
                   Prewash
                 </ButtonLabel>
               </Pressable>
@@ -5819,7 +5819,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(steamWash)}
                 onPress={() => sendPatch({ steamWash: !steamWash })}
               >
-                <ButtonLabel style={controlPillTextStyle(steamWash)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(steamWash)}>
                   Steam
                 </ButtonLabel>
               </Pressable>
@@ -5829,7 +5829,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(sanitizeWash)}
                 onPress={() => sendPatch({ sanitizeWash: !sanitizeWash })}
               >
-                <ButtonLabel style={controlPillTextStyle(sanitizeWash)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(sanitizeWash)}>
                   Sanitize
                 </ButtonLabel>
               </Pressable>
@@ -5837,7 +5837,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(extraSpin)}
                 onPress={() => sendPatch({ extraSpin: !extraSpin })}
               >
-                <ButtonLabel style={controlPillTextStyle(extraSpin)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(extraSpin)}>
                   Dry Boost
                 </ButtonLabel>
               </Pressable>
@@ -5847,7 +5847,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(smartDispense)}
                 onPress={() => sendPatch({ smartDispense: !smartDispense })}
               >
-                <ButtonLabel style={controlPillTextStyle(smartDispense)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(smartDispense)}>
                   Auto Dose
                 </ButtonLabel>
               </Pressable>
@@ -5855,7 +5855,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(ecoWash)}
                 onPress={() => sendPatch({ ecoWash: !ecoWash })}
               >
-                <ButtonLabel style={controlPillTextStyle(ecoWash)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(ecoWash)}>
                   Eco Wash
                 </ButtonLabel>
               </Pressable>
@@ -5903,7 +5903,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(sensorDry)}
                 onPress={() => sendPatch({ sensorDry: !sensorDry })}
               >
-                <ButtonLabel style={controlPillTextStyle(sensorDry)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(sensorDry)}>
                   Sensor Dry
                 </ButtonLabel>
               </Pressable>
@@ -5911,7 +5911,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(wrinkleGuard)}
                 onPress={() => sendPatch({ wrinkleGuard: !wrinkleGuard })}
               >
-                <ButtonLabel style={controlPillTextStyle(wrinkleGuard)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(wrinkleGuard)}>
                   Wrinkle Guard
                 </ButtonLabel>
               </Pressable>
@@ -5921,7 +5921,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(steamRefresh)}
                 onPress={() => sendPatch({ steamRefresh: !steamRefresh })}
               >
-                <ButtonLabel style={controlPillTextStyle(steamRefresh)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(steamRefresh)}>
                   Steam Refresh
                 </ButtonLabel>
               </Pressable>
@@ -5929,7 +5929,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(ecoDry)}
                 onPress={() => sendPatch({ ecoDry: !ecoDry })}
               >
-                <ButtonLabel style={controlPillTextStyle(ecoDry)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(ecoDry)}>
                   Eco Dry
                 </ButtonLabel>
               </Pressable>
@@ -5939,7 +5939,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(airFluff)}
                 onPress={() => sendPatch({ airFluff: !airFluff })}
               >
-                <ButtonLabel style={controlPillTextStyle(airFluff)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(airFluff)}>
                   Air Fluff
                 </ButtonLabel>
               </Pressable>
@@ -5947,7 +5947,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(coolDown)}
                 onPress={() => sendPatch({ coolDown: !coolDown })}
               >
-                <ButtonLabel style={controlPillTextStyle(coolDown)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(coolDown)}>
                   Cool Down
                 </ButtonLabel>
               </Pressable>
@@ -5961,7 +5961,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(lintFilterOk)}
                 onPress={() => sendPatch({ lintFilterOk: !lintFilterOk })}
               >
-                <ButtonLabel style={controlPillTextStyle(lintFilterOk)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(lintFilterOk)}>
                   {lintFilterOk ? "Filter OK" : "Clean Filter"}
                 </ButtonLabel>
               </Pressable>
@@ -5969,7 +5969,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 style={controlPillStyle(antiStatic)}
                 onPress={() => sendPatch({ antiStatic: !antiStatic })}
               >
-                <ButtonLabel style={controlPillTextStyle(antiStatic)}>
+                <ButtonLabel lines={2} style={controlPillTextStyle(antiStatic)}>
                   Anti-Static
                 </ButtonLabel>
               </Pressable>

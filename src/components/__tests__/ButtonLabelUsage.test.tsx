@@ -23,7 +23,7 @@ jest.mock("../../theme/layout", () => ({
 }));
 
 describe("shared button label usage", () => {
-  it("renders option chips with fitted button labels", () => {
+  it("renders option chips with shared button labels", () => {
     const { UNSAFE_getAllByType } = render(
       <OptionChips
         options={[
@@ -41,7 +41,7 @@ describe("shared button label usage", () => {
     expect(UNSAFE_getAllByType(ButtonLabel)).toHaveLength(2);
   });
 
-  it("renders mode tiles with two-line fitted labels", () => {
+  it("renders mode tiles with two-line shared button labels", () => {
     const { UNSAFE_getAllByType } = render(
       <ModeTiles value="cold" onChange={() => {}} />,
     );
@@ -51,7 +51,7 @@ describe("shared button label usage", () => {
     labels.forEach((label) => expect(label.props.lines).toBe(2));
   });
 
-  it("renders quick control pills with fitted labels", () => {
+  it("renders quick control pills with shared button labels", () => {
     const device: Device = {
       id: "tv-1",
       name: "Living Room TV",
