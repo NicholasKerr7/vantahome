@@ -4,6 +4,7 @@ import process from "process";
 import { registerRootComponent } from "expo";
 
 import App from "./App";
+import configureScrollBehavior from "./src/app/configureScrollBehavior";
 
 const globalForMqtt = globalThis as typeof globalThis & {
   Buffer?: typeof Buffer;
@@ -16,6 +17,8 @@ if (!globalForMqtt.Buffer) {
 if (!globalForMqtt.process) {
   globalForMqtt.process = process;
 }
+
+configureScrollBehavior();
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,
