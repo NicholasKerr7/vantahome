@@ -10,6 +10,7 @@ import ManageRoomsScreen from "../ManageRoomsScreen";
 import NotificationsScreen from "../NotificationsScreen";
 import ProfileScreen from "../ProfileScreen";
 import RoomScreen from "../RoomScreen";
+import DeviceHealthScreen from "../DeviceHealthScreen";
 import {
   useHomeStore,
   type AutomationFlow,
@@ -291,5 +292,13 @@ describe("App screens smoke coverage", () => {
       params: { roomId, showAll: false },
     } as any;
     renderScreen(<RoomScreen navigation={navigation} route={route} />);
+  });
+
+  it("renders DeviceHealthScreen", () => {
+    const navigation = { goBack: jest.fn(), navigate: jest.fn() } as any;
+    const route = { key: "DeviceHealth", name: "DeviceHealth" } as any;
+    renderScreen(
+      <DeviceHealthScreen navigation={navigation} route={route} />,
+    );
   });
 });

@@ -45,6 +45,7 @@ import {
   getSecurityModeNotificationSummary,
   type SecurityMode,
 } from "../data/securityModes";
+import { buildDeviceHealthSnapshot } from "../data/deviceHealth";
 import { useResponsive } from "../theme/layout";
 import { deviceClient, type ConnectionStatus } from "../services/deviceClient";
 import {
@@ -220,6 +221,28 @@ export default function SettingsScreen() {
     nextAttemptAt?: number;
   }>({ pending: 0 });
   const [cloudSyncLoading, setCloudSyncLoading] = useState(false);
+  const deviceHealth = useMemo(
+    () =>
+      buildDeviceHealthSnapshot({
+        devices,
+        realtimeEnabled: realtime.enabled,
+        useMqtt: realtime.useMqtt,
+        mqttStatus: realtime.mqttStatus,
+        mqttError: realtime.mqttError,
+        connectionStatus: connection.status,
+        connectionUrl: realtime.wsUrl,
+      }),
+    [
+      connection.status,
+      devices,
+      realtime.enabled,
+      realtime.mqttError,
+      realtime.mqttStatus,
+      realtime.useMqtt,
+      realtime.wsUrl,
+    ],
+  );
+  const topHealthIssues = deviceHealth.issues.slice(0, 3);
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
@@ -1043,6 +1066,59 @@ export default function SettingsScreen() {
     </View>
   );
 
+  const deviceHealthCard = (
+    <View style={cardStyle} key="device-health">
+      <Text style={sectionTitleStyle}>Device Health Center</Text>
+      <Text style={sectionSubStyle}>
+        Low battery, offline cameras, stale sensors, bridge health, and maintenance in one place.
+      </Text>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Critical</Text>
+        <Text style={rowValueStyle}>{deviceHealth.counts.critical}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Warnings</Text>
+        <Text style={rowValueStyle}>{deviceHealth.counts.warning}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Devices checked</Text>
+        <Text style={rowValueStyle}>{devices.length}</Text>
+      </View>
+      {topHealthIssues.length > 0 ? (
+        <>
+          <View style={styles.settingsDivider} />
+          <Text style={notificationGroupLabelStyle}>Needs attention</Text>
+          {topHealthIssues.map((issue) => (
+            <View key={issue.id} style={styles.notificationRow}>
+              <View style={styles.notificationCopy}>
+                <Text style={rowLabelStyle}>{issue.title}</Text>
+                <Text style={notificationSubStyle}>{issue.detail}</Text>
+              </View>
+              <Text style={rowValueStyle}>
+                {issue.severity === "critical" ? "Critical" : "Warning"}
+              </Text>
+            </View>
+          ))}
+        </>
+      ) : (
+        <Text style={notificationSubStyle}>
+          Everything reporting cleanly right now.
+        </Text>
+      )}
+      <Pressable
+        style={secondaryWideBtnStyle}
+        onPress={() => navigation.navigate("DeviceHealth")}
+      >
+        <Ionicons
+          name="pulse-outline"
+          size={Math.round(16 * scale)}
+          color="rgba(60,60,80,0.9)"
+        />
+        <Text style={secondaryWideBtnTextStyle}>Open health center</Text>
+      </Pressable>
+    </View>
+  );
+
   const securityModesCard = (
     <View style={cardStyle} key="security-modes">
       <Text style={sectionTitleStyle}>Security Modes</Text>
@@ -1421,6 +1497,7 @@ export default function SettingsScreen() {
   const cards = __DEV__
     ? [
         homeProfileCard,
+        deviceHealthCard,
         securityModesCard,
         preferencesCard,
         realtimeCard,
@@ -1429,6 +1506,7 @@ export default function SettingsScreen() {
       ]
     : [
         homeProfileCard,
+        deviceHealthCard,
         securityModesCard,
         preferencesCard,
         securityCard,

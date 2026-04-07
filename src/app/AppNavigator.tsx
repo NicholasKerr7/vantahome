@@ -20,6 +20,7 @@ import AutomationBuilderScreen from "../screens/AutomationBuilderScreen";
 import CamerasScreen from "../screens/CamerasScreen";
 import AuditLogScreen from "../screens/AuditLogScreen";
 import CameraViewerScreen from "../screens/CameraViewerScreen";
+import DeviceHealthScreen from "../screens/DeviceHealthScreen";
 import { theme } from "../theme/theme";
 import { supabase } from "../services/supabaseClient";
 import { syncMembershipFromSupabase } from "../services/membership";
@@ -48,6 +49,7 @@ export type RootStackParamList = {
   Cameras: undefined;
   AuditLog: undefined;
   CameraViewer: { deviceId: string };
+  DeviceHealth: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -152,6 +154,7 @@ export default function AppNavigator() {
               <Stack.Screen name="Cameras" component={CamerasScreen} />
               <Stack.Screen name="CameraViewer" component={CameraViewerScreen} />
               <Stack.Screen name="AuditLog" component={AuditLogScreen} />
+              <Stack.Screen name="DeviceHealth" component={DeviceHealthScreen} />
               <Stack.Screen
                 name="AutomationBuilder"
                 component={AutomationBuilderScreen}
