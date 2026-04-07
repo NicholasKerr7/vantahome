@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   orb: {
     backgroundColor: "rgba(255,255,255,0.10)",
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.90)",
+    borderColor: "rgba(255,255,255,0.14)",
     shadowColor: theme.colors.glow,
     shadowOpacity: 0.45,
     shadowRadius: 24,

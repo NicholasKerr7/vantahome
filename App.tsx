@@ -9,12 +9,16 @@ import { startAmbientData } from "./src/services/ambient";
 import { startDeviceRealtime } from "./src/services/realtime";
 import { useHomeStore } from "./src/store/useHomeStore";
 import { startFlowRuntime } from "./src/services/flowRuntime";
-import { ensureNotificationsReady } from "./src/services/notifications";
+import {
+  ensureNotificationsReady,
+  notifyHomeLeftUnsecured,
+} from "./src/services/notifications";
 import { syncMembershipFromSupabase } from "./src/services/membership";
 import {
   buildUtilityLocationPatchFromDeviceResult,
   refreshUtilityLocationFromDeviceIfAuthorized,
 } from "./src/services/utilityLocation";
+import { collectAwaySecurityIssues } from "./src/services/securityAudit";
 import * as Sentry from "@sentry/react-native";
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
@@ -29,6 +33,8 @@ if (sentryEnabled) {
 
 function App() {
   const realtime = useHomeStore((s) => s.realtime);
+  const devices = useHomeStore((s) => s.devices);
+  const household = useHomeStore((s) => s.household);
   const notificationsEnabled = useHomeStore((s) => s.preferences.notifications);
   const utilityLocation = useHomeStore((s) => s.profile.utilityLocation);
   const utilityLocationManual = useHomeStore(
@@ -48,6 +54,8 @@ function App() {
   );
   const setActiveMember = useHomeStore((s) => s.setActiveMember);
   const appState = useRef(AppState.currentState);
+  const suppressNextAwayAudit = useRef(false);
+  const lastHouseOccupied = useRef<boolean | null>(null);
   const wsUrl = realtime.wsUrl.trim();
   const enableRealtime = realtime.enabled;
   const useMqtt = realtime.useMqtt;
@@ -94,9 +102,53 @@ function App() {
   useEffect(() => startAmbientData(), []);
   useEffect(() => startFlowRuntime(), []);
   useEffect(() => {
+    let active = true;
+    const loadMembership = async () => {
+      const result = await syncMembershipFromSupabase();
+      if (!active || !result) return;
+      suppressNextAwayAudit.current = true;
+      setHouseholdFromRemote(result.household);
+      setRoomMembersFromRemote(result.roomMembers);
+      setActiveMember(result.activeMemberId);
+    };
+    void loadMembership();
+    return () => {
+      active = false;
+    };
+  }, [setActiveMember, setHouseholdFromRemote, setRoomMembersFromRemote]);
+  useEffect(() => {
     if (!notificationsEnabled) return;
     ensureNotificationsReady().catch(() => {});
   }, [notificationsEnabled]);
+  useEffect(() => {
+    const houseOccupied = household.some((member) => member.status === "home");
+
+    if (suppressNextAwayAudit.current) {
+      lastHouseOccupied.current = houseOccupied;
+      suppressNextAwayAudit.current = false;
+      return;
+    }
+
+    if (lastHouseOccupied.current === null) {
+      lastHouseOccupied.current = houseOccupied;
+      return;
+    }
+
+    if (!notificationsEnabled) {
+      lastHouseOccupied.current = houseOccupied;
+      return;
+    }
+
+    const everyoneJustLeft = lastHouseOccupied.current && !houseOccupied;
+    if (everyoneJustLeft) {
+      const issues = collectAwaySecurityIssues(devices);
+      if (issues.length) {
+        notifyHomeLeftUnsecured(issues).catch(() => {});
+      }
+    }
+
+    lastHouseOccupied.current = houseOccupied;
+  }, [devices, household, notificationsEnabled]);
   useEffect(() => {
     if (utilityLocationMode !== "device") return;
     syncDeviceUtilityLocation();
@@ -111,6 +163,7 @@ function App() {
       syncMembershipFromSupabase()
         .then((result) => {
           if (!result) return;
+          suppressNextAwayAudit.current = true;
           setHouseholdFromRemote(result.household);
           setRoomMembersFromRemote(result.roomMembers);
           setActiveMember(result.activeMemberId);

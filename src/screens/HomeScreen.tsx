@@ -27,7 +27,6 @@ import {
   selectVisibleRooms,
   useHomeStore,
 } from "../store/useHomeStore";
-import { syncMembershipFromSupabase } from "../services/membership";
 import { useResponsive } from "../theme/layout";
 import {
   notifyAirAlert,
@@ -86,11 +85,6 @@ export default function HomeScreen() {
   const prefs = useHomeStore((s) => s.preferences);
   const addRoom = useHomeStore((s) => s.addRoom);
   const indoorFallback = useHomeStore((s) => s.indoor);
-  const setHouseholdFromRemote = useHomeStore((s) => s.setHouseholdFromRemote);
-  const setRoomMembersFromRemote = useHomeStore(
-    (s) => s.setRoomMembersFromRemote,
-  );
-  const setActiveMember = useHomeStore((s) => s.setActiveMember);
   const [activeRoomIndex, setActiveRoomIndex] = useState(0);
   const lastPowerOutage = useRef<boolean | null>(null);
   const lastSolarActive = useRef<boolean | null>(null);
@@ -301,21 +295,6 @@ export default function HomeScreen() {
     if (hour < 21) return "Good evening";
     return "Good night";
   }, [clock]);
-
-  useEffect(() => {
-    let active = true;
-    const loadMembership = async () => {
-      const result = await syncMembershipFromSupabase();
-      if (!active || !result) return;
-      setHouseholdFromRemote(result.household);
-      setRoomMembersFromRemote(result.roomMembers);
-      setActiveMember(result.activeMemberId);
-    };
-    void loadMembership();
-    return () => {
-      active = false;
-    };
-  }, [setActiveMember, setHouseholdFromRemote, setRoomMembersFromRemote]);
 
   useEffect(() => {
     const energy = devicesAll.find((device) => device.kind === "energy");

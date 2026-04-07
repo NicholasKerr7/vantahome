@@ -2,6 +2,10 @@ import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import type { NotificationCategory } from "../data/appNotifications";
 import { useHomeStore } from "../store/useHomeStore";
+import {
+  formatAwaySecuritySummary,
+  type SecurityAuditIssue,
+} from "./securityAudit";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -236,6 +240,22 @@ export async function notifyEntryOpen({
     `${deviceName} open`,
     `${Math.round(openPercent)}% open.`,
     { kind: "entry-open" },
+    { category: "security" },
+  );
+}
+
+export async function notifyHomeLeftUnsecured(
+  issues: SecurityAuditIssue[],
+) {
+  if (!issues.length) return;
+  await sendLocalNotification(
+    "Home left unsecured",
+    formatAwaySecuritySummary(issues),
+    {
+      kind: "away-security-audit",
+      issueCount: issues.length,
+      devices: issues.map((issue) => issue.deviceId),
+    },
     { category: "security" },
   );
 }
