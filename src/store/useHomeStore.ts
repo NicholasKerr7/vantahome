@@ -1899,16 +1899,21 @@ export const useHomeStore = create<State>()(
         }),
 
       addNotification: (notification) =>
-        set((state) => ({
-          notifications: [
-            {
-              ...notification,
-              id: notification.id ?? `n${Date.now()}`,
-              createdAt: notification.createdAt ?? Date.now(),
-            },
-            ...state.notifications,
-          ].slice(0, 100),
-        })),
+        set((state) => {
+          const nextId = notification.id ?? `n${Date.now()}`;
+          return {
+            notifications: [
+              {
+                ...notification,
+                id: nextId,
+                createdAt: notification.createdAt ?? Date.now(),
+              },
+              ...state.notifications.filter(
+                (existing) => existing.id !== nextId,
+              ),
+            ].slice(0, 100),
+          };
+        }),
 
       dismissNotification: (notificationId) =>
         set((state) => ({

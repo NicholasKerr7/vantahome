@@ -41,6 +41,7 @@ import {
 } from "../services/cloudRegistry";
 import { syncMembershipFromSupabase } from "../services/membership";
 import { supabase } from "../services/supabaseClient";
+import { disableRemotePushRegistration } from "../services/remotePush";
 import {
   DEFAULT_UTILITY_LOCATION_ID,
   UTILITY_RATE_OPTIONS,
@@ -1065,7 +1066,11 @@ export default function ProfileScreen({ navigation }: Props) {
         style: "destructive",
         onPress: async () => {
           if (supabase) {
-            await supabase.auth.signOut();
+            try {
+              await disableRemotePushRegistration();
+            } finally {
+              await supabase.auth.signOut();
+            }
           }
         },
       },

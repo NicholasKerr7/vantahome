@@ -15,6 +15,7 @@ import {
   formatAwaySecuritySummary,
   type SecurityAuditIssue,
 } from "./securityAudit";
+import { dispatchRemotePushNotification } from "./remotePush";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -79,14 +80,38 @@ export async function sendLocalNotification(
     category?: NotificationCategory;
     isNew?: boolean;
     bypassQuietHours?: boolean;
+    id?: string;
   },
 ) {
   const category = options?.category ?? "info";
   const state = useHomeStore.getState();
+  const notificationId =
+    options?.id ??
+    `n${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const bypassQuietHours =
     options?.bypassQuietHours ??
     (category === "security" &&
       shouldSecurityBypassQuietHours(state.profile.securityMode));
+  const notificationData = {
+    ...(data ?? {}),
+    category,
+    title,
+    body,
+    appNotificationId: notificationId,
+    isNew: options?.isNew ?? true,
+    deliveryOrigin: "local",
+  } satisfies Record<string, unknown>;
+
+  dispatchRemotePushNotification({
+    title,
+    body,
+    category,
+    data: notificationData,
+    bypassQuietHours,
+    appNotificationId: notificationId,
+    isNew: options?.isNew ?? true,
+  }).catch(() => {});
+
   const deliveryState = getNotificationDeliveryState(
     state.preferences,
     category,
@@ -106,7 +131,7 @@ export async function sendLocalNotification(
           title,
           body,
           sound: "default",
-          data,
+          data: notificationData,
         },
         trigger: null,
       });
@@ -116,6 +141,7 @@ export async function sendLocalNotification(
   }
 
   useHomeStore.getState().addNotification({
+    id: notificationId,
     title,
     body,
     category,

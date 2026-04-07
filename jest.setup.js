@@ -70,6 +70,28 @@ jest.mock("expo-video", () => {
   };
 });
 
+jest.mock("expo-device", () => ({
+  isDevice: true,
+  deviceName: "Jest Device",
+  modelName: "Jest Model",
+}));
+
+jest.mock("expo-constants", () => {
+  const constants = {
+    easConfig: { projectId: "test-project-id" },
+    expoConfig: {
+      version: "1.0.0",
+      extra: { eas: { projectId: "test-project-id" } },
+    },
+    nativeAppVersion: "1.0.0",
+  };
+  return {
+    __esModule: true,
+    default: constants,
+    ...constants,
+  };
+});
+
 // Extend Jest with @testing-library/jest-native matchers.
 require("@testing-library/jest-native/extend-expect");
 

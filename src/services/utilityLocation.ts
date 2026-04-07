@@ -1,10 +1,23 @@
-import * as Location from "expo-location";
 import {
   DEFAULT_UTILITY_LOCATION_ID,
   resolveUtilityLocationFromGeo,
   type UtilityLocationId,
   type UtilityLocationStatus,
 } from "../data/utilityRates";
+
+type ExpoLocationModule = typeof import("expo-location");
+
+let cachedLocationModule: ExpoLocationModule | null | undefined;
+
+function getLocationModule() {
+  if (cachedLocationModule !== undefined) return cachedLocationModule;
+  try {
+    cachedLocationModule = require("expo-location") as ExpoLocationModule;
+  } catch {
+    cachedLocationModule = null;
+  }
+  return cachedLocationModule;
+}
 
 export type DeviceUtilityLocationResult =
   | {
@@ -27,6 +40,10 @@ export type DeviceUtilityLocationPatch = {
 };
 
 async function resolveUtilityLocationFromDevice(): Promise<DeviceUtilityLocationResult> {
+  const Location = getLocationModule();
+  if (!Location) {
+    return { kind: "unavailable" };
+  }
   try {
     const lastKnown = await Location.getLastKnownPositionAsync({
       maxAge: 1000 * 60 * 15,
@@ -59,6 +76,10 @@ async function resolveUtilityLocationFromDevice(): Promise<DeviceUtilityLocation
 }
 
 export async function requestUtilityLocationFromDevice(): Promise<DeviceUtilityLocationResult> {
+  const Location = getLocationModule();
+  if (!Location) {
+    return { kind: "unavailable" };
+  }
   const permission = await Location.requestForegroundPermissionsAsync();
   if (permission.status !== "granted") {
     return { kind: "permission-denied" };
@@ -67,6 +88,10 @@ export async function requestUtilityLocationFromDevice(): Promise<DeviceUtilityL
 }
 
 export async function refreshUtilityLocationFromDeviceIfAuthorized(): Promise<DeviceUtilityLocationResult | null> {
+  const Location = getLocationModule();
+  if (!Location) {
+    return null;
+  }
   const permission = await Location.getForegroundPermissionsAsync();
   if (permission.status !== "granted") {
     return null;

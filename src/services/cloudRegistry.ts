@@ -130,6 +130,50 @@ export async function pushDeviceStateBatch(events: DeviceStateEvent[]) {
   );
 }
 
+export type PushDeviceRegistrationPayload = {
+  installationId: string;
+  expoPushToken?: string | null;
+  platform: "ios" | "android" | "web" | "unknown";
+  deviceName?: string | null;
+  deviceModel?: string | null;
+  appVersion?: string | null;
+  preferenceState: Record<string, unknown>;
+  disabled?: boolean;
+};
+
+export async function registerPushDevice(
+  payload: PushDeviceRegistrationPayload,
+) {
+  return callEdge<{
+    device: {
+      id: string;
+      home_id: string;
+      user_id: string;
+      installation_id: string;
+      expo_push_token: string | null;
+      disabled_at: string | null;
+      last_seen_at: string;
+    };
+  }>("push-register", payload);
+}
+
+export type RemotePushDispatchPayload = {
+  title: string;
+  body: string;
+  category: "alert" | "device" | "scene" | "automation" | "security" | "info";
+  data?: Record<string, unknown>;
+  bypassQuietHours?: boolean;
+  originPushToken?: string | null;
+  appNotificationId?: string;
+  isNew?: boolean;
+};
+
+export async function dispatchRemotePushNotification(
+  payload: RemotePushDispatchPayload,
+) {
+  return callEdge<{ sent: number; tickets: number }>("push-dispatch", payload);
+}
+
 export function deviceToStateEvent(device: Device): DeviceStateEvent {
   const { id, name, kind, roomId, ...state } = device;
   return { deviceId: id, state };

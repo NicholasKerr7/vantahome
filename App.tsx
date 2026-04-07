@@ -20,6 +20,7 @@ import {
   syncPresenceFromCurrentLocationIfAuthorized,
   syncPresenceGeofencingFromProfile,
 } from "./src/services/presenceGeofencing";
+import { startRemotePushInboxSync } from "./src/services/remotePush";
 import * as Sentry from "@sentry/react-native";
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
@@ -123,6 +124,7 @@ function App() {
 
   useEffect(() => startAmbientData(), []);
   useEffect(() => startFlowRuntime(), []);
+  useEffect(() => startRemotePushInboxSync(), []);
   useEffect(() => {
     let active = true;
     const loadMembership = async () => {

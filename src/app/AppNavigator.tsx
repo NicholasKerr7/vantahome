@@ -25,6 +25,7 @@ import { theme } from "../theme/theme";
 import { supabase } from "../services/supabaseClient";
 import { syncMembershipFromSupabase } from "../services/membership";
 import { bootstrapHome } from "../services/cloudRegistry";
+import { syncRemotePushRegistration } from "../services/remotePush";
 import { useHomeStore } from "../store/useHomeStore";
 
 /**
@@ -62,6 +63,8 @@ export default function AppNavigator() {
     (s) => s.setRoomMembersFromRemote,
   );
   const setActiveMember = useHomeStore((s) => s.setActiveMember);
+  const preferences = useHomeStore((s) => s.preferences);
+  const timezone = useHomeStore((s) => s.profile.timezone);
 
   useEffect(() => {
     if (!supabase) return;
@@ -120,6 +123,14 @@ export default function AppNavigator() {
       active = false;
     };
   }, [session, setActiveMember, setHouseholdFromRemote, setRoomMembersFromRemote]);
+
+  useEffect(() => {
+    if (!session) return;
+    syncRemotePushRegistration({
+      preferences,
+      timezone,
+    }).catch(() => {});
+  }, [preferences, session, timezone]);
 
   if (!authReady) {
     return null;
