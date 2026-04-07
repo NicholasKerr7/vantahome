@@ -1258,6 +1258,7 @@ export default function ProfileScreen({ navigation }: Props) {
           style={[styles.avatarBtn, utilityLocationBusy && secondaryButtonDisabledStyle]}
           onPress={handleUseCurrentLocation}
           disabled={utilityLocationBusy}
+          testID="utility-use-current-location-button"
         >
           <Ionicons
             name={
@@ -1276,6 +1277,7 @@ export default function ProfileScreen({ navigation }: Props) {
           <Pressable
             style={[styles.avatarBtn, styles.avatarBtnGhost]}
             onPress={useManualUtilityMode}
+            testID="utility-use-manual-rates-button"
           >
             <Ionicons
               name="options-outline"
@@ -1289,7 +1291,7 @@ export default function ProfileScreen({ navigation }: Props) {
       <Text style={cardHintTextStyle}>
         Used for estimated daily energy and water cost.
       </Text>
-      <Text style={cardHintTextStyle}>
+      <Text style={cardHintTextStyle} testID="utility-summary-text">
         {utilitySummaryText}
       </Text>
       <Text style={cardHintTextStyle}>

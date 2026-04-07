@@ -33,6 +33,12 @@ const persistentNotificationState = new Map<
   { activeSince: number; lastSentAt: number }
 >();
 
+export function resetNotificationRuntimeState() {
+  permissionReady = null;
+  permissionGranted = null;
+  persistentNotificationState.clear();
+}
+
 type PersistentNotificationOptions = {
   key: string;
   active: boolean;

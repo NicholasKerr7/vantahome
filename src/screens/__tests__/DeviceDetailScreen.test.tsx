@@ -2,6 +2,7 @@ import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import DeviceDetailScreen from "../DeviceDetailScreen";
 import { useHomeStore } from "../../store/useHomeStore";
+import { deviceClient } from "../../services/deviceClient";
 
 const mockLayout = {
   width: 390,
@@ -71,6 +72,12 @@ jest.mock("react-native-safe-area-context", () => {
   };
 });
 
+jest.mock("../../services/deviceClient", () => ({
+  deviceClient: {
+    sendCommand: jest.fn(() => Promise.resolve()),
+  },
+}));
+
 describe("DeviceDetailScreen", () => {
   beforeEach(() => {
     act(() => {
@@ -109,6 +116,36 @@ describe("DeviceDetailScreen", () => {
 
     const editCard = tree.root.findByProps({ testID: "device-edit-card" });
     expect(editCard).toBeTruthy();
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it("sends a patch command when the power button is pressed", () => {
+    const navigation = { goBack: jest.fn(), navigate: jest.fn() } as any;
+    const route = {
+      key: "DeviceDetail",
+      name: "DeviceDetail",
+      params: { deviceId: "d1" },
+    } as any;
+
+    let tree: ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(
+        <DeviceDetailScreen navigation={navigation} route={route} />,
+      );
+    });
+
+    act(() => {
+      tree.root.findByProps({ testID: "device-power-button" }).props.onPress();
+    });
+
+    expect(deviceClient.sendCommand).toHaveBeenCalledWith({
+      op: "patch",
+      deviceId: "d1",
+      patch: { isOn: true },
+    });
+
     act(() => {
       tree.unmount();
     });

@@ -13,7 +13,7 @@
     "mqtt:presence": "node scripts/mqtt-presence.js",
     "realtime:server": "node scripts/realtime-server.js",
     "test": "node --no-addons ./node_modules/jest/bin/jest.js --watchman=false",
-    "test:file": "node --no-addons ./node_modules/jest/bin/jest.js --runInBand --watchman=false --no-cache --forceExit --runTestsByPath"
+    "test:file": "node --no-addons ./node_modules/jest/bin/jest.js --runInBand --watchman=false --no-cache --runTestsByPath"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.4",

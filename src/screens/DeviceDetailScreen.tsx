@@ -9838,7 +9838,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
 
           <View style={powerDockStyle}>
-            <Pressable style={styles.powerWrap} onPress={handlePowerToggle}>
+            <Pressable
+              style={styles.powerWrap}
+              onPress={handlePowerToggle}
+              testID="device-power-button"
+            >
               <View style={powerRingStyle}>
                 <LinearGradient
                   colors={

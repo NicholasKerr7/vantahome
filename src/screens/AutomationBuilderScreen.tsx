@@ -814,8 +814,13 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     navigation.goBack();
   };
 
-  const renderRow = (label: string, text: string, onRemove: () => void) => (
-    <View style={itemRowStyle}>
+  const renderRow = (
+    key: string,
+    label: string,
+    text: string,
+    onRemove: () => void,
+  ) => (
+    <View key={key} style={itemRowStyle}>
       <View style={flex1Style}>
         <Text style={itemLabelStyle}>{label}</Text>
         <Text style={itemValueStyle}>{text}</Text>
@@ -855,6 +860,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           style={headerSaveButtonStyle(!canSave)}
           onPress={handleSave}
           disabled={!canSave}
+          testID="automation-save-button"
         >
           <Ionicons
             name="checkmark"
@@ -880,6 +886,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               placeholder="New flow"
               placeholderTextColor="rgba(255,255,255,0.45)"
               style={inputStyle}
+              testID="automation-name-input"
             />
 
             <View style={styles.switchRow}>
@@ -908,6 +915,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               <Pressable
                 style={addButtonStyle}
                 onPress={() => openEditor("trigger")}
+                testID="automation-add-trigger-button"
               >
                 <Ionicons
                   name="add"
@@ -922,6 +930,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             ) : (
               triggers.map((trigger, index) =>
                 renderRow(
+                  `trigger-${index}`,
                   "Trigger",
                   describeTrigger(trigger, deviceMap, sceneMap, memberMap),
                   () =>
@@ -940,6 +949,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               <Pressable
                 style={addButtonStyle}
                 onPress={() => openEditor("condition")}
+                testID="automation-add-condition-button"
               >
                 <Ionicons
                   name="add"
@@ -954,6 +964,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             ) : (
               conditions.map((condition, index) =>
                 renderRow(
+                  `condition-${index}`,
                   "Condition",
                   describeCondition(condition, deviceMap),
                   () =>
@@ -972,6 +983,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               <Pressable
                 style={addButtonStyle}
                 onPress={() => openEditor("action")}
+                testID="automation-add-action-button"
               >
                 <Ionicons
                   name="add"
@@ -986,6 +998,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             ) : (
               actions.map((action, index) =>
                 renderRow(
+                  `action-${index}`,
                   "Action",
                   describeAction(action, deviceMap, sceneMap),
                   () =>
@@ -1037,6 +1050,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               key={item.id}
               style={typeChipStyle(editorType === item.id)}
               onPress={() => setEditorType(item.id)}
+              testID={`automation-editor-type-${item.id}`}
             >
               <Text style={typeChipTextStyle(editorType === item.id)}>
                 {item.label}
@@ -1063,6 +1077,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   }
                   keyboardType="number-pad"
                   style={inputStyle}
+                  testID="automation-trigger-hour-input"
                 />
               </ModalField>
               <ModalField
@@ -1077,6 +1092,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   }
                   keyboardType="number-pad"
                   style={inputStyle}
+                  testID="automation-trigger-minute-input"
                 />
               </ModalField>
             </View>
@@ -1678,13 +1694,14 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           {editorSection === "action" && editorType === "notify" && (
             <View>
               <ModalField label="Message" labelStyle={inputLabelStyle}>
-                <TextInput
-                  value={draftMessage}
-                  onChangeText={setDraftMessage}
-                  placeholder="Send a notification"
-                  placeholderTextColor="rgba(12,12,18,0.45)"
-                  style={inputStyle}
-                />
+                  <TextInput
+                    value={draftMessage}
+                    onChangeText={setDraftMessage}
+                    placeholder="Send a notification"
+                    placeholderTextColor="rgba(12,12,18,0.45)"
+                    style={inputStyle}
+                    testID="automation-notify-message-input"
+                  />
               </ModalField>
             </View>
           )}
@@ -2261,7 +2278,11 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           )}
         </ScrollView>
 
-        <Pressable style={modalButtonStyle} onPress={addItem}>
+        <Pressable
+          style={modalButtonStyle}
+          onPress={addItem}
+          testID="automation-editor-submit-button"
+        >
           <Text style={modalButtonTextStyle}>Add {editorSection}</Text>
         </Pressable>
       </ModalCard>
