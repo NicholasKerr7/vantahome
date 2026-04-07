@@ -52,6 +52,11 @@ function App() {
   const presenceGeofenceRadiusM = useHomeStore(
     (s) => s.profile.presenceGeofenceRadiusM,
   );
+  const securityMode = useHomeStore((s) => s.profile.securityMode);
+  const securityModeSource = useHomeStore((s) => s.profile.securityModeSource);
+  const securityAutoSyncWithPresence = useHomeStore(
+    (s) => s.profile.securityAutoSyncWithPresence,
+  );
   const utilityLocation = useHomeStore((s) => s.profile.utilityLocation);
   const utilityLocationManual = useHomeStore(
     (s) => s.profile.utilityLocationManual,
@@ -64,6 +69,7 @@ function App() {
     (s) => s.profile.utilityLocationStatus,
   );
   const setProfile = useHomeStore((s) => s.setProfile);
+  const setSecurityMode = useHomeStore((s) => s.setSecurityMode);
   const setHouseholdFromRemote = useHomeStore((s) => s.setHouseholdFromRemote);
   const setRoomMembersFromRemote = useHomeStore(
     (s) => s.setRoomMembersFromRemote,
@@ -158,8 +164,37 @@ function App() {
     }
 
     if (lastHouseOccupied.current === null) {
+      if (securityAutoSyncWithPresence) {
+        if (!houseOccupied && securityMode !== "away") {
+          setSecurityMode("away", { source: "presence" });
+        }
+        if (
+          houseOccupied &&
+          securityMode === "away" &&
+          securityModeSource !== "manual"
+        ) {
+          setSecurityMode("home", { source: "presence" });
+        }
+      }
       lastHouseOccupied.current = houseOccupied;
       return;
+    }
+
+    if (securityAutoSyncWithPresence) {
+      const everyoneJustLeft = lastHouseOccupied.current && !houseOccupied;
+      const someoneJustArrived = !lastHouseOccupied.current && houseOccupied;
+
+      if (everyoneJustLeft && securityMode !== "away") {
+        setSecurityMode("away", { source: "presence" });
+      }
+
+      if (
+        someoneJustArrived &&
+        securityMode === "away" &&
+        securityModeSource !== "manual"
+      ) {
+        setSecurityMode("home", { source: "presence" });
+      }
     }
 
     if (!notificationsEnabled) {
@@ -173,7 +208,14 @@ function App() {
     }
 
     lastHouseOccupied.current = houseOccupied;
-  }, [household, notificationsEnabled]);
+  }, [
+    household,
+    notificationsEnabled,
+    securityAutoSyncWithPresence,
+    securityMode,
+    securityModeSource,
+    setSecurityMode,
+  ]);
   useEffect(() => {
     if (utilityLocationMode !== "device") return;
     syncDeviceUtilityLocation();

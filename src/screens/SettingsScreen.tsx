@@ -38,6 +38,13 @@ import {
   getNotificationRepeatMinutes,
   normalizeNotificationCategorySettings,
 } from "../data/notificationControls";
+import {
+  SECURITY_MODE_OPTIONS,
+  getSecurityModeDescription,
+  getSecurityModeLabel,
+  getSecurityModeNotificationSummary,
+  type SecurityMode,
+} from "../data/securityModes";
 import { useResponsive } from "../theme/layout";
 import { deviceClient, type ConnectionStatus } from "../services/deviceClient";
 import {
@@ -123,12 +130,14 @@ export default function SettingsScreen() {
   const integrations = useHomeStore((s) => s.integrations);
   const prefs = useHomeStore((s) => s.preferences);
   const realtime = useHomeStore((s) => s.realtime);
+  const household = useHomeStore((s) => s.household);
   const linkIntegration = useHomeStore((s) => s.linkIntegration);
   const setIntegrationStatus = useHomeStore((s) => s.setIntegrationStatus);
   const unlinkIntegration = useHomeStore((s) => s.unlinkIntegration);
   const resyncIntegration = useHomeStore((s) => s.resyncIntegration);
   const setPreferences = useHomeStore((s) => s.setPreferences);
   const setRealtime = useHomeStore((s) => s.setRealtime);
+  const setSecurityMode = useHomeStore((s) => s.setSecurityMode);
   const userName = useHomeStore((s) => s.userName);
   const notificationCategories = normalizeNotificationCategorySettings(
     prefs.notificationCategories,
@@ -136,6 +145,11 @@ export default function SettingsScreen() {
   const notificationRepeatMinutes = getNotificationRepeatMinutes(prefs);
   const notificationOpenDelayMinutes = getNotificationOpenDelayMinutes(prefs);
   const quietHoursSummary = formatQuietHoursSummary(prefs);
+  const securityMode = profile.securityMode ?? "home";
+  const securityModeSource = profile.securityModeSource ?? "manual";
+  const securityAutoSyncWithPresence =
+    profile.securityAutoSyncWithPresence ?? true;
+  const houseOccupied = household.some((member) => member.status === "home");
   const navigation = useNavigation<any>();
   const voiceFunctionsBase = useMemo(() => {
     const explicit = process.env.EXPO_PUBLIC_VOICE_FUNCTIONS_URL?.trim();
@@ -164,6 +178,20 @@ export default function SettingsScreen() {
     if (custom) return custom;
     return userName ? `${userName}'s Home` : "Your Home";
   }, [profile.homeName, userName]);
+  const securityModeDescription = useMemo(
+    () => getSecurityModeDescription(securityMode),
+    [securityMode],
+  );
+  const securityModeNotificationSummary = useMemo(
+    () => getSecurityModeNotificationSummary(securityMode),
+    [securityMode],
+  );
+  const securityModeSourceLabel =
+    securityModeSource === "presence"
+      ? "Presence"
+      : securityModeSource === "schedule"
+        ? "Schedule"
+        : "Manual";
   const columnCount = useMemo(() => {
     if (!isWide) return 1;
     const availableWidth = width - outerGutter * 2 - innerGutter * 2;
@@ -961,6 +989,22 @@ export default function SettingsScreen() {
     });
   };
 
+  const setSecurityModeManual = (mode: SecurityMode) => {
+    setSecurityMode(mode, { source: "manual" });
+  };
+
+  const handleSecurityPresenceSyncChange = (value: boolean) => {
+    setProfile({ securityAutoSyncWithPresence: value });
+    if (!value) return;
+    if (!houseOccupied) {
+      setSecurityMode("away", { source: "presence" });
+      return;
+    }
+    if (securityMode === "away") {
+      setSecurityMode("home", { source: "presence" });
+    }
+  };
+
   const homeProfileCard = (
     <View style={cardStyle} key="home-profile">
       <Text style={sectionTitleStyle}>Home Profile</Text>
@@ -996,6 +1040,72 @@ export default function SettingsScreen() {
           {cloudSyncLoading ? "Syncing…" : "Resync to cloud"}
         </Text>
       </Pressable>
+    </View>
+  );
+
+  const securityModesCard = (
+    <View style={cardStyle} key="security-modes">
+      <Text style={sectionTitleStyle}>Security Modes</Text>
+      <Text style={sectionSubStyle}>
+        Home keeps indoor cameras private, Away locks the house down, and Night
+        tightens overnight security.
+      </Text>
+      <Text style={notificationGroupLabelStyle}>Current mode</Text>
+      <View style={styles.controlChipRow}>
+        {SECURITY_MODE_OPTIONS.map((item) => {
+          const active = securityMode === item.id;
+          return (
+            <Pressable
+              key={item.id}
+              style={controlChipStyle(active)}
+              onPress={() => setSecurityModeManual(item.id)}
+            >
+              <Text style={controlChipTextStyle(active)}>{item.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={notificationSubStyle}>{securityModeDescription}</Text>
+      <View style={styles.settingsDivider} />
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Current status</Text>
+        <Text style={rowValueStyle}>{getSecurityModeLabel(securityMode)}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Mode source</Text>
+        <Text style={rowValueStyle}>{securityModeSourceLabel}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>House occupancy</Text>
+        <Text style={rowValueStyle}>{houseOccupied ? "Occupied" : "Empty"}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Follow presence</Text>
+        <Switch
+          value={securityAutoSyncWithPresence}
+          onValueChange={handleSecurityPresenceSyncChange}
+          thumbColor={
+            securityAutoSyncWithPresence
+              ? theme.colors.accent
+              : "rgba(255,255,255,0.8)"
+          }
+          trackColor={{
+            true: "rgba(180,107,255,0.45)",
+            false: "rgba(255,255,255,0.24)",
+          }}
+          style={switchScaleStyle}
+        />
+      </View>
+      <Text style={notificationSubStyle}>
+        {securityAutoSyncWithPresence
+          ? "Away mode applies when the home becomes empty, and Home restores automatically when someone returns."
+          : "Manual mode stays in place until you change it."}
+      </Text>
+      <View style={styles.settingsDivider} />
+      <Text style={notificationGroupLabelStyle}>Alert behavior</Text>
+      <Text style={notificationSubStyle}>
+        {securityModeNotificationSummary}
+      </Text>
     </View>
   );
 
@@ -1311,12 +1421,19 @@ export default function SettingsScreen() {
   const cards = __DEV__
     ? [
         homeProfileCard,
+        securityModesCard,
         preferencesCard,
         realtimeCard,
         securityCard,
         supportCard,
       ]
-    : [homeProfileCard, preferencesCard, securityCard, supportCard];
+    : [
+        homeProfileCard,
+        securityModesCard,
+        preferencesCard,
+        securityCard,
+        supportCard,
+      ];
   const cardColumns = Array.from(
     { length: columnCount },
     () => [] as React.ReactNode[],

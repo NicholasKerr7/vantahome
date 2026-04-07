@@ -73,6 +73,11 @@ beforeEach(() => {
     preferences: { ...seed.preferences },
     realtime: { ...seed.realtime },
     household: seed.household.map((m) => ({ ...m })),
+    roomMembers: seed.roomMembers.map((entry) => ({
+      ...entry,
+      roomIds: [...entry.roomIds],
+    })),
+    activeMemberId: seed.activeMemberId,
   });
 });
 
@@ -345,5 +350,164 @@ describe("useHomeStore", () => {
     expect(useHomeStore.getState().integrations.alexa.status).toBe(
       "not-linked",
     );
+  });
+
+  it("setSecurityMode away closes entries and arms all cameras", () => {
+    const now = jest.spyOn(Date, "now").mockReturnValue(9000);
+
+    useHomeStore.setState({
+      profile: {
+        ...useHomeStore.getState().profile,
+        securityMode: "home",
+        securityModeSource: "manual",
+      },
+      devices: [
+        {
+          id: "door1",
+          name: "Front Door",
+          kind: "door",
+          roomId: "r1",
+          isOn: true,
+          openPercent: 65,
+        },
+        {
+          id: "gate1",
+          name: "Front Gate",
+          kind: "gate",
+          roomId: "r1",
+          isOn: true,
+          openPercent: 100,
+          autoOpenEnabled: true,
+        },
+        {
+          id: "garage1",
+          name: "Garage",
+          kind: "garage",
+          roomId: "r1",
+          isOn: true,
+          openPercent: 30,
+        },
+        {
+          id: "cam-entry",
+          name: "Entry Camera",
+          kind: "camera",
+          roomId: "r1",
+          isOn: false,
+          armed: false,
+          motionAlerts: false,
+          recording: false,
+          nightVision: false,
+        },
+        {
+          id: "cam-office",
+          name: "Office Camera",
+          kind: "camera",
+          roomId: "r4",
+          isOn: false,
+          armed: false,
+          motionAlerts: false,
+          recording: false,
+          nightVision: false,
+        },
+      ],
+    });
+
+    useHomeStore.getState().setSecurityMode("away", { source: "presence" });
+
+    const state = useHomeStore.getState();
+    expect(state.profile.securityMode).toBe("away");
+    expect(state.profile.securityModeSource).toBe("presence");
+    expect(state.profile.securityLastModeChangeAt).toBe(9000);
+    expect(state.devices.find((device) => device.id === "door1")?.openPercent).toBe(
+      0,
+    );
+    expect(state.devices.find((device) => device.id === "gate1")?.openPercent).toBe(
+      0,
+    );
+    expect(
+      state.devices.find((device) => device.id === "gate1")?.autoOpenEnabled,
+    ).toBe(false);
+    expect(
+      state.devices.find((device) => device.id === "garage1")?.openPercent,
+    ).toBe(0);
+
+    const entryCamera = state.devices.find((device) => device.id === "cam-entry");
+    const officeCamera = state.devices.find(
+      (device) => device.id === "cam-office",
+    );
+    expect(entryCamera?.isOn).toBe(true);
+    expect(entryCamera?.armed).toBe(true);
+    expect(entryCamera?.motionAlerts).toBe(true);
+    expect(entryCamera?.nightVision).toBe(true);
+    expect(entryCamera?.recording).toBe(true);
+    expect(entryCamera?.lastSeenAt).toBe(9000);
+    expect(officeCamera?.isOn).toBe(true);
+    expect(officeCamera?.armed).toBe(true);
+    expect(officeCamera?.motionAlerts).toBe(true);
+    expect(officeCamera?.nightVision).toBe(true);
+    now.mockRestore();
+  });
+
+  it("setSecurityMode home and night preserve perimeter focus", () => {
+    useHomeStore.setState({
+      profile: {
+        ...useHomeStore.getState().profile,
+        securityMode: "away",
+        securityModeSource: "presence",
+      },
+      devices: [
+        {
+          id: "cam-entry",
+          name: "Entry Camera",
+          kind: "camera",
+          roomId: "r1",
+          isOn: true,
+          armed: true,
+          motionAlerts: true,
+          recording: true,
+          nightVision: true,
+        },
+        {
+          id: "cam-office",
+          name: "Office Camera",
+          kind: "camera",
+          roomId: "r4",
+          isOn: true,
+          armed: true,
+          motionAlerts: true,
+          recording: true,
+          nightVision: true,
+        },
+      ],
+    });
+
+    useHomeStore.getState().setSecurityMode("home", { source: "manual" });
+
+    let state = useHomeStore.getState();
+    expect(state.devices.find((device) => device.id === "cam-entry")?.armed).toBe(
+      true,
+    );
+    expect(
+      state.devices.find((device) => device.id === "cam-entry")?.recording,
+    ).toBe(false);
+    expect(
+      state.devices.find((device) => device.id === "cam-office")?.armed,
+    ).toBe(false);
+    expect(
+      state.devices.find((device) => device.id === "cam-office")?.motionAlerts,
+    ).toBe(false);
+
+    useHomeStore.getState().setSecurityMode("night", { source: "manual" });
+    state = useHomeStore.getState();
+    expect(state.profile.securityMode).toBe("night");
+    expect(
+      state.devices.find((device) => device.id === "cam-entry")?.recording,
+    ).toBe(true);
+    expect(
+      state.devices.find((device) => device.id === "cam-office")?.armed,
+    ).toBe(false);
+    expect(
+      state.devices.find((device) => device.id === "cam-office")?.recording,
+    ).toBe(false);
   });
 });

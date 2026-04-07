@@ -5,6 +5,11 @@ import {
   getNotificationDeliveryState,
   getNotificationRepeatMinutes,
 } from "../data/notificationControls";
+import {
+  getSecurityNotificationDelayMinutes,
+  getSecurityNotificationRepeatMinutes,
+  shouldSecurityBypassQuietHours,
+} from "../data/securityModes";
 import { useHomeStore } from "../store/useHomeStore";
 import {
   formatAwaySecuritySummary,
@@ -77,11 +82,16 @@ export async function sendLocalNotification(
   },
 ) {
   const category = options?.category ?? "info";
+  const state = useHomeStore.getState();
+  const bypassQuietHours =
+    options?.bypassQuietHours ??
+    (category === "security" &&
+      shouldSecurityBypassQuietHours(state.profile.securityMode));
   const deliveryState = getNotificationDeliveryState(
-    useHomeStore.getState().preferences,
+    state.preferences,
     category,
     new Date(),
-    { bypassQuietHours: options?.bypassQuietHours },
+    { bypassQuietHours },
   );
   if (deliveryState !== "allowed") {
     return false;
@@ -134,11 +144,16 @@ export async function processPersistentNotification(
   }
 
   const runtimeState = persistentNotificationState.get(options.key)!;
-  const preferences = useHomeStore.getState().preferences;
+  const state = useHomeStore.getState();
+  const preferences = state.preferences;
+  const bypassQuietHours =
+    options.category === "security" &&
+    shouldSecurityBypassQuietHours(state.profile.securityMode);
   const deliveryState = getNotificationDeliveryState(
     preferences,
     options.category,
     new Date(now),
+    { bypassQuietHours },
   );
 
   if (deliveryState === "muted") {
@@ -149,9 +164,23 @@ export async function processPersistentNotification(
     return false;
   }
 
-  const delayMinutes = options.delayMinutes ?? 0;
-  const repeatMinutes =
+  const baseDelayMinutes = options.delayMinutes ?? 0;
+  const delayMinutes =
+    options.category === "security"
+      ? getSecurityNotificationDelayMinutes(
+          state.profile.securityMode,
+          baseDelayMinutes,
+        )
+      : baseDelayMinutes;
+  const baseRepeatMinutes =
     options.repeatMinutes ?? getNotificationRepeatMinutes(preferences);
+  const repeatMinutes =
+    options.category === "security"
+      ? getSecurityNotificationRepeatMinutes(
+          state.profile.securityMode,
+          baseRepeatMinutes,
+        )
+      : baseRepeatMinutes;
   const delayMs = Math.max(0, delayMinutes) * 60 * 1000;
   const repeatMs = Math.max(0, repeatMinutes) * 60 * 1000;
 

@@ -17,6 +17,12 @@ import {
   type UtilityLocationMode,
   type UtilityLocationStatus,
 } from "../data/utilityRates";
+import {
+  defaultSecurityModeFields,
+  getSecurityModeLabel,
+  type SecurityMode,
+  type SecurityModeSource,
+} from "../data/securityModes";
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -425,6 +431,10 @@ type Profile = {
   presenceGeofenceRadiusM?: number;
   presenceGeofenceLabel?: string;
   presenceLastSecurityAuditAt?: number;
+  securityMode?: SecurityMode;
+  securityModeSource?: SecurityModeSource;
+  securityAutoSyncWithPresence?: boolean;
+  securityLastModeChangeAt?: number;
 };
 
 type State = {
@@ -465,6 +475,10 @@ type State = {
   setIndoor: (patch: Partial<AmbientReading>) => void;
   setPreferences: (patch: Partial<Preferences>) => void;
   setRealtime: (patch: Partial<RealtimeSettings>) => void;
+  setSecurityMode: (
+    mode: SecurityMode,
+    options?: { source?: SecurityModeSource },
+  ) => void;
   setDevice: (deviceId: string, patch: Partial<Device>) => void;
   setAC: (deviceId: string, patch: Partial<Device>) => void;
   toggleDevice: (deviceId: string) => void;
@@ -588,6 +602,7 @@ const profileSeed: Profile = {
   presenceGeofenceRadiusM: 120,
   presenceGeofenceLabel: "",
   presenceLastSecurityAuditAt: 0,
+  ...defaultSecurityModeFields,
 };
 
 const outdoorSeed: AmbientReading = {
@@ -1668,6 +1683,92 @@ const flowsSeed: AutomationFlow[] = [
   },
 ];
 
+const SECURITY_ENTRY_KINDS = new Set<Device["kind"]>([
+  "door",
+  "garage",
+  "gate",
+]);
+const PERIMETER_CAMERA_PATTERN =
+  /(entry|front|gate|garage|patio|porch|outdoor|outside|driveway|yard)/i;
+
+function isPerimeterCamera(device: Device) {
+  if (device.kind !== "camera") return false;
+  return PERIMETER_CAMERA_PATTERN.test(device.name);
+}
+
+function applySecurityModeToDevice(
+  device: Device,
+  mode: SecurityMode,
+  changedAt: number,
+): Device {
+  if (SECURITY_ENTRY_KINDS.has(device.kind)) {
+    return {
+      ...device,
+      isOn: false,
+      openPercent: 0,
+      openLastActor: `${getSecurityModeLabel(mode)} mode`,
+      ...(device.kind === "gate" && mode !== "home"
+        ? { autoOpenEnabled: false }
+        : {}),
+    };
+  }
+
+  if (device.kind !== "camera") return device;
+
+  const perimeter = isPerimeterCamera(device);
+
+  if (mode === "away") {
+    return {
+      ...device,
+      isOn: true,
+      armed: true,
+      motionAlerts: true,
+      nightVision: true,
+      recording: perimeter ? true : device.recording ?? false,
+      lastSeenAt: changedAt,
+    };
+  }
+
+  if (mode === "night") {
+    if (perimeter) {
+      return {
+        ...device,
+        isOn: true,
+        armed: true,
+        motionAlerts: true,
+        nightVision: true,
+        recording: true,
+        lastSeenAt: changedAt,
+      };
+    }
+    return {
+      ...device,
+      armed: false,
+      motionAlerts: false,
+      recording: false,
+    };
+  }
+
+  if (perimeter) {
+    return {
+      ...device,
+      isOn: true,
+      armed: true,
+      motionAlerts: true,
+      nightVision: true,
+      recording: false,
+      lastSeenAt: changedAt,
+    };
+  }
+
+  return {
+    ...device,
+    armed: false,
+    motionAlerts: false,
+    recording: false,
+  };
+}
+
 export const useHomeStore = create<State>()(
   persist(
     (set, get) => ({
@@ -1811,6 +1912,24 @@ export const useHomeStore = create<State>()(
         set((state) => ({
           realtime: { ...state.realtime, ...patch },
         })),
+
+      setSecurityMode: (mode, options) =>
+        set((state) => {
+          const nextSource =
+            options?.source ?? state.profile.securityModeSource ?? "manual";
+          const now = Date.now();
+          return {
+            profile: {
+              ...state.profile,
+              securityMode: mode,
+              securityModeSource: nextSource,
+              securityLastModeChangeAt: now,
+            },
+            devices: state.devices.map((device) =>
+              applySecurityModeToDevice(device, mode, now),
+            ),
+          };
+        }),
 
       setDevice: (deviceId, patch) =>
         set((state) => {
@@ -2196,15 +2315,19 @@ export const useHomeStore = create<State>()(
     }),
     {
       name: "vantahome-store",
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState, version) => {
         if (!persistedState || typeof persistedState !== "object")
           return {} as State;
         const state = persistedState as State;
-        if (version && version >= 5) {
+        if (version && version >= 6) {
           return {
             ...state,
+            profile: {
+              ...profileSeed,
+              ...state.profile,
+            },
             preferences: {
               haptics: state.preferences?.haptics ?? true,
               notifications: state.preferences?.notifications ?? true,
@@ -2227,6 +2350,10 @@ export const useHomeStore = create<State>()(
               };
         return {
           ...base,
+          profile: {
+            ...profileSeed,
+            ...base.profile,
+          },
           notifications: base.notifications ?? notificationsSeed,
           preferences: {
             haptics: base.preferences?.haptics ?? true,
