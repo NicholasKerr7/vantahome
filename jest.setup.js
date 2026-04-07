@@ -55,7 +55,7 @@ jest.mock("expo-video", () => {
     startPictureInPicture = jest.fn();
     stopPictureInPicture = jest.fn();
     render() {
-      return <View {...this.props} />;
+      return React.createElement(View, this.props);
     }
   }
   return {
