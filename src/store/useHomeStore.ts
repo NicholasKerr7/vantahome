@@ -584,6 +584,84 @@ type AccessScope = {
   roomIds: Set<string>;
 };
 
+type AccessPolicy = AccessScope & {
+  canManageRooms: boolean;
+  canManageDevices: boolean;
+  canManageHousehold: boolean;
+  canManageSecurity: boolean;
+  canManageIntegrations: boolean;
+  canManageAutomations: boolean;
+  canEditScenes: boolean;
+  canRunScenes: boolean;
+  canUseCameras: boolean;
+  canViewAllCameras: boolean;
+};
+
+const ROOM_MANAGEMENT_ROLES: HouseholdMember["role"][] = ["Owner", "Admin"];
+const SECURITY_MANAGEMENT_ROLES: HouseholdMember["role"][] = ["Owner", "Admin"];
+const INTEGRATION_MANAGEMENT_ROLES: HouseholdMember["role"][] = [
+  "Owner",
+  "Admin",
+];
+const SCENE_EDIT_ROLES: HouseholdMember["role"][] = [
+  "Owner",
+  "Admin",
+  "Member",
+  "Tenant",
+];
+const SCENE_RUN_ROLES: HouseholdMember["role"][] = [
+  "Owner",
+  "Admin",
+  "Member",
+  "Tenant",
+  "Guest",
+];
+const AUTOMATION_MANAGEMENT_ROLES: HouseholdMember["role"][] = [
+  "Owner",
+  "Admin",
+  "Member",
+  "Tenant",
+];
+const CAMERA_VIEW_ROLES: HouseholdMember["role"][] = [
+  "Owner",
+  "Admin",
+  "Member",
+  "Tenant",
+];
+const CAMERA_ALL_ROLES: HouseholdMember["role"][] = ["Owner", "Admin", "Member"];
+const TENANT_BLOCKED_DEVICE_KINDS = new Set<DeviceKind>([
+  "camera",
+  "door",
+  "gate",
+  "garage",
+  "energy",
+  "water",
+  "water-heater",
+  "smoke",
+  "sprinkler",
+]);
+const GUEST_CONTROLLABLE_DEVICE_KINDS = new Set<DeviceKind>([
+  "ac",
+  "light",
+  "tv",
+  "coffee",
+  "fridge",
+  "fan",
+  "vacuum",
+  "window",
+  "stove",
+  "washer",
+  "dryer",
+  "dishwasher",
+  "microwave",
+  "air",
+  "speaker",
+]);
+const allowsRole = (
+  roles: HouseholdMember["role"][],
+  role?: HouseholdMember["role"],
+) => !!role && roles.includes(role);
+
 const getAccessScope = (state: Pick<
   State,
   "rooms" | "household" | "roomMembers" | "activeMemberId"
@@ -609,6 +687,122 @@ const getAccessScope = (state: Pick<
   };
 };
 
+export const selectAccessPolicy = (
+  state: Pick<State, "rooms" | "household" | "roomMembers" | "activeMemberId">,
+): AccessPolicy => {
+  const scope = getAccessScope(state);
+  const role = scope.member?.role;
+  return {
+    ...scope,
+    canManageRooms: allowsRole(ROOM_MANAGEMENT_ROLES, role),
+    canManageDevices: allowsRole(ROOM_MANAGEMENT_ROLES, role),
+    canManageHousehold: allowsRole(ROOM_MANAGEMENT_ROLES, role),
+    canManageSecurity: allowsRole(SECURITY_MANAGEMENT_ROLES, role),
+    canManageIntegrations: allowsRole(INTEGRATION_MANAGEMENT_ROLES, role),
+    canManageAutomations: allowsRole(AUTOMATION_MANAGEMENT_ROLES, role),
+    canEditScenes: allowsRole(SCENE_EDIT_ROLES, role),
+    canRunScenes: allowsRole(SCENE_RUN_ROLES, role),
+    canUseCameras: allowsRole(CAMERA_VIEW_ROLES, role),
+    canViewAllCameras: allowsRole(CAMERA_ALL_ROLES, role),
+  };
+};
+
+export const canViewDeviceWithPolicy = (
+  policy: AccessPolicy,
+  device: Device,
+) => {
+  if (policy.fullAccess) return true;
+  if (!device.roomId || !policy.roomIds.has(device.roomId)) return false;
+  if (device.kind === "camera" && !policy.canUseCameras) return false;
+  return true;
+};
+
+export const canControlDeviceWithPolicy = (
+  policy: AccessPolicy,
+  device: Device,
+) => {
+  if (!canViewDeviceWithPolicy(policy, device)) return false;
+  const role = policy.member?.role;
+  if (!role) return false;
+  if (policy.fullAccess) return true;
+  if (role === "Tenant") {
+    return !TENANT_BLOCKED_DEVICE_KINDS.has(device.kind);
+  }
+  if (role === "Guest") {
+    return GUEST_CONTROLLABLE_DEVICE_KINDS.has(device.kind);
+  }
+  return false;
+};
+
+const getSceneDeviceIds = (scene: Scene) =>
+  Array.from(new Set(scene.actions.map((action) => action.deviceId)));
+
+export const canViewSceneWithPolicy = (
+  policy: AccessPolicy,
+  scene: Scene,
+  deviceMap: Map<string, Device>,
+) => {
+  if (!policy.roomIds.has(scene.roomId)) return false;
+  return getSceneDeviceIds(scene).every((deviceId) => {
+    const device = deviceMap.get(deviceId);
+    return !!device && canViewDeviceWithPolicy(policy, device);
+  });
+};
+
+export const canRunSceneWithPolicy = (
+  policy: AccessPolicy,
+  scene: Scene,
+  deviceMap: Map<string, Device>,
+) => {
+  if (!policy.canRunScenes) return false;
+  return getSceneDeviceIds(scene).every((deviceId) => {
+    const device = deviceMap.get(deviceId);
+    return !!device && canControlDeviceWithPolicy(policy, device);
+  });
+};
+
+const getFlowReferencedDeviceIds = (flow: AutomationFlow) => {
+  const ids = new Set<string>();
+  flow.triggers.forEach((trigger) => {
+    if ("deviceId" in trigger) ids.add(trigger.deviceId);
+  });
+  flow.conditions.forEach((condition) => {
+    if ("deviceId" in condition) ids.add(condition.deviceId);
+  });
+  flow.actions.forEach((action) => {
+    if ("deviceId" in action) ids.add(action.deviceId);
+    if (action.type === "branch") {
+      if ("deviceId" in action.condition) ids.add(action.condition.deviceId);
+      action.ifActions.forEach((item) => {
+        if ("deviceId" in item) ids.add(item.deviceId);
+      });
+      action.elseActions?.forEach((item) => {
+        if ("deviceId" in item) ids.add(item.deviceId);
+      });
+    }
+  });
+  return Array.from(ids);
+};
+
+export const selectCanManageRooms = (state: State) =>
+  selectAccessPolicy(state).canManageRooms;
+export const selectCanManageDevices = (state: State) =>
+  selectAccessPolicy(state).canManageDevices;
+export const selectCanManageHousehold = (state: State) =>
+  selectAccessPolicy(state).canManageHousehold;
+export const selectCanManageSecurity = (state: State) =>
+  selectAccessPolicy(state).canManageSecurity;
+export const selectCanManageIntegrations = (state: State) =>
+  selectAccessPolicy(state).canManageIntegrations;
+export const selectCanManageAutomations = (state: State) =>
+  selectAccessPolicy(state).canManageAutomations;
+export const selectCanEditScenes = (state: State) =>
+  selectAccessPolicy(state).canEditScenes;
+export const selectCanViewAllCameras = (state: State) =>
+  selectAccessPolicy(state).canViewAllCameras;
+export const selectCanUseCameras = (state: State) =>
+  selectAccessPolicy(state).canUseCameras;
+
 export const selectActiveMember = (state: State) =>
   state.household.find((m) => m.id === state.activeMemberId) ??
   state.household[0];
@@ -620,10 +814,52 @@ export const selectVisibleRooms = (state: State) => {
 };
 
 export const selectVisibleDevices = (state: State) => {
-  const scope = getAccessScope(state);
-  if (scope.fullAccess) return state.devices;
-  return state.devices.filter(
-    (device) => device.roomId && scope.roomIds.has(device.roomId),
+  const policy = selectAccessPolicy(state);
+  return state.devices.filter((device) => canViewDeviceWithPolicy(policy, device));
+};
+
+export const selectControllableDevices = (state: State) => {
+  const policy = selectAccessPolicy(state);
+  return state.devices.filter((device) =>
+    canControlDeviceWithPolicy(policy, device),
+  );
+};
+
+export const selectVisibleScenes = (state: State) => {
+  const policy = selectAccessPolicy(state);
+  const deviceMap = new Map(state.devices.map((device) => [device.id, device]));
+  return state.scenes.filter((scene) =>
+    canViewSceneWithPolicy(policy, scene, deviceMap),
+  );
+};
+
+export const selectRunnableScenes = (state: State) => {
+  const policy = selectAccessPolicy(state);
+  const deviceMap = new Map(state.devices.map((device) => [device.id, device]));
+  return state.scenes.filter((scene) =>
+    canRunSceneWithPolicy(policy, scene, deviceMap),
+  );
+};
+
+export const selectVisibleRules = (state: State) => {
+  const policy = selectAccessPolicy(state);
+  if (!policy.canManageAutomations) return [];
+  const deviceMap = new Map(state.devices.map((device) => [device.id, device]));
+  return state.rules.filter((rule) => {
+    const device = deviceMap.get(rule.action.deviceId);
+    return !!device && canControlDeviceWithPolicy(policy, device);
+  });
+};
+
+export const selectVisibleFlows = (state: State) => {
+  const policy = selectAccessPolicy(state);
+  if (!policy.canManageAutomations) return [];
+  const deviceMap = new Map(state.devices.map((device) => [device.id, device]));
+  return state.flows.filter((flow) =>
+    getFlowReferencedDeviceIds(flow).every((deviceId) => {
+      const device = deviceMap.get(deviceId);
+      return !!device && canControlDeviceWithPolicy(policy, device);
+    }),
   );
 };
 

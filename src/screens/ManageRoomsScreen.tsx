@@ -18,8 +18,9 @@ import PortraitFrame from "../components/PortraitFrame";
 import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
 import { theme } from "../theme/theme";
+import { useShallow } from "zustand/react/shallow";
 import {
-  selectActiveMember,
+  selectCanManageRooms,
   selectVisibleDevices,
   selectVisibleRooms,
   useHomeStore,
@@ -246,12 +247,9 @@ export default function ManageRoomsScreen({ navigation }: Props) {
     styles.modalPrimaryText,
     { fontSize: labelSize },
   ];
-  const rooms = useHomeStore(selectVisibleRooms);
-  const devices = useHomeStore(selectVisibleDevices);
-  const activeMember = useHomeStore(selectActiveMember);
-  const canManageRooms = activeMember
-    ? ["Owner", "Admin"].includes(activeMember.role)
-    : false;
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
+  const devices = useHomeStore(useShallow(selectVisibleDevices));
+  const canManageRooms = useHomeStore(selectCanManageRooms);
   const addRoom = useHomeStore((s) => s.addRoom);
   const renameRoom = useHomeStore((s) => s.renameRoom);
   const moveRoom = useHomeStore((s) => s.moveRoom);

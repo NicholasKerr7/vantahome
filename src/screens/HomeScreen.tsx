@@ -20,9 +20,11 @@ import RoomCarousel from "../components/RoomCarousel";
 import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
 import HeaderPill from "../components/HeaderPill";
+import { useShallow } from "zustand/react/shallow";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
+  selectControllableDevices,
   selectVisibleDevices,
   selectVisibleRooms,
   useHomeStore,
@@ -82,8 +84,9 @@ export default function HomeScreen() {
   const profile = useHomeStore((s) => s.profile);
   const tempUnit = profile.tempUnit ?? "C";
   const outdoor = useHomeStore((s) => s.outdoor);
-  const rooms = useHomeStore(selectVisibleRooms);
-  const devicesAll = useHomeStore(selectVisibleDevices);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
+  const devicesAll = useHomeStore(useShallow(selectVisibleDevices));
+  const controllableDevices = useHomeStore(useShallow(selectControllableDevices));
   const prefs = useHomeStore((s) => s.preferences);
   const addRoom = useHomeStore((s) => s.addRoom);
   const indoorFallback = useHomeStore((s) => s.indoor);
@@ -558,8 +561,8 @@ export default function HomeScreen() {
       return includesPhrase(normalized, roomName);
     });
     const scopedDevices = roomMatch
-      ? devicesAll.filter((device) => device.roomId === roomMatch.id)
-      : devicesAll;
+      ? controllableDevices.filter((device) => device.roomId === roomMatch.id)
+      : controllableDevices;
 
     const nameMatches = scopedDevices.filter((device) =>
       matchesDeviceName(device.name, normalized),

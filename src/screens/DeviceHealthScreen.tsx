@@ -8,6 +8,7 @@ import BackgroundLines from "../components/BackgroundLines";
 import Pressable from "../components/Pressable";
 import { useResponsive } from "../theme/layout";
 import { theme } from "../theme/theme";
+import { useShallow } from "zustand/react/shallow";
 import {
   selectVisibleDevices,
   selectVisibleRooms,
@@ -54,8 +55,8 @@ export default function DeviceHealthScreen({ navigation }: Props) {
     useResponsive(900);
   const isWide = isTablet && isLandscape;
   const insets = useSafeAreaInsets();
-  const devices = useHomeStore(selectVisibleDevices);
-  const rooms = useHomeStore(selectVisibleRooms);
+  const devices = useHomeStore(useShallow(selectVisibleDevices));
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
   const realtime = useHomeStore((s) => s.realtime);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
     deviceClient.getConnectionStatus(),

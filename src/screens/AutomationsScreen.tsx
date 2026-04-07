@@ -15,7 +15,10 @@ import { theme } from "../theme/theme";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
-  selectVisibleDevices,
+  selectCanManageAutomations,
+  selectControllableDevices,
+  selectVisibleFlows,
+  selectVisibleRules,
   useHomeStore,
 } from "../store/useHomeStore";
 import BackgroundLines from "../components/BackgroundLines";
@@ -29,6 +32,7 @@ import HeaderPill from "../components/HeaderPill";
 import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
 import ModalField from "../components/ModalField";
+import { useShallow } from "zustand/react/shallow";
 
 export default function AutomationsScreen() {
   const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
@@ -181,14 +185,15 @@ export default function AutomationsScreen() {
         )
       : "100%";
   const emptyCardWidth = cardColumns > 1 ? sectionContentWidth : "100%";
-  const allRules = useHomeStore((s) => s.rules);
-  const allFlows = useHomeStore((s) => s.flows);
+  const rules = useHomeStore(useShallow(selectVisibleRules));
+  const flows = useHomeStore(useShallow(selectVisibleFlows));
+  const canManageAutomations = useHomeStore(selectCanManageAutomations);
   const toggleRule = useHomeStore((s) => s.toggleRule);
   const addRule = useHomeStore((s) => s.addRule);
   const updateRule = useHomeStore((s) => s.updateRule);
   const removeRule = useHomeStore((s) => s.removeRule);
   const toggleFlow = useHomeStore((s) => s.toggleFlow);
-  const devices = useHomeStore(selectVisibleDevices);
+  const devices = useHomeStore(useShallow(selectControllableDevices));
   const navigation = useNavigation<any>();
 
   const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
@@ -208,36 +213,11 @@ export default function AutomationsScreen() {
   );
   const isAC = selectedDevice?.kind === "ac";
 
-  const visibleDeviceIds = useMemo(
-    () => new Set(devices.map((device) => device.id)),
-    [devices],
-  );
-  const rules = useMemo(
-    () =>
-      allRules.filter((rule) => visibleDeviceIds.has(rule.action.deviceId)),
-    [allRules, visibleDeviceIds],
-  );
-  const flows = useMemo(() => {
-    const hasAccess = (deviceId?: string) =>
-      deviceId ? visibleDeviceIds.has(deviceId) : true;
-    return allFlows.filter((flow) => {
-      const actionDevices = flow.actions
-        .filter((action) => "deviceId" in action)
-        .map((action) => (action as { deviceId: string }).deviceId);
-      const triggerDevices = flow.triggers
-        .filter((trigger) => "deviceId" in trigger)
-        .map((trigger) => (trigger as { deviceId: string }).deviceId);
-      const conditionDevices = flow.conditions
-        .filter((condition) => "deviceId" in condition)
-        .map((condition) => (condition as { deviceId: string }).deviceId);
-      return [...actionDevices, ...triggerDevices, ...conditionDevices].every(
-        (id) => hasAccess(id),
-      );
-    });
-  }, [allFlows, visibleDeviceIds]);
-
   const canCreate =
-    selectedDevice && /^\d{1,2}$/.test(hour) && /^\d{1,2}$/.test(minute);
+    canManageAutomations &&
+    selectedDevice &&
+    /^\d{1,2}$/.test(hour) &&
+    /^\d{1,2}$/.test(minute);
   const isEditing = modalMode === "edit";
   const editingRule = rules.find((r) => r.id === editingId);
   const flowSummary = (count: number, label: string) =>
@@ -468,6 +448,7 @@ export default function AutomationsScreen() {
   ];
 
   const openAdd = () => {
+    if (!canManageAutomations) return;
     setEditingId(null);
     setRuleName("");
     setHour("21");
@@ -479,6 +460,7 @@ export default function AutomationsScreen() {
   };
 
   const openEdit = (ruleId: string) => {
+    if (!canManageAutomations) return;
     const rule = rules.find((r) => r.id === ruleId);
     if (!rule) return;
     setEditingId(rule.id);
@@ -495,6 +477,7 @@ export default function AutomationsScreen() {
   };
 
   const handleSubmit = () => {
+    if (!canManageAutomations) return;
     if (!selectedDevice) return;
     const h = Math.max(0, Math.min(23, parseInt(hour, 10)));
     const m = Math.max(0, Math.min(59, parseInt(minute, 10)));
@@ -566,7 +549,11 @@ export default function AutomationsScreen() {
             </View>
             <Switch
               value={flow.enabled}
-              onValueChange={() => toggleFlow(flow.id)}
+              onValueChange={() => {
+                if (!canManageAutomations) return;
+                toggleFlow(flow.id);
+              }}
+              disabled={!canManageAutomations}
               trackColor={{
                 false: "rgba(255,255,255,0.18)",
                 true: "rgba(180,107,255,0.55)",
@@ -587,6 +574,7 @@ export default function AutomationsScreen() {
           key={r.id}
           style={cardStyle}
           onPress={() => openEdit(r.id)}
+          disabled={!canManageAutomations}
         >
           <View style={cardBodyStyle}>
             <Text style={cardNameStyle}>{r.name}</Text>
@@ -600,7 +588,11 @@ export default function AutomationsScreen() {
           </View>
           <Switch
             value={r.enabled}
-            onValueChange={() => toggleRule(r.id)}
+            onValueChange={() => {
+              if (!canManageAutomations) return;
+              toggleRule(r.id);
+            }}
+            disabled={!canManageAutomations}
             trackColor={{
               false: "rgba(255,255,255,0.18)",
               true: "rgba(180,107,255,0.55)",
@@ -626,8 +618,12 @@ export default function AutomationsScreen() {
             </Text>
           </View>
           <Pressable
-            style={sectionActionStyle}
-            onPress={() => navigation.navigate("AutomationBuilder")}
+            style={[sectionActionStyle, !canManageAutomations && styles.primaryBtnDisabled]}
+            onPress={() => {
+              if (!canManageAutomations) return;
+              navigation.navigate("AutomationBuilder");
+            }}
+            disabled={!canManageAutomations}
           >
             <Ionicons
               name="add"
@@ -655,8 +651,9 @@ export default function AutomationsScreen() {
             </Text>
           </View>
           <Pressable
-            style={sectionActionStyle}
+            style={[sectionActionStyle, !canManageAutomations && styles.primaryBtnDisabled]}
             onPress={openAdd}
+            disabled={!canManageAutomations}
           >
             <Ionicons
               name="add"
@@ -692,7 +689,9 @@ export default function AutomationsScreen() {
                 <View>
                   <Text style={headerTitleStyle}>Automations</Text>
                   <Text style={headerSubtitleStyle}>
-                    Build flows and schedules.
+                    {canManageAutomations
+                      ? "Build flows and schedules."
+                      : "Your role can view device activity, but automation editing is disabled."}
                   </Text>
                 </View>
                 <HeaderPill

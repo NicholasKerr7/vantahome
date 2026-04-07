@@ -1,4 +1,12 @@
 import {
+  selectCanManageHousehold,
+  selectCanManageSecurity,
+  selectControllableDevices,
+  selectVisibleDevices,
+  selectVisibleFlows,
+  selectVisibleRules,
+  selectRunnableScenes,
+  selectVisibleScenes,
   useHomeStore,
   type AutomationFlow,
   type AutomationRule,
@@ -169,6 +177,183 @@ describe("useHomeStore", () => {
     });
     useHomeStore.getState().removeRoom("r1");
     expect(useHomeStore.getState().rooms).toEqual([{ id: "r1", name: "Solo" }]);
+  });
+
+  it("guest visibility hides cameras and limits control to guest-safe devices", () => {
+    useHomeStore.setState({
+      rooms: [{ id: "r1", name: "Guest Suite" }],
+      household: [
+        { id: "m-guest", name: "Guest User", role: "Guest", status: "home" },
+      ],
+      roomMembers: [{ memberId: "m-guest", roomIds: ["r1"] }],
+      activeMemberId: "m-guest",
+      devices: [
+        { id: "light1", name: "Lamp", kind: "light", roomId: "r1", isOn: true },
+        { id: "tv1", name: "TV", kind: "tv", roomId: "r1", isOn: false },
+        {
+          id: "window1",
+          name: "Window",
+          kind: "window",
+          roomId: "r1",
+          isOn: false,
+          openPercent: 0,
+        },
+        {
+          id: "door1",
+          name: "Door",
+          kind: "door",
+          roomId: "r1",
+          isOn: false,
+          openPercent: 0,
+        },
+        { id: "cam1", name: "Camera", kind: "camera", roomId: "r1", isOn: true },
+      ],
+    });
+
+    const state = useHomeStore.getState();
+    expect(selectVisibleDevices(state).map((device) => device.id)).toEqual([
+      "light1",
+      "tv1",
+      "window1",
+      "door1",
+    ]);
+    expect(selectControllableDevices(state).map((device) => device.id)).toEqual([
+      "light1",
+      "tv1",
+      "window1",
+    ]);
+    expect(selectCanManageHousehold(state)).toBe(false);
+    expect(selectCanManageSecurity(state)).toBe(false);
+  });
+
+  it("tenant can view assigned-room cameras but cannot automate or control security devices", () => {
+    useHomeStore.setState({
+      rooms: [{ id: "r1", name: "Bedroom" }],
+      household: [
+        { id: "m-tenant", name: "Tenant User", role: "Tenant", status: "home" },
+      ],
+      roomMembers: [{ memberId: "m-tenant", roomIds: ["r1"] }],
+      activeMemberId: "m-tenant",
+      devices: [
+        { id: "light1", name: "Lamp", kind: "light", roomId: "r1", isOn: true },
+        {
+          id: "camera1",
+          name: "Bedroom Camera",
+          kind: "camera",
+          roomId: "r1",
+          isOn: true,
+        },
+        {
+          id: "door1",
+          name: "Bedroom Door",
+          kind: "door",
+          roomId: "r1",
+          isOn: false,
+          openPercent: 0,
+        },
+      ],
+      scenes: [
+        {
+          id: "scene-light",
+          roomId: "r1",
+          name: "Light Scene",
+          actions: [{ type: "toggle", deviceId: "light1", on: true }],
+        },
+        {
+          id: "scene-camera",
+          roomId: "r1",
+          name: "Camera Scene",
+          actions: [{ type: "toggle", deviceId: "camera1", on: true }],
+        },
+      ],
+      rules: [
+        {
+          id: "rule-light",
+          name: "Light Rule",
+          enabled: true,
+          trigger: { type: "time", hour: 8, minute: 0 },
+          action: { type: "toggle", deviceId: "light1", on: true },
+        },
+        {
+          id: "rule-camera",
+          name: "Camera Rule",
+          enabled: true,
+          trigger: { type: "time", hour: 9, minute: 0 },
+          action: { type: "toggle", deviceId: "camera1", on: true },
+        },
+      ],
+      flows: [
+        {
+          id: "flow-light",
+          name: "Light Flow",
+          enabled: true,
+          triggers: [{ type: "device", deviceId: "light1", state: "on" }],
+          conditions: [],
+          actions: [{ type: "toggle", deviceId: "light1", on: false }],
+        },
+        {
+          id: "flow-camera",
+          name: "Camera Flow",
+          enabled: true,
+          triggers: [{ type: "device", deviceId: "camera1", state: "on" }],
+          conditions: [],
+          actions: [{ type: "toggle", deviceId: "camera1", on: false }],
+        },
+      ],
+    });
+
+    const state = useHomeStore.getState();
+    expect(selectVisibleDevices(state).map((device) => device.id)).toEqual([
+      "light1",
+      "camera1",
+      "door1",
+    ]);
+    expect(selectControllableDevices(state).map((device) => device.id)).toEqual([
+      "light1",
+    ]);
+    expect(selectVisibleScenes(state).map((scene) => scene.id)).toEqual([
+      "scene-light",
+      "scene-camera",
+    ]);
+    expect(selectRunnableScenes(state).map((scene) => scene.id)).toEqual([
+      "scene-light",
+    ]);
+    expect(selectVisibleRules(state).map((rule) => rule.id)).toEqual([
+      "rule-light",
+    ]);
+    expect(selectVisibleFlows(state).map((flow) => flow.id)).toEqual([
+      "flow-light",
+    ]);
+  });
+
+  it("member keeps full device control but not household or security management", () => {
+    useHomeStore.setState({
+      household: [
+        { id: "m-member", name: "Member User", role: "Member", status: "home" },
+      ],
+      roomMembers: [],
+      activeMemberId: "m-member",
+      rooms: [
+        { id: "r1", name: "Living" },
+        { id: "r2", name: "Bedroom" },
+      ],
+      devices: [
+        { id: "light1", name: "Lamp", kind: "light", roomId: "r1", isOn: true },
+        { id: "camera1", name: "Camera", kind: "camera", roomId: "r2", isOn: true },
+      ],
+    });
+
+    const state = useHomeStore.getState();
+    expect(selectVisibleDevices(state).map((device) => device.id)).toEqual([
+      "light1",
+      "camera1",
+    ]);
+    expect(selectControllableDevices(state).map((device) => device.id)).toEqual([
+      "light1",
+      "camera1",
+    ]);
+    expect(selectCanManageHousehold(state)).toBe(false);
+    expect(selectCanManageSecurity(state)).toBe(false);
   });
 
   it("seeds include extended device kinds", () => {

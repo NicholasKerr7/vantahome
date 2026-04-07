@@ -17,6 +17,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
 import {
   selectActiveMember,
+  selectCanManageHousehold,
+  selectCanManageRooms,
   selectVisibleDevices,
   selectVisibleRooms,
   type IntegrationProvider,
@@ -451,6 +453,8 @@ export default function ProfileScreen({ navigation }: Props) {
   const devicesCount = useHomeStore((s) => selectVisibleDevices(s).length);
   const household = useHomeStore((s) => s.household);
   const rooms = useHomeStore(selectVisibleRooms);
+  const canManageRooms = useHomeStore(selectCanManageRooms);
+  const canManageHousehold = useHomeStore(selectCanManageHousehold);
   const activeMember = useHomeStore(selectActiveMember);
   const activeMemberId = useHomeStore((s) => s.activeMemberId);
   const setActiveMember = useHomeStore((s) => s.setActiveMember);
@@ -508,10 +512,6 @@ export default function ProfileScreen({ navigation }: Props) {
   const [newMemberAvatar, setNewMemberAvatar] = useState("");
   const [pendingInvites, setPendingInvites] = useState<HomeInvite[]>([]);
   const [inviteLoading, setInviteLoading] = useState(false);
-  const canManageRooms = activeMember
-    ? ["Owner", "Admin"].includes(activeMember.role)
-    : false;
-  const canManageHousehold = canManageRooms;
   const resolveRoomRole = (
     role: typeof household[number]["role"],
   ): RoomMemberRole | null => {

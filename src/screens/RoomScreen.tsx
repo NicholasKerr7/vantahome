@@ -28,8 +28,12 @@ import LandscapeFrame from "../components/LandscapeFrame";
 import PortraitFrame from "../components/PortraitFrame";
 import { theme } from "../theme/theme";
 import { deviceClient } from "../services/deviceClient";
+import { useShallow } from "zustand/react/shallow";
 import {
-  selectVisibleDevices,
+  selectCanManageAutomations,
+  selectCanManageDevices,
+  selectControllableDevices,
+  selectRunnableScenes,
   selectVisibleRooms,
   useHomeStore,
   type Device,
@@ -523,12 +527,14 @@ export default function RoomScreen({ route, navigation }: Props) {
   const { roomId, showAll } = route.params;
   const isWholeHome = Boolean(showAll);
 
-  const visibleRooms = useHomeStore(selectVisibleRooms);
+  const visibleRooms = useHomeStore(useShallow(selectVisibleRooms));
   const room = roomId
     ? visibleRooms.find((r) => r.id === roomId)
     : undefined;
-  const devicesAll = useHomeStore(selectVisibleDevices);
-  const scenesAll = useHomeStore((s) => s.scenes);
+  const devicesAll = useHomeStore(useShallow(selectControllableDevices));
+  const scenesAll = useHomeStore(useShallow(selectRunnableScenes));
+  const canManageDevices = useHomeStore(selectCanManageDevices);
+  const canManageAutomations = useHomeStore(selectCanManageAutomations);
   const runScene = useHomeStore((s) => s.runScene);
 
   const setDevice = useHomeStore((s) => s.setDevice);
@@ -581,6 +587,7 @@ export default function RoomScreen({ route, navigation }: Props) {
   }, []);
 
   const handleAddDevice = () => {
+    if (!canManageDevices) return;
     setNewKind("light");
     setNewName("New Light");
     setNameTouched(false);
@@ -589,6 +596,7 @@ export default function RoomScreen({ route, navigation }: Props) {
   };
 
   const handleCreateDevice = () => {
+    if (!canManageDevices) return;
     if (!roomId || isWholeHome) return;
     const option = DEVICE_OPTIONS.find((o) => o.kind === newKind);
     const name = newName.trim() || option?.defaultName || "New Device";
@@ -714,6 +722,7 @@ export default function RoomScreen({ route, navigation }: Props) {
             <Pressable
               style={iconButtonStyle}
               onPress={handleAddDevice}
+              disabled={!canManageDevices}
             >
               <Ionicons
                 name="add"
@@ -796,10 +805,12 @@ export default function RoomScreen({ route, navigation }: Props) {
         }}
         onQuickSchedule={(time) => {
           if (!selectedId) return;
+          if (!canManageAutomations) return;
           quickScheduleDevice(selectedId, time);
         }}
         onDelete={() => {
           if (!selectedId) return;
+          if (!canManageDevices) return;
           removeDevice(selectedId);
           setSelectedId(null);
         }}

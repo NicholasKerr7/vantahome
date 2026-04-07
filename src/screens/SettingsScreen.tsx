@@ -17,8 +17,11 @@ import { useNavigation } from "@react-navigation/native";
 import BackgroundLines from "../components/BackgroundLines";
 import ScreenFrame from "../components/ScreenFrame";
 import ScreenSectionLayout from "../components/ScreenSectionLayout";
+import { useShallow } from "zustand/react/shallow";
 import { theme } from "../theme/theme";
 import {
+  selectCanManageIntegrations,
+  selectCanManageSecurity,
   selectVisibleDevices,
   selectVisibleRooms,
   type IntegrationProvider,
@@ -126,12 +129,15 @@ export default function SettingsScreen() {
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
   const roomsCount = useHomeStore((s) => selectVisibleRooms(s).length);
   const devicesCount = useHomeStore((s) => selectVisibleDevices(s).length);
-  const devices = useHomeStore(selectVisibleDevices);
+  const devices = useHomeStore(useShallow(selectVisibleDevices));
   const profile = useHomeStore((s) => s.profile);
+  const setProfile = useHomeStore((s) => s.setProfile);
   const integrations = useHomeStore((s) => s.integrations);
   const prefs = useHomeStore((s) => s.preferences);
   const realtime = useHomeStore((s) => s.realtime);
   const household = useHomeStore((s) => s.household);
+  const canManageSecurity = useHomeStore(selectCanManageSecurity);
+  const canManageIntegrations = useHomeStore(selectCanManageIntegrations);
   const linkIntegration = useHomeStore((s) => s.linkIntegration);
   const setIntegrationStatus = useHomeStore((s) => s.setIntegrationStatus);
   const unlinkIntegration = useHomeStore((s) => s.unlinkIntegration);
@@ -600,6 +606,13 @@ export default function SettingsScreen() {
   };
 
   const handleVoiceLink = async (provider: IntegrationProvider) => {
+    if (!canManageIntegrations) {
+      Alert.alert(
+        "Admin access required",
+        "Only owners and admins can manage integrations.",
+      );
+      return;
+    }
     if (provider !== "alexa" && provider !== "google") {
       Alert.alert(
         "Coming soon",
@@ -677,6 +690,7 @@ export default function SettingsScreen() {
     const state = integrations[provider];
     const linked = state?.status === "linked";
     const linking = state?.status === "linking";
+    const locked = !canManageIntegrations;
     const integrationRowStyle: StyleProp<ViewStyle> = [
       styles.integrationRow,
       { paddingVertical: integrationPad, borderRadius: integrationRadius },
@@ -707,11 +721,12 @@ export default function SettingsScreen() {
         height: buttonSize,
         borderRadius: Math.round(buttonSize * 0.35),
       },
+      locked && styles.primaryBtnDisabled,
     ];
     const primaryBtnStyle: StyleProp<ViewStyle> = [
       styles.primaryBtn,
       { height: primaryBtnHeight, borderRadius: primaryBtnRadius },
-      linking && styles.primaryBtnDisabled,
+      (linking || locked) && styles.primaryBtnDisabled,
     ];
     const integrationActionsStyle: StyleProp<ViewStyle> = [
       styles.integrationActions,
@@ -756,6 +771,7 @@ export default function SettingsScreen() {
                   onPress={() => resyncIntegration(provider)}
                   style={secondaryBtnStyle}
                   hitSlop={10}
+                  disabled={locked}
                 >
                   <Ionicons
                     name="refresh"
@@ -767,6 +783,7 @@ export default function SettingsScreen() {
                   onPress={() => unlinkIntegration(provider)}
                   style={secondaryBtnStyle}
                   hitSlop={10}
+                  disabled={locked}
                 >
                   <Ionicons
                     name="close"
@@ -778,11 +795,12 @@ export default function SettingsScreen() {
             ) : (
               <Pressable
                 onPress={() => {
-                  if (linking) return;
+                  if (linking || locked) return;
                   void handleVoiceLink(provider);
                 }}
                 style={primaryBtnStyle}
                 hitSlop={10}
+                disabled={linking || locked}
               >
                 <Text style={primaryBtnTextStyle}>
                   {linking ? "Linking…" : "Link account"}
@@ -1013,10 +1031,12 @@ export default function SettingsScreen() {
   };
 
   const setSecurityModeManual = (mode: SecurityMode) => {
+    if (!canManageSecurity) return;
     setSecurityMode(mode, { source: "manual" });
   };
 
   const handleSecurityPresenceSyncChange = (value: boolean) => {
+    if (!canManageSecurity) return;
     setProfile({ securityAutoSyncWithPresence: value });
     if (!value) return;
     if (!houseOccupied) {
@@ -1126,6 +1146,11 @@ export default function SettingsScreen() {
         Home keeps indoor cameras private, Away locks the house down, and Night
         tightens overnight security.
       </Text>
+      {!canManageSecurity ? (
+        <Text style={notificationSubStyle}>
+          Security mode changes require owner or admin access.
+        </Text>
+      ) : null}
       <Text style={notificationGroupLabelStyle}>Current mode</Text>
       <View style={styles.controlChipRow}>
         {SECURITY_MODE_OPTIONS.map((item) => {
@@ -1135,6 +1160,7 @@ export default function SettingsScreen() {
               key={item.id}
               style={controlChipStyle(active)}
               onPress={() => setSecurityModeManual(item.id)}
+              disabled={!canManageSecurity}
             >
               <Text style={controlChipTextStyle(active)}>{item.label}</Text>
             </Pressable>
@@ -1160,6 +1186,7 @@ export default function SettingsScreen() {
         <Switch
           value={securityAutoSyncWithPresence}
           onValueChange={handleSecurityPresenceSyncChange}
+          disabled={!canManageSecurity}
           thumbColor={
             securityAutoSyncWithPresence
               ? theme.colors.accent

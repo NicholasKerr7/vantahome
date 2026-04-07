@@ -17,11 +17,15 @@ import Pressable from "../components/Pressable";
 import BackgroundLines from "../components/BackgroundLines";
 import ModalCard from "../components/ModalCard";
 import ModalField from "../components/ModalField";
+import { useShallow } from "zustand/react/shallow";
 import { theme } from "../theme/theme";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
-  selectVisibleDevices,
+  selectCanManageAutomations,
+  selectControllableDevices,
+  selectVisibleFlows,
+  selectRunnableScenes,
   selectVisibleRooms,
   useHomeStore,
   type AutomationFlow,
@@ -295,14 +299,15 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     { fontSize: labelSize },
   ];
 
-  const flows = useHomeStore((s) => s.flows);
+  const flows = useHomeStore(useShallow(selectVisibleFlows));
   const addFlow = useHomeStore((s) => s.addFlow);
   const updateFlow = useHomeStore((s) => s.updateFlow);
   const removeFlow = useHomeStore((s) => s.removeFlow);
-  const devices = useHomeStore(selectVisibleDevices);
-  const visibleRooms = useHomeStore(selectVisibleRooms);
-  const scenes = useHomeStore((s) => s.scenes);
+  const devices = useHomeStore(useShallow(selectControllableDevices));
+  const visibleRooms = useHomeStore(useShallow(selectVisibleRooms));
+  const scenes = useHomeStore(useShallow(selectRunnableScenes));
   const household = useHomeStore((s) => s.household);
+  const canManageAutomations = useHomeStore(selectCanManageAutomations);
 
   const existing = flows.find((f) => f.id === flowId);
   const isEditing = Boolean(existing);
@@ -428,7 +433,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
 
   const flowName =
     name.trim() || (isEditing ? (existing?.name ?? "Flow") : "New Flow");
-  const canSave = triggers.length > 0 && actions.length > 0;
+  const canSave = canManageAutomations && triggers.length > 0 && actions.length > 0;
 
   const openEditor = (section: EditorSection) => {
     setEditorSection(section);
@@ -834,6 +839,34 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
       </Pressable>
     </View>
   );
+
+  if (!canManageAutomations) {
+    return (
+      <LinearGradient
+        colors={[theme.colors.bg1, theme.colors.bg0]}
+        style={styles.root}
+      >
+        <BackgroundLines />
+        <View style={headerStyle}>
+          <Pressable style={headerButtonStyle} onPress={() => navigation.goBack()}>
+            <Ionicons
+              name="chevron-back"
+              size={Math.round(18 * scale)}
+              color={theme.colors.text}
+            />
+          </Pressable>
+          <Text style={headerTitleStyle}>Automation Access</Text>
+          <View style={headerButtonStyle} />
+        </View>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateTitle}>Automation editing is disabled</Text>
+          <Text style={styles.emptyStateText}>
+            Your role can use the home, but only members, tenants, admins, and owners can edit automations.
+          </Text>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -2533,6 +2566,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   deleteText: { color: "#FFD0D8", fontWeight: "800" },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    gap: 10,
+  },
+  emptyStateTitle: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    fontSize: 22,
+    textAlign: "center",
+  },
+  emptyStateText: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 22,
+  },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",

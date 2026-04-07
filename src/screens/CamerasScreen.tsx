@@ -13,8 +13,10 @@ import CameraThumbnail from "../components/CameraThumbnail";
 import RenderProfiler from "../components/RenderProfiler";
 import { useResponsive } from "../theme/layout";
 import { theme } from "../theme/theme";
+import { useShallow } from "zustand/react/shallow";
 import {
-  selectActiveMember,
+  selectCanUseCameras,
+  selectCanViewAllCameras,
   selectVisibleDevices,
   selectVisibleRooms,
   useHomeStore,
@@ -44,13 +46,11 @@ export default function CamerasScreen({ navigation }: Props) {
   const isWide = isTablet && isLandscape;
   const isTabletPortrait = isTablet && !isLandscape;
   const isPortrait = !isLandscape;
-  const activeMember = useHomeStore(selectActiveMember);
-  const rooms = useHomeStore(selectVisibleRooms);
-  const visibleDevices = useHomeStore(selectVisibleDevices);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
+  const visibleDevices = useHomeStore(useShallow(selectVisibleDevices));
   const allDevices = useHomeStore((s) => s.devices);
-  const canViewAll = activeMember
-    ? ["Owner", "Admin"].includes(activeMember.role)
-    : false;
+  const canViewAll = useHomeStore(selectCanViewAllCameras);
+  const canUseCameras = useHomeStore(selectCanUseCameras);
   const cameraDevices = useMemo(() => {
     const source = canViewAll ? allDevices : visibleDevices;
     return source.filter((device) => device.kind === "camera");
@@ -393,9 +393,13 @@ export default function CamerasScreen({ navigation }: Props) {
 
               {cameraDevices.length === 0 ? (
                 <View style={styles.emptyCard}>
-                  <Text style={styles.emptyTitle}>No cameras yet</Text>
+                  <Text style={styles.emptyTitle}>
+                    {canUseCameras ? "No cameras yet" : "Camera access limited"}
+                  </Text>
                   <Text style={styles.emptySub}>
-                    Add a camera device to view a live overview.
+                    {canUseCameras
+                      ? "Add a camera device to view a live overview."
+                      : "Your role does not include camera access."}
                   </Text>
                 </View>
               ) : (

@@ -17,11 +17,13 @@ import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import LottieView from "lottie-react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useShallow } from "zustand/react/shallow";
 import { RootStackParamList } from "../app/AppNavigator";
 import { theme } from "../theme/theme";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
+  selectControllableDevices,
   selectVisibleDevices,
   selectVisibleRooms,
   useHomeStore,
@@ -982,6 +984,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const device = useHomeStore((s) =>
     selectVisibleDevices(s).find((d) => d.id === deviceId),
   );
+  const controllableDevice = useHomeStore((s) =>
+    selectControllableDevices(s).find((d) => d.id === deviceId),
+  );
   const roomName = useHomeStore(
     (s) =>
       selectVisibleRooms(s).find((r) => r.id === device?.roomId)?.name ?? "",
@@ -996,8 +1001,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const roomTemp = useHomeStore((s) => s.indoor.tempC);
   const outdoor = useHomeStore((s) => s.outdoor);
-  const rooms = useHomeStore(selectVisibleRooms);
-  const devicesAll = useHomeStore(selectVisibleDevices);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
+  const devicesAll = useHomeStore(useShallow(selectVisibleDevices));
   const utilityLocation = useHomeStore((s) => s.profile.utilityLocation);
   const utilityPreset = useMemo(
     () => getUtilityRatePreset(utilityLocation),
@@ -1039,6 +1044,29 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Text style={styles.emptySub}>
               This device is in a room you do not have access to. Ask the owner
               to share the room with you.
+            </Text>
+            <Pressable style={styles.emptyAction} onPress={navigation.goBack}>
+              <Text style={styles.emptyActionText}>Go back</Text>
+            </Pressable>
+          </View>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  if (!controllableDevice) {
+    return (
+      <LinearGradient
+        colors={[theme.colors.bg1, theme.colors.bg0]}
+        style={styles.root}
+      >
+        <BackgroundLines />
+        <View style={styles.emptyWrap}>
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Read-only device</Text>
+            <Text style={styles.emptySub}>
+              This device is shared with your profile for visibility, but your
+              role cannot control it.
             </Text>
             <Pressable style={styles.emptyAction} onPress={navigation.goBack}>
               <Text style={styles.emptyActionText}>Go back</Text>

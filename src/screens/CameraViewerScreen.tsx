@@ -5,7 +5,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
-import { useHomeStore, selectVisibleRooms } from "../store/useHomeStore";
+import {
+  selectVisibleDevices,
+  selectVisibleRooms,
+  useHomeStore,
+} from "../store/useHomeStore";
 import LiveVideoPlayer from "../components/LiveVideoPlayer";
 import CameraThumbnail from "../components/CameraThumbnail";
 import Pressable from "../components/Pressable";
@@ -29,7 +33,7 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
   const { deviceId } = route.params;
   const insets = useSafeAreaInsets();
   const device = useHomeStore((s) =>
-    s.devices.find((item) => item.id === deviceId),
+    selectVisibleDevices(s).find((item) => item.id === deviceId),
   );
   const rooms = useHomeStore(selectVisibleRooms);
   const roomName =
@@ -38,7 +42,7 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
   if (!device) {
     return (
       <View style={styles.missing}>
-        <Text style={styles.missingText}>Camera not found.</Text>
+        <Text style={styles.missingText}>Camera not available for this profile.</Text>
       </View>
     );
   }

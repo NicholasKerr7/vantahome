@@ -23,10 +23,13 @@ import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
 import ModalField from "../components/ModalField";
 import DeviceIcon from "../components/DeviceIcon";
+import { useShallow } from "zustand/react/shallow";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
-  selectVisibleDevices,
+  selectCanEditScenes,
+  selectControllableDevices,
+  selectRunnableScenes,
   selectVisibleRooms,
   useHomeStore,
   type Device,
@@ -127,9 +130,10 @@ export default function ScenesScreen() {
   );
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
-  const rooms = useHomeStore(selectVisibleRooms);
-  const scenes = useHomeStore((s) => s.scenes);
-  const devices = useHomeStore(selectVisibleDevices);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
+  const scenes = useHomeStore(useShallow(selectRunnableScenes));
+  const devices = useHomeStore(useShallow(selectControllableDevices));
+  const canEditScenes = useHomeStore(selectCanEditScenes);
   const runScene = useHomeStore((s) => s.runScene);
   const clearActiveScene = useHomeStore((s) => s.clearActiveScene);
   const activeSceneId = useHomeStore((s) => s.activeSceneId);
@@ -431,6 +435,7 @@ export default function ScenesScreen() {
   ];
 
   const openCreate = () => {
+    if (!canEditScenes) return;
     setShowCreate(true);
     setEditingSceneId(null);
     setSceneName("");
@@ -439,6 +444,7 @@ export default function ScenesScreen() {
   };
 
   const handleCreate = () => {
+    if (!canEditScenes) return;
     if (!roomId) return;
     const room = rooms.find((r) => r.id === roomId);
     const name = sceneName.trim() || `${room?.name ?? "Room"} Scene`;
@@ -463,6 +469,7 @@ export default function ScenesScreen() {
   };
 
   const openEdit = (scene: Scene) => {
+    if (!canEditScenes) return;
     setEditingSceneId(scene.id);
     setShowCreate(true);
     setSceneName(scene.name);
@@ -592,9 +599,9 @@ export default function ScenesScreen() {
                     label="Create"
                     icon="add"
                     iconSize={Math.round(16 * scale)}
-                    style={addPillStyle}
+                    style={[addPillStyle, !canEditScenes && { opacity: 0.55 }]}
                     textStyle={addTextStyle}
-                    onPress={openCreate}
+                    onPress={canEditScenes ? openCreate : undefined}
                   />
                   {activeSceneId ? (
                     <HeaderPill
@@ -880,6 +887,7 @@ export default function ScenesScreen() {
                 },
                 style: modalGhostStyle,
                 textStyle: modalGhostTextStyle,
+                disabled: !canEditScenes,
               },
               {
                 label: "Run scene",
