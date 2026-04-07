@@ -2,7 +2,43 @@ require File.join(File.dirname(`node --print "require.resolve('expo/package.json
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
 require 'json'
+require 'find'
 podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
+
+# React Native's CocoaPods helper shells out to `find` without quoting the project
+# path. That breaks when the repo lives in a directory with spaces, which this
+# checkout does. Override the global helper here so pod install remains stable
+# without editing vendored files in node_modules.
+class ::NewArchitectureHelper
+  def self.set_RCTNewArchEnabled_in_info_plist(installer, new_arch_enabled)
+    project_paths = installer.aggregate_targets
+      .map { |target| target.user_project }
+      .uniq { |project| project.path }
+      .map(&:path)
+
+    excluded_info_plist = ["/Pods", "Tests", "metainternal", ".bundle", "build/", "DerivedData/"]
+
+    project_paths.each do |project_path|
+      project_folder_path = File.dirname(project_path)
+      info_plist_files = []
+
+      ::Find.find(project_folder_path) do |path|
+        next unless File.basename(path) == 'Info.plist'
+        next if excluded_info_plist.any? { |excluded| path.include?(excluded) }
+
+        info_plist_files << path
+      end
+
+      info_plist_files.each do |info_plist_file|
+        info_plist = ::Xcodeproj::Plist.read_from_path(info_plist_file)
+        next if info_plist["RCTNewArchEnabled"] == new_arch_enabled
+
+        info_plist["RCTNewArchEnabled"] = new_arch_enabled ? true : false
+        ::Xcodeproj::Plist.write_to_path(info_plist, info_plist_file)
+      end
+    end
+  end
+end
 
 def ccache_enabled?(podfile_properties)
   # Environment variable takes precedence
@@ -71,6 +107,36 @@ target 'vantahome' do
       'ReactNativeDependencies' => '[RNDeps] Replace React Native Dependencies',
       'hermes-engine' => '[Hermes] Replace Hermes',
     }
+    exconstants_app_config_phase_name = 'Generate app.config for prebuilt Constants.manifest'
+    exconstants_app_config_script = <<~'SCRIPT'
+      set -eo pipefail
+
+      DEST="$CONFIGURATION_BUILD_DIR"
+      RESOURCE_BUNDLE_NAME="EXConstants.bundle"
+      EXPO_CONSTANTS_PACKAGE_DIR="$(cd "$PODS_TARGET_SRCROOT/.." && pwd -P)"
+
+      PROJECT_DIR_BASENAME="$(basename "$PROJECT_DIR")"
+      if [ "x$PROJECT_DIR_BASENAME" != "xPods" ]; then
+        exit 0
+      fi
+
+      PROJECT_ROOT="${PROJECT_ROOT:-$PROJECT_DIR/../..}"
+      PROJECT_ROOT="${PROJECT_ROOT:-$EXPO_CONSTANTS_PACKAGE_DIR/../..}"
+
+      cd "$PROJECT_ROOT" || exit
+
+      if [ "$BUNDLE_FORMAT" = "shallow" ]; then
+        RESOURCE_DEST="$DEST/$RESOURCE_BUNDLE_NAME"
+      elif [ "$BUNDLE_FORMAT" = "deep" ]; then
+        RESOURCE_DEST="$DEST/$RESOURCE_BUNDLE_NAME/Contents/Resources"
+        mkdir -p "$RESOURCE_DEST"
+      else
+        echo "Unsupported bundle format: $BUNDLE_FORMAT"
+        exit 1
+      fi
+
+      "$EXPO_CONSTANTS_PACKAGE_DIR/scripts/with-node.sh" "$EXPO_CONSTANTS_PACKAGE_DIR/scripts/getAppConfig.js" "$PROJECT_ROOT" "$RESOURCE_DEST"
+    SCRIPT
 
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |build_config|
@@ -94,13 +160,20 @@ target 'vantahome' do
       end
 
       phase_marker = replacement_phase_names[target.name]
-      next unless phase_marker
+      exconstants_target = target.name == 'EXConstants'
+      next unless phase_marker || exconstants_target
 
       target.shell_script_build_phases.each do |phase|
-        next unless phase.name&.include?(phase_marker)
+        if phase_marker && phase.name&.include?(phase_marker)
+          phase.shell_script = "echo \"Skipping #{phase_marker}; prebuilt #{target.name} artifacts were already prepared during pod install.\""
+        end
 
-        phase.shell_script = "echo \"Skipping #{phase_marker}; prebuilt #{target.name} artifacts were already prepared during pod install.\""
+        next unless exconstants_target
+        next unless phase.name&.include?(exconstants_app_config_phase_name)
+
+        phase.shell_script = exconstants_app_config_script
       end
     end
   end
+
 end
