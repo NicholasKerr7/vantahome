@@ -7,6 +7,11 @@ import {
   type AppNotification,
 } from "../data/appNotifications";
 import {
+  defaultNotificationPreferenceFields,
+  normalizeNotificationCategorySettings,
+  type NotificationPreferenceSnapshot,
+} from "../data/notificationControls";
+import {
   DEFAULT_UTILITY_LOCATION_ID,
   type UtilityLocationId,
   type UtilityLocationMode,
@@ -372,7 +377,7 @@ type IntegrationState = {
   errorReason?: string;
 };
 
-type Preferences = {
+type Preferences = NotificationPreferenceSnapshot & {
   haptics: boolean;
   notifications: boolean;
 };
@@ -413,6 +418,13 @@ type Profile = {
   utilityLocationMode?: UtilityLocationMode;
   utilityLocationResolvedLabel?: string;
   utilityLocationStatus?: UtilityLocationStatus;
+  locationSharingEnabled?: boolean;
+  presenceGeofenceEnabled?: boolean;
+  presenceGeofenceLatitude?: number;
+  presenceGeofenceLongitude?: number;
+  presenceGeofenceRadiusM?: number;
+  presenceGeofenceLabel?: string;
+  presenceLastSecurityAuditAt?: number;
 };
 
 type State = {
@@ -571,6 +583,11 @@ const profileSeed: Profile = {
   utilityLocationMode: "manual",
   utilityLocationResolvedLabel: "",
   utilityLocationStatus: "fallback",
+  locationSharingEnabled: true,
+  presenceGeofenceEnabled: false,
+  presenceGeofenceRadiusM: 120,
+  presenceGeofenceLabel: "",
+  presenceLastSecurityAuditAt: 0,
 };
 
 const outdoorSeed: AmbientReading = {
@@ -1669,7 +1686,11 @@ export const useHomeStore = create<State>()(
       rules: rulesSeed,
       flows: flowsSeed,
       integrations: integrationsSeed,
-      preferences: { haptics: true, notifications: true },
+      preferences: {
+        haptics: true,
+        notifications: true,
+        ...defaultNotificationPreferenceFields,
+      },
       realtime: realtimeSeed,
       household: householdSeed,
       roomMembers: roomMembersSeed,
@@ -2175,13 +2196,26 @@ export const useHomeStore = create<State>()(
     }),
     {
       name: "vantahome-store",
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState, version) => {
         if (!persistedState || typeof persistedState !== "object")
           return {} as State;
         const state = persistedState as State;
-        if (version && version >= 4) return state;
+        if (version && version >= 5) {
+          return {
+            ...state,
+            preferences: {
+              haptics: state.preferences?.haptics ?? true,
+              notifications: state.preferences?.notifications ?? true,
+              ...defaultNotificationPreferenceFields,
+              ...state.preferences,
+              notificationCategories: normalizeNotificationCategorySettings(
+                state.preferences?.notificationCategories,
+              ),
+            },
+          };
+        }
         const base =
           version && version >= 2
             ? state
@@ -2194,6 +2228,15 @@ export const useHomeStore = create<State>()(
         return {
           ...base,
           notifications: base.notifications ?? notificationsSeed,
+          preferences: {
+            haptics: base.preferences?.haptics ?? true,
+            notifications: base.preferences?.notifications ?? true,
+            ...defaultNotificationPreferenceFields,
+            ...base.preferences,
+            notificationCategories: normalizeNotificationCategorySettings(
+              base.preferences?.notificationCategories,
+            ),
+          },
           household: base.household ?? householdSeed,
           roomMembers: base.roomMembers ?? roomMembersSeed,
           activeMemberId:

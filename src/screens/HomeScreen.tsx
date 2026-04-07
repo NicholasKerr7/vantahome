@@ -28,10 +28,12 @@ import {
   useHomeStore,
 } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
+import { getNotificationOpenDelayMinutes } from "../data/notificationControls";
 import {
   notifyAirAlert,
   notifyEntryOpen,
   notifyPowerStatus,
+  processPersistentNotification,
   notifySolarActive,
   notifyWaterAlert,
   notifyWaterLeak,
@@ -86,28 +88,9 @@ export default function HomeScreen() {
   const addRoom = useHomeStore((s) => s.addRoom);
   const indoorFallback = useHomeStore((s) => s.indoor);
   const [activeRoomIndex, setActiveRoomIndex] = useState(0);
+  const notificationEffectsReady = useRef(false);
   const lastPowerOutage = useRef<boolean | null>(null);
   const lastSolarActive = useRef<boolean | null>(null);
-  const lastWaterAlert = useRef<{
-    budgetExceeded: boolean;
-    lowPressure: boolean;
-    highPressure: boolean;
-  } | null>(null);
-  const lastWaterLeak = useRef<boolean | null>(null);
-  const lastOpenEntryId = useRef<string | null | undefined>(undefined);
-  const lastAirAlert = useRef<
-    Record<
-      string,
-      {
-        aqi: boolean;
-        co2: boolean;
-        voc: boolean;
-        pm25: boolean;
-        pm10: boolean;
-        pollen: boolean;
-      }
-    >
-  >({});
 
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [roomName, setRoomName] = useState("");
@@ -254,6 +237,10 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    notificationEffectsReady.current = true;
+  }, []);
+
+  useEffect(() => {
     Voice.onSpeechResults = (event: any) => {
       const phrase = event?.value?.[0]?.trim?.();
       if (phrase) {
@@ -307,27 +294,33 @@ export default function HomeScreen() {
       lastSolarActive.current = solarActive;
       return;
     }
-    if (!prefs.notifications || !alertsEnabled) {
-      lastPowerOutage.current = currentOutage;
-      lastSolarActive.current = solarActive;
-      return;
-    }
-    if (currentOutage !== lastPowerOutage.current) {
-      lastPowerOutage.current = currentOutage;
+    void processPersistentNotification({
+      key: "energy:power-outage",
+      active: currentOutage && alertsEnabled,
+      category: "alert",
+      send: () =>
+        notifyPowerStatus({
+          isOutage: true,
+          solarActive,
+        }),
+    });
+    if (!currentOutage && lastPowerOutage.current && alertsEnabled) {
       notifyPowerStatus({
-        isOutage: currentOutage,
+        isOutage: false,
         solarActive,
       }).catch(() => {});
     }
-    if (solarActive && !lastSolarActive.current) {
+    if (solarActive && !lastSolarActive.current && alertsEnabled) {
       notifySolarActive(energy.solarW ?? 0).catch(() => {});
     }
+    lastPowerOutage.current = currentOutage;
     lastSolarActive.current = solarActive;
-  }, [devicesAll, prefs.notifications]);
+  }, [clock, devicesAll, prefs]);
 
   useEffect(() => {
     const water = devicesAll.find((device) => device.kind === "water");
     if (!water) return;
+    if (!notificationEffectsReady.current) return;
     const waterBudget = water.waterBudgetL ?? 0;
     const waterToday = water.waterTodayL ?? 0;
     const budgetExceeded = waterBudget > 0 && waterToday >= waterBudget;
@@ -342,81 +335,74 @@ export default function HomeScreen() {
       pressureHighLimit > 0 &&
       pressureValue > pressureHighLimit;
     const leakDetected = water.waterLeakDetected ?? false;
-
-    if (lastWaterAlert.current === null) {
-      lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
-      lastWaterLeak.current = leakDetected;
-      return;
-    }
-
-    if (!prefs.notifications) {
-      lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
-      lastWaterLeak.current = leakDetected;
-      return;
-    }
-
-    if (budgetExceeded && !lastWaterAlert.current.budgetExceeded) {
-      notifyWaterAlert({
-        kind: "budget",
-        current: waterToday,
-        limit: waterBudget,
-      }).catch(() => {});
-    }
-    if (lowPressure && !lastWaterAlert.current.lowPressure) {
-      notifyWaterAlert({
-        kind: "pressure-low",
-        current: pressureValue,
-        limit: pressureLimit,
-      }).catch(() => {});
-    }
-    if (highPressure && !lastWaterAlert.current.highPressure) {
-      notifyWaterAlert({
-        kind: "pressure-high",
-        current: pressureValue,
-        limit: pressureHighLimit,
-      }).catch(() => {});
-    }
-    if (leakDetected && !lastWaterLeak.current) {
-      notifyWaterLeak().catch(() => {});
-    }
-
-    lastWaterAlert.current = { budgetExceeded, lowPressure, highPressure };
-    lastWaterLeak.current = leakDetected;
-  }, [devicesAll, prefs.notifications]);
+    void processPersistentNotification({
+      key: "water:budget",
+      active: budgetExceeded,
+      category: "alert",
+      send: () =>
+        notifyWaterAlert({
+          kind: "budget",
+          current: waterToday,
+          limit: waterBudget,
+        }),
+    });
+    void processPersistentNotification({
+      key: "water:pressure-low",
+      active: lowPressure,
+      category: "alert",
+      send: () =>
+        notifyWaterAlert({
+          kind: "pressure-low",
+          current: pressureValue,
+          limit: pressureLimit,
+        }),
+    });
+    void processPersistentNotification({
+      key: "water:pressure-high",
+      active: highPressure,
+      category: "alert",
+      send: () =>
+        notifyWaterAlert({
+          kind: "pressure-high",
+          current: pressureValue,
+          limit: pressureHighLimit,
+        }),
+    });
+    void processPersistentNotification({
+      key: "water:leak",
+      active: leakDetected,
+      category: "alert",
+      send: () => notifyWaterLeak(),
+    });
+  }, [clock, devicesAll, prefs]);
 
   useEffect(() => {
-    const openEntry =
-      devicesAll.find(
-        (device) =>
-          ["door", "window", "garage", "gate"].includes(device.kind) &&
-          (device.openPercent ?? 0) > 0,
-      ) ?? null;
-    const currentEntryId = openEntry?.id ?? null;
-
-    if (typeof lastOpenEntryId.current === "undefined") {
-      lastOpenEntryId.current = currentEntryId;
-      return;
-    }
-
-    if (!prefs.notifications) {
-      lastOpenEntryId.current = currentEntryId;
-      return;
-    }
-
-    if (currentEntryId && currentEntryId !== lastOpenEntryId.current) {
-      notifyEntryOpen({
-        deviceName: openEntry?.name ?? "Entry",
-        openPercent: openEntry?.openPercent ?? 0,
-      }).catch(() => {});
-    }
-
-    lastOpenEntryId.current = currentEntryId;
-  }, [devicesAll, prefs.notifications]);
+    if (!notificationEffectsReady.current) return;
+    const openDelayMinutes = getNotificationOpenDelayMinutes(prefs);
+    devicesAll
+      .filter((device) =>
+        ["door", "window", "garage", "gate"].includes(device.kind),
+      )
+      .forEach((device) => {
+        const openPercent = device.openPercent ?? 0;
+        void processPersistentNotification({
+          key: `entry-open:${device.id}`,
+          active: openPercent > 0,
+          category: "security",
+          delayMinutes: openDelayMinutes,
+          send: () =>
+            notifyEntryOpen({
+              deviceName: device.name,
+              openPercent,
+            }),
+        });
+      });
+  }, [clock, devicesAll, prefs]);
 
   useEffect(() => {
     const airDevices = devicesAll.filter((device) => device.kind === "air");
     if (!airDevices.length) return;
-    const nextState = { ...lastAirAlert.current };
+    if (!notificationEffectsReady.current) return;
 
     airDevices.forEach((device) => {
       const alertsEnabled = device.airAlertsEnabled ?? true;
@@ -441,79 +427,80 @@ export default function HomeScreen() {
       const pm10Exceeded = alertsEnabled && pm10 > 0 && pm10 >= pm10Limit;
       const pollenExceeded =
         alertsEnabled && pollen > 0 && pollen >= pollenLimit;
-
-      const prev = nextState[device.id] ?? {
-        aqi: false,
-        co2: false,
-        voc: false,
-        pm25: false,
-        pm10: false,
-        pollen: false,
-      };
-
-      if (prefs.notifications && alertsEnabled) {
-        if (aqiExceeded && !prev.aqi) {
+      void processPersistentNotification({
+        key: `air:${device.id}:aqi`,
+        active: aqiExceeded,
+        category: "alert",
+        send: () =>
           notifyAirAlert({
             deviceName: device.name,
             kind: "aqi",
             current: aqi,
             limit: aqiLimit,
-          }).catch(() => {});
-        }
-        if (co2Exceeded && !prev.co2) {
+          }),
+      });
+      void processPersistentNotification({
+        key: `air:${device.id}:co2`,
+        active: co2Exceeded,
+        category: "alert",
+        send: () =>
           notifyAirAlert({
             deviceName: device.name,
             kind: "co2",
             current: co2,
             limit: co2Limit,
-          }).catch(() => {});
-        }
-        if (vocExceeded && !prev.voc) {
+          }),
+      });
+      void processPersistentNotification({
+        key: `air:${device.id}:voc`,
+        active: vocExceeded,
+        category: "alert",
+        send: () =>
           notifyAirAlert({
             deviceName: device.name,
             kind: "voc",
             current: voc,
             limit: vocLimit,
-          }).catch(() => {});
-        }
-        if (pm25Exceeded && !prev.pm25) {
+          }),
+      });
+      void processPersistentNotification({
+        key: `air:${device.id}:pm25`,
+        active: pm25Exceeded,
+        category: "alert",
+        send: () =>
           notifyAirAlert({
             deviceName: device.name,
             kind: "pm25",
             current: pm25,
             limit: pm25Limit,
-          }).catch(() => {});
-        }
-        if (pm10Exceeded && !prev.pm10) {
+          }),
+      });
+      void processPersistentNotification({
+        key: `air:${device.id}:pm10`,
+        active: pm10Exceeded,
+        category: "alert",
+        send: () =>
           notifyAirAlert({
             deviceName: device.name,
             kind: "pm10",
             current: pm10,
             limit: pm10Limit,
-          }).catch(() => {});
-        }
-        if (pollenExceeded && !prev.pollen) {
+          }),
+      });
+      void processPersistentNotification({
+        key: `air:${device.id}:pollen`,
+        active: pollenExceeded,
+        category: "alert",
+        send: () =>
           notifyAirAlert({
             deviceName: device.name,
             kind: "pollen",
             current: pollen,
             limit: pollenLimit,
-          }).catch(() => {});
-        }
-      }
-
-      nextState[device.id] = {
-        aqi: aqiExceeded,
-        co2: co2Exceeded,
-        voc: vocExceeded,
-        pm25: pm25Exceeded,
-        pm10: pm10Exceeded,
-        pollen: pollenExceeded,
-      };
+          }),
+      });
     });
-
-    lastAirAlert.current = nextState;
-  }, [devicesAll, prefs.notifications]);
+  }, [clock, devicesAll, prefs]);
 
   const handleCreateRoom = () => {
     if (!canCreate) return;

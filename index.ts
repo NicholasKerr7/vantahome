@@ -5,6 +5,7 @@ import { registerRootComponent } from "expo";
 
 import App from "./App";
 import configureScrollBehavior from "./src/app/configureScrollBehavior";
+import "./src/services/presenceGeofencing";
 
 const globalForMqtt = globalThis as typeof globalThis & {
   Buffer?: typeof Buffer;

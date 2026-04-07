@@ -24,6 +24,20 @@ import {
   type IntegrationProvider,
   useHomeStore,
 } from "../store/useHomeStore";
+import {
+  NOTIFICATION_CATEGORY_OPTIONS,
+  NOTIFICATION_OPEN_DELAY_OPTIONS,
+  NOTIFICATION_QUIET_HOUR_END_OPTIONS,
+  NOTIFICATION_QUIET_HOUR_START_OPTIONS,
+  NOTIFICATION_REPEAT_OPTIONS,
+  formatHourLabel,
+  formatNotificationDelayLabel,
+  formatNotificationRepeatLabel,
+  formatQuietHoursSummary,
+  getNotificationOpenDelayMinutes,
+  getNotificationRepeatMinutes,
+  normalizeNotificationCategorySettings,
+} from "../data/notificationControls";
 import { useResponsive } from "../theme/layout";
 import { deviceClient, type ConnectionStatus } from "../services/deviceClient";
 import {
@@ -116,6 +130,12 @@ export default function SettingsScreen() {
   const setPreferences = useHomeStore((s) => s.setPreferences);
   const setRealtime = useHomeStore((s) => s.setRealtime);
   const userName = useHomeStore((s) => s.userName);
+  const notificationCategories = normalizeNotificationCategorySettings(
+    prefs.notificationCategories,
+  );
+  const notificationRepeatMinutes = getNotificationRepeatMinutes(prefs);
+  const notificationOpenDelayMinutes = getNotificationOpenDelayMinutes(prefs);
+  const quietHoursSummary = formatQuietHoursSummary(prefs);
   const navigation = useNavigation<any>();
   const voiceFunctionsBase = useMemo(() => {
     const explicit = process.env.EXPO_PUBLIC_VOICE_FUNCTIONS_URL?.trim();
@@ -233,6 +253,23 @@ export default function SettingsScreen() {
   const rowValueStyle: StyleProp<TextStyle> = [
     styles.rowValue,
     { fontSize: rowValueSize },
+  ];
+  const notificationSubStyle: StyleProp<TextStyle> = [
+    styles.notificationSub,
+    { fontSize: Math.max(11, rowValueSize - 1) },
+  ];
+  const notificationGroupLabelStyle: StyleProp<TextStyle> = [
+    styles.notificationGroupLabel,
+    { fontSize: rowLabelSize },
+  ];
+  const controlChipTextStyle = (active: boolean): StyleProp<TextStyle> => [
+    styles.controlChipText,
+    { fontSize: rowValueSize },
+    active && styles.controlChipTextActive,
+  ];
+  const controlChipStyle = (active: boolean): StyleProp<ViewStyle> => [
+    styles.controlChip,
+    active && styles.controlChipActive,
   ];
   const primaryBtnTextStyle: StyleProp<TextStyle> = [
     styles.primaryBtnText,
@@ -912,6 +949,18 @@ export default function SettingsScreen() {
     </View>
   );
 
+  const setNotificationCategoryEnabled = (
+    category: keyof typeof notificationCategories,
+    value: boolean,
+  ) => {
+    setPreferences({
+      notificationCategories: {
+        ...notificationCategories,
+        [category]: value,
+      },
+    });
+  };
+
   const homeProfileCard = (
     <View style={cardStyle} key="home-profile">
       <Text style={sectionTitleStyle}>Home Profile</Text>
@@ -953,6 +1002,9 @@ export default function SettingsScreen() {
   const preferencesCard = (
     <View style={cardStyle} key="preferences">
       <Text style={sectionTitleStyle}>Preferences</Text>
+      <Text style={sectionSubStyle}>
+        Tune what reaches you and when it should stay quiet.
+      </Text>
       <View style={styles.row}>
         <Text style={rowLabelStyle}>Haptics</Text>
         <Switch
@@ -987,6 +1039,137 @@ export default function SettingsScreen() {
           style={switchScaleStyle}
         />
       </View>
+      <View style={styles.settingsDivider} />
+      <Text style={notificationGroupLabelStyle}>Per-category</Text>
+      {NOTIFICATION_CATEGORY_OPTIONS.map((item) => (
+        <View key={item.id} style={styles.notificationRow}>
+          <View style={styles.notificationCopy}>
+            <Text style={rowLabelStyle}>{item.label}</Text>
+            <Text style={notificationSubStyle}>{item.description}</Text>
+          </View>
+          <Switch
+            value={notificationCategories[item.id]}
+            onValueChange={(value) =>
+              setNotificationCategoryEnabled(item.id, value)
+            }
+            thumbColor={
+              notificationCategories[item.id]
+                ? theme.colors.accent
+                : "rgba(255,255,255,0.8)"
+            }
+            trackColor={{
+              true: "rgba(180,107,255,0.45)",
+              false: "rgba(255,255,255,0.24)",
+            }}
+            style={switchScaleStyle}
+          />
+        </View>
+      ))}
+      <View style={styles.settingsDivider} />
+      <Text style={notificationGroupLabelStyle}>Quiet hours</Text>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Silence notification delivery</Text>
+        <Switch
+          value={prefs.notificationQuietHoursEnabled ?? false}
+          onValueChange={(value) =>
+            setPreferences({ notificationQuietHoursEnabled: value })
+          }
+          thumbColor={
+            prefs.notificationQuietHoursEnabled
+              ? theme.colors.accent
+              : "rgba(255,255,255,0.8)"
+          }
+          trackColor={{
+            true: "rgba(180,107,255,0.45)",
+            false: "rgba(255,255,255,0.24)",
+          }}
+          style={switchScaleStyle}
+        />
+      </View>
+      <Text style={notificationSubStyle}>{quietHoursSummary}</Text>
+      <Text style={notificationGroupLabelStyle}>Quiet hours start</Text>
+      <View style={styles.controlChipRow}>
+        {NOTIFICATION_QUIET_HOUR_START_OPTIONS.map((hour) => {
+          const active = (prefs.notificationQuietHoursStartHour ?? 22) === hour;
+          return (
+            <Pressable
+              key={`quiet-start-${hour}`}
+              style={controlChipStyle(active)}
+              onPress={() =>
+                setPreferences({ notificationQuietHoursStartHour: hour })
+              }
+            >
+              <Text style={controlChipTextStyle(active)}>
+                {formatHourLabel(hour)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={notificationGroupLabelStyle}>Quiet hours end</Text>
+      <View style={styles.controlChipRow}>
+        {NOTIFICATION_QUIET_HOUR_END_OPTIONS.map((hour) => {
+          const active = (prefs.notificationQuietHoursEndHour ?? 7) === hour;
+          return (
+            <Pressable
+              key={`quiet-end-${hour}`}
+              style={controlChipStyle(active)}
+              onPress={() =>
+                setPreferences({ notificationQuietHoursEndHour: hour })
+              }
+            >
+              <Text style={controlChipTextStyle(active)}>
+                {formatHourLabel(hour)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={styles.settingsDivider} />
+      <Text style={notificationGroupLabelStyle}>Repeat reminders</Text>
+      <Text style={notificationSubStyle}>
+        Repeat while a condition is still active.
+      </Text>
+      <View style={styles.controlChipRow}>
+        {NOTIFICATION_REPEAT_OPTIONS.map((minutes) => {
+          const active = notificationRepeatMinutes === minutes;
+          return (
+            <Pressable
+              key={`repeat-${minutes}`}
+              style={controlChipStyle(active)}
+              onPress={() => setPreferences({ notificationRepeatMinutes: minutes })}
+            >
+              <Text style={controlChipTextStyle(active)}>
+                {formatNotificationRepeatLabel(minutes)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={styles.settingsDivider} />
+      <Text style={notificationGroupLabelStyle}>Open-entry delay</Text>
+      <Text style={notificationSubStyle}>
+        Notify only if a door, window, gate, or garage is still open.
+      </Text>
+      <View style={styles.controlChipRow}>
+        {NOTIFICATION_OPEN_DELAY_OPTIONS.map((minutes) => {
+          const active = notificationOpenDelayMinutes === minutes;
+          return (
+            <Pressable
+              key={`open-delay-${minutes}`}
+              style={controlChipStyle(active)}
+              onPress={() =>
+                setPreferences({ notificationOpenDelayMinutes: minutes })
+              }
+            >
+              <Text style={controlChipTextStyle(active)}>
+                {formatNotificationDelayLabel(minutes)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={styles.settingsDivider} />
       <View style={styles.row}>
         <Text style={rowLabelStyle}>Appearance</Text>
         <Text style={rowValueStyle}>Purple</Text>
@@ -1581,6 +1764,57 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: "right",
     maxWidth: "60%",
+  },
+  settingsDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginVertical: 12,
+  },
+  notificationGroupLabel: {
+    color: theme.colors.text,
+    fontWeight: "900",
+    marginBottom: 8,
+  },
+  notificationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 8,
+  },
+  notificationCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  notificationSub: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  controlChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  controlChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
+  controlChipActive: {
+    backgroundColor: "rgba(180,107,255,0.22)",
+    borderColor: "rgba(180,107,255,0.38)",
+  },
+  controlChipText: {
+    color: theme.colors.subtext,
+    fontWeight: "800",
+  },
+  controlChipTextActive: {
+    color: theme.colors.text,
   },
 
   secondaryWideBtn: {

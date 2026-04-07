@@ -9,16 +9,17 @@ import { startAmbientData } from "./src/services/ambient";
 import { startDeviceRealtime } from "./src/services/realtime";
 import { useHomeStore } from "./src/store/useHomeStore";
 import { startFlowRuntime } from "./src/services/flowRuntime";
-import {
-  ensureNotificationsReady,
-  notifyHomeLeftUnsecured,
-} from "./src/services/notifications";
+import { ensureNotificationsReady } from "./src/services/notifications";
 import { syncMembershipFromSupabase } from "./src/services/membership";
 import {
   buildUtilityLocationPatchFromDeviceResult,
   refreshUtilityLocationFromDeviceIfAuthorized,
 } from "./src/services/utilityLocation";
-import { collectAwaySecurityIssues } from "./src/services/securityAudit";
+import {
+  maybeNotifyHomeLeftUnsecured,
+  syncPresenceFromCurrentLocationIfAuthorized,
+  syncPresenceGeofencingFromProfile,
+} from "./src/services/presenceGeofencing";
 import * as Sentry from "@sentry/react-native";
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
@@ -33,9 +34,24 @@ if (sentryEnabled) {
 
 function App() {
   const realtime = useHomeStore((s) => s.realtime);
-  const devices = useHomeStore((s) => s.devices);
   const household = useHomeStore((s) => s.household);
+  const activeMemberId = useHomeStore((s) => s.activeMemberId);
   const notificationsEnabled = useHomeStore((s) => s.preferences.notifications);
+  const locationSharingEnabled = useHomeStore(
+    (s) => s.profile.locationSharingEnabled,
+  );
+  const presenceGeofenceEnabled = useHomeStore(
+    (s) => s.profile.presenceGeofenceEnabled,
+  );
+  const presenceGeofenceLatitude = useHomeStore(
+    (s) => s.profile.presenceGeofenceLatitude,
+  );
+  const presenceGeofenceLongitude = useHomeStore(
+    (s) => s.profile.presenceGeofenceLongitude,
+  );
+  const presenceGeofenceRadiusM = useHomeStore(
+    (s) => s.profile.presenceGeofenceRadiusM,
+  );
   const utilityLocation = useHomeStore((s) => s.profile.utilityLocation);
   const utilityLocationManual = useHomeStore(
     (s) => s.profile.utilityLocationManual,
@@ -110,6 +126,7 @@ function App() {
       setHouseholdFromRemote(result.household);
       setRoomMembersFromRemote(result.roomMembers);
       setActiveMember(result.activeMemberId);
+      syncPresenceFromCurrentLocationIfAuthorized().catch(() => {});
     };
     void loadMembership();
     return () => {
@@ -120,6 +137,17 @@ function App() {
     if (!notificationsEnabled) return;
     ensureNotificationsReady().catch(() => {});
   }, [notificationsEnabled]);
+  useEffect(() => {
+    syncPresenceGeofencingFromProfile().catch(() => {});
+    syncPresenceFromCurrentLocationIfAuthorized().catch(() => {});
+  }, [
+    activeMemberId,
+    locationSharingEnabled,
+    presenceGeofenceEnabled,
+    presenceGeofenceLatitude,
+    presenceGeofenceLongitude,
+    presenceGeofenceRadiusM,
+  ]);
   useEffect(() => {
     const houseOccupied = household.some((member) => member.status === "home");
 
@@ -141,14 +169,11 @@ function App() {
 
     const everyoneJustLeft = lastHouseOccupied.current && !houseOccupied;
     if (everyoneJustLeft) {
-      const issues = collectAwaySecurityIssues(devices);
-      if (issues.length) {
-        notifyHomeLeftUnsecured(issues).catch(() => {});
-      }
+      maybeNotifyHomeLeftUnsecured().catch(() => {});
     }
 
     lastHouseOccupied.current = houseOccupied;
-  }, [devices, household, notificationsEnabled]);
+  }, [household, notificationsEnabled]);
   useEffect(() => {
     if (utilityLocationMode !== "device") return;
     syncDeviceUtilityLocation();
@@ -160,6 +185,7 @@ function App() {
       appState.current = nextState;
       if (!wasBackground || nextState !== "active") return;
       syncDeviceUtilityLocation();
+      syncPresenceGeofencingFromProfile().catch(() => {});
       syncMembershipFromSupabase()
         .then((result) => {
           if (!result) return;
@@ -167,6 +193,7 @@ function App() {
           setHouseholdFromRemote(result.household);
           setRoomMembersFromRemote(result.roomMembers);
           setActiveMember(result.activeMemberId);
+          syncPresenceFromCurrentLocationIfAuthorized().catch(() => {});
         })
         .catch(() => {});
     });

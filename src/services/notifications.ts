@@ -1,6 +1,10 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import type { NotificationCategory } from "../data/appNotifications";
+import {
+  getNotificationDeliveryState,
+  getNotificationRepeatMinutes,
+} from "../data/notificationControls";
 import { useHomeStore } from "../store/useHomeStore";
 import {
   formatAwaySecuritySummary,
@@ -18,6 +22,19 @@ Notifications.setNotificationHandler({
 
 let permissionReady: Promise<boolean> | null = null;
 let permissionGranted: boolean | null = null;
+const persistentNotificationState = new Map<
+  string,
+  { activeSince: number; lastSentAt: number }
+>();
+
+type PersistentNotificationOptions = {
+  key: string;
+  active: boolean;
+  category: NotificationCategory;
+  send: () => Promise<boolean>;
+  delayMinutes?: number;
+  repeatMinutes?: number;
+};
 
 async function configureAndroidChannel() {
   if (Platform.OS !== "android") return;
@@ -53,8 +70,23 @@ export async function sendLocalNotification(
   title: string,
   body: string,
   data?: Record<string, unknown>,
-  options?: { category?: NotificationCategory; isNew?: boolean },
+  options?: {
+    category?: NotificationCategory;
+    isNew?: boolean;
+    bypassQuietHours?: boolean;
+  },
 ) {
+  const category = options?.category ?? "info";
+  const deliveryState = getNotificationDeliveryState(
+    useHomeStore.getState().preferences,
+    category,
+    new Date(),
+    { bypassQuietHours: options?.bypassQuietHours },
+  );
+  if (deliveryState !== "allowed") {
+    return false;
+  }
+
   let osNotificationId: string | undefined;
   try {
     const allowed = await ensureNotificationsReady();
@@ -76,10 +108,79 @@ export async function sendLocalNotification(
   useHomeStore.getState().addNotification({
     title,
     body,
-    category: options?.category ?? "info",
+    category,
     isNew: options?.isNew ?? true,
     osNotificationId,
   });
+  return true;
+}
+
+export async function processPersistentNotification(
+  options: PersistentNotificationOptions,
+) {
+  const now = Date.now();
+  const existing = persistentNotificationState.get(options.key);
+
+  if (!options.active) {
+    persistentNotificationState.delete(options.key);
+    return false;
+  }
+
+  if (!existing) {
+    persistentNotificationState.set(options.key, {
+      activeSince: now,
+      lastSentAt: 0,
+    });
+  }
+
+  const runtimeState = persistentNotificationState.get(options.key)!;
+  const preferences = useHomeStore.getState().preferences;
+  const deliveryState = getNotificationDeliveryState(
+    preferences,
+    options.category,
+    new Date(now),
+  );
+
+  if (deliveryState === "muted") {
+    persistentNotificationState.delete(options.key);
+    return false;
+  }
+  if (deliveryState === "quiet-hours") {
+    return false;
+  }
+
+  const delayMinutes = options.delayMinutes ?? 0;
+  const repeatMinutes =
+    options.repeatMinutes ?? getNotificationRepeatMinutes(preferences);
+  const delayMs = Math.max(0, delayMinutes) * 60 * 1000;
+  const repeatMs = Math.max(0, repeatMinutes) * 60 * 1000;
+
+  if (!runtimeState.lastSentAt) {
+    if (now - runtimeState.activeSince < delayMs) {
+      return false;
+    }
+    const sent = await options.send();
+    if (sent) {
+      persistentNotificationState.set(options.key, {
+        ...runtimeState,
+        lastSentAt: now,
+      });
+    }
+    return sent;
+  }
+
+  if (repeatMs <= 0 || now - runtimeState.lastSentAt < repeatMs) {
+    return false;
+  }
+
+  const sent = await options.send();
+  if (sent) {
+    persistentNotificationState.set(options.key, {
+      ...runtimeState,
+      lastSentAt: now,
+    });
+  }
+  return sent;
 }
 
 export async function notifyPowerStatus({
@@ -93,15 +194,14 @@ export async function notifyPowerStatus({
     const body = solarActive
       ? "Main power offline. Solar is supplying the home."
       : "Main power offline. Switch to backup if available.";
-    await sendLocalNotification(
+    return sendLocalNotification(
       "Power outage",
       body,
       { kind: "power-outage" },
       { category: "alert" },
     );
-    return;
   }
-  await sendLocalNotification(
+  return sendLocalNotification(
     "Power restored",
     "Main power is back online.",
     {
@@ -121,24 +221,22 @@ export async function notifyWaterAlert({
   limit: number;
 }) {
   if (kind === "budget") {
-    await sendLocalNotification(
+    return sendLocalNotification(
       "Water budget exceeded",
       `Today: ${current} L (budget ${limit} L).`,
       { kind: "water-budget" },
       { category: "alert" },
     );
-    return;
   }
   if (kind === "pressure-high") {
-    await sendLocalNotification(
+    return sendLocalNotification(
       "Water pressure high",
       `Current: ${current} psi (limit ${limit} psi).`,
       { kind: "water-pressure-high" },
       { category: "alert" },
     );
-    return;
   }
-  await sendLocalNotification(
+  return sendLocalNotification(
     "Water pressure low",
     `Current: ${current} psi (limit ${limit} psi).`,
     { kind: "water-pressure-low" },
@@ -147,7 +245,7 @@ export async function notifyWaterAlert({
 }
 
 export async function notifyWaterLeak() {
-  await sendLocalNotification(
+  return sendLocalNotification(
     "Water leak detected",
     "Auto shutoff recommended.",
     { kind: "water-leak" },
@@ -168,51 +266,46 @@ export async function notifyAirAlert({
 }) {
   const prefix = deviceName ? `${deviceName} • ` : "";
   if (kind === "aqi") {
-    await sendLocalNotification(
+    return sendLocalNotification(
       `${prefix}Air quality`,
       `AQI ${current} (limit ${limit}).`,
       { kind: "air-aqi" },
       { category: "alert" },
     );
-    return;
   }
   if (kind === "co2") {
-    await sendLocalNotification(
+    return sendLocalNotification(
       `${prefix}CO2 high`,
       `CO2 ${current} ppm (limit ${limit} ppm).`,
       { kind: "air-co2" },
       { category: "alert" },
     );
-    return;
   }
   if (kind === "voc") {
-    await sendLocalNotification(
+    return sendLocalNotification(
       `${prefix}VOC high`,
       `VOC ${current} ppb (limit ${limit} ppb).`,
       { kind: "air-voc" },
       { category: "alert" },
     );
-    return;
   }
   if (kind === "pm25") {
-    await sendLocalNotification(
+    return sendLocalNotification(
       `${prefix}PM2.5 high`,
       `PM2.5 ${current} ug/m3 (limit ${limit} ug/m3).`,
       { kind: "air-pm25" },
       { category: "alert" },
     );
-    return;
   }
   if (kind === "pm10") {
-    await sendLocalNotification(
+    return sendLocalNotification(
       `${prefix}PM10 high`,
       `PM10 ${current} ug/m3 (limit ${limit} ug/m3).`,
       { kind: "air-pm10" },
       { category: "alert" },
     );
-    return;
   }
-  await sendLocalNotification(
+  return sendLocalNotification(
     `${prefix}Pollen alert`,
     `Pollen index ${current} (limit ${limit}).`,
     { kind: "air-pollen" },
@@ -221,7 +314,7 @@ export async function notifyAirAlert({
 }
 
 export async function notifySolarActive(productionW: number) {
-  await sendLocalNotification(
+  return sendLocalNotification(
     "Solar active",
     `Producing ${Math.round(productionW)}W.`,
     { kind: "solar-active" },
@@ -236,7 +329,7 @@ export async function notifyEntryOpen({
   deviceName: string;
   openPercent: number;
 }) {
-  await sendLocalNotification(
+  return sendLocalNotification(
     `${deviceName} open`,
     `${Math.round(openPercent)}% open.`,
     { kind: "entry-open" },
@@ -248,7 +341,7 @@ export async function notifyHomeLeftUnsecured(
   issues: SecurityAuditIssue[],
 ) {
   if (!issues.length) return;
-  await sendLocalNotification(
+  return sendLocalNotification(
     "Home left unsecured",
     formatAwaySecuritySummary(issues),
     {

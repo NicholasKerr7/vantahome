@@ -47,10 +47,14 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your camera</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Allow VantaHome to monitor your home zone and update presence automations after you leave home.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Allow VantaHome to monitor your home zone and update presence automations after you leave home.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow VantaHome to capture voice commands.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Allow VantaHome to access your location to estimate local utility costs.</string>
+	<string>Allow VantaHome to access your location to estimate local utility costs and configure your home zone.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow VantaHome to access your photo library to set a profile avatar.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
@@ -67,6 +71,10 @@
 	<false/>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDefault</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

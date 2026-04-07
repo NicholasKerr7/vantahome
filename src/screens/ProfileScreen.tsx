@@ -55,6 +55,13 @@ import {
   buildUtilityLocationPatchFromDeviceResult,
   requestUtilityLocationFromDevice,
 } from "../services/utilityLocation";
+import {
+  configurePresenceGeofenceFromCurrentLocation,
+  DEFAULT_PRESENCE_GEOFENCE_RADIUS_M,
+  PRESENCE_GEOFENCE_RADIUS_OPTIONS,
+  syncPresenceFromCurrentLocationIfAuthorized,
+  syncPresenceGeofencingFromProfile,
+} from "../services/presenceGeofencing";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -482,6 +489,16 @@ export default function ProfileScreen({ navigation }: Props) {
   const [utilityLocationStatus, setUtilityLocationStatus] =
     useState<UtilityLocationStatus>(profile.utilityLocationStatus ?? "fallback");
   const [utilityLocationBusy, setUtilityLocationBusy] = useState(false);
+  const [presenceGeofenceEnabled, setPresenceGeofenceEnabled] = useState(
+    profile.presenceGeofenceEnabled ?? false,
+  );
+  const [presenceGeofenceRadiusM, setPresenceGeofenceRadiusM] = useState(
+    profile.presenceGeofenceRadiusM ?? DEFAULT_PRESENCE_GEOFENCE_RADIUS_M,
+  );
+  const [presenceGeofenceLabel, setPresenceGeofenceLabel] = useState(
+    profile.presenceGeofenceLabel ?? "",
+  );
+  const [presenceGeofenceBusy, setPresenceGeofenceBusy] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<
@@ -548,7 +565,9 @@ export default function ProfileScreen({ navigation }: Props) {
     refreshInvites();
   }, [refreshInvites]);
   const [biometricLock, setBiometricLock] = useState(true);
-  const [locationSharing, setLocationSharing] = useState(true);
+  const [locationSharing, setLocationSharing] = useState(
+    profile.locationSharingEnabled ?? true,
+  );
   const [activitySharing, setActivitySharing] = useState(false);
   const [autoUpdates, setAutoUpdates] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
@@ -639,7 +658,7 @@ export default function ProfileScreen({ navigation }: Props) {
       label: "Location sharing",
       sub: "Used for presence automations",
       value: locationSharing,
-      onChange: setLocationSharing,
+      onChange: (value: boolean) => handleLocationSharingChange(value),
     },
     {
       id: "activity",
@@ -746,6 +765,103 @@ export default function ProfileScreen({ navigation }: Props) {
       ? "Refresh current location"
       : "Use current location";
 
+  const handleLocationSharingChange = (value: boolean) => {
+    setLocationSharing(value);
+    if (!value) {
+      setPresenceGeofenceEnabled(false);
+      setProfile({
+        locationSharingEnabled: false,
+        presenceGeofenceEnabled: false,
+      });
+      void syncPresenceGeofencingFromProfile();
+      return;
+    }
+
+    setProfile({ locationSharingEnabled: true });
+    void syncPresenceGeofencingFromProfile();
+    void syncPresenceFromCurrentLocationIfAuthorized();
+  };
+
+  const handlePresenceRadiusSelect = (radius: number) => {
+    setPresenceGeofenceRadiusM(radius);
+    setProfile({ presenceGeofenceRadiusM: radius });
+    if (locationSharing && presenceGeofenceEnabled) {
+      void syncPresenceGeofencingFromProfile();
+      void syncPresenceFromCurrentLocationIfAuthorized();
+    }
+  };
+
+  const handleSetCurrentLocationAsHome = async () => {
+    if (presenceGeofenceBusy) return;
+    setPresenceGeofenceBusy(true);
+    try {
+      const result = await configurePresenceGeofenceFromCurrentLocation(
+        presenceGeofenceRadiusM,
+      );
+
+      if (result.kind === "task-unavailable") {
+        Alert.alert(
+          "Background presence unavailable",
+          "Use a development build or installed app to run home geofencing in the background.",
+        );
+        return;
+      }
+
+      if (result.kind === "permission-denied") {
+        Alert.alert(
+          "Location permission needed",
+          "Allow location access to set your home zone.",
+        );
+        return;
+      }
+
+      if (result.kind === "background-permission-denied") {
+        Alert.alert(
+          "Always Allow needed",
+          "Enable Always location access so VantaHome can update your presence after you leave home.",
+        );
+        return;
+      }
+
+      if (result.kind === "location-unavailable") {
+        Alert.alert(
+          "Location unavailable",
+          "VantaHome couldn't read your current location right now.",
+        );
+        return;
+      }
+
+      setLocationSharing(true);
+      setPresenceGeofenceEnabled(true);
+      setPresenceGeofenceRadiusM(result.radiusM);
+      setPresenceGeofenceLabel(result.label);
+    } finally {
+      setPresenceGeofenceBusy(false);
+    }
+  };
+
+  const handleDisableHomeZone = () => {
+    setPresenceGeofenceEnabled(false);
+    setProfile({ presenceGeofenceEnabled: false });
+    void syncPresenceGeofencingFromProfile();
+  };
+
+  const presenceSummaryText = !locationSharing
+    ? "Location sharing is off, so presence automations are paused."
+    : presenceGeofenceEnabled
+      ? presenceGeofenceLabel
+        ? `Home zone active at ${presenceGeofenceLabel} with a ${presenceGeofenceRadiusM}m radius.`
+        : `Home zone active with a ${presenceGeofenceRadiusM}m radius.`
+      : presenceGeofenceLabel
+        ? `Home zone saved at ${presenceGeofenceLabel}. Turn it back on to resume automatic away/home detection.`
+        : "No home zone saved yet. Set your current location as home to enable automatic away/home detection.";
+
+  const presenceActionLabel = presenceGeofenceBusy
+    ? "Setting home zone..."
+    : presenceGeofenceEnabled
+      ? "Refresh home zone"
+      : "Set current location as home";
+
   const onSave = () => {
     setProfile({
       name: name.trim(),
@@ -762,6 +878,10 @@ export default function ProfileScreen({ navigation }: Props) {
       utilityLocationMode,
       utilityLocationResolvedLabel,
       utilityLocationStatus,
+      locationSharingEnabled: locationSharing,
+      presenceGeofenceEnabled,
+      presenceGeofenceRadiusM,
+      presenceGeofenceLabel,
     });
     navigation.goBack();
   };
@@ -1316,6 +1436,52 @@ export default function ProfileScreen({ navigation }: Props) {
           />
         </View>
       ))}
+      <Text style={cardHintTextStyle}>Home zone radius</Text>
+      <View style={styles.chipRow}>
+        {PRESENCE_GEOFENCE_RADIUS_OPTIONS.map((radius) => {
+          const active = presenceGeofenceRadiusM === radius;
+          return (
+            <Pressable
+              key={radius}
+              style={chipStyle(active)}
+              onPress={() => handlePresenceRadiusSelect(radius)}
+            >
+              <Text style={chipTextStyle(active)}>{radius}m</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={cardHintTextStyle}>{presenceSummaryText}</Text>
+      <View style={styles.utilityActionGroup}>
+        <Pressable
+          style={[
+            styles.avatarBtn,
+            presenceGeofenceBusy && secondaryButtonDisabledStyle,
+          ]}
+          onPress={handleSetCurrentLocationAsHome}
+          disabled={presenceGeofenceBusy}
+        >
+          <Ionicons
+            name={presenceGeofenceBusy ? "time-outline" : "locate-outline"}
+            size={Math.round(16 * scale)}
+            color={theme.colors.text}
+          />
+          <Text style={secondaryBtnTextStyle}>{presenceActionLabel}</Text>
+        </Pressable>
+        {presenceGeofenceEnabled ? (
+          <Pressable
+            style={[styles.avatarBtn, styles.avatarBtnGhost]}
+            onPress={handleDisableHomeZone}
+          >
+            <Ionicons
+              name="pause-circle-outline"
+              size={Math.round(16 * scale)}
+              color={theme.colors.subtext}
+            />
+            <Text style={secondaryBtnTextStyle}>Pause home zone</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <Pressable style={styles.rowAction}>
         <Text style={rowActionTextStyle}>Manage trusted devices</Text>
         <Ionicons
