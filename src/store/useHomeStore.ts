@@ -68,6 +68,20 @@ export type AirQualitySample = {
   tempC?: number;
 };
 
+export type EnergySample = {
+  ts: number;
+  powerW?: number;
+  solarW?: number;
+  gridAvailable?: boolean;
+};
+
+export type WaterSample = {
+  ts: number;
+  flowLpm?: number;
+  pressurePsi?: number;
+  leakDetected?: boolean;
+};
+
 export type Weekday = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
 export type SprinklerSchedule = {
@@ -188,6 +202,7 @@ export type Device = {
   solarW?: number; // energy monitor
   solarTodayKwh?: number; // energy monitor
   gridTodayKwh?: number; // energy monitor
+  energyHistory?: EnergySample[]; // energy monitor
   waterLpm?: number; // water meter
   waterTodayL?: number; // water meter
   waterPressurePsi?: number; // water meter
@@ -199,6 +214,7 @@ export type Device = {
   waterPressureAlerts?: boolean; // water meter
   waterAutoShutoff?: boolean; // water meter
   waterBudgetL?: number; // water meter
+  waterHistory?: WaterSample[]; // water meter
   speakerSource?: "AirPlay" | "Bluetooth" | "Spotify" | "AUX" | "TV";
   speakerPreset?: "Flat" | "Warm" | "Bright" | "Bass" | "Vocal";
   bass?: number;
@@ -400,6 +416,20 @@ const AIR_SAMPLE_FIELDS: Array<keyof Device> = [
   "tempC",
 ];
 const AIR_HISTORY_MAX = 144;
+const ENERGY_SAMPLE_FIELDS: Array<keyof Device> = [
+  "powerW",
+  "solarW",
+  "gridAvailable",
+];
+const WATER_SAMPLE_FIELDS: Array<keyof Device> = [
+  "waterLpm",
+  "waterPressurePsi",
+  "waterLeakDetected",
+];
+const TELEMETRY_HISTORY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const ENERGY_HISTORY_MAX = 336;
+const WATER_HISTORY_MAX = 336;
+const TELEMETRY_HISTORY_MIN_INTERVAL_MS = 15 * 60 * 1000;
 
 type RealtimeSettings = {
   enabled: boolean;
@@ -1951,6 +1981,113 @@ export const useHomeStore = create<State>()(
                   lastThumbnailUrl,
                 };
               }
+              if (d.kind === "energy") {
+                const hasSampleUpdate = ENERGY_SAMPLE_FIELDS.some(
+                  (field) => patch[field] !== undefined,
+                );
+                const incomingHistory = patch.energyHistory;
+                if (!hasSampleUpdate && !incomingHistory) return next;
+
+                if (Array.isArray(incomingHistory)) {
+                  const trimmed = incomingHistory
+                    .filter((item) => item && typeof item.ts === "number")
+                    .filter((item) => item.ts >= now - TELEMETRY_HISTORY_WINDOW_MS)
+                    .slice(-ENERGY_HISTORY_MAX);
+                  return {
+                    ...next,
+                    energyHistory: trimmed,
+                  };
+                }
+
+                const history = Array.isArray(d.energyHistory)
+                  ? d.energyHistory
+                  : [];
+                const lastSample = history[history.length - 1];
+                const hasMeaningfulChange =
+                  !lastSample ||
+                  Math.abs((patch.powerW ?? d.powerW ?? 0) - (lastSample.powerW ?? 0)) >=
+                    80 ||
+                  Math.abs((patch.solarW ?? d.solarW ?? 0) - (lastSample.solarW ?? 0)) >=
+                    80 ||
+                  (patch.gridAvailable ?? d.gridAvailable) !== lastSample.gridAvailable;
+                if (
+                  lastSample &&
+                  now - lastSample.ts < TELEMETRY_HISTORY_MIN_INTERVAL_MS &&
+                  !hasMeaningfulChange
+                ) {
+                  return next;
+                }
+
+                const sample: EnergySample = {
+                  ts: now,
+                  powerW: patch.powerW ?? d.powerW,
+                  solarW: patch.solarW ?? d.solarW,
+                  gridAvailable: patch.gridAvailable ?? d.gridAvailable,
+                };
+                const trimmed = [...history, sample]
+                  .filter((item) => item && typeof item.ts === "number")
+                  .filter((item) => item.ts >= now - TELEMETRY_HISTORY_WINDOW_MS)
+                  .slice(-ENERGY_HISTORY_MAX);
+                return {
+                  ...next,
+                  energyHistory: trimmed,
+                };
+              }
+
+              if (d.kind === "water") {
+                const hasSampleUpdate = WATER_SAMPLE_FIELDS.some(
+                  (field) => patch[field] !== undefined,
+                );
+                const incomingHistory = patch.waterHistory;
+                if (!hasSampleUpdate && !incomingHistory) return next;
+
+                if (Array.isArray(incomingHistory)) {
+                  const trimmed = incomingHistory
+                    .filter((item) => item && typeof item.ts === "number")
+                    .filter((item) => item.ts >= now - TELEMETRY_HISTORY_WINDOW_MS)
+                    .slice(-WATER_HISTORY_MAX);
+                  return {
+                    ...next,
+                    waterHistory: trimmed,
+                  };
+                }
+
+                const history = Array.isArray(d.waterHistory) ? d.waterHistory : [];
+                const lastSample = history[history.length - 1];
+                const hasMeaningfulChange =
+                  !lastSample ||
+                  Math.abs((patch.waterLpm ?? d.waterLpm ?? 0) - (lastSample.flowLpm ?? 0)) >=
+                    0.6 ||
+                  Math.abs(
+                    (patch.waterPressurePsi ?? d.waterPressurePsi ?? 0) -
+                      (lastSample.pressurePsi ?? 0),
+                  ) >= 2 ||
+                  (patch.waterLeakDetected ?? d.waterLeakDetected) !==
+                    lastSample.leakDetected;
+                if (
+                  lastSample &&
+                  now - lastSample.ts < TELEMETRY_HISTORY_MIN_INTERVAL_MS &&
+                  !hasMeaningfulChange
+                ) {
+                  return next;
+                }
+
+                const sample: WaterSample = {
+                  ts: now,
+                  flowLpm: patch.waterLpm ?? d.waterLpm,
+                  pressurePsi: patch.waterPressurePsi ?? d.waterPressurePsi,
+                  leakDetected: patch.waterLeakDetected ?? d.waterLeakDetected,
+                };
+                const trimmed = [...history, sample]
+                  .filter((item) => item && typeof item.ts === "number")
+                  .filter((item) => item.ts >= now - TELEMETRY_HISTORY_WINDOW_MS)
+                  .slice(-WATER_HISTORY_MAX);
+                return {
+                  ...next,
+                  waterHistory: trimmed,
+                };
+              }
+
               if (d.kind !== "air") return next;
 
               const hasSampleUpdate = AIR_SAMPLE_FIELDS.some(

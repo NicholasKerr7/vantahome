@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import Pressable from "../components/Pressable";
+import AnalyticsHistoryCard from "../components/AnalyticsHistoryCard";
 import LandscapeFrame from "../components/LandscapeFrame";
 import PortraitFrame from "../components/PortraitFrame";
 import { LinearGradient } from "expo-linear-gradient";
@@ -25,6 +26,7 @@ import {
   formatNotificationTime,
   type NotificationCategory,
 } from "../data/appNotifications";
+import { buildSecurityAnalytics } from "../data/analyticsHistory";
 import {
   clearDeliveredNotifications,
   dismissDeliveredNotification,
@@ -210,6 +212,10 @@ export default function NotificationsScreen() {
       [...notifications].sort((left, right) => right.createdAt - left.createdAt),
     [notifications],
   );
+  const securityAnalytics = useMemo(
+    () => buildSecurityAnalytics(sortedNotifications),
+    [sortedNotifications],
+  );
 
   useEffect(() => {
     markNotificationsSeen();
@@ -302,6 +308,15 @@ export default function NotificationsScreen() {
           })}
         </View>
         <View style={listWrapStyle}>
+          <View style={styles.analyticsWrap}>
+            <AnalyticsHistoryCard
+              title="Security activity"
+              subtitle="24h and 7d event volume"
+              icon="shield-checkmark-outline"
+              datasets={securityAnalytics}
+              accentColor={CATEGORY_META.security.accent}
+            />
+          </View>
           <FlatList
             data={filteredNotifications}
             keyExtractor={(item) => item.id}
@@ -538,5 +553,8 @@ const styles = StyleSheet.create({
     color: theme.colors.subtext,
     fontWeight: "700",
     textAlign: "center",
+  },
+  analyticsWrap: {
+    marginTop: 10,
   },
 });

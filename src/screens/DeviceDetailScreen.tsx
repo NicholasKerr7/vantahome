@@ -11,6 +11,7 @@ import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Slider from "@react-native-community/slider";
 import Pressable from "../components/Pressable";
 import ButtonLabel from "../components/ButtonLabel";
+import AnalyticsHistoryCard from "../components/AnalyticsHistoryCard";
 import { LinearGradient } from "expo-linear-gradient";
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -69,6 +70,11 @@ import { deviceClient } from "../services/deviceClient";
 import { useResponsive } from "../theme/layout";
 import DeviceIcon from "../components/DeviceIcon";
 import { reportRoomPresence } from "../services/roomPresence";
+import {
+  buildAirAnalytics,
+  buildEnergyAnalytics,
+  buildWaterAnalytics,
+} from "../data/analyticsHistory";
 import {
   estimateElectricityCost,
   estimateWaterCost,
@@ -1616,6 +1622,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     utilityPreset.electricityUsdPerKwh,
   )}`;
   const powerOutage = !gridAvailable;
+  const energyAnalytics = useMemo(() => buildEnergyAnalytics(device), [device]);
   const waterFlow = device.waterLpm ?? 0;
   const waterToday = device.waterTodayL ?? 0;
   const waterPressure = device.waterPressurePsi ?? 0;
@@ -1635,6 +1642,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const waterRateLabel = `${utilityPreset.chipLabel} · ${formatWaterRate(
     utilityPreset.waterUsdPerLiter,
   )}`;
+  const waterAnalytics = useMemo(() => buildWaterAnalytics(device), [device]);
   const waterBudgetExceeded = waterBudget > 0 && waterToday >= waterBudget;
   const lowPressure =
     waterPressureAlerts &&
@@ -1689,6 +1697,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       ? device.airOutdoorTempC
       : outdoor.tempC;
   const airHistory = Array.isArray(device.airHistory) ? device.airHistory : [];
+  const airAnalytics = useMemo(() => buildAirAnalytics(device), [device]);
   const airBand = resolveAirBand(airQuality);
   const airSeries = useMemo(() => {
     if (airHistory.length >= 2) {
@@ -4850,6 +4859,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
         )}
       </View>
+      <AnalyticsHistoryCard
+        title="Usage history"
+        subtitle="24h and 7d energy demand"
+        icon="flash-outline"
+        datasets={energyAnalytics}
+        cardStyle={controlCardStyle}
+        accentColor={theme.colors.accent2}
+      />
     </View>
   );
 
@@ -8282,21 +8299,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </View>
   );
   const waterUsageCard = (
-    <View style={waterControlCardStyle}>
-      <Text style={styles.cardLabel}>Usage history</Text>
-      <Text style={styles.waterUsageHint}>
-        Last 7 days · {waterToday} L today{"\n"}
-        Est. today · ${waterCostToday.toFixed(2)} at {waterRateLabel}
-      </Text>
-      <View style={styles.waterUsageBars}>
-        {[18, 28, 22, 36, 26, 30, 20].map((height, index) => (
-          <View
-            key={`water-usage-${index}`}
-            style={[styles.waterUsageBar, { height }]}
-          />
-        ))}
-      </View>
-    </View>
+    <AnalyticsHistoryCard
+      title="Usage history"
+      subtitle={`Today ${waterToday} L · $${waterCostToday.toFixed(2)} est.`}
+      icon="water-outline"
+      datasets={waterAnalytics}
+      cardStyle={waterControlCardStyle}
+      accentColor="#67C7FF"
+    />
   );
   const cameraPresenceCard = (
     <View style={cameraControlCardStyle}>
@@ -9688,6 +9698,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       airTrendLabel={airTrendLabel}
                       airSeriesAqi={airSeriesAqi}
                       airChartMax={airChartMax}
+                      airAnalytics={airAnalytics}
                       airRecommendations={airRecommendations}
                       airCo2={airCo2}
                       airPm25={airPm25}

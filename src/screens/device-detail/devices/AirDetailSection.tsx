@@ -5,6 +5,8 @@ import Slider from "@react-native-community/slider";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import Pressable from "../../../components/Pressable";
+import AnalyticsHistoryCard from "../../../components/AnalyticsHistoryCard";
+import type { AnalyticsDatasets } from "../../../data/analyticsHistory";
 import type { Device } from "../../../store/useHomeStore";
 import OptionChips from "../../../components/OptionChips";
 
@@ -72,6 +74,7 @@ type AirDetailSectionProps = {
   airTrendLabel: string;
   airSeriesAqi: number[];
   airChartMax: number;
+  airAnalytics: AnalyticsDatasets;
   airRecommendations: string[];
   airCo2: number;
   airPm25: number;
@@ -158,6 +161,7 @@ export default function AirDetailSection({
   airTrendLabel,
   airSeriesAqi,
   airChartMax,
+  airAnalytics,
   airRecommendations,
   airCo2,
   airPm25,
@@ -381,48 +385,14 @@ export default function AirDetailSection({
         </View>
       </View>
 
-      <View style={airTrendCardStyle}>
-        <View style={styles.airTrendHeader}>
-          <Text style={styles.cardLabel}>24h trend</Text>
-          <View style={airTrendPillStyle}>
-            <Ionicons name={airTrendIcon} size={14} color={airBand.color} />
-            <Text style={styles.airTrendText}>{airTrendLabel}</Text>
-          </View>
-        </View>
-        <View style={styles.airTrendChartFrame}>
-          <View style={styles.airChart}>
-            {airSeriesAqi.map((value, index) => {
-              const height = Math.max(
-                6,
-                Math.round((value / airChartMax) * airChartMaxHeight),
-              );
-              const band = resolveAirBand(value);
-              return (
-                <View
-                  key={`air-bar-${index}`}
-                  style={airChartBarStyle(
-                    height,
-                    band.color,
-                    index === airSeriesAqi.length - 1 ? 1 : 0.6,
-                  )}
-                />
-              );
-            })}
-          </View>
-        </View>
-        <View style={styles.airLegendRow}>
-          {airLegendBands.map((band) => (
-            <View key={`air-legend-${band.label}`} style={styles.airLegendItem}>
-              <View style={airLegendDotStyle(band.color)} />
-              <Text style={styles.airLegendText}>{band.label}</Text>
-            </View>
-          ))}
-        </View>
-        <Text style={styles.airTrendUpdated}>
-          Updated{" "}
-          {airLastUpdatedAt ? formatTimeAgo(airLastUpdatedAt) : "just now"}
-        </Text>
-      </View>
+      <AnalyticsHistoryCard
+        title="Air quality history"
+        subtitle={`Trend ${airTrendLabel} AQI · ${airBand.label}`}
+        icon={airTrendIcon}
+        datasets={airAnalytics}
+        cardStyle={airTrendCardStyle}
+        accentColor={airBand.color}
+      />
 
       <View style={styles.airMetricGrid}>
         {[
@@ -703,51 +673,14 @@ export default function AirDetailSection({
           </View>
         </View>
 
-        <View style={airTrendCardStyle}>
-          <View style={styles.airTrendHeader}>
-            <Text style={styles.cardLabel}>24h trend</Text>
-            <View style={airTrendPillStyle}>
-              <Ionicons name={airTrendIcon} size={14} color={airBand.color} />
-              <Text style={styles.airTrendText}>{airTrendLabel}</Text>
-            </View>
-          </View>
-          <View style={styles.airTrendChartFrame}>
-            <View style={styles.airChart}>
-              {airSeriesAqi.map((value, index) => {
-                const height = Math.max(
-                  6,
-                  Math.round((value / airChartMax) * airChartMaxHeight),
-                );
-                const band = resolveAirBand(value);
-                return (
-                  <View
-                    key={`air-bar-${index}`}
-                    style={airChartBarStyle(
-                      height,
-                      band.color,
-                      index === airSeriesAqi.length - 1 ? 1 : 0.6,
-                    )}
-                  />
-                );
-              })}
-            </View>
-          </View>
-          <View style={styles.airLegendRow}>
-            {airLegendBands.map((band) => (
-              <View
-                key={`air-legend-${band.label}`}
-                style={styles.airLegendItem}
-              >
-                <View style={airLegendDotStyle(band.color)} />
-                <Text style={styles.airLegendText}>{band.label}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={styles.airTrendUpdated}>
-            Updated{" "}
-            {airLastUpdatedAt ? formatTimeAgo(airLastUpdatedAt) : "just now"}
-          </Text>
-        </View>
+        <AnalyticsHistoryCard
+          title="Air quality history"
+          subtitle={`Trend ${airTrendLabel} AQI · ${airBand.label}`}
+          icon={airTrendIcon}
+          datasets={airAnalytics}
+          cardStyle={airTrendCardStyle}
+          accentColor={airBand.color}
+        />
 
         <View style={styles.airMetricGrid}>
           {[
@@ -954,48 +887,14 @@ export default function AirDetailSection({
 
   const portraitCards = (
     <>
-      <View style={airTrendCardStyle}>
-        <View style={styles.airTrendHeader}>
-          <Text style={styles.cardLabel}>24h trend</Text>
-          <View style={airTrendPillStyle}>
-            <Ionicons name={airTrendIcon} size={14} color={airBand.color} />
-            <Text style={styles.airTrendText}>{airTrendLabel}</Text>
-          </View>
-        </View>
-        <View style={styles.airTrendChartFrame}>
-          <View style={styles.airChart}>
-            {airSeriesAqi.map((value, index) => {
-              const height = Math.max(
-                6,
-                Math.round((value / airChartMax) * airChartMaxHeight),
-              );
-              const band = resolveAirBand(value);
-              return (
-                <View
-                  key={`air-bar-${index}`}
-                  style={airChartBarStyle(
-                    height,
-                    band.color,
-                    index === airSeriesAqi.length - 1 ? 1 : 0.6,
-                  )}
-                />
-              );
-            })}
-          </View>
-        </View>
-        <View style={styles.airLegendRow}>
-          {airLegendBands.map((band) => (
-            <View key={`air-legend-${band.label}`} style={styles.airLegendItem}>
-              <View style={airLegendDotStyle(band.color)} />
-              <Text style={styles.airLegendText}>{band.label}</Text>
-            </View>
-          ))}
-        </View>
-        <Text style={styles.airTrendUpdated}>
-          Updated{" "}
-          {airLastUpdatedAt ? formatTimeAgo(airLastUpdatedAt) : "just now"}
-        </Text>
-      </View>
+      <AnalyticsHistoryCard
+        title="Air quality history"
+        subtitle={`Trend ${airTrendLabel} AQI · ${airBand.label}`}
+        icon={airTrendIcon}
+        datasets={airAnalytics}
+        cardStyle={airTrendCardStyle}
+        accentColor={airBand.color}
+      />
 
       <View style={styles.airMetricGrid}>
         {[
