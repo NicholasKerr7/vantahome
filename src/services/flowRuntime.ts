@@ -1,10 +1,16 @@
 import { deviceClient } from "./deviceClient";
+import { sendLocalNotification } from "./notifications";
+import { matchesSunRelation } from "./sunCycle";
 import {
   useHomeStore,
   type AutomationFlow,
   type AutomationRule,
+  type Device,
   type FlowAction,
   type FlowCondition,
+  type FlowLeafAction,
+  type FlowTrigger,
+  type HouseholdMember,
   type Weekday,
 } from "../store/useHomeStore";
 
@@ -13,7 +19,18 @@ type FlowRuntimeOptions = {
   timeTickMs?: number;
 };
 
+type FlowEvaluationContext = {
+  openSinceByDeviceId: Map<string, number>;
+};
+
 const WEEKDAYS: Weekday[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const OPENABLE_KINDS = new Set<Device["kind"]>([
+  "door",
+  "window",
+  "garage",
+  "gate",
+]);
+const MAX_BRANCH_DEPTH = 5;
 
 export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
   const flowCooldownMs = options.flowCooldownMs ?? 10_000;
@@ -22,58 +39,47 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
   const lastFlowRun = new Map<string, number>();
   const lastTimeTrigger = new Map<string, string>();
   const lastRuleRun = new Map<string, string>();
+  const lastStatefulMatch = new Map<string, boolean>();
   const running = new Set<string>();
+  const context: FlowEvaluationContext = {
+    openSinceByDeviceId: snapshotOpenState(useHomeStore.getState().devices),
+  };
 
-  let deviceState = snapshotDeviceState(useHomeStore.getState().devices);
-  let presenceState = snapshotPresence(useHomeStore.getState().household);
+  const syncStatefulFlows = (now = new Date(), allowFire = true) => {
+    const state = useHomeStore.getState();
+    state.flows.forEach((flow) => {
+      if (!flow.enabled) {
+        lastStatefulMatch.set(flow.id, false);
+        return;
+      }
+      if (!flow.triggers.some(isStatefulTrigger)) return;
+
+      const nextMatch =
+        flow.triggers.some((trigger) => triggerMatchesState(trigger, state)) &&
+        conditionsPass(flow.conditions, now, state, context);
+      const prevMatch = lastStatefulMatch.get(flow.id) ?? false;
+
+      if (allowFire && nextMatch && !prevMatch) {
+        runFlow(flow, flowCooldownMs, running, lastFlowRun, context);
+      }
+      lastStatefulMatch.set(flow.id, nextMatch);
+    });
+  };
+
+  syncStatefulFlows(new Date(), false);
 
   const stateUnsub = useHomeStore.subscribe((state, prev) => {
     if (state.devices !== prev.devices) {
-      const flows = useHomeStore.getState().flows;
-      state.devices.forEach((device) => {
-        const prevOn = deviceState.get(device.id);
-        if (prevOn === device.isOn) return;
-        deviceState.set(device.id, device.isOn);
-        flows.forEach((flow) => {
-          if (!flow.enabled) return;
-          flow.triggers.forEach((trigger, idx) => {
-            if (trigger.type !== "device") return;
-            if (trigger.deviceId !== device.id) return;
-            if (device.isOn !== (trigger.state === "on")) return;
-            runFlow(
-              flow,
-              flowCooldownMs,
-              running,
-              lastFlowRun,
-              `device-${idx}`,
-            );
-          });
-        });
-      });
+      syncOpenStateMap(prev.devices, state.devices, context.openSinceByDeviceId);
+      syncStatefulFlows(new Date(), true);
     }
 
     if (state.household !== prev.household) {
-      const flows = useHomeStore.getState().flows;
-      state.household.forEach((member) => {
-        const prevStatus = presenceState.get(member.id);
-        if (prevStatus === member.status) return;
-        presenceState.set(member.id, member.status);
-        flows.forEach((flow) => {
-          if (!flow.enabled) return;
-          flow.triggers.forEach((trigger, idx) => {
-            if (trigger.type !== "presence") return;
-            if (trigger.memberId !== member.id) return;
-            if (trigger.status !== member.status) return;
-            runFlow(
-              flow,
-              flowCooldownMs,
-              running,
-              lastFlowRun,
-              `presence-${idx}`,
-            );
-          });
-        });
-      });
+      syncStatefulFlows(new Date(), true);
+    }
+
+    if (state.flows !== prev.flows) {
+      syncStatefulFlows(new Date(), false);
     }
 
     if (state.lastSceneRun && state.lastSceneRun !== prev.lastSceneRun) {
@@ -83,7 +89,14 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
         flow.triggers.forEach((trigger, idx) => {
           if (trigger.type !== "scene") return;
           if (trigger.sceneId !== state.lastSceneRun?.sceneId) return;
-          runFlow(flow, flowCooldownMs, running, lastFlowRun, `scene-${idx}`);
+          runFlow(
+            flow,
+            flowCooldownMs,
+            running,
+            lastFlowRun,
+            context,
+            `scene-${idx}`,
+          );
         });
       });
     }
@@ -101,23 +114,33 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
         if (
           trigger.hour !== now.getHours() ||
           trigger.minute !== now.getMinutes()
-        )
+        ) {
           return;
+        }
         const triggerKey = `${flow.id}:${idx}`;
         if (lastTimeTrigger.get(triggerKey) === minuteKey) return;
-        if (!conditionsPass(flow.conditions, now, state)) return;
         lastTimeTrigger.set(triggerKey, minuteKey);
-        runFlow(flow, flowCooldownMs, running, lastFlowRun, `time-${idx}`);
+        runFlow(
+          flow,
+          flowCooldownMs,
+          running,
+          lastFlowRun,
+          context,
+          `time-${idx}`,
+        );
       });
     });
+
+    syncStatefulFlows(now, true);
 
     state.rules.forEach((rule) => {
       if (!rule.enabled) return;
       if (
         rule.trigger.hour !== now.getHours() ||
         rule.trigger.minute !== now.getMinutes()
-      )
+      ) {
         return;
+      }
       if (lastRuleRun.get(rule.id) === minuteKey) return;
       lastRuleRun.set(rule.id, minuteKey);
       runRule(rule);
@@ -133,18 +156,8 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
   };
 }
 
-function snapshotDeviceState(devices: Array<{ id: string; isOn: boolean }>) {
-  const map = new Map<string, boolean>();
-  devices.forEach((d) => map.set(d.id, d.isOn));
-  return map;
-}
-
-function snapshotPresence(
-  members: Array<{ id: string; status: "home" | "away" }>,
-) {
-  const map = new Map<string, "home" | "away">();
-  members.forEach((m) => map.set(m.id, m.status));
-  return map;
+function isStatefulTrigger(trigger: FlowTrigger) {
+  return trigger.type === "device" || trigger.type === "presence";
 }
 
 function runFlow(
@@ -152,7 +165,8 @@ function runFlow(
   cooldownMs: number,
   running: Set<string>,
   lastFlowRun: Map<string, number>,
-  _reason: string,
+  context: FlowEvaluationContext,
+  _reason = "stateful",
 ) {
   if (running.has(flow.id)) return;
   const now = Date.now();
@@ -160,12 +174,12 @@ function runFlow(
   if (now - last < cooldownMs) return;
 
   const state = useHomeStore.getState();
-  if (!conditionsPass(flow.conditions, new Date(), state)) return;
+  if (!conditionsPass(flow.conditions, new Date(now), state, context)) return;
 
   running.add(flow.id);
   lastFlowRun.set(flow.id, now);
 
-  void executeActions(flow.actions).finally(() => {
+  void executeActions(flow.actions, context, flow.name).finally(() => {
     running.delete(flow.id);
   });
 }
@@ -174,11 +188,13 @@ function conditionsPass(
   conditions: FlowCondition[],
   now: Date,
   state: ReturnType<typeof useHomeStore.getState>,
+  context: FlowEvaluationContext,
 ) {
   if (!conditions.length) return true;
-  const deviceMap = new Map(state.devices.map((d) => [d.id, d]));
+  const deviceMap = new Map(state.devices.map((device) => [device.id, device]));
   const day = WEEKDAYS[now.getDay()];
   const minutes = now.getHours() * 60 + now.getMinutes();
+  const household = state.household;
 
   return conditions.every((condition) => {
     switch (condition.type) {
@@ -191,58 +207,212 @@ function conditionsPass(
       case "device": {
         const device = deviceMap.get(condition.deviceId);
         if (!device) return false;
-        return device.isOn === (condition.state === "on");
+        return matchesDeviceState(device, condition.state);
       }
       case "day":
         return condition.days.includes(day);
+      case "household":
+        return matchesHouseholdCondition(household, condition.match);
+      case "sun":
+        return matchesSunRelation(
+          now,
+          {
+            latitude: state.profile.presenceGeofenceLatitude,
+            longitude: state.profile.presenceGeofenceLongitude,
+          },
+          condition.relation,
+        );
+      case "open-for": {
+        const device = deviceMap.get(condition.deviceId);
+        if (!device || !isDeviceOpen(device)) return false;
+        const openSince = context.openSinceByDeviceId.get(condition.deviceId);
+        if (!openSince) return false;
+        return now.getTime() - openSince >= condition.minutes * 60 * 1000;
+      }
       default:
         return true;
     }
   });
 }
 
-async function executeActions(actions: FlowAction[]) {
+async function executeActions(
+  actions: FlowAction[],
+  context: FlowEvaluationContext,
+  flowName: string,
+  depth = 0,
+) {
+  if (depth > MAX_BRANCH_DEPTH) return;
+
   for (const action of actions) {
-    if (action.type === "delay") {
-      const seconds = Number.isFinite(action.seconds)
-        ? Math.max(1, action.seconds)
-        : 1;
-      await sleep(seconds * 1000);
+    if (action.type === "branch") {
+      const state = useHomeStore.getState();
+      const nextActions = conditionsPass(
+        [action.condition],
+        new Date(),
+        state,
+        context,
+      )
+        ? action.ifActions
+        : (action.elseActions ?? []);
+      await executeActions(nextActions, context, flowName, depth + 1);
       continue;
     }
-    if (action.type === "toggle") {
-      await deviceClient.sendCommand({
-        op: "toggle",
-        deviceId: action.deviceId,
-        on: action.on,
-      });
-      continue;
-    }
-    if (action.type === "set-ac") {
-      await deviceClient.sendCommand({
-        op: "set-temp",
-        deviceId: action.deviceId,
-        value: action.tempC,
-        mode: action.mode,
-      });
-      continue;
-    }
-    if (action.type === "set-brightness") {
-      await deviceClient.sendCommand({
-        op: "set-brightness",
-        deviceId: action.deviceId,
-        value: action.brightness,
-      });
-      continue;
-    }
-    if (action.type === "run-scene") {
-      useHomeStore.getState().runScene(action.sceneId);
-      continue;
-    }
-    if (action.type === "notify") {
-      console.log(`[Flow] ${action.message}`);
-    }
+
+    await executeLeafAction(action, flowName);
   }
+}
+
+async function executeLeafAction(action: FlowLeafAction, flowName: string) {
+  if (action.type === "delay") {
+    const seconds = Number.isFinite(action.seconds)
+      ? Math.max(1, action.seconds)
+      : 1;
+    await sleep(seconds * 1000);
+    return;
+  }
+
+  if (action.type === "toggle") {
+    await deviceClient.sendCommand({
+      op: "toggle",
+      deviceId: action.deviceId,
+      on: action.on,
+    });
+    return;
+  }
+
+  if (action.type === "patch") {
+    await deviceClient.sendCommand({
+      op: "patch",
+      deviceId: action.deviceId,
+      patch: action.patch,
+    });
+    return;
+  }
+
+  if (action.type === "set-ac") {
+    await deviceClient.sendCommand({
+      op: "set-temp",
+      deviceId: action.deviceId,
+      value: action.tempC,
+      mode: action.mode,
+    });
+    return;
+  }
+
+  if (action.type === "set-brightness") {
+    await deviceClient.sendCommand({
+      op: "set-brightness",
+      deviceId: action.deviceId,
+      value: action.brightness,
+    });
+    return;
+  }
+
+  if (action.type === "run-scene") {
+    useHomeStore.getState().runScene(action.sceneId);
+    return;
+  }
+
+  if (action.type === "notify") {
+    await sendLocalNotification(
+      flowName,
+      action.message,
+      { kind: "automation-flow" },
+      { category: "automation" },
+    );
+  }
+}
+
+function triggerMatchesState(
+  trigger: FlowTrigger,
+  state: ReturnType<typeof useHomeStore.getState>,
+) {
+  if (trigger.type === "presence") {
+    return state.household.some(
+      (member) =>
+        member.id === trigger.memberId && member.status === trigger.status,
+    );
+  }
+
+  if (trigger.type === "device") {
+    const device = state.devices.find((item) => item.id === trigger.deviceId);
+    if (!device) return false;
+    return matchesDeviceState(device, trigger.state);
+  }
+
+  return false;
+}
+
+function matchesDeviceState(
+  device: Pick<Device, "kind" | "isOn" | "openPercent">,
+  state: "on" | "off" | "open" | "closed",
+) {
+  if (state === "on") return device.isOn;
+  if (state === "off") return !device.isOn;
+  const open = isDeviceOpen(device);
+  return state === "open" ? open : !open;
+}
+
+function isDeviceOpen(device: Pick<Device, "kind" | "isOn" | "openPercent">) {
+  if (OPENABLE_KINDS.has(device.kind)) {
+    return (device.openPercent ?? 0) > 0;
+  }
+  return device.isOn;
+}
+
+function matchesHouseholdCondition(
+  members: HouseholdMember[],
+  match: "everyone-away" | "everyone-home" | "someone-home",
+) {
+  if (!members.length) return false;
+  if (match === "everyone-away") {
+    return members.every((member) => member.status === "away");
+  }
+  if (match === "everyone-home") {
+    return members.every((member) => member.status === "home");
+  }
+  return members.some((member) => member.status === "home");
+}
+
+function snapshotOpenState(devices: Device[]) {
+  const now = Date.now();
+  const map = new Map<string, number>();
+  devices.forEach((device) => {
+    if (isDeviceOpen(device)) {
+      map.set(device.id, now);
+    }
+  });
+  return map;
+}
+
+function syncOpenStateMap(
+  prevDevices: Device[],
+  nextDevices: Device[],
+  openSinceByDeviceId: Map<string, number>,
+) {
+  const prevMap = new Map(prevDevices.map((device) => [device.id, device]));
+  const nextMap = new Map(nextDevices.map((device) => [device.id, device]));
+  const now = Date.now();
+
+  nextDevices.forEach((device) => {
+    const prev = prevMap.get(device.id);
+    const wasOpen = prev ? isDeviceOpen(prev) : false;
+    const isOpen = isDeviceOpen(device);
+
+    if (isOpen && !wasOpen) {
+      openSinceByDeviceId.set(device.id, now);
+      return;
+    }
+    if (!isOpen) {
+      openSinceByDeviceId.delete(device.id);
+    }
+  });
+
+  prevDevices.forEach((device) => {
+    if (!nextMap.has(device.id)) {
+      openSinceByDeviceId.delete(device.id);
+    }
+  });
 }
 
 function runRule(rule: AutomationRule) {
@@ -267,12 +437,12 @@ function runRule(rule: AutomationRule) {
 }
 
 function timeKey(now: Date) {
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${d}-${hh}:${mm}`;
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hour = String(now.getHours()).padStart(2, "0");
+  const minute = String(now.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}-${hour}:${minute}`;
 }
 
 function sleep(ms: number) {

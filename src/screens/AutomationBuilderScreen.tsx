@@ -28,6 +28,7 @@ import {
   type Device,
   type FlowAction,
   type FlowCondition,
+  type FlowLeafAction,
   type FlowTrigger,
   type Weekday,
 } from "../store/useHomeStore";
@@ -48,19 +49,101 @@ const CONDITION_TYPES = [
   { id: "time-range", label: "Time Range" },
   { id: "device", label: "Device" },
   { id: "day", label: "Days" },
+  { id: "household", label: "Household" },
+  { id: "sun", label: "Sun" },
+  { id: "open-for", label: "Open For" },
 ] as const;
 
 const ACTION_TYPES = [
   { id: "toggle", label: "Toggle" },
+  { id: "patch", label: "Patch" },
   { id: "set-ac", label: "Set AC" },
   { id: "set-brightness", label: "Brightness" },
   { id: "run-scene", label: "Run Scene" },
   { id: "delay", label: "Delay" },
   { id: "notify", label: "Notify" },
+  { id: "branch", label: "Branch" },
 ] as const;
 
 const WEEK_DAYS: Weekday[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DELAY_PRESETS = [5, 15, 30, 60, 120, 300];
+const OPEN_DURATION_PRESETS = [5, 10, 15, 30];
+const PATCH_OPEN_PRESETS = [0, 25, 50, 100];
+const DEVICE_STATE_OPTIONS: Array<{
+  value: Extract<Extract<FlowTrigger, { type: "device" }>["state"], string>;
+  label: string;
+}> = [
+  { value: "on", label: "On" },
+  { value: "off", label: "Off" },
+  { value: "open", label: "Open" },
+  { value: "closed", label: "Closed" },
+];
+const HOUSEHOLD_MATCH_OPTIONS: Array<{
+  value: Extract<Extract<FlowCondition, { type: "household" }>["match"], string>;
+  label: string;
+}> = [
+  { value: "everyone-away", label: "Everyone away" },
+  { value: "everyone-home", label: "Everyone home" },
+  { value: "someone-home", label: "Someone home" },
+];
+const SUN_RELATION_OPTIONS: Array<{
+  value: Extract<Extract<FlowCondition, { type: "sun" }>["relation"], string>;
+  label: string;
+}> = [
+  { value: "after-sunset", label: "After sunset" },
+  { value: "before-sunrise", label: "Before sunrise" },
+];
+const BRANCH_CONDITION_TYPES = [
+  { id: "device", label: "Device" },
+  { id: "household", label: "Household" },
+  { id: "sun", label: "Sun" },
+  { id: "open-for", label: "Open For" },
+] as const;
+const BRANCH_ACTION_TYPES = [
+  { id: "run-scene", label: "Run Scene" },
+  { id: "notify", label: "Notify" },
+  { id: "delay", label: "Delay" },
+  { id: "patch", label: "Patch" },
+] as const;
+
+type DeviceMatchState = Extract<
+  Extract<FlowTrigger, { type: "device" }>["state"],
+  string
+>;
+type HouseholdMatch = Extract<
+  Extract<FlowCondition, { type: "household" }>["match"],
+  string
+>;
+type SunRelation = Extract<
+  Extract<FlowCondition, { type: "sun" }>["relation"],
+  string
+>;
+type BranchConditionType = (typeof BRANCH_CONDITION_TYPES)[number]["id"];
+type BranchActionType = (typeof BRANCH_ACTION_TYPES)[number]["id"];
+
+type BranchActionDraft = {
+  type: BranchActionType;
+  deviceId: string;
+  sceneId: string;
+  delaySeconds: number;
+  message: string;
+  patchOpenPercent: number;
+  patchArmed: boolean;
+  patchRecording: boolean;
+  patchMotionAlerts: boolean;
+};
+
+const createBranchActionDraft = (): BranchActionDraft => ({
+  type: "run-scene",
+  deviceId: "",
+  sceneId: "",
+  delaySeconds: 15,
+  message: "Automation branch matched.",
+  patchOpenPercent: 0,
+  patchArmed: true,
+  patchRecording: true,
+  patchMotionAlerts: true,
+});
 
 export default function AutomationBuilderScreen({ navigation, route }: Props) {
   const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
@@ -246,7 +329,9 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     endMinute: "00",
   });
   const [draftDeviceId, setDraftDeviceId] = useState("");
-  const [draftStateOn, setDraftStateOn] = useState(true);
+  const [draftDeviceMatchState, setDraftDeviceMatchState] =
+    useState<DeviceMatchState>("on");
+  const [draftToggleOn, setDraftToggleOn] = useState(true);
   const [draftSceneId, setDraftSceneId] = useState("");
   const [draftMemberId, setDraftMemberId] = useState("");
   const [draftPresenceStatus, setDraftPresenceStatus] = useState<
@@ -263,6 +348,34 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
   const [draftTemp, setDraftTemp] = useState(22);
   const [draftDelaySeconds, setDraftDelaySeconds] = useState(10);
   const [draftMessage, setDraftMessage] = useState("Someone arrived.");
+  const [draftHouseholdMatch, setDraftHouseholdMatch] =
+    useState<HouseholdMatch>("everyone-away");
+  const [draftSunRelation, setDraftSunRelation] =
+    useState<SunRelation>("after-sunset");
+  const [draftOpenMinutes, setDraftOpenMinutes] = useState(10);
+  const [draftPatchOpenPercent, setDraftPatchOpenPercent] = useState(0);
+  const [draftPatchArmed, setDraftPatchArmed] = useState(true);
+  const [draftPatchRecording, setDraftPatchRecording] = useState(true);
+  const [draftPatchMotionAlerts, setDraftPatchMotionAlerts] = useState(true);
+  const [draftBranchConditionType, setDraftBranchConditionType] =
+    useState<BranchConditionType>("household");
+  const [draftBranchConditionDeviceId, setDraftBranchConditionDeviceId] =
+    useState("");
+  const [draftBranchConditionDeviceState, setDraftBranchConditionDeviceState] =
+    useState<DeviceMatchState>("open");
+  const [draftBranchConditionHouseholdMatch, setDraftBranchConditionHouseholdMatch] =
+    useState<HouseholdMatch>("everyone-away");
+  const [draftBranchConditionSunRelation, setDraftBranchConditionSunRelation] =
+    useState<SunRelation>("after-sunset");
+  const [draftBranchConditionOpenDeviceId, setDraftBranchConditionOpenDeviceId] =
+    useState("");
+  const [draftBranchConditionOpenMinutes, setDraftBranchConditionOpenMinutes] =
+    useState(10);
+  const [draftBranchIfAction, setDraftBranchIfAction] =
+    useState<BranchActionDraft>(createBranchActionDraft);
+  const [draftBranchElseEnabled, setDraftBranchElseEnabled] = useState(true);
+  const [draftBranchElseAction, setDraftBranchElseAction] =
+    useState<BranchActionDraft>(createBranchActionDraft);
 
   useEffect(() => {
     if (!existing) return;
@@ -298,6 +411,20 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     () => devices.filter((d) => d.kind === "light"),
     [devices],
   );
+  const openableDevices = useMemo(
+    () =>
+      devices.filter((device) =>
+        ["door", "window", "garage", "gate"].includes(device.kind),
+      ),
+    [devices],
+  );
+  const patchableDevices = useMemo(
+    () =>
+      devices.filter((device) =>
+        ["door", "window", "garage", "gate", "camera"].includes(device.kind),
+      ),
+    [devices],
+  );
 
   const flowName =
     name.trim() || (isEditing ? (existing?.name ?? "Flow") : "New Flow");
@@ -319,20 +446,50 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
       endHour: "23",
       endMinute: "00",
     });
-    setDraftStateOn(true);
+    setDraftDeviceMatchState("on");
+    setDraftToggleOn(true);
     setDraftPresenceStatus("home");
     setDraftDays(["Mon", "Tue", "Wed", "Thu", "Fri"]);
     setDraftBrightness(60);
     setDraftTemp(22);
     setDraftDelaySeconds(10);
     setDraftMessage("Someone arrived.");
+    setDraftHouseholdMatch("everyone-away");
+    setDraftSunRelation("after-sunset");
+    setDraftOpenMinutes(10);
+    setDraftPatchOpenPercent(0);
+    setDraftPatchArmed(true);
+    setDraftPatchRecording(true);
+    setDraftPatchMotionAlerts(true);
+    setDraftBranchConditionType("household");
+    setDraftBranchConditionDeviceState("open");
+    setDraftBranchConditionHouseholdMatch("everyone-away");
+    setDraftBranchConditionSunRelation("after-sunset");
+    setDraftBranchConditionOpenMinutes(10);
+    setDraftBranchIfAction(createBranchActionDraft());
+    setDraftBranchElseEnabled(true);
+    setDraftBranchElseAction(createBranchActionDraft());
 
     const firstDevice = devices[0]?.id ?? "";
+    const firstOpenableDevice = openableDevices[0]?.id ?? firstDevice;
+    const firstPatchableDevice = patchableDevices[0]?.id ?? firstDevice;
     const firstScene = accessibleScenes[0]?.id ?? "";
     const firstMember = household[0]?.id ?? "";
     setDraftDeviceId(firstDevice);
     setDraftSceneId(firstScene);
     setDraftMemberId(firstMember);
+    setDraftBranchConditionDeviceId(firstDevice);
+    setDraftBranchConditionOpenDeviceId(firstOpenableDevice);
+    setDraftBranchIfAction((prev) => ({
+      ...prev,
+      deviceId: firstPatchableDevice,
+      sceneId: firstScene,
+    }));
+    setDraftBranchElseAction((prev) => ({
+      ...prev,
+      deviceId: firstPatchableDevice,
+      sceneId: firstScene,
+    }));
   };
 
   useEffect(() => {
@@ -343,6 +500,10 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
         ? acDevices
         : editorType === "set-brightness"
           ? lightDevices
+          : editorType === "patch"
+            ? patchableDevices
+            : editorSection === "condition" && editorType === "open-for"
+              ? openableDevices
           : devices;
     if (!options.length) return;
     if (!options.find((d) => d.id === draftDeviceId)) {
@@ -354,6 +515,8 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     devices,
     acDevices,
     lightDevices,
+    openableDevices,
+    patchableDevices,
     draftDeviceId,
   ]);
 
@@ -365,6 +528,100 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
     const h = clamp(parseInt(hour || "0", 10), 0, 23);
     const m = clamp(parseInt(minute || "0", 10), 0, 59);
     return { hour: h, minute: m };
+  };
+  const buildPatchForDevice = (
+    deviceId: string,
+    patch: {
+      openPercent: number;
+      armed: boolean;
+      recording: boolean;
+      motionAlerts: boolean;
+    },
+  ) => {
+    const device = deviceMap.get(deviceId);
+    if (!device) return null;
+    if (["door", "window", "garage", "gate"].includes(device.kind)) {
+      const openPercent = clamp(patch.openPercent, 0, 100);
+      return {
+        openPercent,
+        isOn: openPercent > 0,
+      } satisfies Partial<Device>;
+    }
+    if (device.kind === "camera") {
+      return {
+        armed: patch.armed,
+        recording: patch.recording,
+        motionAlerts: patch.motionAlerts,
+        isOn: patch.armed || patch.recording || patch.motionAlerts,
+      } satisfies Partial<Device>;
+    }
+    return null;
+  };
+  const buildBranchCondition = (): FlowCondition | null => {
+    if (draftBranchConditionType === "device" && draftBranchConditionDeviceId) {
+      return {
+        type: "device",
+        deviceId: draftBranchConditionDeviceId,
+        state: draftBranchConditionDeviceState,
+      };
+    }
+    if (draftBranchConditionType === "household") {
+      return {
+        type: "household",
+        match: draftBranchConditionHouseholdMatch,
+      };
+    }
+    if (draftBranchConditionType === "sun") {
+      return {
+        type: "sun",
+        relation: draftBranchConditionSunRelation,
+      };
+    }
+    if (
+      draftBranchConditionType === "open-for" &&
+      draftBranchConditionOpenDeviceId
+    ) {
+      return {
+        type: "open-for",
+        deviceId: draftBranchConditionOpenDeviceId,
+        minutes: clamp(draftBranchConditionOpenMinutes, 1, 120),
+      };
+    }
+    return null;
+  };
+  const buildBranchLeafAction = (
+    draft: BranchActionDraft,
+  ): FlowLeafAction | null => {
+    if (draft.type === "run-scene" && draft.sceneId) {
+      return { type: "run-scene", sceneId: draft.sceneId };
+    }
+    if (draft.type === "notify") {
+      return {
+        type: "notify",
+        message: draft.message.trim() || "Automation branch matched.",
+      };
+    }
+    if (draft.type === "delay") {
+      return {
+        type: "delay",
+        seconds: clamp(draft.delaySeconds, 1, 600),
+      };
+    }
+    if (draft.type === "patch" && draft.deviceId) {
+      const patch = buildPatchForDevice(draft.deviceId, {
+        openPercent: draft.patchOpenPercent,
+        armed: draft.patchArmed,
+        recording: draft.patchRecording,
+        motionAlerts: draft.patchMotionAlerts,
+      });
+      if (!patch) return null;
+      return {
+        type: "patch",
+        deviceId: draft.deviceId,
+        patch,
+      };
+    }
+    return null;
   };
 
   const addItem = () => {
@@ -380,7 +637,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           {
             type: "device",
             deviceId: draftDeviceId,
-            state: draftStateOn ? "on" : "off",
+            state: draftDeviceMatchState,
           },
         ]);
       }
@@ -423,7 +680,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           {
             type: "device",
             deviceId: draftDeviceId,
-            state: draftStateOn ? "on" : "off",
+            state: draftDeviceMatchState,
           },
         ]);
       }
@@ -431,14 +688,50 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
         const days = draftDays.length ? draftDays : WEEK_DAYS;
         setConditions((prev) => [...prev, { type: "day", days }]);
       }
+      if (editorType === "household") {
+        setConditions((prev) => [
+          ...prev,
+          { type: "household", match: draftHouseholdMatch },
+        ]);
+      }
+      if (editorType === "sun") {
+        setConditions((prev) => [
+          ...prev,
+          { type: "sun", relation: draftSunRelation },
+        ]);
+      }
+      if (editorType === "open-for" && draftDeviceId) {
+        setConditions((prev) => [
+          ...prev,
+          {
+            type: "open-for",
+            deviceId: draftDeviceId,
+            minutes: clamp(draftOpenMinutes, 1, 120),
+          },
+        ]);
+      }
     }
 
     if (editorSection === "action") {
       if (editorType === "toggle" && draftDeviceId) {
         setActions((prev) => [
           ...prev,
-          { type: "toggle", deviceId: draftDeviceId, on: draftStateOn },
+          { type: "toggle", deviceId: draftDeviceId, on: draftToggleOn },
         ]);
+      }
+      if (editorType === "patch" && draftDeviceId) {
+        const patch = buildPatchForDevice(draftDeviceId, {
+          openPercent: draftPatchOpenPercent,
+          armed: draftPatchArmed,
+          recording: draftPatchRecording,
+          motionAlerts: draftPatchMotionAlerts,
+        });
+        if (patch) {
+          setActions((prev) => [
+            ...prev,
+            { type: "patch", deviceId: draftDeviceId, patch },
+          ]);
+        }
       }
       if (editorType === "set-ac" && draftDeviceId) {
         setActions((prev) => [
@@ -474,6 +767,24 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
       if (editorType === "notify") {
         const message = draftMessage.trim() || "Notification";
         setActions((prev) => [...prev, { type: "notify", message }]);
+      }
+      if (editorType === "branch") {
+        const condition = buildBranchCondition();
+        const ifAction = buildBranchLeafAction(draftBranchIfAction);
+        const elseAction = draftBranchElseEnabled
+          ? buildBranchLeafAction(draftBranchElseAction)
+          : null;
+        if (condition && ifAction) {
+          setActions((prev) => [
+            ...prev,
+            {
+              type: "branch",
+              condition,
+              ifActions: [ifAction],
+              ...(elseAction ? { elseActions: [elseAction] } : {}),
+            },
+          ]);
+        }
       }
     }
 
@@ -792,24 +1103,25 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   ))}
                 </ScrollView>
               </ModalField>
-              <View style={styles.switchRow}>
-                <Text style={inputLabelStyle}>
-                  State: {draftStateOn ? "On" : "Off"}
-                </Text>
-                <Switch
-                  value={draftStateOn}
-                  onValueChange={setDraftStateOn}
-                  thumbColor={
-                    draftStateOn
-                      ? theme.colors.accent
-                      : "rgba(255,255,255,0.8)"
-                  }
-                  trackColor={{
-                    true: "rgba(180,107,255,0.45)",
-                    false: "rgba(255,255,255,0.24)",
-                  }}
-                />
-              </View>
+              <ModalField label="State" labelStyle={inputLabelStyle}>
+                <View style={styles.dayGrid}>
+                  {DEVICE_STATE_OPTIONS.map((option) => (
+                    <Pressable
+                      key={option.value}
+                      style={choiceChipStyle(draftDeviceMatchState === option.value)}
+                      onPress={() => setDraftDeviceMatchState(option.value)}
+                    >
+                      <Text
+                        style={choiceChipTextStyle(
+                          draftDeviceMatchState === option.value,
+                        )}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ModalField>
             </View>
           )}
 
@@ -961,24 +1273,25 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   ))}
                 </ScrollView>
               </ModalField>
-              <View style={styles.switchRow}>
-                <Text style={inputLabelStyle}>
-                  State: {draftStateOn ? "On" : "Off"}
-                </Text>
-                <Switch
-                  value={draftStateOn}
-                  onValueChange={setDraftStateOn}
-                  thumbColor={
-                    draftStateOn
-                      ? theme.colors.accent
-                      : "rgba(255,255,255,0.8)"
-                  }
-                  trackColor={{
-                    true: "rgba(180,107,255,0.45)",
-                    false: "rgba(255,255,255,0.24)",
-                  }}
-                />
-              </View>
+              <ModalField label="State" labelStyle={inputLabelStyle}>
+                <View style={styles.dayGrid}>
+                  {DEVICE_STATE_OPTIONS.map((option) => (
+                    <Pressable
+                      key={option.value}
+                      style={choiceChipStyle(draftDeviceMatchState === option.value)}
+                      onPress={() => setDraftDeviceMatchState(option.value)}
+                    >
+                      <Text
+                        style={choiceChipTextStyle(
+                          draftDeviceMatchState === option.value,
+                        )}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ModalField>
             </View>
           )}
 
@@ -1011,6 +1324,108 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             </View>
           )}
 
+          {editorSection === "condition" && editorType === "household" && (
+            <View>
+              <ModalField label="Household" labelStyle={inputLabelStyle}>
+                <View style={styles.dayGrid}>
+                  {HOUSEHOLD_MATCH_OPTIONS.map((option) => (
+                    <Pressable
+                      key={option.value}
+                      style={choiceChipStyle(draftHouseholdMatch === option.value)}
+                      onPress={() => setDraftHouseholdMatch(option.value)}
+                    >
+                      <Text
+                        style={choiceChipTextStyle(
+                          draftHouseholdMatch === option.value,
+                        )}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ModalField>
+            </View>
+          )}
+
+          {editorSection === "condition" && editorType === "sun" && (
+            <View>
+              <ModalField label="Sun timing" labelStyle={inputLabelStyle}>
+                <View style={styles.dayGrid}>
+                  {SUN_RELATION_OPTIONS.map((option) => (
+                    <Pressable
+                      key={option.value}
+                      style={choiceChipStyle(draftSunRelation === option.value)}
+                      onPress={() => setDraftSunRelation(option.value)}
+                    >
+                      <Text
+                        style={choiceChipTextStyle(
+                          draftSunRelation === option.value,
+                        )}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ModalField>
+            </View>
+          )}
+
+          {editorSection === "condition" && editorType === "open-for" && (
+            <View>
+              <ModalField label="Entry device" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {openableDevices.map((device) => (
+                    <Pressable
+                      key={device.id}
+                      style={choiceChipStyle(draftDeviceId === device.id)}
+                      onPress={() => setDraftDeviceId(device.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftDeviceId === device.id)}>
+                        {device.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+              <ModalField label="Open for" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {OPEN_DURATION_PRESETS.map((minutes) => {
+                    const active = draftOpenMinutes === minutes;
+                    return (
+                      <Pressable
+                        key={minutes}
+                        style={choiceChipStyle(active)}
+                        onPress={() => setDraftOpenMinutes(minutes)}
+                      >
+                        <Text style={choiceChipTextStyle(active)}>
+                          {minutes}m
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                <TextInput
+                  value={String(draftOpenMinutes)}
+                  onChangeText={(value) =>
+                    setDraftOpenMinutes(parseInt(value || "0", 10))
+                  }
+                  keyboardType="number-pad"
+                  style={inputStyle}
+                />
+              </ModalField>
+            </View>
+          )}
+
           {editorSection === "action" && editorType === "toggle" && (
             <View>
               <ModalField label="Device" labelStyle={inputLabelStyle}>
@@ -1034,13 +1449,13 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               </ModalField>
               <View style={styles.switchRow}>
                 <Text style={inputLabelStyle}>
-                  Turn {draftStateOn ? "On" : "Off"}
+                  Turn {draftToggleOn ? "On" : "Off"}
                 </Text>
                 <Switch
-                  value={draftStateOn}
-                  onValueChange={setDraftStateOn}
+                  value={draftToggleOn}
+                  onValueChange={setDraftToggleOn}
                   thumbColor={
-                    draftStateOn
+                    draftToggleOn
                       ? theme.colors.accent
                       : "rgba(255,255,255,0.8)"
                   }
@@ -1050,6 +1465,116 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   }}
                 />
               </View>
+            </View>
+          )}
+
+          {editorSection === "action" && editorType === "patch" && (
+            <View>
+              <ModalField label="Patchable device" labelStyle={inputLabelStyle}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {patchableDevices.map((device) => (
+                    <Pressable
+                      key={device.id}
+                      style={choiceChipStyle(draftDeviceId === device.id)}
+                      onPress={() => setDraftDeviceId(device.id)}
+                    >
+                      <Text style={choiceChipTextStyle(draftDeviceId === device.id)}>
+                        {device.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </ModalField>
+              {["door", "window", "garage", "gate"].includes(
+                deviceMap.get(draftDeviceId)?.kind ?? "",
+              ) && (
+                <ModalField label="Open %" labelStyle={inputLabelStyle}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.chipRow}
+                  >
+                    {PATCH_OPEN_PRESETS.map((value) => {
+                      const active = draftPatchOpenPercent === value;
+                      return (
+                        <Pressable
+                          key={value}
+                          style={choiceChipStyle(active)}
+                          onPress={() => setDraftPatchOpenPercent(value)}
+                        >
+                          <Text style={choiceChipTextStyle(active)}>
+                            {value}%
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                  <TextInput
+                    value={String(draftPatchOpenPercent)}
+                    onChangeText={(value) =>
+                      setDraftPatchOpenPercent(parseInt(value || "0", 10))
+                    }
+                    keyboardType="number-pad"
+                    style={inputStyle}
+                  />
+                </ModalField>
+              )}
+              {deviceMap.get(draftDeviceId)?.kind === "camera" && (
+                <>
+                  <View style={styles.switchRow}>
+                    <Text style={inputLabelStyle}>Armed</Text>
+                    <Switch
+                      value={draftPatchArmed}
+                      onValueChange={setDraftPatchArmed}
+                      thumbColor={
+                        draftPatchArmed
+                          ? theme.colors.accent
+                          : "rgba(255,255,255,0.8)"
+                      }
+                      trackColor={{
+                        true: "rgba(180,107,255,0.45)",
+                        false: "rgba(255,255,255,0.24)",
+                      }}
+                    />
+                  </View>
+                  <View style={styles.switchRow}>
+                    <Text style={inputLabelStyle}>Recording</Text>
+                    <Switch
+                      value={draftPatchRecording}
+                      onValueChange={setDraftPatchRecording}
+                      thumbColor={
+                        draftPatchRecording
+                          ? theme.colors.accent
+                          : "rgba(255,255,255,0.8)"
+                      }
+                      trackColor={{
+                        true: "rgba(180,107,255,0.45)",
+                        false: "rgba(255,255,255,0.24)",
+                      }}
+                    />
+                  </View>
+                  <View style={styles.switchRow}>
+                    <Text style={inputLabelStyle}>Motion alerts</Text>
+                    <Switch
+                      value={draftPatchMotionAlerts}
+                      onValueChange={setDraftPatchMotionAlerts}
+                      thumbColor={
+                        draftPatchMotionAlerts
+                          ? theme.colors.accent
+                          : "rgba(255,255,255,0.8)"
+                      }
+                      trackColor={{
+                        true: "rgba(180,107,255,0.45)",
+                        false: "rgba(255,255,255,0.24)",
+                      }}
+                    />
+                  </View>
+                </>
+              )}
             </View>
           )}
 
@@ -1198,6 +1723,542 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               </ModalField>
             </View>
           )}
+
+          {editorSection === "action" && editorType === "branch" && (
+            <View>
+              <ModalField label="If" labelStyle={inputLabelStyle}>
+                <View style={styles.dayGrid}>
+                  {BRANCH_CONDITION_TYPES.map((option) => (
+                    <Pressable
+                      key={option.id}
+                      style={choiceChipStyle(draftBranchConditionType === option.id)}
+                      onPress={() => setDraftBranchConditionType(option.id)}
+                    >
+                      <Text
+                        style={choiceChipTextStyle(
+                          draftBranchConditionType === option.id,
+                        )}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ModalField>
+
+              {draftBranchConditionType === "device" && (
+                <>
+                  <ModalField label="Device" labelStyle={inputLabelStyle}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.chipRow}
+                    >
+                      {devices.map((device) => (
+                        <Pressable
+                          key={device.id}
+                          style={choiceChipStyle(
+                            draftBranchConditionDeviceId === device.id,
+                          )}
+                          onPress={() => setDraftBranchConditionDeviceId(device.id)}
+                        >
+                          <Text
+                            style={choiceChipTextStyle(
+                              draftBranchConditionDeviceId === device.id,
+                            )}
+                          >
+                            {device.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </ModalField>
+                  <ModalField label="State" labelStyle={inputLabelStyle}>
+                    <View style={styles.dayGrid}>
+                      {DEVICE_STATE_OPTIONS.map((option) => (
+                        <Pressable
+                          key={option.value}
+                          style={choiceChipStyle(
+                            draftBranchConditionDeviceState === option.value,
+                          )}
+                          onPress={() =>
+                            setDraftBranchConditionDeviceState(option.value)
+                          }
+                        >
+                          <Text
+                            style={choiceChipTextStyle(
+                              draftBranchConditionDeviceState === option.value,
+                            )}
+                          >
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </ModalField>
+                </>
+              )}
+
+              {draftBranchConditionType === "household" && (
+                <ModalField label="Household" labelStyle={inputLabelStyle}>
+                  <View style={styles.dayGrid}>
+                    {HOUSEHOLD_MATCH_OPTIONS.map((option) => (
+                      <Pressable
+                        key={option.value}
+                        style={choiceChipStyle(
+                          draftBranchConditionHouseholdMatch === option.value,
+                        )}
+                        onPress={() =>
+                          setDraftBranchConditionHouseholdMatch(option.value)
+                        }
+                      >
+                        <Text
+                          style={choiceChipTextStyle(
+                            draftBranchConditionHouseholdMatch === option.value,
+                          )}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ModalField>
+              )}
+
+              {draftBranchConditionType === "sun" && (
+                <ModalField label="Sun timing" labelStyle={inputLabelStyle}>
+                  <View style={styles.dayGrid}>
+                    {SUN_RELATION_OPTIONS.map((option) => (
+                      <Pressable
+                        key={option.value}
+                        style={choiceChipStyle(
+                          draftBranchConditionSunRelation === option.value,
+                        )}
+                        onPress={() =>
+                          setDraftBranchConditionSunRelation(option.value)
+                        }
+                      >
+                        <Text
+                          style={choiceChipTextStyle(
+                            draftBranchConditionSunRelation === option.value,
+                          )}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ModalField>
+              )}
+
+              {draftBranchConditionType === "open-for" && (
+                <>
+                  <ModalField label="Entry device" labelStyle={inputLabelStyle}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.chipRow}
+                    >
+                      {openableDevices.map((device) => (
+                        <Pressable
+                          key={device.id}
+                          style={choiceChipStyle(
+                            draftBranchConditionOpenDeviceId === device.id,
+                          )}
+                          onPress={() =>
+                            setDraftBranchConditionOpenDeviceId(device.id)
+                          }
+                        >
+                          <Text
+                            style={choiceChipTextStyle(
+                              draftBranchConditionOpenDeviceId === device.id,
+                            )}
+                          >
+                            {device.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </ModalField>
+                  <ModalField label="Open for" labelStyle={inputLabelStyle}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.chipRow}
+                    >
+                      {OPEN_DURATION_PRESETS.map((minutes) => {
+                        const active = draftBranchConditionOpenMinutes === minutes;
+                        return (
+                          <Pressable
+                            key={minutes}
+                            style={choiceChipStyle(active)}
+                            onPress={() =>
+                              setDraftBranchConditionOpenMinutes(minutes)
+                            }
+                          >
+                            <Text style={choiceChipTextStyle(active)}>
+                              {minutes}m
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                    <TextInput
+                      value={String(draftBranchConditionOpenMinutes)}
+                      onChangeText={(value) =>
+                        setDraftBranchConditionOpenMinutes(
+                          parseInt(value || "0", 10),
+                        )
+                      }
+                      keyboardType="number-pad"
+                      style={inputStyle}
+                    />
+                  </ModalField>
+                </>
+              )}
+
+              <ModalField label="Then" labelStyle={inputLabelStyle}>
+                <View style={styles.dayGrid}>
+                  {BRANCH_ACTION_TYPES.map((option) => (
+                    <Pressable
+                      key={option.id}
+                      style={choiceChipStyle(draftBranchIfAction.type === option.id)}
+                      onPress={() =>
+                        setDraftBranchIfAction((prev) => ({
+                          ...prev,
+                          type: option.id,
+                        }))
+                      }
+                    >
+                      <Text
+                        style={choiceChipTextStyle(
+                          draftBranchIfAction.type === option.id,
+                        )}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ModalField>
+
+              {draftBranchIfAction.type === "run-scene" && (
+                <ModalField label="Scene" labelStyle={inputLabelStyle}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.chipRow}
+                  >
+                    {accessibleScenes.map((scene) => (
+                      <Pressable
+                        key={scene.id}
+                        style={choiceChipStyle(
+                          draftBranchIfAction.sceneId === scene.id,
+                        )}
+                        onPress={() =>
+                          setDraftBranchIfAction((prev) => ({
+                            ...prev,
+                            sceneId: scene.id,
+                          }))
+                        }
+                      >
+                        <Text
+                          style={choiceChipTextStyle(
+                            draftBranchIfAction.sceneId === scene.id,
+                          )}
+                        >
+                          {scene.name}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </ModalField>
+              )}
+
+              {draftBranchIfAction.type === "notify" && (
+                <ModalField label="Message" labelStyle={inputLabelStyle}>
+                  <TextInput
+                    value={draftBranchIfAction.message}
+                    onChangeText={(value) =>
+                      setDraftBranchIfAction((prev) => ({
+                        ...prev,
+                        message: value,
+                      }))
+                    }
+                    placeholder="Send a notification"
+                    placeholderTextColor="rgba(12,12,18,0.45)"
+                    style={inputStyle}
+                  />
+                </ModalField>
+              )}
+
+              {draftBranchIfAction.type === "delay" && (
+                <ModalField label="Delay (seconds)" labelStyle={inputLabelStyle}>
+                  <TextInput
+                    value={String(draftBranchIfAction.delaySeconds)}
+                    onChangeText={(value) =>
+                      setDraftBranchIfAction((prev) => ({
+                        ...prev,
+                        delaySeconds: parseInt(value || "0", 10),
+                      }))
+                    }
+                    keyboardType="number-pad"
+                    style={inputStyle}
+                  />
+                </ModalField>
+              )}
+
+              {draftBranchIfAction.type === "patch" && (
+                <>
+                  <ModalField label="Device" labelStyle={inputLabelStyle}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.chipRow}
+                    >
+                      {patchableDevices.map((device) => (
+                        <Pressable
+                          key={device.id}
+                          style={choiceChipStyle(
+                            draftBranchIfAction.deviceId === device.id,
+                          )}
+                          onPress={() =>
+                            setDraftBranchIfAction((prev) => ({
+                              ...prev,
+                              deviceId: device.id,
+                            }))
+                          }
+                        >
+                          <Text
+                            style={choiceChipTextStyle(
+                              draftBranchIfAction.deviceId === device.id,
+                            )}
+                          >
+                            {device.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </ModalField>
+                  {["door", "window", "garage", "gate"].includes(
+                    deviceMap.get(draftBranchIfAction.deviceId)?.kind ?? "",
+                  ) && (
+                    <ModalField label="Open %" labelStyle={inputLabelStyle}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.chipRow}
+                      >
+                        {PATCH_OPEN_PRESETS.map((value) => {
+                          const active = draftBranchIfAction.patchOpenPercent === value;
+                          return (
+                            <Pressable
+                              key={value}
+                              style={choiceChipStyle(active)}
+                              onPress={() =>
+                                setDraftBranchIfAction((prev) => ({
+                                  ...prev,
+                                  patchOpenPercent: value,
+                                }))
+                              }
+                            >
+                              <Text style={choiceChipTextStyle(active)}>
+                                {value}%
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    </ModalField>
+                  )}
+                </>
+              )}
+
+              <View style={styles.switchRow}>
+                <Text style={inputLabelStyle}>Else branch</Text>
+                <Switch
+                  value={draftBranchElseEnabled}
+                  onValueChange={setDraftBranchElseEnabled}
+                  thumbColor={
+                    draftBranchElseEnabled
+                      ? theme.colors.accent
+                      : "rgba(255,255,255,0.8)"
+                  }
+                  trackColor={{
+                    true: "rgba(180,107,255,0.45)",
+                    false: "rgba(255,255,255,0.24)",
+                  }}
+                />
+              </View>
+
+              {draftBranchElseEnabled && (
+                <>
+                  <ModalField label="Else" labelStyle={inputLabelStyle}>
+                    <View style={styles.dayGrid}>
+                      {BRANCH_ACTION_TYPES.map((option) => (
+                        <Pressable
+                          key={option.id}
+                          style={choiceChipStyle(
+                            draftBranchElseAction.type === option.id,
+                          )}
+                          onPress={() =>
+                            setDraftBranchElseAction((prev) => ({
+                              ...prev,
+                              type: option.id,
+                            }))
+                          }
+                        >
+                          <Text
+                            style={choiceChipTextStyle(
+                              draftBranchElseAction.type === option.id,
+                            )}
+                          >
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </ModalField>
+
+                  {draftBranchElseAction.type === "run-scene" && (
+                    <ModalField label="Scene" labelStyle={inputLabelStyle}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.chipRow}
+                      >
+                        {accessibleScenes.map((scene) => (
+                          <Pressable
+                            key={scene.id}
+                            style={choiceChipStyle(
+                              draftBranchElseAction.sceneId === scene.id,
+                            )}
+                            onPress={() =>
+                              setDraftBranchElseAction((prev) => ({
+                                ...prev,
+                                sceneId: scene.id,
+                              }))
+                            }
+                          >
+                            <Text
+                              style={choiceChipTextStyle(
+                                draftBranchElseAction.sceneId === scene.id,
+                              )}
+                            >
+                              {scene.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </ModalField>
+                  )}
+
+                  {draftBranchElseAction.type === "notify" && (
+                    <ModalField label="Message" labelStyle={inputLabelStyle}>
+                      <TextInput
+                        value={draftBranchElseAction.message}
+                        onChangeText={(value) =>
+                          setDraftBranchElseAction((prev) => ({
+                            ...prev,
+                            message: value,
+                          }))
+                        }
+                        placeholder="Send a notification"
+                        placeholderTextColor="rgba(12,12,18,0.45)"
+                        style={inputStyle}
+                      />
+                    </ModalField>
+                  )}
+
+                  {draftBranchElseAction.type === "delay" && (
+                    <ModalField
+                      label="Delay (seconds)"
+                      labelStyle={inputLabelStyle}
+                    >
+                      <TextInput
+                        value={String(draftBranchElseAction.delaySeconds)}
+                        onChangeText={(value) =>
+                          setDraftBranchElseAction((prev) => ({
+                            ...prev,
+                            delaySeconds: parseInt(value || "0", 10),
+                          }))
+                        }
+                        keyboardType="number-pad"
+                        style={inputStyle}
+                      />
+                    </ModalField>
+                  )}
+
+                  {draftBranchElseAction.type === "patch" && (
+                    <>
+                      <ModalField label="Device" labelStyle={inputLabelStyle}>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={styles.chipRow}
+                        >
+                          {patchableDevices.map((device) => (
+                            <Pressable
+                              key={device.id}
+                              style={choiceChipStyle(
+                                draftBranchElseAction.deviceId === device.id,
+                              )}
+                              onPress={() =>
+                                setDraftBranchElseAction((prev) => ({
+                                  ...prev,
+                                  deviceId: device.id,
+                                }))
+                              }
+                            >
+                              <Text
+                                style={choiceChipTextStyle(
+                                  draftBranchElseAction.deviceId === device.id,
+                                )}
+                              >
+                                {device.name}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </ScrollView>
+                      </ModalField>
+                      {["door", "window", "garage", "gate"].includes(
+                        deviceMap.get(draftBranchElseAction.deviceId)?.kind ?? "",
+                      ) && (
+                        <ModalField label="Open %" labelStyle={inputLabelStyle}>
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.chipRow}
+                          >
+                            {PATCH_OPEN_PRESETS.map((value) => {
+                              const active =
+                                draftBranchElseAction.patchOpenPercent === value;
+                              return (
+                                <Pressable
+                                  key={value}
+                                  style={choiceChipStyle(active)}
+                                  onPress={() =>
+                                    setDraftBranchElseAction((prev) => ({
+                                      ...prev,
+                                      patchOpenPercent: value,
+                                    }))
+                                  }
+                                >
+                                  <Text style={choiceChipTextStyle(active)}>
+                                    {value}%
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </ScrollView>
+                        </ModalField>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </View>
+          )}
         </ScrollView>
 
         <Pressable style={modalButtonStyle} onPress={addItem}>
@@ -1218,7 +2279,7 @@ function describeTrigger(
     case "time":
       return `At ${formatTime(trigger.hour, trigger.minute)}`;
     case "device":
-      return `${devices.get(trigger.deviceId)?.name ?? "Device"} turns ${trigger.state.toUpperCase()}`;
+      return `${devices.get(trigger.deviceId)?.name ?? "Device"} is ${formatDeviceStateLabel(trigger.state)}`;
     case "scene":
       return `${scenes.get(trigger.sceneId)?.name ?? "Scene"} starts`;
     case "presence":
@@ -1239,9 +2300,15 @@ function describeCondition(
         condition.endMinute,
       )}`;
     case "device":
-      return `${devices.get(condition.deviceId)?.name ?? "Device"} is ${condition.state.toUpperCase()}`;
+      return `${devices.get(condition.deviceId)?.name ?? "Device"} is ${formatDeviceStateLabel(condition.state)}`;
     case "day":
       return `Days: ${condition.days.join(", ")}`;
+    case "household":
+      return formatHouseholdMatchLabel(condition.match);
+    case "sun":
+      return formatSunRelationLabel(condition.relation);
+    case "open-for":
+      return `${devices.get(condition.deviceId)?.name ?? "Entry"} open for ${condition.minutes}m`;
     default:
       return "Condition";
   }
@@ -1253,6 +2320,16 @@ function describeAction(
   scenes: Map<string, { id: string; name: string }>,
 ) {
   switch (action.type) {
+    case "patch": {
+      const device = devices.get(action.deviceId);
+      if (typeof action.patch.openPercent === "number") {
+        return `${device?.name ?? "Device"} to ${Math.round(action.patch.openPercent)}% open`;
+      }
+      if (device?.kind === "camera") {
+        return `${device.name} camera updated`;
+      }
+      return `${device?.name ?? "Device"} patched`;
+    }
     case "toggle":
       return `${devices.get(action.deviceId)?.name ?? "Device"} ${action.on ? "ON" : "OFF"}`;
     case "set-ac":
@@ -1265,9 +2342,60 @@ function describeAction(
       return `Wait ${action.seconds}s`;
     case "notify":
       return `Notify: ${action.message}`;
+    case "branch": {
+      const thenLabel = action.ifActions
+        .map((item) => describeLeafAction(item, devices, scenes))
+        .join(", ");
+      const elseLabel = (action.elseActions ?? [])
+        .map((item) => describeLeafAction(item, devices, scenes))
+        .join(", ");
+      return elseLabel
+        ? `If ${describeCondition(action.condition, devices)} → ${thenLabel}; else ${elseLabel}`
+        : `If ${describeCondition(action.condition, devices)} → ${thenLabel}`;
+    }
     default:
       return "Action";
   }
+}
+
+function describeLeafAction(
+  action: FlowLeafAction,
+  devices: Map<string, Device>,
+  scenes: Map<string, { id: string; name: string }>,
+) {
+  return describeAction(action, devices, scenes);
+}
+
+function formatDeviceStateLabel(state: DeviceMatchState) {
+  switch (state) {
+    case "open":
+      return "OPEN";
+    case "closed":
+      return "CLOSED";
+    case "on":
+      return "ON";
+    case "off":
+      return "OFF";
+    default:
+      return state.toUpperCase();
+  }
+}
+
+function formatHouseholdMatchLabel(match: HouseholdMatch) {
+  switch (match) {
+    case "everyone-away":
+      return "Everyone is away";
+    case "everyone-home":
+      return "Everyone is home";
+    case "someone-home":
+      return "Someone is home";
+    default:
+      return "Household";
+  }
+}
+
+function formatSunRelationLabel(relation: SunRelation) {
+  return relation === "after-sunset" ? "After sunset" : "Before sunrise";
 }
 
 function formatTime(hour: number, minute: number) {

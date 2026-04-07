@@ -357,7 +357,7 @@ export type AutomationRule = {
 
 export type FlowTrigger =
   | { type: "time"; hour: number; minute: number }
-  | { type: "device"; deviceId: string; state: "on" | "off" }
+  | { type: "device"; deviceId: string; state: "on" | "off" | "open" | "closed" }
   | { type: "scene"; sceneId: string }
   | { type: "presence"; memberId: string; status: HouseholdMember["status"] };
 
@@ -369,16 +369,32 @@ export type FlowCondition =
       endHour: number;
       endMinute: number;
     }
-  | { type: "device"; deviceId: string; state: "on" | "off" }
-  | { type: "day"; days: Weekday[] };
+  | { type: "device"; deviceId: string; state: "on" | "off" | "open" | "closed" }
+  | { type: "day"; days: Weekday[] }
+  | {
+      type: "household";
+      match: "everyone-away" | "everyone-home" | "someone-home";
+    }
+  | { type: "sun"; relation: "after-sunset" | "before-sunrise" }
+  | { type: "open-for"; deviceId: string; minutes: number };
 
-export type FlowAction =
+export type FlowLeafAction =
   | { type: "toggle"; deviceId: string; on: boolean }
+  | { type: "patch"; deviceId: string; patch: Partial<Device> }
   | { type: "set-ac"; deviceId: string; tempC: number; mode: DeviceMode }
   | { type: "set-brightness"; deviceId: string; brightness: number }
   | { type: "run-scene"; sceneId: string }
   | { type: "delay"; seconds: number }
   | { type: "notify"; message: string };
+
+export type FlowAction =
+  | FlowLeafAction
+  | {
+      type: "branch";
+      condition: FlowCondition;
+      ifActions: FlowLeafAction[];
+      elseActions?: FlowLeafAction[];
+    };
 
 export type AutomationFlow = {
   id: string;
