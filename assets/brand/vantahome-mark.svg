@@ -1,0 +1,71 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Vantahome smart-home mark</title>
+  <desc id="desc">A futuristic V-shaped smart home logo mark with a central automation hub.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="72%">
+      <stop offset="0" stop-color="#22134B"/>
+      <stop offset="0.52" stop-color="#100B28"/>
+      <stop offset="1" stop-color="#050612"/>
+    </radialGradient>
+    <linearGradient id="violet" x1="230" y1="184" x2="810" y2="835" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F3C7FF"/>
+      <stop offset="0.28" stop-color="#A855F7"/>
+      <stop offset="0.68" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="160" y1="145" x2="865" y2="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.2" stop-color="#E9B7FF"/>
+      <stop offset="0.58" stop-color="#A855F7"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.55 0 0 0 0 0.18 0 0 0 0 1 0 0 0 0.9 0" result="purpleGlow"/>
+      <feMerge>
+        <feMergeNode in="purpleGlow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+  <rect x="45" y="45" width="934" height="934" rx="205" stroke="url(#edge)" stroke-width="8" opacity="0.72"/>
+  <rect x="65" y="65" width="894" height="894" rx="190" stroke="#6D28D9" stroke-width="2" opacity="0.42"/>
+
+  <g filter="url(#glow)">
+    <!-- Roof and chimney: home -->
+    <path d="M177 478L512 168L847 478H735L512 272L289 478H177Z" fill="url(#violet)" stroke="url(#edge)" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M674 260H744V432L674 367V260Z" fill="url(#violet)" stroke="url(#edge)" stroke-width="7" stroke-linejoin="round"/>
+
+    <!-- Back home frame -->
+    <path d="M245 510H346L512 746L678 510H779V785H642V692L522 866H502L382 692V785H245V510Z" fill="#0B0920" stroke="url(#edge)" stroke-width="8" stroke-linejoin="round" opacity="0.95"/>
+
+    <!-- V identity -->
+    <path d="M304 522H405L512 704L619 522H720L534 846H490L304 522Z" fill="url(#violet)" stroke="url(#edge)" stroke-width="8" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Smart hub and minimal circuit network -->
+  <g filter="url(#softGlow)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M512 520V343" stroke="#C084FC" stroke-width="8"/>
+    <path d="M512 520L392 423" stroke="#C084FC" stroke-width="8"/>
+    <path d="M512 520L632 423" stroke="#C084FC" stroke-width="8"/>
+    <path d="M512 520V681" stroke="#C084FC" stroke-width="8"/>
+    <circle cx="512" cy="520" r="62" fill="#130B2D" stroke="url(#edge)" stroke-width="10"/>
+    <circle cx="512" cy="520" r="34" fill="#F8D7FF"/>
+    <circle cx="512" cy="520" r="88" stroke="#7C3AED" stroke-width="4" opacity="0.72"/>
+    <circle cx="512" cy="343" r="15" fill="#F8D7FF" stroke="#A855F7" stroke-width="8"/>
+    <circle cx="392" cy="423" r="15" fill="#F8D7FF" stroke="#A855F7" stroke-width="8"/>
+    <circle cx="632" cy="423" r="15" fill="#F8D7FF" stroke="#A855F7" stroke-width="8"/>
+    <circle cx="512" cy="681" r="15" fill="#F8D7FF" stroke="#A855F7" stroke-width="8"/>
+  </g>
+
+  <path d="M240 482L512 230L784 482" stroke="#F5D0FE" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+</svg>
