@@ -1,7 +1,7 @@
 # Supabase Edge Functions (Phase 2)
 
-These functions sit alongside the PostgREST API and handle bootstrapping + state ingest.
-Room-level access is enforced via the `room_members` table and RLS policies.
+These functions sit alongside the PostgREST API. Room visibility and
+action-level permissions are enforced by RLS and database authorization helpers.
 
 ## Functions
 
@@ -9,18 +9,19 @@ Room-level access is enforced via the `room_members` table and RLS policies.
   - Body: `{ "name": "My Home" }`
   - Creates a home and inserts the owner into `home_members`.
 
-- `device-state` (POST/PUT)
-  - Body: `{ "deviceId": "<uuid>", "state": { ... } }`
-  - Merges the patch with existing `device_state` and upserts.
-
-- `device-state-batch` (POST)
-  - Body: `{ "events": [{ "deviceId": "<uuid>", "state": { ... } }] }`
-  - Batch upsert for multiple devices.
+- `device-command` (POST)
+  - Accepts a typed, short-lived command envelope.
+  - RLS derives the required permission from the device kind, action, and
+    payload; callers cannot select their own permission.
+- `device-state` and `device-state-batch`
+  - Legacy client-write endpoints now return `403`.
+  - Physical observations must be written by the trusted Vanta Bridge path.
 - `home-invite` (POST)
 - `home-invite-respond` (POST)
+  - Calls the transactional `respond_home_invite` database function.
 - `device-audit` (POST)
-  - Body: `{ "email": "user@example.com", "name": "Jane", "role": "guest", "roomIds": ["<room_uuid>"] }`
-  - Invites a user and inserts them into `home_members` (+ optional `room_members`).
+  - Resolves the exact device/home through caller-scoped RLS before using the
+    service role to append an audit record.
 
 ## Voice (Phase 3)
 
@@ -37,6 +38,7 @@ Room-level access is enforced via the `room_members` table and RLS policies.
 
 ```bash
 supabase functions deploy home-bootstrap
+supabase functions deploy device-command
 supabase functions deploy device-state
 supabase functions deploy device-state-batch
 supabase functions deploy home-invite
@@ -45,5 +47,5 @@ supabase functions deploy home-invite
 ## Auth
 
 Pass the user JWT in `Authorization: Bearer <token>`.
-RLS policies enforce access on `homes`, `home_members`, `room_members`, `rooms`,
-`devices`, and `device_state` (room-scoped for guests/tenants).
+RLS policies enforce access on homes, memberships, rooms, devices, state,
+commands, and audit data. Room access never grants sensitive commands by itself.

@@ -16,6 +16,7 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow VantaHome to access your photo library to set a profile avatar.",
+        "NSFaceIDUsageDescription": "Allow VantaHome to confirm sensitive home actions.",
         "NSMicrophoneUsageDescription": "Allow VantaHome to capture voice commands.",
         "NSSpeechRecognitionUsageDescription": "Allow VantaHome to recognize your voice commands."
       },
@@ -41,6 +42,12 @@
       "expo-image-picker",
       "expo-web-browser",
       "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow VantaHome to confirm sensitive home actions."
+        }
+      ],
       "sentry-expo",
       [
         "expo-video",

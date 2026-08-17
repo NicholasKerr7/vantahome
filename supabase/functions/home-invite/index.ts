@@ -1,6 +1,12 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseClient } from "../_shared/supabaseClient.ts";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import {
+  boundedString,
+  isUuid,
+  readJsonObject,
+  RequestValidationError,
+} from "../_shared/validation.ts";
 
 const ROLES = ["admin", "member", "guest", "tenant"] as const;
 type InviteRole = (typeof ROLES)[number];
@@ -27,23 +33,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const email = typeof body?.email === "string" ? body.email.trim() : "";
-    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    const body = await readJsonObject(req, 8_192);
+    const email = boundedString(body.email, "email", 320).toLowerCase();
+    const name = boundedString(body.name, "name", 120, false);
     const roleInput =
-      typeof body?.role === "string" ? body.role.trim().toLowerCase() : "";
-    const role: InviteRole = ROLES.includes(roleInput as InviteRole)
-      ? (roleInput as InviteRole)
-      : "member";
+      typeof body?.role === "string" ? body.role.trim().toLowerCase() : "member";
+    if (!ROLES.includes(roleInput as InviteRole)) {
+      throw new RequestValidationError("role is invalid.");
+    }
+    const role = roleInput as InviteRole;
     const roomIds = Array.isArray(body?.roomIds)
-      ? body.roomIds.filter((id: unknown) => typeof id === "string")
+      ? [...new Set(body.roomIds.filter(isUuid))]
       : [];
 
-    if (!email) {
-      return new Response(JSON.stringify({ error: "Email is required." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      throw new RequestValidationError("email is invalid.");
+    }
+    if (Array.isArray(body.roomIds) && roomIds.length !== body.roomIds.length) {
+      throw new RequestValidationError("roomIds contains an invalid identifier.");
     }
 
     const { data: membership, error: membershipError } = await supabase
@@ -155,8 +162,9 @@ Deno.serve(async (req) => {
       },
     );
   } catch (err) {
+    const status = err instanceof RequestValidationError ? 400 : 500;
     return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

@@ -6,8 +6,10 @@ import {
   type DeviceStatePatch,
 } from "./transportSchemas";
 import { runtimePolicy } from "../config/runtimeMode";
+import { authorizeLocalDeviceCommand } from "../security/localCommandAuthorization";
+import { confirmSensitiveAction } from "../security/biometricConfirmation";
 
-export type DeviceCommand =
+type DeviceCommandOperation =
   | { op: "toggle"; deviceId: string; on?: boolean }
   | { op: "set-properties"; deviceId: string; changes: DeviceStatePatch }
   | { op: "set-temp"; deviceId: string; value: number; mode?: Device["mode"] }
@@ -33,6 +35,17 @@ export type DeviceCommand =
       deviceId: string;
       action: "up" | "down" | "left" | "right" | "select" | "home";
     };
+
+export type CommandSecurity = {
+  commandId: string;
+  nonce: string;
+  createdAt: number;
+  expiresAt: number;
+  idempotencyKey: string;
+};
+
+export type DeviceCommand = DeviceCommandOperation & Partial<CommandSecurity>;
+export type SecuredDeviceCommand = DeviceCommandOperation & CommandSecurity;
 
 export type DeviceStateEvent = {
   deviceId: string;
@@ -78,15 +91,16 @@ type ResolvedConnectOptions = {
 
 type CommandOptions = {
   optimistic?: boolean;
+  ttlMs?: number;
 };
 
 type CommandTransport = (
-  cmd: DeviceCommand,
+  cmd: SecuredDeviceCommand,
   patch: DeviceStatePatch | null,
 ) => Promise<void> | void;
 
 type RetryEntry = {
-  cmd: DeviceCommand;
+  cmd: SecuredDeviceCommand;
   patch: DeviceStatePatch | null;
   attempts: number;
   nextAttemptAt: number;
@@ -109,7 +123,7 @@ class DeviceClient {
   private listeners = new Set<Listener>();
   private connectionListeners = new Set<ConnectionListener>();
   private retryListeners = new Set<RetryListener>();
-  private commandListeners: Set<(cmd: DeviceCommand) => void> | null = null;
+  private commandListeners: Set<(cmd: SecuredDeviceCommand) => void> | null = null;
   private socket: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
@@ -148,7 +162,7 @@ class DeviceClient {
     return () => this.retryListeners.delete(fn);
   }
 
-  subscribeCommand(fn: (cmd: DeviceCommand) => void) {
+  subscribeCommand(fn: (cmd: SecuredDeviceCommand) => void) {
     if (!this.commandListeners) {
       this.commandListeners = new Set();
     }
@@ -210,34 +224,41 @@ class DeviceClient {
   }
 
   async sendCommand(cmd: DeviceCommand, options: CommandOptions = {}) {
+    const authorization = authorizeLocalDeviceCommand(cmd);
+    if (!authorization.allowed) {
+      throw new CommandAuthorizationError(authorization.reason);
+    }
+    await confirmSensitiveAction(authorization.permission);
+    const securedCommand = this.secureCommand(cmd, options.ttlMs);
     const optimistic =
       options.optimistic ?? !runtimePolicy.requireRealTransport;
-    const patch = this.patchFromCommand(cmd);
+    const patch = this.patchFromCommand(securedCommand);
     // Apply a local patch immediately so the UI feels snappy.
     if (optimistic && patch) {
       const evt: DeviceStateEvent = {
-        deviceId: cmd.deviceId,
+        deviceId: securedCommand.deviceId,
         patch,
         ts: Date.now(),
       };
       this.emit(evt);
     }
 
-    const sent = await this.attemptSend(cmd, patch, {
+    const sent = await this.attemptSend(securedCommand, patch, {
       allowMock:
         runtimePolicy.allowMockTelemetry && this.commandTransport === null,
       optimistic,
     });
     if (!sent) {
-      this.enqueueRetry(cmd, patch);
+      this.enqueueRetry(securedCommand, patch);
     }
 
-    this.commandListeners?.forEach((fn) => fn(cmd));
+    this.commandListeners?.forEach((fn) => fn(securedCommand));
     void logDeviceAuditEvent({
-      deviceId: cmd.deviceId,
-      action: cmd.op,
-      payload: cmd as unknown as Record<string, unknown>,
+      deviceId: securedCommand.deviceId,
+      action: securedCommand.op,
+      payload: securedCommand as unknown as Record<string, unknown>,
     }).catch(() => {});
+    return { commandId: securedCommand.commandId, queued: !sent };
   }
 
   pushState(deviceId: string, patch: unknown) {
@@ -360,8 +381,9 @@ class DeviceClient {
     }).catch(() => {});
   }
 
-  private enqueueRetry(cmd: DeviceCommand, patch: DeviceStatePatch | null) {
+  private enqueueRetry(cmd: SecuredDeviceCommand, patch: DeviceStatePatch | null) {
     const now = Date.now();
+    if (cmd.expiresAt <= now) return;
     this.retryQueue.push({
       cmd,
       patch,
@@ -392,6 +414,7 @@ class DeviceClient {
     const pending = this.retryQueue;
     this.retryQueue = [];
     for (const entry of pending) {
+      if (entry.cmd.expiresAt <= now) continue;
       if (entry.nextAttemptAt > now) {
         this.retryQueue.push(entry);
         continue;
@@ -420,10 +443,11 @@ class DeviceClient {
   }
 
   private async attemptSend(
-    cmd: DeviceCommand,
+    cmd: SecuredDeviceCommand,
     patch: DeviceStatePatch | null,
     options: { allowMock: boolean; optimistic: boolean },
   ) {
+    if (cmd.expiresAt <= Date.now()) return false;
     if (this.commandTransport) {
       try {
         await this.commandTransport(cmd, patch);
@@ -503,6 +527,58 @@ class DeviceClient {
         return null;
     }
   }
+
+  private secureCommand(
+    cmd: DeviceCommand,
+    requestedTtlMs = 15_000,
+  ): SecuredDeviceCommand {
+    const now = Date.now();
+    if (
+      cmd.op === "set-properties" &&
+      ["id", "name", "kind", "roomId", "__proto__", "constructor", "prototype"].some(
+        (key) => Object.prototype.hasOwnProperty.call(cmd.changes, key),
+      )
+    ) {
+      throw new CommandAuthorizationError("immutable_device_field");
+    }
+    const ttlMs = Math.max(1_000, Math.min(60_000, requestedTtlMs));
+    const commandId = cmd.commandId?.trim() || createCommandId();
+    const createdAt = cmd.createdAt ?? now;
+    const expiresAt = cmd.expiresAt ?? createdAt + ttlMs;
+    if (expiresAt <= now || expiresAt > createdAt + 60_000) {
+      throw new CommandExpiredError();
+    }
+    return {
+      ...cmd,
+      commandId,
+      nonce: cmd.nonce?.trim() || createCommandId(),
+      createdAt,
+      expiresAt,
+      idempotencyKey: cmd.idempotencyKey?.trim() || commandId,
+    } as SecuredDeviceCommand;
+  }
+}
+
+export class CommandAuthorizationError extends Error {
+  constructor(public readonly reason: string) {
+    super(`Device command denied: ${reason}`);
+    this.name = "CommandAuthorizationError";
+  }
+}
+
+export class CommandExpiredError extends Error {
+  constructor() {
+    super("Device command has expired or exceeds the maximum lifetime.");
+    this.name = "CommandExpiredError";
+  }
+}
+
+let commandSequence = 0;
+function createCommandId() {
+  commandSequence = (commandSequence + 1) % Number.MAX_SAFE_INTEGER;
+  return `${Date.now().toString(36)}-${commandSequence.toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 12)}`;
 }
 
 export const deviceClient = new DeviceClient();

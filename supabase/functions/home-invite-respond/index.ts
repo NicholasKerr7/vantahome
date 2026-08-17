@@ -1,6 +1,10 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseClient } from "../_shared/supabaseClient.ts";
-import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import {
+  isUuid,
+  readJsonObject,
+  RequestValidationError,
+} from "../_shared/validation.ts";
 
 type InviteAction = "accept" | "decline";
 
@@ -26,93 +30,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json().catch(() => ({}));
+    const body = await readJsonObject(req, 4_096);
     const inviteId =
       typeof body?.inviteId === "string" ? body.inviteId.trim() : "";
-    const action: InviteAction =
-      body?.action === "decline" ? "decline" : "accept";
-
-    const admin = getSupabaseAdmin();
-    const { data: invite, error: inviteError } = await admin
-      .from("home_invites")
-      .select("*")
-      .eq("id", inviteId)
-      .maybeSingle();
-
-    if (inviteError || !invite) {
-      return new Response(JSON.stringify({ error: "Invite not found." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const action = body?.action as InviteAction;
+    if (!isUuid(inviteId) || (action !== "accept" && action !== "decline")) {
+      throw new RequestValidationError("inviteId or action is invalid.");
     }
 
-    const userEmail = userData.user.email?.toLowerCase() ?? "";
-    if (
-      invite.invited_user_id &&
-      invite.invited_user_id !== userData.user.id
-    ) {
-      return new Response(JSON.stringify({ error: "Forbidden." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (invite.email?.toLowerCase() !== userEmail) {
-      return new Response(JSON.stringify({ error: "Forbidden." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // The database function locks and processes the invite atomically, so a
+    // partial membership cannot remain after a room-assignment failure.
+    const { data: status, error } = await supabase.rpc("respond_home_invite", {
+      target_invite_id: inviteId,
+      response_action: action,
+    });
 
-    if (invite.status !== "pending") {
-      return new Response(JSON.stringify({ error: "Invite already processed." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (action === "accept") {
-      const { error: memberError } = await admin
-        .from("home_members")
-        .upsert({
-          home_id: invite.home_id,
-          user_id: userData.user.id,
-          role: invite.role,
-        });
-      if (memberError) {
-        return new Response(JSON.stringify({ error: memberError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      if (Array.isArray(invite.room_ids) && invite.room_ids.length) {
-        const payload = invite.room_ids.map((roomId: string) => ({
-          room_id: roomId,
-          user_id: userData.user.id,
-          role: invite.role,
-        }));
-        const { error: roomError } = await admin
-          .from("room_members")
-          .upsert(payload);
-        if (roomError) {
-          return new Response(JSON.stringify({ error: roomError.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-    }
-
-    const { error: updateError } = await admin
-      .from("home_invites")
-      .update({
-        status: action === "accept" ? "accepted" : "declined",
-        responded_at: new Date().toISOString(),
-      })
-      .eq("id", invite.id);
-
-    if (updateError) {
-      return new Response(JSON.stringify({ error: updateError.message }), {
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -120,8 +54,8 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        status: action === "accept" ? "accepted" : "declined",
-        inviteId: invite.id,
+        status,
+        inviteId,
       }),
       {
         status: 200,
@@ -129,8 +63,9 @@ Deno.serve(async (req) => {
       },
     );
   } catch (err) {
+    const status = err instanceof RequestValidationError ? 400 : 500;
     return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

@@ -1,6 +1,14 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseClient } from "../_shared/supabaseClient.ts";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import {
+  boundedString,
+  isPlainObject,
+  isSafeJson,
+  isUuid,
+  readJsonObject,
+  RequestValidationError,
+} from "../_shared/validation.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,27 +32,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const deviceId = typeof body?.deviceId === "string" ? body.deviceId : null;
-    const action = typeof body?.action === "string" ? body.action : "command";
-    const payload = typeof body?.payload === "object" ? body.payload : {};
+    const body = await readJsonObject(req, 16_384);
+    const deviceId = boundedString(body.deviceId, "deviceId", 64);
+    const action = boundedString(body.action ?? "command", "action", 64);
+    const payload = body.payload ?? {};
 
-    if (!deviceId) {
-      return new Response(JSON.stringify({ error: "deviceId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!isUuid(deviceId) || !isPlainObject(payload) || !isSafeJson(payload)) {
+      throw new RequestValidationError("deviceId or payload is invalid.");
     }
 
-    const { data: membership, error: membershipError } = await supabase
-      .from("home_members")
+    // Resolve the home from the exact device through caller-scoped RLS. Never
+    // trust a caller-selected or first membership when writing with service role.
+    const { data: device, error: deviceError } = await supabase
+      .from("devices")
       .select("home_id")
-      .eq("user_id", userData.user.id)
+      .eq("id", deviceId)
       .limit(1)
       .maybeSingle();
 
-    if (membershipError || !membership) {
-      return new Response(JSON.stringify({ error: "Home not found." }), {
+    if (deviceError || !device) {
+      return new Response(JSON.stringify({ error: "Device not found." }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -52,7 +59,7 @@ Deno.serve(async (req) => {
 
     const admin = getSupabaseAdmin();
     const { error: insertError } = await admin.from("device_audit_logs").insert({
-      home_id: membership.home_id,
+      home_id: device.home_id,
       device_id: deviceId,
       actor_user_id: userData.user.id,
       actor_name: userData.user.user_metadata?.name ?? null,
@@ -73,8 +80,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    const status = err instanceof RequestValidationError ? 400 : 500;
     return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

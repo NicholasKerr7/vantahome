@@ -26,11 +26,7 @@ import {
 } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import { deviceClient, type ConnectionStatus } from "../services/deviceClient";
-import {
-  bootstrapHome,
-  devicesToStateEvents,
-  pushDeviceStateBatch,
-} from "../services/cloudRegistry";
+import { bootstrapHome } from "../services/cloudRegistry";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -104,7 +100,6 @@ export default function SettingsScreen() {
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
   const roomsCount = useHomeStore((s) => selectVisibleRooms(s).length);
   const devicesCount = useHomeStore((s) => selectVisibleDevices(s).length);
-  const devices = useHomeStore(selectVisibleDevices);
   const profile = useHomeStore((s) => s.profile);
   const integrations = useHomeStore((s) => s.integrations);
   const prefs = useHomeStore((s) => s.preferences);
@@ -498,9 +493,10 @@ export default function SettingsScreen() {
     try {
       const homeName = profile.homeName?.trim() || `${userName}'s Home`;
       await bootstrapHome(homeName);
-      const events = devicesToStateEvents(devices);
-      const result = await pushDeviceStateBatch(events);
-      Alert.alert("Cloud sync", `Synced ${result.updated} devices.`);
+      Alert.alert(
+        "Cloud home ready",
+        "Device observations will sync through Vanta Bridge after hub pairing.",
+      );
     } catch (err: any) {
       Alert.alert(
         "Cloud sync failed",
@@ -944,7 +940,7 @@ export default function SettingsScreen() {
         disabled={cloudSyncLoading}
       >
         <Text style={primaryBtnTextStyle}>
-          {cloudSyncLoading ? "Syncing…" : "Resync to cloud"}
+          {cloudSyncLoading ? "Preparing…" : "Initialize cloud home"}
         </Text>
       </Pressable>
     </View>
