@@ -57,3 +57,41 @@ supabase functions deploy home-invite
 Pass the user JWT in `Authorization: Bearer <token>`.
 RLS policies enforce access on homes, memberships, rooms, devices, state,
 commands, and audit data. Room access never grants sensitive commands by itself.
+
+## Edge abuse controls
+
+Migration 009 creates atomic fixed-window rate buckets in the private schema.
+The Edge runtime HMAC-hashes client IP and actor identities before calling the
+service-role-only bucket function; raw addresses are neither stored nor logged.
+
+Set both secrets before deploying the updated functions:
+
+```bash
+supabase secrets set RATE_LIMIT_HASH_SECRET="$(openssl rand -hex 32)"
+supabase secrets set TRUSTED_PROXY_HOPS=1
+```
+
+`TRUSTED_PROXY_HOPS` must match the number of sanitizing proxies on the hosted
+request path. Leave it unset/zero when that chain has not been verified; in
+that mode forwarded headers are ignored. Authenticated endpoints still use an
+actor bucket, while public voice OAuth and fulfillment endpoints fail closed
+until a trusted client address can be resolved.
+
+Current endpoint buckets:
+
+- Device commands: 120/minute per actor and, when resolved, per IP.
+- Device audit: 240/minute per actor/IP.
+- Home bootstrap: 5/hour per actor/IP.
+- Home invitations: 20/hour per actor/IP; responses: 30/hour.
+- Voice authorization: 10 POSTs or 120 GETs per 15 minutes per IP.
+- Voice tokens: 60/minute per IP.
+- Alexa/Google fulfillment: 600/minute per linked actor/IP.
+
+Every finalized protected request emits one JSON `edge_operation` event with a
+request ID, endpoint, outcome, status, duration, region, and rate-limit state.
+These fields are intended for Supabase Logs Explorer dashboards and alerts.
+No token, email, raw IP, payload, or rate-limit hash is included.
+
+Deploy in this order: apply migrations through 009, set the secrets, then deploy
+the functions. Deploying the functions first intentionally produces `503` for
+protected operations because rate-limit storage/configuration is unavailable.

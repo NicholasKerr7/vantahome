@@ -18,6 +18,12 @@ import {
   readJsonObject,
   RequestValidationError,
 } from "../_shared/validation.ts";
+import {
+  createEdgeRequestContext,
+  enforceEdgeRateLimit,
+  finalizeEdgeResponse,
+  rateLimitResponse,
+} from "../_shared/edgeSecurity.ts";
 
 function errorResponse(type: string, message: string, directive: any) {
   return {
@@ -46,14 +52,34 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  const securityContext = createEdgeRequestContext(req, "alexa-smart-home");
+  const ipRateLimit = await enforceEdgeRateLimit(securityContext, {
+    maxRequests: 600,
+    windowSeconds: 60,
+    requireClientIp: true,
+  });
+  if (!ipRateLimit.allowed) {
+    return rateLimitResponse(securityContext, ipRateLimit);
+  }
 
   const userId = await getVoiceUserId(req, "alexa");
   if (!userId) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+      "unauthorized",
+    );
   }
+  const rateLimit = await enforceEdgeRateLimit(securityContext, {
+    actorId: userId,
+    maxRequests: 600,
+    windowSeconds: 60,
+    includeClientIp: false,
+  });
+  if (!rateLimit.allowed) return rateLimitResponse(securityContext, rateLimit);
 
   try {
     const body = await readJsonObject(req, 32_768);
@@ -93,10 +119,15 @@ Deno.serve(async (req) => {
         },
       };
 
-      return new Response(JSON.stringify(response), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return finalizeEdgeResponse(
+        securityContext,
+        new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }),
+        "discovery_completed",
+        rateLimit,
+      );
     }
 
     const endpoint = directive.endpoint;
@@ -208,15 +239,25 @@ Deno.serve(async (req) => {
       },
     };
 
-    return new Response(JSON.stringify(response), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+      "fulfilled",
+      rateLimit,
+    );
   } catch (err) {
     const status = err instanceof RequestValidationError ? 400 : 500;
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify({ error: (err as Error).message }), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+      status === 400 ? "invalid_request" : "server_error",
+      rateLimit,
+    );
   }
 });

@@ -10,6 +10,12 @@ import {
   readFormObject,
   RequestValidationError,
 } from "../_shared/validation.ts";
+import {
+  createEdgeRequestContext,
+  enforceEdgeRateLimit,
+  finalizeEdgeResponse,
+  rateLimitResponse,
+} from "../_shared/edgeSecurity.ts";
 
 function jsonResponse(data: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -31,8 +37,15 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
+  const securityContext = createEdgeRequestContext(req, "voice-token");
 
   try {
+    const rateLimit = await enforceEdgeRateLimit(securityContext, {
+      maxRequests: 60,
+      windowSeconds: 60,
+      requireClientIp: true,
+    });
+    if (!rateLimit.allowed) return rateLimitResponse(securityContext, rateLimit);
     const body = await readFormObject(req, 8_192, 8);
     const grantType = boundedString(body.grant_type, "grant_type", 64);
     const clientId = boundedString(body.client_id, "client_id", 128);
@@ -75,12 +88,17 @@ Deno.serve(async (req) => {
       if (exchangeError) return jsonResponse({ error: "server_error" }, 500);
       if (!exchanged) return jsonResponse({ error: "invalid_grant" }, 400);
 
-      return jsonResponse({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        token_type: "Bearer",
-        expires_in: 3600,
-      });
+      return finalizeEdgeResponse(
+        securityContext,
+        jsonResponse({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          token_type: "Bearer",
+          expires_in: 3600,
+        }),
+        "authorization_code_exchanged",
+        rateLimit,
+      );
     }
 
     if (grantType === "refresh_token") {
@@ -126,19 +144,32 @@ Deno.serve(async (req) => {
       // only the request that rotated the old token can return a new pair.
       if (!rotatedToken) return jsonResponse({ error: "invalid_grant" }, 400);
 
-      return jsonResponse({
-        access_token: newAccess,
-        refresh_token: newRefresh,
-        token_type: "Bearer",
-        expires_in: 3600,
-      });
+      return finalizeEdgeResponse(
+        securityContext,
+        jsonResponse({
+          access_token: newAccess,
+          refresh_token: newRefresh,
+          token_type: "Bearer",
+          expires_in: 3600,
+        }),
+        "refresh_rotated",
+        rateLimit,
+      );
     }
 
     return jsonResponse({ error: "unsupported_grant_type" }, 400);
   } catch (err) {
     if (err instanceof RequestValidationError) {
-      return jsonResponse({ error: "invalid_request" }, 400);
+      return finalizeEdgeResponse(
+        securityContext,
+        jsonResponse({ error: "invalid_request" }, 400),
+        "invalid_request",
+      );
     }
-    return jsonResponse({ error: "server_error" }, 500);
+    return finalizeEdgeResponse(
+      securityContext,
+      jsonResponse({ error: "server_error" }, 500),
+      "server_error",
+    );
   }
 });

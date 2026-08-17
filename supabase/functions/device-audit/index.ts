@@ -9,6 +9,12 @@ import {
   readJsonObject,
   RequestValidationError,
 } from "../_shared/validation.ts";
+import {
+  createEdgeRequestContext,
+  enforceEdgeRateLimit,
+  finalizeEdgeResponse,
+  rateLimitResponse,
+} from "../_shared/edgeSecurity.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,6 +27,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  const securityContext = createEdgeRequestContext(req, "device-audit");
 
   try {
     const supabase = getSupabaseClient(req);
@@ -31,6 +38,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const rateLimit = await enforceEdgeRateLimit(securityContext, {
+      actorId: userData.user.id,
+      maxRequests: 240,
+      windowSeconds: 60,
+    });
+    if (!rateLimit.allowed) return rateLimitResponse(securityContext, rateLimit);
 
     const body = await readJsonObject(req, 16_384);
     const deviceId = boundedString(body.deviceId, "deviceId", 64);
@@ -75,15 +88,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+      "audit_recorded",
+      rateLimit,
+    );
   } catch (err) {
     const status = err instanceof RequestValidationError ? 400 : 500;
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify({ error: (err as Error).message }), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+      status === 400 ? "invalid_request" : "server_error",
+    );
   }
 });

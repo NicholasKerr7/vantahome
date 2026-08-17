@@ -7,6 +7,12 @@ import {
   readJsonObject,
   RequestValidationError,
 } from "../_shared/validation.ts";
+import {
+  createEdgeRequestContext,
+  enforceEdgeRateLimit,
+  finalizeEdgeResponse,
+  rateLimitResponse,
+} from "../_shared/edgeSecurity.ts";
 
 const ROLES = ["admin", "member", "guest", "tenant"] as const;
 type InviteRole = (typeof ROLES)[number];
@@ -22,16 +28,27 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  const securityContext = createEdgeRequestContext(req, "home-invite");
 
   try {
     const supabase = getSupabaseClient(req);
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return finalizeEdgeResponse(
+        securityContext,
+        new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }),
+        "unauthorized",
+      );
     }
+    const rateLimit = await enforceEdgeRateLimit(securityContext, {
+      actorId: userData.user.id,
+      maxRequests: 20,
+      windowSeconds: 3600,
+    });
+    if (!rateLimit.allowed) return rateLimitResponse(securityContext, rateLimit);
 
     const body = await readJsonObject(req, 8_192);
     const email = boundedString(body.email, "email", 320).toLowerCase();
@@ -154,8 +171,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify({
         member: {
           userId: invitedUserId,
           email,
@@ -163,17 +181,22 @@ Deno.serve(async (req) => {
           role,
         },
         status: existingMember ? "already_member" : "invited",
-      }),
-      {
+      }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+      }),
+      existingMember ? "already_member" : "invited",
+      rateLimit,
     );
   } catch (err) {
     const status = err instanceof RequestValidationError ? 400 : 500;
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify({ error: (err as Error).message }), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+      status === 400 ? "invalid_request" : "server_error",
+    );
   }
 });

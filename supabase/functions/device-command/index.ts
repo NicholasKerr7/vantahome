@@ -8,6 +8,12 @@ import {
   readJsonObject,
   RequestValidationError,
 } from "../_shared/validation.ts";
+import {
+  createEdgeRequestContext,
+  enforceEdgeRateLimit,
+  finalizeEdgeResponse,
+  rateLimitResponse,
+} from "../_shared/edgeSecurity.ts";
 
 const COMMAND_ACTIONS = new Set([
   "toggle",
@@ -33,16 +39,27 @@ Deno.serve(async (request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  const securityContext = createEdgeRequestContext(request, "device-command");
 
   try {
     const supabase = getSupabaseClient(request);
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return finalizeEdgeResponse(
+        securityContext,
+        new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }),
+        "unauthorized",
+      );
     }
+    const rateLimit = await enforceEdgeRateLimit(securityContext, {
+      actorId: userData.user.id,
+      maxRequests: 120,
+      windowSeconds: 60,
+    });
+    if (!rateLimit.allowed) return rateLimitResponse(securityContext, rateLimit);
 
     const command = await readJsonObject(request, 16_384);
     const deviceId = boundedString(command.deviceId, "deviceId", 64);
@@ -118,15 +135,24 @@ Deno.serve(async (request) => {
       });
     }
 
-    return new Response(JSON.stringify({ command: data }), {
-      status: 202,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify({ command: data }), {
+        status: 202,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+      "accepted",
+      rateLimit,
+    );
   } catch (error) {
     const status = error instanceof RequestValidationError ? 400 : 500;
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(JSON.stringify({ error: (error as Error).message }), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }),
+      status === 400 ? "invalid_request" : "server_error",
+    );
   }
 });

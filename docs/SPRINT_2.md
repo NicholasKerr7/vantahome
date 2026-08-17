@@ -50,12 +50,21 @@ Status: **in progress**
   invitations. Privileged voice reads no longer bypass a member denial.
 - Docker-free override tests cover grants, denials, owner invariants, cleanup,
   command rejection, visibility, migration policies, and privileged call paths.
+- Migration 009 adds private, atomic Edge rate buckets keyed only by HMAC-hashed
+  actor/client identities, with bounded opportunistic retention.
+- Forwarded client addresses are ignored unless an explicit trusted-proxy hop
+  count is configured. Public OAuth/voice endpoints fail closed without a
+  verified client address; authenticated endpoints retain actor limits.
+- Commands, audit writes, household mutations, OAuth, and Alexa/Google
+  fulfillment now emit privacy-safe structured operational events with request
+  IDs, outcomes, latency, region, and rate-limit state.
+- Docker-free tests cover spoofed proxy chains, IP validation, deterministic
+  hashing, private-schema/RPC privileges, atomic buckets, and fail-closed paths.
 
 ## Remaining before the Sprint 2 gate
 
 - Add database integration tests for every role, room, device category, and
   unauthorized state/command mutation—not only pure permission-function tests.
-- Add trusted-proxy IP-aware rate limiting and operational metrics.
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
 - Validate this migration against a disposable Supabase project and perform an

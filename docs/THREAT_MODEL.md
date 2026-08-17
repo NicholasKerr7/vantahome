@@ -41,7 +41,8 @@ privileged but must still validate inputs and minimize authority.
 | Partial invite acceptance | Row lock and transactional database function | Expiration cleanup and notification workflow |
 | Service-role confused deputy | Audit resolves caller-visible devices; voice uses explicit room/role checks and server-only RPCs | Database integration tests |
 | Stolen unlocked phone | Biometrics for sensitive commands, camera viewing, and household-admin mutations in alpha/production | Validate platform behavior during alpha testing |
-| Abuse/command flooding | Atomic actor, home, and device rate gates | Trusted-proxy IP limits and observability |
+| Abuse/command flooding | Atomic actor/home/device command gates plus HMAC-keyed Edge actor/IP buckets | Tune production thresholds from structured operational events |
+| Forwarded-IP spoofing | Ignore forwarding headers unless a trusted proxy hop count is configured; reject malformed chains | Verify the hosted proxy topology before setting production secrets |
 
 ## Safety position
 

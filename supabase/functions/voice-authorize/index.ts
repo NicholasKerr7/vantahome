@@ -7,6 +7,12 @@ import {
   readFormObject,
   RequestValidationError,
 } from "../_shared/validation.ts";
+import {
+  createEdgeRequestContext,
+  enforceEdgeRateLimit,
+  finalizeEdgeResponse,
+  rateLimitResponse,
+} from "../_shared/edgeSecurity.ts";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, (character) => ({
@@ -61,6 +67,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  const securityContext = createEdgeRequestContext(req, "voice-authorize");
+  const rateLimit = await enforceEdgeRateLimit(securityContext, {
+    maxRequests: req.method === "POST" ? 10 : 120,
+    windowSeconds: 900,
+    requireClientIp: true,
+  });
+  if (!rateLimit.allowed) return rateLimitResponse(securityContext, rateLimit);
 
   const url = new URL(req.url);
   const params = url.searchParams;
@@ -116,10 +129,15 @@ Deno.serve(async (req) => {
       </form>
     `;
 
-    return new Response(renderHtml(body), {
-      status: 200,
-      headers: { "Content-Type": "text/html" },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(renderHtml(body), {
+        status: 200,
+        headers: { "Content-Type": "text/html" },
+      }),
+      "login_form_rendered",
+      rateLimit,
+    );
   }
 
   if (req.method !== "POST") {
@@ -194,18 +212,25 @@ Deno.serve(async (req) => {
     redirect.searchParams.set("code", code);
     if (formState) redirect.searchParams.set("state", formState);
 
-    return new Response(null, {
-      status: 302,
-      headers: { Location: redirect.toString() },
-    });
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(null, {
+        status: 302,
+        headers: { Location: redirect.toString() },
+      }),
+      "authorization_code_issued",
+      rateLimit,
+    );
   } catch (err) {
     const status = err instanceof RequestValidationError ? 400 : 500;
-    return new Response(
-      renderHtml('<div class="error">Unable to link this account.</div>'),
-      {
+    return finalizeEdgeResponse(
+      securityContext,
+      new Response(renderHtml('<div class="error">Unable to link this account.</div>'), {
         status,
         headers: { "Content-Type": "text/html" },
-      },
+      }),
+      status === 400 ? "invalid_request" : "server_error",
+      rateLimit,
     );
   }
 });
