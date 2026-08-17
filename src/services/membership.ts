@@ -1,5 +1,10 @@
 import { supabase } from "./supabaseClient";
-import type { HouseholdMember, RoomMembership } from "../store/useHomeStore";
+import type {
+  HouseholdMember,
+  MemberPermissionOverride,
+  RoomMembership,
+} from "../store/useHomeStore";
+import { ACTION_PERMISSIONS, type ActionPermission } from "../security/permissions";
 
 type HomeMemberRow = {
   user_id: string;
@@ -15,9 +20,16 @@ type RoomRow = {
   id: string;
 };
 
+type PermissionOverrideRow = {
+  user_id: string;
+  permission: string;
+  allowed: boolean;
+};
+
 export type MembershipSyncResult = {
   household: HouseholdMember[];
   roomMembers: RoomMembership[];
+  permissionOverrides: MemberPermissionOverride[];
   activeMemberId: string;
 };
 
@@ -96,9 +108,27 @@ export async function syncMembershipFromSupabase(): Promise<
       status: "away",
     })) ?? [];
 
+  const { data: overrideData, error: overrideError } = await supabase
+    .from("member_permission_overrides")
+    .select("user_id, permission, allowed")
+    .eq("home_id", membership.home_id);
+  // Do not replace a previously synchronized security policy with role defaults
+  // when the override read fails.
+  if (overrideError) return null;
+  const validPermissions = new Set<string>(ACTION_PERMISSIONS);
+  const permissionOverrides =
+    (overrideData as PermissionOverrideRow[] | null)
+      ?.filter((row) => validPermissions.has(row.permission))
+      .map((row) => ({
+        memberId: row.user_id,
+        permission: row.permission as ActionPermission,
+        allowed: row.allowed,
+      })) ?? [];
+
   return {
     household,
     roomMembers,
+    permissionOverrides,
     activeMemberId: userId,
   };
 }

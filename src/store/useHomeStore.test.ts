@@ -75,6 +75,7 @@ beforeEach(() => {
       ...membership,
       roomIds: [...membership.roomIds],
     })),
+    memberPermissionOverrides: [],
     activeMemberId: seed.activeMemberId,
   });
 });
@@ -199,6 +200,47 @@ describe("useHomeStore", () => {
     expect(selectVisibleDevices(useHomeStore.getState()).map((d) => d.id)).toEqual([
       "light",
     ]);
+  });
+
+  it("exposes an assigned camera after an explicit guest grant", () => {
+    useHomeStore.setState({
+      rooms: [{ id: "r1", name: "Guest room" }],
+      household: [
+        { id: "guest", name: "Guest", role: "Guest", status: "home" },
+      ],
+      activeMemberId: "guest",
+      roomMembers: [{ memberId: "guest", roomIds: ["r1"] }],
+      memberPermissionOverrides: [
+        { memberId: "guest", permission: "camera.live", allowed: true },
+      ],
+      devices: [
+        { id: "camera", name: "Camera", kind: "camera", roomId: "r1", isOn: true },
+      ],
+    });
+
+    expect(selectVisibleDevices(useHomeStore.getState()).map((d) => d.id)).toEqual([
+      "camera",
+    ]);
+  });
+
+  it("hides devices after an explicit device view denial", () => {
+    useHomeStore.setState({
+      activeMemberId: "m2",
+      memberPermissionOverrides: [
+        { memberId: "m2", permission: "device.view", allowed: false },
+      ],
+    });
+    expect(selectVisibleDevices(useHomeStore.getState())).toEqual([]);
+  });
+
+  it("cleans permission overrides when a member is removed", () => {
+    useHomeStore.setState({
+      memberPermissionOverrides: [
+        { memberId: "m4", permission: "garage.open", allowed: true },
+      ],
+    });
+    useHomeStore.getState().removeHouseholdMember("m4");
+    expect(useHomeStore.getState().memberPermissionOverrides).toEqual([]);
   });
 
   it("setDevice patches only the targeted device", () => {

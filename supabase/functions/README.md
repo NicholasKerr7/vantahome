@@ -2,6 +2,8 @@
 
 These functions sit alongside the PostgREST API. Room visibility and
 action-level permissions are enforced by RLS and database authorization helpers.
+Migration 008 adds per-member overrides. An explicit grant or denial takes
+priority over the role default, except that owner access cannot be overridden.
 
 ## Functions
 
@@ -35,10 +37,10 @@ action-level permissions are enforced by RLS and database authorization helpers.
 - `google-smart-home` (POST)
   - Google Smart Home fulfillment handler.
 
-Voice discovery applies household and assigned-room scope and exposes only
-lights, climate, TVs, fans, and speakers. Fulfillment calls a service-role-only
-authorization transaction to enqueue commands; it never writes observed device
-state directly.
+Voice discovery applies household scope, assigned-room scope, and effective
+per-member action permissions, then exposes only lights, climate, TVs, fans,
+and speakers. Fulfillment calls a service-role-only authorization transaction
+to enqueue commands; it never writes observed device state directly.
 
 ## Deploy
 

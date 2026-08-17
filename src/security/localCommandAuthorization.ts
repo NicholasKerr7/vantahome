@@ -16,11 +16,15 @@ export function authorizeLocalDeviceCommand(command: DeviceCommand) {
   const roomMembership = state.roomMembers.find(
     (entry) => entry.memberId === member.id,
   );
+  const permissionOverrides = state.memberPermissionOverrides.filter(
+    (entry) => entry.memberId === member.id,
+  );
   return authorizeDeviceCommand(
     {
       role: member.role,
       fullHomeAccess,
       accessibleRoomIds: new Set(roomMembership?.roomIds ?? []),
+      permissionOverrides,
     },
     command,
     device,

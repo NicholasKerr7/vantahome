@@ -87,6 +87,9 @@ export default function HomeScreen() {
   const setRoomMembersFromRemote = useHomeStore(
     (s) => s.setRoomMembersFromRemote,
   );
+  const setMemberPermissionOverridesFromRemote = useHomeStore(
+    (s) => s.setMemberPermissionOverridesFromRemote,
+  );
   const setActiveMember = useHomeStore((s) => s.setActiveMember);
   const [activeRoomIndex, setActiveRoomIndex] = useState(0);
   const lastPowerOutage = useRef<boolean | null>(null);
@@ -303,13 +306,19 @@ export default function HomeScreen() {
       if (!active || !result) return;
       setHouseholdFromRemote(result.household);
       setRoomMembersFromRemote(result.roomMembers);
+      setMemberPermissionOverridesFromRemote(result.permissionOverrides);
       setActiveMember(result.activeMemberId);
     };
     void loadMembership();
     return () => {
       active = false;
     };
-  }, [setActiveMember, setHouseholdFromRemote, setRoomMembersFromRemote]);
+  }, [
+    setActiveMember,
+    setHouseholdFromRemote,
+    setMemberPermissionOverridesFromRemote,
+    setRoomMembersFromRemote,
+  ]);
 
   useEffect(() => {
     const energy = devicesAll.find((device) => device.kind === "energy");

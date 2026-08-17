@@ -56,4 +56,47 @@ describe("action-level permissions", () => {
     expect(roleHasPermission("Guest", "camera.live")).toBe(false);
     expect(roleHasPermission("Member", "camera.live")).toBe(true);
   });
+
+  test("an explicit grant takes priority over the role default", () => {
+    expect(
+      roleHasPermission("Guest", "camera.live", [
+        { permission: "camera.live", allowed: true },
+      ]),
+    ).toBe(true);
+  });
+
+  test("an explicit denial takes priority over the role default", () => {
+    expect(
+      roleHasPermission("Member", "camera.live", [
+        { permission: "camera.live", allowed: false },
+      ]),
+    ).toBe(false);
+  });
+
+  test("owner access cannot be overridden", () => {
+    expect(
+      roleHasPermission("Owner", "lock.unlock", [
+        { permission: "lock.unlock", allowed: false },
+      ]),
+    ).toBe(true);
+  });
+
+  test("a command denial is enforced for an otherwise authorized role", () => {
+    expect(
+      authorizeDeviceCommand(
+        {
+          ...context("Admin"),
+          permissionOverrides: [
+            { permission: "garage.open", allowed: false },
+          ],
+        },
+        {
+          op: "set-properties",
+          deviceId: garage.id,
+          changes: { openPercent: 100 },
+        },
+        garage,
+      ),
+    ).toMatchObject({ allowed: false, permission: "garage.open" });
+  });
 });

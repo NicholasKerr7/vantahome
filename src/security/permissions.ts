@@ -22,6 +22,10 @@ export const ACTION_PERMISSIONS = [
 
 export type ActionPermission = (typeof ACTION_PERMISSIONS)[number];
 export type HouseholdRole = HouseholdMember["role"];
+export type PermissionOverride = {
+  permission: ActionPermission;
+  allowed: boolean;
+};
 
 const ROLE_PERMISSIONS: Record<HouseholdRole, ReadonlySet<ActionPermission>> = {
   Owner: new Set(ACTION_PERMISSIONS),
@@ -48,7 +52,12 @@ const ROLE_PERMISSIONS: Record<HouseholdRole, ReadonlySet<ActionPermission>> = {
 export function roleHasPermission(
   role: HouseholdRole,
   permission: ActionPermission,
+  overrides: readonly PermissionOverride[] = [],
 ) {
+  // The canonical owner cannot be locked out through delegated settings.
+  if (role === "Owner") return true;
+  const override = overrides.find((item) => item.permission === permission);
+  if (override) return override.allowed;
   return ROLE_PERMISSIONS[role].has(permission);
 }
 
@@ -108,6 +117,7 @@ export type CommandAuthorizationContext = {
   role: HouseholdRole;
   accessibleRoomIds: ReadonlySet<string>;
   fullHomeAccess: boolean;
+  permissionOverrides?: readonly PermissionOverride[];
 };
 
 export function authorizeDeviceCommand(
@@ -119,7 +129,13 @@ export function authorizeDeviceCommand(
     return { allowed: false, reason: "room_access_denied" } as const;
   }
   const permission = permissionForCommand(command, device);
-  if (!roleHasPermission(context.role, permission)) {
+  if (
+    !roleHasPermission(
+      context.role,
+      permission,
+      context.permissionOverrides,
+    )
+  ) {
     return { allowed: false, reason: "action_permission_denied", permission } as const;
   }
   return { allowed: true, permission } as const;

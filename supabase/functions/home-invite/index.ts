@@ -67,7 +67,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!["owner", "admin"].includes(membership.role)) {
+    const { data: canInvite, error: permissionError } = await supabase.rpc(
+      "effective_member_has_action_permission",
+      {
+        target_home_id: membership.home_id,
+        target_user_id: userData.user.id,
+        requested_permission: "member.invite",
+      },
+    );
+    if (permissionError || canInvite !== true) {
       return new Response(JSON.stringify({ error: "Forbidden." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

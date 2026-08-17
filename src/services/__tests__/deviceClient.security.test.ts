@@ -10,6 +10,7 @@ describe("device command security", () => {
   afterEach(() => {
     useHomeStore.getState().setActiveMember("m1");
     useHomeStore.getState().setRoomMembership("m4", ["r2"]);
+    useHomeStore.setState({ memberPermissionOverrides: [] });
   });
 
   test("adds expiry, nonce, and idempotency metadata before transport", async () => {
@@ -67,6 +68,22 @@ describe("device command security", () => {
   test("room access does not let a tenant open a gate", async () => {
     useHomeStore.getState().setRoomMembership("m4", ["r1", "r2"]);
     useHomeStore.getState().setActiveMember("m4");
+    await expect(
+      deviceClient.sendCommand({
+        op: "set-properties",
+        deviceId: "d26",
+        changes: { openPercent: 100, isOn: true },
+      }),
+    ).rejects.toMatchObject({ reason: "action_permission_denied" });
+  });
+
+  test("an explicit denial blocks a normally authorized owner delegate", async () => {
+    useHomeStore.getState().setActiveMember("m2");
+    useHomeStore.getState().setMemberPermissionOverride(
+      "m2",
+      "garage.open",
+      false,
+    );
     await expect(
       deviceClient.sendCommand({
         op: "set-properties",

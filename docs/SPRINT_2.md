@@ -39,10 +39,20 @@ Status: **in progress**
 - Inviting/removing household members and changing assigned rooms requires local
   protected reauthentication in alpha/production. Owner invitations are not an
   available client action.
+- Migration 008 adds explicit per-member permission grants and denials while
+  keeping the canonical owner's access immutable. Role defaults remain the
+  fallback when no override exists.
+- Household managers can edit Role/Allow/Deny decisions in the profile UI;
+  changes require protected reauthentication and roll back locally when the
+  server rejects them.
+- Effective overrides now govern local commands, device and camera visibility,
+  database command/RLS checks, voice discovery and fulfillment, and household
+  invitations. Privileged voice reads no longer bypass a member denial.
+- Docker-free override tests cover grants, denials, owner invariants, cleanup,
+  command rejection, visibility, migration policies, and privileged call paths.
 
 ## Remaining before the Sprint 2 gate
 
-- Add per-member permission overrides and management UI.
 - Add database integration tests for every role, room, device category, and
   unauthorized state/command mutation—not only pure permission-function tests.
 - Add trusted-proxy IP-aware rate limiting and operational metrics.

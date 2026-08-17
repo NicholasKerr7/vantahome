@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { ConnectionStatus } from "../services/deviceClient";
 import { applyDeviceStatePatch } from "./deviceState";
+import { roleHasPermission } from "../security/permissions";
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -291,6 +292,12 @@ export type RoomMembership = {
   roomIds: string[];
 };
 
+export type MemberPermissionOverride = {
+  memberId: string;
+  permission: import("../security/permissions").ActionPermission;
+  allowed: boolean;
+};
+
 const FULL_ACCESS_ROLES: HouseholdMember["role"][] = [
   "Owner",
   "Admin",
@@ -407,6 +414,7 @@ export type HomeState = {
   realtime: RealtimeSettings;
   household: HouseholdMember[];
   roomMembers: RoomMembership[];
+  memberPermissionOverrides: MemberPermissionOverride[];
   activeMemberId: string;
 
   addRoom: (name: string) => void;
@@ -441,6 +449,14 @@ export type HomeState = {
   revokeRoomAccess: (memberId: string, roomId: string) => void;
   setHouseholdFromRemote: (members: HouseholdMember[]) => void;
   setRoomMembersFromRemote: (members: RoomMembership[]) => void;
+  setMemberPermissionOverride: (
+    memberId: string,
+    permission: MemberPermissionOverride["permission"],
+    allowed: boolean | null,
+  ) => void;
+  setMemberPermissionOverridesFromRemote: (
+    overrides: MemberPermissionOverride[],
+  ) => void;
 
   addRule: (rule: Omit<AutomationRule, "id">) => void;
   toggleRule: (ruleId: string) => void;
@@ -479,7 +495,11 @@ type AccessScope = {
 
 const getAccessScope = (state: Pick<
   HomeState,
-  "rooms" | "household" | "roomMembers" | "activeMemberId"
+  | "rooms"
+  | "household"
+  | "roomMembers"
+  | "memberPermissionOverrides"
+  | "activeMemberId"
 >): AccessScope => {
   const member =
     state.household.find((m) => m.id === state.activeMemberId) ??
@@ -514,13 +534,21 @@ export const selectVisibleRooms = (state: HomeState) => {
 
 export const selectVisibleDevices = (state: HomeState) => {
   const scope = getAccessScope(state);
-  if (scope.fullAccess) return state.devices;
-  // Assigned-room visibility is separate from the explicit camera.live grant.
+  if (!scope.member) return [];
+  const overrides = state.memberPermissionOverrides.filter(
+    (item) => item.memberId === scope.member?.id,
+  );
+  if (!roleHasPermission(scope.member.role, "device.view", overrides)) return [];
+  const canViewCamera = roleHasPermission(
+    scope.member.role,
+    "camera.live",
+    overrides,
+  );
+  if (scope.fullAccess && canViewCamera) return state.devices;
   return state.devices.filter(
     (device) =>
-      device.kind !== "camera" &&
-      device.roomId &&
-      scope.roomIds.has(device.roomId),
+      (scope.fullAccess || (device.roomId && scope.roomIds.has(device.roomId))) &&
+      (device.kind !== "camera" || canViewCamera),
   );
 };
 
@@ -1636,6 +1664,7 @@ export const useHomeStore = create<HomeState>()(
       realtime: realtimeSeed,
       household: householdSeed,
       roomMembers: roomMembersSeed,
+      memberPermissionOverrides: [],
       activeMemberId: activeMemberSeed,
 
       addRoom: (name) => {
@@ -1801,11 +1830,20 @@ export const useHomeStore = create<HomeState>()(
           const roomMembers = state.roomMembers.filter(
             (entry) => entry.memberId !== memberId,
           );
+          const memberPermissionOverrides =
+            state.memberPermissionOverrides.filter(
+              (entry) => entry.memberId !== memberId,
+            );
           const activeMemberId =
             state.activeMemberId === memberId
               ? household[0]?.id ?? ""
               : state.activeMemberId;
-          return { household, roomMembers, activeMemberId };
+          return {
+            household,
+            roomMembers,
+            memberPermissionOverrides,
+            activeMemberId,
+          };
         }),
 
       setHouseholdPresence: (memberId, status) =>
@@ -1828,6 +1866,23 @@ export const useHomeStore = create<HomeState>()(
         set(() => ({
           roomMembers: members,
         })),
+
+      setMemberPermissionOverride: (memberId, permission, allowed) =>
+        set((state) => {
+          const remaining = state.memberPermissionOverrides.filter(
+            (item) =>
+              item.memberId !== memberId || item.permission !== permission,
+          );
+          return {
+            memberPermissionOverrides:
+              allowed === null
+                ? remaining
+                : [...remaining, { memberId, permission, allowed }],
+          };
+        }),
+
+      setMemberPermissionOverridesFromRemote: (overrides) =>
+        set(() => ({ memberPermissionOverrides: overrides })),
 
       setActiveMember: (memberId) =>
         set((state) => {
@@ -2043,13 +2098,13 @@ export const useHomeStore = create<HomeState>()(
     }),
     {
       name: "vantahome-store",
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState, version) => {
         if (!persistedState || typeof persistedState !== "object")
           return {} as HomeState;
         const state = persistedState as HomeState;
-        if (version && version >= 3) return state;
+        if (version && version >= 4) return state;
         const base =
           version && version >= 2
             ? state
@@ -2063,6 +2118,7 @@ export const useHomeStore = create<HomeState>()(
           ...base,
           household: base.household ?? householdSeed,
           roomMembers: base.roomMembers ?? roomMembersSeed,
+          memberPermissionOverrides: base.memberPermissionOverrides ?? [],
           activeMemberId:
             base.activeMemberId ??
             base.household?.[0]?.id ??
@@ -2086,6 +2142,7 @@ export const useHomeStore = create<HomeState>()(
         realtime: state.realtime,
         household: state.household,
         roomMembers: state.roomMembers,
+        memberPermissionOverrides: state.memberPermissionOverrides,
         activeMemberId: state.activeMemberId,
       }),
     },

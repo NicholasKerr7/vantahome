@@ -47,11 +47,27 @@ export default function CamerasScreen({ navigation }: Props) {
   const isTabletPortrait = isTablet && !isLandscape;
   const isPortrait = !isLandscape;
   const activeMember = useHomeStore(selectActiveMember);
+  const allPermissionOverrides = useHomeStore(
+    (state) => state.memberPermissionOverrides,
+  );
+  const permissionOverrides = useMemo(
+    () =>
+      allPermissionOverrides.filter(
+        (item) => item.memberId === activeMember?.id,
+      ),
+    [activeMember?.id, allPermissionOverrides],
+  );
   const rooms = useHomeStore(selectVisibleRooms);
   const visibleDevices = useHomeStore(selectVisibleDevices);
   const allDevices = useHomeStore((s) => s.devices);
   const canViewCamera = Boolean(
-    activeMember && roleHasPermission(activeMember.role, "camera.live"),
+    activeMember &&
+      roleHasPermission(
+        activeMember.role,
+        "device.view",
+        permissionOverrides,
+      ) &&
+      roleHasPermission(activeMember.role, "camera.live", permissionOverrides),
   );
   const canViewAll = activeMember
     ? ["Owner", "Admin"].includes(activeMember.role)

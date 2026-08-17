@@ -42,6 +42,12 @@ import {
 import { syncMembershipFromSupabase } from "../services/membership";
 import { supabase } from "../services/supabaseClient";
 import { confirmProtectedAccess } from "../security/biometricConfirmation";
+import MemberPermissionEditor from "../components/MemberPermissionEditor";
+import { setMemberPermissionOverrideRemote } from "../services/memberPermissions";
+import {
+  roleHasPermission,
+  type ActionPermission,
+} from "../security/permissions";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -438,6 +444,15 @@ export default function ProfileScreen({ navigation }: Props) {
     (s) => s.setRoomMembersFromRemote,
   );
   const roomMembers = useHomeStore((s) => s.roomMembers);
+  const memberPermissionOverrides = useHomeStore(
+    (s) => s.memberPermissionOverrides,
+  );
+  const setMemberPermissionOverride = useHomeStore(
+    (s) => s.setMemberPermissionOverride,
+  );
+  const setMemberPermissionOverridesFromRemote = useHomeStore(
+    (s) => s.setMemberPermissionOverridesFromRemote,
+  );
   const setRoomMembership = useHomeStore((s) => s.setRoomMembership);
   const addHouseholdMember = useHomeStore((s) => s.addHouseholdMember);
   const removeHouseholdMember = useHomeStore((s) => s.removeHouseholdMember);
@@ -465,6 +480,17 @@ export default function ProfileScreen({ navigation }: Props) {
     ? ["Owner", "Admin"].includes(activeMember.role)
     : false;
   const canManageHousehold = canManageRooms;
+  const activePermissionOverrides = memberPermissionOverrides.filter(
+    (item) => item.memberId === activeMember?.id,
+  );
+  const canInviteMembers = Boolean(
+    activeMember &&
+      roleHasPermission(
+        activeMember.role,
+        "member.invite",
+        activePermissionOverrides,
+      ),
+  );
   const confirmHouseholdAdminChange = async () => {
     try {
       await confirmProtectedAccess("Confirm household administration change");
@@ -513,6 +539,37 @@ export default function ProfileScreen({ navigation }: Props) {
       Alert.alert(
         "Room access update failed",
         (err as Error).message ?? "Unable to update room access.",
+      );
+    }
+  };
+  const updatePermissionOverride = async (
+    member: typeof household[number],
+    permission: ActionPermission,
+    allowed: boolean | null,
+  ) => {
+    if (!canManageHousehold || member.role === "Owner") return;
+    if (!(await confirmHouseholdAdminChange())) return;
+    const previous = memberPermissionOverrides.find(
+      (item) =>
+        item.memberId === member.id && item.permission === permission,
+    );
+    setMemberPermissionOverride(member.id, permission, allowed);
+    if (!member.userId || !isUuid(member.userId)) return;
+    try {
+      await setMemberPermissionOverrideRemote(
+        member.userId,
+        permission,
+        allowed,
+      );
+    } catch (err) {
+      setMemberPermissionOverride(
+        member.id,
+        permission,
+        previous?.allowed ?? null,
+      );
+      Alert.alert(
+        "Permission update failed",
+        (err as Error).message ?? "Unable to update this permission.",
       );
     }
   };
@@ -708,7 +765,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const handleAddMember = async () => {
     const trimmed = newMemberName.trim();
     const email = newMemberEmail.trim().toLowerCase();
-    if (!trimmed) return;
+    if (!trimmed || !canInviteMembers) return;
     if (!email) {
       Alert.alert("Email required", "Add an email to invite this member.");
       return;
@@ -827,6 +884,7 @@ export default function ProfileScreen({ navigation }: Props) {
         if (result) {
           setHouseholdFromRemote(result.household);
           setRoomMembersFromRemote(result.roomMembers);
+          setMemberPermissionOverridesFromRemote(result.permissionOverrides);
           setActiveMember(result.activeMemberId);
         }
       }
@@ -1308,14 +1366,25 @@ export default function ProfileScreen({ navigation }: Props) {
               )}
             </View>
           ) : null}
+          {canManageHousehold ? (
+            <MemberPermissionEditor
+              role={member.role}
+              overrides={memberPermissionOverrides.filter(
+                (item) => item.memberId === member.id,
+              )}
+              onChange={(permission, allowed) =>
+                void updatePermissionOverride(member, permission, allowed)
+              }
+            />
+          ) : null}
         </View>
       ))}
 
       <View style={styles.addMemberCard}>
         <Text style={cardHintTextStyle}>Add person</Text>
-        {!canManageHousehold ? (
+        {!canInviteMembers ? (
           <Text style={styles.readOnlyNote}>
-            Only admins can add or remove members.
+            Your effective permissions do not allow invitations.
           </Text>
         ) : null}
         <TextInput
@@ -1324,7 +1393,7 @@ export default function ProfileScreen({ navigation }: Props) {
           placeholder="Full name"
           placeholderTextColor="rgba(255,255,255,0.45)"
           style={inputFieldStyle}
-          editable={canManageHousehold}
+          editable={canInviteMembers}
         />
         <TextInput
           value={newMemberEmail}
@@ -1332,7 +1401,7 @@ export default function ProfileScreen({ navigation }: Props) {
           placeholder="Email address"
           placeholderTextColor="rgba(255,255,255,0.45)"
           style={inputFieldStyle}
-          editable={canManageHousehold}
+          editable={canInviteMembers}
           autoCapitalize="none"
           keyboardType="email-address"
         />
@@ -1345,7 +1414,7 @@ export default function ProfileScreen({ navigation }: Props) {
                 key={role}
                 style={chipStyle(active)}
                 onPress={() => setNewMemberRole(role)}
-                disabled={!canManageHousehold}
+                disabled={!canInviteMembers}
               >
                 <Text style={chipTextStyle(active)}>
                   {role}
@@ -1358,7 +1427,7 @@ export default function ProfileScreen({ navigation }: Props) {
           <Pressable
             style={styles.avatarBtn}
             onPress={pickHouseholdAvatar}
-            disabled={!canManageHousehold}
+            disabled={!canInviteMembers}
           >
             <Ionicons
               name="image-outline"
@@ -1373,7 +1442,7 @@ export default function ProfileScreen({ navigation }: Props) {
             <Pressable
               style={avatarBtnGhostStyle}
               onPress={() => setNewMemberAvatar("")}
-              disabled={!canManageHousehold}
+              disabled={!canInviteMembers}
             >
               <Ionicons
                 name="close"
@@ -1387,14 +1456,14 @@ export default function ProfileScreen({ navigation }: Props) {
         <Pressable
           style={secondaryButtonStyle(
             inviteLoading ||
-              !canManageHousehold ||
+              !canInviteMembers ||
               !newMemberName.trim() ||
               !newMemberEmail.trim(),
           )}
           onPress={handleAddMember}
           disabled={
             inviteLoading ||
-            !canManageHousehold ||
+            !canInviteMembers ||
             !newMemberName.trim() ||
             !newMemberEmail.trim()
           }

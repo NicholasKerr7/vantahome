@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -7,6 +7,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import {
   selectActiveMember,
+  selectVisibleDevices,
   selectVisibleRooms,
   useHomeStore,
 } from "../store/useHomeStore";
@@ -34,13 +35,29 @@ const formatLastSeen = (ts?: number) => {
 export default function CameraViewerScreen({ route, navigation }: Props) {
   const { deviceId } = route.params;
   const insets = useSafeAreaInsets();
-  const device = useHomeStore((s) =>
-    s.devices.find((item) => item.id === deviceId),
+  const device = useHomeStore((state) =>
+    selectVisibleDevices(state).find((item) => item.id === deviceId),
   );
   const activeMember = useHomeStore(selectActiveMember);
+  const allPermissionOverrides = useHomeStore(
+    (state) => state.memberPermissionOverrides,
+  );
+  const permissionOverrides = useMemo(
+    () =>
+      allPermissionOverrides.filter(
+        (item) => item.memberId === activeMember?.id,
+      ),
+    [activeMember?.id, allPermissionOverrides],
+  );
   const rooms = useHomeStore(selectVisibleRooms);
   const canViewCamera = Boolean(
-    activeMember && roleHasPermission(activeMember.role, "camera.live"),
+    activeMember &&
+      roleHasPermission(
+        activeMember.role,
+        "device.view",
+        permissionOverrides,
+      ) &&
+      roleHasPermission(activeMember.role, "camera.live", permissionOverrides),
   );
   const protectedAccess = useProtectedAccess(
     "Confirm access to this camera",
