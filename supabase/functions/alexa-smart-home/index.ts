@@ -2,15 +2,22 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getVoiceUserId } from "../_shared/voiceHandlers.ts";
 import {
   fetchVoiceData,
-  upsertDeviceState,
   enqueueDeviceCommand,
 } from "../_shared/voiceData.ts";
 import {
   alexaDisplayCategory,
   buildAlexaCapabilities,
   buildAlexaProperties,
+  getTraits,
 } from "../_shared/voiceMappings.ts";
 import { randomToken } from "../_shared/voiceAuth.ts";
+import {
+  boundedString,
+  isPlainObject,
+  isUuid,
+  readJsonObject,
+  RequestValidationError,
+} from "../_shared/validation.ts";
 
 function errorResponse(type: string, message: string, directive: any) {
   return {
@@ -40,7 +47,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const userId = await getVoiceUserId(req);
+  const userId = await getVoiceUserId(req, "alexa");
   if (!userId) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
@@ -49,11 +56,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const directive = body?.directive;
-    const header = directive?.header;
-    const namespace = header?.namespace;
-    const name = header?.name;
+    const body = await readJsonObject(req, 32_768);
+    const directive = body.directive;
+    if (!isPlainObject(directive) || !isPlainObject(directive.header)) {
+      throw new RequestValidationError("Invalid Alexa directive.");
+    }
+    const header = directive.header;
+    const namespace = boundedString(header.namespace, "namespace", 80);
+    const name = boundedString(header.name, "name", 80);
 
     if (namespace === "Alexa.Discovery" && name === "Discover") {
       const { devices, rooms } = await fetchVoiceData(userId);
@@ -89,9 +99,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const endpoint = directive?.endpoint;
-    const deviceId = endpoint?.endpointId;
-    if (!deviceId) {
+    const endpoint = directive.endpoint;
+    const deviceId = isPlainObject(endpoint) ? endpoint.endpointId : "";
+    if (!isUuid(deviceId)) {
       return new Response(
         JSON.stringify(
           errorResponse("NO_ENDPOINT", "Missing device.", directive),
@@ -118,18 +128,22 @@ Deno.serve(async (req) => {
     }
 
     const patch: Record<string, unknown> = {};
+    const traits = getTraits(device.kind);
 
-    if (namespace === "Alexa.PowerController") {
+    if (namespace === "Alexa.PowerController" && traits.supportsOnOff) {
       if (name === "TurnOn") patch.isOn = true;
       if (name === "TurnOff") patch.isOn = false;
     }
 
     if (
       namespace === "Alexa.BrightnessController" &&
-      name === "SetBrightness"
+      name === "SetBrightness" &&
+      traits.supportsBrightness
     ) {
-      const brightness = directive?.payload?.brightness;
-      if (typeof brightness === "number") {
+      const brightness = isPlainObject(directive.payload)
+        ? directive.payload.brightness
+        : undefined;
+      if (typeof brightness === "number" && Number.isFinite(brightness)) {
         patch.brightness = Math.max(0, Math.min(100, brightness));
         patch.isOn = brightness > 0;
       }
@@ -137,10 +151,17 @@ Deno.serve(async (req) => {
 
     if (
       namespace === "Alexa.ThermostatController" &&
-      name === "SetTargetTemperature"
+      name === "SetTargetTemperature" &&
+      traits.supportsTemp
     ) {
-      const target = directive?.payload?.targetSetpoint?.value;
-      if (typeof target === "number") patch.tempC = target;
+      const targetSetpoint = isPlainObject(directive.payload)
+        && isPlainObject(directive.payload.targetSetpoint)
+        ? directive.payload.targetSetpoint
+        : null;
+      const target = targetSetpoint?.value;
+      if (typeof target === "number" && Number.isFinite(target)) {
+        patch.tempC = Math.max(10, Math.min(35, target));
+      }
     }
 
     if (
@@ -162,22 +183,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const mergedState = Object.keys(patch).length
-      ? await upsertDeviceState(deviceId, patch)
-      : (states.get(deviceId) ?? {});
-
     if (Object.keys(patch).length) {
-      await enqueueDeviceCommand(deviceId, {
-        source: "alexa",
-        namespace,
-        name,
-        patch,
-      });
+      await enqueueDeviceCommand(userId, deviceId, "alexa", patch);
     }
+
+    // Voice requests enqueue intent; only bridge observations update device
+    // state. Returning the last observed state avoids false physical claims.
+    const observedState = states.get(deviceId) ?? {};
 
     const response = {
       context: {
-        properties: buildAlexaProperties(device.kind, mergedState),
+        properties: buildAlexaProperties(device.kind, observedState),
       },
       event: {
         header: {
@@ -197,8 +213,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    const status = err instanceof RequestValidationError ? 400 : 500;
     return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

@@ -24,6 +24,13 @@ idempotency key, creation time, and expiry. Direct client writes to flexible
 state. Sensitive actions fail closed and require local biometric confirmation in
 alpha and production modes.
 
+Alexa and Google discovery is room-scoped and excludes high-risk device kinds.
+Voice fulfillment cannot directly mutate observed device state. Command flooding
+is limited per actor, household, and device at the database insertion boundary.
+Camera screens and household access changes require protected reauthentication
+in alpha and production; camera rows also require `camera.live` permission at
+the database boundary.
+
 See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for trust boundaries and
 [`docs/SPRINT_2.md`](docs/SPRINT_2.md) for current implementation status.
 

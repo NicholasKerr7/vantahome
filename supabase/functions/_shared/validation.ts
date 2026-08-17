@@ -62,6 +62,37 @@ export async function readJsonObject(
   return value;
 }
 
+export async function readFormObject(
+  request: Request,
+  maxBytes = 8_192,
+  maxFields = 16,
+): Promise<Record<string, string>> {
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new RequestValidationError("Request body is too large.");
+  }
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
+    throw new RequestValidationError("Request body is too large.");
+  }
+
+  const params = new URLSearchParams(raw);
+  const entries: Record<string, string> = {};
+  let fieldCount = 0;
+  for (const [key, value] of params.entries()) {
+    fieldCount += 1;
+    if (
+      fieldCount > maxFields ||
+      key.length > 64 ||
+      Object.prototype.hasOwnProperty.call(entries, key)
+    ) {
+      throw new RequestValidationError("Invalid form body.");
+    }
+    entries[key] = value;
+  }
+  return entries;
+}
+
 export function boundedString(
   value: unknown,
   field: string,

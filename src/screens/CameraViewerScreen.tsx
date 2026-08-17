@@ -5,11 +5,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
-import { useHomeStore, selectVisibleRooms } from "../store/useHomeStore";
+import {
+  selectActiveMember,
+  selectVisibleRooms,
+  useHomeStore,
+} from "../store/useHomeStore";
 import LiveVideoPlayer from "../components/LiveVideoPlayer";
 import CameraThumbnail from "../components/CameraThumbnail";
 import Pressable from "../components/Pressable";
 import { theme } from "../theme/theme";
+import { roleHasPermission } from "../security/permissions";
+import { useProtectedAccess } from "../security/useProtectedAccess";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CameraViewer">;
 
@@ -31,7 +37,15 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
   const device = useHomeStore((s) =>
     s.devices.find((item) => item.id === deviceId),
   );
+  const activeMember = useHomeStore(selectActiveMember);
   const rooms = useHomeStore(selectVisibleRooms);
+  const canViewCamera = Boolean(
+    activeMember && roleHasPermission(activeMember.role, "camera.live"),
+  );
+  const protectedAccess = useProtectedAccess(
+    "Confirm access to this camera",
+    canViewCamera,
+  );
   const roomName =
     device?.roomId && rooms.find((room) => room.id === device.roomId)?.name;
 
@@ -40,6 +54,49 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
       <View style={styles.missing}>
         <Text style={styles.missingText}>Camera not found.</Text>
       </View>
+    );
+  }
+
+  if (!canViewCamera || protectedAccess.state !== "granted") {
+    const checking = canViewCamera && protectedAccess.state === "checking";
+    return (
+      <LinearGradient
+        colors={[theme.colors.bg1, theme.colors.bg0]}
+        style={styles.accessRoot}
+      >
+        <Ionicons
+          name={checking ? "scan-outline" : "lock-closed-outline"}
+          size={34}
+          color={theme.colors.text}
+        />
+        <Text style={styles.accessTitle}>
+          {checking
+            ? "Confirming camera access"
+            : canViewCamera
+              ? "Camera access locked"
+              : "Camera access unavailable"}
+        </Text>
+        <Text style={styles.accessText}>
+          {checking
+            ? "Complete the protected authentication prompt."
+            : canViewCamera
+              ? "Authenticate again to view private camera content."
+              : "Your household role does not include live camera access."}
+        </Text>
+        <View style={styles.accessActions}>
+          <Pressable style={styles.headerBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.headerBtnText}>Back</Text>
+          </Pressable>
+          {!checking && canViewCamera ? (
+            <Pressable
+              style={styles.headerBtn}
+              onPress={() => void protectedAccess.retry()}
+            >
+              <Text style={styles.headerBtnText}>Try again</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </LinearGradient>
     );
   }
 
@@ -129,6 +186,26 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  accessRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+    gap: 12,
+  },
+  accessTitle: {
+    color: theme.colors.text,
+    fontSize: 20,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  accessText: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
+    textAlign: "center",
+    maxWidth: 420,
+  },
+  accessActions: { flexDirection: "row", gap: 10, marginTop: 8 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

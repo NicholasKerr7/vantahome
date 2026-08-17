@@ -515,8 +515,12 @@ export const selectVisibleRooms = (state: HomeState) => {
 export const selectVisibleDevices = (state: HomeState) => {
   const scope = getAccessScope(state);
   if (scope.fullAccess) return state.devices;
+  // Assigned-room visibility is separate from the explicit camera.live grant.
   return state.devices.filter(
-    (device) => device.roomId && scope.roomIds.has(device.roomId),
+    (device) =>
+      device.kind !== "camera" &&
+      device.roomId &&
+      scope.roomIds.has(device.roomId),
   );
 };
 

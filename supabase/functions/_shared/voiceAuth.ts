@@ -14,6 +14,7 @@ export type VoiceToken = {
   client_id: string;
   user_id: string;
   expires_at: string;
+  refresh_expires_at: string;
 };
 
 export function randomToken(length = 32) {
@@ -45,7 +46,13 @@ export async function getVoiceClient(clientId: string) {
 
 export async function verifyClientSecret(client: VoiceClient, secret: string) {
   const hashed = await hashSecret(secret);
-  return hashed === client.client_secret_hash;
+  const expected = client.client_secret_hash.toLowerCase();
+  if (hashed.length !== expected.length) return false;
+  let difference = 0;
+  for (let index = 0; index < hashed.length; index += 1) {
+    difference |= hashed.charCodeAt(index) ^ expected.charCodeAt(index);
+  }
+  return difference === 0;
 }
 
 export async function findToken(accessToken: string) {

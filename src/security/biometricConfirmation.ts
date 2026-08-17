@@ -17,11 +17,14 @@ export class BiometricConfirmationError extends Error {
   }
 }
 
-export async function confirmSensitiveAction(permission: ActionPermission) {
-  if (!BIOMETRIC_PERMISSIONS.has(permission)) return;
+export function requiresProtectedAccess() {
+  return runtimePolicy.requireRealTransport;
+}
+
+export async function confirmProtectedAccess(promptMessage: string) {
   // Seeded demo/development controls remain usable in Expo Go and simulators.
   // Alpha and production fail closed when strong local authentication is absent.
-  if (!runtimePolicy.requireRealTransport) return;
+  if (!requiresProtectedAccess()) return;
 
   const [hasHardware, isEnrolled] = await Promise.all([
     LocalAuthentication.hasHardwareAsync(),
@@ -34,11 +37,16 @@ export async function confirmSensitiveAction(permission: ActionPermission) {
   }
 
   const result = await LocalAuthentication.authenticateAsync({
-    promptMessage: "Confirm sensitive VantaHome action",
+    promptMessage,
     cancelLabel: "Cancel",
     disableDeviceFallback: false,
   });
   if (!result.success) {
     throw new BiometricConfirmationError("Sensitive action was not confirmed.");
   }
+}
+
+export async function confirmSensitiveAction(permission: ActionPermission) {
+  if (!BIOMETRIC_PERMISSIONS.has(permission)) return;
+  await confirmProtectedAccess("Confirm sensitive VantaHome action");
 }

@@ -41,6 +41,7 @@ import {
 } from "../services/cloudRegistry";
 import { syncMembershipFromSupabase } from "../services/membership";
 import { supabase } from "../services/supabaseClient";
+import { confirmProtectedAccess } from "../security/biometricConfirmation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -455,7 +456,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<
-    "Owner" | "Admin" | "Member" | "Guest" | "Tenant"
+    "Admin" | "Member" | "Guest" | "Tenant"
   >("Guest");
   const [newMemberAvatar, setNewMemberAvatar] = useState("");
   const [pendingInvites, setPendingInvites] = useState<HomeInvite[]>([]);
@@ -464,6 +465,18 @@ export default function ProfileScreen({ navigation }: Props) {
     ? ["Owner", "Admin"].includes(activeMember.role)
     : false;
   const canManageHousehold = canManageRooms;
+  const confirmHouseholdAdminChange = async () => {
+    try {
+      await confirmProtectedAccess("Confirm household administration change");
+      return true;
+    } catch {
+      Alert.alert(
+        "Confirmation required",
+        "Authenticate again before changing household access.",
+      );
+      return false;
+    }
+  };
   const resolveRoomRole = (
     role: typeof household[number]["role"],
   ): RoomMemberRole | null => {
@@ -483,6 +496,7 @@ export default function ProfileScreen({ navigation }: Props) {
     prevRoomIds: string[],
     nextRoomIds: string[],
   ) => {
+    if (!(await confirmHouseholdAdminChange())) return;
     setRoomMembership(memberId, nextRoomIds);
     const roomRole = resolveRoomRole(role);
     if (
@@ -699,6 +713,7 @@ export default function ProfileScreen({ navigation }: Props) {
       Alert.alert("Email required", "Add an email to invite this member.");
       return;
     }
+    if (!(await confirmHouseholdAdminChange())) return;
     const addMemberLocally = () => {
       const localId = `m${Date.now()}`;
       const initialRoomIds =
@@ -791,6 +806,13 @@ export default function ProfileScreen({ navigation }: Props) {
       );
     }
     setInviteLoading(false);
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    const member = household.find((item) => item.id === memberId);
+    if (!canManageHousehold || !member || member.role === "Owner") return;
+    if (!(await confirmHouseholdAdminChange())) return;
+    removeHouseholdMember(memberId);
   };
 
   const handleRespondInvite = async (
@@ -1227,10 +1249,7 @@ export default function ProfileScreen({ navigation }: Props) {
             </View>
             <Pressable
               style={styles.memberRemove}
-              onPress={() => {
-                if (!canManageHousehold || member.role === "Owner") return;
-                removeHouseholdMember(member.id);
-              }}
+              onPress={() => void handleRemoveMember(member.id)}
               hitSlop={8}
               disabled={!canManageHousehold || member.role === "Owner"}
             >
@@ -1318,7 +1337,7 @@ export default function ProfileScreen({ navigation }: Props) {
           keyboardType="email-address"
         />
         <View style={styles.chipRow}>
-          {(["Owner", "Admin", "Member", "Guest", "Tenant"] as const).map(
+          {(["Admin", "Member", "Guest", "Tenant"] as const).map(
             (role) => {
             const active = newMemberRole === role;
             return (

@@ -1,4 +1,5 @@
 import {
+  selectVisibleDevices,
   useHomeStore,
   type AutomationFlow,
   type AutomationRule,
@@ -70,6 +71,11 @@ beforeEach(() => {
     preferences: { ...seed.preferences },
     realtime: { ...seed.realtime },
     household: seed.household.map((m) => ({ ...m })),
+    roomMembers: seed.roomMembers.map((membership) => ({
+      ...membership,
+      roomIds: [...membership.roomIds],
+    })),
+    activeMemberId: seed.activeMemberId,
   });
 });
 
@@ -168,6 +174,31 @@ describe("useHomeStore", () => {
     expect(kinds.has("fridge")).toBe(true);
     expect(kinds.has("garage")).toBe(true);
     expect(kinds.has("camera")).toBe(true);
+  });
+
+  it("does not expose cameras through guest room visibility", () => {
+    useHomeStore.setState({
+      rooms: [{ id: "r1", name: "Guest room" }],
+      household: [
+        { id: "guest", name: "Guest", role: "Guest", status: "home" },
+      ],
+      activeMemberId: "guest",
+      roomMembers: [{ memberId: "guest", roomIds: ["r1"] }],
+      devices: [
+        { id: "light", name: "Lamp", kind: "light", roomId: "r1", isOn: true },
+        {
+          id: "camera",
+          name: "Camera",
+          kind: "camera",
+          roomId: "r1",
+          isOn: true,
+        },
+      ],
+    });
+
+    expect(selectVisibleDevices(useHomeStore.getState()).map((d) => d.id)).toEqual([
+      "light",
+    ]);
   });
 
   it("setDevice patches only the targeted device", () => {

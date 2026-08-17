@@ -1,6 +1,6 @@
 begin;
 
-select plan(10);
+select plan(12);
 
 select ok(role_has_action_permission('owner', 'lock.unlock'), 'owner can unlock');
 select ok(role_has_action_permission('admin', 'garage.open'), 'admin can open garage');
@@ -9,6 +9,8 @@ select ok(not role_has_action_permission('member', 'lock.unlock'), 'member canno
 select ok(role_has_action_permission('tenant', 'climate.control'), 'tenant controls climate');
 select ok(not role_has_action_permission('tenant', 'garage.open'), 'tenant cannot open garage');
 select ok(not role_has_action_permission('guest', 'member.invite'), 'guest cannot invite');
+select ok(not role_has_action_permission('guest', 'camera.live'), 'guest cannot view cameras');
+select ok(role_has_action_permission('member', 'camera.live'), 'member can view cameras');
 
 select is(
   permission_for_device_command(

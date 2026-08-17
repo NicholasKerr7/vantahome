@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-## Implemented in the first cut
+## Implemented
 
 - Native Supabase sessions use Keychain/Keystore through Expo SecureStore.
 - Action permissions distinguish ordinary controls from cameras, locks,
@@ -20,21 +20,40 @@ Status: **in progress**
 - Device audit logging resolves the exact caller-visible device/home before
   performing its narrowly scoped service-role insert.
 - A formal threat model and initial SQL permission tests were added.
+- Migration 007 now upgrades the legacy migration-002 command queue safely;
+  preserved legacy rows are expired rather than treated as trusted commands.
+- Voice and bootstrap functions now use bounded shared request validation.
+- Voice discovery respects room assignments and excludes locks, doors, gates,
+  cameras, cooking devices, safety devices, and other high-risk categories.
+- Voice fulfillment queues server-authorized commands and cannot write observed
+  device state through the service role.
+- OAuth authorization-code exchange is row-locked and atomic, and rendered
+  linking fields are HTML-escaped. Voice tokens are provider-bound; refresh
+  tokens have an absolute expiry and rotate on use.
+- Command rate limits are enforced at actor, household, and device boundaries by
+  a table trigger, including concurrent API and voice requests.
+- Home bootstrap is an authenticated, serialized database transaction.
+- Docker-free regression tests cover validation and migration guardrails.
+- Camera registry/state reads require the explicit `camera.live` permission;
+  camera screens reauthenticate on focus in alpha/production.
+- Inviting/removing household members and changing assigned rooms requires local
+  protected reauthentication in alpha/production. Owner invitations are not an
+  available client action.
 
 ## Remaining before the Sprint 2 gate
 
 - Add per-member permission overrides and management UI.
-- Apply shared payload validation to every voice and bootstrap Edge Function.
-- Complete the service-role inventory, especially voice fulfillment paths.
 - Add database integration tests for every role, room, device category, and
   unauthorized state/command mutation—not only pure permission-function tests.
-- Add per-home, per-device, and IP-aware rate limiting with operational metrics.
-- Require protected reauthentication for camera viewing and household-admin
-  mutations, not only sensitive device commands.
+- Add trusted-proxy IP-aware rate limiting and operational metrics.
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
 - Validate this migration against a disposable Supabase project and perform an
   external security review before alpha.
+
+The disposable-project and database-integration items intentionally remain
+deferred while Docker is unavailable. Static migration guardrails are useful,
+but they are not presented as equivalent to executing PostgreSQL/RLS tests.
 
 ## Gate
 

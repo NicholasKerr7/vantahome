@@ -2,6 +2,21 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import { getVoiceClient, randomToken } from "../_shared/voiceAuth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import {
+  boundedString,
+  readFormObject,
+  RequestValidationError,
+} from "../_shared/validation.ts";
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  })[character] ?? character);
+}
 
 function renderHtml(body: string) {
   return `<!doctype html>
@@ -42,15 +57,6 @@ async function signInWithPassword(email: string, password: string) {
   return data.user;
 }
 
-function parseForm(body: string) {
-  const params = new URLSearchParams(body);
-  const entries: Record<string, string> = {};
-  params.forEach((value, key) => {
-    entries[key] = value;
-  });
-  return entries;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -64,7 +70,14 @@ Deno.serve(async (req) => {
   const state = params.get("state") ?? "";
 
   if (req.method === "GET") {
-    if (!clientId || !redirectUri || responseType !== "code") {
+    if (
+      !clientId ||
+      clientId.length > 128 ||
+      !redirectUri ||
+      redirectUri.length > 2_048 ||
+      responseType !== "code" ||
+      state.length > 512
+    ) {
       return new Response(
         renderHtml('<div class="error">Invalid OAuth request.</div>'),
         {
@@ -85,13 +98,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    const safeClientId = escapeHtml(clientId);
+    const safeRedirectUri = escapeHtml(redirectUri);
+    const safeState = escapeHtml(state);
     const body = `
-      <h1>Link ${client.name}</h1>
+      <h1>Link ${escapeHtml(client.name)}</h1>
       <p class="hint">Sign in to VantaHome to link your account.</p>
       <form method="post">
-        <input type="hidden" name="client_id" value="${clientId}" />
-        <input type="hidden" name="redirect_uri" value="${redirectUri}" />
-        <input type="hidden" name="state" value="${state}" />
+        <input type="hidden" name="client_id" value="${safeClientId}" />
+        <input type="hidden" name="redirect_uri" value="${safeRedirectUri}" />
+        <input type="hidden" name="state" value="${safeState}" />
         <label>Email</label>
         <input type="email" name="email" required />
         <label>Password</label>
@@ -114,21 +130,18 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const form = parseForm(await req.text());
-    const formClientId = form.client_id ?? "";
-    const formRedirect = form.redirect_uri ?? "";
-    const formState = form.state ?? "";
-    const email = form.email ?? "";
-    const password = form.password ?? "";
-
-    if (!formClientId || !formRedirect || !email || !password) {
-      return new Response(
-        renderHtml('<div class="error">Missing login details.</div>'),
-        {
-          status: 400,
-          headers: { "Content-Type": "text/html" },
-        },
-      );
+    const form = await readFormObject(req, 8_192, 8);
+    const formClientId = boundedString(form.client_id, "client_id", 128);
+    const formRedirect = boundedString(
+      form.redirect_uri,
+      "redirect_uri",
+      2_048,
+    );
+    const formState = boundedString(form.state ?? "", "state", 512, false);
+    const email = boundedString(form.email, "email", 320).toLowerCase();
+    const password = form.password;
+    if (typeof password !== "string" || !password || password.length > 1_024) {
+      throw new RequestValidationError("Invalid login details.");
     }
 
     const client = await getVoiceClient(formClientId);
@@ -186,10 +199,11 @@ Deno.serve(async (req) => {
       headers: { Location: redirect.toString() },
     });
   } catch (err) {
+    const status = err instanceof RequestValidationError ? 400 : 500;
     return new Response(
-      renderHtml(`<div class="error">${(err as Error).message}</div>`),
+      renderHtml('<div class="error">Unable to link this account.</div>'),
       {
-        status: 500,
+        status,
         headers: { "Content-Type": "text/html" },
       },
     );

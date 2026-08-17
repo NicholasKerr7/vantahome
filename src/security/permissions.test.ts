@@ -51,4 +51,9 @@ describe("action-level permissions", () => {
   test("room access never implies member administration", () => {
     expect(roleHasPermission("Tenant", "member.invite")).toBe(false);
   });
+
+  test("camera access is explicit rather than implied by room visibility", () => {
+    expect(roleHasPermission("Guest", "camera.live")).toBe(false);
+    expect(roleHasPermission("Member", "camera.live")).toBe(true);
+  });
 });

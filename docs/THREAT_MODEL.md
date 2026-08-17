@@ -33,15 +33,15 @@ privileged but must still validate inputs and minimize authority.
 | Threat | Current control | Remaining work |
 | --- | --- | --- |
 | Extracted mobile secrets | SecureStore for native sessions; no public MQTT credentials | Migrate hub/HA credentials when pairing exists |
-| Cross-home or cross-room access | RLS plus exact device/home resolution | Automated full role/device RLS matrix |
+| Cross-home or cross-room access | RLS, exact device/home resolution, room-scoped voice discovery | Automated full role/device RLS matrix |
 | Tenant/guest sensitive commands | Client and database action permissions | Per-member overrides and admin UI |
 | Replayed/duplicated commands | Nonce, expiry, command ID, unique idempotency keys | Bridge-side durable deduplication |
 | False physical confirmation | Production optimistic confirmation disabled; client state writes revoked | Full bridge acknowledgement lifecycle |
-| Oversized/malformed payloads | Shared bounded JSON validation on hardened functions | Apply validator to every remaining Edge Function |
+| Oversized/malformed payloads | Shared bounded JSON/form validation on command, invite, audit, bootstrap, and voice functions | Maintain validation as endpoints are added |
 | Partial invite acceptance | Row lock and transactional database function | Expiration cleanup and notification workflow |
-| Service-role confused deputy | Audit endpoint resolves exact RLS-visible device | Complete service-role inventory and tests |
-| Stolen unlocked phone | Biometrics for sensitive commands in alpha/production | Protected camera viewing and admin mutations |
-| Abuse/command flooding | Database command rate gate | Per-home/device limits and observability |
+| Service-role confused deputy | Audit resolves caller-visible devices; voice uses explicit room/role checks and server-only RPCs | Database integration tests |
+| Stolen unlocked phone | Biometrics for sensitive commands, camera viewing, and household-admin mutations in alpha/production | Validate platform behavior during alpha testing |
+| Abuse/command flooding | Atomic actor, home, and device rate gates | Trusted-proxy IP limits and observability |
 
 ## Safety position
 
@@ -55,7 +55,9 @@ not disable the certified device's native safety behavior.
 - `home-invite`: needed for Supabase Auth invitations and invite record creation;
   caller must already be owner/admin and room IDs are constrained to that home.
 - `device-audit`: append-only use after caller-scoped device lookup.
-- Voice OAuth/data helpers: privileged token and device access remains to be
-  narrowed and covered by the Sprint 2 authorization test matrix.
+- Voice OAuth helpers: service role is limited to private OAuth tables; tokens
+  are provider-bound and refresh tokens expire and rotate. Voice
+  discovery explicitly applies member/room scope; fulfillment calls the
+  service-role-only `enqueue_voice_device_command` authorization transaction.
 - `home-invite-respond`: service role removed; the authenticated caller invokes a
   single transactional security-definer function.

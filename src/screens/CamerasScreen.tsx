@@ -23,6 +23,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { roleHasPermission } from "../security/permissions";
+import { useProtectedAccess } from "../security/useProtectedAccess";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Cameras">;
 
@@ -48,13 +50,21 @@ export default function CamerasScreen({ navigation }: Props) {
   const rooms = useHomeStore(selectVisibleRooms);
   const visibleDevices = useHomeStore(selectVisibleDevices);
   const allDevices = useHomeStore((s) => s.devices);
+  const canViewCamera = Boolean(
+    activeMember && roleHasPermission(activeMember.role, "camera.live"),
+  );
   const canViewAll = activeMember
     ? ["Owner", "Admin"].includes(activeMember.role)
     : false;
   const cameraDevices = useMemo(() => {
+    if (!canViewCamera) return [];
     const source = canViewAll ? allDevices : visibleDevices;
     return source.filter((device) => device.kind === "camera");
-  }, [allDevices, canViewAll, visibleDevices]);
+  }, [allDevices, canViewAll, canViewCamera, visibleDevices]);
+  const protectedAccess = useProtectedAccess(
+    "Confirm access to household cameras",
+    canViewCamera,
+  );
   const roomMap = useMemo(
     () => new Map(rooms.map((room) => [room.id, room.name])),
     [rooms],
@@ -254,6 +264,49 @@ export default function CamerasScreen({ navigation }: Props) {
     }
     navigation.navigate("Main", { screen: "Home" } as never);
   }, [navigation]);
+
+  if (!canViewCamera || protectedAccess.state !== "granted") {
+    const checking = canViewCamera && protectedAccess.state === "checking";
+    return (
+      <LinearGradient
+        colors={[theme.colors.bg1, theme.colors.bg0]}
+        style={styles.protectedRoot}
+      >
+        <Ionicons
+          name={checking ? "scan-outline" : "lock-closed-outline"}
+          size={36}
+          color={theme.colors.text}
+        />
+        <Text style={styles.protectedTitle}>
+          {checking
+            ? "Confirming camera access"
+            : canViewCamera
+              ? "Camera access locked"
+              : "Camera access unavailable"}
+        </Text>
+        <Text style={styles.protectedText}>
+          {checking
+            ? "Complete the protected authentication prompt."
+            : canViewCamera
+              ? "Authenticate again to view private camera content."
+              : "Your household role does not include live camera access."}
+        </Text>
+        <View style={styles.protectedActions}>
+          <Pressable style={styles.protectedButton} onPress={handleBack}>
+            <Text style={styles.protectedButtonText}>Back</Text>
+          </Pressable>
+          {!checking && canViewCamera ? (
+            <Pressable
+              style={styles.protectedButton}
+              onPress={() => void protectedAccess.retry()}
+            >
+              <Text style={styles.protectedButtonText}>Try again</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </LinearGradient>
+    );
+  }
 
   return (
     <RenderProfiler id="CamerasScreen">
@@ -568,6 +621,35 @@ export default function CamerasScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  protectedRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+    gap: 12,
+  },
+  protectedTitle: {
+    color: theme.colors.text,
+    fontSize: 20,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  protectedText: {
+    color: theme.colors.subtext,
+    fontWeight: "700",
+    textAlign: "center",
+    maxWidth: 420,
+  },
+  protectedActions: { flexDirection: "row", gap: 10, marginTop: 8 },
+  protectedButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  protectedButtonText: { color: theme.colors.text, fontWeight: "800" },
   content: { flex: 1, alignItems: "center" },
   sectionsScroll: { flex: 1 },
   headerBlock: { gap: 12 },

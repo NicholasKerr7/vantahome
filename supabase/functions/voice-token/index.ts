@@ -5,15 +5,11 @@ import {
   randomToken,
   verifyClientSecret,
 } from "../_shared/voiceAuth.ts";
-
-function parseForm(body: string) {
-  const params = new URLSearchParams(body);
-  const entries: Record<string, string> = {};
-  params.forEach((value, key) => {
-    entries[key] = value;
-  });
-  return entries;
-}
+import {
+  boundedString,
+  readFormObject,
+  RequestValidationError,
+} from "../_shared/validation.ts";
 
 function jsonResponse(data: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -37,14 +33,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = parseForm(await req.text());
-    const grantType = body.grant_type ?? "";
-    const clientId = body.client_id ?? "";
-    const clientSecret = body.client_secret ?? "";
-
-    if (!grantType || !clientId || !clientSecret) {
-      return jsonResponse({ error: "invalid_request" }, 400);
-    }
+    const body = await readFormObject(req, 8_192, 8);
+    const grantType = boundedString(body.grant_type, "grant_type", 64);
+    const clientId = boundedString(body.client_id, "client_id", 128);
+    const clientSecret = boundedString(
+      body.client_secret,
+      "client_secret",
+      1_024,
+    );
 
     const client = await getVoiceClient(clientId);
     if (!client) return jsonResponse({ error: "invalid_client" }, 401);
@@ -55,45 +51,29 @@ Deno.serve(async (req) => {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
     if (grantType === "authorization_code") {
-      const code = body.code ?? "";
-      const redirectUri = body.redirect_uri ?? "";
-      if (!code || !redirectUri)
-        return jsonResponse({ error: "invalid_request" }, 400);
-
-      const { data: codeRow } = await admin
-        .from("voice_oauth_codes")
-        .select("*")
-        .eq("code", code)
-        .maybeSingle();
-
-      if (
-        !codeRow ||
-        codeRow.client_id !== clientId ||
-        codeRow.redirect_uri !== redirectUri
-      ) {
-        return jsonResponse({ error: "invalid_grant" }, 400);
-      }
-
-      if (new Date(codeRow.expires_at).getTime() <= Date.now()) {
-        return jsonResponse({ error: "invalid_grant" }, 400);
-      }
+      const code = boundedString(body.code, "code", 256);
+      const redirectUri = boundedString(
+        body.redirect_uri,
+        "redirect_uri",
+        2_048,
+      );
 
       const accessToken = randomToken(24);
       const refreshToken = randomToken(24);
 
-      const { error: insertError } = await admin
-        .from("voice_oauth_tokens")
-        .insert({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-          client_id: clientId,
-          user_id: codeRow.user_id,
-          expires_at: expiresAt,
-        });
-
-      if (insertError) return jsonResponse({ error: "server_error" }, 500);
-
-      await admin.from("voice_oauth_codes").delete().eq("code", code);
+      const { data: exchanged, error: exchangeError } = await admin.rpc(
+        "exchange_voice_authorization_code",
+        {
+          oauth_code: code,
+          oauth_client_id: clientId,
+          oauth_redirect_uri: redirectUri,
+          new_access_token: accessToken,
+          new_refresh_token: refreshToken,
+          new_expires_at: expiresAt,
+        },
+      );
+      if (exchangeError) return jsonResponse({ error: "server_error" }, 500);
+      if (!exchanged) return jsonResponse({ error: "invalid_grant" }, 400);
 
       return jsonResponse({
         access_token: accessToken,
@@ -104,8 +84,11 @@ Deno.serve(async (req) => {
     }
 
     if (grantType === "refresh_token") {
-      const refreshToken = body.refresh_token ?? "";
-      if (!refreshToken) return jsonResponse({ error: "invalid_request" }, 400);
+      const refreshToken = boundedString(
+        body.refresh_token,
+        "refresh_token",
+        256,
+      );
 
       const { data: tokenRow } = await admin
         .from("voice_oauth_tokens")
@@ -115,19 +98,37 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!tokenRow) return jsonResponse({ error: "invalid_grant" }, 400);
+      if (new Date(tokenRow.refresh_expires_at).getTime() <= Date.now()) {
+        await admin
+          .from("voice_oauth_tokens")
+          .delete()
+          .eq("refresh_token", refreshToken)
+          .eq("client_id", clientId);
+        return jsonResponse({ error: "invalid_grant" }, 400);
+      }
 
       const newAccess = randomToken(24);
-      const { error: updateError } = await admin
+      const newRefresh = randomToken(24);
+      const { data: rotatedToken, error: updateError } = await admin
         .from("voice_oauth_tokens")
-        .update({ access_token: newAccess, expires_at: expiresAt })
+        .update({
+          access_token: newAccess,
+          refresh_token: newRefresh,
+          expires_at: expiresAt,
+        })
         .eq("refresh_token", refreshToken)
-        .eq("client_id", clientId);
+        .eq("client_id", clientId)
+        .select("refresh_token")
+        .maybeSingle();
 
       if (updateError) return jsonResponse({ error: "server_error" }, 500);
+      // Selecting the updated row makes concurrent refresh-token reuse fail:
+      // only the request that rotated the old token can return a new pair.
+      if (!rotatedToken) return jsonResponse({ error: "invalid_grant" }, 400);
 
       return jsonResponse({
         access_token: newAccess,
-        refresh_token: refreshToken,
+        refresh_token: newRefresh,
         token_type: "Bearer",
         expires_in: 3600,
       });
@@ -135,9 +136,9 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ error: "unsupported_grant_type" }, 400);
   } catch (err) {
-    return jsonResponse(
-      { error: (err as Error).message ?? "server_error" },
-      500,
-    );
+    if (err instanceof RequestValidationError) {
+      return jsonResponse({ error: "invalid_request" }, 400);
+    }
+    return jsonResponse({ error: "server_error" }, 500);
   }
 });

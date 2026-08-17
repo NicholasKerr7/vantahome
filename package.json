@@ -9,6 +9,7 @@
     "web": "expo start --web",
     "build": "expo export --platform web",
     "lint": "tsc --noEmit",
+    "lint:edge": "tsc -p supabase/functions/tsconfig.json",
     "sentry:sourcemaps": "sentry-expo upload-sourcemaps",
     "mqtt:presence": "node scripts/mqtt-presence.js",
     "realtime:server": "node scripts/realtime-server.js",

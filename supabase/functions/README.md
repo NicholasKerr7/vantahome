@@ -7,7 +7,7 @@ action-level permissions are enforced by RLS and database authorization helpers.
 
 - `home-bootstrap` (POST)
   - Body: `{ "name": "My Home" }`
-  - Creates a home and inserts the owner into `home_members`.
+  - Atomically creates a home and inserts the owner into `home_members`.
 
 - `device-command` (POST)
   - Accepts a typed, short-lived command envelope.
@@ -28,11 +28,17 @@ action-level permissions are enforced by RLS and database authorization helpers.
 - `voice-authorize` (GET/POST)
   - OAuth2 authorize endpoint with a minimal login form.
 - `voice-token` (POST)
-  - OAuth2 token endpoint (authorization_code + refresh_token).
+  - OAuth2 token endpoint (authorization_code + refresh_token); authorization
+    codes are consumed in a row-locked transaction.
 - `alexa-smart-home` (POST)
   - Alexa Smart Home fulfillment handler.
 - `google-smart-home` (POST)
   - Google Smart Home fulfillment handler.
+
+Voice discovery applies household and assigned-room scope and exposes only
+lights, climate, TVs, fans, and speakers. Fulfillment calls a service-role-only
+authorization transaction to enqueue commands; it never writes observed device
+state directly.
 
 ## Deploy
 

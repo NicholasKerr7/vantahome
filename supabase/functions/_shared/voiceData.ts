@@ -13,16 +13,33 @@ export type VoiceStateRow = {
   state: Record<string, unknown>;
 };
 
+const VOICE_CONTROLLABLE_KINDS = new Set([
+  "light",
+  "ac",
+  "tv",
+  "fan",
+  "speaker",
+]);
+
+export function isVoiceControllableKind(kind: string) {
+  return VOICE_CONTROLLABLE_KINDS.has(kind);
+}
+
 export async function fetchVoiceData(userId: string) {
   const admin = getSupabaseAdmin();
   const { data: memberships, error: memberError } = await admin
     .from("home_members")
-    .select("home_id")
+    .select("home_id, role")
     .eq("user_id", userId);
 
   if (memberError) throw memberError;
-  const homeIds = (memberships ?? []).map((m) => m.home_id).filter(Boolean);
-  if (!homeIds.length) {
+  const fullHomeIds = (memberships ?? [])
+    .filter((membership) => ["owner", "admin", "member"].includes(membership.role))
+    .map((membership) => membership.home_id);
+  const restrictedHomeIds = (memberships ?? [])
+    .filter((membership) => ["guest", "tenant"].includes(membership.role))
+    .map((membership) => membership.home_id);
+  if (!fullHomeIds.length && !restrictedHomeIds.length) {
     return {
       devices: [],
       rooms: new Map<string, string>(),
@@ -30,27 +47,63 @@ export async function fetchVoiceData(userId: string) {
     };
   }
 
-  const { data: rooms } = await admin
-    .from("rooms")
-    .select("id, name")
-    .in("home_id", homeIds);
+  const { data: assignedRooms, error: assignedRoomError } = restrictedHomeIds.length
+    ? await admin
+        .from("room_members")
+        .select("room_id, rooms!inner(id, name, home_id)")
+        .eq("user_id", userId)
+        .in("rooms.home_id", restrictedHomeIds)
+    : { data: [], error: null };
+  if (assignedRoomError) throw assignedRoomError;
+  const restrictedRooms = (assignedRooms ?? []).flatMap((row) => {
+    const room = Array.isArray(row.rooms) ? row.rooms[0] : row.rooms;
+    return room ? [room] : [];
+  });
+  const restrictedRoomIds = restrictedRooms.map((room) => room.id);
+
+  const { data: fullRooms, error: fullRoomError } = fullHomeIds.length
+    ? await admin
+        .from("rooms")
+        .select("id, name, home_id")
+        .in("home_id", fullHomeIds)
+    : { data: [], error: null };
+  if (fullRoomError) throw fullRoomError;
 
   const roomMap = new Map<string, string>();
-  (rooms ?? []).forEach((room) => roomMap.set(room.id, room.name));
+  [...(fullRooms ?? []), ...restrictedRooms].forEach((room) =>
+    roomMap.set(room.id, room.name)
+  );
 
-  const { data: devices } = await admin
-    .from("devices")
-    .select("id, name, kind, room_id, home_id")
-    .in("home_id", homeIds);
+  const { data: fullDevices, error: fullDeviceError } = fullHomeIds.length
+    ? await admin
+        .from("devices")
+        .select("id, name, kind, room_id, home_id")
+        .in("home_id", fullHomeIds)
+    : { data: [], error: null };
+  if (fullDeviceError) throw fullDeviceError;
+  const { data: restrictedDevices, error: restrictedDeviceError } =
+    restrictedRoomIds.length
+      ? await admin
+          .from("devices")
+          .select("id, name, kind, room_id, home_id")
+          .in("home_id", restrictedHomeIds)
+          .in("room_id", restrictedRoomIds)
+      : { data: [], error: null };
+  if (restrictedDeviceError) throw restrictedDeviceError;
 
-  const deviceIds = (devices ?? []).map((d) => d.id);
+  const devices = [...(fullDevices ?? []), ...(restrictedDevices ?? [])].filter(
+    (device) => isVoiceControllableKind(device.kind),
+  );
 
-  const { data: states } = deviceIds.length
+  const deviceIds = devices.map((device) => device.id);
+
+  const { data: states, error: stateError } = deviceIds.length
     ? await admin
         .from("device_state")
         .select("device_id, state")
         .in("device_id", deviceIds)
-    : { data: [] };
+    : { data: [], error: null };
+  if (stateError) throw stateError;
 
   const stateMap = new Map<string, Record<string, unknown>>();
   (states ?? []).forEach((row: VoiceStateRow) => {
@@ -58,34 +111,25 @@ export async function fetchVoiceData(userId: string) {
   });
 
   return {
-    devices: (devices ?? []) as VoiceDevice[],
+    devices: devices as VoiceDevice[],
     rooms: roomMap,
     states: stateMap,
   };
 }
 
-export async function upsertDeviceState(
+export async function enqueueDeviceCommand(
+  userId: string,
   deviceId: string,
+  source: "alexa" | "google",
   patch: Record<string, unknown>,
 ) {
   const admin = getSupabaseAdmin();
-  const { data: existing } = await admin
-    .from("device_state")
-    .select("state")
-    .eq("device_id", deviceId)
-    .maybeSingle();
-
-  const mergedState = { ...(existing?.state ?? {}), ...patch };
-  await admin
-    .from("device_state")
-    .upsert({ device_id: deviceId, state: mergedState });
-  return mergedState;
-}
-
-export async function enqueueDeviceCommand(
-  deviceId: string,
-  command: Record<string, unknown>,
-) {
-  const admin = getSupabaseAdmin();
-  await admin.from("device_commands").insert({ device_id: deviceId, command });
+  const { data, error } = await admin.rpc("enqueue_voice_device_command", {
+    target_user_id: userId,
+    target_device_id: deviceId,
+    voice_source: source,
+    command_patch: patch,
+  });
+  if (error) throw error;
+  return data?.[0] ?? null;
 }
