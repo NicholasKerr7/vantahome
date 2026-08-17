@@ -36,6 +36,37 @@ npm run android
 npm run web
 ```
 
+### Low-storage iOS workflow
+
+Docker is not required to build, test, or run the mobile client. Keep Docker
+stopped during ordinary app development and use one installed iOS runtime with
+one simulator device. Before a native build, keep at least 15 GB free; 20 GB or
+more leaves safer headroom for Xcode's temporary files.
+
+Use the Docker-free regression suite for routine verification:
+
+```bash
+npm run verify
+```
+
+Then run the app normally so Expo starts Metro and attaches the JavaScript
+bundle to the simulator:
+
+```bash
+npm run ios
+```
+
+Keep Xcode's DerivedData after a successful build when space permits. It is a
+small, rebuildable cache that makes later native builds substantially faster.
+If storage becomes tight, remove old simulator runtimes in Xcode's Components
+settings and delete DerivedData in Xcode's Locations settings. Do not keep
+multiple runtimes solely for VantaHome.
+
+The full local Supabase/self-hosted stack is intentionally outside this lean
+workflow because it requires Docker and significantly more disk. Use a remote
+disposable Supabase project for database integration testing until the machine
+has comfortable storage headroom.
+
 ## Realtime dev server
 
 Spin up a local WebSocket bridge and point the app to it in Settings → Realtime (Dev):
