@@ -1483,7 +1483,11 @@ export function getDeviceCapabilities(
   context: CapabilityContext,
 ) {
   const list = CAPABILITIES[device.kind] ?? [];
+  const reported = Array.isArray(device.reportedCapabilityIds)
+    ? new Set(device.reportedCapabilityIds)
+    : null;
   return list
+    .filter((cap) => !reported || reported.has(cap.id))
     .filter((cap) => (cap.contexts ?? DEFAULT_CONTEXTS).includes(context))
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }

@@ -1840,7 +1840,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   };
   const sendPatch = (patch: Partial<Device>) => {
     deviceClient
-      .sendCommand({ op: "patch", deviceId: device.id, patch })
+      .sendCommand({ op: "set-properties", deviceId: device.id, changes: patch })
       .catch(() => {});
   };
   const setOpenTarget = (target: number) => {
@@ -1863,15 +1863,15 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         patch.channel = device.channel ?? 1;
       }
       deviceClient
-        .sendCommand({ op: "patch", deviceId: device.id, patch })
+        .sendCommand({ op: "set-properties", deviceId: device.id, changes: patch })
         .catch(() => {});
       return;
     }
     deviceClient
       .sendCommand({
-        op: "patch",
+        op: "set-properties",
         deviceId: device.id,
-        patch: { isOn: nextOn },
+        changes: { isOn: nextOn },
       })
       .catch(() => {});
   };
@@ -1982,9 +1982,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         });
         deviceClient
           .sendCommand({
-            op: "patch",
+            op: "set-properties",
             deviceId: partner.id,
-            patch: {
+            changes: {
               stackId: nextStackId,
               stackPosition: partnerPosition,
             },
@@ -1993,9 +1993,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         clearIds.forEach((id) => {
           deviceClient
             .sendCommand({
-              op: "patch",
+              op: "set-properties",
               deviceId: id,
-              patch: {
+              changes: {
                 stackId: undefined,
                 stackPosition: undefined,
               },
@@ -2030,9 +2030,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       }
       deviceClient
         .sendCommand({
-          op: "patch",
+          op: "set-properties",
           deviceId: id,
-          patch: {
+          changes: {
             stackId: undefined,
             stackPosition: undefined,
           },
@@ -3189,9 +3189,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     if (!gateDevice) return;
     deviceClient
       .sendCommand({
-        op: "patch",
+        op: "set-properties",
         deviceId: gateDevice.id,
-        patch: { openPercent: target, isOn: target > 0 },
+        changes: { openPercent: target, isOn: target > 0 },
       })
       .catch(() => {});
   };
@@ -8385,9 +8385,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         onSelect={() =>
           deviceClient
             .sendCommand({
-              op: "patch",
+              op: "set-properties",
               deviceId: gateDevice.id,
-              patch: { autoOpenEnabled: !gateAutoOpen },
+              changes: { autoOpenEnabled: !gateAutoOpen },
             })
             .catch(() => {})
         }
@@ -9060,9 +9060,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             const next = clamp(channel + 1, 1, 999);
             deviceClient
               .sendCommand({
-                op: "patch",
+                op: "set-properties",
                 deviceId: device.id,
-                patch: {
+                changes: {
                   channel: next,
                   source: "Live TV",
                   isOn: true,
@@ -9080,9 +9080,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             const next = clamp(channel - 1, 1, 999);
             deviceClient
               .sendCommand({
-                op: "patch",
+                op: "set-properties",
                 deviceId: device.id,
-                patch: {
+                changes: {
                   channel: next,
                   source: "Live TV",
                   isOn: true,

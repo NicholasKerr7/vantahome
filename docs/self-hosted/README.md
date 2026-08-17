@@ -111,9 +111,12 @@ In HA:
 - Add MQTT integration with host `127.0.0.1`, username `vantahome`, and your password.
 - Add the Frigate integration if you want detection events in HA.
 
-## 10) VantaHome MQTT bridge (app)
+## 10) Development-only mobile MQTT connection
 
-The app connects over MQTT WebSockets (`ws://`). The Mosquitto config in this repo enables port `9001`; restart the broker after copying the stack:
+This path is retained for demo/development only. Alpha and production mobile
+clients connect to Vanta Bridge over authenticated WSS/HTTPS; broker credentials
+stay on the hub. The Mosquitto config enables WebSockets on port `9001` for local
+experiments:
 
 ```bash
 docker compose restart mosquitto
@@ -123,11 +126,12 @@ In your app `.env`:
 
 ```
 EXPO_PUBLIC_MQTT_URL=ws://<nuc-ip>:9001
-EXPO_PUBLIC_MQTT_USERNAME=vantahome
-EXPO_PUBLIC_MQTT_PASSWORD=<password>
 EXPO_PUBLIC_MQTT_TOPIC_STATE=vantahome/devices/state
 EXPO_PUBLIC_MQTT_TOPIC_COMMAND=vantahome/devices/command
 ```
+
+Use an anonymous, isolated development broker for this legacy mobile path. Do
+not embed household broker credentials in Expo public variables.
 
 In the app, open Settings → Realtime (Dev) and enable the toggle (WebSocket URL can stay blank when using MQTT).
 

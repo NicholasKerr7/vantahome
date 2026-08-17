@@ -1,47 +1,46 @@
-# Phase 4: Matter Bridge → Apple Home
+# Phase 4: Matter Controller and Apple Home
 
-This phase connects your VantaHome device registry into Apple Home via Matter. The fastest, most reliable path is to use Home Assistant's built‑in Matter server as the bridge.
+Home Assistant is a Matter controller, not a Matter bridge. It can commission
+Matter devices into Home Assistant, but it cannot expose arbitrary Home
+Assistant entities as Matter devices.
 
-## Recommended path (Home Assistant Matter server)
+## VantaHome 1.0: Matter devices into VantaHome
 
-1. **Update HA** to a version that includes the Matter integration.
-2. **Enable Matter** in HA:
-   - Settings → Devices & Services → Add Integration → Matter.
-   - Set the Matter server to _Bridge_ mode.
-3. **Expose devices** in HA:
-   - Make sure your devices (or MQTT entities) exist in HA.
-   - Use HA's “Expose to Matter” toggles.
-4. **Pair with Apple Home**:
-   - In HA Matter integration, create a pairing code.
-   - In Apple Home app: Add Accessory → More options → Matter device → scan/paste code.
+1. Run Home Assistant OS, the supported installation path for its Matter Server.
+2. Add the Matter integration in Home Assistant.
+3. Commission a Matter device into Home Assistant.
+4. Import its device/entities and capabilities through Vanta Bridge.
 
-Once paired, Apple Home uses Matter over your LAN. Your VantaHome app stays the primary UI; HA is the bridge.
+The flow is Matter device → Home Assistant Matter controller → Vanta Bridge →
+VantaHome.
 
-## Alternative path (Dedicated Matter bridge)
+## Existing Home Assistant devices into Apple Home
 
-If you need custom device modeling or a cloud‑native bridge:
+Use Home Assistant's HomeKit Bridge integration for supported entities. This is
+HomeKit, not Matter bridging.
 
-- Run a Matter bridge using **matter.js** or **Project CHIP**.
-- Implement endpoints based on your device registry (`devices` + `device_state`).
-- Use the `device_commands` queue (Phase 3) to sync state and control.
+## Post-1.0: VantaHome Matter product
 
-This is more work but gives you full control over the device model and vendor IDs.
+A proprietary VantaHome Matter controller or bridge requires dedicated software,
+product architecture, certification, and trademark decisions. Direct VantaHome
+commissioning and bridging are explicitly outside the first public release.
 
 ## Suggested command flow
 
-- VantaHome → MQTT/HA for local control.
-- HA → Matter bridge for Apple Home.
+- VantaHome → authenticated Vanta Bridge WSS/HTTPS.
+- Vanta Bridge → Home Assistant WebSocket API and service calls.
+- Home Assistant → commissioned Matter device.
 - VantaHome cloud registry stays in sync via Phase 2/3 state ingest.
 
 ## Checklist
 
-- [ ] HA updated and Matter integration enabled
-- [ ] Devices exposed to Matter in HA
-- [ ] Apple Home paired via Matter code
-- [ ] Validate on/off + brightness + temperature
+- [ ] Home Assistant OS updated and Matter integration enabled
+- [ ] Matter device commissioned into Home Assistant
+- [ ] Device imported through Vanta Bridge with actual capabilities
+- [ ] Validate service calls and observed state changes
 
 ## Notes
 
-- Apple Home requires the **same LAN** for initial pairing.
-- Matter does not require MFi membership for bridges.
-- Keep HA host on a static IP for stability.
+- Multi-admin sharing may allow the same Matter device to join another
+  controller fabric; it does not turn Home Assistant into a bridge.
+- Keep the Home Assistant host on a stable LAN address.

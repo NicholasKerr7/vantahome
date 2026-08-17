@@ -1,7 +1,10 @@
 # vantahome
 
-VantaHome is a smart home control UI built with Expo and React Native. It focuses on a polished
-mobile-first experience with seeded devices, scenes, and automations (no backend required to run).
+VantaHome is a premium smart-home client built with Expo and React Native. The
+seeded demo remains available, while production architecture is moving toward a
+local Vanta Bridge backed by Home Assistant. See
+[`docs/PRODUCT_CONSTITUTION.md`](docs/PRODUCT_CONSTITUTION.md) and
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Features
 
@@ -60,8 +63,10 @@ Options:
 - `--kind` (known | unknown)
 - `--source` (motion | camera | sensor)
 
-If your broker requires auth, set `EXPO_PUBLIC_MQTT_USERNAME` and
-`EXPO_PUBLIC_MQTT_PASSWORD`.
+The simulator CLI can read `MQTT_USERNAME` and `MQTT_PASSWORD`. Broker secrets
+must never use `EXPO_PUBLIC_*` variables or ship in the mobile binary. Direct
+mobile MQTT is limited to demo/development mode and will be replaced by an
+authenticated Vanta Bridge WSS/HTTPS connection in alpha/production.
 
 ## Data and configuration
 

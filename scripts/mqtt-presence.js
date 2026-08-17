@@ -112,8 +112,8 @@ const payload = {
 };
 
 const client = mqtt.connect(url, {
-  username: process.env.EXPO_PUBLIC_MQTT_USERNAME,
-  password: process.env.EXPO_PUBLIC_MQTT_PASSWORD,
+  username: process.env.MQTT_USERNAME,
+  password: process.env.MQTT_PASSWORD,
   clientId: `vantahome-presence-${Math.random().toString(16).slice(2)}`,
   keepalive: 20,
 });

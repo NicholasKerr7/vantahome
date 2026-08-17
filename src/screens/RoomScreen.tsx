@@ -788,9 +788,9 @@ export default function RoomScreen({ route, navigation }: Props) {
           if (!selectedId) return;
           deviceClient
             .sendCommand({
-              op: "patch",
+              op: "set-properties",
               deviceId: selectedId,
-              patch: { isOn: !(selected?.isOn ?? false) },
+              changes: { isOn: !(selected?.isOn ?? false) },
             })
             .catch(() => {});
         }}

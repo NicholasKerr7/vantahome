@@ -26,8 +26,8 @@ const applyPatch = (deviceId, patch) => {
 
 const patchFromCommand = (cmd) => {
   switch (cmd.op) {
-    case "patch":
-      return cmd.patch || null;
+    case "set-properties":
+      return cmd.changes || null;
     case "toggle":
       return { isOn: typeof cmd.on === "boolean" ? cmd.on : true };
     case "set-temp":

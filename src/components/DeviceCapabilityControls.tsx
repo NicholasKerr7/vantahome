@@ -291,7 +291,7 @@ function DeviceCapabilityControls({
 
   const sendPatch = (patch: Partial<Device>) => {
     deviceClient
-      .sendCommand({ op: "patch", deviceId: device.id, patch })
+      .sendCommand({ op: "set-properties", deviceId: device.id, changes: patch })
       .catch(() => {});
   };
 

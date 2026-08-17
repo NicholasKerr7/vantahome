@@ -3,6 +3,7 @@ import { useHomeStore } from "../store/useHomeStore";
 import { startMqttBridge } from "./mqttBridge";
 import { supabase } from "./supabaseClient";
 import { startSupabaseDeviceRealtime } from "./supabaseRealtime";
+import { runtimePolicy } from "../config/runtimeMode";
 
 type RealtimeOptions = {
   wsUrl?: string | null;
@@ -32,7 +33,8 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
   const useSupabase = enabled && wantsSupabase;
   // Priority order: MQTT (local), then Supabase, then direct WS, then mock telemetry.
   const enableMockTelemetry =
-    options.enableMockTelemetry ?? (!wsUrl && !useSupabase && !useMqtt);
+    runtimePolicy.allowMockTelemetry &&
+    (options.enableMockTelemetry ?? (!wsUrl && !useSupabase && !useMqtt));
   const fallbackUseSupabase = options.useSupabase ?? !!supabase;
   const fallbackTimeoutMs = options.mqttFallbackTimeoutMs ?? 6000;
 

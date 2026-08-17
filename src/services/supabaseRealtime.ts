@@ -1,19 +1,10 @@
-import type { Device } from "../store/useHomeStore";
 import { deviceClient } from "./deviceClient";
 import { supabase } from "./supabaseClient";
+import { parseDeviceStateEvent } from "./transportSchemas";
+import { runtimePolicy } from "../config/runtimeMode";
 
 type SupabaseRealtimeOptions = {
   channel?: string;
-};
-
-type DeviceStatePayload = {
-  deviceId: string;
-  patch: Partial<Device>;
-  ts?: number;
-};
-
-type DeviceStateBatchPayload = {
-  events: DeviceStatePayload[];
 };
 
 export function startSupabaseDeviceRealtime(
@@ -31,17 +22,23 @@ export function startSupabaseDeviceRealtime(
   });
 
   channel.on("broadcast", { event: "device-state" }, ({ payload }) => {
-    const data = payload as DeviceStatePayload;
-    if (!data?.deviceId || !data?.patch) return;
-    deviceClient.pushState(data.deviceId, data.patch);
+    const event = parseDeviceStateEvent(payload);
+    if (!event) return;
+    deviceClient.pushState(event.deviceId, event.patch);
   });
 
   channel.on("broadcast", { event: "device-state-batch" }, ({ payload }) => {
-    const data = payload as DeviceStateBatchPayload;
-    if (!data?.events) return;
-    data.events.forEach((evt) => {
-      if (!evt?.deviceId || !evt?.patch) return;
-      deviceClient.pushState(evt.deviceId, evt.patch);
+    const events: unknown[] =
+      payload &&
+      typeof payload === "object" &&
+      "events" in payload &&
+      Array.isArray(payload.events)
+        ? payload.events
+        : [];
+    events.forEach((value) => {
+      const event = parseDeviceStateEvent(value);
+      if (!event) return;
+      deviceClient.pushState(event.deviceId, event.patch);
     });
   });
 
@@ -51,16 +48,16 @@ export function startSupabaseDeviceRealtime(
     }
   });
 
-  const clearCommandTransport = deviceClient.setCommandTransport(
-    async (cmd, patch) => {
-      if (!patch) return;
-      await channel.send({
-        type: "broadcast",
-        event: "device-state",
-        payload: { deviceId: cmd.deviceId, patch, ts: Date.now() },
-      });
-    },
-  );
+  const clearCommandTransport = runtimePolicy.allowMockTelemetry
+    ? deviceClient.setCommandTransport(async (cmd, patch) => {
+        if (!patch) return;
+        await channel.send({
+          type: "broadcast",
+          event: "device-state",
+          payload: { deviceId: cmd.deviceId, patch, ts: Date.now() },
+        });
+      })
+    : () => {};
 
   return () => {
     clearCommandTransport();

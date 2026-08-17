@@ -1,9 +1,15 @@
 import type { Device } from "../store/useHomeStore";
 import { logDeviceAuditEvent } from "./cloudRegistry";
+import {
+  parseDeviceStatePatch,
+  parseTransportMessage,
+  type DeviceStatePatch,
+} from "./transportSchemas";
+import { runtimePolicy } from "../config/runtimeMode";
 
 export type DeviceCommand =
   | { op: "toggle"; deviceId: string; on?: boolean }
-  | { op: "patch"; deviceId: string; patch: Partial<Device> }
+  | { op: "set-properties"; deviceId: string; changes: DeviceStatePatch }
   | { op: "set-temp"; deviceId: string; value: number; mode?: Device["mode"] }
   | { op: "set-brightness"; deviceId: string; value: number }
   | { op: "set-volume"; deviceId: string; value: number }
@@ -30,7 +36,7 @@ export type DeviceCommand =
 
 export type DeviceStateEvent = {
   deviceId: string;
-  patch: Partial<Device>;
+  patch: DeviceStatePatch;
   ts: number;
 };
 
@@ -50,26 +56,6 @@ type ConnectionEvent = {
 type RetryStatus = {
   pending: number;
   nextAttemptAt?: number;
-};
-
-type DeviceStateMessage = {
-  type: "state";
-  deviceId: string;
-  patch: Partial<Device>;
-  ts?: number;
-};
-
-type DeviceStateBatchMessage = {
-  type: "state-batch";
-  events: Array<
-    DeviceStateEvent | { deviceId: string; patch: Partial<Device>; ts?: number }
-  >;
-};
-
-type DeviceSnapshotMessage = {
-  type: "snapshot";
-  devices: Device[];
-  ts?: number;
 };
 
 type Listener = (evt: DeviceStateEvent) => void;
@@ -96,12 +82,12 @@ type CommandOptions = {
 
 type CommandTransport = (
   cmd: DeviceCommand,
-  patch: Partial<Device> | null,
+  patch: DeviceStatePatch | null,
 ) => Promise<void> | void;
 
 type RetryEntry = {
   cmd: DeviceCommand;
-  patch: Partial<Device> | null;
+  patch: DeviceStatePatch | null;
   attempts: number;
   nextAttemptAt: number;
 };
@@ -224,7 +210,8 @@ class DeviceClient {
   }
 
   async sendCommand(cmd: DeviceCommand, options: CommandOptions = {}) {
-    const optimistic = options.optimistic ?? true;
+    const optimistic =
+      options.optimistic ?? !runtimePolicy.requireRealTransport;
     const patch = this.patchFromCommand(cmd);
     // Apply a local patch immediately so the UI feels snappy.
     if (optimistic && patch) {
@@ -237,7 +224,8 @@ class DeviceClient {
     }
 
     const sent = await this.attemptSend(cmd, patch, {
-      allowMock: this.commandTransport === null,
+      allowMock:
+        runtimePolicy.allowMockTelemetry && this.commandTransport === null,
       optimistic,
     });
     if (!sent) {
@@ -252,10 +240,13 @@ class DeviceClient {
     }).catch(() => {});
   }
 
-  pushState(deviceId: string, patch: Partial<Device>) {
-    const evt: DeviceStateEvent = { deviceId, patch, ts: Date.now() };
+  pushState(deviceId: string, patch: unknown) {
+    const parsedPatch = parseDeviceStatePatch(patch);
+    if (!parsedPatch) return false;
+    const evt: DeviceStateEvent = { deviceId, patch: parsedPatch, ts: Date.now() };
     this.emit(evt);
-    this.logStateChange(deviceId, patch, "local");
+    this.logStateChange(deviceId, parsedPatch, "local");
+    return true;
   }
 
   private emit(evt: DeviceStateEvent) {
@@ -336,59 +327,29 @@ class DeviceClient {
 
   private handleMessage(raw: unknown) {
     const data = this.parseMessage(raw);
-    if (!data) return;
-
-    if (this.isDeviceStateMessage(data)) {
-      const evt: DeviceStateEvent = {
-        deviceId: data.deviceId,
-        patch: data.patch,
-        ts: data.ts ?? Date.now(),
-      };
-      this.emit(evt);
-      this.logStateChange(evt.deviceId, evt.patch, "realtime");
+    const message = parseTransportMessage(data);
+    if (!message || message.type === "presence") return;
+    if (message.type === "state") {
+      this.emit(message.event);
+      this.logStateChange(message.event.deviceId, message.event.patch, "realtime");
       return;
     }
-
-    if (this.isDeviceStateBatchMessage(data)) {
-      data.events.forEach((evt) => {
-        if (!evt || typeof evt.deviceId !== "string" || !evt.patch) return;
-        const emitted: DeviceStateEvent = {
-          deviceId: evt.deviceId,
-          patch: evt.patch,
-          ts: "ts" in evt && typeof evt.ts === "number" ? evt.ts : Date.now(),
-        };
-        this.emit(emitted);
-        this.logStateChange(emitted.deviceId, emitted.patch, "realtime");
+    if (message.type === "state-batch") {
+      message.events.forEach((event) => {
+        this.emit(event);
+        this.logStateChange(event.deviceId, event.patch, "realtime");
       });
       return;
     }
-
-    if (this.isDeviceSnapshotMessage(data)) {
-      data.devices.forEach((device) => {
-        if (!device || typeof device.id !== "string") return;
-        this.emit({
-          deviceId: device.id,
-          patch: device,
-          ts: data.ts ?? Date.now(),
-        });
-      });
-      return;
-    }
-
-    if (typeof data.deviceId === "string" && data.patch) {
-      const evt: DeviceStateEvent = {
-        deviceId: data.deviceId,
-        patch: data.patch,
-        ts: Date.now(),
-      };
-      this.emit(evt);
-      this.logStateChange(evt.deviceId, evt.patch, "realtime");
-    }
+    message.devices.forEach((device) => {
+      const { id, name: _name, kind: _kind, roomId: _roomId, ...patch } = device;
+      this.emit({ deviceId: id, patch, ts: message.ts });
+    });
   }
 
   private logStateChange(
     deviceId: string,
-    patch: Partial<Device>,
+    patch: DeviceStatePatch,
     source: "local" | "realtime",
   ) {
     if (!patch || Object.keys(patch).length === 0) return;
@@ -399,7 +360,7 @@ class DeviceClient {
     }).catch(() => {});
   }
 
-  private enqueueRetry(cmd: DeviceCommand, patch: Partial<Device> | null) {
+  private enqueueRetry(cmd: DeviceCommand, patch: DeviceStatePatch | null) {
     const now = Date.now();
     this.retryQueue.push({
       cmd,
@@ -460,7 +421,7 @@ class DeviceClient {
 
   private async attemptSend(
     cmd: DeviceCommand,
-    patch: Partial<Device> | null,
+    patch: DeviceStatePatch | null,
     options: { allowMock: boolean; optimistic: boolean },
   ) {
     if (this.commandTransport) {
@@ -514,26 +475,10 @@ class DeviceClient {
     return null;
   }
 
-  private isDeviceStateMessage(data: any): data is DeviceStateMessage {
-    return (
-      data?.type === "state" && typeof data.deviceId === "string" && data.patch
-    );
-  }
-
-  private isDeviceStateBatchMessage(
-    data: any,
-  ): data is DeviceStateBatchMessage {
-    return data?.type === "state-batch" && Array.isArray(data.events);
-  }
-
-  private isDeviceSnapshotMessage(data: any): data is DeviceSnapshotMessage {
-    return data?.type === "snapshot" && Array.isArray(data.devices);
-  }
-
-  private patchFromCommand(cmd: DeviceCommand): Partial<Device> | null {
+  private patchFromCommand(cmd: DeviceCommand): DeviceStatePatch | null {
     switch (cmd.op) {
-      case "patch":
-        return cmd.patch;
+      case "set-properties":
+        return cmd.changes;
       case "toggle":
         return typeof cmd.on === "boolean" ? { isOn: cmd.on } : { isOn: true };
       case "set-temp":

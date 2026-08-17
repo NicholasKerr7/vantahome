@@ -231,7 +231,7 @@ export default function DeviceTile({
   const { isTablet, isLandscape, scale } = useResponsive();
   const sendPatch = (patch: Partial<Device>) => {
     deviceClient
-      .sendCommand({ op: "patch", deviceId: device.id, patch })
+      .sendCommand({ op: "set-properties", deviceId: device.id, changes: patch })
       .catch(() => {});
   };
   const toggleOpenable = () => {

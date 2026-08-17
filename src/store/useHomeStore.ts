@@ -2,6 +2,7 @@ import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { ConnectionStatus } from "../services/deviceClient";
+import { applyDeviceStatePatch } from "./deviceState";
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -63,6 +64,8 @@ export type Device = {
   kind: DeviceKind;
   roomId: string;
   isOn: boolean;
+  /** Capability IDs reported by the integration; absent for seeded demo data. */
+  reportedCapabilityIds?: string[];
 
   // Shared controls
   tempC?: number;
@@ -367,19 +370,6 @@ type Preferences = {
   notifications: boolean;
 };
 
-const AIR_SAMPLE_FIELDS: Array<keyof Device> = [
-  "airQualityIndex",
-  "humidity",
-  "airPm25",
-  "airPm10",
-  "airCo2",
-  "airVoc",
-  "airFormaldehyde",
-  "airPollen",
-  "tempC",
-];
-const AIR_HISTORY_MAX = 144;
-
 type RealtimeSettings = {
   enabled: boolean;
   wsUrl: string;
@@ -400,7 +390,7 @@ type Profile = {
   timezone?: string;
 };
 
-type State = {
+export type HomeState = {
   userName: string;
   profile: Profile;
   outdoor: AmbientReading;
@@ -488,7 +478,7 @@ type AccessScope = {
 };
 
 const getAccessScope = (state: Pick<
-  State,
+  HomeState,
   "rooms" | "household" | "roomMembers" | "activeMemberId"
 >): AccessScope => {
   const member =
@@ -512,17 +502,17 @@ const getAccessScope = (state: Pick<
   };
 };
 
-export const selectActiveMember = (state: State) =>
+export const selectActiveMember = (state: HomeState) =>
   state.household.find((m) => m.id === state.activeMemberId) ??
   state.household[0];
 
-export const selectVisibleRooms = (state: State) => {
+export const selectVisibleRooms = (state: HomeState) => {
   const scope = getAccessScope(state);
   if (scope.fullAccess) return state.rooms;
   return state.rooms.filter((room) => scope.roomIds.has(room.id));
 };
 
-export const selectVisibleDevices = (state: State) => {
+export const selectVisibleDevices = (state: HomeState) => {
   const scope = getAccessScope(state);
   if (scope.fullAccess) return state.devices;
   return state.devices.filter(
@@ -1621,7 +1611,7 @@ const flowsSeed: AutomationFlow[] = [
   },
 ];
 
-export const useHomeStore = create<State>()(
+export const useHomeStore = create<HomeState>()(
   persist(
     (set, get) => ({
       userName: "Nick",
@@ -1728,71 +1718,9 @@ export const useHomeStore = create<State>()(
         })),
 
       setDevice: (deviceId, patch) =>
-        set((state) => {
-          const now = Date.now();
-          return {
-            devices: state.devices.map((d) => {
-              if (d.id !== deviceId) return d;
-              const next = { ...d, ...patch };
-              if (d.kind === "camera") {
-                const isOnline =
-                  patch.isOn === true || (patch.isOn === undefined && d.isOn);
-                const lastSeenAt = isOnline
-                  ? patch.lastSeenAt ?? now
-                  : d.lastSeenAt;
-                const lastThumbnailUrl = patch.thumbnailUrl ?? d.lastThumbnailUrl;
-                return {
-                  ...next,
-                  lastSeenAt,
-                  lastThumbnailUrl,
-                };
-              }
-              if (d.kind !== "air") return next;
-
-              const hasSampleUpdate = AIR_SAMPLE_FIELDS.some(
-                (field) => patch[field] !== undefined,
-              );
-              const incomingHistory = patch.airHistory;
-              if (!hasSampleUpdate && !incomingHistory) return next;
-
-              const ts = patch.airLastUpdatedAt ?? now;
-              if (Array.isArray(incomingHistory)) {
-                const trimmed = incomingHistory
-                  .filter((item) => item && typeof item.ts === "number")
-                  .slice(-AIR_HISTORY_MAX);
-                return {
-                  ...next,
-                  airLastUpdatedAt: ts,
-                  airHistory: trimmed,
-                };
-              }
-
-              const sample: AirQualitySample = {
-                ts,
-                aqi: patch.airQualityIndex ?? d.airQualityIndex,
-                humidity: patch.humidity ?? d.humidity,
-                pm25: patch.airPm25 ?? d.airPm25,
-                pm10: patch.airPm10 ?? d.airPm10,
-                co2: patch.airCo2 ?? d.airCo2,
-                voc: patch.airVoc ?? d.airVoc,
-                formaldehyde: patch.airFormaldehyde ?? d.airFormaldehyde,
-                pollen: patch.airPollen ?? d.airPollen,
-                tempC: patch.tempC ?? d.tempC,
-              };
-              const history = Array.isArray(d.airHistory) ? d.airHistory : [];
-              const cutoff = ts - 24 * 60 * 60 * 1000;
-              const trimmed = [...history, sample]
-                .filter((item) => item && typeof item.ts === "number")
-                .filter((item) => item.ts >= cutoff)
-                .slice(-AIR_HISTORY_MAX);
-              return {
-                ...next,
-                airLastUpdatedAt: ts,
-                airHistory: trimmed,
-              };
-            }),
-          };
-        }),
+        set((state) => ({
+          devices: applyDeviceStatePatch(state.devices, deviceId, patch),
+        })),
 
       setAC: (deviceId, patch) =>
         set((state) => ({
@@ -2115,8 +2043,8 @@ export const useHomeStore = create<State>()(
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState, version) => {
         if (!persistedState || typeof persistedState !== "object")
-          return {} as State;
-        const state = persistedState as State;
+          return {} as HomeState;
+        const state = persistedState as HomeState;
         if (version && version >= 3) return state;
         const base =
           version && version >= 2
