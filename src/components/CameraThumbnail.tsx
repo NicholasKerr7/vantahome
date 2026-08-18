@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
 import type { StyleProp, ViewStyle, TextStyle } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
@@ -24,6 +25,7 @@ function CameraThumbnail({
 }: Props) {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(uri) && !failed;
+  useEffect(() => setFailed(false), [uri]);
   const gradientColors = useMemo(
     () =>
       [
@@ -38,8 +40,11 @@ function CameraThumbnail({
     <View style={[styles.root, style]}>
       {showImage ? (
         <Image
+          testID="camera-thumbnail-image"
           source={{ uri: uri as string }}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={120}
           style={StyleSheet.absoluteFill}
           onError={() => setFailed(true)}
         />

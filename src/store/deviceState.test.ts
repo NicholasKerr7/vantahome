@@ -23,6 +23,29 @@ describe("applyDeviceStatePatch", () => {
     expect(next.lastThumbnailUrl).toBe("new.jpg");
   });
 
+  test("keeps the last camera observation when it goes offline", () => {
+    const camera: Device = {
+      id: "camera-1",
+      name: "Entry",
+      kind: "camera",
+      roomId: "r1",
+      isOn: true,
+      thumbnailUrl: "cached.jpg",
+      lastThumbnailUrl: "cached.jpg",
+      lastSeenAt: 100,
+    };
+
+    const [next] = applyDeviceStatePatch(
+      [camera],
+      camera.id,
+      { isOn: false },
+      200,
+    );
+    expect(next.isOn).toBe(false);
+    expect(next.lastSeenAt).toBe(100);
+    expect(next.lastThumbnailUrl).toBe("cached.jpg");
+  });
+
   test("keeps a bounded air-quality history", () => {
     const air: Device = {
       id: "air-1",

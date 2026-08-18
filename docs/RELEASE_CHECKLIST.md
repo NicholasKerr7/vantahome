@@ -22,7 +22,8 @@ Use this checklist before shipping a production build.
 ## Data & Realtime
 - [ ] Confirm MQTT broker URL/TLS credentials and WS endpoints.
 - [ ] Verify device state updates with real hardware.
-- [ ] Confirm offline behavior (last seen + cached thumbnail).
+- [x] Persist last-seen camera state and use OS-managed memory/disk caching for
+  the latest thumbnail, with regression coverage for offline transitions.
 
 ## Observability
 - [x] Add optional Sentry crash reporting configured by environment.

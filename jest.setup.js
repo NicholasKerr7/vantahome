@@ -21,6 +21,11 @@ jest.mock("expo-linear-gradient", () => {
   return { LinearGradient: View };
 });
 
+jest.mock("expo-image", () => {
+  const { Image } = require("react-native");
+  return { Image };
+});
+
 jest.mock("@react-native-community/slider", () => {
   const { View } = require("react-native");
   return View;
