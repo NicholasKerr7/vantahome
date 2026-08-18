@@ -4,7 +4,10 @@ Status: **automated security gate passed; external review pending**
 
 The external review scope and non-binding vendor inquiry are prepared in
 [Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md) and
-[Independent Security Review Outreach](./SECURITY_REVIEW_OUTREACH.md).
+[Independent Security Review Outreach](./SECURITY_REVIEW_OUTREACH.md). The
+[Security Review Environment Runbook](./SECURITY_REVIEW_ENVIRONMENT.md)
+defines the disposable-project isolation, synthetic authorization matrix,
+reviewer handoff, and teardown procedure without provisioning resources early.
 
 ## Implemented
 

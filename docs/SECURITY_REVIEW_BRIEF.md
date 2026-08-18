@@ -4,7 +4,7 @@ Status: **ready for external scoping and quotation**
 
 Prepared: 2026-08-18  
 Repository: `NicholasKerr7/vantahome` (public)  
-Review baseline: `c8b18b27d852299856b056401d12f28384f6ce76`
+Review baseline: `e1b8ea073b4892fb6655c1761d2795bfd8b80444`
 
 ## Objective
 
@@ -32,7 +32,7 @@ supporting evidence, not substitutes for this assessment.
 
 The baseline contains approximately 160 TypeScript files and 49,758 lines
 across the application and Edge Functions. The automated gate currently has
-205 passing tests, including database authorization and migration guardrails.
+213 passing tests, including database authorization and migration guardrails.
 
 ## Requested work packages
 
@@ -93,6 +93,9 @@ document:
 - Synthetic test data and separate accounts for each household role.
 - Test application builds when dynamic mobile testing begins.
 - A secure channel for temporary credentials and vulnerability disclosure.
+
+Provisioning, persona creation, reviewer handoff, and teardown follow the
+[Security Review Environment Runbook](./SECURITY_REVIEW_ENVIRONMENT.md).
 
 No credentials, tokens, customer data, or private keys will be placed in the
 repository, email body, issue tracker, or final public report.

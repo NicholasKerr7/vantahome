@@ -42,7 +42,7 @@ Body:
 >
 > The public repository is https://github.com/NicholasKerr7/vantahome and the
 > proposed baseline commit is
-> c8b18b27d852299856b056401d12f28384f6ce76. A detailed scope brief is attached
+> e1b8ea073b4892fb6655c1761d2795bfd8b80444. A detailed scope brief is attached
 > or can be provided as plain text.
 >
 > Please advise on your recommended scope, team size, effort, earliest
