@@ -140,8 +140,8 @@ if (require.main === module) {
       }
       if (!isReady(result)) process.exitCode = 1;
     })
-    .catch((error) => {
-      console.error(error instanceof Error ? error.message : "Check failed.");
+    .catch(() => {
+      console.error("Supabase readiness check failed.");
       process.exitCode = 1;
     });
 }

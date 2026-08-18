@@ -8,11 +8,16 @@ import {
   type Scene,
 } from "../../store/useHomeStore";
 import { deviceClient } from "../deviceClient";
+import { sendLocalNotification } from "../notifications";
 
 jest.mock("../deviceClient", () => ({
   deviceClient: {
     sendCommand: jest.fn(),
   },
+}));
+
+jest.mock("../notifications", () => ({
+  sendLocalNotification: jest.fn(async () => undefined),
 }));
 
 function cloneRooms(rooms: Room[]) {
@@ -79,6 +84,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  jest.restoreAllMocks();
   jest.useRealTimers();
 });
 
@@ -146,6 +152,39 @@ describe("flowRuntime", () => {
     await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(2);
 
+    stop();
+  });
+
+  it("delivers notification actions without logging their private message", async () => {
+    const privateMessage = "Resident arrived at the private entrance";
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    const devices = cloneDevices(useHomeStore.getState().devices);
+    const d1 = devices.find((device) => device.id === "d1");
+    if (d1) d1.isOn = false;
+    useHomeStore.setState({
+      devices,
+      flows: [
+        {
+          id: "f-notify",
+          name: "Arrival",
+          enabled: true,
+          triggers: [{ type: "device", deviceId: "d1", state: "on" }],
+          conditions: [],
+          actions: [{ type: "notify", message: privateMessage }],
+        },
+      ],
+    });
+
+    const stop = startFlowRuntime({ timeTickMs: 60_000 });
+    useHomeStore.getState().setDevice("d1", { isOn: true });
+    await flushPromises();
+
+    expect(sendLocalNotification).toHaveBeenCalledWith(
+      "VantaHome automation",
+      privateMessage,
+      { kind: "automation" },
+    );
+    expect(consoleSpy).not.toHaveBeenCalled();
     stop();
   });
 });

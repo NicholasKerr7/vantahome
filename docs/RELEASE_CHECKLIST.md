@@ -28,7 +28,8 @@ Use this checklist before shipping a production build.
 ## Observability
 - [x] Add optional Sentry crash reporting configured by environment.
 - [ ] Add basic analytics or feature flags if needed.
-- [ ] Verify logs do not include secrets/PII.
+- [x] Keep runtime logs payload-free and scrub identity, request, household,
+  breadcrumb, and message data from Sentry events before transmission.
 
 ## QA
 - [x] Run TypeScript, Edge Function, and Jest verification in GitHub Actions.

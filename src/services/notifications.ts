@@ -21,7 +21,8 @@ async function configureAndroidChannel() {
     sound: "default",
     vibrationPattern: [0, 200, 200, 200],
     enableVibrate: true,
-    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    // Hide household and device details on a locked Android screen.
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
   });
 }
 

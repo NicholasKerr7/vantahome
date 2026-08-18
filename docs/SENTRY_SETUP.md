@@ -7,6 +7,11 @@ EXPO_PUBLIC_SENTRY_DSN=your-dsn
 EXPO_PUBLIC_SENTRY_ENV=production
 ```
 
+Default PII collection is disabled. Before transmission, VantaHome removes
+user/request data, custom context, tags, extras, span/transaction names, and
+breadcrumb payloads while retaining exception types and stack traces for crash
+grouping.
+
 ## 2) Source map upload (build time)
 Provide these environment variables in your CI/EAS build (do **not** put them in `.env`):
 ```

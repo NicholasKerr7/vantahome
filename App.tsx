@@ -12,6 +12,7 @@ import { startFlowRuntime } from "./src/services/flowRuntime";
 import { ensureNotificationsReady } from "./src/services/notifications";
 import { syncMembershipFromSupabase } from "./src/services/membership";
 import * as Sentry from "@sentry/react-native";
+import { scrubSentryEvent } from "./src/observability/sentryPrivacy";
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
 const sentryEnabled = Boolean(sentryDsn);
@@ -19,6 +20,9 @@ if (sentryEnabled) {
   Sentry.init({
     dsn: sentryDsn,
     environment: process.env.EXPO_PUBLIC_SENTRY_ENV?.trim() || "production",
+    sendDefaultPii: false,
+    beforeSend: scrubSentryEvent,
+    beforeSendTransaction: scrubSentryEvent,
     tracesSampleRate: 0.2,
   });
 }

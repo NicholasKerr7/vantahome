@@ -128,17 +128,17 @@ client.on("connect", () => {
   clearTimeout(timeout);
   client.publish(topic, JSON.stringify(payload), { qos: 0 }, (err) => {
     if (err) {
-      console.error("MQTT publish failed:", err.message);
+      console.error("MQTT publish failed.");
       process.exit(1);
     }
-    console.log(`Presence event published to ${topic}`);
+    console.log("Presence event published.");
     client.end(true);
   });
 });
 
-client.on("error", (err) => {
+client.on("error", () => {
   clearTimeout(timeout);
-  console.error("MQTT error:", err.message);
+  console.error("MQTT connection failed.");
   client.end(true);
   process.exit(1);
 });

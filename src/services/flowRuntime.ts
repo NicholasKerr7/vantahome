@@ -1,4 +1,5 @@
 import { deviceClient } from "./deviceClient";
+import { sendLocalNotification } from "./notifications";
 import {
   useHomeStore,
   type AutomationFlow,
@@ -240,7 +241,9 @@ async function executeActions(actions: FlowAction[]) {
       continue;
     }
     if (action.type === "notify") {
-      console.log(`[Flow] ${action.message}`);
+      await sendLocalNotification("VantaHome automation", action.message, {
+        kind: "automation",
+      });
     }
   }
 }
