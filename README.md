@@ -16,8 +16,9 @@ are documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Screenshots
 
-These iPhone simulator captures use VantaHome's explicitly labeled seeded demo
-mode. No production household data or credentials are shown.
+These simulator captures use VantaHome's explicitly labeled seeded demo mode.
+The phone views are portrait and the tablet views are landscape. No production
+household data or credentials are shown.
 
 | Home | Automations | Scenes |
 | --- | --- | --- |
@@ -26,6 +27,12 @@ mode. No production household data or credentials are shown.
 | Devices | Device controls | Integrations |
 | --- | --- | --- |
 | ![VantaHome mobile device grid](docs/screenshots/mobile-devices.png) | ![VantaHome mobile TV controls](docs/screenshots/mobile-device-controls.png) | ![VantaHome mobile voice and integration settings](docs/screenshots/mobile-integrations.png) |
+
+### Tablet landscape
+
+| Home | Settings and integrations |
+| --- | --- |
+| ![VantaHome tablet home dashboard in landscape](docs/screenshots/tablet-home-landscape.png) | ![VantaHome tablet settings and integrations in landscape](docs/screenshots/tablet-settings-landscape.png) |
 
 ## Tech stack
 
