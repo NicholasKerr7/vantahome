@@ -9,7 +9,8 @@ Use this checklist before shipping a production build.
 - [x] Lock down realtime transport (MQTT/Supabase/WS) for alpha/production and disable mock fallback.
 
 ## Auth & Security
-- [ ] Apply migrations through 010 and deploy every required Edge Function to the active project.
+- [x] Apply migrations through 010 and deploy every required Edge Function to
+  the active project.
 - [ ] Configure OAuth providers (Google, Apple, etc.) in Supabase.
 - [ ] Verify mobile redirect URIs (Expo + native).
 - [ ] Confirm RLS policies for invites, room_members, and device audit logs.

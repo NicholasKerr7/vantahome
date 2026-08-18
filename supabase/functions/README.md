@@ -118,5 +118,8 @@ prints no keys, and exits unsuccessfully while required artifacts are missing:
 npm run supabase:check
 ```
 
-This inventory does not replace the pgTAP authorization matrix or prove that
-private migration 009 objects exist. It is a safe deployment completeness check.
+Protected tables may report `401` or `403` to this anonymous inventory; those
+statuses prove that the route exists without weakening row access. A missing
+route reports `404`. This inventory does not replace the pgTAP authorization
+matrix or prove that private migration 009 objects exist. It is a safe
+deployment completeness check.

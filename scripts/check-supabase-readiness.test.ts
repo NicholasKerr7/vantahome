@@ -1,6 +1,7 @@
 const {
   REQUIRED_FUNCTIONS,
   REQUIRED_TABLES,
+  isDeployedStatus,
   isReady,
 } = require("./check-supabase-readiness.js");
 
@@ -23,5 +24,20 @@ describe("Supabase readiness inventory", () => {
     expect(isReady(ready)).toBe(true);
     ready.functions[0].status = 404;
     expect(isReady(ready)).toBe(false);
+  });
+
+  test("accepts access-protected resources but rejects missing routes", () => {
+    expect(isDeployedStatus(401)).toBe(true);
+    expect(isDeployedStatus(403)).toBe(true);
+    expect(isDeployedStatus(404)).toBe(false);
+
+    const protectedSurface = {
+      tables: REQUIRED_TABLES.map((name: string) => ({ name, status: 401 })),
+      functions: REQUIRED_FUNCTIONS.map((name: string) => ({
+        name,
+        status: 403,
+      })),
+    };
+    expect(isReady(protectedSurface)).toBe(true);
   });
 });

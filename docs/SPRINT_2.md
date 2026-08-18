@@ -67,6 +67,9 @@ Status: **in progress**
   every household role, assigned and foreign rooms/homes, camera visibility,
   immutable observed state, command envelopes, spoofed actors, and explicit
   per-member grants and denials.
+- Migrations through 010 and every client-required Edge Function are deployed
+  to the active Supabase project. A private rate-limit hashing secret is set,
+  and the public readiness inventory passes while recognizing protected tables.
 
 ## Remaining before the Sprint 2 gate
 
@@ -74,7 +77,7 @@ Status: **in progress**
   project; the real pgTAP suite is present but has not yet run against Postgres.
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
-- Validate this migration against a disposable Supabase project and perform an
+- Validate the migrations against a disposable Supabase project and perform an
   external security review before alpha.
 
 The disposable-project execution remains deferred while Docker and remote test

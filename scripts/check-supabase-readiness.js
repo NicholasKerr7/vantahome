@@ -109,9 +109,15 @@ async function checkReadiness() {
   return { host, tables, functions };
 }
 
+function isDeployedStatus(status) {
+  // PostgREST proves a protected relation exists with 401/403 even though the
+  // publishable-key probe is intentionally not allowed to read its rows.
+  return (status >= 200 && status < 300) || status === 401 || status === 403;
+}
+
 function isReady(result) {
   return [...result.tables, ...result.functions].every(
-    ({ status }) => status >= 200 && status < 300,
+    ({ status }) => isDeployedStatus(status),
   );
 }
 
@@ -123,7 +129,12 @@ function printReport(result) {
   ]) {
     console.log(`${label}:`);
     entries.forEach(({ name, status }) => {
-      const marker = status >= 200 && status < 300 ? "ready" : "missing";
+      const marker =
+        status === 401 || status === 403
+          ? "ready (access protected)"
+          : isDeployedStatus(status)
+            ? "ready"
+            : "missing";
       console.log(`  ${name}: ${marker} (HTTP ${status || "unreachable"})`);
     });
   }
@@ -149,6 +160,7 @@ if (require.main === module) {
 module.exports = {
   REQUIRED_FUNCTIONS,
   REQUIRED_TABLES,
+  isDeployedStatus,
   isReady,
   readLocalEnv,
 };
