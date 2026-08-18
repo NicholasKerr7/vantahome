@@ -13,6 +13,7 @@
     "verify": "npm run lint && npm run lint:edge && npm test -- --runInBand",
     "test:db:remote": "supabase test db supabase/tests/*.sql --db-url \"$SUPABASE_DB_URL\"",
     "supabase:check": "node scripts/check-supabase-readiness.js",
+    "security:secrets": "node scripts/check-secrets.js --history",
     "sentry:sourcemaps": "sentry-expo-upload-sourcemaps dist",
     "mqtt:presence": "node scripts/mqtt-presence.js",
     "realtime:server": "node scripts/realtime-server.js",

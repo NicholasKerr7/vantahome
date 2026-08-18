@@ -14,7 +14,8 @@ Use this checklist before shipping a production build.
 - [ ] Verify mobile redirect URIs (Expo + native).
 - [ ] Confirm RLS policies for invites, room_members, and device audit logs.
 - [x] Add rate limits/abuse protection for public endpoints.
-- [ ] Ensure no secrets committed; rotate keys if needed.
+- [x] Scan tracked files and Git history for high-confidence secrets in CI;
+  rotate credentials if a future scan detects exposure.
 - [ ] Resolve or formally accept the Expo/React Native transitive dependency
   advisories tracked in [Dependency Security Notes](./DEPENDENCY_SECURITY.md).
 
