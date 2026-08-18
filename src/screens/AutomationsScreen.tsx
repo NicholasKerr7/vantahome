@@ -565,6 +565,7 @@ export default function AutomationsScreen() {
               </Text>
             </View>
             <Switch
+              accessibilityLabel={`${flow.name} enabled`}
               value={flow.enabled}
               onValueChange={() => toggleFlow(flow.id)}
               trackColor={{
@@ -599,6 +600,7 @@ export default function AutomationsScreen() {
             </Text>
           </View>
           <Switch
+            accessibilityLabel={`${r.name} enabled`}
             value={r.enabled}
             onValueChange={() => toggleRule(r.id)}
             trackColor={{
@@ -744,6 +746,7 @@ export default function AutomationsScreen() {
 
         <ModalField label="Name" labelStyle={modalLabelStyle}>
           <TextInput
+            accessibilityLabel="Schedule name"
             value={ruleName}
             onChangeText={setRuleName}
             placeholder="Morning routine"
@@ -779,6 +782,7 @@ export default function AutomationsScreen() {
         <ModalField label="Time" labelStyle={modalLabelStyle}>
           <View style={styles.timeRow}>
             <TextInput
+              accessibilityLabel="Schedule hour"
               value={hour}
               onChangeText={setHour}
               placeholder="21"
@@ -788,6 +792,7 @@ export default function AutomationsScreen() {
             />
             <Text style={styles.timeColon}>:</Text>
             <TextInput
+              accessibilityLabel="Schedule minute"
               value={minute}
               onChangeText={setMinute}
               placeholder="00"

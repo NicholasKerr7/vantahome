@@ -979,6 +979,7 @@ export default function ProfileScreen({ navigation }: Props) {
         <View style={formColumnStyle}>
           <Text style={labelTextStyle}>Name</Text>
           <TextInput
+            accessibilityLabel="Name"
             value={name}
             onChangeText={setName}
             placeholder="Your name"
@@ -988,6 +989,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
           <Text style={labelTextStyle}>Email</Text>
           <TextInput
+            accessibilityLabel="Email"
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
@@ -1000,6 +1002,7 @@ export default function ProfileScreen({ navigation }: Props) {
         <View style={formColumnStyle}>
           <Text style={labelTextStyle}>Phone</Text>
           <TextInput
+            accessibilityLabel="Phone"
             value={phone}
             onChangeText={setPhone}
             placeholder="+1 (555) 000-0000"
@@ -1010,6 +1013,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
           <Text style={labelTextStyle}>Home name</Text>
           <TextInput
+            accessibilityLabel="Home name"
             value={homeName}
             onChangeText={setHomeName}
             placeholder="Vanta Home"
@@ -1069,6 +1073,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
       <Text style={cardHintTopTextStyle}>Timezone</Text>
       <TextInput
+        accessibilityLabel="Timezone"
         value={timezone}
         onChangeText={setTimezone}
         placeholder="Auto"
@@ -1091,6 +1096,7 @@ export default function ProfileScreen({ navigation }: Props) {
       <View style={styles.row}>
         <Text style={rowLabelTextStyle}>Haptics</Text>
         <Switch
+          accessibilityLabel="Haptics"
           value={prefs.haptics}
           onValueChange={(v) => setPreferences({ haptics: v })}
           thumbColor={
@@ -1108,6 +1114,7 @@ export default function ProfileScreen({ navigation }: Props) {
       <View style={styles.row}>
         <Text style={rowLabelTextStyle}>Notifications</Text>
         <Switch
+          accessibilityLabel="Notifications"
           value={prefs.notifications}
           onValueChange={(v) => setPreferences({ notifications: v })}
           thumbColor={
@@ -1206,6 +1213,7 @@ export default function ProfileScreen({ navigation }: Props) {
             <Text style={settingSubTextStyle}>{item.sub}</Text>
           </View>
           <Switch
+            accessibilityLabel={item.label}
             value={item.value}
             onValueChange={item.onChange}
             thumbColor={
@@ -1250,6 +1258,7 @@ export default function ProfileScreen({ navigation }: Props) {
             <Text style={settingSubTextStyle}>{item.sub}</Text>
           </View>
           <Switch
+            accessibilityLabel={item.label}
             value={item.value}
             onValueChange={item.onChange}
             thumbColor={
@@ -1392,6 +1401,7 @@ export default function ProfileScreen({ navigation }: Props) {
           </Text>
         ) : null}
         <TextInput
+          accessibilityLabel="New member name"
           value={newMemberName}
           onChangeText={setNewMemberName}
           placeholder="Full name"
@@ -1400,6 +1410,7 @@ export default function ProfileScreen({ navigation }: Props) {
           editable={canInviteMembers}
         />
         <TextInput
+          accessibilityLabel="New member email"
           value={newMemberEmail}
           onChangeText={setNewMemberEmail}
           placeholder="Email address"

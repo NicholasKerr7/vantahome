@@ -887,6 +887,7 @@ export default function RoomScreen({ route, navigation }: Props) {
 
         <ModalField label="Name" labelStyle={modalLabelTextStyle}>
           <TextInput
+            accessibilityLabel="Device name"
             value={newName}
             onChangeText={(value) => {
               setNameTouched(true);

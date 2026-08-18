@@ -664,6 +664,7 @@ export default function ScenesScreen() {
 
           <ModalField label="Scene name" labelStyle={modalLabelStyle}>
             <TextInput
+              accessibilityLabel="Scene name"
               value={sceneName}
               onChangeText={setSceneName}
               placeholder="Movie Night"
@@ -1541,6 +1542,7 @@ function DeviceControlCard({
             />
             <View style={styles.stepRow}>
               <Pressable
+                accessibilityLabel="Previous channel"
                 style={stepBtnStyle}
                 onPress={() => onPatch({ channel: clamp(channel - 1, 1, 99) })}
               >
@@ -1552,6 +1554,7 @@ function DeviceControlCard({
               </Pressable>
               <Text style={stepValueStyle}>Ch {channel}</Text>
               <Pressable
+                accessibilityLabel="Next channel"
                 style={stepBtnStyle}
                 onPress={() => onPatch({ channel: clamp(channel + 1, 1, 99) })}
               >

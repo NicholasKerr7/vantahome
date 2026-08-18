@@ -927,6 +927,7 @@ export default function HomeScreen() {
         </Text>
 
         <TextInput
+          accessibilityLabel="New room name"
           value={roomName}
           onChangeText={setRoomName}
           placeholder="Office, Patio, Studio..."

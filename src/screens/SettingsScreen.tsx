@@ -982,6 +982,7 @@ export default function SettingsScreen() {
       <View style={styles.row}>
         <Text style={rowLabelStyle}>Haptics</Text>
         <Switch
+          accessibilityLabel="Haptics"
           value={prefs.haptics}
           onValueChange={(v) => setPreferences({ haptics: v })}
           thumbColor={
@@ -999,6 +1000,7 @@ export default function SettingsScreen() {
       <View style={styles.row}>
         <Text style={rowLabelStyle}>Notifications</Text>
         <Switch
+          accessibilityLabel="Notifications"
           value={prefs.notifications}
           onValueChange={(v) => setPreferences({ notifications: v })}
           thumbColor={
@@ -1027,6 +1029,7 @@ export default function SettingsScreen() {
       <View style={styles.row}>
         <Text style={rowLabelStyle}>Enable realtime</Text>
         <Switch
+          accessibilityLabel="Enable realtime"
           value={realtime.enabled}
           onValueChange={(v) => setRealtime({ enabled: v })}
           thumbColor={
@@ -1044,6 +1047,7 @@ export default function SettingsScreen() {
       <View style={styles.row}>
         <Text style={rowLabelStyle}>Use MQTT bridge</Text>
         <Switch
+          accessibilityLabel="Use MQTT bridge"
           value={realtime.useMqtt}
           onValueChange={(v) => setRealtime({ useMqtt: v })}
           thumbColor={
@@ -1094,6 +1098,7 @@ export default function SettingsScreen() {
       </View>
       <Text style={rowLabelStyle}>WebSocket endpoint</Text>
       <TextInput
+        accessibilityLabel="WebSocket endpoint"
         value={realtime.wsUrl}
         onChangeText={(value) => setRealtime({ wsUrl: value })}
         placeholder="ws://localhost:8088"

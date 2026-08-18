@@ -82,6 +82,7 @@ export default function DeviceScheduleModal({
       <ModalField label="Time" labelStyle={labelStyle}>
         <View style={timeRowStyle}>
           <TextInput
+            accessibilityLabel="Schedule hour"
             value={schedHour}
             onChangeText={onChangeSchedHour}
             placeholder="06"
@@ -91,6 +92,7 @@ export default function DeviceScheduleModal({
           />
           <Text style={timeColonStyle}>:</Text>
           <TextInput
+            accessibilityLabel="Schedule minute"
             value={schedMinute}
             onChangeText={onChangeSchedMinute}
             placeholder="00"

@@ -115,6 +115,7 @@ export default function DeviceEditModal({
 
         <ModalField label="Device name" labelStyle={labelStyle}>
           <TextInput
+            accessibilityLabel="Device name"
             value={draftName}
             onChangeText={onChangeDraftName}
             placeholder="Device name"

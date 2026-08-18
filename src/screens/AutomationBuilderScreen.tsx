@@ -571,6 +571,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
 
             <Text style={inputLabelStyle}>Name</Text>
             <TextInput
+              accessibilityLabel="Flow name"
               value={name}
               onChangeText={setName}
               placeholder="New flow"
@@ -581,6 +582,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             <View style={styles.switchRow}>
               <Text style={inputLabelStyle}>Enabled</Text>
               <Switch
+                accessibilityLabel="Flow enabled"
                 value={enabled}
                 onValueChange={setEnabled}
                 thumbColor={
@@ -753,6 +755,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                 containerStyle={flex1Style}
               >
                 <TextInput
+                  accessibilityLabel="Trigger hour"
                   value={draftTime.hour}
                   onChangeText={(value) =>
                     setDraftTime((prev) => ({ ...prev, hour: value }))
@@ -767,6 +770,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                 containerStyle={flex1Style}
               >
                 <TextInput
+                  accessibilityLabel="Trigger minute"
                   value={draftTime.minute}
                   onChangeText={(value) =>
                     setDraftTime((prev) => ({ ...prev, minute: value }))
@@ -804,6 +808,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   State: {draftStateOn ? "On" : "Off"}
                 </Text>
                 <Switch
+                  accessibilityLabel="Device state trigger"
                   value={draftStateOn}
                   onValueChange={setDraftStateOn}
                   thumbColor={
@@ -847,6 +852,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   {draftPresenceStatus === "home" ? "Home" : "Away"}
                 </Text>
                 <Switch
+                  accessibilityLabel="Presence status"
                   value={draftPresenceStatus === "home"}
                   onValueChange={(v) =>
                     setDraftPresenceStatus(v ? "home" : "away")
@@ -895,6 +901,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                 <ModalField label="Start time" labelStyle={inputLabelStyle}>
                   <View style={styles.formRow}>
                     <TextInput
+                      accessibilityLabel="Start hour"
                       value={draftRange.startHour}
                       onChangeText={(value) =>
                         setDraftRange((prev) => ({
@@ -906,6 +913,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                       style={inputStyle}
                     />
                     <TextInput
+                      accessibilityLabel="Start minute"
                       value={draftRange.startMinute}
                       onChangeText={(value) =>
                         setDraftRange((prev) => ({
@@ -921,6 +929,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                 <ModalField label="End time" labelStyle={inputLabelStyle}>
                   <View style={styles.formRow}>
                     <TextInput
+                      accessibilityLabel="End hour"
                       value={draftRange.endHour}
                       onChangeText={(value) =>
                         setDraftRange((prev) => ({
@@ -932,6 +941,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                       style={inputStyle}
                     />
                     <TextInput
+                      accessibilityLabel="End minute"
                       value={draftRange.endMinute}
                       onChangeText={(value) =>
                         setDraftRange((prev) => ({
@@ -973,6 +983,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   State: {draftStateOn ? "On" : "Off"}
                 </Text>
                 <Switch
+                  accessibilityLabel="Device state condition"
                   value={draftStateOn}
                   onValueChange={setDraftStateOn}
                   thumbColor={
@@ -1044,6 +1055,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   Turn {draftStateOn ? "On" : "Off"}
                 </Text>
                 <Switch
+                  accessibilityLabel="Device power action"
                   value={draftStateOn}
                   onValueChange={setDraftStateOn}
                   thumbColor={
@@ -1083,6 +1095,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
               </ModalField>
               <ModalField label="Temperature" labelStyle={inputLabelStyle}>
                 <TextInput
+                  accessibilityLabel="Temperature"
                   value={String(draftTemp)}
                   onChangeText={(value) =>
                     setDraftTemp(parseInt(value || "0", 10))
@@ -1122,6 +1135,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                 </ModalField>
                 <ModalField label="Brightness %" labelStyle={inputLabelStyle}>
                   <TextInput
+                    accessibilityLabel="Brightness percentage"
                     value={String(draftBrightness)}
                     onChangeText={(value) =>
                       setDraftBrightness(parseInt(value || "0", 10))
@@ -1161,6 +1175,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             <View>
               <ModalField label="Message" labelStyle={inputLabelStyle}>
                 <TextInput
+                  accessibilityLabel="Notification message"
                   value={draftMessage}
                   onChangeText={setDraftMessage}
                   placeholder="Send a notification"
@@ -1195,6 +1210,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   })}
                 </ScrollView>
                 <TextInput
+                  accessibilityLabel="Delay seconds"
                   value={String(draftDelaySeconds)}
                   onChangeText={(value) =>
                     setDraftDelaySeconds(parseInt(value || "0", 10))

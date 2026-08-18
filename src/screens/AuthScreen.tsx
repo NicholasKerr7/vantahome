@@ -567,6 +567,7 @@ export default function AuthScreen({}: Props) {
         <View style={styles.field}>
           <Text style={labelStyle}>Full name</Text>
           <TextInput
+            accessibilityLabel="Full name"
             value={name}
             onChangeText={setName}
             placeholder="Nick Kerr"
@@ -581,6 +582,7 @@ export default function AuthScreen({}: Props) {
       <View style={styles.field}>
         <Text style={labelStyle}>Email</Text>
         <TextInput
+          accessibilityLabel="Email"
           value={email}
           onChangeText={setEmail}
           placeholder="you@example.com"
@@ -596,6 +598,7 @@ export default function AuthScreen({}: Props) {
         <Text style={labelStyle}>Password</Text>
         <View style={styles.inputRow}>
           <TextInput
+            accessibilityLabel="Password"
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
@@ -605,6 +608,12 @@ export default function AuthScreen({}: Props) {
             returnKeyType={mode === "create" ? "next" : "done"}
           />
           <Pressable
+            accessibilityLabel={
+              showPassword
+                ? "Hide password"
+                : "Show password"
+            }
+            accessibilityState={{ selected: showPassword }}
             style={eyeBtnStyle}
             onPress={() => setShowPassword((v) => !v)}
           >
@@ -622,6 +631,7 @@ export default function AuthScreen({}: Props) {
           <Text style={labelStyle}>Confirm password</Text>
           <View style={styles.inputRow}>
             <TextInput
+              accessibilityLabel="Confirm password"
               value={confirm}
               onChangeText={setConfirm}
               placeholder="••••••••"
@@ -631,6 +641,12 @@ export default function AuthScreen({}: Props) {
               returnKeyType="done"
             />
             <Pressable
+              accessibilityLabel={
+                showConfirm
+                  ? "Hide confirmed password"
+                  : "Show confirmed password"
+              }
+              accessibilityState={{ selected: showConfirm }}
               style={eyeBtnStyle}
               onPress={() => setShowConfirm((v) => !v)}
             >

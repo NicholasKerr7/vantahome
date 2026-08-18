@@ -8946,6 +8946,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <View style={remotePadWrapStyle}>
         <View style={remotePadAreaStyle}>
           <Pressable
+            accessibilityLabel={device.muted ? "Unmute" : "Mute"}
+            accessibilityState={{ selected: device.muted }}
             style={remoteSideLeftStyle}
             onPress={() => {
               const next = !device.muted;
@@ -8966,6 +8968,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </Pressable>
           <View style={navPadStyle}>
             <Pressable
+              accessibilityLabel="Navigate up"
               style={navUpStyle}
               onPress={() =>
                 deviceClient
@@ -8980,6 +8983,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               <Ionicons name="chevron-up" size={18} color="#0c0c12" />
             </Pressable>
             <Pressable
+              accessibilityLabel="Navigate left"
               style={navLeftStyle}
               onPress={() =>
                 deviceClient
@@ -8994,6 +8998,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               <Ionicons name="chevron-back" size={18} color="#0c0c12" />
             </Pressable>
             <Pressable
+              accessibilityLabel="Select"
               style={navCenterStyle}
               onPress={() =>
                 deviceClient
@@ -9008,6 +9013,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               <Text style={styles.navCenterText}>OK</Text>
             </Pressable>
             <Pressable
+              accessibilityLabel="Navigate right"
               style={navRightStyle}
               onPress={() =>
                 deviceClient
@@ -9022,6 +9028,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               <Ionicons name="chevron-forward" size={18} color="#0c0c12" />
             </Pressable>
             <Pressable
+              accessibilityLabel="Navigate down"
               style={navDownStyle}
               onPress={() =>
                 deviceClient
@@ -9037,6 +9044,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
           <Pressable
+            accessibilityLabel="Home"
             style={remoteSideRightStyle}
             onPress={() => {
               sendPatch({ source: "Home", isOn: true });

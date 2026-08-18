@@ -337,6 +337,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                       <View style={flex1Style}>
                         <Text style={labelTextStyle}>Room name</Text>
                         <TextInput
+                          accessibilityLabel={`${room.name} room name`}
                           value={draft}
                           onChangeText={(value) =>
                             setDrafts((prev) => ({
@@ -356,6 +357,10 @@ export default function ManageRoomsScreen({ navigation }: Props) {
 
                       <View style={styles.actions}>
                         <Pressable
+                          accessibilityLabel={`Move ${room.name} up`}
+                          accessibilityState={{
+                            disabled: !canManageRooms || idx === 0,
+                          }}
                           style={actionButtonStyle(!canManageRooms || idx === 0)}
                           onPress={() => moveRoom(room.id, -1)}
                           disabled={!canManageRooms || idx === 0}
@@ -367,6 +372,11 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                           />
                         </Pressable>
                         <Pressable
+                          accessibilityLabel={`Move ${room.name} down`}
+                          accessibilityState={{
+                            disabled:
+                              !canManageRooms || idx === rooms.length - 1,
+                          }}
                           style={actionButtonStyle(
                             !canManageRooms || idx === rooms.length - 1,
                           )}
@@ -427,6 +437,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
         <Text style={modalSubStyle}>Give the room a friendly name.</Text>
 
         <TextInput
+          accessibilityLabel="New room name"
           value={roomName}
           onChangeText={setRoomName}
           placeholder="Office, Patio, Studio..."
