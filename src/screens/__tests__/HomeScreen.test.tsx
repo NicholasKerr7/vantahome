@@ -1,4 +1,5 @@
 import React from "react";
+import { StyleSheet } from "react-native";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import HomeScreen from "../HomeScreen";
 import { useHomeStore } from "../../store/useHomeStore";
@@ -122,6 +123,9 @@ describe("HomeScreen", () => {
       isLandscape: false,
       isTablet: false,
       contentWidth: 390,
+      gutter: 22,
+      topPad: 56,
+      blockGap: 14,
       scale: 1,
     });
   });
@@ -202,6 +206,44 @@ describe("HomeScreen", () => {
       tree.root.findByProps({ testID: "room-carousel-mock" }).props
         .accessibilityLabel,
     ).toBe("compact");
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it("centers the orb and room deck on one axis in tablet landscape", () => {
+    Object.assign(mockLayout, {
+      width: 1366,
+      height: 1024,
+      isLandscape: true,
+      isTablet: true,
+      contentWidth: 980,
+      gutter: 36,
+      topPad: 56,
+      blockGap: 20,
+      scale: 1.08,
+    });
+    let tree: ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<HomeScreen />);
+    });
+
+    const heroStyle = StyleSheet.flatten(
+      tree.root.findByProps({ testID: "home-hero-stack" }).props.style,
+    );
+    const orbStyle = StyleSheet.flatten(
+      tree.root.findByProps({ testID: "home-orb-wrap" }).props.style,
+    );
+    const roomsStyle = StyleSheet.flatten(
+      tree.root.findByProps({ testID: "home-rooms-section" }).props.style,
+    );
+
+    expect(heroStyle.flexDirection).toBe("column");
+    expect(heroStyle.alignItems).toBe("center");
+    expect(orbStyle.width).toBe("100%");
+    expect(roomsStyle.alignSelf).toBe("center");
+    expect(roomsStyle.width).toBeGreaterThan(0);
+    expect(roomsStyle.width).toBeLessThan(mockLayout.contentWidth);
     act(() => {
       tree.unmount();
     });

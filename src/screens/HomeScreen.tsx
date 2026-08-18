@@ -50,17 +50,23 @@ export default function HomeScreen() {
   const roomsGap = Math.round((isTablet ? 10 : 6) * scale);
   const heroGap = Math.round((isTablet ? 28 : 16) * scale);
   const contentInset = Math.round(gutter);
+  const isTabletLandscape = isTablet && isLandscape;
   const headerPadTop = isLandscape
     ? Math.round((isTablet ? 26 : 18) * scale)
     : topPad;
-  // Landscape keeps live status and room controls visible together instead of
-  // forcing the full-size portrait hero above the room deck.
+  // Compact phone/web landscape uses columns. Tablets keep one centered axis
+  // so the room deck reads as a continuation of the orb instead of a sidebar.
   const landscapeGap = Math.round((isTablet ? 26 : 16) * scale);
   const landscapeOrbWidth = Math.round((isTablet ? 270 : 220) * scale);
-  const landscapeCarouselWidth = Math.max(
-    300,
-    contentWidth - contentInset * 2 - landscapeOrbWidth - landscapeGap,
-  );
+  const landscapeCarouselWidth = isTabletLandscape
+    ? Math.min(
+        Math.round(500 * scale),
+        contentWidth - contentInset * 2,
+      )
+    : Math.max(
+        300,
+        contentWidth - contentInset * 2 - landscapeOrbWidth - landscapeGap,
+      );
   const avatarSize = Math.round(
     (isTablet ? (isLandscape ? 48 : 52) : 38) * scale,
   );
@@ -153,10 +159,15 @@ export default function HomeScreen() {
   const roomsSectionStyle: StyleProp<ViewStyle> = [
     styles.roomsSection,
     { marginTop: heroGap },
-    isLandscape && {
+    isLandscape && !isTabletLandscape && {
       flex: 1,
       width: 0,
       marginTop: Math.round((isTablet ? 12 : 6) * scale),
+    },
+    isTabletLandscape && {
+      width: landscapeCarouselWidth,
+      marginTop: 0,
+      alignSelf: "center",
     },
   ];
   const roomsHeaderStyle: StyleProp<ViewStyle> = [
@@ -177,12 +188,19 @@ export default function HomeScreen() {
       flex: 1,
       justifyContent: "space-between",
     },
-    isLandscape && {
+    isLandscape && !isTabletLandscape && {
       paddingBottom: Math.round((isTablet ? 18 : 12) * scale),
       flexDirection: "row",
       alignItems: "flex-start",
       justifyContent: "space-between",
       gap: landscapeGap,
+    },
+    isTabletLandscape && {
+      paddingBottom: Math.round(18 * scale),
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      gap: Math.round(12 * scale),
     },
   ];
   const heroOrbWrapStyle: StyleProp<ViewStyle> = [
@@ -191,12 +209,18 @@ export default function HomeScreen() {
       flex: 1,
       justifyContent: "center",
     },
-    isLandscape && {
+    isLandscape && !isTabletLandscape && {
       flexGrow: 0,
       flexShrink: 0,
       flexBasis: landscapeOrbWidth,
       width: landscapeOrbWidth,
       paddingTop: Math.round((isTablet ? 18 : 8) * scale),
+    },
+    isTabletLandscape && {
+      flexGrow: 0,
+      flexShrink: 0,
+      width: "100%",
+      paddingTop: Math.round(8 * scale),
     },
   ];
   const roomsCarouselWrapStyle: StyleProp<ViewStyle> = [
@@ -844,8 +868,8 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <View style={heroStackStyle}>
-              <View style={heroOrbWrapStyle}>
+            <View testID="home-hero-stack" style={heroStackStyle}>
+              <View testID="home-orb-wrap" style={heroOrbWrapStyle}>
                 <GradientOrb
                   outdoor={outdoor}
                   indoor={indoor}
@@ -856,32 +880,30 @@ export default function HomeScreen() {
                 />
               </View>
 
-              <View
-                style={roomsSectionStyle}
-              >
+              <View testID="home-rooms-section" style={roomsSectionStyle}>
                 <View style={roomsHeaderStyle}>
                   <Text style={roomsTitleStyle}>Rooms</Text>
-                <View style={roomsActionsStyle}>
-                  <HeaderPill
-                    label="Manage"
-                    icon="settings-outline"
-                    iconSize={Math.round(14 * scale)}
-                    style={roomsAddStyle}
-                    textStyle={roomsAddTextStyle}
-                    onPress={() => goRoot("ManageRooms")}
-                  />
-                  <HeaderPill
-                    label="Cameras"
-                    icon="videocam-outline"
-                    iconSize={Math.round(14 * scale)}
-                    style={roomsAddStyle}
-                    textStyle={roomsAddTextStyle}
-                    onPress={() => goRoot("Cameras")}
-                  />
-                  <HeaderPill
-                    label="Add room"
-                    icon="add"
-                    iconSize={Math.round(16 * scale)}
+                  <View style={roomsActionsStyle}>
+                    <HeaderPill
+                      label="Manage"
+                      icon="settings-outline"
+                      iconSize={Math.round(14 * scale)}
+                      style={roomsAddStyle}
+                      textStyle={roomsAddTextStyle}
+                      onPress={() => goRoot("ManageRooms")}
+                    />
+                    <HeaderPill
+                      label="Cameras"
+                      icon="videocam-outline"
+                      iconSize={Math.round(14 * scale)}
+                      style={roomsAddStyle}
+                      textStyle={roomsAddTextStyle}
+                      onPress={() => goRoot("Cameras")}
+                    />
+                    <HeaderPill
+                      label="Add room"
+                      icon="add"
+                      iconSize={Math.round(16 * scale)}
                       style={roomsAddStyle}
                       textStyle={roomsAddTextStyle}
                       onPress={() => setShowAddRoom(true)}
