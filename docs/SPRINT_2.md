@@ -2,6 +2,10 @@
 
 Status: **automated security gate passed; external review pending**
 
+The external review scope and non-binding vendor inquiry are prepared in
+[Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md) and
+[Independent Security Review Outreach](./SECURITY_REVIEW_OUTREACH.md).
+
 ## Implemented
 
 - Native Supabase sessions use Keychain/Keystore through Expo SecureStore.
