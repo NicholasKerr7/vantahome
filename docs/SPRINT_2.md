@@ -60,19 +60,27 @@ Status: **in progress**
   IDs, outcomes, latency, region, and rate-limit state.
 - Docker-free tests cover spoofed proxy chains, IP validation, deterministic
   hashing, private-schema/RPC privileges, atomic buckets, and fail-closed paths.
+- Migration 010 makes household policy helpers non-recursive security-definer
+  checks, pins their search path, disables nested RLS evaluation, and limits
+  execution to authenticated callers.
+- A rollback-only pgTAP integration suite now covers every app device category,
+  every household role, assigned and foreign rooms/homes, camera visibility,
+  immutable observed state, command envelopes, spoofed actors, and explicit
+  per-member grants and denials.
 
 ## Remaining before the Sprint 2 gate
 
-- Add database integration tests for every role, room, device category, and
-  unauthorized state/command mutation—not only pure permission-function tests.
+- Execute the database authorization matrix against a disposable Supabase
+  project; the real pgTAP suite is present but has not yet run against Postgres.
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
 - Validate this migration against a disposable Supabase project and perform an
   external security review before alpha.
 
-The disposable-project and database-integration items intentionally remain
-deferred while Docker is unavailable. Static migration guardrails are useful,
-but they are not presented as equivalent to executing PostgreSQL/RLS tests.
+The disposable-project execution remains deferred while Docker and remote test
+credentials are unavailable. The committed pgTAP suite is a real database test,
+but its Docker-free Jest guardrail is not presented as equivalent to executing
+it against PostgreSQL.
 
 ## Gate
 

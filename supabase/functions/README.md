@@ -92,6 +92,20 @@ request ID, endpoint, outcome, status, duration, region, and rate-limit state.
 These fields are intended for Supabase Logs Explorer dashboards and alerts.
 No token, email, raw IP, payload, or rate-limit hash is included.
 
-Deploy in this order: apply migrations through 009, set the secrets, then deploy
+Deploy in this order: apply migrations through 010, set the secrets, then deploy
 the functions. Deploying the functions first intentionally produces `503` for
 protected operations because rate-limit storage/configuration is unavailable.
+
+## Remote database verification without Docker
+
+Use only a disposable project. The tests create Auth and household fixtures
+inside a transaction and roll them back, but they intentionally exercise real
+RLS policies and security-definer functions.
+
+```bash
+export SUPABASE_DB_URL='postgresql://...'
+npm run test:db:remote
+```
+
+Apply migrations through 010 before running the suite. Never point this command
+at the production database.
