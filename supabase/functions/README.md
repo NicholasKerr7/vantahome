@@ -45,12 +45,15 @@ to enqueue commands; it never writes observed device state directly.
 ## Deploy
 
 ```bash
-supabase functions deploy home-bootstrap
-supabase functions deploy device-command
-supabase functions deploy device-state
-supabase functions deploy device-state-batch
-supabase functions deploy home-invite
+supabase db push
+supabase functions deploy
 ```
+
+`supabase/config.toml` is the source of truth for gateway JWT verification.
+Authenticated app APIs keep `verify_jwt = true`. The OAuth and Alexa/Google
+endpoints use `verify_jwt = false` because they validate OAuth client
+credentials or provider-bound VantaHome access tokens inside their handlers.
+Do not replace these per-function settings with a global deploy flag.
 
 ## Auth
 
@@ -92,7 +95,7 @@ request ID, endpoint, outcome, status, duration, region, and rate-limit state.
 These fields are intended for Supabase Logs Explorer dashboards and alerts.
 No token, email, raw IP, payload, or rate-limit hash is included.
 
-Deploy in this order: apply migrations through 010, set the secrets, then deploy
+Deploy in this order: apply migrations through 011, set the secrets, then deploy
 the functions. Deploying the functions first intentionally produces `503` for
 protected operations because rate-limit storage/configuration is unavailable.
 
@@ -108,7 +111,7 @@ export VANTAHOME_DISPOSABLE_DB_CONFIRMED=true
 npm run test:db:remote
 ```
 
-Apply migrations through 010 before running the suite. The runner fails closed
+Apply migrations through 011 before running the suite. The runner fails closed
 unless the disposable confirmation is explicit and the database project ref is
 different from `EXPO_PUBLIC_SUPABASE_URL`. It connects with the lightweight
 Node PostgreSQL client and does not start Docker.

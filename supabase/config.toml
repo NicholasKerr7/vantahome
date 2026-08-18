@@ -1,0 +1,38 @@
+project_id = "vantahome"
+
+# These functions are called only by signed-in VantaHome clients.
+[functions.home-bootstrap]
+verify_jwt = true
+
+[functions.device-command]
+verify_jwt = true
+
+[functions.device-state]
+verify_jwt = true
+
+[functions.device-state-batch]
+verify_jwt = true
+
+[functions.device-audit]
+verify_jwt = true
+
+[functions.home-invite]
+verify_jwt = true
+
+[functions.home-invite-respond]
+verify_jwt = true
+
+# External OAuth and smart-home providers cannot present Supabase user JWTs.
+# Their handlers authenticate credentials, authorization codes, or provider-
+# bound VantaHome access tokens before reading or commanding household data.
+[functions.voice-authorize]
+verify_jwt = false
+
+[functions.voice-token]
+verify_jwt = false
+
+[functions.alexa-smart-home]
+verify_jwt = false
+
+[functions.google-smart-home]
+verify_jwt = false

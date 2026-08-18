@@ -11,13 +11,13 @@ Run the new migration to add OAuth and command tables:
 ## 2) Deploy Edge Functions
 
 ```bash
-supabase functions deploy voice-authorize
-supabase functions deploy voice-token
-supabase functions deploy alexa-smart-home
-supabase functions deploy google-smart-home
+supabase functions deploy
 ```
 
 These functions require `SUPABASE_SERVICE_ROLE_KEY` in the function environment.
+Their `verify_jwt = false` gateway settings are intentionally scoped in
+`supabase/config.toml`: OAuth clients and provider-bound VantaHome access tokens
+are authenticated by the handlers instead of as Supabase user sessions.
 
 ## 3) Seed voice OAuth clients
 
@@ -81,5 +81,6 @@ Both expect `Authorization: Bearer <access_token>` issued by `voice-token`.
 ## Notes
 
 - The OAuth login form uses email/password. If you sign in only with Google/Apple, set a password in Supabase to link voice assistants.
-- State is written into `device_state`; commands are queued into `device_commands`.
+- Fulfillment queues authorized commands into `device_commands`; only the
+  trusted bridge may write observed state into `device_state`.
 - You can build a local bridge (MQTT/HA) to consume `device_commands` and apply them to devices.

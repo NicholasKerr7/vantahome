@@ -67,13 +67,22 @@ Status: **automated security gate passed; external review pending**
   every household role, assigned and foreign rooms/homes, camera visibility,
   immutable observed state, command envelopes, spoofed actors, and explicit
   per-member grants and denials.
-- Migrations through 010 and every client-required Edge Function are deployed
+- Migrations through 011 and every client-required Edge Function are deployed
   to the active Supabase project. A private rate-limit hashing secret is set,
   and the public readiness inventory passes while recognizing protected tables.
 - Migrations 001 through 010 were applied from scratch to a data-less disposable
   Supabase project. The real PostgreSQL suites passed all 157 authorization
   matrix assertions and all 12 permission-derivation assertions, then rolled
   back their fixtures. The disposable project was deleted after the run.
+- Migration 011 removes the final production database lint findings without
+  widening function privileges. It and every earlier migration were applied
+  from scratch on a second disposable project; database lint was clean and the
+  same 169 pgTAP assertions passed before that project was deleted.
+- Edge Function JWT enforcement is now explicit in `supabase/config.toml`.
+  App APIs require a Supabase user JWT, while the OAuth and Alexa/Google
+  endpoints authenticate their own client credentials or provider-bound
+  VantaHome tokens. Live unauthenticated probes reach those handlers and are
+  rejected with their expected `400`/`401` responses.
 
 ## Remaining before the Sprint 2 gate
 
