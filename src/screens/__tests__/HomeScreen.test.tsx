@@ -253,8 +253,9 @@ describe("HomeScreen", () => {
     expect(roomsStyle.transform).toEqual([
       { translateY: expect.any(Number) },
     ]);
-    expect(roomsStyle.transform[0].translateY).toBeGreaterThanOrEqual(42);
-    expect(carouselWrapStyle.marginTop).toBeGreaterThanOrEqual(24);
+    expect(roomsStyle.transform[0].translateY).toBeGreaterThanOrEqual(48);
+    expect(carouselWrapStyle.marginTop).toBeGreaterThanOrEqual(12);
+    expect(carouselWrapStyle.marginTop).toBeLessThanOrEqual(14);
     act(() => {
       tree.unmount();
     });
@@ -291,7 +292,7 @@ describe("HomeScreen", () => {
     expect(heroStyle.gap).toBeLessThanOrEqual(16);
     expect(heroStyle.paddingBottom).toBeLessThanOrEqual(14);
     expect(roomsStyle.transform[0].translateY).toBe(0);
-    expect(carouselWrapStyle.marginTop).toBeLessThanOrEqual(16);
+    expect(carouselWrapStyle.marginTop).toBeLessThanOrEqual(11);
     act(() => {
       tree.unmount();
     });

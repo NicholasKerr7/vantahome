@@ -65,7 +65,7 @@ export default function HomeScreen() {
       scale,
   );
   const tabletLandscapeDeckGap = Math.round(
-    (isVeryShortTabletLandscape ? 8 : isShortTabletLandscape ? 14 : 24) *
+    (isVeryShortTabletLandscape ? 8 : isShortTabletLandscape ? 10 : 12) *
       scale,
   );
   const tabletLandscapeBottomLift = Math.round(
@@ -73,7 +73,7 @@ export default function HomeScreen() {
       scale,
   );
   const tabletLandscapeDeckOffset = Math.round(
-    (isShortTabletLandscape ? 0 : 42) * scale,
+    (isShortTabletLandscape ? 0 : 48) * scale,
   );
   const landscapeCarouselWidth = isTabletLandscape
     ? Math.min(
