@@ -13,6 +13,7 @@ import { ensureNotificationsReady } from "./src/services/notifications";
 import { syncMembershipFromSupabase } from "./src/services/membership";
 import * as Sentry from "@sentry/react-native";
 import { scrubSentryEvent } from "./src/observability/sentryPrivacy";
+import { applyDeviceOrientationPolicy } from "./src/services/orientation";
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
 const sentryEnabled = Boolean(sentryDsn);
@@ -51,6 +52,9 @@ function App() {
 
   useEffect(() => startAmbientData(), []);
   useEffect(() => startFlowRuntime(), []);
+  useEffect(() => {
+    applyDeviceOrientationPolicy().catch(() => {});
+  }, []);
   useEffect(() => {
     if (!notificationsEnabled) return;
     ensureNotificationsReady().catch(() => {});

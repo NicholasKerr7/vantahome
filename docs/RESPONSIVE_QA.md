@@ -11,9 +11,11 @@ release artifacts still require a final device smoke test before store upload.
 | Device class | Orientation | Viewport | Result |
 | --- | --- | ---: | --- |
 | Phone | Portrait | 390 × 844 | Pass |
-| Phone | Landscape | 844 × 390 | Pass |
 | Tablet | Portrait | 820 × 1180 | Pass |
 | Tablet | Landscape | 1180 × 820 | Pass |
+
+Installed phone builds are portrait-only. Tablets remain rotatable and retain
+both supported layouts. Browser windows remain resizable for development QA.
 
 The Home and Scenes layouts were visually inspected at every viewport. The
 onboarding, Settings, and Automations flows were also exercised at phone
@@ -21,11 +23,11 @@ portrait size. Internal scroll containers remained usable at reduced landscape
 height, the root matched each viewport, navigation remained reachable, and no
 page errors or error overlays were reported.
 
-The 2026-08-18 polish pass added a compact side-by-side Home dashboard for both
-landscape classes, reduced the phone landscape navigation footprint, prevented
-phone room-action clipping, increased onboarding headline contrast, and removed
-unintended flex growth from the Settings integration panels. All four viewport
-baselines were rechecked after these changes.
+The 2026-08-18 polish pass added a compact side-by-side Home dashboard for
+tablet landscape, prevented phone room-action clipping, increased onboarding
+headline contrast, and removed unintended flex growth from the Settings
+integration panels. The supported viewport baselines were rechecked after
+these changes.
 
 ## Runtime regression found during QA
 
@@ -39,6 +41,6 @@ QA.
 ## Repeat the check
 
 1. Start Expo without Docker or a simulator: `npm run web`.
-2. Open the local URL in a browser and exercise the four viewports above.
+2. Open the local URL in a browser and exercise the three viewports above.
 3. Confirm onboarding and all four bottom tabs mount, scroll, and navigate.
 4. Confirm the browser has no page errors or React error overlay.
