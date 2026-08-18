@@ -22,7 +22,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useResponsive } from "../theme/layout";
 import BackgroundLines from "../components/BackgroundLines";
 import { theme } from "../theme/theme";
-import LottieView from "lottie-react-native";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "../services/supabaseClient";
 import { bootstrapHome } from "../services/cloudRegistry";
@@ -35,10 +34,9 @@ import {
   fetchAuthProviderAvailability,
   type AuthProviderAvailability,
 } from "../services/authProviderAvailability";
+import VantaHomeMark from "../components/VantaHomeMark";
 
 WebBrowser.maybeCompleteAuthSession();
-
-const AUTH_LOTTIE_SOURCE = require("../../assets/animations/auth-hero.json");
 
 const redirectUri = makeAuthCallbackUri();
 
@@ -68,11 +66,11 @@ export default function AuthScreen({}: Props) {
   const frameWidth = useLandscapeFrame
     ? Math.min(contentWidth - gutter * 2, cardWidth + framePad * 2)
     : cardWidth;
-  const authLottieScale = isLandscape ? (isTablet ? 1.5 : 1.4) : 1;
-  const authLottieSize = Math.round(
-    (isTablet ? 190 : 150) * scale * authLottieScale,
+  const authLogoScale = isLandscape ? (isTablet ? 1.5 : 1.4) : 1;
+  const authLogoSize = Math.round(
+    (isTablet ? 190 : 150) * scale * authLogoScale,
   );
-  const authLottieGap = Math.round(
+  const authLogoGap = Math.round(
     (isTablet ? 14 : 10) * scale * (isLandscape ? 2 : 1),
   );
   const titleSize = Math.round((isTablet ? 28 : 24) * scale);
@@ -132,16 +130,16 @@ export default function AuthScreen({}: Props) {
     mode === "login"
       ? emailValid && passwordOk
       : name.trim().length > 1 && emailValid && passwordOk && confirmOk;
-  const lottieWrapLayout: ViewStyle = {
-    width: authLottieSize,
-    height: authLottieSize,
-    marginBottom: authLottieGap,
-    borderRadius: Math.round(authLottieSize / 2),
+  const logoWrapLayout: ViewStyle = {
+    width: authLogoSize,
+    height: authLogoSize,
+    marginBottom: authLogoGap,
+    borderRadius: Math.round(authLogoSize * 0.22),
   };
-  const lottieWrapStyle: StyleProp<ViewStyle> = [
-    styles.authLottieWrap,
-    lottieWrapLayout,
-    useLandscapeFrame && styles.authLottieWrapLandscape,
+  const logoWrapStyle: StyleProp<ViewStyle> = [
+    styles.authLogoWrap,
+    logoWrapLayout,
+    useLandscapeFrame && styles.authLogoWrapLandscape,
   ];
   const heroTitleLayout: TextStyle = {
     fontSize: useLandscapeFrame ? landscapeTitleSize : titleSize,
@@ -509,34 +507,8 @@ export default function AuthScreen({}: Props) {
 
   const heroContent = (
     <>
-      <View
-        style={lottieWrapStyle}
-      >
-        <LinearGradient
-          colors={["rgba(255,255,255,0.98)", "rgba(255,255,255,0.85)"]}
-          start={{ x: 0.2, y: 0.1 }}
-          end={{ x: 0.9, y: 1 }}
-          style={styles.authLottieBackdrop}
-        />
-        <LottieView
-          source={AUTH_LOTTIE_SOURCE}
-          autoPlay
-          loop
-          resizeMode="contain"
-          style={styles.authLottie}
-        />
-        <LinearGradient
-          colors={[
-            "rgba(255,255,255,0.6)",
-            "rgba(255,255,255,0.0)",
-            "rgba(255,255,255,0.6)",
-          ]}
-          locations={[0, 0.5, 1]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.authLottieFade}
-          pointerEvents="none"
-        />
+      <View style={logoWrapStyle}>
+        <VantaHomeMark size={authLogoSize} />
       </View>
       <Text style={heroTitleStyle}>
         VantaHome, connected.
@@ -918,17 +890,11 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     backgroundColor: "rgba(12,12,18,0.12)",
   },
-  authLottieWrap: {
+  authLogoWrap: {
     alignSelf: "center",
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.85)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.85)",
   },
-  authLottieWrapLandscape: { alignSelf: "flex-start" },
-  authLottieBackdrop: { ...StyleSheet.absoluteFillObject },
-  authLottie: { width: "100%", height: "100%", opacity: 1 },
-  authLottieFade: { ...StyleSheet.absoluteFillObject },
+  authLogoWrapLandscape: { alignSelf: "flex-start" },
   h1: { fontSize: 24, fontWeight: "900", color: "#0C0C12" },
   heroTitleLandscape: { textAlign: "left", maxWidth: 360 },
   sub: { marginTop: 6, color: "rgba(12,12,18,0.55)", fontWeight: "700" },
