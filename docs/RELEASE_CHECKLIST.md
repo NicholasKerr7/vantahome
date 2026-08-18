@@ -15,7 +15,8 @@ Use this checklist before shipping a production build.
 - [ ] Confirm RLS policies for invites, room_members, and device audit logs.
 - [x] Add rate limits/abuse protection for public endpoints.
 - [ ] Ensure no secrets committed; rotate keys if needed.
-- [ ] Resolve or formally accept Expo/React Native transitive dependency audit advisories before release.
+- [ ] Resolve or formally accept the Expo/React Native transitive dependency
+  advisories tracked in [Dependency Security Notes](./DEPENDENCY_SECURITY.md).
 
 ## Data & Realtime
 - [ ] Confirm MQTT broker URL/TLS credentials and WS endpoints.

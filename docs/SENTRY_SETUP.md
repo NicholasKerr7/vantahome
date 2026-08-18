@@ -15,7 +15,7 @@ SENTRY_ORG=your-org
 SENTRY_PROJECT=your-project
 ```
 
-Then run:
+After exporting production bundles and source maps to `dist`, run:
 ```
 npm run sentry:sourcemaps
 ```
