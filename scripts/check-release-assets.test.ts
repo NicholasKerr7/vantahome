@@ -49,10 +49,11 @@ describe("release asset check", () => {
         expoConfig,
         assets: {
           icon: { width: 1024, height: 1024, hasAlpha: false },
-          adaptive: { width: 1024, height: 1024, hasAlpha: true },
+          adaptive: { width: 1024, height: 1024, hasAlpha: false },
           splash: { width: 1024, height: 1024, hasAlpha: true },
           favicon: { width: 48, height: 48, hasAlpha: false },
           iconDigest: "icon",
+          adaptiveDigest: "icon",
           splashDigest: "splash",
         },
         native: {
@@ -73,6 +74,7 @@ describe("release asset check", () => {
         splash: { width: 1024, height: 1024, hasAlpha: true },
         favicon: { width: 48, height: 48, hasAlpha: true },
         iconDigest: "new-icon",
+        adaptiveDigest: "old-icon",
         splashDigest: "new-splash",
       },
       native: {
@@ -84,6 +86,7 @@ describe("release asset check", () => {
     expect(errors).toEqual(
       expect.arrayContaining([
         "App icon must be an opaque 1024x1024 PNG.",
+        "Adaptive foreground must be an opaque 1024x1024 PNG matching the app icon.",
         "Native iOS icon must match the release icon.",
         "Native iOS splash images must match the release splash.",
       ]),

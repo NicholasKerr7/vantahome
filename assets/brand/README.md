@@ -1,9 +1,11 @@
 # Vantahome Brand Assets
 
-This folder contains the final Vantahome brand source files.
+This folder contains the approved VantaHome icon master and supporting editable
+brand artwork.
 
 ## Files
 
+- `vantahome-icon-master.png` — approved, product-owner-supplied app icon master.
 - `vantahome-mark.svg` — standalone brand mark / source icon direction.
 - `vantahome-logo-horizontal.svg` — full horizontal logo lockup with wordmark.
 - `vantahome-app-icon.svg` — opaque, full-bleed iOS/legacy icon source.
@@ -20,12 +22,12 @@ The mark is built around three ideas:
 
 ## Expo asset targets
 
-Your `app.json` already points to these PNG files:
+`app.json` points to these generated PNG files:
 
-- `assets/icon.png`
-- `assets/adaptive-icon.png`
-- `assets/splash-icon.png`
-- `assets/favicon.png`
+- `assets/release/icon.png`
+- `assets/release/adaptive-icon.png`
+- `assets/release/splash-icon.png`
+- `assets/release/favicon.png`
 
 Use the final icon artwork as the visual source for those PNG files.
 
@@ -36,4 +38,5 @@ Recommended sizes:
 - Splash icon: `1024x1024`, centered with more padding for `contain`
 - Favicon: `48x48` or `32x32`
 
-Keep the SVG files as the editable source of truth.
+Keep `vantahome-icon-master.png` unchanged as the source of truth for app icons.
+The SVG files remain editable supporting artwork for other brand placements.

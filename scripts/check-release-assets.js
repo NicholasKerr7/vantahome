@@ -37,9 +37,12 @@ function validateReleaseAssets({ expoConfig, assets, native }) {
   if (
     adaptive.width !== 1024 ||
     adaptive.height !== 1024 ||
-    !adaptive.hasAlpha
+    adaptive.hasAlpha ||
+    assets.adaptiveDigest !== assets.iconDigest
   ) {
-    errors.push("Adaptive foreground must be a transparent 1024x1024 PNG.");
+    errors.push(
+      "Adaptive foreground must be an opaque 1024x1024 PNG matching the app icon.",
+    );
   }
   if (splash.width !== 1024 || splash.height !== 1024 || !splash.hasAlpha) {
     errors.push("Splash image must be a transparent 1024x1024 PNG.");
@@ -120,6 +123,7 @@ function main() {
       splash,
       favicon,
       iconDigest: icon.digest,
+      adaptiveDigest: adaptive.digest,
       splashDigest: splash.digest,
     },
     native: {
