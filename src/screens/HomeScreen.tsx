@@ -51,6 +51,8 @@ export default function HomeScreen() {
   const heroGap = Math.round((isTablet ? 28 : 16) * scale);
   const contentInset = Math.round(gutter);
   const isTabletLandscape = isTablet && isLandscape;
+  const isShortTabletLandscape = isTabletLandscape && height < 900;
+  const isVeryShortTabletLandscape = isTabletLandscape && height < 800;
   const headerPadTop = isLandscape
     ? Math.round((isTablet ? 26 : 18) * scale)
     : topPad;
@@ -58,9 +60,22 @@ export default function HomeScreen() {
   // so the room deck reads as a continuation of the orb instead of a sidebar.
   const landscapeGap = Math.round((isTablet ? 26 : 16) * scale);
   const landscapeOrbWidth = Math.round((isTablet ? 270 : 220) * scale);
+  const tabletLandscapeHeroGap = Math.round(
+    (isVeryShortTabletLandscape ? 8 : isShortTabletLandscape ? 14 : 24) *
+      scale,
+  );
+  const tabletLandscapeDeckGap = Math.round(
+    (isVeryShortTabletLandscape ? 8 : isShortTabletLandscape ? 14 : 24) *
+      scale,
+  );
+  const tabletLandscapeBottomLift = Math.round(
+    (isVeryShortTabletLandscape ? 6 : isShortTabletLandscape ? 12 : 34) *
+      scale,
+  );
   const landscapeCarouselWidth = isTabletLandscape
     ? Math.min(
-        Math.round(500 * scale),
+        Math.round(460 * scale),
+        Math.round(contentWidth * 0.52),
         contentWidth - contentInset * 2,
       )
     : Math.max(
@@ -196,11 +211,13 @@ export default function HomeScreen() {
       gap: landscapeGap,
     },
     isTabletLandscape && {
-      paddingBottom: Math.round(18 * scale),
+      // Visually center the combined orb/deck composition in the space above
+      // the persistent tab bar, with a slight upward bias for optical balance.
+      paddingBottom: tabletLandscapeBottomLift,
       flexDirection: "column",
       alignItems: "center",
-      justifyContent: "flex-start",
-      gap: Math.round(12 * scale),
+      justifyContent: "center",
+      gap: tabletLandscapeHeroGap,
     },
   ];
   const heroOrbWrapStyle: StyleProp<ViewStyle> = [
@@ -227,7 +244,11 @@ export default function HomeScreen() {
     styles.roomsCarouselWrap,
     {
       marginTop: Math.round(
-        (isTablet ? (isLandscape ? 18 : 44) : isLandscape ? 12 : 30) * scale,
+        (isTablet
+          ? isLandscape
+            ? tabletLandscapeDeckGap
+            : 44 * scale
+          : (isLandscape ? 12 : 30) * scale),
       ),
     },
   ];
@@ -911,7 +932,10 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <View style={roomsCarouselWrapStyle}>
+                <View
+                  testID="home-rooms-carousel-wrap"
+                  style={roomsCarouselWrapStyle}
+                >
                   <RoomCarousel
                     rooms={rooms}
                     devices={devicesAll}

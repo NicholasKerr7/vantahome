@@ -237,13 +237,53 @@ describe("HomeScreen", () => {
     const roomsStyle = StyleSheet.flatten(
       tree.root.findByProps({ testID: "home-rooms-section" }).props.style,
     );
+    const carouselWrapStyle = StyleSheet.flatten(
+      tree.root.findByProps({ testID: "home-rooms-carousel-wrap" }).props.style,
+    );
 
     expect(heroStyle.flexDirection).toBe("column");
     expect(heroStyle.alignItems).toBe("center");
+    expect(heroStyle.justifyContent).toBe("center");
+    expect(heroStyle.gap).toBeGreaterThanOrEqual(24);
+    expect(heroStyle.paddingBottom).toBeGreaterThan(0);
     expect(orbStyle.width).toBe("100%");
     expect(roomsStyle.alignSelf).toBe("center");
     expect(roomsStyle.width).toBeGreaterThan(0);
-    expect(roomsStyle.width).toBeLessThan(mockLayout.contentWidth);
+    expect(roomsStyle.width).toBeLessThanOrEqual(mockLayout.contentWidth * 0.52);
+    expect(carouselWrapStyle.marginTop).toBeGreaterThanOrEqual(24);
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it("tightens vertical rhythm on shorter tablet landscape viewports", () => {
+    Object.assign(mockLayout, {
+      width: 1180,
+      height: 820,
+      isLandscape: true,
+      isTablet: true,
+      contentWidth: 980,
+      gutter: 36,
+      topPad: 56,
+      blockGap: 20,
+      scale: 1.08,
+    });
+    let tree: ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<HomeScreen />);
+    });
+
+    const heroStyle = StyleSheet.flatten(
+      tree.root.findByProps({ testID: "home-hero-stack" }).props.style,
+    );
+    const carouselWrapStyle = StyleSheet.flatten(
+      tree.root.findByProps({ testID: "home-rooms-carousel-wrap" }).props.style,
+    );
+
+    expect(heroStyle.justifyContent).toBe("center");
+    expect(heroStyle.gap).toBeLessThanOrEqual(16);
+    expect(heroStyle.paddingBottom).toBeLessThanOrEqual(14);
+    expect(carouselWrapStyle.marginTop).toBeLessThanOrEqual(16);
     act(() => {
       tree.unmount();
     });
