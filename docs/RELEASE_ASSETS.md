@@ -13,6 +13,7 @@ Release PNGs live in `assets/release/` and are referenced by `app.json`.
 The checked-in native iOS icon and splash copies must match these release PNGs.
 Run `npm run release:assets-check`; CI also runs it through `npm run verify`.
 
-The app icon, adaptive icon, and favicon are deterministic resizes of the
-product-owner-supplied raster master. The splash remains derived from the
-editable SVG artwork. No generated variation is introduced during export.
+The app icon, adaptive icon, favicon, and splash are deterministic derivatives
+of the product-owner-supplied raster master. The splash centers a 640x640 copy
+on a transparent 1024x1024 canvas for Expo's `contain` mode. No generated
+variation is introduced during export.

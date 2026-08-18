@@ -1,16 +1,10 @@
 # Vantahome Brand Assets
 
-This folder contains the approved VantaHome icon master and supporting editable
-brand artwork.
+This folder contains the approved VantaHome icon master.
 
 ## Files
 
 - `vantahome-icon-master.png` — approved, product-owner-supplied app icon master.
-- `vantahome-mark.svg` — standalone brand mark / source icon direction.
-- `vantahome-logo-horizontal.svg` — full horizontal logo lockup with wordmark.
-- `vantahome-app-icon.svg` — opaque, full-bleed iOS/legacy icon source.
-- `vantahome-adaptive-foreground.svg` — transparent Android foreground source.
-- `vantahome-splash.svg` — padded transparent splash source.
 
 ## Meaning
 
@@ -38,5 +32,6 @@ Recommended sizes:
 - Splash icon: `1024x1024`, centered with more padding for `contain`
 - Favicon: `48x48` or `32x32`
 
-Keep `vantahome-icon-master.png` unchanged as the source of truth for app icons.
-The SVG files remain editable supporting artwork for other brand placements.
+Keep `vantahome-icon-master.png` unchanged as the single source of truth. The
+app icon, adaptive icon, favicon, and padded splash derivative must all use this
+approved artwork.
