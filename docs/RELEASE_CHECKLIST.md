@@ -27,6 +27,7 @@ Use this checklist before shipping a production build.
 - [ ] Verify logs do not include secrets/PII.
 
 ## QA
+- [x] Run TypeScript, Edge Function, and Jest verification in GitHub Actions.
 - [x] Run unit tests: `npm test`.
 - [x] Add smoke tests for key flows (Auth, Rooms, DeviceDetail, Automations, Cameras).
 - [ ] Validate tablet/phone layouts in portrait/landscape.
