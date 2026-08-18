@@ -10,10 +10,11 @@
     "build": "expo export --platform web",
     "lint": "tsc --noEmit",
     "lint:edge": "tsc -p supabase/functions/tsconfig.json",
-    "verify": "npm run lint && npm run lint:edge && npm run release:version-check && npm run release:assets-check && npm test -- --runInBand",
+    "verify": "npm run lint && npm run lint:edge && npm run security:dependencies && npm run release:version-check && npm run release:assets-check && npm test -- --runInBand",
     "test:db:remote": "node scripts/run-remote-db-tests.js",
     "supabase:check": "node scripts/check-supabase-readiness.js",
     "security:secrets": "node scripts/check-secrets.js --history",
+    "security:dependencies": "node scripts/check-dependency-security.js",
     "release:version-check": "node scripts/check-release-version.js",
     "release:assets-check": "node scripts/check-release-assets.js",
     "sentry:sourcemaps": "sentry-expo-upload-sourcemaps dist",
@@ -26,6 +27,7 @@
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.8",
+    "@lottiefiles/dotlottie-react": "0.13.5",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/slider": "5.0.1",
     "@react-native-masked-view/masked-view": "0.3.2",
@@ -85,6 +87,10 @@
   "overrides": {
     "@react-native-voice/voice": {
       "@expo/config-plugins": "54.0.5"
+    },
+    "postcss": "8.5.26",
+    "xcode": {
+      "uuid": "11.1.1"
     }
   },
   "private": true

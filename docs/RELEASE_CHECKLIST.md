@@ -17,7 +17,7 @@ Use this checklist before shipping a production build.
 - [x] Add rate limits/abuse protection for public endpoints.
 - [x] Scan tracked files and Git history for high-confidence secrets in CI;
   rotate credentials if a future scan detects exposure.
-- [ ] Resolve or formally accept the Expo/React Native transitive dependency
+- [x] Resolve or formally accept the Expo/React Native transitive dependency
   advisories tracked in [Dependency Security Notes](./DEPENDENCY_SECURITY.md).
 
 ## Data & Realtime

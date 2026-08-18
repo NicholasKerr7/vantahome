@@ -43,3 +43,6 @@ jobs:
 
       - name: Verify app, Edge Functions, and tests
         run: npm run verify
+
+      - name: Build production web export
+        run: npm run build
