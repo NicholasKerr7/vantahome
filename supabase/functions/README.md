@@ -109,3 +109,14 @@ npm run test:db:remote
 
 Apply migrations through 010 before running the suite. Never point this command
 at the production database.
+
+Before or after a deployment, inventory the client-visible tables and Edge
+Functions with the publishable app credentials. This command is read-only,
+prints no keys, and exits unsuccessfully while required artifacts are missing:
+
+```bash
+npm run supabase:check
+```
+
+This inventory does not replace the pgTAP authorization matrix or prove that
+private migration 009 objects exist. It is a safe deployment completeness check.

@@ -12,6 +12,7 @@
     "lint:edge": "tsc -p supabase/functions/tsconfig.json",
     "verify": "npm run lint && npm run lint:edge && npm test -- --runInBand",
     "test:db:remote": "supabase test db supabase/tests/*.sql --db-url \"$SUPABASE_DB_URL\"",
+    "supabase:check": "node scripts/check-supabase-readiness.js",
     "sentry:sourcemaps": "sentry-expo upload-sourcemaps",
     "mqtt:presence": "node scripts/mqtt-presence.js",
     "realtime:server": "node scripts/realtime-server.js",
