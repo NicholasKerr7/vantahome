@@ -24,11 +24,16 @@ const JSON_ASSIGNMENT =
 
 function isPlaceholder(value) {
   const normalized = value.trim().toLowerCase();
+  // History scanning requires retaining this exact, noncredentialed placeholder
+  // after it has been removed from the current review runbook.
+  const isHistoricalReviewDatabasePlaceholder =
+    normalized === "postgresql://review-database-url";
   return (
     !normalized ||
     normalized.includes("...") ||
     normalized === "changeme" ||
     normalized === "replace-me" ||
+    isHistoricalReviewDatabasePlaceholder ||
     normalized.startsWith("your-") ||
     normalized.startsWith("example") ||
     normalized.startsWith("<") ||

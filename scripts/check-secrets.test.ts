@@ -23,7 +23,22 @@ describe("secret scanner", () => {
   test("allows documented placeholders and empty values", () => {
     expect(isPlaceholder("your-token")).toBe(true);
     expect(isPlaceholder("postgresql://...")).toBe(true);
+    // Retain this exact historical documentation placeholder because CI scans
+    // committed history as well as the current tree.
+    expect(isPlaceholder("postgresql://review-database-url")).toBe(true);
     expect(scanText("AUTH_TOKEN=...\nPASSWORD=", ".env.example")).toEqual([]);
+  });
+
+  test("does not treat real-looking database URLs as placeholders", () => {
+    expect(isPlaceholder("postgresql://database.internal/vantahome")).toBe(false);
+    expect(
+      scanText(
+        "SUPABASE_DB_URL=postgresql://database.internal/vantahome",
+        "fixture.env",
+      ),
+    ).toEqual([
+      expect.objectContaining({ type: "literal value assigned to SUPABASE_DB_URL" }),
+    ]);
   });
 
   test("deduplicates identical findings", () => {

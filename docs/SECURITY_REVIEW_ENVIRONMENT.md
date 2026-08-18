@@ -31,13 +31,12 @@ Record these values outside the public repository:
 
 The two project references must differ. Keep review configuration in an ignored
 local file such as `.env.review.local`; never replace the app's active `.env`
-or commit credentials. The remote database runner provides an additional
+or commit credentials. After supplying `SUPABASE_DB_URL` through that ignored
+review environment, the remote database runner provides an additional
 fail-closed check:
 
 ```sh
-VANTAHOME_DISPOSABLE_DB_CONFIRMED=true \
-SUPABASE_DB_URL='postgresql://review-database-url' \
-npm run test:db:remote
+VANTAHOME_DISPOSABLE_DB_CONFIRMED=true npm run test:db:remote
 ```
 
 It refuses to run unless the database URL identifies a project different from
