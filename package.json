@@ -11,7 +11,7 @@
     "lint": "tsc --noEmit",
     "lint:edge": "tsc -p supabase/functions/tsconfig.json",
     "verify": "npm run lint && npm run lint:edge && npm run release:version-check && npm run release:assets-check && npm test -- --runInBand",
-    "test:db:remote": "supabase test db supabase/tests/*.sql --db-url \"$SUPABASE_DB_URL\"",
+    "test:db:remote": "node scripts/run-remote-db-tests.js",
     "supabase:check": "node scripts/check-supabase-readiness.js",
     "security:secrets": "node scripts/check-secrets.js --history",
     "release:version-check": "node scripts/check-release-version.js",

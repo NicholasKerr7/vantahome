@@ -104,11 +104,13 @@ RLS policies and security-definer functions.
 
 ```bash
 export SUPABASE_DB_URL='postgresql://...'
+export VANTAHOME_DISPOSABLE_DB_CONFIRMED=true
 npm run test:db:remote
 ```
 
-Apply migrations through 010 before running the suite. Never point this command
-at the production database.
+Apply migrations through 010 before running the suite. The runner fails closed
+unless the disposable confirmation is explicit and the database project ref is
+different from `EXPO_PUBLIC_SUPABASE_URL`.
 
 Before or after a deployment, inventory the client-visible tables and Edge
 Functions with the publishable app credentials. This command is read-only,

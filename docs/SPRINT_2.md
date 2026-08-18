@@ -80,10 +80,12 @@ Status: **in progress**
 - Validate the migrations against a disposable Supabase project and perform an
   external security review before alpha.
 
-The disposable-project execution remains deferred while Docker and remote test
-credentials are unavailable. The committed pgTAP suite is a real database test,
-but its Docker-free Jest guardrail is not presented as equivalent to executing
-it against PostgreSQL.
+The disposable-project execution remains deferred until an isolated preview
+branch or project is provisioned. The remote runner now fails closed unless its
+target is explicitly confirmed as disposable and differs from the active app
+project. The committed pgTAP suite is a real database test, but its Docker-free
+Jest guardrail is not presented as equivalent to executing it against
+PostgreSQL.
 
 ## Gate
 
