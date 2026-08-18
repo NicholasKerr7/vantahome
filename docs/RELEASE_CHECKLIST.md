@@ -11,9 +11,12 @@ Use this checklist before shipping a production build.
 ## Auth & Security
 - [x] Apply migrations through 011 and deploy every required Edge Function to
   the active project.
-- [ ] Configure OAuth providers (Google, Apple, etc.) in Supabase.
-- [ ] Verify mobile redirect URIs (Expo + native).
-- [ ] Confirm RLS policies for invites, room_members, and device audit logs.
+- [ ] Enable the remaining intended OAuth provider in Supabase (Google is
+  enabled; Apple still requires Apple Developer credentials).
+- [x] Verify mobile redirect URIs in Supabase, Expo config, and the checked-in
+  iOS project; guard them with [Authentication Redirects](./AUTH_REDIRECTS.md).
+- [x] Confirm RLS policies for invites, room_members, and device audit logs with
+  the disposable-project pgTAP authorization matrix.
 - [x] Add rate limits/abuse protection for public endpoints.
 - [x] Scan tracked files and Git history for high-confidence secrets in CI;
   rotate credentials if a future scan detects exposure.

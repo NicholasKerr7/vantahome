@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -23,32 +23,26 @@ import { useResponsive } from "../theme/layout";
 import BackgroundLines from "../components/BackgroundLines";
 import { theme } from "../theme/theme";
 import LottieView from "lottie-react-native";
-import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "../services/supabaseClient";
 import { bootstrapHome } from "../services/cloudRegistry";
 import LandscapeFrame from "../components/LandscapeFrame";
+import {
+  getAuthRedirectParams,
+  makeAuthCallbackUri,
+} from "../config/authRedirects";
+import {
+  fetchAuthProviderAvailability,
+  type AuthProviderAvailability,
+} from "../services/authProviderAvailability";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const AUTH_LOTTIE_SOURCE = require("../../assets/animations/auth-hero.json");
 
-const redirectUri = AuthSession.makeRedirectUri({
-  scheme: "vantahome",
-  path: "auth-callback",
-});
+const redirectUri = makeAuthCallbackUri();
 
 type OAuthProvider = "apple" | "google";
-
-const getAuthParams = (url: string) => {
-  const parsed = new URL(url);
-  const params = new URLSearchParams(parsed.search);
-  if (parsed.hash) {
-    const hashParams = new URLSearchParams(parsed.hash.replace(/^#/, ""));
-    hashParams.forEach((value, key) => params.set(key, value));
-  }
-  return params;
-};
 
 type Props = NativeStackScreenProps<RootStackParamList, "Auth">;
 
@@ -113,6 +107,20 @@ export default function AuthScreen({}: Props) {
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
   const [emailAuthLoading, setEmailAuthLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [authProviders, setAuthProviders] = useState<AuthProviderAvailability>({
+    apple: false,
+    google: false,
+  });
+
+  useEffect(() => {
+    let active = true;
+    void fetchAuthProviderAvailability().then((providers) => {
+      if (active) setAuthProviders(providers);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const emailValid = useMemo(() => /\S+@\S+\.\S+/.test(email.trim()), [email]);
   const passwordOk = password.trim().length >= 6;
@@ -385,7 +393,11 @@ export default function AuthScreen({}: Props) {
         return;
       }
 
-      const params = getAuthParams(result.url);
+      const params = getAuthRedirectParams(result.url);
+      if (!params) {
+        Alert.alert("Sign-in failed", "The provider returned an invalid URL.");
+        return;
+      }
       const code = params.get("code");
       const accessToken = params.get("access_token");
       const refreshToken = params.get("refresh_token");
@@ -474,7 +486,9 @@ export default function AuthScreen({}: Props) {
     if (resetLoading || emailAuthLoading || oauthLoading) return;
     setResetLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(safeEmail);
+      const { error } = await supabase.auth.resetPasswordForEmail(safeEmail, {
+        redirectTo: redirectUri,
+      });
       if (error) {
         Alert.alert("Reset failed", error.message);
         return;
@@ -637,7 +651,12 @@ export default function AuthScreen({}: Props) {
             : "Forgot password?"}
         </Text>
         {mode === "login" && (
-          <Pressable onPress={handleResetPassword} disabled={resetLoading}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Send password reset email"
+            onPress={handleResetPassword}
+            disabled={resetLoading}
+          >
             <Text style={hintLinkStyle}>
               {resetLoading ? "Sending…" : "Reset"}
             </Text>
@@ -674,46 +693,58 @@ export default function AuthScreen({}: Props) {
         </LinearGradient>
       </Pressable>
 
-      <View style={styles.orRow}>
-        <View style={styles.orLine} />
-        <Text style={styles.orText}>or</Text>
-        <View style={styles.orLine} />
-      </View>
+      {(authProviders.apple || authProviders.google) && (
+        <>
+          <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.orLine} />
+          </View>
 
-      <View style={styles.socialRow}>
-        <Pressable
-          style={socialButtonStyle(Boolean(oauthLoading))}
-          onPress={() => handleOAuth("apple")}
-          disabled={oauthLoading !== null || emailAuthLoading}
-        >
-          {oauthLoading === "apple" ? (
-            <ActivityIndicator size="small" color="#0C0C12" />
-          ) : (
-            <Ionicons
-              name="logo-apple"
-              size={Math.round(18 * scale)}
-              color="#0C0C12"
-            />
-          )}
-          <Text style={socialTextStyle}>Apple</Text>
-        </Pressable>
-        <Pressable
-          style={socialButtonStyle(Boolean(oauthLoading))}
-          onPress={() => handleOAuth("google")}
-          disabled={oauthLoading !== null || emailAuthLoading}
-        >
-          {oauthLoading === "google" ? (
-            <ActivityIndicator size="small" color="#0C0C12" />
-          ) : (
-            <Ionicons
-              name="logo-google"
-              size={Math.round(18 * scale)}
-              color="#0C0C12"
-            />
-          )}
-          <Text style={socialTextStyle}>Google</Text>
-        </Pressable>
-      </View>
+          <View style={styles.socialRow}>
+            {authProviders.apple && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Apple"
+                style={socialButtonStyle(Boolean(oauthLoading))}
+                onPress={() => handleOAuth("apple")}
+                disabled={oauthLoading !== null || emailAuthLoading}
+              >
+                {oauthLoading === "apple" ? (
+                  <ActivityIndicator size="small" color="#0C0C12" />
+                ) : (
+                  <Ionicons
+                    name="logo-apple"
+                    size={Math.round(18 * scale)}
+                    color="#0C0C12"
+                  />
+                )}
+                <Text style={socialTextStyle}>Apple</Text>
+              </Pressable>
+            )}
+            {authProviders.google && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Google"
+                style={socialButtonStyle(Boolean(oauthLoading))}
+                onPress={() => handleOAuth("google")}
+                disabled={oauthLoading !== null || emailAuthLoading}
+              >
+                {oauthLoading === "google" ? (
+                  <ActivityIndicator size="small" color="#0C0C12" />
+                ) : (
+                  <Ionicons
+                    name="logo-google"
+                    size={Math.round(18 * scale)}
+                    color="#0C0C12"
+                  />
+                )}
+                <Text style={socialTextStyle}>Google</Text>
+              </Pressable>
+            )}
+          </View>
+        </>
+      )}
 
     </>
   );

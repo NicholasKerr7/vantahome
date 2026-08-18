@@ -28,18 +28,15 @@ import {
 import { useResponsive } from "../theme/layout";
 import { deviceClient, type ConnectionStatus } from "../services/deviceClient";
 import { bootstrapHome } from "../services/cloudRegistry";
-import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 import { runtimePolicy } from "../config/runtimeMode";
+import { makeVoiceLinkUri } from "../config/authRedirects";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const voiceRedirectUri = AuthSession.makeRedirectUri({
-  scheme: "vantahome",
-  path: "voice-link",
-});
+const voiceRedirectUri = makeVoiceLinkUri();
 
 type IntegrationRowProps = {
   provider: IntegrationProvider;

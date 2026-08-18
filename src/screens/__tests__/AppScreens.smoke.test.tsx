@@ -10,6 +10,7 @@ import ManageRoomsScreen from "../ManageRoomsScreen";
 import NotificationsScreen from "../NotificationsScreen";
 import ProfileScreen from "../ProfileScreen";
 import RoomScreen from "../RoomScreen";
+import PasswordRecoveryScreen from "../PasswordRecoveryScreen";
 import {
   useHomeStore,
   type AutomationFlow,
@@ -110,6 +111,10 @@ jest.mock("expo-auth-session", () => ({
 jest.mock("expo-web-browser", () => ({
   maybeCompleteAuthSession: jest.fn(),
   openAuthSessionAsync: jest.fn(() => Promise.resolve({ type: "cancel" })),
+}));
+
+jest.mock("../../services/authProviderAvailability", () => ({
+  fetchAuthProviderAvailability: jest.fn(() => new Promise(() => {})),
 }));
 
 jest.mock("@react-native-masked-view/masked-view", () => {
@@ -234,6 +239,10 @@ describe("App screens smoke coverage", () => {
     const navigation = { replace: jest.fn(), goBack: jest.fn() } as any;
     const route = { key: "Auth", name: "Auth" } as any;
     renderScreen(<AuthScreen navigation={navigation} route={route} />);
+  });
+
+  it("renders PasswordRecoveryScreen", () => {
+    renderScreen(<PasswordRecoveryScreen onComplete={jest.fn()} />);
   });
 
   it("renders OnboardingScreen", () => {

@@ -83,6 +83,11 @@ Status: **automated security gate passed; external review pending**
   endpoints authenticate their own client credentials or provider-bound
   VantaHome tokens. Live unauthenticated probes reach those handlers and are
   rejected with their expected `400`/`401` responses.
+- Mobile authentication now uses one guarded native callback shared by social
+  sign-in and password recovery. Recovery links establish a session only from
+  the exact VantaHome callback and present a dedicated password replacement
+  screen before household loading resumes. The sign-in UI reads GoTrue's public
+  provider settings so disabled providers are not offered as broken actions.
 
 ## Remaining before the Sprint 2 gate
 

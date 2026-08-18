@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Linking } from "react-native";
 import {
   NavigationContainer,
   DefaultTheme,
@@ -26,6 +27,11 @@ import { syncMembershipFromSupabase } from "../services/membership";
 import { bootstrapHome } from "../services/cloudRegistry";
 import { useHomeStore } from "../store/useHomeStore";
 import { resolveAuthExperience } from "../config/runtimeMode";
+import {
+  getAuthRedirectParams,
+  isAuthCallbackUrl,
+} from "../config/authRedirects";
+import PasswordRecoveryScreen from "../screens/PasswordRecoveryScreen";
 
 /**
  * Root stack for the app.
@@ -38,6 +44,7 @@ import { resolveAuthExperience } from "../config/runtimeMode";
  */
 export type RootStackParamList = {
   Auth: undefined;
+  PasswordRecovery: undefined;
   Onboarding: undefined;
   Main: NavigatorScreenParams<BottomTabParamList>;
   Room: { roomId?: string; showAll?: boolean };
@@ -55,6 +62,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   const [session, setSession] = useState<Session | null>(null);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [authReady, setAuthReady] = useState(!supabase);
   const setHouseholdFromRemote = useHomeStore((s) => s.setHouseholdFromRemote);
   const setRoomMembersFromRemote = useHomeStore(
@@ -64,8 +72,9 @@ export default function AppNavigator() {
 
   useEffect(() => {
     if (!supabase) return;
+    const authClient = supabase;
     let mounted = true;
-    supabase.auth
+    authClient.auth
       .getSession()
       .then(({ data }) => {
         if (!mounted) return;
@@ -77,17 +86,55 @@ export default function AppNavigator() {
         setSession(null);
         setAuthReady(true);
       });
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const handleAuthUrl = async (url: string | null) => {
+      if (!mounted || !url || !isAuthCallbackUrl(url)) return;
+      const params = getAuthRedirectParams(url);
+      if (!params) return;
+      const isRecovery = params.get("type") === "recovery";
+      if (isRecovery) setPasswordRecovery(true);
+
+      const code = params.get("code");
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+      let recoveredSession: Session | null = null;
+      try {
+        if (code) {
+          const { data, error } =
+            await authClient.auth.exchangeCodeForSession(code);
+          if (!error) recoveredSession = data.session;
+        } else if (accessToken && refreshToken) {
+          const { data, error } = await authClient.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (!error) recoveredSession = data.session;
+        }
+      } catch {
+        recoveredSession = null;
+      } finally {
+        if (mounted && isRecovery && !recoveredSession) {
+          setPasswordRecovery(false);
+        }
+      }
+    };
+
+    void Linking.getInitialURL().then(handleAuthUrl).catch(() => undefined);
+    const linkSubscription = Linking.addEventListener("url", ({ url }) => {
+      void handleAuthUrl(url);
+    });
+    const { data } = authClient.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
       setSession(nextSession ?? null);
     });
     return () => {
       mounted = false;
+      linkSubscription.remove();
       data.subscription.unsubscribe();
     };
   }, []);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || passwordRecovery) return;
     let active = true;
     const ensureMembership = async () => {
       let result = await syncMembershipFromSupabase();
@@ -118,7 +165,13 @@ export default function AppNavigator() {
     return () => {
       active = false;
     };
-  }, [session, setActiveMember, setHouseholdFromRemote, setRoomMembersFromRemote]);
+  }, [
+    passwordRecovery,
+    session,
+    setActiveMember,
+    setHouseholdFromRemote,
+    setRoomMembersFromRemote,
+  ]);
 
   if (!authReady) {
     return null;
@@ -138,7 +191,15 @@ export default function AppNavigator() {
         }}
       >
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {authExperience === "configuration-required" ? (
+          {passwordRecovery && session ? (
+            <Stack.Screen name="PasswordRecovery">
+              {() => (
+                <PasswordRecoveryScreen
+                  onComplete={() => setPasswordRecovery(false)}
+                />
+              )}
+            </Stack.Screen>
+          ) : authExperience === "configuration-required" ? (
             <Stack.Screen name="Auth" component={AuthRequiredScreen} />
           ) : authExperience === "authenticated" ||
             authExperience === "demo" ? (
