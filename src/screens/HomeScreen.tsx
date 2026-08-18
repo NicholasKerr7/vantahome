@@ -69,8 +69,11 @@ export default function HomeScreen() {
       scale,
   );
   const tabletLandscapeBottomLift = Math.round(
-    (isVeryShortTabletLandscape ? 6 : isShortTabletLandscape ? 12 : 34) *
+    (isVeryShortTabletLandscape ? 6 : isShortTabletLandscape ? 12 : 0) *
       scale,
+  );
+  const tabletLandscapeDeckOffset = Math.round(
+    (isShortTabletLandscape ? 0 : 42) * scale,
   );
   const landscapeCarouselWidth = isTabletLandscape
     ? Math.min(
@@ -183,6 +186,9 @@ export default function HomeScreen() {
       width: landscapeCarouselWidth,
       marginTop: 0,
       alignSelf: "center",
+      // The fixed tab bar carries substantial visual weight. Lowering only the
+      // room deck balances that weight without pulling the orb off center.
+      transform: [{ translateY: tabletLandscapeDeckOffset }],
     },
   ];
   const roomsHeaderStyle: StyleProp<ViewStyle> = [
@@ -211,8 +217,8 @@ export default function HomeScreen() {
       gap: landscapeGap,
     },
     isTabletLandscape && {
-      // Visually center the combined orb/deck composition in the space above
-      // the persistent tab bar, with a slight upward bias for optical balance.
+      // Center the hero group within the usable viewport; the room section has
+      // its own optical offset on taller tablets to balance the fixed tab bar.
       paddingBottom: tabletLandscapeBottomLift,
       flexDirection: "column",
       alignItems: "center",
