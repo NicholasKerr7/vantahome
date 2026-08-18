@@ -41,7 +41,10 @@ Use this checklist before shipping a production build.
 - [x] Configure and automatically verify app version plus iOS/Android build
   numbers using [Release Versioning](./RELEASE_VERSIONING.md).
 - [ ] Build release artifacts for iOS/Android.
-- [ ] Validate app icons, splash, and store metadata.
+- [x] Replace Expo placeholders and automatically validate app icons, splash,
+  favicon, display name, and native iOS copies using
+  [Release Assets](./RELEASE_ASSETS.md).
+- [ ] Finalize store listing metadata, screenshots, app identifiers, and URLs.
 - [ ] Generate privacy policy + terms, update URLs in stores.
 
 ## Post‑release

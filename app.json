@@ -1,20 +1,21 @@
 {
   "expo": {
-    "name": "vantahome",
+    "name": "VantaHome",
     "slug": "vantahome",
     "scheme": "vantahome",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/release/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/release/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#050612"
     },
     "ios": {
       "supportsTablet": true,
       "buildNumber": "1",
+      "icon": "./assets/release/icon.png",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow VantaHome to access your photo library to set a profile avatar.",
         "NSFaceIDUsageDescription": "Allow VantaHome to confirm sensitive home actions.",
@@ -25,9 +26,10 @@
     },
     "android": {
       "versionCode": 1,
+      "icon": "./assets/release/icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/release/adaptive-icon.png",
+        "backgroundColor": "#050612"
       },
       "permissions": [
         "android.permission.READ_MEDIA_IMAGES",
@@ -36,7 +38,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/release/favicon.png"
     },
     "plugins": [
       "expo-font",

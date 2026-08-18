@@ -6,6 +6,9 @@ This folder contains the final Vantahome brand source files.
 
 - `vantahome-mark.svg` — standalone brand mark / source icon direction.
 - `vantahome-logo-horizontal.svg` — full horizontal logo lockup with wordmark.
+- `vantahome-app-icon.svg` — opaque, full-bleed iOS/legacy icon source.
+- `vantahome-adaptive-foreground.svg` — transparent Android foreground source.
+- `vantahome-splash.svg` — padded transparent splash source.
 
 ## Meaning
 
