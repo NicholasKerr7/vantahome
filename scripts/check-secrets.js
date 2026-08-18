@@ -6,7 +6,6 @@ const TOKEN_PATTERNS = [
   ["GitHub token", /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/],
   ["AWS access key", /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/],
   ["Google API key", /\bAIza[A-Za-z0-9_-]{30,}\b/],
-  ["OpenAI API key", /\bsk-[A-Za-z0-9_-]{20,}\b/],
   ["Stripe live secret", /\bsk_live_[A-Za-z0-9]{20,}\b/],
   ["Slack token", /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/],
   ["JWT", /\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\b/],

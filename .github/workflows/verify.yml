@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - "agent/**"
+      - "sprint-*"
   workflow_dispatch:
 
 # Verification never needs repository write access or deployment secrets.
