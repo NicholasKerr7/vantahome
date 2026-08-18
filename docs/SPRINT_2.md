@@ -9,6 +9,9 @@ The external review scope and non-binding vendor inquiry are prepared in
 ## Implemented
 
 - Native Supabase sessions use Keychain/Keystore through Expo SecureStore.
+  Generation-based UTF-8 chunks stay below native value limits, preserve
+  legacy sessions until their next write, and commit atomically through a
+  small manifest.
 - Action permissions distinguish ordinary controls from cameras, locks,
   garages/gates, stoves, safety devices, automations, and invitations.
 - Local command authorization checks both room scope and action permission.
