@@ -1306,6 +1306,10 @@ export default function ProfileScreen({ navigation }: Props) {
               </Text>
             </View>
             <Pressable
+              accessibilityLabel={`Remove ${member.name}`}
+              accessibilityState={{
+                disabled: !canManageHousehold || member.role === "Owner",
+              }}
               style={styles.memberRemove}
               onPress={() => void handleRemoveMember(member.id)}
               hitSlop={8}
@@ -1546,6 +1550,7 @@ export default function ProfileScreen({ navigation }: Props) {
                 <View style={headerRowStyle}>
                   <View style={headerSlotStyle}>
                     <Pressable
+                      accessibilityLabel="Back"
                       style={iconButtonStyle}
                       onPress={() => navigation.goBack()}
                     >

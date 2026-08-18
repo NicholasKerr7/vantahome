@@ -445,6 +445,7 @@ export default function NotificationsScreen() {
         style={topBarStyle}
       >
         <Pressable
+          accessibilityLabel="Back"
           style={iconButtonStyle}
           onPress={() => {
             if (navigation.canGoBack()) navigation.goBack();

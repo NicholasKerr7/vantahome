@@ -164,6 +164,7 @@ export default function TabBar({
           <Pressable
             key={route.key}
             accessibilityRole="button"
+            accessibilityLabel={route.name}
             accessibilityState={isFocused ? { selected: true } : {}}
             onPress={onPress}
             style={styles.item}

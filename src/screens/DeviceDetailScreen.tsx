@@ -9121,6 +9121,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           <View style={styles.panelBody}>
             <View style={headerPillStyle}>
               <Pressable
+                accessibilityLabel="Back"
                 onPress={() => navigation.goBack()}
                 style={headerBtnStyle}
                 hitSlop={10}
@@ -9141,6 +9142,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               </Text>
 
               <Pressable
+                accessibilityLabel={`Edit ${device.name}`}
                 style={headerBtnStyle}
                 hitSlop={10}
                 onPress={() => setShowEdit(true)}
@@ -9787,7 +9789,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </View>
 
           <View style={powerDockStyle}>
-            <Pressable style={styles.powerWrap} onPress={handlePowerToggle}>
+            <Pressable
+              accessibilityLabel={`${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
+              accessibilityState={{ selected: device.isOn }}
+              style={styles.powerWrap}
+              onPress={handlePowerToggle}
+            >
               <View style={powerRingStyle}>
                 <LinearGradient
                   colors={

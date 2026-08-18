@@ -815,6 +815,7 @@ export default function HomeScreen() {
                 </Text>
                 <View style={styles.topActions}>
                   <Pressable
+                    accessibilityLabel="Notifications"
                     style={bellStyle}
                     onPress={() => goRoot("Notifications")}
                     testID="home-notifications-button"
@@ -826,6 +827,7 @@ export default function HomeScreen() {
                     />
                   </Pressable>
                   <Pressable
+                    accessibilityLabel="Profile"
                     style={styles.avatarBtn}
                     onPress={() => goRoot("Profile")}
                     hitSlop={8}

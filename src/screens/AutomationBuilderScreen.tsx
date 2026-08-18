@@ -509,7 +509,11 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
         <Text style={itemLabelStyle}>{label}</Text>
         <Text style={itemValueStyle}>{text}</Text>
       </View>
-      <Pressable style={styles.removeBtn} onPress={onRemove}>
+      <Pressable
+        accessibilityLabel={`Remove ${label.toLowerCase()}`}
+        style={styles.removeBtn}
+        onPress={onRemove}
+      >
         <Ionicons
           name="close"
           size={Math.round(16 * scale)}
@@ -528,6 +532,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
 
       <View style={headerStyle}>
         <Pressable
+          accessibilityLabel="Back"
           style={headerButtonStyle}
           onPress={() => navigation.goBack()}
         >
@@ -541,6 +546,8 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           {isEditing ? "Edit Flow" : "New Flow"}
         </Text>
         <Pressable
+          accessibilityLabel="Save flow"
+          accessibilityState={{ disabled: !canSave }}
           style={headerSaveButtonStyle(!canSave)}
           onPress={handleSave}
           disabled={!canSave}

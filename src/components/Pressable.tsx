@@ -17,6 +17,7 @@ export default function Pressable({
   style,
   pressedStyle,
   disablePressedStyle,
+  accessibilityRole = "button",
   ...props
 }: Props) {
   const applyPressedStyle = !disablePressedStyle;
@@ -25,6 +26,7 @@ export default function Pressable({
     return (
       <RNPressable
         {...props}
+        accessibilityRole={accessibilityRole}
         style={(state) => {
           const base = style(state);
           if (!state.pressed || !applyPressedStyle) return base;
@@ -37,6 +39,7 @@ export default function Pressable({
   return (
     <RNPressable
       {...props}
+      accessibilityRole={accessibilityRole}
       style={({ pressed }) => [
         style,
         pressed && applyPressedStyle && DEFAULT_PRESSED_STYLE,

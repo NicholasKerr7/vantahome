@@ -689,6 +689,7 @@ export default function RoomScreen({ route, navigation }: Props) {
         >
           <View style={topRowStyle}>
           <Pressable
+            accessibilityLabel="Back"
             style={iconButtonStyle}
             onPress={() => navigation.goBack()}
           >
@@ -712,6 +713,7 @@ export default function RoomScreen({ route, navigation }: Props) {
             <View style={headerSlotStyle} />
           ) : (
             <Pressable
+              accessibilityLabel="Add device"
               style={iconButtonStyle}
               onPress={handleAddDevice}
             >

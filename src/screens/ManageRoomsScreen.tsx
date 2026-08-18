@@ -290,6 +290,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
       <View style={contentStyle}>
         <View style={styles.top}>
           <Pressable
+            accessibilityLabel="Back"
             style={iconButtonStyle}
             onPress={() => navigation.goBack()}
           >
@@ -297,6 +298,8 @@ export default function ManageRoomsScreen({ navigation }: Props) {
           </Pressable>
           <Text style={titleTextStyle}>Manage Rooms</Text>
           <Pressable
+            accessibilityLabel="Add room"
+            accessibilityState={{ disabled: !canManageRooms }}
             style={iconButtonStyle}
             onPress={() => setShowAdd(true)}
             disabled={!canManageRooms}

@@ -280,6 +280,8 @@ export default function DeviceTile({
         </View>
 
         <Pressable
+          accessibilityLabel={`${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
+          accessibilityState={{ selected: device.isOn }}
           onPress={(e) =>
             stop(e, () =>
               isOpenableKind(device.kind)

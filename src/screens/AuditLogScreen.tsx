@@ -128,7 +128,11 @@ export default function AuditLogScreen({ navigation }: Props) {
           radius={frameRadius}
         >
           <View style={styles.header}>
-            <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Pressable
+              accessibilityLabel="Back"
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
               <Ionicons name="chevron-back" size={18} color={theme.colors.text} />
             </Pressable>
             <View style={styles.headerText}>

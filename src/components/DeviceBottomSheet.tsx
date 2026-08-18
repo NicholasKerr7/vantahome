@@ -265,6 +265,8 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     </View>
 
                     <Pressable
+                      accessibilityLabel={`${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
+                      accessibilityState={{ selected: device.isOn }}
                       onPress={onToggle}
                       style={powerStyle(device.isOn)}
                     >
