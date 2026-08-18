@@ -267,8 +267,8 @@ export default function SettingsScreen() {
     isWide && styles.heroLayoutLandscape,
   ];
   const heroColumnStyle: StyleProp<ViewStyle> = [
-    styles.heroColumn,
     { minWidth: 0 },
+    isWide && styles.heroColumn,
   ];
   const heroPanelStyle: StyleProp<ViewStyle> = [
     styles.heroPanel,

@@ -28,6 +28,7 @@ export default function GradientOrb({
   onVoicePress,
   onVoicePressIn,
   onVoicePressOut,
+  compact = false,
 }: {
   outdoor: { tempC: number; label: string };
   indoor: { tempC: number; label: string };
@@ -36,28 +37,41 @@ export default function GradientOrb({
   onVoicePress?: () => void;
   onVoicePressIn?: () => void;
   onVoicePressOut?: () => void;
+  compact?: boolean;
 }) {
   const { width, isTablet, isLandscape, scale } = useResponsive();
-  const baseSize = isTablet ? (isLandscape ? 320 : 380) : 280;
+  const baseSize = compact
+    ? isTablet
+      ? 250
+      : 210
+    : isTablet
+      ? isLandscape
+        ? 320
+        : 380
+      : 280;
   const maxSize = isTablet ? width * (isLandscape ? 0.42 : 0.62) : width - 60;
-  const orbSize = Math.max(240, Math.min(baseSize, maxSize));
+  const orbSize = Math.max(compact ? 200 : 240, Math.min(baseSize, maxSize));
   const radius = orbSize / 2;
   const innerInset = Math.max(10, Math.round(orbSize * 0.035));
   const innerRadius = radius - innerInset;
   const orbPadding = Math.round(
-    (isTablet ? (isLandscape ? 30 : 34) : 28) * scale,
+    (compact ? (isTablet ? 20 : 16) : isTablet ? (isLandscape ? 30 : 34) : 28) *
+      scale,
   );
   const hasVoice =
     !!onVoicePress || !!onVoicePressIn || !!onVoicePressOut || !!voiceActive;
   const voiceAuraSize = Math.round(orbSize * (isTablet ? 1.2 : 1.14));
   const tempSize = Math.round(
-    (isTablet ? (isLandscape ? 34 : 38) : 34) * scale,
+    (compact ? (isTablet ? 28 : 25) : isTablet ? (isLandscape ? 34 : 38) : 34) *
+      scale,
   );
   const labelSize = Math.round((isTablet ? 13 : 12) * scale);
   const promptTitleSize = Math.round((isTablet ? 18 : 16) * scale);
   const promptSubSize = Math.round((isTablet ? 12 : 11) * scale);
   const rowGap = Math.round((isTablet ? 10 : 8) * scale);
-  const dividerSpacing = Math.round((isTablet ? 18 : 14) * scale);
+  const dividerSpacing = Math.round(
+    (compact ? (isTablet ? 11 : 8) : isTablet ? 18 : 14) * scale,
+  );
   const iconSize = Math.round((isTablet ? 20 : 18) * scale);
   const gradientColors: [string, string, string] = isTablet
     ? [

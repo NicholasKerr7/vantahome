@@ -47,10 +47,20 @@ export default function HomeScreen() {
   const roomsTitleSize = Math.round((isTablet ? 18 : 16) * scale);
   const roomsBtnHeight = Math.round((isTablet ? 38 : 34) * scale);
   const roomsBtnText = Math.round((isTablet ? 13 : 12) * scale);
-  const roomsGap = Math.round((isTablet ? 10 : 8) * scale);
+  const roomsGap = Math.round((isTablet ? 10 : 6) * scale);
   const heroGap = Math.round((isTablet ? 28 : 16) * scale);
   const contentInset = Math.round(gutter);
-  const headerPadTop = topPad;
+  const headerPadTop = isLandscape
+    ? Math.round((isTablet ? 26 : 18) * scale)
+    : topPad;
+  // Landscape keeps live status and room controls visible together instead of
+  // forcing the full-size portrait hero above the room deck.
+  const landscapeGap = Math.round((isTablet ? 26 : 16) * scale);
+  const landscapeOrbWidth = Math.round((isTablet ? 270 : 220) * scale);
+  const landscapeCarouselWidth = Math.max(
+    300,
+    contentWidth - contentInset * 2 - landscapeOrbWidth - landscapeGap,
+  );
   const avatarSize = Math.round(
     (isTablet ? (isLandscape ? 48 : 52) : 38) * scale,
   );
@@ -143,6 +153,11 @@ export default function HomeScreen() {
   const roomsSectionStyle: StyleProp<ViewStyle> = [
     styles.roomsSection,
     { marginTop: heroGap },
+    isLandscape && {
+      flex: 1,
+      width: 0,
+      marginTop: Math.round((isTablet ? 12 : 6) * scale),
+    },
   ];
   const roomsHeaderStyle: StyleProp<ViewStyle> = [
     styles.roomsHeader,
@@ -164,20 +179,31 @@ export default function HomeScreen() {
     },
     isLandscape && {
       paddingBottom: Math.round((isTablet ? 18 : 12) * scale),
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: landscapeGap,
     },
   ];
   const heroOrbWrapStyle: StyleProp<ViewStyle> = [
     styles.heroOrbWrap,
-    (!isLandscape || !isTablet) && {
+    !isLandscape && {
       flex: 1,
       justifyContent: "center",
+    },
+    isLandscape && {
+      flexGrow: 0,
+      flexShrink: 0,
+      flexBasis: landscapeOrbWidth,
+      width: landscapeOrbWidth,
+      paddingTop: Math.round((isTablet ? 18 : 8) * scale),
     },
   ];
   const roomsCarouselWrapStyle: StyleProp<ViewStyle> = [
     styles.roomsCarouselWrap,
     {
       marginTop: Math.round(
-        (isTablet ? (isLandscape ? 40 : 44) : isLandscape ? 28 : 30) * scale,
+        (isTablet ? (isLandscape ? 18 : 44) : isLandscape ? 12 : 30) * scale,
       ),
     },
   ];
@@ -191,7 +217,10 @@ export default function HomeScreen() {
   ];
   const roomsAddStyle: StyleProp<ViewStyle> = [
     styles.roomsAdd,
-    { height: roomsBtnHeight },
+    {
+      height: roomsBtnHeight,
+      paddingHorizontal: Math.round((isTablet ? 12 : 8) * scale),
+    },
   ];
   const roomsAddTextStyle: StyleProp<TextStyle> = [
     styles.roomsAddText,
@@ -821,6 +850,7 @@ export default function HomeScreen() {
                   unit={tempUnit}
                   voiceActive={showVoice}
                   onVoicePress={handleVoicePress}
+                  compact={isLandscape}
                 />
               </View>
 
@@ -872,6 +902,8 @@ export default function HomeScreen() {
                     }
                     wholeHomeDevices={hasWholeHome ? featuredDevices : undefined}
                     onWholeHomePress={() => goRoot("Room", { showAll: true })}
+                    compact={isLandscape}
+                    maxWidth={isLandscape ? landscapeCarouselWidth : undefined}
                   />
                 </View>
               </View>

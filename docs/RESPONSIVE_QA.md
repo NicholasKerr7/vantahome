@@ -21,6 +21,12 @@ portrait size. Internal scroll containers remained usable at reduced landscape
 height, the root matched each viewport, navigation remained reachable, and no
 page errors or error overlays were reported.
 
+The 2026-08-18 polish pass added a compact side-by-side Home dashboard for both
+landscape classes, reduced the phone landscape navigation footprint, prevented
+phone room-action clipping, increased onboarding headline contrast, and removed
+unintended flex growth from the Settings integration panels. All four viewport
+baselines were rechecked after these changes.
+
 ## Runtime regression found during QA
 
 The initial web development bundle parsed Zustand's ESM middleware inside a

@@ -74,16 +74,26 @@ jest.mock("@expo/vector-icons/Ionicons", () => {
 jest.mock("../../components/RoomCarousel", () => {
   const React = require("react");
   const { View } = require("react-native");
-  return function MockRoomCarousel() {
-    return <View testID="room-carousel-mock" />;
+  return function MockRoomCarousel(props: { compact?: boolean }) {
+    return (
+      <View
+        testID="room-carousel-mock"
+        accessibilityLabel={props.compact ? "compact" : "standard"}
+      />
+    );
   };
 });
 
 jest.mock("../../components/GradientOrb", () => {
   const React = require("react");
   const { View } = require("react-native");
-  return function MockGradientOrb() {
-    return <View />;
+  return function MockGradientOrb(props: { compact?: boolean }) {
+    return (
+      <View
+        testID="gradient-orb-mock"
+        accessibilityLabel={props.compact ? "compact" : "standard"}
+      />
+    );
   };
 });
 
@@ -106,6 +116,14 @@ describe("HomeScreen", () => {
 
   afterEach(() => {
     jest.clearAllTimers();
+    Object.assign(mockLayout, {
+      width: 390,
+      height: 844,
+      isLandscape: false,
+      isTablet: false,
+      contentWidth: 390,
+      scale: 1,
+    });
   });
 
   beforeEach(() => {
@@ -160,6 +178,30 @@ describe("HomeScreen", () => {
     const bell = tree.root.findByProps({ testID: "home-notifications-button" });
     act(() => bell.props.onPress());
     expect(mockParentNavigate).toHaveBeenCalledWith("Notifications", undefined);
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it("uses compact dashboard components in landscape", () => {
+    Object.assign(mockLayout, {
+      width: 844,
+      height: 390,
+      isLandscape: true,
+      contentWidth: 720,
+    });
+    let tree: ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<HomeScreen />);
+    });
+    expect(
+      tree.root.findByProps({ testID: "gradient-orb-mock" }).props
+        .accessibilityLabel,
+    ).toBe("compact");
+    expect(
+      tree.root.findByProps({ testID: "room-carousel-mock" }).props
+        .accessibilityLabel,
+    ).toBe("compact");
     act(() => {
       tree.unmount();
     });

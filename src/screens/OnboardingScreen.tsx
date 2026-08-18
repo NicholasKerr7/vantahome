@@ -13,7 +13,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { RootStackParamList } from "../app/AppNavigator";
-import GradientText from "../components/GradientText";
 import VantaHomeMark from "../components/VantaHomeMark";
 import BackgroundLines from "../components/BackgroundLines";
 import { theme } from "../theme/theme";
@@ -229,13 +228,7 @@ export default function OnboardingScreen({ navigation }: Props) {
               <Text style={headlineTextStyle}>
                 Your home
               </Text>
-              <GradientText
-                text="in sync."
-                colors={["#C9B7FF", "#7A5CFF"] as [string, string]}
-                textProps={{
-                  style: headlineAccentStyle,
-                }}
-              />
+              <Text style={headlineAccentStyle}>in sync.</Text>
               <Text style={subheadTextStyle}>
                 Scenes, automations, and live control blended into one elegant
                 dashboard.
@@ -387,7 +380,12 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     letterSpacing: -0.8,
   },
-  headlineAccent: { fontSize: 40, fontWeight: "900", letterSpacing: -0.8 },
+  headlineAccent: {
+    fontSize: 40,
+    fontWeight: "900",
+    letterSpacing: -0.8,
+    color: "#D9CCFF",
+  },
   subhead: {
     marginTop: 8,
     maxWidth: 320,

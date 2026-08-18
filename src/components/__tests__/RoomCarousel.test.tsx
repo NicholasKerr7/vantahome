@@ -1,5 +1,6 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
+import { StyleSheet } from "react-native";
 import RoomCarousel from "../RoomCarousel";
 import type { Device, Room } from "../../store/useHomeStore";
 
@@ -64,6 +65,17 @@ const devices: Device[] = [
 ];
 
 describe("RoomCarousel", () => {
+  afterEach(() => {
+    Object.assign(mockLayout, {
+      width: 390,
+      height: 844,
+      isLandscape: false,
+      isTablet: false,
+      contentWidth: 390,
+      scale: 1,
+    });
+  });
+
   it("renders a stacked deck with up to three cards", () => {
     let tree: ReactTestRenderer;
     act(() => {
@@ -93,6 +105,33 @@ describe("RoomCarousel", () => {
       testID: "room-carousel-card-peek",
     });
     expect(peeks.length).toBeGreaterThan(0);
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it("uses a bounded compact deck for landscape layouts", () => {
+    Object.assign(mockLayout, {
+      width: 844,
+      height: 390,
+      isLandscape: true,
+      contentWidth: 720,
+    });
+    let tree: ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(
+        <RoomCarousel
+          rooms={rooms}
+          devices={devices}
+          compact
+          maxWidth={448}
+        />,
+      );
+    });
+    const deck = tree.root.findByProps({ testID: "room-carousel-deck" });
+    const deckStyle = StyleSheet.flatten(deck.props.style);
+    expect(deckStyle.width).toBe(448);
+    expect(deckStyle.height).toBeLessThan(210);
     act(() => {
       tree.unmount();
     });

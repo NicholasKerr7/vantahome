@@ -49,13 +49,18 @@ export default function TabBar({
   const { width, isTablet, isLandscape, scale, gutter } = useResponsive();
   const insets = useSafeAreaInsets();
   const inset = isTablet ? (isLandscape ? 28 : 24) : gutter;
-  const bottomInset = insets.bottom > 0 ? insets.bottom + 8 : inset;
+  const bottomInset =
+    insets.bottom > 0
+      ? insets.bottom + 8
+      : !isTablet && isLandscape
+        ? 10
+        : inset;
   const maxWidth = isTablet ? (isLandscape ? 720 : 560) : width - inset * 2;
   const barWidth = Math.min(width - inset * 2, maxWidth);
   const barLeft = (width - barWidth) / 2;
   const count = state.routes.length;
   const barHeight = Math.round(
-    (isTablet ? (isLandscape ? 76 : 72) : 60) * scale,
+    (isTablet ? (isLandscape ? 76 : 72) : isLandscape ? 52 : 60) * scale,
   );
   const pillInset = Math.round((isTablet ? 10 : 8) * scale);
   const pillInsetX = Math.round((isTablet ? 10 : 6) * scale);
@@ -64,7 +69,7 @@ export default function TabBar({
   );
   const labelSize = Math.round((isTablet ? 12 : 11) * scale);
   const itemGap = Math.round((isTablet ? 8 : 6) * scale);
-  const barBackground = "rgba(245,235,255,0.92)";
+  const barBackground = "rgba(249,245,255,0.97)";
   const barBorder = "rgba(255,255,255,0.7)";
   const pillBorder = "rgba(255,255,255,0.35)";
   const pillColors: [string, string] = ["#B08CFF", "#6B3CFF"];

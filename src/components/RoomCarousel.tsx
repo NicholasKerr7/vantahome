@@ -457,6 +457,8 @@ export default function RoomCarousel({
   wholeHomeDevices,
   onWholeHomePress,
   onDevicePress,
+  compact = false,
+  maxWidth,
 }: {
   rooms: Room[];
   devices: Device[];
@@ -465,6 +467,8 @@ export default function RoomCarousel({
   wholeHomeDevices?: Device[];
   onWholeHomePress?: () => void;
   onDevicePress?: (deviceId: string) => void;
+  compact?: boolean;
+  maxWidth?: number;
 }) {
   const showWholeHome = Boolean(wholeHomeDevices?.length);
   const data = useMemo(
@@ -475,14 +479,19 @@ export default function RoomCarousel({
   const { width, isTablet, isLandscape, scale, gutter } = useResponsive();
   const listWidth = Math.min(
     width,
+    maxWidth ?? width,
     isTablet ? (isLandscape ? 980 : 880) : width,
   );
-  const sidePad = isTablet ? (isLandscape ? 56 : 40) : gutter;
-  const cardPad = Math.round((isTablet ? (isLandscape ? 26 : 24) : 16) * scale);
-  const cardHeight = Math.round(
-    (isTablet ? (isLandscape ? 234 : 242) : 170) * scale,
+  const sidePad = compact ? 0 : isTablet ? (isLandscape ? 56 : 40) : gutter;
+  const cardPad = Math.round(
+    (compact ? (isTablet ? 18 : 14) : isTablet ? (isLandscape ? 26 : 24) : 16) *
+      scale,
   );
-  const minCard = isTablet ? 360 : 260;
+  const cardHeight = Math.round(
+    (compact ? (isTablet ? 184 : 146) : isTablet ? (isLandscape ? 234 : 242) : 170) *
+      scale,
+  );
+  const minCard = compact ? 300 : isTablet ? 360 : 260;
   const cardWidth = Math.max(
     minCard,
     Math.round(listWidth - sidePad * 2),
@@ -493,18 +502,27 @@ export default function RoomCarousel({
       cardHeight,
       cardPad,
       iconTileWidth: (cardWidth - cardPad * 2) / 4,
-      titleSize: Math.round((isTablet ? (isLandscape ? 23 : 22) : 18) * scale),
-      titleSizeInactive: Math.round((isTablet ? 17 : 14) * scale),
+      titleSize: Math.round(
+        (compact ? (isTablet ? 19 : 16) : isTablet ? (isLandscape ? 23 : 22) : 18) *
+          scale,
+      ),
+      titleSizeInactive: Math.round(
+        (compact ? (isTablet ? 15 : 13) : isTablet ? 17 : 14) * scale,
+      ),
       subSize: Math.round((isTablet ? 14 : 12) * scale),
-      iconSize: Math.round((isTablet ? 26 : 22) * scale),
+      iconSize: Math.round(
+        (compact ? (isTablet ? 22 : 19) : isTablet ? 26 : 22) * scale,
+      ),
       iconLabelSize: Math.round((isTablet ? 12 : 11) * scale),
       iconRowTop: Math.round((isTablet ? 16 : 12) * scale),
       cardRadius: Math.round((isTablet ? 36 : 28) * scale),
       iconGap: Math.round((isTablet ? 12 : 8) * scale),
-      bubbleSize: Math.round((isTablet ? 52 : 42) * scale),
+      bubbleSize: Math.round(
+        (compact ? (isTablet ? 44 : 36) : isTablet ? 52 : 42) * scale,
+      ),
       bubbleRadius: Math.round((isTablet ? 18 : 14) * scale),
     }),
-    [cardWidth, cardHeight, cardPad, isTablet, isLandscape, scale],
+    [cardWidth, cardHeight, cardPad, compact, isTablet, isLandscape, scale],
   );
   const stackDepth = Math.round(cardHeight * (isTablet ? 0.28 : 0.24));
   const containerHeight = cardHeight + stackDepth;
