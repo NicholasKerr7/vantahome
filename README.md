@@ -14,6 +14,19 @@ are documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Scenes and automations with device state previews and ON highlighting.
 - Profile, settings, notifications, onboarding, and management flows.
 
+## Screenshots
+
+These iPhone simulator captures use VantaHome's explicitly labeled seeded demo
+mode. No production household data or credentials are shown.
+
+| Home | Automations | Scenes |
+| --- | --- | --- |
+| ![VantaHome mobile home dashboard](docs/screenshots/mobile-home.png) | ![VantaHome mobile automations](docs/screenshots/mobile-automations.png) | ![VantaHome mobile scenes](docs/screenshots/mobile-scenes.png) |
+
+| Devices | Device controls | Integrations |
+| --- | --- | --- |
+| ![VantaHome mobile device grid](docs/screenshots/mobile-devices.png) | ![VantaHome mobile TV controls](docs/screenshots/mobile-device-controls.png) | ![VantaHome mobile voice and integration settings](docs/screenshots/mobile-integrations.png) |
+
 ## Tech stack
 
 - Expo SDK 54 + React Native 0.81
