@@ -4,7 +4,8 @@ VantaHome is a premium smart-home client built with Expo and React Native. The
 seeded demo remains available, while production architecture is moving toward a
 local Vanta Bridge backed by Home Assistant. See
 [`docs/PRODUCT_CONSTITUTION.md`](docs/PRODUCT_CONSTITUTION.md) and
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Development and review practices
+are documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Features
 
