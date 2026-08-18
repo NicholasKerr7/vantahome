@@ -39,7 +39,8 @@ Use this checklist before shipping a production build.
 - [x] Run TypeScript, Edge Function, and Jest verification in GitHub Actions.
 - [x] Run unit tests: `npm test`.
 - [x] Add smoke tests for key flows (Auth, Rooms, DeviceDetail, Automations, Cameras).
-- [ ] Validate tablet/phone layouts in portrait/landscape.
+- [x] Validate tablet/phone layouts in portrait/landscape using the lightweight
+  React Native Web release-QA matrix in [RESPONSIVE_QA.md](./RESPONSIVE_QA.md).
 
 ## Build & Release
 - [x] Configure and automatically verify app version plus iOS/Android build
