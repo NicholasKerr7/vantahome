@@ -14,6 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "buildNumber": "1",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow VantaHome to access your photo library to set a profile avatar.",
         "NSFaceIDUsageDescription": "Allow VantaHome to confirm sensitive home actions.",
@@ -23,6 +24,7 @@
       "bundleIdentifier": "com.anonymous.vantahome"
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

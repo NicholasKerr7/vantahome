@@ -38,7 +38,8 @@ Use this checklist before shipping a production build.
 - [ ] Validate tablet/phone layouts in portrait/landscape.
 
 ## Build & Release
-- [ ] Configure app version + build numbers.
+- [x] Configure and automatically verify app version plus iOS/Android build
+  numbers using [Release Versioning](./RELEASE_VERSIONING.md).
 - [ ] Build release artifacts for iOS/Android.
 - [ ] Validate app icons, splash, and store metadata.
 - [ ] Generate privacy policy + terms, update URLs in stores.
