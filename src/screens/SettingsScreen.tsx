@@ -8,6 +8,7 @@ import {
   Easing,
   TextInput,
   Alert,
+  Linking,
 } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "../components/Pressable";
@@ -30,6 +31,8 @@ import { bootstrapHome } from "../services/cloudRegistry";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Constants from "expo-constants";
+import { runtimePolicy } from "../config/runtimeMode";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -44,6 +47,11 @@ type IntegrationRowProps = {
   description: string;
   icon: keyof typeof Ionicons.glyphMap;
 };
+
+const supportedVoiceProviders = new Set<IntegrationProvider>([
+  "alexa",
+  "google",
+]);
 
 export default function SettingsScreen() {
   const { width, gutter, topPad, isTablet, isLandscape, scale } =
@@ -133,6 +141,13 @@ export default function SettingsScreen() {
     }),
     [],
   );
+  const appVersion = Constants.expoConfig?.version ?? "Unknown";
+  const configuredSupportEmail = process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim();
+  const supportEmail =
+    configuredSupportEmail &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(configuredSupportEmail)
+      ? configuredSupportEmail
+      : null;
 
   const homeTitle = useMemo(() => {
     const custom = profile.homeName?.trim();
@@ -508,13 +523,7 @@ export default function SettingsScreen() {
   };
 
   const handleVoiceLink = async (provider: IntegrationProvider) => {
-    if (provider !== "alexa" && provider !== "google") {
-      Alert.alert(
-        "Coming soon",
-        "This integration uses a future bridge and is not available yet.",
-      );
-      return;
-    }
+    if (!supportedVoiceProviders.has(provider)) return;
     if (!voiceAuthorizeUrl) {
       Alert.alert(
         "Missing configuration",
@@ -558,7 +567,7 @@ export default function SettingsScreen() {
         Alert.alert("Linking failed", "No authorization code returned.");
         return;
       }
-      if (returnedState && returnedState !== state) {
+      if (returnedState !== state) {
         setIntegrationStatus(provider, "not-linked");
         Alert.alert("Linking failed", "Invalid state returned.");
         return;
@@ -585,6 +594,7 @@ export default function SettingsScreen() {
     const state = integrations[provider];
     const linked = state?.status === "linked";
     const linking = state?.status === "linking";
+    const supported = supportedVoiceProviders.has(provider);
     const integrationRowStyle: StyleProp<ViewStyle> = [
       styles.integrationRow,
       { paddingVertical: integrationPad, borderRadius: integrationRadius },
@@ -653,7 +663,13 @@ export default function SettingsScreen() {
         <View style={integrationActionsStyle}>
           <Animated.View style={statusPillInlineStyle}>
             <Text style={statusTextToneStyle}>
-              {linked ? "Linked" : linking ? "Linking…" : "Not linked"}
+              {linked
+                ? "Linked"
+                : linking
+                  ? "Linking…"
+                  : supported
+                    ? "Not linked"
+                    : "Planned"}
             </Text>
           </Animated.View>
 
@@ -664,6 +680,8 @@ export default function SettingsScreen() {
                   onPress={() => resyncIntegration(provider)}
                   style={secondaryBtnStyle}
                   hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Resync ${label}`}
                 >
                   <Ionicons
                     name="refresh"
@@ -675,6 +693,8 @@ export default function SettingsScreen() {
                   onPress={() => unlinkIntegration(provider)}
                   style={secondaryBtnStyle}
                   hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Unlink ${label}`}
                 >
                   <Ionicons
                     name="close"
@@ -689,11 +709,22 @@ export default function SettingsScreen() {
                   if (linking) return;
                   void handleVoiceLink(provider);
                 }}
-                style={primaryBtnStyle}
+                style={[
+                  primaryBtnStyle,
+                  !supported && styles.primaryBtnDisabled,
+                ]}
+                disabled={!supported || linking}
+                accessibilityRole="button"
+                accessibilityLabel={`${label}: ${supported ? "link account" : "unavailable"}`}
+                accessibilityState={{ disabled: !supported || linking }}
                 hitSlop={10}
               >
                 <Text style={primaryBtnTextStyle}>
-                  {linking ? "Linking…" : "Link account"}
+                  {linking
+                    ? "Linking…"
+                    : supported
+                      ? "Link account"
+                      : "Unavailable"}
                 </Text>
               </Pressable>
             )}
@@ -703,14 +734,16 @@ export default function SettingsScreen() {
     );
   };
 
-  const integrationStates = Object.values(integrations);
-  const linkedCount = integrationStates.filter(
+  const supportedIntegrationStates = Array.from(supportedVoiceProviders).map(
+    (provider) => integrations[provider],
+  );
+  const linkedCount = supportedIntegrationStates.filter(
     (integration) => integration.status === "linked",
   ).length;
-  const linkingCount = integrationStates.filter(
+  const linkingCount = supportedIntegrationStates.filter(
     (integration) => integration.status === "linking",
   ).length;
-  const availableCount = integrationStates.length;
+  const availableCount = supportedVoiceProviders.size;
   const pendingCount = Math.max(0, availableCount - linkedCount);
   const integrationProgress =
     availableCount > 0 ? linkedCount / availableCount : 0;
@@ -764,13 +797,13 @@ export default function SettingsScreen() {
     {
       provider: "homekit",
       label: "Apple HomeKit",
-      description: "Sync devices to the Apple Home app.",
+      description: "Planned through the future Vanta Bridge.",
       icon: "logo-apple",
     },
     {
       provider: "matter",
       label: "Matter Bridge",
-      description: "Matter-ready bridge for multi-ecosystem homes.",
+      description: "Not part of the VantaHome 1.0 integration scope.",
       icon: "link-outline",
     },
   ];
@@ -1080,19 +1113,35 @@ export default function SettingsScreen() {
       <Text style={sectionTitleStyle}>Support</Text>
       <View style={styles.row}>
         <Text style={rowLabelStyle}>App Version</Text>
-        <Text style={rowValueStyle}>1.0.0</Text>
+        <Text style={rowValueStyle}>{appVersion}</Text>
       </View>
-      <Pressable
-        style={secondaryWideBtnStyle}
-        onPress={() => {}}
-      >
-        <Ionicons
-          name="mail"
-          size={Math.round(16 * scale)}
-          color="rgba(60,60,80,0.9)"
-        />
-        <Text style={secondaryWideBtnTextStyle}>Send feedback</Text>
-      </Pressable>
+      <View style={styles.row}>
+        <Text style={rowLabelStyle}>Runtime</Text>
+        <Text style={rowValueStyle}>
+          {runtimePolicy.mode === "demo"
+            ? "Demo • seeded local data"
+            : runtimePolicy.mode}
+        </Text>
+      </View>
+      {supportEmail ? (
+        <Pressable
+          style={secondaryWideBtnStyle}
+          onPress={() => {
+            void Linking.openURL(
+              `mailto:${supportEmail}?subject=${encodeURIComponent(`VantaHome ${appVersion} feedback`)}`,
+            );
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Send VantaHome feedback by email"
+        >
+          <Ionicons
+            name="mail"
+            size={Math.round(16 * scale)}
+            color="rgba(60,60,80,0.9)"
+          />
+          <Text style={secondaryWideBtnTextStyle}>Send feedback</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
   const securityCard = (

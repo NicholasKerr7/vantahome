@@ -4,16 +4,17 @@ Use this checklist before shipping a production build.
 
 ## P0 Blockers
 - [ ] Replace demo camera URLs (`test-streams.mux.dev`, `picsum`) with real snapshot + stream endpoints.
-- [ ] Decide on `demoMode` (remove or keep with clear UX) and verify auth gate.
-- [ ] Remove/replace "stub" copy in Settings integrations + app version label.
-- [ ] Lock down realtime transport (MQTT/Supabase/WS) for production and disable mock fallback.
+- [x] Keep explicit demo mode with labeled seeded data; require Supabase auth in every other mode.
+- [x] Replace Settings integration/version stubs with supported-scope and runtime-derived labels.
+- [x] Lock down realtime transport (MQTT/Supabase/WS) for alpha/production and disable mock fallback.
 
 ## Auth & Security
 - [ ] Configure OAuth providers (Google, Apple, etc.) in Supabase.
 - [ ] Verify mobile redirect URIs (Expo + native).
 - [ ] Confirm RLS policies for invites, room_members, and device audit logs.
-- [ ] Add rate limits/abuse protection for public endpoints.
+- [x] Add rate limits/abuse protection for public endpoints.
 - [ ] Ensure no secrets committed; rotate keys if needed.
+- [ ] Resolve or formally accept Expo/React Native transitive dependency audit advisories before release.
 
 ## Data & Realtime
 - [ ] Confirm MQTT broker URL/TLS credentials and WS endpoints.
@@ -21,13 +22,13 @@ Use this checklist before shipping a production build.
 - [ ] Confirm offline behavior (last seen + cached thumbnail).
 
 ## Observability
-- [ ] Add crash reporting (Sentry/Crashlytics).
+- [x] Add optional Sentry crash reporting configured by environment.
 - [ ] Add basic analytics or feature flags if needed.
 - [ ] Verify logs do not include secrets/PII.
 
 ## QA
-- [ ] Run unit tests: `npm test`.
-- [ ] Run smoke tests for key flows (Auth, Rooms, DeviceDetail, Automations, Cameras).
+- [x] Run unit tests: `npm test`.
+- [x] Add smoke tests for key flows (Auth, Rooms, DeviceDetail, Automations, Cameras).
 - [ ] Validate tablet/phone layouts in portrait/landscape.
 
 ## Build & Release

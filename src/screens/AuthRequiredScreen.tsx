@@ -12,7 +12,9 @@ export default function AuthRequiredScreen() {
         <Text style={styles.title}>Auth required</Text>
         <Text style={styles.subtitle}>
           Supabase credentials are missing. Add EXPO_PUBLIC_SUPABASE_URL and
-          EXPO_PUBLIC_SUPABASE_ANON_KEY to your .env to enable sign‑in.
+          EXPO_PUBLIC_SUPABASE_ANON_KEY to your environment before running an
+          authenticated development, alpha, or production build. Set
+          EXPO_PUBLIC_VANTA_MODE=demo only for the clearly labeled local demo.
         </Text>
       </View>
     </LinearGradient>

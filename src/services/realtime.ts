@@ -3,7 +3,10 @@ import { useHomeStore } from "../store/useHomeStore";
 import { startMqttBridge } from "./mqttBridge";
 import { supabase } from "./supabaseClient";
 import { startSupabaseDeviceRealtime } from "./supabaseRealtime";
-import { runtimePolicy } from "../config/runtimeMode";
+import {
+  isAllowedDirectWebSocketUrl,
+  runtimePolicy,
+} from "../config/runtimeMode";
 
 type RealtimeOptions = {
   wsUrl?: string | null;
@@ -22,10 +25,15 @@ type RealtimeOptions = {
 
 export function startDeviceRealtime(options: RealtimeOptions = {}) {
   const enabled = options.enabled ?? true;
-  const wsUrl =
+  const configuredWsUrl =
     options.wsUrl === null
       ? null
       : (options.wsUrl ?? process.env.EXPO_PUBLIC_DEVICE_WS_URL);
+  // Persisted development settings must not reopen an insecure socket after
+  // the same app is promoted to alpha or production.
+  const wsUrl = isAllowedDirectWebSocketUrl(configuredWsUrl)
+    ? configuredWsUrl
+    : null;
   const mqttUrl = options.mqttUrl ?? process.env.EXPO_PUBLIC_MQTT_URL;
   const wantsMqtt = options.useMqtt ?? !!mqttUrl;
   const useMqtt = enabled && wantsMqtt;

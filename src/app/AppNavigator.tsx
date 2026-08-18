@@ -25,6 +25,7 @@ import { supabase } from "../services/supabaseClient";
 import { syncMembershipFromSupabase } from "../services/membership";
 import { bootstrapHome } from "../services/cloudRegistry";
 import { useHomeStore } from "../store/useHomeStore";
+import { resolveAuthExperience } from "../config/runtimeMode";
 
 /**
  * Root stack for the app.
@@ -123,8 +124,10 @@ export default function AppNavigator() {
     return null;
   }
 
-  const hasSupabase = Boolean(supabase);
-  const isAuthed = Boolean(session);
+  const authExperience = resolveAuthExperience({
+    hasSupabase: Boolean(supabase),
+    hasSession: Boolean(session),
+  });
   return (
     <BottomSheetModalProvider>
       <NavigationContainer
@@ -135,9 +138,10 @@ export default function AppNavigator() {
         }}
       >
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {!hasSupabase ? (
+          {authExperience === "configuration-required" ? (
             <Stack.Screen name="Auth" component={AuthRequiredScreen} />
-          ) : isAuthed ? (
+          ) : authExperience === "authenticated" ||
+            authExperience === "demo" ? (
             <>
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="Main" component={BottomTabs} />
