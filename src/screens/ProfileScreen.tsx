@@ -1227,14 +1227,6 @@ export default function ProfileScreen({ navigation }: Props) {
           />
         </View>
       ))}
-      <Pressable style={styles.rowAction}>
-        <Text style={rowActionTextStyle}>Manage trusted devices</Text>
-        <Ionicons
-          name="chevron-forward"
-          size={Math.round(16 * scale)}
-          color={theme.colors.subtext}
-        />
-      </Pressable>
     </View>,
     <View key="updates-reports" style={cardBaseStyle}>
       <View style={styles.cardHeader}>
@@ -1272,14 +1264,6 @@ export default function ProfileScreen({ navigation }: Props) {
           />
         </View>
       ))}
-      <Pressable style={styles.rowAction}>
-        <Text style={rowActionTextStyle}>View weekly report</Text>
-        <Ionicons
-          name="chevron-forward"
-          size={Math.round(16 * scale)}
-          color={theme.colors.subtext}
-        />
-      </Pressable>
     </View>,
     pendingInvitesCard,
     <View key="household" style={cardBaseStyle}>
