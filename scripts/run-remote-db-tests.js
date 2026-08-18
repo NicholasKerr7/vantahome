@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require("node:fs");
-const { spawnSync } = require("node:child_process");
+const { Client } = require("pg");
 const { readLocalEnv } = require("./check-supabase-readiness.js");
 
 function projectRefFromUrl(value) {
@@ -51,7 +51,41 @@ function validateRemoteTestTarget({ databaseUrl, appUrl, confirmation }) {
   }
 }
 
-function main() {
+function tapLinesFromQueryResult(result) {
+  const results = Array.isArray(result) ? result : [result];
+  return results.flatMap(({ rows = [] }) =>
+    rows.flatMap((row) =>
+      Object.values(row).filter(
+        (value) =>
+          typeof value === "string" &&
+          (/^(?:not )?ok\b/.test(value) || /^1\.\.\d+$/.test(value)),
+      ),
+    ),
+  );
+}
+
+async function runSqlTest(databaseUrl, path) {
+  const client = new Client({
+    connectionString: databaseUrl,
+    ssl: { rejectUnauthorized: false },
+  });
+  try {
+    await client.connect();
+    const result = await client.query(fs.readFileSync(path, "utf8"));
+    const tapLines = tapLinesFromQueryResult(result);
+    tapLines.forEach((line) => console.log(line));
+    if (!tapLines.some((line) => /^1\.\.\d+$/.test(line))) {
+      throw new Error(`${path} did not emit a pgTAP plan.`);
+    }
+    if (tapLines.some((line) => line.startsWith("not ok"))) {
+      throw new Error(`${path} reported a failing pgTAP assertion.`);
+    }
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+async function main() {
   const localEnv = readLocalEnv();
   const databaseUrl = process.env.SUPABASE_DB_URL ?? "";
   const appUrl =
@@ -75,19 +109,24 @@ function main() {
     .filter((name) => name.endsWith(".sql"))
     .sort()
     .map((name) => `supabase/tests/${name}`);
-  const result = spawnSync(
-    "supabase",
-    ["test", "db", ...tests, "--db-url", databaseUrl],
-    { stdio: "inherit" },
-  );
-  if (result.error) {
-    console.error("Unable to start the Supabase database test runner.");
+  try {
+    for (const path of tests) {
+      console.log(`Running ${path}`);
+      await runSqlTest(databaseUrl, path);
+    }
+    console.log(`${tests.length} remote pgTAP files passed.`);
+  } catch (error) {
+    console.error(
+      error instanceof Error ? error.message : "Remote database tests failed.",
+    );
     process.exitCode = 1;
-    return;
   }
-  process.exitCode = result.status ?? 1;
 }
 
-if (require.main === module) main();
+if (require.main === module) void main();
 
-module.exports = { projectRefFromUrl, validateRemoteTestTarget };
+module.exports = {
+  projectRefFromUrl,
+  tapLinesFromQueryResult,
+  validateRemoteTestTarget,
+};

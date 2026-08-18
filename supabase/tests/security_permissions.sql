@@ -1,5 +1,8 @@
 begin;
 
+create extension if not exists pgtap with schema extensions;
+set local search_path = public, extensions;
+
 select plan(12);
 
 select ok(role_has_action_permission('owner', 'lock.unlock'), 'owner can unlock');

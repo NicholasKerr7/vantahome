@@ -213,17 +213,16 @@ select ok(
 
 -- Observed state is immutable to every authenticated client, including owner.
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
-select is(
-  (with changed as (
-    update device_state set state = '{"isOn":true}'::jsonb
+select is_empty(
+  $$update device_state set state = '{"isOn":true}'::jsonb
     where device_id = '40000000-0000-0000-0000-000000000002'
-    returning 1
-  ) select count(*) from changed),
-  0::bigint,
+    returning device_id$$,
   'owner cannot mutate observed device state'
 );
 select throws_ok(
   $$insert into device_state (device_id, state) values ('40000000-0000-0000-0000-000000000025', '{}'::jsonb)$$,
+  '42501',
+  null,
   'authenticated state inserts are rejected'
 );
 
@@ -275,7 +274,7 @@ select throws_ok($$
     '{"op":"toggle","deviceId":"40000000-0000-0000-0000-000000000025","commandId":"guest-private-denied","nonce":"guest-private-denied-nonce","idempotencyKey":"guest-private-denied-key"}'::jsonb,
     'guest-private-denied-nonce', 'guest-private-denied-key', now(), now() + interval '15 seconds'
   )
-$$, 'unassigned-room command insert is rejected');
+$$, '42501', null, 'unassigned-room command insert is rejected');
 
 select throws_ok($$
   insert into device_commands (
@@ -288,7 +287,7 @@ select throws_ok($$
     '{"op":"toggle","deviceId":"40000000-0000-0000-0000-000000000002","commandId":"spoofed-actor-denied","nonce":"spoofed-actor-denied-nonce","idempotencyKey":"spoofed-actor-denied-key"}'::jsonb,
     'spoofed-actor-denied-nonce', 'spoofed-actor-denied-key', now(), now() + interval '15 seconds'
   )
-$$, 'spoofed command actor is rejected');
+$$, '42501', null, 'spoofed command actor is rejected');
 
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-0000-0000-000000000006","role":"authenticated"}', true);
 select ok(

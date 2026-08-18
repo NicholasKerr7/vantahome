@@ -1,5 +1,6 @@
 const {
   projectRefFromUrl,
+  tapLinesFromQueryResult,
   validateRemoteTestTarget,
 } = require("./run-remote-db-tests.js");
 
@@ -56,5 +57,15 @@ describe("remote database test safety", () => {
         confirmation: "true",
       }),
     ).toThrow("active app project");
+  });
+
+  test("extracts only pgTAP assertions and plans from query results", () => {
+    expect(
+      tapLinesFromQueryResult([
+        { rows: [{ ok: "ok 1 - owner can unlock" }] },
+        { rows: [{ set_config: '{"role":"authenticated"}' }] },
+        { rows: [{ finish: "1..1" }] },
+      ]),
+    ).toEqual(["ok 1 - owner can unlock", "1..1"]);
   });
 });

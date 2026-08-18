@@ -1,6 +1,6 @@
 # Sprint 2 — Security and Trust Boundary Closure
 
-Status: **in progress**
+Status: **automated security gate passed; external review pending**
 
 ## Implemented
 
@@ -70,25 +70,23 @@ Status: **in progress**
 - Migrations through 010 and every client-required Edge Function are deployed
   to the active Supabase project. A private rate-limit hashing secret is set,
   and the public readiness inventory passes while recognizing protected tables.
+- Migrations 001 through 010 were applied from scratch to a data-less disposable
+  Supabase project. The real PostgreSQL suites passed all 157 authorization
+  matrix assertions and all 12 permission-derivation assertions, then rolled
+  back their fixtures. The disposable project was deleted after the run.
 
 ## Remaining before the Sprint 2 gate
 
-- Execute the database authorization matrix against a disposable Supabase
-  project; the real pgTAP suite is present but has not yet run against Postgres.
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
-- Validate the migrations against a disposable Supabase project and perform an
-  external security review before alpha.
+- Perform an external security review before alpha.
 
-The disposable-project execution remains deferred until an isolated preview
-branch or project is provisioned. The remote runner now fails closed unless its
-target is explicitly confirmed as disposable and differs from the active app
-project. The committed pgTAP suite is a real database test, but its Docker-free
-Jest guardrail is not presented as equivalent to executing it against
-PostgreSQL.
+The remote runner fails closed unless its target is explicitly confirmed as
+disposable and differs from the active app project. It executes the real pgTAP
+suite through a lightweight PostgreSQL client and does not require Docker.
 
 ## Gate
 
-The gate passes only when automated tests prove that no role can read, modify,
-or command an unauthorized household, room, device, or capability. This first
-cut materially narrows the trust boundary but does not claim that gate yet.
+The automated gate passes: the disposable-project matrix proves that tested
+roles cannot read, modify, or command an unauthorized household, room, device,
+or capability. External security review remains required before alpha.

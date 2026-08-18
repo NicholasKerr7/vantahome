@@ -110,7 +110,8 @@ npm run test:db:remote
 
 Apply migrations through 010 before running the suite. The runner fails closed
 unless the disposable confirmation is explicit and the database project ref is
-different from `EXPO_PUBLIC_SUPABASE_URL`.
+different from `EXPO_PUBLIC_SUPABASE_URL`. It connects with the lightweight
+Node PostgreSQL client and does not start Docker.
 
 Before or after a deployment, inventory the client-visible tables and Edge
 Functions with the publishable app credentials. This command is read-only,

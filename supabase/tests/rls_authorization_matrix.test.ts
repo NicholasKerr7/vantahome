@@ -37,8 +37,10 @@ describe("database RLS authorization matrix guardrails", () => {
   test("tests room, state, command, actor, and override isolation", () => {
     expect(matrix).toContain("tenant cannot command an unassigned room");
     expect(matrix).toContain("owner cannot mutate observed device state");
+    expect(matrix).toContain("select is_empty(");
     expect(matrix).toContain("unassigned-room command insert is rejected");
     expect(matrix).toContain("spoofed command actor is rejected");
+    expect(matrix.match(/'42501'/g)).toHaveLength(3);
     expect(matrix).toContain("explicit denial removes a member role permission");
   });
 
