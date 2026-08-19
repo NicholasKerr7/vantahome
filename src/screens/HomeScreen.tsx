@@ -61,19 +61,18 @@ export default function HomeScreen() {
   const landscapeGap = Math.round((isTablet ? 26 : 16) * scale);
   const landscapeOrbWidth = Math.round((isTablet ? 270 : 220) * scale);
   const tabletLandscapeHeroGap = Math.round(
-    (isVeryShortTabletLandscape ? 8 : isShortTabletLandscape ? 14 : 24) *
+    (isVeryShortTabletLandscape ? 8 : isShortTabletLandscape ? 14 : 72) *
       scale,
   );
+  // The rear carousel cards rise above their container, so this includes that
+  // lift while preserving a visible gap beneath the room action buttons.
   const tabletLandscapeDeckGap = Math.round(
-    (isVeryShortTabletLandscape ? 8 : isShortTabletLandscape ? 10 : 12) *
+    (isVeryShortTabletLandscape ? 8 : isShortTabletLandscape ? 14 : 44) *
       scale,
   );
   const tabletLandscapeBottomLift = Math.round(
     (isVeryShortTabletLandscape ? 6 : isShortTabletLandscape ? 12 : 0) *
       scale,
-  );
-  const tabletLandscapeDeckOffset = Math.round(
-    (isShortTabletLandscape ? 0 : 48) * scale,
   );
   const landscapeCarouselWidth = isTabletLandscape
     ? Math.min(
@@ -186,9 +185,6 @@ export default function HomeScreen() {
       width: landscapeCarouselWidth,
       marginTop: 0,
       alignSelf: "center",
-      // The fixed tab bar carries substantial visual weight. Lowering only the
-      // room deck balances that weight without pulling the orb off center.
-      transform: [{ translateY: tabletLandscapeDeckOffset }],
     },
   ];
   const roomsHeaderStyle: StyleProp<ViewStyle> = [
@@ -217,8 +213,8 @@ export default function HomeScreen() {
       gap: landscapeGap,
     },
     isTabletLandscape && {
-      // Center the hero group within the usable viewport; the room section has
-      // its own optical offset on taller tablets to balance the fixed tab bar.
+      // Keep the orb and room deck in normal layout flow so the centered group
+      // reserves its full height and cannot drift into the fixed tab bar.
       paddingBottom: tabletLandscapeBottomLift,
       flexDirection: "column",
       alignItems: "center",

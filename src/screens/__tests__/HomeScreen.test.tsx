@@ -244,18 +244,14 @@ describe("HomeScreen", () => {
     expect(heroStyle.flexDirection).toBe("column");
     expect(heroStyle.alignItems).toBe("center");
     expect(heroStyle.justifyContent).toBe("center");
-    expect(heroStyle.gap).toBeGreaterThanOrEqual(24);
+    expect(heroStyle.gap).toBeGreaterThanOrEqual(72);
     expect(heroStyle.paddingBottom).toBe(0);
     expect(orbStyle.width).toBe("100%");
     expect(roomsStyle.alignSelf).toBe("center");
     expect(roomsStyle.width).toBeGreaterThan(0);
     expect(roomsStyle.width).toBeLessThanOrEqual(mockLayout.contentWidth * 0.52);
-    expect(roomsStyle.transform).toEqual([
-      { translateY: expect.any(Number) },
-    ]);
-    expect(roomsStyle.transform[0].translateY).toBeGreaterThanOrEqual(48);
-    expect(carouselWrapStyle.marginTop).toBeGreaterThanOrEqual(12);
-    expect(carouselWrapStyle.marginTop).toBeLessThanOrEqual(14);
+    expect(roomsStyle.transform).toBeUndefined();
+    expect(carouselWrapStyle.marginTop).toBeGreaterThanOrEqual(44);
     act(() => {
       tree.unmount();
     });
@@ -291,8 +287,9 @@ describe("HomeScreen", () => {
     expect(heroStyle.justifyContent).toBe("center");
     expect(heroStyle.gap).toBeLessThanOrEqual(16);
     expect(heroStyle.paddingBottom).toBeLessThanOrEqual(14);
-    expect(roomsStyle.transform[0].translateY).toBe(0);
-    expect(carouselWrapStyle.marginTop).toBeLessThanOrEqual(11);
+    expect(roomsStyle.transform).toBeUndefined();
+    expect(carouselWrapStyle.marginTop).toBeGreaterThanOrEqual(14);
+    expect(carouselWrapStyle.marginTop).toBeLessThanOrEqual(16);
     act(() => {
       tree.unmount();
     });
