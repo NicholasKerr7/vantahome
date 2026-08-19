@@ -10,7 +10,9 @@ active VantaHome Supabase project.
 
 1. Accept scope, price, dates, rules of engagement, data handling, and retest
    terms in writing.
-2. Freeze the agreed commit and record its full hash in the private engagement
+2. Complete the
+   [Security Review Baseline Checklist](./SECURITY_REVIEW_BASELINE_CHECKLIST.md),
+   freeze the agreed commit, and record its full hash in the private engagement
    record.
 3. Create a new disposable Supabase project with no production links, customer
    data, household hardware, or shared credentials.

@@ -1,14 +1,19 @@
 # Independent Security Review Outreach
 
-Status: **scope prepared; owner approval required before a paid engagement**
+Status: **inquiry sent 2026-08-18; response pending; no testing authorized**
 
 ## Recommended first contact
 
 Cure53 is the preferred first contact because its published services and reports
 cover white-box mobile applications, APIs, server software, architecture, and
-source-code review. Send the brief in
-[Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md) and request a
-non-binding proposal from `hello@cure53.de`.
+source-code review. A non-binding proposal was requested from
+`hello@cure53.de` using the
+[Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md).
+
+The inquiry named `e1b8ea073b4892fb6655c1761d2795bfd8b80444` as the proposed
+quotation baseline. It is not the frozen testing baseline. Select and record the
+final commit only after scope and rules of engagement are agreed, following the
+[Security Review Baseline Checklist](./SECURITY_REVIEW_BASELINE_CHECKLIST.md).
 
 ## Alternatives
 
@@ -21,7 +26,7 @@ non-binding proposal from `hello@cure53.de`.
   advertised autonomous fixed-price offering is web-only and is therefore not
   sufficient for the Sprint 2 gate by itself.
 
-## Proposed inquiry
+## Sent inquiry
 
 Subject: `VantaHome independent mobile, Supabase, and architecture security review`
 

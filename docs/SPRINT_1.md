@@ -1,6 +1,6 @@
 # Sprint 1 — Product Constitution and Architecture Extraction
 
-Status: **in progress**
+Status: **visual baseline complete; architecture extraction remains in progress**
 
 ## Implemented in the first cut
 
@@ -23,10 +23,12 @@ Status: **in progress**
   driver-reported capability IDs.
 - Matter documentation now correctly treats Home Assistant as a controller and
   HomeKit Bridge as the Apple Home export path.
+- Mobile and tablet screenshot baselines are captured in the README, responsive
+  breakpoints have regression coverage, and phone orientation is constrained to
+  portrait while tablets retain supported landscape review viewports.
 
 ## Remaining before the Sprint 1 gate
 
-- Capture and approve mobile/tablet screenshot baselines and design tokens.
 - Extract registry, household, automation, and preference implementations from
   the compatibility store (contracts exist; implementations remain together).
 - Continue splitting `DeviceDetailScreen` orchestration into device modules.

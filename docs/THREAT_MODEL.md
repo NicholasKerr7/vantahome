@@ -1,8 +1,8 @@
 # VantaHome Threat Model
 
-Status: initial Sprint 2 model. Revisit before each alpha release and whenever a
-new integration, device category, remote-access path, or service-role use is
-introduced.
+Status: refreshed for external Sprint 2 review on 2026-08-19. Revisit before
+each alpha release and whenever a new integration, device category,
+remote-access path, or service-role use is introduced.
 
 ## Assets
 
@@ -33,16 +33,18 @@ privileged but must still validate inputs and minimize authority.
 | Threat | Current control | Remaining work |
 | --- | --- | --- |
 | Extracted mobile secrets | SecureStore for native sessions; no public MQTT credentials | Migrate hub/HA credentials when pairing exists |
-| Cross-home or cross-room access | RLS, exact device/home resolution, room-scoped voice discovery | Automated full role/device RLS matrix |
-| Tenant/guest sensitive commands | Client and database action permissions | Per-member overrides and admin UI |
+| Cross-home or cross-room access | RLS, exact device/home resolution, room-scoped voice discovery, and a rollback-only full role/device pgTAP matrix | Independent validation and continued matrix coverage as schemas evolve |
+| Tenant/guest sensitive commands | Client/database action permissions plus per-member grants, denials, and manager UI | Independent bypass testing across mobile, API, database, camera, and voice paths |
 | Replayed/duplicated commands | Nonce, expiry, command ID, unique idempotency keys | Bridge-side durable deduplication |
 | False physical confirmation | Production optimistic confirmation disabled; client state writes revoked | Full bridge acknowledgement lifecycle |
 | Oversized/malformed payloads | Shared bounded JSON/form validation on command, invite, audit, bootstrap, and voice functions | Maintain validation as endpoints are added |
 | Partial invite acceptance | Row lock and transactional database function | Expiration cleanup and notification workflow |
-| Service-role confused deputy | Audit resolves caller-visible devices; voice uses explicit room/role checks and server-only RPCs | Database integration tests |
+| Service-role confused deputy | Audit resolves caller-visible devices; voice uses explicit room/role checks and server-only RPCs; database integration tests cover privileged paths | Independent source review and least-authority review whenever privileged endpoints change |
 | Stolen unlocked phone | Biometrics for sensitive commands, camera viewing, and household-admin mutations in alpha/production | Validate platform behavior during alpha testing |
 | Abuse/command flooding | Atomic actor/home/device command gates plus HMAC-keyed Edge actor/IP buckets | Tune production thresholds from structured operational events |
 | Forwarded-IP spoofing | Ignore forwarding headers unless a trusted proxy hop count is configured; reject malformed chains | Verify the hosted proxy topology before setting production secrets |
+| Authentication callback confusion | One exact native callback parser handles OAuth and password recovery; recovery requires the expected callback and session state | Independent deep-link, session-fixation, and token-leakage testing |
+| Unauthorized camera access | Explicit `camera.live` checks constrain registry/state reads; alpha/production screens reauthenticate on focus | Independent API and mobile bypass testing plus real endpoint validation |
 
 ## Safety position
 

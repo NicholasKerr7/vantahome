@@ -2,9 +2,14 @@
 
 Status: **ready for external scoping and quotation**
 
-Prepared: 2026-08-18  
-Repository: `NicholasKerr7/vantahome` (public)  
-Review baseline: `e1b8ea073b4892fb6655c1761d2795bfd8b80444`
+- Prepared: 2026-08-18; refreshed: 2026-08-19
+- Repository: `NicholasKerr7/vantahome` (public)
+- Quotation baseline sent: `e1b8ea073b4892fb6655c1761d2795bfd8b80444`
+- Testing baseline: **not frozen; select only after written scope agreement**
+
+The quotation baseline identifies the repository state referenced by the first
+inquiry; it does not authorize testing. Freeze the final testing commit using
+the [Security Review Baseline Checklist](./SECURITY_REVIEW_BASELINE_CHECKLIST.md).
 
 ## Objective
 
@@ -30,9 +35,11 @@ supporting evidence, not substitutes for this assessment.
 - Native deep-link handling for OAuth and password recovery.
 - Privacy-safe operational events and optional Sentry integration.
 
-The baseline contains approximately 160 TypeScript files and 49,758 lines
-across the application and Edge Functions. The automated gate currently has
-213 passing tests, including database authorization and migration guardrails.
+The current candidate contains 180 TypeScript files and 51,194 lines across the
+application and Edge Functions, with 11 SQL migrations and 11 Edge Functions.
+The automated gate currently has 220 passing tests, including database
+authorization and migration guardrails. Recalculate these inventory figures at
+the final frozen commit rather than treating them as engagement identifiers.
 
 ## Requested work packages
 
