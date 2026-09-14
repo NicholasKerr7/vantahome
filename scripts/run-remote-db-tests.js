@@ -55,31 +55,57 @@ function tapLinesFromQueryResult(result) {
   const results = Array.isArray(result) ? result : [result];
   return results.flatMap(({ rows = [] }) =>
     rows.flatMap((row) =>
-      Object.values(row).filter(
+      Object.values(row).flatMap((value) => typeof value === "string" ? value.split(/\r?\n/) : []).filter(
         (value) =>
           typeof value === "string" &&
-          (/^(?:not )?ok\b/.test(value) || /^1\.\.\d+$/.test(value)),
+          (/^(?:not )?ok\b/.test(value) || /^1\.\.\d+$/.test(value) || /^Bail out!/i.test(value)),
       ),
     ),
   );
 }
 
-async function runSqlTest(databaseUrl, path) {
-  const client = new Client({
-    connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false },
+function validateTapLines(tapLines) {
+  const plans = tapLines.filter((line) => /^1\.\.\d+$/.test(line));
+  const assertions = tapLines.filter((line) => /^(?:not )?ok\b/.test(line));
+  if (plans.length !== 1) throw new Error("Expected exactly one pgTAP plan.");
+  const planned = Number(plans[0].slice(3));
+  if (planned < 1 || planned !== assertions.length) {
+    throw new Error("pgTAP assertion count does not match its plan.");
+  }
+  if (tapLines.some((line) => line.startsWith("not ok") || /^Bail out!/i.test(line))) {
+    throw new Error("pgTAP reported a failure or bailout.");
+  }
+  assertions.forEach((line, index) => {
+    if (Number(line.match(/^ok (\d+)\b/)?.[1]) !== index + 1) {
+      throw new Error("pgTAP assertion numbering is incomplete or duplicated.");
+    }
   });
+}
+
+function databaseClientOptions(databaseUrl, ca) {
+  const url = new URL(databaseUrl);
+  // pg URL SSL options can replace the SSL object. Keep verification explicit
+  // and accept a project CA separately, never an insecure fallback.
+  for (const key of url.searchParams.keys()) {
+    if (/^ssl|^uselibpqcompat$/i.test(key)) {
+      if (key !== "sslmode" || url.searchParams.get(key) !== "verify-full") {
+        throw new Error("Database URL SSL options must use sslmode=verify-full only.");
+      }
+    }
+  }
+  url.searchParams.delete("sslmode");
+  return { connectionString: url.toString(), ssl: { rejectUnauthorized: true, ...(ca ? { ca } : {}) } };
+}
+
+async function runSqlTest(databaseUrl, path) {
+  const caPath = process.env.SUPABASE_DB_CA_FILE;
+  const client = new Client(databaseClientOptions(databaseUrl, caPath ? fs.readFileSync(caPath, "utf8") : undefined));
   try {
     await client.connect();
     const result = await client.query(fs.readFileSync(path, "utf8"));
     const tapLines = tapLinesFromQueryResult(result);
     tapLines.forEach((line) => console.log(line));
-    if (!tapLines.some((line) => /^1\.\.\d+$/.test(line))) {
-      throw new Error(`${path} did not emit a pgTAP plan.`);
-    }
-    if (tapLines.some((line) => line.startsWith("not ok"))) {
-      throw new Error(`${path} reported a failing pgTAP assertion.`);
-    }
+    validateTapLines(tapLines);
   } finally {
     await client.end().catch(() => {});
   }
@@ -129,4 +155,6 @@ module.exports = {
   projectRefFromUrl,
   tapLinesFromQueryResult,
   validateRemoteTestTarget,
+  databaseClientOptions,
+  validateTapLines,
 };

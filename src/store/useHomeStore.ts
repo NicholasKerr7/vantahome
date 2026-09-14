@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { ConnectionStatus } from "../services/deviceClient";
 import { applyDeviceStatePatch } from "./deviceState";
 import { roleHasPermission } from "../security/permissions";
+import { runtimePolicy } from "../config/runtimeMode";
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -65,6 +66,8 @@ export type Device = {
   kind: DeviceKind;
   roomId: string;
   isOn: boolean;
+  /** Server observation time; used to avoid older snapshots replacing live state. */
+  observedAt?: number;
   /** Capability IDs reported by the integration; absent for seeded demo data. */
   reportedCapabilityIds?: string[];
 
@@ -398,6 +401,12 @@ type Profile = {
 };
 
 export type HomeState = {
+  accountUserId: string | null;
+  accountHomeId: string | null;
+  authenticatedUserId: string | null;
+  activeHomeId: string | null;
+  membershipReady: boolean;
+  sessionEpoch: number;
   userName: string;
   profile: Profile;
   outdoor: AmbientReading;
@@ -466,7 +475,7 @@ export type HomeState = {
     deviceId: string,
     time: { hour: number; minute: number },
   ) => void;
-  runScene: (sceneId: string) => void;
+  runScene: (sceneId: string, options?: { signal?: AbortSignal }) => Promise<void>;
   clearActiveScene: () => void;
   addScene: (scene: Omit<Scene, "id">) => void;
   updateScene: (sceneId: string, patch: Partial<Scene>) => void;
@@ -501,9 +510,7 @@ const getAccessScope = (state: Pick<
   | "memberPermissionOverrides"
   | "activeMemberId"
 >): AccessScope => {
-  const member =
-    state.household.find((m) => m.id === state.activeMemberId) ??
-    state.household[0];
+  const member = state.household.find((m) => m.id === state.activeMemberId);
   const fullAccess = roleHasFullAccess(member?.role);
   if (fullAccess) {
     return {
@@ -523,16 +530,17 @@ const getAccessScope = (state: Pick<
 };
 
 export const selectActiveMember = (state: HomeState) =>
-  state.household.find((m) => m.id === state.activeMemberId) ??
-  state.household[0];
+  state.household.find((m) => m.id === state.activeMemberId);
 
 export const selectVisibleRooms = (state: HomeState) => {
+  if (state.accountUserId && !state.membershipReady) return [];
   const scope = getAccessScope(state);
   if (scope.fullAccess) return state.rooms;
   return state.rooms.filter((room) => scope.roomIds.has(room.id));
 };
 
 export const selectVisibleDevices = (state: HomeState) => {
+  if (state.accountUserId && !state.membershipReady) return [];
   const scope = getAccessScope(state);
   if (!scope.member) return [];
   const overrides = state.memberPermissionOverrides.filter(
@@ -1643,9 +1651,60 @@ const flowsSeed: AutomationFlow[] = [
   },
 ];
 
+let storageWritesEnabled = true;
+let accountGeneration = 0;
+
+function withoutCameraUrls<T extends Partial<Device>>(device: T) {
+  const { streamUrl, thumbnailUrl, lastThumbnailUrl, ...safe } = device;
+  return safe;
+}
+
+function sanitizeCachedState(raw: string | null) {
+  if (!raw) return raw;
+  try {
+    const cached = JSON.parse(raw);
+    if (Array.isArray(cached.state?.devices)) {
+      cached.state.devices = cached.state.devices.map(withoutCameraUrls);
+    }
+    if (Array.isArray(cached.state?.scenes)) {
+      cached.state.scenes = cached.state.scenes.map((scene: Scene) => ({
+        ...scene,
+        actions: scene.actions.map((action) => action.type === "patch"
+          ? { ...action, patch: withoutCameraUrls(action.patch) } : action),
+      }));
+    }
+    return JSON.stringify(cached);
+  } catch { return null; }
+}
+
+async function sanitizeLegacyCache() {
+  const raw = await AsyncStorage.getItem("vantahome-store");
+  const safe = sanitizeCachedState(raw);
+  // Retain unowned local automations; only remove reusable camera URLs.
+  if (raw && safe && raw !== safe) await AsyncStorage.setItem("vantahome-store", safe);
+}
+
+const scopedStorage = {
+  getItem: async (key: string) => {
+    const generation = accountGeneration;
+    const raw = await AsyncStorage.getItem(key);
+    if (generation !== accountGeneration) return null;
+    return sanitizeCachedState(raw);
+  },
+  setItem: (key: string, value: string) =>
+    storageWritesEnabled ? AsyncStorage.setItem(key, value) : Promise.resolve(),
+  removeItem: (key: string) => AsyncStorage.removeItem(key),
+};
+
 export const useHomeStore = create<HomeState>()(
   persist(
     (set, get) => ({
+      accountUserId: null,
+      accountHomeId: null,
+      authenticatedUserId: null,
+      activeHomeId: null,
+      membershipReady: false,
+      sessionEpoch: 0,
       userName: "Nick",
       profile: profileSeed,
       outdoor: outdoorSeed,
@@ -1858,8 +1917,7 @@ export const useHomeStore = create<HomeState>()(
           household: members,
           activeMemberId:
             members.find((m) => m.id === state.activeMemberId)?.id ??
-            members[0]?.id ??
-            state.activeMemberId,
+            "",
         })),
 
       setRoomMembersFromRemote: (members) =>
@@ -1986,7 +2044,24 @@ export const useHomeStore = create<HomeState>()(
         }
       },
 
-      runScene: (sceneId) =>
+      runScene: async (sceneId, options) => {
+        const initial = get();
+        const scene = initial.scenes.find((candidate) => candidate.id === sceneId);
+        if (!scene || options?.signal?.aborted) return;
+        if (runtimePolicy.requireRealTransport) {
+          const scope = {
+            userId: initial.authenticatedUserId,
+            homeId: initial.activeHomeId,
+            sessionEpoch: initial.sessionEpoch,
+          };
+          // Resolve lazily so store initialization never imports its command
+          // client recursively. A literal require works in both Metro and Jest.
+          const { executeSceneCommands, sceneScopeIsCurrent } = require("../services/sceneExecution") as typeof import("../services/sceneExecution");
+          await executeSceneCommands(scene.actions, scope, options?.signal);
+          if (!sceneScopeIsCurrent(scope, options?.signal)) return;
+          set({ activeSceneId: sceneId, lastSceneRun: { sceneId, ts: Date.now() } });
+          return;
+        }
         set((state) => {
           const scene = state.scenes.find((s) => s.id === sceneId);
           if (!scene) return {};
@@ -2007,7 +2082,8 @@ export const useHomeStore = create<HomeState>()(
             activeSceneId: sceneId,
             lastSceneRun: { sceneId, ts: Date.now() },
           };
-        }),
+        });
+      },
 
       clearActiveScene: () =>
         set(() => ({
@@ -2098,8 +2174,27 @@ export const useHomeStore = create<HomeState>()(
     }),
     {
       name: "vantahome-store",
-      version: 4,
-      storage: createJSONStorage(() => AsyncStorage),
+      version: 5,
+      skipHydration: true,
+      storage: createJSONStorage(() => scopedStorage),
+      merge: (persisted, current) => {
+        const cached = persisted as Partial<HomeState> | undefined;
+        if (!cached || (cached.accountUserId ?? null) !== current.accountUserId) {
+          return current;
+        }
+        return {
+          ...current,
+          ...cached,
+          // Cached roles and sessions are never proof of current membership.
+          authenticatedUserId: current.authenticatedUserId,
+          activeHomeId: null,
+          membershipReady: false,
+          sessionEpoch: current.sessionEpoch,
+          ...(current.accountUserId
+            ? { household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "" }
+            : {}),
+        };
+      },
       migrate: (persistedState, version) => {
         if (!persistedState || typeof persistedState !== "object")
           return {} as HomeState;
@@ -2127,13 +2222,16 @@ export const useHomeStore = create<HomeState>()(
       },
       // Only persist user-facing state to keep storage light and migration-safe.
       partialize: (state) => ({
+        accountUserId: state.accountUserId,
+        accountHomeId: state.accountHomeId,
         userName: state.userName,
         profile: state.profile,
         outdoor: state.outdoor,
         indoor: state.indoor,
         rooms: state.rooms,
-        devices: state.devices,
-        scenes: state.scenes,
+        devices: state.devices.map(withoutCameraUrls),
+        scenes: state.scenes.map((scene) => ({ ...scene, actions: scene.actions.map((action) =>
+          action.type === "patch" ? { ...action, patch: withoutCameraUrls(action.patch) } : action) })),
         activeSceneId: state.activeSceneId,
         rules: state.rules,
         flows: state.flows,
@@ -2148,3 +2246,52 @@ export const useHomeStore = create<HomeState>()(
     },
   ),
 );
+
+const demoState = useHomeStore.getState();
+
+export function clearHomeAccountState(userId: string | null) {
+  useHomeStore.setState({
+    accountUserId: userId,
+    accountHomeId: null,
+    authenticatedUserId: userId,
+    activeHomeId: null,
+    membershipReady: false,
+    userName: "",
+    profile: { name: "", timeFormat: "12h", tempUnit: "C", timezone: "Auto" },
+    outdoor: { tempC: 0, label: "Unavailable" },
+    indoor: { tempC: 0, label: "Unavailable" },
+    rooms: [], devices: [], scenes: [], rules: [], flows: [],
+    activeSceneId: null, lastSceneRun: null,
+    integrations: { alexa: { status: "not-linked" }, google: { status: "not-linked" }, homekit: { status: "not-linked" }, matter: { status: "not-linked" } },
+    preferences: { haptics: true, notifications: true },
+    realtime: { enabled: true, wsUrl: "", useMqtt: false },
+    household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "",
+  });
+}
+
+/** Switch storage before hydration; never show or overwrite another account's cache. */
+export async function hydrateHomeAccount(userId: string | null, demo = false) {
+  const generation = ++accountGeneration;
+  storageWritesEnabled = false;
+  useHomeStore.persist.setOptions({
+    name: userId ? `vantahome-store:user:${userId}` : demo ? "vantahome-store" : "vantahome-store:signed-out",
+  });
+  clearHomeAccountState(userId);
+  useHomeStore.setState({ sessionEpoch: generation });
+  if (demo) useHomeStore.setState(demoState);
+  try {
+    await sanitizeLegacyCache();
+    if (generation !== accountGeneration) return false;
+    if (userId || demo) await useHomeStore.persist.rehydrate();
+  } finally {
+    if (generation === accountGeneration) storageWritesEnabled = Boolean(userId || demo);
+  }
+  return generation === accountGeneration;
+}
+
+export function invalidateHomeMembership() {
+  useHomeStore.setState({
+    activeHomeId: null, membershipReady: false,
+    household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "",
+  });
+}

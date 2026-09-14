@@ -43,6 +43,10 @@ VANTAHOME_DISPOSABLE_DB_CONFIRMED=true npm run test:db:remote
 
 It refuses to run unless the database URL identifies a project different from
 `EXPO_PUBLIC_SUPABASE_URL`.
+The runner verifies the database TLS certificate. If the project's certificate
+requires a custom CA, provide its PEM file through `SUPABASE_DB_CA_FILE`; do not
+disable verification. It also requires the complete planned pgTAP assertion
+count, consecutive numbering, and no failures or bailouts.
 
 ## Synthetic authorization matrix
 
@@ -76,8 +80,12 @@ from ordinary light or media controls.
 
 ## Deployment and preflight
 
-- Apply migrations 001 through 011 from scratch; do not clone the active
+- Apply migrations 001 through 013 from scratch; do not clone the active
   database.
+- Apply migration 012 before deploying the updated invitation and Google voice
+  handlers; they depend on its service-only account lookup and unlink RPCs.
+  Migration 013 adds `device_state` to the hosted Realtime publication. Confirm
+  the publication and observed-state RLS behavior on the disposable project.
 - Deploy only the Edge Functions pinned to the agreed source commit.
 - Generate a new rate-limit HMAC secret and synthetic OAuth/voice client
   credentials. Do not enable real Alexa, Google, Sentry, or household-device
@@ -86,6 +94,10 @@ from ordinary light or media controls.
   addresses, and recovery links.
 - Confirm JWT enforcement and public endpoint behavior match
   `supabase/config.toml`.
+- Verify the PKCE callback and secure random/SHA-256 support on physical iOS
+  and Android devices, including recovery, cancellation, account switching and
+  background/resume. Old implicit-token callbacks are intentionally rejected;
+  initiate a fresh sign-in or recovery request from the application.
 - Run the following checks before access is issued:
 
 ```sh

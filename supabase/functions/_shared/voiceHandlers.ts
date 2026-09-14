@@ -1,6 +1,6 @@
 import { findToken, getVoiceClient, isExpired } from "./voiceAuth.ts";
 
-export async function getVoiceUserId(
+export async function getVoiceIdentity(
   req: Request,
   expectedProvider: "alexa" | "google",
 ) {
@@ -12,7 +12,15 @@ export async function getVoiceUserId(
   if (isExpired(tokenRow.expires_at)) return null;
   const client = await getVoiceClient(tokenRow.client_id);
   if (!client || client.provider !== expectedProvider) return null;
-  return tokenRow.user_id;
+  return { userId: tokenRow.user_id, clientId: tokenRow.client_id };
+}
+
+export async function getVoiceUserId(
+  req: Request,
+  expectedProvider: "alexa" | "google",
+) {
+  const identity = await getVoiceIdentity(req, expectedProvider);
+  return identity?.userId ?? null;
 }
 
 export function jsonResponse(payload: Record<string, unknown>, status = 200) {

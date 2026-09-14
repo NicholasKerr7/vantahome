@@ -8,11 +8,10 @@ export const NATIVE_AUTH_CALLBACK_URI = "vantahome://auth-callback";
 export const NATIVE_VOICE_LINK_URI = "vantahome://voice-link";
 
 function makeAppRedirectUri(path: string, native: string) {
+  if (Platform.OS !== "web") return native;
   return AuthSession.makeRedirectUri({
     scheme: APP_SCHEME,
     path,
-    // Existing native projects cannot reliably infer their production URI.
-    ...(Platform.OS === "web" ? {} : { native }),
   });
 }
 
@@ -26,12 +25,18 @@ export function makeVoiceLinkUri() {
 
 export function getAuthRedirectParams(url: string) {
   try {
+    if (!isAuthCallbackUrl(url)) return null;
     const parsed = new URL(url);
     const params = new URLSearchParams(parsed.search);
     if (parsed.hash) {
       const hashParams = new URLSearchParams(parsed.hash.replace(/^#/, ""));
-      hashParams.forEach((value, key) => params.set(key, value));
+      for (const [key, value] of hashParams) {
+        if (params.has(key)) return null;
+        params.append(key, value);
+      }
     }
+    const names = Array.from(params.keys());
+    if (new Set(names).size !== names.length) return null;
     return params;
   } catch {
     return null;
@@ -41,10 +46,14 @@ export function getAuthRedirectParams(url: string) {
 export function isAuthCallbackUrl(url: string) {
   try {
     const parsed = new URL(url);
+    const expected = new URL(makeAuthCallbackUri());
     return (
-      parsed.protocol === `${APP_SCHEME}:` &&
-      (parsed.hostname === AUTH_CALLBACK_PATH ||
-        parsed.pathname.replace(/^\//, "") === AUTH_CALLBACK_PATH)
+      parsed.protocol === expected.protocol &&
+      parsed.hostname === expected.hostname &&
+      parsed.port === expected.port &&
+      parsed.pathname === expected.pathname &&
+      !parsed.username &&
+      !parsed.password
     );
   } catch {
     return false;

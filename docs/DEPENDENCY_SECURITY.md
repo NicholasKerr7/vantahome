@@ -1,6 +1,6 @@
 # Dependency Security Notes
 
-Last reviewed: 2026-08-18
+Last reviewed: 2026-09-14
 
 ## Current baseline
 
@@ -8,6 +8,9 @@ Last reviewed: 2026-08-18
 - Patched overrides move PostCSS to 8.5.26 and the `xcode` build helper's UUID
   dependency to 11.1.1. Both versions clear their current advisories while the
   Expo SDK 54 dependency check, configuration, tests, and web export pass.
+- Refreshed the compatible lockfile versions of `@xmldom/xmldom`,
+  `baseline-browser-mapping`, `browserslist`, and `js-yaml` to their patched
+  releases without changing the Expo or React Native major versions.
 - The only concrete findings left are two high-severity denial-of-service
   advisories in Metro's transitive `image-size` 1.2.1 dependency. npm propagates
   those findings through many Expo/React Native packages, so its headline total
@@ -30,6 +33,30 @@ Last reviewed: 2026-08-18
   `image-size` advisory URLs below; propagated npm entries are not allowlisted.
 - CI also builds the production web export so optional web-runtime dependency
   drift cannot pass on type checks and native-focused tests alone.
+
+## URI decoder compatibility patch
+
+- Override `decode-uri-component` to 0.5.0, the patched release for
+  [GHSA-vcc3-ghjq-m6fr](https://github.com/SamVerschueren/decode-uri-component/security/advisories/GHSA-vcc3-ghjq-m6fr).
+  The upstream implementation replaces recursive malformed-input decoding with
+  a single-pass UTF-8 scanner; the decoder itself is not modified locally.
+- React Navigation still consumes the CommonJS API of `query-string` 7.1.3.
+  Pin that version and adapt its decoder import to the new ESM default export
+  with `scripts/patch-query-string.js`. This is one import-line change; query
+  parsing, navigation, and the patched decoder's algorithm stay intact.
+- `npm install` and `npm ci` apply the patch through `postinstall`. The script
+  requires the exact reviewed versions and source hashes, is idempotent, and
+  refuses unknown upstream contents. The dependency security gate checks that
+  the patch is present even if install lifecycle scripts were skipped. In that
+  case run `npm run postinstall` before verification.
+- Jest explicitly transforms only this additional ESM dependency, matching
+  Metro's normal module handling. Regression tests exercise real query-string
+  and React Navigation imports, round-trip query parameters, malformed UTF-8,
+  and a small malformed-input sample in a time-limited child process.
+- Reassess and remove the compatibility patch when React Navigation adopts a
+  compatible query-string release with a patched decoder. Do not automatically
+  repin its hashes after an upstream change; inspect the changed dependency and
+  rerun the navigation tests and production web export first.
 
 ## Temporary image-size risk acceptance
 

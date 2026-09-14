@@ -92,6 +92,7 @@ function startWeatherPolling({
       const res = await fetch(url.toString());
       if (!res.ok) return;
       const data = await res.json();
+      if (cancelled) return;
       const current = data?.current_weather;
       if (!current || typeof current.temperature !== "number") return;
 

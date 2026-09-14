@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   Animated,
+  Alert,
 } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "../components/Pressable";
@@ -35,6 +36,7 @@ import {
 } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { runtimePolicy } from "../config/runtimeMode";
 
 export default function ScenesScreen() {
   const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
@@ -131,6 +133,21 @@ export default function ScenesScreen() {
   const scenes = useHomeStore((s) => s.scenes);
   const devices = useHomeStore(selectVisibleDevices);
   const runScene = useHomeStore((s) => s.runScene);
+  const sceneRequestPending = useRef(false);
+  const requestScene = async (sceneId: string) => {
+    if (sceneRequestPending.current) return;
+    sceneRequestPending.current = true;
+    const epoch = useHomeStore.getState().sessionEpoch;
+    try {
+      await runScene(sceneId);
+    } catch {
+      if (useHomeStore.getState().sessionEpoch === epoch) {
+        Alert.alert("Scene not completed", "Unable to request every action. Check home access and device status before retrying.");
+      }
+    } finally {
+      sceneRequestPending.current = false;
+    }
+  };
   const clearActiveScene = useHomeStore((s) => s.clearActiveScene);
   const activeSceneId = useHomeStore((s) => s.activeSceneId);
   const addScene = useHomeStore((s) => s.addScene);
@@ -546,7 +563,7 @@ export default function ScenesScreen() {
                 devices={sceneDevices}
                 actionLabels={actionLabels}
                 isActive={scene.id === activeSceneId}
-                onRun={() => runScene(scene.id)}
+                onRun={() => { void requestScene(scene.id); }}
                 onOpen={() => setDetailSceneId(scene.id)}
               />
             );
@@ -886,7 +903,7 @@ export default function ScenesScreen() {
                 label: "Run scene",
                 onPress: () => {
                   if (!detailScene) return;
-                  runScene(detailScene.id);
+                  void requestScene(detailScene.id);
                 },
                 style: modalPrimaryBaseStyle,
                 textStyle: modalPrimaryTextStyle,
@@ -1979,7 +1996,7 @@ function SceneCard({
               size={Math.round(14 * scaleFactor)}
               color={theme.colors.text}
             />
-            <Text style={runTextStyle}>{isActive ? "Active" : "Run"}</Text>
+            <Text style={runTextStyle}>{isActive ? runtimePolicy.requireRealTransport ? "Requested" : "Active" : "Run"}</Text>
           </Pressable>
         </View>
 

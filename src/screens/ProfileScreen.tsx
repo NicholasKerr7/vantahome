@@ -39,17 +39,28 @@ import {
   respondHomeInvite,
   type HomeInvite,
 } from "../services/cloudRegistry";
-import { syncMembershipFromSupabase } from "../services/membership";
+import { applyMembershipSnapshot, syncMembershipFromSupabase } from "../services/membership";
 import { supabase } from "../services/supabaseClient";
 import { confirmProtectedAccess } from "../security/biometricConfirmation";
 import MemberPermissionEditor from "../components/MemberPermissionEditor";
 import { setMemberPermissionOverrideRemote } from "../services/memberPermissions";
 import {
+  canAdministerMember,
   roleHasPermission,
   type ActionPermission,
 } from "../security/permissions";
+import { runtimePolicy } from "../config/runtimeMode";
+import { cancelAuthFlow, waitForAuthExchange } from "../services/authFlow";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
+
+function scopeIsCurrent(previous: ReturnType<typeof useHomeStore.getState>) {
+  const state = useHomeStore.getState();
+  return state.authenticatedUserId === previous.authenticatedUserId &&
+    state.sessionEpoch === previous.sessionEpoch &&
+    state.activeHomeId === previous.activeHomeId && state.activeMemberId === previous.activeMemberId &&
+    (!supabase || state.membershipReady);
+}
 
 export default function ProfileScreen({ navigation }: Props) {
   const { width, gutter, topPad, isTablet, isLandscape, scale } =
@@ -438,20 +449,12 @@ export default function ProfileScreen({ navigation }: Props) {
   const rooms = useHomeStore(selectVisibleRooms);
   const activeMember = useHomeStore(selectActiveMember);
   const activeMemberId = useHomeStore((s) => s.activeMemberId);
-  const setActiveMember = useHomeStore((s) => s.setActiveMember);
-  const setHouseholdFromRemote = useHomeStore((s) => s.setHouseholdFromRemote);
-  const setRoomMembersFromRemote = useHomeStore(
-    (s) => s.setRoomMembersFromRemote,
-  );
   const roomMembers = useHomeStore((s) => s.roomMembers);
   const memberPermissionOverrides = useHomeStore(
     (s) => s.memberPermissionOverrides,
   );
   const setMemberPermissionOverride = useHomeStore(
     (s) => s.setMemberPermissionOverride,
-  );
-  const setMemberPermissionOverridesFromRemote = useHomeStore(
-    (s) => s.setMemberPermissionOverridesFromRemote,
   );
   const setRoomMembership = useHomeStore((s) => s.setRoomMembership);
   const addHouseholdMember = useHomeStore((s) => s.addHouseholdMember);
@@ -480,6 +483,15 @@ export default function ProfileScreen({ navigation }: Props) {
     ? ["Owner", "Admin"].includes(activeMember.role)
     : false;
   const canManageHousehold = canManageRooms;
+  const canEditMember = (member: typeof household[number]) =>
+    canAdministerMember(selectActiveMember(useHomeStore.getState()), member);
+  const canEditPermission = (member: typeof household[number], permission: ActionPermission) => {
+    const state = useHomeStore.getState();
+    const actor = selectActiveMember(state);
+    return canAdministerMember(actor, member) && Boolean(actor && roleHasPermission(
+      actor.role, permission, state.memberPermissionOverrides.filter((item) => item.memberId === actor.id),
+    ));
+  };
   const activePermissionOverrides = memberPermissionOverrides.filter(
     (item) => item.memberId === activeMember?.id,
   );
@@ -522,7 +534,9 @@ export default function ProfileScreen({ navigation }: Props) {
     prevRoomIds: string[],
     nextRoomIds: string[],
   ) => {
+    const scope = useHomeStore.getState();
     if (!(await confirmHouseholdAdminChange())) return;
+    if (!scopeIsCurrent(scope)) return;
     setRoomMembership(memberId, nextRoomIds);
     const roomRole = resolveRoomRole(role);
     if (
@@ -535,6 +549,7 @@ export default function ProfileScreen({ navigation }: Props) {
     try {
       await setRoomMembershipRemote(userId, nextRoomIds, roomRole);
     } catch (err) {
+      if (!scopeIsCurrent(scope)) return;
       setRoomMembership(memberId, prevRoomIds);
       Alert.alert(
         "Room access update failed",
@@ -547,8 +562,10 @@ export default function ProfileScreen({ navigation }: Props) {
     permission: ActionPermission,
     allowed: boolean | null,
   ) => {
-    if (!canManageHousehold || member.role === "Owner") return;
+    const scope = useHomeStore.getState();
+    if (!canEditPermission(member, permission)) return;
     if (!(await confirmHouseholdAdminChange())) return;
+    if (!scopeIsCurrent(scope) || !canEditPermission(member, permission)) return;
     const previous = memberPermissionOverrides.find(
       (item) =>
         item.memberId === member.id && item.permission === permission,
@@ -562,6 +579,7 @@ export default function ProfileScreen({ navigation }: Props) {
         allowed,
       );
     } catch (err) {
+      if (!scopeIsCurrent(scope)) return;
       setMemberPermissionOverride(
         member.id,
         permission,
@@ -574,15 +592,16 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   };
   const refreshInvites = useCallback(async () => {
+    const scope = useHomeStore.getState();
     if (!supabase) {
       setPendingInvites([]);
       return;
     }
     try {
       const invites = await listPendingInvites();
-      setPendingInvites(invites);
+      if (scopeIsCurrent(scope)) setPendingInvites(invites);
     } catch {
-      setPendingInvites([]);
+      if (scopeIsCurrent(scope)) setPendingInvites([]);
     }
   }, []);
   useEffect(() => {
@@ -763,14 +782,17 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   const handleAddMember = async () => {
+    const scope = useHomeStore.getState();
     const trimmed = newMemberName.trim();
     const email = newMemberEmail.trim().toLowerCase();
     if (!trimmed || !canInviteMembers) return;
+    if (newMemberRole === "Admin" && activeMember?.role !== "Owner") return;
     if (!email) {
       Alert.alert("Email required", "Add an email to invite this member.");
       return;
     }
     if (!(await confirmHouseholdAdminChange())) return;
+    if (!scopeIsCurrent(scope)) return;
     const addMemberLocally = () => {
       const localId = `m${Date.now()}`;
       const initialRoomIds =
@@ -795,6 +817,7 @@ export default function ProfileScreen({ navigation }: Props) {
       setNewMemberAvatar("");
     };
     if (!supabase) {
+      if (!runtimePolicy.allowUnauthenticatedDemo) return;
       addMemberLocally();
       Alert.alert(
         "Invite added locally",
@@ -804,20 +827,13 @@ export default function ProfileScreen({ navigation }: Props) {
     }
     try {
       const { data: sessionData } = await supabase.auth.getSession();
+      if (!scopeIsCurrent(scope)) return;
       if (!sessionData.session?.access_token) {
-        addMemberLocally();
-        Alert.alert(
-          "Invite added locally",
-          "Sign in to send real invites from the cloud.",
-        );
+        Alert.alert("Sign in required", "Sign in again to send this invitation.");
         return;
       }
     } catch {
-      addMemberLocally();
-      Alert.alert(
-        "Invite added locally",
-        "Sign in to send real invites from the cloud.",
-      );
+      if (scopeIsCurrent(scope)) Alert.alert("Sign in required", "Sign in again to send this invitation.");
       return;
     }
     try {
@@ -831,64 +847,69 @@ export default function ProfileScreen({ navigation }: Props) {
         newMemberRole === "Guest" || newMemberRole === "Tenant"
           ? rooms.map((room) => room.id).slice(0, 1)
           : [];
-      const { member } = await inviteHomeMember({
+      const result = await inviteHomeMember({
         email,
         name: trimmed,
         role: roleLower,
         roomIds: initialRoomIds.length ? initialRoomIds : undefined,
-      });
-      addHouseholdMember({
-        id: member.userId,
-        userId: member.userId,
-        name: member.name,
-        role: newMemberRole,
-        status: "away",
-        avatarUri: newMemberAvatar,
-        avatarColor: avatarColor,
-      });
-      if (initialRoomIds.length) {
-        setRoomMembership(member.userId, initialRoomIds);
-      }
+      }, scope.authenticatedUserId ?? undefined);
+      if (!scopeIsCurrent(scope)) return;
+      // A pending invitation is not accepted household membership.
+      Alert.alert(result.status === "already_member" ? "Already a member" : "Invitation sent",
+        result.status === "already_member" ? "This person already belongs to your home." : "They will appear as a member after accepting.");
       setNewMemberName("");
       setNewMemberEmail("");
       setNewMemberRole("Guest");
       setNewMemberAvatar("");
       await refreshInvites();
     } catch (err) {
+      if (!scopeIsCurrent(scope)) return;
       const message = (err as Error).message ?? "Unable to invite member.";
-      addMemberLocally();
-      Alert.alert(
-        "Invite added locally",
-        `Invite failed to send: ${message}. You can resend after signing in.`,
-      );
+      Alert.alert("Invitation not sent", message);
+    } finally {
+      if (scopeIsCurrent(scope)) setInviteLoading(false);
     }
-    setInviteLoading(false);
   };
 
   const handleRemoveMember = async (memberId: string) => {
     const member = household.find((item) => item.id === memberId);
-    if (!canManageHousehold || !member || member.role === "Owner") return;
+    const scope = useHomeStore.getState();
+    if (!member || !canEditMember(member)) return;
     if (!(await confirmHouseholdAdminChange())) return;
-    removeHouseholdMember(memberId);
+    if (!scopeIsCurrent(scope) || !canEditMember(member)) return;
+    if (!supabase) {
+      if (runtimePolicy.allowUnauthenticatedDemo) removeHouseholdMember(memberId);
+      return;
+    }
+    try {
+      if (!scope.activeHomeId || !member.userId) throw new Error("Verify home access again.");
+      const { data, error } = await supabase.from("home_members").delete()
+        .eq("home_id", scope.activeHomeId).eq("user_id", member.userId).select("user_id").maybeSingle();
+      if (!scopeIsCurrent(scope)) return;
+      if (error || !data) throw new Error("You do not have permission to remove this member.");
+      removeHouseholdMember(memberId);
+    } catch (error) {
+      if (scopeIsCurrent(scope)) Alert.alert("Member not removed", (error as Error).message);
+    }
   };
 
   const handleRespondInvite = async (
     inviteId: string,
     action: "accept" | "decline",
   ) => {
+    const scope = useHomeStore.getState();
     try {
-      await respondHomeInvite(inviteId, action);
+      await respondHomeInvite(inviteId, action, scope.authenticatedUserId ?? undefined);
+      if (!scopeIsCurrent(scope)) return;
       setPendingInvites((prev) => prev.filter((item) => item.id !== inviteId));
       if (action === "accept") {
         const result = await syncMembershipFromSupabase();
         if (result) {
-          setHouseholdFromRemote(result.household);
-          setRoomMembersFromRemote(result.roomMembers);
-          setMemberPermissionOverridesFromRemote(result.permissionOverrides);
-          setActiveMember(result.activeMemberId);
+          applyMembershipSnapshot(result);
         }
       }
     } catch (err) {
+      if (!scopeIsCurrent(scope)) return;
       Alert.alert(
         "Invite response failed",
         (err as Error).message ?? "Unable to respond to invite.",
@@ -908,7 +929,10 @@ export default function ProfileScreen({ navigation }: Props) {
         style: "destructive",
         onPress: async () => {
           if (supabase) {
-            await supabase.auth.signOut();
+            await cancelAuthFlow();
+            await waitForAuthExchange();
+            const { error } = await supabase.auth.signOut({ scope: "local" });
+            if (error) Alert.alert("Sign-out failed", "Please try again.");
           }
         },
       },
@@ -1301,12 +1325,12 @@ export default function ProfileScreen({ navigation }: Props) {
             <Pressable
               accessibilityLabel={`Remove ${member.name}`}
               accessibilityState={{
-                disabled: !canManageHousehold || member.role === "Owner",
+                disabled: !canEditMember(member),
               }}
               style={styles.memberRemove}
               onPress={() => void handleRemoveMember(member.id)}
               hitSlop={8}
-              disabled={!canManageHousehold || member.role === "Owner"}
+              disabled={!canEditMember(member)}
             >
               <Ionicons
                 name="close"
@@ -1366,6 +1390,8 @@ export default function ProfileScreen({ navigation }: Props) {
           {canManageHousehold ? (
             <MemberPermissionEditor
               role={member.role}
+              disabled={!canEditMember(member)}
+              canChange={(permission) => canEditPermission(member, permission)}
               overrides={memberPermissionOverrides.filter(
                 (item) => item.memberId === member.id,
               )}
@@ -1405,7 +1431,7 @@ export default function ProfileScreen({ navigation }: Props) {
           keyboardType="email-address"
         />
         <View style={styles.chipRow}>
-          {(["Admin", "Member", "Guest", "Tenant"] as const).map(
+          {(["Admin", "Member", "Guest", "Tenant"] as const).filter((role) => role !== "Admin" || activeMember?.role === "Owner").map(
             (role) => {
             const active = newMemberRole === role;
             return (
@@ -1453,6 +1479,7 @@ export default function ProfileScreen({ navigation }: Props) {
           ) : null}
         </View>
         <Pressable
+          accessibilityLabel="Invite member"
           style={secondaryButtonStyle(
             inviteLoading ||
               !canInviteMembers ||

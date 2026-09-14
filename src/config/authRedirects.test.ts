@@ -14,12 +14,30 @@ describe("auth redirects", () => {
   test("recognizes only the app auth callback", () => {
     expect(isAuthCallbackUrl("vantahome://auth-callback?code=abc")).toBe(true);
     expect(isAuthCallbackUrl("vantahome:///auth-callback#type=recovery")).toBe(
-      true,
+      false,
     );
     expect(isAuthCallbackUrl("https://attacker.test/auth-callback")).toBe(
       false,
     );
     expect(isAuthCallbackUrl("vantahome://voice-link?code=abc")).toBe(false);
+  });
+
+  test.each([
+    "vantahome://other/auth-callback?code=abc",
+    "vantahome://auth-callback/other?code=abc",
+    "vantahome://user:password@auth-callback?code=abc",
+    "vantahome://auth-callback:123?code=abc",
+  ])("rejects noncanonical callback components: %s", (url) => {
+    expect(isAuthCallbackUrl(url)).toBe(false);
+    expect(getAuthRedirectParams(url)).toBeNull();
+  });
+
+  test.each([
+    "vantahome://auth-callback?code=one&code=two",
+    "vantahome://auth-callback?code=one#code=two",
+    "vantahome://auth-callback#code=one&code=two",
+  ])("rejects ambiguous parameters: %s", (url) => {
+    expect(getAuthRedirectParams(url)).toBeNull();
   });
 
   test("combines query and fragment parameters", () => {

@@ -9,6 +9,8 @@ import {
 } from "../config/runtimeMode";
 
 type RealtimeOptions = {
+  userId?: string | null;
+  homeId?: string | null;
   wsUrl?: string | null;
   enabled?: boolean;
   enableMockTelemetry?: boolean;
@@ -36,7 +38,7 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
     : null;
   const mqttUrl = options.mqttUrl ?? process.env.EXPO_PUBLIC_MQTT_URL;
   const wantsMqtt = options.useMqtt ?? !!mqttUrl;
-  const useMqtt = enabled && wantsMqtt;
+  const useMqtt = enabled && wantsMqtt && runtimePolicy.allowDirectMqtt;
   const wantsSupabase = options.useSupabase ?? (!!supabase && !useMqtt);
   const useSupabase = enabled && wantsSupabase;
   // Priority order: MQTT (local), then Supabase, then direct WS, then mock telemetry.
@@ -45,6 +47,13 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
     (options.enableMockTelemetry ?? (!wsUrl && !useSupabase && !useMqtt));
   const fallbackUseSupabase = options.useSupabase ?? !!supabase;
   const fallbackTimeoutMs = options.mqttFallbackTimeoutMs ?? 6000;
+
+  if (
+    !enabled ||
+    (runtimePolicy.requireRealTransport && (!options.userId || !options.homeId))
+  ) {
+    return () => {};
+  }
 
   const unsubscribe = deviceClient.subscribeState((evt) => {
     useHomeStore.getState().setDevice(evt.deviceId, evt.patch);
@@ -70,6 +79,8 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
     if (fallbackUseSupabase && supabase) {
       stopSupabase = startSupabaseDeviceRealtime({
         channel: options.supabaseChannel,
+        userId: options.userId,
+        homeId: options.homeId,
       });
       return;
     }
@@ -100,6 +111,8 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
   if (!useMqtt && useSupabase) {
     stopSupabase = startSupabaseDeviceRealtime({
       channel: options.supabaseChannel,
+      userId: options.userId,
+      homeId: options.homeId,
     });
   }
   if (!useMqtt && !useSupabase && wsUrl) {

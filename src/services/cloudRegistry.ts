@@ -15,10 +15,13 @@ function assertSupabaseReady() {
   }
 }
 
-async function getAccessToken() {
+async function getAccessToken(expectedUserId?: string) {
   assertSupabaseReady();
   const { data, error } = await supabase!.auth.getSession();
   if (error) throw error;
+  if (expectedUserId && data.session?.user.id !== expectedUserId) {
+    throw new Error("The account changed. Please try again.");
+  }
   const token = data.session?.access_token;
   if (!token) throw new Error("Missing auth session.");
   return token;
@@ -28,8 +31,9 @@ async function callEdge<T>(
   path: string,
   payload: unknown,
   method = "POST",
+  expectedUserId?: string,
 ): Promise<T> {
-  const token = await getAccessToken();
+  const token = await getAccessToken(expectedUserId);
   const response = await fetch(`${supabaseUrl}/functions/v1/${path}`, {
     method,
     headers: {
@@ -48,10 +52,13 @@ async function callEdge<T>(
   return data as T;
 }
 
-export async function bootstrapHome(name: string) {
-  return callEdge<{ home: { id: string; name: string } }>("home-bootstrap", {
-    name,
-  });
+export async function bootstrapHome(name: string, expectedUserId?: string) {
+  return callEdge<{ home: { id: string; name: string } }>(
+    "home-bootstrap",
+    { name },
+    "POST",
+    expectedUserId,
+  );
 }
 
 export type InviteMemberPayload = {
@@ -61,11 +68,14 @@ export type InviteMemberPayload = {
   roomIds?: string[];
 };
 
-export async function inviteHomeMember(payload: InviteMemberPayload) {
+export async function inviteHomeMember(
+  payload: InviteMemberPayload,
+  expectedUserId?: string,
+) {
   return callEdge<{
     member: { userId: string; email: string; name: string; role: string };
     status?: "invited" | "already_member";
-  }>("home-invite", payload);
+  }>("home-invite", payload, "POST", expectedUserId);
 }
 
 export type HomeInvite = {
@@ -96,10 +106,16 @@ export async function listPendingInvites() {
   return (data as HomeInvite[]) ?? [];
 }
 
-export async function respondHomeInvite(inviteId: string, action: "accept" | "decline") {
+export async function respondHomeInvite(
+  inviteId: string,
+  action: "accept" | "decline",
+  expectedUserId?: string,
+) {
   return callEdge<{ status: "accepted" | "declined"; inviteId: string }>(
     "home-invite-respond",
     { inviteId, action },
+    "POST",
+    expectedUserId,
   );
 }
 

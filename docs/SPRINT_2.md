@@ -1,6 +1,6 @@
 # Sprint 2 — Security and Trust Boundary Closure
 
-Status: **automated security gate passed; external review pending**
+Status: **local remediation verification; hosted retest and external review pending**
 
 The external review scope and non-binding vendor inquiry are prepared in
 [Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md) and
@@ -104,6 +104,12 @@ reviewer handoff, and teardown procedure without provisioning resources early.
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
 - Perform an external security review before alpha.
+- Deploy the reviewed migrations through 013 and matching Edge Functions to an
+  explicitly authorized disposable environment, then repeat hosted checks.
+  Local verification does not change the active project's deployed policies.
+- Rebuild and verify native sign-in/recovery, account isolation, background
+  behavior, biometric prompts, and authorized realtime updates on physical devices.
+- Revisit the time-limited dependency exception before its documented deadline.
 
 The remote runner fails closed unless its target is explicitly confirmed as
 disposable and differs from the active app project. It executes the real pgTAP
@@ -111,6 +117,7 @@ suite through a lightweight PostgreSQL client and does not require Docker.
 
 ## Gate
 
-The automated gate passes: the disposable-project matrix proves that tested
-roles cannot read, modify, or command an unauthorized household, room, device,
-or capability. External security review remains required before alpha.
+Automated checks provide evidence for the cases tested; they are not a general
+security guarantee. The historical hosted checks above cover their recorded
+migration baseline, not later local changes. Hosted retesting and the independent
+security review remain required before alpha or physical integration.

@@ -49,7 +49,8 @@ function cloneScenes(scenes: Scene[]) {
   return scenes.map((scene) => ({
     ...scene,
     actions: scene.actions.map((action) => {
-      if (action.type === "patch") return { ...action, patch: { ...action.patch } };
+      if (action.type === "patch")
+        return { ...action, patch: { ...action.patch } };
       return { ...action };
     }),
   }));
@@ -91,6 +92,29 @@ afterEach(() => {
 const flushPromises = () => Promise.resolve();
 
 describe("flowRuntime", () => {
+  it("cancels delayed commands and notifications when the session runtime stops", async () => {
+    useHomeStore.setState({
+      flows: [
+        {
+          id: "delayed",
+          name: "Delayed",
+          enabled: true,
+          triggers: [{ type: "time", hour: 6, minute: 30 }],
+          conditions: [],
+          actions: [
+            { type: "delay", seconds: 30 },
+            { type: "toggle", deviceId: "d1", on: true },
+            { type: "notify", message: "Private household event" },
+          ],
+        },
+      ],
+    });
+    const stop = startFlowRuntime();
+    stop();
+    await jest.advanceTimersByTimeAsync(60_000);
+    expect(deviceClient.sendCommand).not.toHaveBeenCalled();
+    expect(sendLocalNotification).not.toHaveBeenCalled();
+  });
   it("runs device-triggered flows and respects cooldown", async () => {
     const devices = cloneDevices(useHomeStore.getState().devices);
     const d1 = devices.find((device) => device.id === "d1");
@@ -107,7 +131,10 @@ describe("flowRuntime", () => {
     };
     useHomeStore.setState({ flows: [flow] });
 
-    const stop = startFlowRuntime({ flowCooldownMs: 10_000, timeTickMs: 60_000 });
+    const stop = startFlowRuntime({
+      flowCooldownMs: 10_000,
+      timeTickMs: 60_000,
+    });
 
     useHomeStore.getState().setDevice("d1", { isOn: true });
     await flushPromises();

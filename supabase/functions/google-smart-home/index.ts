@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
-import { getVoiceUserId } from "../_shared/voiceHandlers.ts";
+import { getVoiceIdentity } from "../_shared/voiceHandlers.ts";
+import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
 import {
   fetchVoiceData,
   enqueueDeviceCommand,
@@ -45,8 +46,8 @@ Deno.serve(async (req) => {
     return rateLimitResponse(securityContext, ipRateLimit);
   }
 
-  const userId = await getVoiceUserId(req, "google");
-  if (!userId) {
+  const identity = await getVoiceIdentity(req, "google");
+  if (!identity) {
     return finalizeEdgeResponse(
       securityContext,
       new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -56,6 +57,7 @@ Deno.serve(async (req) => {
       "unauthorized",
     );
   }
+  const { userId, clientId } = identity;
   const rateLimit = await enforceEdgeRateLimit(securityContext, {
     actorId: userId,
     maxRequests: 600,
@@ -65,7 +67,9 @@ Deno.serve(async (req) => {
   if (!rateLimit.allowed) return rateLimitResponse(securityContext, rateLimit);
 
   try {
-    const body = await readJsonObject(req, 32_768);
+    // Google EXECUTE nests primitive parameters nine levels below its envelope.
+    // Keep the byte/property/array limits and a provider-specific depth ceiling.
+    const body = await readJsonObject(req, 32_768, 10);
     const requestId = boundedString(body.requestId, "requestId", 128);
     if (!Array.isArray(body.inputs) || body.inputs.length !== 1) {
       throw new RequestValidationError("Exactly one Google input is required.");
@@ -75,6 +79,23 @@ Deno.serve(async (req) => {
       throw new RequestValidationError("Invalid Google input.");
     }
     const intent = boundedString(input.intent, "intent", 80);
+
+    if (intent === "action.devices.DISCONNECT") {
+      const { error } = await getSupabaseAdmin().rpc("revoke_voice_link", {
+        target_user_id: userId,
+        target_client_id: clientId,
+      });
+      if (error) throw new Error("Unable to unlink account.");
+      return finalizeEdgeResponse(
+        securityContext,
+        new Response("{}", {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }),
+        "account_disconnected",
+        rateLimit,
+      );
+    }
 
     const { devices, rooms, states } = await fetchVoiceData(userId);
 

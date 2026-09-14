@@ -33,6 +33,7 @@ type Props = {
   role: HouseholdRole;
   overrides: readonly PermissionOverride[];
   disabled?: boolean;
+  canChange?: (permission: ActionPermission) => boolean;
   onChange: (permission: ActionPermission, allowed: boolean | null) => void;
 };
 
@@ -40,6 +41,7 @@ export default function MemberPermissionEditor({
   role,
   overrides,
   disabled = false,
+  canChange,
   onChange,
 }: Props) {
   if (role === "Owner") {
@@ -62,6 +64,7 @@ export default function MemberPermissionEditor({
           (item) => item.permission === permission,
         );
         const roleAllows = roleHasPermission(role, permission);
+        const readOnly = disabled || canChange?.(permission) === false;
         return (
           <View key={permission} style={styles.row}>
             <View style={styles.labelWrap}>
@@ -87,10 +90,10 @@ export default function MemberPermissionEditor({
                     key={label}
                     accessibilityRole="button"
                     accessibilityLabel={`${PERMISSION_LABELS[permission]}: ${label}`}
-                    accessibilityState={{ selected, disabled }}
+                    accessibilityState={{ selected, disabled: readOnly }}
                     style={[styles.option, selected && styles.optionSelected]}
-                    onPress={() => onChange(permission, value)}
-                    disabled={disabled}
+                    onPress={() => { if (!readOnly) onChange(permission, value); }}
+                    disabled={readOnly}
                   >
                     <Text
                       style={[

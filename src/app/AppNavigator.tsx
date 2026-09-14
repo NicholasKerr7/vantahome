@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Linking } from "react-native";
+import { Linking, View, Text, ActivityIndicator } from "react-native";
 import {
   NavigationContainer,
   DefaultTheme,
@@ -23,14 +23,20 @@ import AuditLogScreen from "../screens/AuditLogScreen";
 import CameraViewerScreen from "../screens/CameraViewerScreen";
 import { theme } from "../theme/theme";
 import { supabase } from "../services/supabaseClient";
-import { syncMembershipFromSupabase } from "../services/membership";
-import { bootstrapHome } from "../services/cloudRegistry";
-import { useHomeStore } from "../store/useHomeStore";
-import { resolveAuthExperience } from "../config/runtimeMode";
 import {
-  getAuthRedirectParams,
-  isAuthCallbackUrl,
-} from "../config/authRedirects";
+  applyMembershipSnapshot,
+  syncMembershipFromSupabase,
+} from "../services/membership";
+import { bootstrapHome } from "../services/cloudRegistry";
+import { hydrateHomeAccount, useHomeStore } from "../store/useHomeStore";
+import { resolveAuthExperience, runtimePolicy } from "../config/runtimeMode";
+import {
+  cancelAuthFlow,
+  completeAuthCallback,
+  waitForAuthExchange,
+} from "../services/authFlow";
+import { deviceClient } from "../services/deviceClient";
+import Pressable from "../components/Pressable";
 import PasswordRecoveryScreen from "../screens/PasswordRecoveryScreen";
 
 /**
@@ -63,68 +69,91 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function AppNavigator() {
   const [session, setSession] = useState<Session | null>(null);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
-  const [authReady, setAuthReady] = useState(!supabase);
-  const setHouseholdFromRemote = useHomeStore((s) => s.setHouseholdFromRemote);
-  const setRoomMembersFromRemote = useHomeStore(
-    (s) => s.setRoomMembersFromRemote,
+  const [authReady, setAuthReady] = useState(false);
+  const [membershipError, setMembershipError] = useState(false);
+  const [membershipRetry, setMembershipRetry] = useState(0);
+  const membershipReady = useHomeStore((s) => s.membershipReady);
+  const navigationScope = useHomeStore((s) =>
+    `${s.authenticatedUserId ?? "demo"}:${s.sessionEpoch}:${s.accountHomeId ?? "unverified"}`,
   );
-  const setActiveMember = useHomeStore((s) => s.setActiveMember);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      let mounted = true;
+      void hydrateHomeAccount(
+        null,
+        runtimePolicy.allowUnauthenticatedDemo,
+      ).then(() => {
+        if (mounted) setAuthReady(true);
+      });
+      return () => {
+        mounted = false;
+      };
+    }
     const authClient = supabase;
     let mounted = true;
+    let currentUserId: string | null | undefined;
+    let transition = 0;
+    let receivedAuthEvent = false;
+    const receiveSession = async (nextSession: Session | null) => {
+      if (!mounted) return;
+      const userId = nextSession?.user.id ?? null;
+      if (currentUserId === userId) {
+        setSession(nextSession);
+        return;
+      }
+      currentUserId = userId;
+      const version = ++transition;
+      deviceClient.resetSession();
+      // Clearing is synchronous, before React can render the new identity.
+      const hydration = hydrateHomeAccount(userId);
+      setAuthReady(false);
+      setSession(nextSession);
+      if (!nextSession) setPasswordRecovery(false);
+      await hydration;
+      if (!mounted || version !== transition) return;
+      if (nextSession) {
+        const meta = nextSession.user.user_metadata ?? {};
+        useHomeStore.getState().setProfile({
+          name:
+            meta.full_name ||
+            meta.name ||
+            nextSession.user.email?.split("@")[0] ||
+            "Home",
+          email: nextSession.user.email,
+        });
+      }
+      setAuthReady(true);
+    };
     authClient.auth
       .getSession()
       .then(({ data }) => {
-        if (!mounted) return;
-        setSession(data.session ?? null);
-        setAuthReady(true);
+        if (!receivedAuthEvent) void receiveSession(data.session ?? null);
       })
       .catch(() => {
-        if (!mounted) return;
-        setSession(null);
-        setAuthReady(true);
+        if (!receivedAuthEvent) void receiveSession(null);
       });
     const handleAuthUrl = async (url: string | null) => {
-      if (!mounted || !url || !isAuthCallbackUrl(url)) return;
-      const params = getAuthRedirectParams(url);
-      if (!params) return;
-      const isRecovery = params.get("type") === "recovery";
-      if (isRecovery) setPasswordRecovery(true);
-
-      const code = params.get("code");
-      const accessToken = params.get("access_token");
-      const refreshToken = params.get("refresh_token");
-      let recoveredSession: Session | null = null;
-      try {
-        if (code) {
-          const { data, error } =
-            await authClient.auth.exchangeCodeForSession(code);
-          if (!error) recoveredSession = data.session;
-        } else if (accessToken && refreshToken) {
-          const { data, error } = await authClient.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          if (!error) recoveredSession = data.session;
-        }
-      } catch {
-        recoveredSession = null;
-      } finally {
-        if (mounted && isRecovery && !recoveredSession) {
-          setPasswordRecovery(false);
-        }
-      }
+      if (!mounted || !url) return;
+      let recovery = false;
+      const recovered = await completeAuthCallback(url, () => {
+        recovery = true;
+        if (mounted) setPasswordRecovery(true);
+      });
+      if (mounted && recovery && !recovered) setPasswordRecovery(false);
     };
 
-    void Linking.getInitialURL().then(handleAuthUrl).catch(() => undefined);
+    void Linking.getInitialURL()
+      .then(handleAuthUrl)
+      .catch(() => undefined);
     const linkSubscription = Linking.addEventListener("url", ({ url }) => {
       void handleAuthUrl(url);
     });
     const { data } = authClient.auth.onAuthStateChange((event, nextSession) => {
+      receivedAuthEvent = true;
+      if (event === "SIGNED_OUT") void cancelAuthFlow();
       if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
-      setSession(nextSession ?? null);
+      void receiveSession(nextSession ?? null);
     });
     return () => {
       mounted = false;
@@ -134,11 +163,16 @@ export default function AppNavigator() {
   }, []);
 
   useEffect(() => {
-    if (!session || passwordRecovery) return;
+    if (!session || passwordRecovery || !authReady) return;
     let active = true;
+    const sessionEpoch = useHomeStore.getState().sessionEpoch;
+    const isCurrent = () =>
+      active && useHomeStore.getState().sessionEpoch === sessionEpoch;
     const ensureMembership = async () => {
-      let result = await syncMembershipFromSupabase();
-      if (!result) {
+      setMembershipError(false);
+      let result = await syncMembershipFromSupabase(session.user.id);
+      if (!isCurrent()) return;
+      if (!result && !useHomeStore.getState().accountHomeId) {
         const meta = session.user.user_metadata ?? {};
         const baseName =
           meta.full_name ||
@@ -150,83 +184,147 @@ export default function AppNavigator() {
           "Home";
         const homeName = `${String(baseName).trim() || "Home"}'s Home`;
         try {
-          await bootstrapHome(homeName);
+          await bootstrapHome(homeName, session.user.id);
         } catch {
+          if (isCurrent()) setMembershipError(true);
           return;
         }
-        result = await syncMembershipFromSupabase();
+        if (!isCurrent()) return;
+        result = await syncMembershipFromSupabase(session.user.id);
       }
-      if (!active || !result) return;
-      setHouseholdFromRemote(result.household);
-      setRoomMembersFromRemote(result.roomMembers);
-      setActiveMember(result.activeMemberId);
+      if (!isCurrent()) return;
+      if (!result || !applyMembershipSnapshot(result)) setMembershipError(true);
     };
-    void ensureMembership();
+    void ensureMembership().catch(() => {
+      if (isCurrent()) setMembershipError(true);
+    });
     return () => {
       active = false;
     };
-  }, [
-    passwordRecovery,
-    session,
-    setActiveMember,
-    setHouseholdFromRemote,
-    setRoomMembersFromRemote,
-  ]);
+  }, [passwordRecovery, session?.user.id, authReady, membershipRetry]);
 
   if (!authReady) {
     return null;
   }
 
+  const checkingMembership = Boolean(
+    session && !passwordRecovery && !membershipReady,
+  );
   const authExperience = resolveAuthExperience({
     hasSupabase: Boolean(supabase),
     hasSession: Boolean(session),
   });
   return (
-    <BottomSheetModalProvider>
-      <NavigationContainer
-        theme={{
-          ...DefaultTheme,
-          // Ensure the “safe” default background matches our gradient base.
-          colors: { ...DefaultTheme.colors, background: theme.colors.bg0 },
-        }}
+    <View style={{ flex: 1 }}>
+      <View
+        style={{ flex: 1 }}
+        pointerEvents={checkingMembership ? "none" : "auto"}
+        accessibilityElementsHidden={checkingMembership}
+        importantForAccessibility={
+          checkingMembership ? "no-hide-descendants" : "auto"
+        }
       >
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {passwordRecovery && session ? (
-            <Stack.Screen name="PasswordRecovery">
-              {() => (
-                <PasswordRecoveryScreen
-                  onComplete={() => setPasswordRecovery(false)}
-                />
+        <BottomSheetModalProvider>
+          <NavigationContainer
+            key={navigationScope}
+            theme={{
+              ...DefaultTheme,
+              // Ensure the “safe” default background matches our gradient base.
+              colors: { ...DefaultTheme.colors, background: theme.colors.bg0 },
+            }}
+          >
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              {passwordRecovery && session ? (
+                <Stack.Screen name="PasswordRecovery">
+                  {() => (
+                    <PasswordRecoveryScreen
+                      onComplete={() => setPasswordRecovery(false)}
+                    />
+                  )}
+                </Stack.Screen>
+              ) : authExperience === "configuration-required" ? (
+                <Stack.Screen name="Auth" component={AuthRequiredScreen} />
+              ) : authExperience === "authenticated" ||
+                authExperience === "demo" ? (
+                <>
+                  <Stack.Screen
+                    name="Onboarding"
+                    component={OnboardingScreen}
+                  />
+                  <Stack.Screen name="Main" component={BottomTabs} />
+                  <Stack.Screen name="Room" component={RoomScreen} />
+                  <Stack.Screen
+                    name="DeviceDetail"
+                    component={DeviceDetailScreen}
+                  />
+                  <Stack.Screen
+                    name="Notifications"
+                    component={NotificationsScreen}
+                  />
+                  <Stack.Screen name="Profile" component={ProfileScreen} />
+                  <Stack.Screen
+                    name="ManageRooms"
+                    component={ManageRoomsScreen}
+                  />
+                  <Stack.Screen name="Cameras" component={CamerasScreen} />
+                  <Stack.Screen
+                    name="CameraViewer"
+                    component={CameraViewerScreen}
+                  />
+                  <Stack.Screen name="AuditLog" component={AuditLogScreen} />
+                  <Stack.Screen
+                    name="AutomationBuilder"
+                    component={AutomationBuilderScreen}
+                  />
+                </>
+              ) : (
+                <Stack.Screen name="Auth" component={AuthScreen} />
               )}
-            </Stack.Screen>
-          ) : authExperience === "configuration-required" ? (
-            <Stack.Screen name="Auth" component={AuthRequiredScreen} />
-          ) : authExperience === "authenticated" ||
-            authExperience === "demo" ? (
-            <>
-              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              <Stack.Screen name="Main" component={BottomTabs} />
-              <Stack.Screen name="Room" component={RoomScreen} />
-              <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} />
-              <Stack.Screen
-                name="Notifications"
-                component={NotificationsScreen}
-              />
-              <Stack.Screen name="Profile" component={ProfileScreen} />
-              <Stack.Screen name="ManageRooms" component={ManageRoomsScreen} />
-              <Stack.Screen name="Cameras" component={CamerasScreen} />
-              <Stack.Screen name="CameraViewer" component={CameraViewerScreen} />
-              <Stack.Screen name="AuditLog" component={AuditLogScreen} />
-              <Stack.Screen
-                name="AutomationBuilder"
-                component={AutomationBuilderScreen}
-              />
-            </>
-          ) : (
-            <Stack.Screen name="Auth" component={AuthScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </BottomSheetModalProvider>
+      </View>
+      {checkingMembership && (
+        <View
+          accessibilityViewIsModal
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 16,
+            backgroundColor: theme.colors.bg0,
+          }}
+        >
+          {!membershipError && (
+            <ActivityIndicator color={theme.colors.accent2} />
           )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </BottomSheetModalProvider>
+          <Text style={{ color: theme.colors.text }}>
+            {membershipError
+              ? "Unable to verify home access."
+              : "Verifying your home…"}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setMembershipRetry((value) => value + 1)}
+          >
+            <Text style={{ color: theme.colors.accent2 }}>Retry</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              void cancelAuthFlow()
+                .then(waitForAuthExchange)
+                .then(() => supabase?.auth.signOut({ scope: "local" }));
+            }}
+          >
+            <Text style={{ color: theme.colors.subtext }}>Sign out</Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 }

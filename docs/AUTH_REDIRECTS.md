@@ -24,9 +24,15 @@ until the corresponding public client ID is configured in the app environment.
 ## Recovery flow
 
 Password reset emails explicitly use the auth callback instead of Supabase's
-default Site URL. The app accepts only its own callback scheme/path, establishes
-the recovery session from an authorization code or token pair, and presents a
-dedicated password replacement screen before loading household data.
+default Site URL. The app requires the exact canonical callback and a locally
+initiated, expiring recovery flow, then exchanges an authorization code using
+PKCE. It rejects implicit access/refresh-token callbacks and presents a dedicated
+password replacement screen before loading household data. Expired requests or
+older token-pair links require starting a fresh recovery request in this app.
+
+The same local-flow and PKCE requirements apply to OAuth sign-in and signup
+confirmation. Code-level checks were updated on 2026-09-14; physical-device
+warm/cold callback and recovery verification must be repeated for this build.
 
 ## Provider status
 

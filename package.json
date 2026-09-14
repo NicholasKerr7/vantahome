@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
+    "postinstall": "node scripts/patch-query-string.js",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -14,7 +15,7 @@
     "test:db:remote": "node scripts/run-remote-db-tests.js",
     "supabase:check": "node scripts/check-supabase-readiness.js",
     "security:secrets": "node scripts/check-secrets.js --history",
-    "security:dependencies": "node scripts/check-dependency-security.js",
+    "security:dependencies": "node scripts/patch-query-string.js --check && node scripts/check-dependency-security.js",
     "release:version-check": "node scripts/check-release-version.js",
     "release:assets-check": "node scripts/check-release-assets.js",
     "release:auth-redirect-check": "node scripts/check-auth-redirects.js",
@@ -44,6 +45,7 @@
     "expo-av": "~16.0.8",
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.12",
+    "expo-crypto": "~15.0.9",
     "expo-device": "~8.0.10",
     "expo-font": "~14.0.10",
     "expo-haptics": "~15.0.8",
@@ -92,6 +94,8 @@
       "@expo/config-plugins": "54.0.5"
     },
     "postcss": "8.5.26",
+    "decode-uri-component": "0.5.0",
+    "query-string": "7.1.3",
     "xcode": {
       "uuid": "11.1.1"
     }

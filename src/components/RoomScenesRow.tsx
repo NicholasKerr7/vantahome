@@ -15,6 +15,7 @@ import { theme } from "../theme/theme";
 import { useHomeStore } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import { LinearGradient } from "expo-linear-gradient";
+import { runtimePolicy } from "../config/runtimeMode";
 
 export default function RoomScenesRow({
   title = "Scenes",
@@ -169,8 +170,9 @@ export default function RoomScenesRow({
           >
             <Text style={infoTitleStyle}>One-tap scenes</Text>
             <Text style={infoTextStyle}>
-              Tap a scene chip to apply it instantly to this room. You can undo
-              for a few seconds after it runs.
+              {runtimePolicy.requireRealTransport
+                ? "Tap a scene chip to request its settings. Devices update after their state is observed. Undo requests the previous settings."
+                : "Tap a scene chip to apply it instantly to this room. You can undo for a few seconds after it runs."}
             </Text>
             <Pressable
               style={infoButtonStyle}

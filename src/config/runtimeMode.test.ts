@@ -54,11 +54,11 @@ describe("runtime transport policy", () => {
   });
 
   test.each(["alpha", "production"] as const)(
-    "requires TLS sockets in %s",
+    "keeps unpaired direct sockets disabled in %s",
     (mode) => {
       expect(isAllowedDirectWebSocketUrl("ws://bridge.local", mode)).toBe(false);
       expect(isAllowedDirectWebSocketUrl("wss://bridge.example", mode)).toBe(
-        true,
+        false,
       );
     },
   );

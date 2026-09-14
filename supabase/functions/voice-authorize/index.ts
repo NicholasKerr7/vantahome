@@ -24,14 +24,45 @@ function escapeHtml(value: string) {
   })[character] ?? character);
 }
 
-function renderHtml(body: string) {
+function oauthHeaders(extra: HeadersInit = {}, styleNonce?: string, formRedirect?: string) {
+  const headers = new Headers(extra);
+  const redirect = formRedirect ? new URL(formRedirect) : null;
+  // Some browsers apply form-action to the final POST redirect too. Permit the
+  // registered provider origin so the authorization-code handoff still works.
+  const formTarget = redirect?.protocol === "https:" ? ` ${redirect.origin}` : "";
+  headers.set("Cache-Control", "no-store");
+  headers.set("Pragma", "no-cache");
+  headers.set("Referrer-Policy", "no-referrer");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Content-Security-Policy", [
+    "default-src 'none'",
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    `form-action 'self'${formTarget}`,
+    `style-src ${styleNonce ? `'nonce-${styleNonce}'` : "'none'"}`,
+  ].join("; "));
+  return headers;
+}
+
+function htmlResponse(body: string, status: number, formRedirect?: string) {
+  // A per-response style nonce preserves the linking form without allowing
+  // arbitrary inline scripts or styles in this password-bearing document.
+  const nonce = randomToken(16);
+  return new Response(renderHtml(body, nonce), {
+    status,
+    headers: oauthHeaders({ "Content-Type": "text/html; charset=utf-8" }, nonce, formRedirect),
+  });
+}
+
+function renderHtml(body: string, nonce: string) {
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>VantaHome Linking</title>
-<style>
+<style nonce="${nonce}">
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1b0e3d; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
   .card { width: min(420px, 92vw); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 20px; padding: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
   h1 { margin: 0 0 12px; font-size: 20px; }
@@ -65,7 +96,7 @@ async function signInWithPassword(email: string, password: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: oauthHeaders(corsHeaders) });
   }
   const securityContext = createEdgeRequestContext(req, "voice-authorize");
   const rateLimit = await enforceEdgeRateLimit(securityContext, {
@@ -73,7 +104,13 @@ Deno.serve(async (req) => {
     windowSeconds: 900,
     requireClientIp: true,
   });
-  if (!rateLimit.allowed) return rateLimitResponse(securityContext, rateLimit);
+  if (!rateLimit.allowed) {
+    const response = rateLimitResponse(securityContext, rateLimit);
+    return new Response(response.body, {
+      status: response.status,
+      headers: oauthHeaders(response.headers),
+    });
+  }
 
   const url = new URL(req.url);
   const params = url.searchParams;
@@ -91,23 +128,17 @@ Deno.serve(async (req) => {
       responseType !== "code" ||
       state.length > 512
     ) {
-      return new Response(
-        renderHtml('<div class="error">Invalid OAuth request.</div>'),
-        {
-          status: 400,
-          headers: { "Content-Type": "text/html" },
-        },
+      return htmlResponse(
+        '<div class="error">Invalid OAuth request.</div>',
+        400,
       );
     }
 
     const client = await getVoiceClient(clientId);
     if (!client || !client.redirect_uris.includes(redirectUri)) {
-      return new Response(
-        renderHtml('<div class="error">Unknown client.</div>'),
-        {
-          status: 400,
-          headers: { "Content-Type": "text/html" },
-        },
+      return htmlResponse(
+        '<div class="error">Unknown client.</div>',
+        400,
       );
     }
 
@@ -131,10 +162,7 @@ Deno.serve(async (req) => {
 
     return finalizeEdgeResponse(
       securityContext,
-      new Response(renderHtml(body), {
-        status: 200,
-        headers: { "Content-Type": "text/html" },
-      }),
+      htmlResponse(body, 200, redirectUri),
       "login_form_rendered",
       rateLimit,
     );
@@ -143,7 +171,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: oauthHeaders({ ...corsHeaders, "Content-Type": "application/json" }),
     });
   }
 
@@ -164,23 +192,17 @@ Deno.serve(async (req) => {
 
     const client = await getVoiceClient(formClientId);
     if (!client || !client.redirect_uris.includes(formRedirect)) {
-      return new Response(
-        renderHtml('<div class="error">Unknown client.</div>'),
-        {
-          status: 400,
-          headers: { "Content-Type": "text/html" },
-        },
+      return htmlResponse(
+        '<div class="error">Unknown client.</div>',
+        400,
       );
     }
 
     const user = await signInWithPassword(email, password);
     if (!user) {
-      return new Response(
-        renderHtml('<div class="error">Invalid credentials.</div>'),
-        {
-          status: 401,
-          headers: { "Content-Type": "text/html" },
-        },
+      return htmlResponse(
+        '<div class="error">Invalid credentials.</div>',
+        401,
       );
     }
 
@@ -197,14 +219,9 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      return new Response(
-        renderHtml(
-          '<div class="error">Unable to create authorization code.</div>',
-        ),
-        {
-          status: 500,
-          headers: { "Content-Type": "text/html" },
-        },
+      return htmlResponse(
+        '<div class="error">Unable to create authorization code.</div>',
+        500,
       );
     }
 
@@ -216,7 +233,7 @@ Deno.serve(async (req) => {
       securityContext,
       new Response(null, {
         status: 302,
-        headers: { Location: redirect.toString() },
+        headers: oauthHeaders({ Location: redirect.toString() }),
       }),
       "authorization_code_issued",
       rateLimit,
@@ -225,10 +242,7 @@ Deno.serve(async (req) => {
     const status = err instanceof RequestValidationError ? 400 : 500;
     return finalizeEdgeResponse(
       securityContext,
-      new Response(renderHtml('<div class="error">Unable to link this account.</div>'), {
-        status,
-        headers: { "Content-Type": "text/html" },
-      }),
+      htmlResponse('<div class="error">Unable to link this account.</div>', status),
       status === 400 ? "invalid_request" : "server_error",
       rateLimit,
     );

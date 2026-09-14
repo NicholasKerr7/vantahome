@@ -41,6 +41,18 @@ the remaining extractions. This compatibility-first sequence prevents UI churn.
 `EXPO_PUBLIC_VANTA_MODE` is one of `demo`, `development`, `alpha`, or
 `production`. Demo/development may use mock telemetry and direct MQTT for local
 experiments. Alpha/production fail closed: no mock transport and no mobile MQTT.
+Unpaired direct WebSockets are also development-only: TLS is not a pairing or
+authorization mechanism. Release telemetry uses RLS-protected `device_state`
+Postgres Changes and re-reads current, caller-visible state. Broadcast messages
+are confined to the explicit demo/development path. Commands use the
+authenticated `device-command` API; acceptance never implies physical confirmation.
+
+Local caches are partitioned by authenticated account. Current household/room
+permissions must be verified before cached data or automation runtimes become
+available. Account changes stop subscriptions, queued commands and delayed
+automation actions. Temporary membership revalidation preserves navigation;
+fresh observations take precedence over older registry snapshots. Camera stream
+and thumbnail URLs are excluded from persistent caches.
 
 Inbound MQTT, WebSocket, and Supabase device events pass runtime schemas before
 they enter application state. Immutable identity/configuration fields cannot be

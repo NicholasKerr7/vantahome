@@ -2,6 +2,8 @@ const {
   projectRefFromUrl,
   tapLinesFromQueryResult,
   validateRemoteTestTarget,
+  databaseClientOptions,
+  validateTapLines,
 } = require("./run-remote-db-tests.js");
 
 const activeRef = "abcdefghijklmnopqrst";
@@ -12,6 +14,20 @@ const disposableUrl =
   "aws-0-us-west-1.pooler.supabase.com:6543/postgres";
 
 describe("remote database test safety", () => {
+  test("verifies database TLS and keeps URL options from weakening it", () => {
+    expect(databaseClientOptions(disposableUrl).ssl).toEqual({ rejectUnauthorized: true });
+    expect(databaseClientOptions(`${disposableUrl}?sslmode=verify-full`, "test-ca").ssl).toEqual({ rejectUnauthorized: true, ca: "test-ca" });
+    for (const suffix of ["sslmode=require", "sslmode=no-verify", "sslmode=disable", "ssl=false", "uselibpqcompat=1"]) {
+      expect(() => databaseClientOptions(`${disposableUrl}?${suffix}`)).toThrow("SSL options");
+    }
+  });
+  test("requires complete passing TAP output, not only a plan", () => {
+    expect(() => validateTapLines(["1..2", "ok 1 - first", "ok 2 - second"])).not.toThrow();
+    for (const lines of [
+      ["1..2", "ok 1 - truncated"], ["1..1", "not ok 1 - denied"],
+      ["1..2", "ok 1", "ok 1"], ["1..1", "ok 1", "Bail out!"], ["1..0"],
+    ]) expect(() => validateTapLines(lines)).toThrow();
+  });
   test("extracts refs from API, direct database, and pooler URLs", () => {
     expect(projectRefFromUrl(appUrl)).toBe(activeRef);
     expect(

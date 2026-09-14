@@ -56,7 +56,7 @@ export function resolveAuthExperience({
   return hasSession ? "authenticated" : "sign-in";
 }
 
-/** Rejects insecure release sockets and credentials embedded in URLs. */
+/** Direct sockets have no pairing handshake yet; TLS alone is not authorization. */
 export function isAllowedDirectWebSocketUrl(
   value: string | null | undefined,
   mode: RuntimeMode = runtimePolicy.mode,
@@ -66,7 +66,7 @@ export function isAllowedDirectWebSocketUrl(
     const parsed = new URL(value);
     if (parsed.username || parsed.password) return false;
     if (mode === "alpha" || mode === "production") {
-      return parsed.protocol === "wss:";
+      return false;
     }
     return parsed.protocol === "ws:" || parsed.protocol === "wss:";
   } catch {

@@ -22,6 +22,17 @@ export const ACTION_PERMISSIONS = [
 
 export type ActionPermission = (typeof ACTION_PERMISSIONS)[number];
 export type HouseholdRole = HouseholdMember["role"];
+
+/** Delegated administration never includes the owner, self, or peer admins. */
+export function canAdministerMember(
+  actor: Pick<HouseholdMember, "id" | "role"> | undefined,
+  member: Pick<HouseholdMember, "id" | "role">,
+) {
+  if (!actor || member.role === "Owner") return false;
+  return actor.role === "Owner" ||
+    (actor.role === "Admin" && actor.id !== member.id &&
+      ["Member", "Guest", "Tenant"].includes(member.role));
+}
 export type PermissionOverride = {
   permission: ActionPermission;
   allowed: boolean;
@@ -72,8 +83,9 @@ export function permissionForCommand(
     if (command.op === "toggle") return "lock.unlock";
     if (
       command.op === "set-properties" &&
-      typeof command.changes.openPercent === "number" &&
-      command.changes.openPercent > 0
+      ((typeof command.changes.openPercent === "number" &&
+        command.changes.openPercent > 0) ||
+        command.changes.isOn === true || command.changes.autoOpenEnabled === true)
     ) {
       return "lock.unlock";
     }
@@ -83,8 +95,9 @@ export function permissionForCommand(
     if (command.op === "toggle") return "garage.open";
     if (
       command.op === "set-properties" &&
-      typeof command.changes.openPercent === "number" &&
-      command.changes.openPercent > 0
+      ((typeof command.changes.openPercent === "number" &&
+        command.changes.openPercent > 0) ||
+        command.changes.isOn === true || command.changes.autoOpenEnabled === true)
     ) {
       return "garage.open";
     }

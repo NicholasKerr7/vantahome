@@ -18,8 +18,8 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
   return prototype === Object.prototype || prototype === null;
 }
 
-export function isSafeJson(value: unknown, depth = 0): boolean {
-  if (depth > 5) return false;
+export function isSafeJson(value: unknown, depth = 0, maxDepth = 5): boolean {
+  if (depth > maxDepth) return false;
   if (
     value === null ||
     typeof value === "string" ||
@@ -27,36 +27,66 @@ export function isSafeJson(value: unknown, depth = 0): boolean {
   ) return true;
   if (typeof value === "number") return Number.isFinite(value);
   if (Array.isArray(value)) {
-    return value.length <= 256 && value.every((item) => isSafeJson(item, depth + 1));
+    return value.length <= 256 && value.every((item) => isSafeJson(item, depth + 1, maxDepth));
   }
   if (!isPlainObject(value)) return false;
   const entries = Object.entries(value);
   return entries.length <= 256 && entries.every(
     ([key, item]) =>
       !["__proto__", "constructor", "prototype"].includes(key) &&
-      isSafeJson(item, depth + 1),
+      isSafeJson(item, depth + 1, maxDepth),
   );
+}
+
+async function readBoundedText(
+  request: Request,
+  maxBytes: number,
+): Promise<string> {
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    await request.body?.cancel().catch(() => undefined);
+    throw new RequestValidationError("Request body is too large.");
+  }
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let receivedBytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      receivedBytes += value.byteLength;
+      // Enforce the actual stream size, including missing or false length headers,
+      // before decoding or retaining the chunk that crosses the boundary.
+      if (receivedBytes > maxBytes) {
+        throw new RequestValidationError("Request body is too large.");
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    return text + decoder.decode();
+  } catch (error) {
+    await reader.cancel().catch(() => undefined);
+    if (error instanceof RequestValidationError) throw error;
+    throw new RequestValidationError("Unable to read request body.");
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 export async function readJsonObject(
   request: Request,
   maxBytes = 32_768,
+  maxDepth = 5,
 ): Promise<Record<string, unknown>> {
-  const declaredLength = Number(request.headers.get("content-length") ?? 0);
-  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
-    throw new RequestValidationError("Request body is too large.");
-  }
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
-    throw new RequestValidationError("Request body is too large.");
-  }
+  const raw = await readBoundedText(request, maxBytes);
   let value: unknown;
   try {
     value = JSON.parse(raw);
   } catch {
     throw new RequestValidationError("Invalid JSON body.");
   }
-  if (!isPlainObject(value) || !isSafeJson(value)) {
+  if (!isPlainObject(value) || !isSafeJson(value, 0, maxDepth)) {
     throw new RequestValidationError("Invalid request body.");
   }
   return value;
@@ -67,14 +97,7 @@ export async function readFormObject(
   maxBytes = 8_192,
   maxFields = 16,
 ): Promise<Record<string, string>> {
-  const declaredLength = Number(request.headers.get("content-length") ?? 0);
-  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
-    throw new RequestValidationError("Request body is too large.");
-  }
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
-    throw new RequestValidationError("Request body is too large.");
-  }
+  const raw = await readBoundedText(request, maxBytes);
 
   const params = new URLSearchParams(raw);
   const entries: Record<string, string> = {};
@@ -84,6 +107,7 @@ export async function readFormObject(
     if (
       fieldCount > maxFields ||
       key.length > 64 ||
+      ["__proto__", "constructor", "prototype"].includes(key) ||
       Object.prototype.hasOwnProperty.call(entries, key)
     ) {
       throw new RequestValidationError("Invalid form body.");

@@ -6,6 +6,7 @@ import {
   FlatList,
   TextInput,
   ScrollView,
+  Alert,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -36,6 +37,8 @@ import {
 } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { runtimePolicy } from "../config/runtimeMode";
+import { captureSceneScope, executeSceneCommands, type SceneScope } from "../services/sceneExecution";
 
 const DEVICE_OPTIONS: Array<{
   kind: Device["kind"];
@@ -563,9 +566,11 @@ export default function RoomScreen({ route, navigation }: Props) {
   );
 
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sceneRequestPending = useRef(false);
   const [undoScene, setUndoScene] = useState<{
     label: string;
     patches: Array<{ id: string; patch: Partial<Device> }>;
+    scope: SceneScope;
   } | null>(null);
 
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -647,7 +652,8 @@ export default function RoomScreen({ route, navigation }: Props) {
     requestAnimationFrame(() => sheetRef.current?.present());
   };
 
-  const handleRunScene = (sceneId: string) => {
+  const handleRunScene = async (sceneId: string) => {
+    if (sceneRequestPending.current) return;
     const scene = scenesAll.find((s) => s.id === sceneId);
     if (!scene) return;
     const deviceMap = new Map(devicesAll.map((d) => [d.id, d]));
@@ -666,10 +672,22 @@ export default function RoomScreen({ route, navigation }: Props) {
       })
       .filter(Boolean) as Array<{ id: string; patch: Partial<Device> }>;
 
-    runScene(sceneId);
+    const scope = captureSceneScope();
+    sceneRequestPending.current = true;
+    try {
+      await runScene(sceneId);
+    } catch {
+      if (scope.sessionEpoch === useHomeStore.getState().sessionEpoch) {
+        Alert.alert("Scene not completed", "Unable to request every action. Check home access and device status before retrying.");
+      }
+      return;
+    } finally {
+      sceneRequestPending.current = false;
+    }
+    if (scope.sessionEpoch !== useHomeStore.getState().sessionEpoch) return;
 
     if (undoTimer.current) clearTimeout(undoTimer.current);
-    setUndoScene({ label: scene.name, patches });
+    setUndoScene({ label: scene.name, patches, scope });
     undoTimer.current = setTimeout(() => setUndoScene(null), 5000);
   };
 
@@ -759,11 +777,24 @@ export default function RoomScreen({ route, navigation }: Props) {
 
       {undoScene ? (
         <View style={undoBarStyle}>
-          <Text style={styles.undoText}>{undoScene.label} applied</Text>
+          <Text style={styles.undoText}>{undoScene.label} {runtimePolicy.requireRealTransport ? "requested" : "applied"}</Text>
           <Pressable
             onPress={() => {
-              undoScene.patches.forEach((p) => setDevice(p.id, p.patch));
+              const undo = undoScene;
               setUndoScene(null);
+              if (!runtimePolicy.requireRealTransport) {
+                undo.patches.forEach((p) => setDevice(p.id, p.patch));
+                return;
+              }
+              const actions = undo.patches.flatMap(({ id, patch }) => {
+                const known = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
+                return Object.keys(known).length ? [{ type: "patch" as const, deviceId: id, patch: known }] : [];
+              });
+              void executeSceneCommands(actions, undo.scope).catch(() => {
+                if (undo.scope.sessionEpoch === useHomeStore.getState().sessionEpoch) {
+                  Alert.alert("Undo not completed", "Unable to request every previous setting. Check device status before retrying.");
+                }
+              });
             }}
           >
             <Text style={styles.undoAction}>Undo</Text>

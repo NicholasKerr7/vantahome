@@ -213,11 +213,11 @@ select ok(
 
 -- Observed state is immutable to every authenticated client, including owner.
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
-select is_empty(
+select throws_ok(
   $$update device_state set state = '{"isOn":true}'::jsonb
     where device_id = '40000000-0000-0000-0000-000000000002'
     returning device_id$$,
-  'owner cannot mutate observed device state'
+  '42501', null, 'owner cannot mutate observed device state'
 );
 select throws_ok(
   $$insert into device_state (device_id, state) values ('40000000-0000-0000-0000-000000000025', '{}'::jsonb)$$,
@@ -258,7 +258,7 @@ insert into device_commands (
   '40000000-0000-0000-0000-000000000002',
   '10000000-0000-0000-0000-000000000004',
   'toggle',
-  '{"op":"toggle","deviceId":"40000000-0000-0000-0000-000000000002","commandId":"guest-light-ok","nonce":"guest-light-ok-nonce","idempotencyKey":"guest-light-ok-key"}'::jsonb,
+  '{"op":"toggle","deviceId":"40000000-0000-0000-0000-000000000002","commandId":"guest-light-ok","nonce":"guest-light-ok-nonce","idempotencyKey":"guest-light-ok-key"}'::jsonb || jsonb_build_object('createdAt', floor(extract(epoch from now()) * 1000), 'expiresAt', floor(extract(epoch from now() + interval '15 seconds') * 1000)),
   'guest-light-ok-nonce', 'guest-light-ok-key', now(), now() + interval '15 seconds'
 );
 select is((select count(*) from device_commands), 1::bigint, 'guest can queue an allowed assigned-room command');
@@ -271,7 +271,7 @@ select throws_ok($$
     'guest-private-denied', '20000000-0000-0000-0000-000000000001',
     '40000000-0000-0000-0000-000000000025', '10000000-0000-0000-0000-000000000004',
     'toggle',
-    '{"op":"toggle","deviceId":"40000000-0000-0000-0000-000000000025","commandId":"guest-private-denied","nonce":"guest-private-denied-nonce","idempotencyKey":"guest-private-denied-key"}'::jsonb,
+    '{"op":"toggle","deviceId":"40000000-0000-0000-0000-000000000025","commandId":"guest-private-denied","nonce":"guest-private-denied-nonce","idempotencyKey":"guest-private-denied-key"}'::jsonb || jsonb_build_object('createdAt', floor(extract(epoch from now()) * 1000), 'expiresAt', floor(extract(epoch from now() + interval '15 seconds') * 1000)),
     'guest-private-denied-nonce', 'guest-private-denied-key', now(), now() + interval '15 seconds'
   )
 $$, '42501', null, 'unassigned-room command insert is rejected');
@@ -284,7 +284,7 @@ select throws_ok($$
     'spoofed-actor-denied', '20000000-0000-0000-0000-000000000001',
     '40000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003',
     'toggle',
-    '{"op":"toggle","deviceId":"40000000-0000-0000-0000-000000000002","commandId":"spoofed-actor-denied","nonce":"spoofed-actor-denied-nonce","idempotencyKey":"spoofed-actor-denied-key"}'::jsonb,
+    '{"op":"toggle","deviceId":"40000000-0000-0000-0000-000000000002","commandId":"spoofed-actor-denied","nonce":"spoofed-actor-denied-nonce","idempotencyKey":"spoofed-actor-denied-key"}'::jsonb || jsonb_build_object('createdAt', floor(extract(epoch from now()) * 1000), 'expiresAt', floor(extract(epoch from now() + interval '15 seconds') * 1000)),
     'spoofed-actor-denied-nonce', 'spoofed-actor-denied-key', now(), now() + interval '15 seconds'
   )
 $$, '42501', null, 'spoofed command actor is rejected');

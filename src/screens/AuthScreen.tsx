@@ -25,12 +25,14 @@ import { theme } from "../theme/theme";
 import LottieView from "lottie-react-native";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "../services/supabaseClient";
-import { bootstrapHome } from "../services/cloudRegistry";
 import LandscapeFrame from "../components/LandscapeFrame";
+import { makeAuthCallbackUri } from "../config/authRedirects";
 import {
-  getAuthRedirectParams,
-  makeAuthCallbackUri,
-} from "../config/authRedirects";
+  beginAuthFlow,
+  cancelAuthFlow,
+  completeAuthCallback,
+  waitForAuthExchange,
+} from "../services/authFlow";
 import {
   fetchAuthProviderAvailability,
   type AuthProviderAvailability,
@@ -76,9 +78,7 @@ export default function AuthScreen({}: Props) {
     (isTablet ? 14 : 10) * scale * (isLandscape ? 2 : 1),
   );
   const titleSize = Math.round((isTablet ? 28 : 24) * scale);
-  const landscapeTitleSize = Math.round(
-    titleSize * (isTablet ? 1.6 : 1.4),
-  );
+  const landscapeTitleSize = Math.round(titleSize * (isTablet ? 1.6 : 1.4));
   const heroTitleGap = Math.round((isTablet ? 12 : 8) * scale);
   const subSize = Math.round((isTablet ? 14 : 12) * scale);
   const segmentHeight = Math.round((isTablet ? 40 : 36) * scale);
@@ -95,7 +95,6 @@ export default function AuthScreen({}: Props) {
   const landscapeColumnPad = Math.round((isTablet ? 6 : 4) * scale);
   const scrollPad = Math.round((isLandscape ? 16 : 0) * scale);
   const scrollMinHeight = Math.max(0, height - gutter * 2);
-  const setProfile = useHomeStore((s) => s.setProfile);
   const profile = useHomeStore((s) => s.profile);
   const [mode, setMode] = useState<"create" | "login">("create");
   const [name, setName] = useState(profile.name ?? "");
@@ -179,7 +178,10 @@ export default function AuthScreen({}: Props) {
     styles.label,
     { fontSize: labelSize },
   ];
-  const inputLayout: TextStyle = { height: inputHeight, borderRadius: inputRadius };
+  const inputLayout: TextStyle = {
+    height: inputHeight,
+    borderRadius: inputRadius,
+  };
   const inputStyle: StyleProp<TextStyle> = [styles.input, inputLayout];
   const inputInlineStyle: StyleProp<TextStyle> = [
     styles.input,
@@ -231,10 +233,7 @@ export default function AuthScreen({}: Props) {
     styles.skipText,
     { fontSize: hintSize },
   ];
-  const outerStyle: StyleProp<ViewStyle> = [
-    styles.outer,
-    { padding: gutter },
-  ];
+  const outerStyle: StyleProp<ViewStyle> = [styles.outer, { padding: gutter }];
   const scrollContentStyle: StyleProp<ViewStyle> = [
     styles.scroll,
     isLandscape && {
@@ -266,28 +265,6 @@ export default function AuthScreen({}: Props) {
     formColumnLayout,
   ];
 
-  const applyProfileFromUser = (
-    user?: { email?: string; user_metadata?: Record<string, any> } | null,
-  ) => {
-    const safeEmail = email.trim();
-    const fallbackName =
-      safeEmail.split("@")[0]?.replace(/[._-]+/g, " ") ?? "Home";
-    const meta = user?.user_metadata ?? {};
-    const metaName =
-      meta.full_name ||
-      meta.name ||
-      meta.preferred_username ||
-      meta.nickname ||
-      meta.given_name;
-    const nextName =
-      metaName ||
-      (mode === "login" ? profile.name || fallbackName : name.trim()) ||
-      "Vanta Home";
-    setProfile({ name: nextName, email: user?.email ?? safeEmail });
-    const homeName = profile.homeName?.trim() || `${nextName}'s Home`;
-    void bootstrapHome(homeName).catch(() => {});
-  };
-
   const handleContinue = async () => {
     if (!supabase) {
       Alert.alert(
@@ -302,32 +279,30 @@ export default function AuthScreen({}: Props) {
     const safeEmail = email.trim();
     try {
       if (mode === "create") {
+        await beginAuthFlow("signup");
         const { data, error } = await supabase.auth.signUp({
           email: safeEmail,
           password,
-          options: { data: { full_name: name.trim() } },
+          options: {
+            data: { full_name: name.trim() },
+            emailRedirectTo: redirectUri,
+          },
         });
         if (error) {
+          await cancelAuthFlow();
           Alert.alert("Sign-up failed", error.message);
           return;
         }
         if (data.session?.user) {
-          applyProfileFromUser(data.session.user);
+          await cancelAuthFlow();
           return;
-        }
-        if (data.user) {
-          setProfile({
-            name:
-              name.trim() ||
-              data.user.email?.split("@")[0]?.replace(/[._-]+/g, " ") ||
-              "Vanta Home",
-            email: data.user.email ?? safeEmail,
-          });
         }
         Alert.alert("Check your email", "Confirm your email, then sign in.");
         return;
       }
 
+      await cancelAuthFlow();
+      await waitForAuthExchange();
       const { data, error } = await supabase.auth.signInWithPassword({
         email: safeEmail,
         password,
@@ -337,12 +312,10 @@ export default function AuthScreen({}: Props) {
         return;
       }
       if (data.user) {
-        applyProfileFromUser(data.user);
         return;
       }
       const { data: userData } = await supabase.auth.getUser();
       if (userData.user) {
-        applyProfileFromUser(userData.user);
         return;
       }
       Alert.alert(
@@ -370,11 +343,13 @@ export default function AuthScreen({}: Props) {
     if (oauthLoading || emailAuthLoading) return;
     setOauthLoading(provider);
     try {
+      await beginAuthFlow("oauth");
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: redirectUri },
+        options: { redirectTo: redirectUri, skipBrowserRedirect: true },
       });
       if (error || !data?.url) {
+        await cancelAuthFlow();
         Alert.alert(
           "Sign-in failed",
           error?.message ?? "Unable to start OAuth flow.",
@@ -387,51 +362,14 @@ export default function AuthScreen({}: Props) {
         redirectUri,
       );
       if (result.type !== "success" || !result.url) {
+        await cancelAuthFlow();
         if (result.type === "dismiss" || result.type === "cancel") {
           Alert.alert("Sign-in cancelled", "OAuth flow was canceled.");
         }
         return;
       }
 
-      const params = getAuthRedirectParams(result.url);
-      if (!params) {
-        Alert.alert("Sign-in failed", "The provider returned an invalid URL.");
-        return;
-      }
-      const code = params.get("code");
-      const accessToken = params.get("access_token");
-      const refreshToken = params.get("refresh_token");
-
-      let sessionUser = null as null | {
-        email?: string;
-        user_metadata?: Record<string, any>;
-      };
-
-      if (code) {
-        const { data: exchangeData, error: exchangeError } =
-          await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          Alert.alert("Sign-in failed", exchangeError.message);
-          return;
-        }
-        sessionUser = exchangeData.session?.user ?? null;
-      } else if (accessToken && refreshToken) {
-        const { data: sessionData, error: sessionError } =
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-        if (sessionError) {
-          Alert.alert("Sign-in failed", sessionError.message);
-          return;
-        }
-        sessionUser = sessionData.session?.user ?? null;
-      }
-
-      if (!sessionUser) {
-        const { data: userData } = await supabase.auth.getUser();
-        sessionUser = userData.user ?? null;
-      }
+      const sessionUser = (await completeAuthCallback(result.url))?.user;
 
       if (sessionUser) {
         const userEmail = sessionUser.email ?? profile.email ?? "";
@@ -443,13 +381,6 @@ export default function AuthScreen({}: Props) {
           userEmail.split("@")[0]?.replace(/[._-]+/g, " ") ||
           profile.name ||
           "Vanta Home";
-        setProfile({ name: userName, email: userEmail });
-        try {
-          const homeName = profile.homeName?.trim() || `${userName}'s Home`;
-          await bootstrapHome(homeName);
-        } catch {
-          // Ignore bootstrap errors (e.g., already has a home).
-        }
         Alert.alert("Signed in", `Welcome back, ${userName}!`);
       } else {
         Alert.alert(
@@ -458,6 +389,7 @@ export default function AuthScreen({}: Props) {
         );
       }
     } catch (err: any) {
+      await cancelAuthFlow();
       Alert.alert(
         "Sign-in failed",
         err?.message ?? "Unable to complete OAuth.",
@@ -486,10 +418,12 @@ export default function AuthScreen({}: Props) {
     if (resetLoading || emailAuthLoading || oauthLoading) return;
     setResetLoading(true);
     try {
+      await beginAuthFlow("recovery");
       const { error } = await supabase.auth.resetPasswordForEmail(safeEmail, {
         redirectTo: redirectUri,
       });
       if (error) {
+        await cancelAuthFlow();
         Alert.alert("Reset failed", error.message);
         return;
       }
@@ -509,9 +443,7 @@ export default function AuthScreen({}: Props) {
 
   const heroContent = (
     <>
-      <View
-        style={lottieWrapStyle}
-      >
+      <View style={lottieWrapStyle}>
         <LinearGradient
           colors={["rgba(255,255,255,0.98)", "rgba(255,255,255,0.85)"]}
           start={{ x: 0.2, y: 0.1 }}
@@ -538,9 +470,7 @@ export default function AuthScreen({}: Props) {
           pointerEvents="none"
         />
       </View>
-      <Text style={heroTitleStyle}>
-        VantaHome, connected.
-      </Text>
+      <Text style={heroTitleStyle}>VantaHome, connected.</Text>
       <Text style={heroSubStyle}>
         Create an account or sign in to sync devices, scenes, and automations.
       </Text>
@@ -761,7 +691,6 @@ export default function AuthScreen({}: Props) {
           </View>
         </>
       )}
-
     </>
   );
 
@@ -807,13 +736,9 @@ export default function AuthScreen({}: Props) {
             <View style={cardStyle}>
               {useLandscapeFrame ? (
                 <View style={styles.cardLandscape}>
-                  <View style={heroColumnStyle}>
-                    {heroContent}
-                  </View>
+                  <View style={heroColumnStyle}>{heroContent}</View>
                   <View style={styles.heroDivider} />
-                  <View style={formColumnStyle}>
-                    {formContent}
-                  </View>
+                  <View style={formColumnStyle}>{formContent}</View>
                 </View>
               ) : (
                 <>

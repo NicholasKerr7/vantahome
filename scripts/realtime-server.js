@@ -5,7 +5,7 @@ const WebSocket = require("ws");
 
 const PORT = Number(process.env.PORT || 8088);
 const server = http.createServer();
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server, maxPayload: 32 * 1024 });
 const deviceState = new Map();
 
 const broadcast = (message) => {
@@ -93,6 +93,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-server.listen(PORT, () => {
+// This mock bridge is unauthenticated and must not listen on the local network.
+server.listen(PORT, "127.0.0.1", () => {
   console.log(`Realtime WS server listening on ws://localhost:${PORT}`);
 });

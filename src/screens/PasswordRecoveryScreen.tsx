@@ -12,6 +12,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Pressable from "../components/Pressable";
 import { supabase } from "../services/supabaseClient";
 import { theme } from "../theme/theme";
+import { cancelAuthFlow, waitForAuthExchange } from "../services/authFlow";
 
 export function isValidRecoveryPassword(password: string, confirm: string) {
   return password.length >= 8 && password === confirm;
@@ -49,12 +50,17 @@ export default function PasswordRecoveryScreen({
   };
 
   const returnToSignIn = async () => {
-    await supabase?.auth.signOut();
+    await cancelAuthFlow();
+    await waitForAuthExchange();
+    await supabase?.auth.signOut({ scope: "local" });
     onComplete();
   };
 
   return (
-    <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={styles.root}>
+    <LinearGradient
+      colors={[theme.colors.bg1, theme.colors.bg0]}
+      style={styles.root}
+    >
       <View style={styles.card}>
         <View style={styles.icon}>
           <Ionicons name="key-outline" size={28} color={theme.colors.text} />

@@ -24,6 +24,7 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
   const lastTimeTrigger = new Map<string, string>();
   const lastRuleRun = new Map<string, string>();
   const running = new Set<string>();
+  const lifetime = new AbortController();
 
   let deviceState = snapshotDeviceState(useHomeStore.getState().devices);
   let presenceState = snapshotPresence(useHomeStore.getState().household);
@@ -47,6 +48,7 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
               running,
               lastFlowRun,
               `device-${idx}`,
+              lifetime.signal,
             );
           });
         });
@@ -71,6 +73,7 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
               running,
               lastFlowRun,
               `presence-${idx}`,
+              lifetime.signal,
             );
           });
         });
@@ -84,7 +87,14 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
         flow.triggers.forEach((trigger, idx) => {
           if (trigger.type !== "scene") return;
           if (trigger.sceneId !== state.lastSceneRun?.sceneId) return;
-          runFlow(flow, flowCooldownMs, running, lastFlowRun, `scene-${idx}`);
+          runFlow(
+            flow,
+            flowCooldownMs,
+            running,
+            lastFlowRun,
+            `scene-${idx}`,
+            lifetime.signal,
+          );
         });
       });
     }
@@ -108,7 +118,14 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
         if (lastTimeTrigger.get(triggerKey) === minuteKey) return;
         if (!conditionsPass(flow.conditions, now, state)) return;
         lastTimeTrigger.set(triggerKey, minuteKey);
-        runFlow(flow, flowCooldownMs, running, lastFlowRun, `time-${idx}`);
+        runFlow(
+          flow,
+          flowCooldownMs,
+          running,
+          lastFlowRun,
+          `time-${idx}`,
+          lifetime.signal,
+        );
       });
     });
 
@@ -129,6 +146,7 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
   tick();
 
   return () => {
+    lifetime.abort();
     clearInterval(timer);
     stateUnsub();
   };
@@ -154,6 +172,7 @@ function runFlow(
   running: Set<string>,
   lastFlowRun: Map<string, number>,
   _reason: string,
+  signal: AbortSignal,
 ) {
   if (running.has(flow.id)) return;
   const now = Date.now();
@@ -166,9 +185,14 @@ function runFlow(
   running.add(flow.id);
   lastFlowRun.set(flow.id, now);
 
-  void executeActions(flow.actions).finally(() => {
-    running.delete(flow.id);
-  });
+  void executeActions(flow.actions, signal).then(
+    () => {
+      running.delete(flow.id);
+    },
+    () => {
+      running.delete(flow.id);
+    },
+  );
 }
 
 function conditionsPass(
@@ -202,13 +226,14 @@ function conditionsPass(
   });
 }
 
-async function executeActions(actions: FlowAction[]) {
+async function executeActions(actions: FlowAction[], signal: AbortSignal) {
   for (const action of actions) {
+    if (signal.aborted) return;
     if (action.type === "delay") {
       const seconds = Number.isFinite(action.seconds)
         ? Math.max(1, action.seconds)
         : 1;
-      await sleep(seconds * 1000);
+      await sleep(seconds * 1000, signal);
       continue;
     }
     if (action.type === "toggle") {
@@ -237,7 +262,7 @@ async function executeActions(actions: FlowAction[]) {
       continue;
     }
     if (action.type === "run-scene") {
-      useHomeStore.getState().runScene(action.sceneId);
+      await useHomeStore.getState().runScene(action.sceneId, { signal });
       continue;
     }
     if (action.type === "notify") {
@@ -278,6 +303,15 @@ function timeKey(now: Date) {
   return `${y}-${m}-${d}-${hh}:${mm}`;
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    signal.addEventListener("abort", done, { once: true });
+    if (signal.aborted) done();
+  });
 }

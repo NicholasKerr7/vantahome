@@ -99,6 +99,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (role === "admin") {
+      // Delegated administrators may invite ordinary members, but cannot create
+      // another administrator to bypass restrictions set by the home's owner.
+      const { data: ownedHome, error: ownerError } = await supabase
+        .from("homes")
+        .select("id")
+        .eq("id", membership.home_id)
+        .eq("owner_id", userData.user.id)
+        .maybeSingle();
+      if (ownerError || !ownedHome) {
+        return new Response(JSON.stringify({ error: "Only the home owner can invite administrators." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     if (["guest", "tenant"].includes(role) && roomIds.length === 0) {
       return new Response(
         JSON.stringify({ error: "Guests and tenants need room access." }),
@@ -115,26 +132,28 @@ Deno.serve(async (req) => {
         data: name ? { name } : undefined,
       });
 
-    let invitedUserId = inviteData?.user?.id ?? "";
-    if (!invitedUserId) {
-      const { data: existingUsers, error: listError } =
-        await admin.auth.admin.listUsers({
-          filter: `email=eq.${email}`,
-          perPage: 1,
-          page: 1,
-        });
-      if (listError || !existingUsers?.users?.length) {
-        return new Response(
-          JSON.stringify({
-            error: inviteError?.message ?? "Unable to invite member.",
-          }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-      invitedUserId = existingUsers.users[0].id;
+    let invitedUserId: string | null = null;
+    if (!inviteError && inviteData?.user?.email?.trim().toLowerCase() === email) {
+      invitedUserId = inviteData.user.id;
+    } else if (["email_exists", "user_already_exists"].includes(inviteError?.code)) {
+      // The Auth directory API does not support an email filter. Resolve only
+      // explicit existing-account errors through the exact, server-only lookup.
+      const { data: existingUserId, error: lookupError } = await admin.rpc(
+        "find_auth_user_id_by_email",
+        { target_email: email },
+      );
+      if (!lookupError && isUuid(existingUserId)) invitedUserId = existingUserId;
+    }
+    if (!isUuid(invitedUserId)) {
+      return finalizeEdgeResponse(
+        securityContext,
+        new Response(JSON.stringify({ error: "Unable to invite member." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }),
+        "invitation_failed",
+        rateLimit,
+      );
     }
     const { data: existingMember } = await admin
       .from("home_members")
@@ -177,7 +196,7 @@ Deno.serve(async (req) => {
         member: {
           userId: invitedUserId,
           email,
-          name: name || inviteData.user.user_metadata?.name || email,
+          name: name || inviteData?.user?.user_metadata?.name || email,
           role,
         },
         status: existingMember ? "already_member" : "invited",

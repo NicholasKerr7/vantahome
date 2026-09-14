@@ -5,7 +5,7 @@ import {
   parseTransportMessage,
   type DeviceStatePatch,
 } from "./transportSchemas";
-import { runtimePolicy } from "../config/runtimeMode";
+import { isAllowedDirectWebSocketUrl, runtimePolicy } from "../config/runtimeMode";
 import { authorizeLocalDeviceCommand } from "../security/localCommandAuthorization";
 import { confirmSensitiveAction } from "../security/biometricConfirmation";
 
@@ -120,6 +120,7 @@ type RetryOptions = {
  * one-shot operations, subscribeState for realtime updates.
  */
 class DeviceClient {
+  private sessionGeneration = 0;
   private listeners = new Set<Listener>();
   private connectionListeners = new Set<ConnectionListener>();
   private retryListeners = new Set<RetryListener>();
@@ -185,6 +186,9 @@ class DeviceClient {
   }
 
   connect(url: string, options: ConnectOptions = {}) {
+    if (!isAllowedDirectWebSocketUrl(url)) {
+      throw new CommandAuthorizationError("unpaired_transport_disabled");
+    }
     const merged: ResolvedConnectOptions = {
       protocols: options.protocols,
       autoReconnect: options.autoReconnect ?? true,
@@ -205,10 +209,22 @@ class DeviceClient {
     this.connection = null;
     this.clearReconnect();
     if (this.socket) {
-      this.socket.close();
+      const socket = this.socket;
       this.socket = null;
+      socket.close();
     }
     this.emitConnection("disconnected");
+  }
+
+  /** Invalidates in-flight work as well as queued work at an identity boundary. */
+  resetSession() {
+    this.sessionGeneration += 1;
+    this.commandTransport = null;
+    this.retryQueue = [];
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+    this.disconnect();
+    this.emitRetryStatus();
   }
 
   setCommandTransport(fn: CommandTransport | null) {
@@ -224,14 +240,18 @@ class DeviceClient {
   }
 
   async sendCommand(cmd: DeviceCommand, options: CommandOptions = {}) {
+    const generation = this.sessionGeneration;
     const authorization = authorizeLocalDeviceCommand(cmd);
     if (!authorization.allowed) {
       throw new CommandAuthorizationError(authorization.reason);
     }
     await confirmSensitiveAction(authorization.permission);
+    if (generation !== this.sessionGeneration) {
+      throw new CommandAuthorizationError("session_changed");
+    }
     const securedCommand = this.secureCommand(cmd, options.ttlMs);
     const optimistic =
-      options.optimistic ?? !runtimePolicy.requireRealTransport;
+      runtimePolicy.allowMockTelemetry && (options.optimistic ?? true);
     const patch = this.patchFromCommand(securedCommand);
     // Apply a local patch immediately so the UI feels snappy.
     if (optimistic && patch) {
@@ -248,6 +268,9 @@ class DeviceClient {
         runtimePolicy.allowMockTelemetry && this.commandTransport === null,
       optimistic,
     });
+    if (generation !== this.sessionGeneration) {
+      throw new CommandAuthorizationError("session_changed");
+    }
     if (!sent) {
       this.enqueueRetry(securedCommand, patch);
     }
@@ -300,16 +323,19 @@ class DeviceClient {
     this.socket = socket;
 
     socket.onopen = () => {
+      if (this.socket !== socket) return;
       this.reconnectAttempts = 0;
       this.emitConnection("connected");
     };
 
     socket.onmessage = (event) => {
+      if (this.socket !== socket) return;
       this.handleMessage(event.data);
     };
 
     socket.onclose = () => {
-      if (this.socket === socket) this.socket = null;
+      if (this.socket !== socket) return;
+      this.socket = null;
       if (options.autoReconnect) {
         this.scheduleReconnect();
       } else {
@@ -318,6 +344,7 @@ class DeviceClient {
     };
 
     socket.onerror = () => {
+      if (this.socket !== socket) return;
       this.emitConnection("error", "Socket error");
       if (options.autoReconnect) {
         this.scheduleReconnect();
@@ -409,11 +436,13 @@ class DeviceClient {
   }
 
   private async flushRetryQueue() {
+    const generation = this.sessionGeneration;
     if (this.retryQueue.length === 0) return;
     const now = Date.now();
     const pending = this.retryQueue;
     this.retryQueue = [];
     for (const entry of pending) {
+      if (generation !== this.sessionGeneration) return;
       if (entry.cmd.expiresAt <= now) continue;
       if (entry.nextAttemptAt > now) {
         this.retryQueue.push(entry);
@@ -423,6 +452,7 @@ class DeviceClient {
         allowMock: false,
         optimistic: true,
       });
+      if (generation !== this.sessionGeneration) return;
       if (!sent) {
         const attempts = entry.attempts + 1;
         if (attempts <= this.retryOptions.maxRetries) {
@@ -447,15 +477,19 @@ class DeviceClient {
     patch: DeviceStatePatch | null,
     options: { allowMock: boolean; optimistic: boolean },
   ) {
+    const generation = this.sessionGeneration;
     if (cmd.expiresAt <= Date.now()) return false;
+    if (!authorizeLocalDeviceCommand(cmd).allowed) return false;
     if (this.commandTransport) {
       try {
         await this.commandTransport(cmd, patch);
-        return true;
+        return generation === this.sessionGeneration;
       } catch {
         // Fall through to other transports.
       }
     }
+
+    if (generation !== this.sessionGeneration) return false;
 
     if (this.socket?.readyState === WebSocket.OPEN) {
       try {
@@ -470,6 +504,7 @@ class DeviceClient {
 
     // Simulate round-trip; in production call your API here.
     await new Promise((r) => setTimeout(r, 80));
+    if (generation !== this.sessionGeneration) return false;
     if (!options.optimistic && patch) {
       const evt: DeviceStateEvent = {
         deviceId: cmd.deviceId,
