@@ -124,8 +124,8 @@ active app project or mobile configuration.
   its cause remains unconfirmed. These are API/SDK checks, not native UI,
   reconnect, endurance, or physical-device verification.
 - Public voice handlers returned the expected `503` with trusted-proxy handling
-  disabled. A temporary ingress diagnostic was rejected at its authorization
-  gate, so it did not establish a trusted hop count. Positive voice/OAuth checks
+  disabled. A temporary ingress diagnostic returned `403` on its baseline
+  request, before proxy-chain evidence was collected. Positive voice/OAuth checks
   remain unrun; fail-closed behavior is not evidence of working voice linking.
 - Local verification repeated successfully: 370 tests across 51 suites, app and
   Edge TypeScript checks, release checks, web export, and the secret scan.
