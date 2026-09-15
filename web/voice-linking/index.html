@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="vanta-linking-api" content="__VANTA_LINKING_API__" />
+    <meta name="vanta-linking-origin" content="__VANTA_LINKING_ORIGIN__" />
+    <meta name="vanta-linking-preview" content="__VANTA_LINKING_PREVIEW__" />
+    <title>Link your account · VantaHome</title>
+    <link rel="icon" href="./logo.png" type="image/png" />
+    <link rel="stylesheet" href="./linking.css" />
+    <script type="module" src="./main.js"></script>
+  </head>
+  <body>
+    <div id="preview-notice" class="preview-notice" hidden>Local verification · simulated service. Do not use real account details.</div>
+    <main class="page">
+      <header class="brand" aria-label="VantaHome">
+        <img src="./logo.png" width="56" height="56" alt="" />
+        <span>VantaHome</span>
+      </header>
+      <section class="card" aria-labelledby="heading">
+        <div class="eyebrow"><span class="signal" aria-hidden="true"></span> Secure account linking</div>
+        <h1 id="heading">Your home.<br /><span>Connected to your voice.</span></h1>
+        <p class="intro">Sign in to connect the devices you can control with your voice provider.</p>
+
+        <div id="status" class="status" role="status" aria-live="polite">Checking your linking request…</div>
+        <div id="error" class="error" role="alert" hidden></div>
+        <button id="retry" class="secondary retry" type="button" hidden>Try again</button>
+
+        <form id="link-form" hidden>
+          <div class="provider"><span>Linking to</span><strong id="provider-name"></strong></div>
+          <fieldset id="credentials">
+            <legend class="sr-only">Your VantaHome account</legend>
+            <label for="email">Email address</label>
+            <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="320" required />
+            <label for="password">Password</label>
+            <div class="password-field">
+              <input id="password" name="password" type="password" autocomplete="current-password" maxlength="1024" required />
+              <button id="show-password" class="password-toggle" type="button" aria-controls="password" aria-pressed="false" aria-label="Show password">Show</button>
+            </div>
+            <p class="recovery">Forgot your password? Reset it in the VantaHome app.</p>
+            <button id="submit" class="primary" type="submit"><span id="submit-label">Link account</span><span aria-hidden="true">↗</span></button>
+          </fieldset>
+          <button id="cancel" class="secondary cancel" type="button">Cancel linking</button>
+          <p class="consent">Only supported devices your account is permitted to control will be available to your voice provider.</p>
+        </form>
+        <noscript><p class="error">JavaScript is required for account linking. Enable it, then restart linking from your voice provider.</p></noscript>
+      </section>
+      <footer class="privacy">Your password goes directly to VantaHome’s authentication service.<br />This page does not store your sign-in details.</footer>
+    </main>
+  </body>
+</html>

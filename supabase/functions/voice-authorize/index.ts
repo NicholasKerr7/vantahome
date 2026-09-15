@@ -5,8 +5,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import {
   boundedString,
   readFormObject,
+  readJsonObject,
   RequestValidationError,
 } from "../_shared/validation.ts";
+import {
+  exactOAuthString,
+  isCanonicalVoiceRedirect,
+  isVoiceLinkingPreflightAllowed,
+  resolveVoiceLinkingOrigin,
+  validateAuthorizationQuery,
+  voiceLinkingHeaders,
+} from "../_shared/voiceLinking.ts";
 import {
   createEdgeRequestContext,
   enforceEdgeRateLimit,
@@ -79,6 +88,8 @@ function renderHtml(body: string, nonce: string) {
 </html>`;
 }
 
+class InvalidCredentialsError extends Error {}
+
 async function signInWithPassword(email: string, password: string) {
   const url = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -90,12 +101,49 @@ async function signInWithPassword(email: string, password: string) {
     email,
     password,
   });
-  if (error) throw error;
+  if (error) {
+    if (error.code === "invalid_credentials" || error.status === 400 || error.status === 401) {
+      throw new InvalidCredentialsError();
+    }
+    throw error;
+  }
   return data.user;
 }
 
 Deno.serve(async (req) => {
+  const params = new URL(req.url).searchParams;
+  // Any json selector enters the restricted path, even when a duplicate later
+  // causes rejection. A conflicting selector must not fall back to wildcard CORS.
+  const jsonMode = params.getAll("format").includes("json");
+  const origin = jsonMode
+    ? resolveVoiceLinkingOrigin(req.headers.get("origin"), Deno.env.get("VOICE_LINKING_ORIGIN"))
+    : null;
+  const allowedOrigin = origin?.allowed ? origin.origin : null;
+  const jsonResponse = (data: Record<string, unknown>, status: number, extra: HeadersInit = {}) => {
+    const headers = voiceLinkingHeaders(oauthHeaders(extra), allowedOrigin);
+    headers.set("Content-Type", "application/json; charset=utf-8");
+    return new Response(JSON.stringify(data), { status, headers });
+  };
+  const failure = (error: string, status: number) => jsonMode
+    ? jsonResponse({ error }, status)
+    : htmlResponse('<div class="error">Unable to link this account.</div>', status);
+
+  if (origin && !origin.allowed) {
+    return failure(origin.status === 503 ? "linking_unavailable" : "origin_not_allowed", origin.status);
+  }
+  try {
+    validateAuthorizationQuery(params);
+  } catch {
+    return failure("invalid_request", 400);
+  }
   if (req.method === "OPTIONS") {
+    if (jsonMode) {
+      if (!isVoiceLinkingPreflightAllowed(req)) return failure("invalid_preflight", 403);
+      const headers = voiceLinkingHeaders(oauthHeaders(), allowedOrigin);
+      headers.set("Access-Control-Allow-Methods", "GET, POST");
+      headers.set("Access-Control-Allow-Headers", "Content-Type");
+      return new Response(null, { status: 204, headers });
+    }
     return new Response("ok", { headers: oauthHeaders(corsHeaders) });
   }
   const securityContext = createEdgeRequestContext(req, "voice-authorize");
@@ -112,46 +160,41 @@ Deno.serve(async (req) => {
   });
   if (!rateLimit.allowed) {
     const response = rateLimitResponse(securityContext, rateLimit);
+    if (jsonMode) {
+      return jsonResponse({ error: response.status === 503 ? "abuse_protection_unavailable" : "rate_limited" },
+        response.status, response.headers);
+    }
     return new Response(response.body, {
       status: response.status,
       headers: oauthHeaders(response.headers),
     });
   }
 
-  const url = new URL(req.url);
-  const params = url.searchParams;
-  const clientId = params.get("client_id") ?? "";
-  const redirectUri = params.get("redirect_uri") ?? "";
-  const responseType = params.get("response_type") ?? "";
-  const state = params.get("state") ?? "";
+  try {
+    if (req.method === "GET") {
+      const clientId = exactOAuthString(params.get("client_id"), 128);
+      const redirectUri = exactOAuthString(params.get("redirect_uri"), 2_048);
+      const state = exactOAuthString(params.get("state") ?? "", 512, false);
+      if (params.get("response_type") !== "code") throw new RequestValidationError("Invalid response type.");
+      const client = await getVoiceClient(clientId, { throwOnStorageError: true });
+      if (!client || !client.redirect_uris.includes(redirectUri)) return failure("unknown_client", 400);
 
-  if (req.method === "GET") {
-    if (
-      !clientId ||
-      clientId.length > 128 ||
-      !redirectUri ||
-      redirectUri.length > 2_048 ||
-      responseType !== "code" ||
-      state.length > 512
-    ) {
-      return htmlResponse(
-        '<div class="error">Invalid OAuth request.</div>',
-        400,
-      );
-    }
-
-    const client = await getVoiceClient(clientId);
-    if (!client || !client.redirect_uris.includes(redirectUri)) {
-      return htmlResponse(
-        '<div class="error">Unknown client.</div>',
-        400,
-      );
-    }
-
-    const safeClientId = escapeHtml(clientId);
-    const safeRedirectUri = escapeHtml(redirectUri);
-    const safeState = escapeHtml(state);
-    const body = `
+      if (jsonMode) {
+        if (!isCanonicalVoiceRedirect(redirectUri)) return failure("invalid_request", 400);
+        if (typeof client.name !== "string" || !client.name.trim() || client.name.length > 128 ||
+          !["alexa", "google"].includes(client.provider)) return failure("server_error", 500);
+        return finalizeEdgeResponse(securityContext, jsonResponse({
+          client: { name: client.name, provider: client.provider },
+          client_id: clientId,
+          redirect_uri: redirectUri,
+          response_type: "code",
+          state,
+        }, 200), "linking_request_validated", rateLimit);
+      }
+      const safeClientId = escapeHtml(clientId);
+      const safeRedirectUri = escapeHtml(redirectUri);
+      const safeState = escapeHtml(state);
+      const body = `
       <h1>Link ${escapeHtml(client.name)}</h1>
       <p class="hint">Sign in to VantaHome to link your account.</p>
       <form method="post">
@@ -166,50 +209,50 @@ Deno.serve(async (req) => {
       </form>
     `;
 
-    return finalizeEdgeResponse(
-      securityContext,
-      htmlResponse(body, 200, redirectUri),
-      "login_form_rendered",
-      rateLimit,
-    );
-  }
+      return finalizeEdgeResponse(
+        securityContext,
+        htmlResponse(body, 200, redirectUri),
+        "login_form_rendered",
+        rateLimit,
+      );
+    }
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: oauthHeaders({ ...corsHeaders, "Content-Type": "application/json" }),
-    });
-  }
+    if (req.method !== "POST") {
+      if (jsonMode) return failure("method_not_allowed", 405);
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: oauthHeaders({ ...corsHeaders, "Content-Type": "application/json" }),
+      });
+    }
 
-  try {
-    const form = await readFormObject(req, 8_192, 8);
-    const formClientId = boundedString(form.client_id, "client_id", 128);
-    const formRedirect = boundedString(
-      form.redirect_uri,
-      "redirect_uri",
-      2_048,
-    );
-    const formState = boundedString(form.state ?? "", "state", 512, false);
+    if (jsonMode && req.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") {
+      return failure("unsupported_media_type", 415);
+    }
+    const form = jsonMode ? await readJsonObject(req, 8_192, 1) : await readFormObject(req, 8_192, 8);
+    if (jsonMode) {
+      const fields = ["client_id", "redirect_uri", "response_type", "state", "email", "password"];
+      if (Object.keys(form).some((key) => !fields.includes(key)) || form.response_type !== "code" || !Object.hasOwn(form, "state")) {
+        throw new RequestValidationError("Invalid authorization body.");
+      }
+    }
+    const formClientId = exactOAuthString(form.client_id, 128);
+    const formRedirect = exactOAuthString(form.redirect_uri, 2_048);
+    const formState = exactOAuthString(jsonMode ? form.state : (form.state ?? ""), 512, false);
     const email = boundedString(form.email, "email", 320).toLowerCase();
     const password = form.password;
     if (typeof password !== "string" || !password || password.length > 1_024) {
       throw new RequestValidationError("Invalid login details.");
     }
 
-    const client = await getVoiceClient(formClientId);
+    const client = await getVoiceClient(formClientId, { throwOnStorageError: true });
     if (!client || !client.redirect_uris.includes(formRedirect)) {
-      return htmlResponse(
-        '<div class="error">Unknown client.</div>',
-        400,
-      );
+      return failure("unknown_client", 400);
     }
+    if (jsonMode && !isCanonicalVoiceRedirect(formRedirect)) return failure("invalid_request", 400);
 
     const user = await signInWithPassword(email, password);
     if (!user) {
-      return htmlResponse(
-        '<div class="error">Invalid credentials.</div>',
-        401,
-      );
+      return failure("invalid_credentials", 401);
     }
 
     const admin = getSupabaseAdmin();
@@ -225,19 +268,19 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      return htmlResponse(
-        '<div class="error">Unable to create authorization code.</div>',
-        500,
-      );
+      return failure("server_error", 500);
     }
 
     const redirect = new URL(formRedirect);
     redirect.searchParams.set("code", code);
+    // Empty state must not accidentally inherit a parameter from the
+    // registered redirect URI. Copy non-empty opaque state verbatim.
+    redirect.searchParams.delete("state");
     if (formState) redirect.searchParams.set("state", formState);
 
     return finalizeEdgeResponse(
       securityContext,
-      new Response(null, {
+      jsonMode ? jsonResponse({ redirect: redirect.toString() }, 200) : new Response(null, {
         status: 302,
         headers: oauthHeaders({ Location: redirect.toString() }),
       }),
@@ -245,11 +288,12 @@ Deno.serve(async (req) => {
       rateLimit,
     );
   } catch (err) {
-    const status = err instanceof RequestValidationError ? 400 : 500;
+    const status = err instanceof RequestValidationError ? 400 : err instanceof InvalidCredentialsError ? 401 : 500;
+    const error = status === 400 ? "invalid_request" : status === 401 ? "invalid_credentials" : "server_error";
     return finalizeEdgeResponse(
       securityContext,
-      htmlResponse('<div class="error">Unable to link this account.</div>', status),
-      status === 400 ? "invalid_request" : "server_error",
+      failure(error, status),
+      error,
       rateLimit,
     );
   }

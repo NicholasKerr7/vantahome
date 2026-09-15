@@ -28,7 +28,8 @@ priority over the role default, except that owner access cannot be overridden.
 ## Voice (Phase 3)
 
 - `voice-authorize` (GET/POST)
-  - OAuth2 authorize endpoint with a minimal login form.
+  - OAuth2 authorize endpoint with a legacy login form and an opt-in JSON mode
+    for the isolated browser-linking page.
 - `voice-token` (POST)
   - OAuth2 token endpoint (authorization_code + refresh_token); authorization
     codes are consumed in a row-locked transaction.
@@ -54,6 +55,34 @@ form markup does not establish a usable sign-in page. See the platform's
 Do not enable a paid custom domain or publish a new login host without approval.
 Confirmed execution and real account linking remain separate integration gates
 from synthetic API authorization tests.
+
+### Standalone browser linking
+
+The local implementation adds `?format=json` to `voice-authorize` for an
+isolated static page. It has not been deployed or published; the earlier hosted
+voice API evidence does not verify this new mode. See
+[Browser Account Linking](../../docs/VOICE_ACCOUNT_LINKING.md) for the synthetic
+preview, explicit standalone build, API contract, and host approval checklist.
+
+JSON mode requires an Edge-runtime `VOICE_LINKING_ORIGIN` equal to the exact
+approved canonical HTTPS page origin, with no trailing slash, path, credentials,
+query, or fragment. It is disabled when this setting is missing or invalid
+(`503`); missing, `null`, and unapproved request origins are rejected (`403`).
+Do not put this setting into the phone's `.env`, infer it from a request, use a
+wildcard, or enable a local/HTTP production exception.
+
+JSON GET returns validated public client metadata and the exact OAuth bindings.
+JSON POST accepts only the supported bounded fields, rechecks the registered
+canonical HTTPS callback, authenticates, and returns a server-built redirect
+URL. Preflight permits only GET/POST and `Content-Type`; all JSON responses,
+including rate-limit failures, remove wildcard CORS, use no-store and
+`Vary: Origin`, and echo only the approved origin without credentialed CORS.
+
+Without the JSON selector, the existing HTML GET/form POST mode remains
+available. Both modes preserve opaque state, reject duplicate known OAuth query
+fields, and share the same GET/POST IP-rate budgets. The JSON page does not
+bypass missing trusted client-IP protection or authorize a deployment, domain
+purchase, provider-console change, or real-device test.
 
 ### Alexa requests and observations
 

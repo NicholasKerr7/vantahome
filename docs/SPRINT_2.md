@@ -161,12 +161,54 @@ updated authentication modules; application configuration remained unchanged.
   with a replaced policy. The original strict document check was not relaxed;
   its failure is preserved separately from the passing HTTP-only results. No
   real provider account, native device, or physical command was tested.
-- Latest local verification passed: 456 tests across 53 suites, app and
+- Local verification for that baseline passed: 456 tests across 53 suites, app and
   Edge TypeScript checks, release checks, web export, and the secret scan.
 
 Detailed evidence and environment identifiers remain outside the public
 repository. No real provider accounts, email delivery, or household hardware
 were involved. These results do not authorize external reviewer access.
+
+## Local-only browser-linking progress
+
+An isolated static account-linking page and opt-in `voice-authorize?format=json`
+mode are now implemented locally. They have **not been published or deployed**;
+the hosted record for source `42ab751` above remains historical evidence for
+that source and its tested paths, not verification of this new code.
+
+- The standalone page uses the existing release icon and validates provider
+  metadata before presenting credentials. It sends a password directly to the
+  configured Supabase function, never through an added forwarding proxy.
+- JSON mode is disabled unless `VOICE_LINKING_ORIGIN` names the exact approved
+  HTTPS page origin. It rejects unapproved origins, constrains preflight, strips
+  inherited wildcard CORS from failures, and retains the existing fail-closed
+  client-IP checks and shared GET/POST rate budgets.
+- Registered callbacks and opaque OAuth state remain exact. Both modes reject
+  duplicate known query fields, and the browser verifies the complete returned
+  callback before navigation. Existing HTML/form compatibility is preserved.
+- A visibly labeled, Docker-free preview uses only local synthetic credentials
+  and a loopback mock API. Its success, failure, and cancellation paths are not
+  real Supabase authentication, provider linking, or physical-device evidence.
+- A separate explicit build creates an ignored static artifact and required
+  HTTP-header manifest. It is not included in the Expo build or automatically
+  published through the root hosting configuration. No live environment or
+  phone configuration is changed by these local commands.
+- Local verification passed 689 tests across 57 suites, application and Edge
+  TypeScript, dependency policy, release/asset/auth-redirect checks, and the
+  production web export. Tracked-file and Git-history secret scans passed. The
+  standalone bundle was built with a reserved example origin and the exact
+  release icon; it was not published.
+- Local browser checks passed synthetic success/cancellation handoffs, rejected
+  credentials with password clearing/remasking, rate limits, service-unavailable
+  retries, unexpected callback rejection, duplicate-parameter rejection, and
+  literal display of HTML-shaped provider names. Phone portrait (including a
+  320-pixel viewport) and tablet landscape screenshots were inspected without
+  horizontal overflow. These browser checks use the simulated service only and
+  do not change the hosted gate status.
+
+See [Browser Account Linking](./VOICE_ACCOUNT_LINKING.md) for preview/build
+commands, credential precautions, the API contract, and hosting approval gates.
+The hosted browser, ingress trust, native, physical completion, and external
+review gates remain open.
 
 ## Remaining before the Sprint 2 gate
 

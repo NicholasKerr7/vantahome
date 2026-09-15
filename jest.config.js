@@ -10,6 +10,6 @@ module.exports = {
   ),
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   testMatch: ["**/?(*.)+(spec|test).[tj]s?(x)"],
-  modulePathIgnorePatterns: ["<rootDir>/vantahome/"],
+  modulePathIgnorePatterns: ["<rootDir>/vantahome/", "<rootDir>/dist/", "<rootDir>/voice-linking-dist/"],
   watchPathIgnorePatterns: ["<rootDir>/vantahome/"],
 };

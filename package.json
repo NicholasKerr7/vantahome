@@ -9,6 +9,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build": "expo export --platform web",
+    "build:voice-linking": "node scripts/build-voice-linking.js",
+    "preview:voice-linking": "node scripts/preview-voice-linking.js",
     "lint": "tsc --noEmit",
     "lint:edge": "tsc -p supabase/functions/tsconfig.json",
     "verify": "npm run lint && npm run lint:edge && npm run security:dependencies && npm run release:version-check && npm run release:assets-check && npm run release:auth-redirect-check && npm test -- --runInBand",

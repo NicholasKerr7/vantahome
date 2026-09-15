@@ -46,3 +46,9 @@ jobs:
 
       - name: Build production web export
         run: npm run build
+
+      - name: Check standalone linking build without publishing
+        run: >-
+          npm run build:voice-linking --
+          --project-ref aaaaaaaaaaaaaaaaaaaa
+          --site-origin https://linking.example.invalid

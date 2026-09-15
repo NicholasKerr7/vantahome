@@ -7,6 +7,7 @@ supabase/.temp
 .expo/
 dist/
 web-build/
+voice-linking-dist/
 
 # dependencies
 node_modules/
