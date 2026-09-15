@@ -52,8 +52,64 @@ function domain rewrites HTML responses to plain text. An HTTP `200` containing
 form markup does not establish a usable sign-in page. See the platform's
 [HTML response limitation](https://supabase.com/docs/guides/functions/limits).
 Do not enable a paid custom domain or publish a new login host without approval.
-Provider-shaped Alexa requests, confirmed execution, and real account linking
-remain separate integration gates from synthetic API authorization tests.
+Confirmed execution and real account linking remain separate integration gates
+from synthetic API authorization tests.
+
+### Alexa requests and observations
+
+Alexa discovery authenticates `directive.payload.scope`; endpoint directives
+authenticate `directive.endpoint.scope`. Each scope must contain a `BearerToken`
+issued to an Alexa client. Header-only callers remain supported; malformed,
+misplaced, or conflicting credentials are rejected. Synchronous responses include
+only the endpoint ID, never the incoming bearer token or cookie.
+
+Brightness is an integer from 0 to 100. Thermostat requests require an explicit
+Celsius, Fahrenheit, or Kelvin scale; conversion precedes validation against
+the command queue's 10–35°C range. Invalid values are rejected, not clamped.
+
+`ReportState` returns `Alexa.StateReport` only when every advertised property has
+a valid value and trustworthy timing information. The trusted integration must
+write the following metadata with its observations in `device_state.state`:
+
+```json
+{
+  "isOn": false,
+  "brightness": 12,
+  "observations": {
+    "isOn": {
+      "timeOfSample": "2026-09-14T12:00:00.000Z",
+      "lastConfirmedAt": "2026-09-14T12:01:50.000Z"
+    },
+    "brightness": {
+      "timeOfSample": "2026-09-14T11:59:00.000Z",
+      "lastConfirmedAt": "2026-09-14T12:01:00.000Z"
+    }
+  }
+}
+```
+
+`timeOfSample` is when that property changed on the device; `lastConfirmedAt` is
+when the integration last confirmed its value. The integration must write each
+value and its matching metadata atomically; changing a value must never retain
+timing metadata from the previous value. Times must be valid UTC timestamps
+with `timeOfSample <= lastConfirmedAt <= now`. Each property's uncertainty grows
+with time since confirmation. Database `updated_at` is a receipt timestamp and
+cannot replace device sample information. Missing, incomplete, or invalid
+observations produce an error, including legacy rows without this metadata;
+Google and mobile state fields keep their existing format. The authoritative
+bridge writer and physical observation checks remain integration work.
+
+Alexa control still queues authorized intent, then returns `Alexa.ErrorResponse`
+with `INTERNAL_ERROR` because physical completion cannot yet be confirmed. It
+does not return a successful `Response` or unsupported `DeferredResponse`.
+Enqueue failures use a fixed message without downstream error details. A future
+completion worker must honor command expiry, handle provider retries, and resolve
+reported failures before physical Alexa execution can be enabled.
+
+References: [Alexa account-linking tokens](https://developer.amazon.com/docs/alexaplus/account-linking/add-account-linking-logic-smart-home.html),
+[state reports](https://developer.amazon.com/docs/alexaplus/device-apis/alexa-statereport.html),
+[responses](https://developer.amazon.com/docs/alexaplus/device-apis/alexa-response.html),
+and [property timing](https://developer.amazon.com/docs/alexaplus/device-apis/message-guide.html).
 
 ## Deploy
 
@@ -119,7 +175,10 @@ Current endpoint buckets:
 - Device audit: 240/minute per actor/IP.
 - Home bootstrap: 5/hour per actor/IP.
 - Home invitations: 20/hour per actor/IP; responses: 30/hour.
-- Voice authorization: 10 POSTs or 120 GETs per 15 minutes per IP.
+- Voice authorization: independent budgets of 10 POSTs and 120 GETs per 15
+  minutes per IP (`voice-authorize.post` and `voice-authorize.get`). Loading the
+  login page does not consume password attempts. Operational logs still use
+  `voice-authorize` as the endpoint name.
 - Voice tokens: 60/minute per IP.
 - Alexa/Google fulfillment: 600/minute per linked actor/IP.
 

@@ -33,13 +33,20 @@ export async function hashSecret(secret: string) {
     .join("");
 }
 
-export async function getVoiceClient(clientId: string) {
+// Native Alexa must distinguish lookup outages from invalid credentials to
+// avoid unlinking valid accounts. Other callers retain their nullable contract.
+type VoiceLookupOptions = { throwOnStorageError?: boolean };
+
+export async function getVoiceClient(clientId: string, options: VoiceLookupOptions = {}) {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("voice_oauth_clients")
     .select("*")
     .eq("id", clientId)
     .maybeSingle();
+  if (error && options.throwOnStorageError) {
+    throw new Error("Voice authorization lookup is unavailable.");
+  }
   if (error || !data) return null;
   return data as VoiceClient;
 }
@@ -55,13 +62,16 @@ export async function verifyClientSecret(client: VoiceClient, secret: string) {
   return difference === 0;
 }
 
-export async function findToken(accessToken: string) {
+export async function findToken(accessToken: string, options: VoiceLookupOptions = {}) {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("voice_oauth_tokens")
     .select("*")
     .eq("access_token", accessToken)
     .maybeSingle();
+  if (error && options.throwOnStorageError) {
+    throw new Error("Voice authorization lookup is unavailable.");
+  }
   if (error || !data) return null;
   return data as VoiceToken;
 }

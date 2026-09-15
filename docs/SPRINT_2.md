@@ -40,6 +40,13 @@ reviewer handoff, and teardown procedure without provisioning resources early.
 - OAuth authorization-code exchange is row-locked and atomic, and rendered
   linking fields are HTML-escaped. Voice tokens are provider-bound; refresh
   tokens have an absolute expiry and rotate on use.
+- Voice authorization separates document loads from the smaller password-attempt
+  rate budget. Alexa accepts native directive credentials, omits sensitive
+  request fields from responses, and validates brightness and temperature units.
+- Alexa state reports require real per-property sample/confirmation timestamps;
+  missing observations never become fabricated device values. Queue acceptance
+  does not claim physical completion: Google reports `PENDING`, while Alexa
+  reports an error until its supported completion flow is implemented.
 - Command rate limits are enforced at actor, household, and device boundaries by
   a table trigger, including concurrent API and voice requests.
 - Home bootstrap is an authenticated, serialized database transaction.
@@ -124,10 +131,16 @@ active app project or mobile configuration.
   its cause remains unconfirmed. These are API/SDK checks, not native UI,
   reconnect, endurance, or physical-device verification.
 - Public voice handlers returned the expected `503` with trusted-proxy handling
-  disabled. A temporary ingress diagnostic returned `403` on its baseline
-  request, before proxy-chain evidence was collected. Positive voice/OAuth checks
-  remain unrun; fail-closed behavior is not evidence of working voice linking.
-- Local verification repeated successfully: 370 tests across 51 suites, app and
+  disabled. Subsequent bounded ingress diagnostics supported a separate,
+  temporary staging-only proxy experiment; accepted public requests consumed
+  the same hashed limiter bucket, while rejected spoofing challenges consumed
+  none. The stricter topology assessment remained incomplete, and trust was
+  restored to zero after testing. This is not a production proxy configuration.
+- The first positive voice session stopped at the OAuth document's strict CSP
+  boundary, before token exchange or fulfillment. Its fixtures were removed.
+  API-only verification and browser account linking are separate gates; an HTTP
+  `200` with form markup does not prove a usable, protected login page.
+- Latest local verification passed: 456 tests across 53 suites, app and
   Edge TypeScript checks, release checks, web export, and the secret scan.
 
 Detailed evidence and environment identifiers remain outside the public
@@ -139,9 +152,12 @@ were involved. These results do not authorize external reviewer access.
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
 - Perform an external security review before alpha.
-- Establish the exact trusted staging ingress path, then run positive hosted
-  OAuth and synthetic Alexa/Google checks. Do not guess a proxy hop count or
-  treat expected fail-closed responses as functional voice verification.
+- Complete positive hosted OAuth and synthetic Alexa/Google checks, without
+  treating temporary ingress experiments as production trust evidence.
+- Approve and verify a browser-capable account-linking host, then test real
+  provider linking. The shared Edge domain's HTML behavior does not satisfy
+  that gate. Implement authoritative bridge observations and physical command
+  completion before real Alexa execution.
 - Rebuild and verify native sign-in/recovery, account isolation, background
   behavior, biometric prompts, and authorized realtime updates on physical devices.
 - Revisit the time-limited dependency exception before its documented deadline.

@@ -103,45 +103,6 @@ export function buildAlexaCapabilities(kind: string) {
   return base;
 }
 
-export function buildAlexaProperties(
-  kind: string,
-  state: Record<string, unknown>,
-) {
-  const caps = getTraits(kind);
-  const now = new Date().toISOString();
-  const props: Array<Record<string, unknown>> = [
-    {
-      namespace: "Alexa.PowerController",
-      name: "powerState",
-      value: (state.isOn ?? false) ? "ON" : "OFF",
-      timeOfSample: now,
-      uncertaintyInMilliseconds: 500,
-    },
-  ];
-
-  if (caps.supportsBrightness) {
-    props.push({
-      namespace: "Alexa.BrightnessController",
-      name: "brightness",
-      value: state.brightness ?? 0,
-      timeOfSample: now,
-      uncertaintyInMilliseconds: 500,
-    });
-  }
-
-  if (caps.supportsTemp) {
-    props.push({
-      namespace: "Alexa.ThermostatController",
-      name: "targetSetpoint",
-      value: { value: state.tempC ?? 22, scale: "CELSIUS" },
-      timeOfSample: now,
-      uncertaintyInMilliseconds: 500,
-    });
-  }
-
-  return props;
-}
-
 export function googleState(kind: string, state: Record<string, unknown>) {
   const caps = getTraits(kind);
   const payload: Record<string, unknown> = {

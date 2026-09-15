@@ -99,7 +99,13 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: oauthHeaders(corsHeaders) });
   }
   const securityContext = createEdgeRequestContext(req, "voice-authorize");
-  const rateLimit = await enforceEdgeRateLimit(securityContext, {
+  // Loading the form must not consume the smaller password-attempt budget.
+  // Keep the operational endpoint name stable and split only the stored buckets.
+  const rateContext = {
+    ...securityContext,
+    endpoint: req.method === "POST" ? "voice-authorize.post" : "voice-authorize.get",
+  };
+  const rateLimit = await enforceEdgeRateLimit(rateContext, {
     maxRequests: req.method === "POST" ? 10 : 120,
     windowSeconds: 900,
     requireClientIp: true,

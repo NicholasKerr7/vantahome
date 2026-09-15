@@ -70,10 +70,11 @@ describe("Docker-free Edge abuse-control guardrails", () => {
         path.join(repositoryRoot, `supabase/functions/${endpoint}/index.ts`),
         "utf8",
       );
-      const tokenLookup = source.search(/await getVoice(?:UserId|Identity)/);
+      const tokenLookup = source.search(/await getVoice(?:UserId|Identity|TokenAuthentication)\(/);
+      const ipLimit = source.indexOf("const ipRateLimit = await enforceEdgeRateLimit");
       expect(tokenLookup).toBeGreaterThan(-1);
-      expect(source.indexOf("const ipRateLimit = await enforceEdgeRateLimit"))
-        .toBeLessThan(tokenLookup);
+      expect(ipLimit).toBeGreaterThan(-1);
+      expect(ipLimit).toBeLessThan(tokenLookup);
       expect(source).toContain("includeClientIp: false");
     },
   );

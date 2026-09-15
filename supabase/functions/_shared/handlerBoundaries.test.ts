@@ -322,6 +322,44 @@ describe("Google command and unlink lifecycle", () => {
 describe("OAuth response protections", () => {
   const authorizeUrl = "https://edge.example.test/voice-authorize?client_id=voice-test&response_type=code&redirect_uri=https%3A%2F%2Fvoice.example.test%2Fcallback";
 
+  function useCountingRateBuckets() {
+    const counts = new Map<string, number>();
+    mockEnforceRateLimit.mockImplementation(async (context, policy) => {
+      expect(context.endpoint).toMatch(/^[a-z0-9][a-z0-9._-]{0,63}$/);
+      const count = (counts.get(context.endpoint) ?? 0) + 1;
+      counts.set(context.endpoint, count);
+      return { allowed: count <= policy.maxRequests, remaining: Math.max(0, policy.maxRequests - count) };
+    });
+  }
+
+  function passwordRequest() {
+    return new Request(authorizeUrl, {
+      method: "POST", body: new URLSearchParams({
+        client_id: "voice-test", redirect_uri: "https://voice.example.test/callback",
+        email: "owner@example.test", password: "test-password", state: "opaque-state",
+      }),
+    });
+  }
+
+  test("reloading the login form does not consume password attempts", async () => {
+    useCountingRateBuckets();
+    for (let count = 0; count < 11; count++) {
+      expect((await handlers["voice-authorize"](new Request(authorizeUrl))).status).toBe(200);
+    }
+    expect((await handlers["voice-authorize"](passwordRequest())).status).toBe(302);
+    expect(mockCreateClient).toHaveBeenCalledTimes(1);
+  });
+
+  test("still limits password submissions to ten independently of form loads", async () => {
+    useCountingRateBuckets();
+    for (let count = 0; count < 10; count++) {
+      expect((await handlers["voice-authorize"](passwordRequest())).status).toBe(302);
+    }
+    expect((await handlers["voice-authorize"](passwordRequest())).status).toBe(429);
+    expect(mockCreateClient).toHaveBeenCalledTimes(10);
+    expect((await handlers["voice-authorize"](new Request(authorizeUrl))).status).toBe(200);
+  });
+
   function expectProtected(response: Response) {
     expect(response.headers.get("x-frame-options")).toBe("DENY");
     expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
