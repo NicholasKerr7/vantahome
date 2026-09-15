@@ -243,9 +243,9 @@ Deno.serve(async (req) => {
 
           results.push({
             ids: [deviceId],
-            status: "SUCCESS",
-            // State remains bridge-observed; the voice request only queues intent.
-            states: googleState(device.kind, states.get(deviceId) ?? {}),
+            // Queued intent is not physical completion. Only the authoritative
+            // bridge observation can confirm the resulting device state.
+            status: "PENDING",
           });
         }
       }
@@ -256,7 +256,7 @@ Deno.serve(async (req) => {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }),
-        "execution_completed",
+        "execution_processed",
         rateLimit,
       );
     }

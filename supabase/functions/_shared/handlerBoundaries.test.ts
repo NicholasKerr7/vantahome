@@ -233,10 +233,45 @@ describe("voice authentication boundaries", () => {
 });
 
 describe("Google command and unlink lifecycle", () => {
-  test("accepts the nested EXECUTE envelope for an authorized light", async () => {
+  test("reports a queued nested EXECUTE as pending without claiming completed state", async () => {
     const response = await handlers["google-smart-home"](googleRequest("action.devices.EXECUTE", executePayload()));
     expect(response.status).toBe(200);
     expect(mockEnqueueDeviceCommand).toHaveBeenCalledWith(actorId, deviceId, "google", { isOn: true });
+    const body = await response.json();
+    expect(body).toEqual({
+      requestId: "test-request",
+      payload: { commands: [{ ids: [deviceId], status: "PENDING" }] },
+    });
+    expect(body.payload.commands[0]).not.toHaveProperty("states");
+    expect(body.payload.commands[0].status).not.toBe("SUCCESS");
+  });
+
+  test("does not report pending or success when enqueueing fails", async () => {
+    mockEnqueueDeviceCommand.mockRejectedValue(new Error("Unable to queue command."));
+    const response = await handlers["google-smart-home"](googleRequest("action.devices.EXECUTE", executePayload()));
+    expect(response.status).toBe(500);
+    expect(mockEnqueueDeviceCommand).toHaveBeenCalledWith(actorId, deviceId, "google", { isOn: true });
+    const body = await response.json();
+    expect(body).toEqual({ error: "Unable to queue command." });
+    expect(body).not.toHaveProperty("payload.commands");
+    expect(JSON.stringify(body)).not.toMatch(/PENDING|SUCCESS/);
+  });
+
+  test("keeps QUERY responses tied to observed state without queueing a command", async () => {
+    mockFetchVoiceData.mockResolvedValue({
+      devices: [{ id: deviceId, home_id: homeId, room_id: null, name: "Light", kind: "light" }],
+      rooms: new Map(),
+      states: new Map([[deviceId, { isOn: false, brightness: 12 }]]),
+    });
+    const response = await handlers["google-smart-home"](googleRequest("action.devices.QUERY", {
+      devices: [{ id: deviceId }, { id: foreignId }],
+    }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      requestId: "test-request",
+      payload: { devices: { [deviceId]: { online: true, on: false, brightness: 12 } } },
+    });
+    expect(mockEnqueueDeviceCommand).not.toHaveBeenCalled();
   });
 
   test("returns the per-device denial without enqueueing a foreign device", async () => {

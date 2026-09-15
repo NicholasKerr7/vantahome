@@ -42,6 +42,19 @@ per-member action permissions, then exposes only lights, climate, TVs, fans,
 and speakers. Fulfillment calls a service-role-only authorization transaction
 to enqueue commands; it never writes observed device state directly.
 
+Google `EXECUTE` replies use `PENDING` after a successful enqueue and omit
+post-execution state. Queue acceptance is not physical completion; `QUERY` still
+returns observed state. This follows the provider's
+[execution response contract](https://developers.home.google.com/cloud-to-cloud/intents/execute).
+
+Account linking also needs a browser-capable HTTPS host: Supabase's shared
+function domain rewrites HTML responses to plain text. An HTTP `200` containing
+form markup does not establish a usable sign-in page. See the platform's
+[HTML response limitation](https://supabase.com/docs/guides/functions/limits).
+Do not enable a paid custom domain or publish a new login host without approval.
+Provider-shaped Alexa requests, confirmed execution, and real account linking
+remain separate integration gates from synthetic API authorization tests.
+
 ## Deploy
 
 For internal verification, use an explicitly authorized disposable project whose
