@@ -1,6 +1,6 @@
 # Sprint 2 — Security and Trust Boundary Closure
 
-Status: **hosted core verification passed; voice, native, and external review pending**
+Status: **hosted core and voice API checks passed; browser, native, and external review pending**
 
 The external review scope and non-binding vendor inquiry are prepared in
 [Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md) and
@@ -130,6 +130,13 @@ active app project or mobile configuration.
   while the owner's positive control did. An initial timeout did not reproduce;
   its cause remains unconfirmed. These are API/SDK checks, not native UI,
   reconnect, endurance, or physical-device verification.
+
+### Voice follow-up
+
+Reviewed source `42ab751` was subsequently deployed to the same isolated Free
+environment. All four voice functions were redeployed because they share the
+updated authentication modules; application configuration remained unchanged.
+
 - Public voice handlers returned the expected `503` with trusted-proxy handling
   disabled. Subsequent bounded ingress diagnostics supported a separate,
   temporary staging-only proxy experiment; accepted public requests consumed
@@ -140,6 +147,20 @@ active app project or mobile configuration.
   boundary, before token exchange or fulfillment. Its fixtures were removed.
   API-only verification and browser account linking are separate gates; an HTTP
   `200` with form markup does not prove a usable, protected login page.
+- A separate HTTP-only session passed 43 named API/security behavior checks over
+  68 validation requests. Fourteen fixture-insertion labels and one successful
+  document HTTP-response label are excluded from that behavior count. Coverage
+  included code/client/redirect binding, expiration, single use, token rotation
+  and replay rejection, household and permission isolation, scoped disconnect,
+  native Alexa credentials and state reports, and honest queue-only responses.
+- Synthetic observations remained unchanged by queued commands. Cleanup used
+  32 requests and removed all synthetic accounts and household fixtures. Exact
+  runtime revision transitions and JWT settings were checked; temporary trust
+  returned to zero, and a final public request confirmed fail-closed `503`.
+- Browser linking remains **blocked**: the hosted documents returned plain text
+  with a replaced policy. The original strict document check was not relaxed;
+  its failure is preserved separately from the passing HTTP-only results. No
+  real provider account, native device, or physical command was tested.
 - Latest local verification passed: 456 tests across 53 suites, app and
   Edge TypeScript checks, release checks, web export, and the secret scan.
 
@@ -152,8 +173,8 @@ were involved. These results do not authorize external reviewer access.
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
 - Perform an external security review before alpha.
-- Complete positive hosted OAuth and synthetic Alexa/Google checks, without
-  treating temporary ingress experiments as production trust evidence.
+- Establish the production ingress trust boundary before enabling permanent
+  proxy trust; the bounded staging experiment is not production evidence.
 - Approve and verify a browser-capable account-linking host, then test real
   provider linking. The shared Edge domain's HTML behavior does not satisfy
   that gate. Implement authoritative bridge observations and physical command
@@ -171,5 +192,5 @@ suite through a lightweight PostgreSQL client and does not require Docker.
 Automated checks provide evidence for the cases tested; they are not a general
 security guarantee. Current staging evidence covers the recorded source and
 tested paths only; it does not update the active project's deployed policies.
-Pending voice and native verification and the independent security review remain
-required before alpha or physical integration.
+Browser/provider linking, physical completion, native verification, and the
+independent security review remain required before alpha or physical integration.
