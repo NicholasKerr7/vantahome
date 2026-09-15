@@ -44,10 +44,29 @@ to enqueue commands; it never writes observed device state directly.
 
 ## Deploy
 
+For internal verification, use an explicitly authorized disposable project whose
+reference differs from the active app project. Do not rely on a previously linked
+CLI target. Prepare a private, untracked, access-restricted Edge secrets file as
+described below; never overwrite the application's `.env`.
+
+With a CLI version supporting explicit project selection for database pushes:
+
 ```bash
-supabase db push
-supabase functions deploy
+: "${VANTAHOME_REVIEW_PROJECT_REF:?Set the confirmed disposable project reference}"
+: "${VANTAHOME_REVIEW_EDGE_ENV:?Set the private Edge secrets file path}"
+
+supabase db push --project-ref "$VANTAHOME_REVIEW_PROJECT_REF" --skip-vault --dry-run
+supabase db push --project-ref "$VANTAHOME_REVIEW_PROJECT_REF" --skip-vault
+supabase secrets set --project-ref "$VANTAHOME_REVIEW_PROJECT_REF" \
+  --env-file "$VANTAHOME_REVIEW_EDGE_ENV"
+supabase functions deploy --project-ref "$VANTAHOME_REVIEW_PROJECT_REF" --use-api
 ```
+
+Review the dry-run migration list before applying it. `--use-api` bundles the
+functions remotely without Docker. Do not add `--prune` or bypass the target
+review with automatic confirmation. `--skip-vault` avoids importing local Vault
+configuration into the disposable environment. Keep database credentials private
+and TLS certificate verification enabled.
 
 `supabase/config.toml` is the source of truth for gateway JWT verification.
 Authenticated app APIs keep `verify_jwt = true`. The OAuth and Alexa/Google
@@ -67,18 +86,19 @@ Migration 009 creates atomic fixed-window rate buckets in the private schema.
 The Edge runtime HMAC-hashes client IP and actor identities before calling the
 service-role-only bucket function; raw addresses are neither stored nor logged.
 
-Set both secrets before deploying the updated functions:
-
-```bash
-supabase secrets set RATE_LIMIT_HASH_SECRET="$(openssl rand -hex 32)"
-supabase secrets set TRUSTED_PROXY_HOPS=1
-```
+Before deploying the updated functions, place both settings in the private
+secrets file used above: a fresh environment-specific `RATE_LIMIT_HASH_SECRET`
+(at least 32 random bytes, hex-encoded), and `TRUSTED_PROXY_HOPS=0` initially.
+Do not reuse a secret from another environment or commit this file.
 
 `TRUSTED_PROXY_HOPS` must match the number of sanitizing proxies on the hosted
 request path. Leave it unset/zero when that chain has not been verified; in
 that mode forwarded headers are ignored. Authenticated endpoints still use an
 actor bucket, while public voice OAuth and fulfillment endpoints fail closed
-until a trusted client address can be resolved.
+until a trusted client address can be resolved. Use a nonzero value only after
+verifying that callers cannot influence the selected address on the exact hosted
+path; reverify after infrastructure changes. A rejected or incomplete diagnostic
+does not justify enabling trust. Never copy a guessed value of `1` from an example.
 
 Current endpoint buckets:
 
@@ -95,9 +115,11 @@ request ID, endpoint, outcome, status, duration, region, and rate-limit state.
 These fields are intended for Supabase Logs Explorer dashboards and alerts.
 No token, email, raw IP, payload, or rate-limit hash is included.
 
-Deploy in this order: apply migrations through 011, set the secrets, then deploy
-the functions. Deploying the functions first intentionally produces `503` for
-protected operations because rate-limit storage/configuration is unavailable.
+Deploy in this order: apply migrations through 013, set the secrets, then deploy
+the functions. Migration 012 must precede the matching invitation and Google
+handlers; migration 013 publishes device observations for Realtime. Missing
+abuse-control storage or configuration intentionally produces `503` for protected
+operations.
 
 ## Remote database verification without Docker
 
@@ -111,7 +133,7 @@ export VANTAHOME_DISPOSABLE_DB_CONFIRMED=true
 npm run test:db:remote
 ```
 
-Apply migrations through 011 before running the suite. The runner fails closed
+Apply migrations through 013 before running the suite. The runner fails closed
 unless the disposable confirmation is explicit and the database project ref is
 different from `EXPO_PUBLIC_SUPABASE_URL`. It connects with the lightweight
 Node PostgreSQL client and does not start Docker.
@@ -128,4 +150,5 @@ Protected tables may report `401` or `403` to this anonymous inventory; those
 statuses prove that the route exists without weakening row access. A missing
 route reports `404`. This inventory does not replace the pgTAP authorization
 matrix or prove that private migration 009 objects exist. It is a safe
-deployment completeness check.
+deployment completeness check, not proof of authorized operations, Realtime
+delivery, or working voice account linking.

@@ -1,6 +1,6 @@
 # Sprint 2 — Security and Trust Boundary Closure
 
-Status: **local remediation verification; hosted retest and external review pending**
+Status: **hosted core verification passed; voice, native, and external review pending**
 
 The external review scope and non-binding vendor inquiry are prepared in
 [Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md) and
@@ -77,9 +77,11 @@ reviewer handoff, and teardown procedure without provisioning resources early.
   every household role, assigned and foreign rooms/homes, camera visibility,
   immutable observed state, command envelopes, spoofed actors, and explicit
   per-member grants and denials.
-- Migrations through 011 and every client-required Edge Function are deployed
-  to the active Supabase project. A private rate-limit hashing secret is set,
-  and the public readiness inventory passes while recognizing protected tables.
+- Historical baseline: migrations through 011 and every client-required Edge
+  Function were deployed to the active Supabase project. A private rate-limit
+  hashing secret was set, and the public readiness inventory passed while
+  recognizing protected tables. This does not describe its current availability
+  or deploy the later remediation baseline to that project.
 - Migrations 001 through 010 were applied from scratch to a data-less disposable
   Supabase project. The real PostgreSQL suites passed all 157 authorization
   matrix assertions and all 12 permission-derivation assertions, then rolled
@@ -91,22 +93,55 @@ reviewer handoff, and teardown procedure without provisioning resources early.
 - Edge Function JWT enforcement is now explicit in `supabase/config.toml`.
   App APIs require a Supabase user JWT, while the OAuth and Alexa/Google
   endpoints authenticate their own client credentials or provider-bound
-  VantaHome tokens. Live unauthenticated probes reach those handlers and are
-  rejected with their expected `400`/`401` responses.
+  VantaHome tokens. Historical unauthenticated probes reached those handlers
+  and were rejected with their expected `400`/`401` responses.
 - Mobile authentication now uses one guarded native callback shared by social
   sign-in and password recovery. Recovery links establish a session only from
   the exact VantaHome callback and present a dedicated password replacement
   screen before household loading resumes. The sign-in UI reads GoTrue's public
   provider settings so disabled providers are not offered as broken actions.
 
+## Current hosted verification
+
+On 2026-09-14, reviewed source `d2cd8e9` was deployed to a separate, explicitly
+authorized disposable Free environment, without Docker or changes to the
+active app project or mobile configuration.
+
+- Migrations 001–013 and all 11 matching Edge Functions were deployed. Gateway
+  JWT settings matched `supabase/config.toml`; signed-in requests worked through
+  the authenticated gateway without weakening verification.
+- All 297 hosted SQL regression assertions passed over verified TLS. Fixtures
+  rolled back, and application row counts matched before and after the suites.
+- The core hosted harness passed 60 assertions, including fixture setup, across
+  76 validation requests. Coverage included command authorization, replay
+  rejection, household/room isolation, invitation responses, explicit denials,
+  and immutable observations. Synthetic accounts and household data were removed
+  and cleanup verified.
+- Two bounded Auth/Realtime reruns passed identity/session refresh, account
+  switching, authorized update delivery/refetch, and membership revocation
+  checks. A removed guest's existing subscription received no further update
+  while the owner's positive control did. An initial timeout did not reproduce;
+  its cause remains unconfirmed. These are API/SDK checks, not native UI,
+  reconnect, endurance, or physical-device verification.
+- Public voice handlers returned the expected `503` with trusted-proxy handling
+  disabled. A temporary ingress diagnostic was rejected at its authorization
+  gate, so it did not establish a trusted hop count. Positive voice/OAuth checks
+  remain unrun; fail-closed behavior is not evidence of working voice linking.
+- Local verification repeated successfully: 370 tests across 51 suites, app and
+  Edge TypeScript checks, release checks, web export, and the secret scan.
+
+Detailed evidence and environment identifiers remain outside the public
+repository. No real provider accounts, email delivery, or household hardware
+were involved. These results do not authorize external reviewer access.
+
 ## Remaining before the Sprint 2 gate
 
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
 - Perform an external security review before alpha.
-- Deploy the reviewed migrations through 013 and matching Edge Functions to an
-  explicitly authorized disposable environment, then repeat hosted checks.
-  Local verification does not change the active project's deployed policies.
+- Establish the exact trusted staging ingress path, then run positive hosted
+  OAuth and synthetic Alexa/Google checks. Do not guess a proxy hop count or
+  treat expected fail-closed responses as functional voice verification.
 - Rebuild and verify native sign-in/recovery, account isolation, background
   behavior, biometric prompts, and authorized realtime updates on physical devices.
 - Revisit the time-limited dependency exception before its documented deadline.
@@ -118,6 +153,7 @@ suite through a lightweight PostgreSQL client and does not require Docker.
 ## Gate
 
 Automated checks provide evidence for the cases tested; they are not a general
-security guarantee. The historical hosted checks above cover their recorded
-migration baseline, not later local changes. Hosted retesting and the independent
-security review remain required before alpha or physical integration.
+security guarantee. Current staging evidence covers the recorded source and
+tested paths only; it does not update the active project's deployed policies.
+Pending voice and native verification and the independent security review remain
+required before alpha or physical integration.

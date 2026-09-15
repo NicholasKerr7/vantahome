@@ -6,6 +6,11 @@ This runbook turns the agreed review scope into an isolated, reproducible test
 environment. It does not authorize testing and must not be used against the
 active VantaHome Supabase project.
 
+Separately authorized internal staging verification may precede an engagement;
+see the recorded results in [Sprint 2](./SPRINT_2.md). That environment is not an
+approved reviewer handoff and does not waive the written engagement, access,
+expiry, or independent-review requirements below.
+
 ## Release gates
 
 1. Accept scope, price, dates, rules of engagement, data handling, and retest
