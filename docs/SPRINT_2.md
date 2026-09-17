@@ -210,6 +210,31 @@ commands, credential precautions, the API contract, and hosting approval gates.
 The hosted browser, ingress trust, native, physical completion, and external
 review gates remain open.
 
+## Home-first preparation
+
+The near-term objective is dependable personal-home use while preserving the
+architecture for a later commercial product. [Home-First Pilot](./HOME_PILOT.md)
+records the one-light readiness path, equipment unknowns, and separation of
+disposable test data, personal household data, and future customer environments.
+This does not waive review, enable hardware control, or complete Sprint 2.
+
+The isolated linking page now has a local-only Cloudflare preparation command.
+It packages the existing assets with native static security headers and keeps
+configuration/readiness metadata outside the served directory. Generated
+public/preview URLs, routing, and Worker logs are disabled by default; they do
+not prove an existing account has no other routes or logs. Packaging tests and
+CI use synthetic identifiers, never deployment credentials. No dependencies,
+Docker images, domains, hosting plans, live settings, or phone configuration
+changes are required for this preparation. Hosted header/logging verification,
+account access, and target approval remain outstanding.
+
+Local verification for this preparation: **741 tests across 58 suites**, app
+and Edge Function TypeScript, the dependency/release checks, the production web
+export, and both isolated linking package commands passed. The 52 new packaging
+tests cover explicit targets, header rules, exact public assets, and rejection
+of unexpected files, linked output files, and linked source paths. These are
+local checks, not Cloudflare-runtime, hosted-browser, or physical-device proof.
+
 ## Remaining before the Sprint 2 gate
 
 - Store future hub credentials, Home Assistant tokens, recovery material, and

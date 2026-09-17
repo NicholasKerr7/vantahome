@@ -8,6 +8,7 @@ supabase/.temp
 dist/
 web-build/
 voice-linking-dist/
+voice-linking-cloudflare/
 
 # dependencies
 node_modules/

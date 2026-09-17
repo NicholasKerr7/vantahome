@@ -91,6 +91,88 @@ Host access logs must not retain OAuth query strings, codes, state, or credentia
 bodies. Removing query parameters from browser history cannot erase an initial
 URL already recorded by a server, CDN, or monitoring integration.
 
+## Cloudflare preparation, without publishing
+
+Cloudflare Workers Static Assets is the preferred option to evaluate for this
+small page. It does not replace Supabase or the mobile app. This is a local
+package, not an approved account, deployed Worker, verified host, or assurance
+of commercial eligibility. Confirm the account's current terms before use.
+
+The following command uses deliberately synthetic identifiers and a reserved
+non-live origin so it can also run in CI without credentials:
+
+```bash
+npm run prepare:voice-linking:cloudflare -- \
+  --project-ref aaaaaaaaaaaaaaaaaaaa \
+  --site-origin https://linking.example.invalid \
+  --account-id 00000000000000000000000000000000 \
+  --worker-name vantahome-linking-check
+```
+
+For a later approved target, replace all four values explicitly. The account ID
+is a public identifier, **not an API token**. This command never reads `.env`,
+loads account credentials, contacts Cloudflare, installs Wrangler, runs Docker,
+or invokes a deployment. It produces only the ignored `voice-linking-cloudflare/`
+directory. Existing unexpected files, linked output files, and symbolic links
+are rejected before any generated output is overwritten; nothing is deleted.
+
+The package separates configuration from served files:
+
+```text
+voice-linking-cloudflare/
+  wrangler.json       # explicit account/name; no public route enabled
+  readiness.json      # canonical entry URL and outstanding approval checks
+  public/
+    index.html
+    main.js
+    protocol.js
+    linking.css
+    logo.png
+    _headers
+```
+
+Only `public/` is the asset directory. It contains the existing page and exact
+release icon plus one `/*` security-header rule; no app export, tests, secrets,
+readiness metadata, or server-side password proxy. Unlike the generic header
+manifest above, `_headers` is Cloudflare's native static-response configuration.
+It still needs hosted verification. See [Cloudflare headers](https://developers.cloudflare.com/workers/static-assets/headers/).
+
+The authorization entry URL is explicitly **`https://<approved-host>/index.html`**,
+with the provider's OAuth query parameters. HTML rewriting and SPA fallback are
+disabled: do not register `/` and assume it resolves to the page, or rewrite
+unknown paths to the login form. See [HTML handling](https://developers.cloudflare.com/workers/static-assets/routing/advanced/html-handling/).
+
+The generated configuration has no Worker script or resource bindings, disables
+`workers.dev` and preview URLs, declares no routes, and disables Wrangler usage
+metrics, Worker Logpush, and Worker observability/invocation logs. These are
+preparation defaults, not authentication and not proof of privacy or isolation.
+Deploying over an existing Worker can affect existing domain bindings. Confirm
+a new, approved target and inspect its live bindings before any future upload.
+The root Expo/Vercel configuration remains unchanged; no automatic deployment
+workflow is added.
+
+Before publication, separately verify:
+
+- The exact host/account and access level, plan eligibility, and any costs;
+  no paid plan, domain purchase, or shared project is implied by preparation.
+- Account/zone/WAF/access logs, Logpush, retention, analytics, and injected
+  scripts. Disabling Worker logs does not disable every platform log: Cloudflare
+  HTTP log fields can include the full request URI and query string. See
+  [HTTP log fields](https://developers.cloudflare.com/logs/logpush/logpush-job/datasets/zone/http_requests/#clientrequesturi).
+- The page and assets retain the intended HTML/MIME types and security headers;
+  unknown paths, unsupported methods, redirects, and platform errors meet the
+  policy too. `_headers` documentation covers static responses, not a universal
+  guarantee for platform-generated responses.
+- The matching Supabase JSON API, exact approved origin, trusted-client-IP
+  protection, synthetic browser flow, and the other gates below. Do not test
+  real passwords just because a static page loads.
+
+No hosted Cloudflare or Wrangler-runtime test has passed merely because the
+package and its filesystem/header tests pass. Connection and hosting validation
+remain required. Static asset requests and storage currently have no charge;
+dynamic Worker execution and other services have separate limits/pricing. See
+[Cloudflare asset billing](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/).
+
 ## JSON authorization contract
 
 The new mode is selected explicitly with `?format=json` on

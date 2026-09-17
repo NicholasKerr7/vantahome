@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "build": "expo export --platform web",
     "build:voice-linking": "node scripts/build-voice-linking.js",
+    "prepare:voice-linking:cloudflare": "node scripts/prepare-cloudflare-linking.js",
     "preview:voice-linking": "node scripts/preview-voice-linking.js",
     "lint": "tsc --noEmit",
     "lint:edge": "tsc -p supabase/functions/tsconfig.json",

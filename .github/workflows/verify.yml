@@ -52,3 +52,11 @@ jobs:
           npm run build:voice-linking --
           --project-ref aaaaaaaaaaaaaaaaaaaa
           --site-origin https://linking.example.invalid
+
+      - name: Prepare Cloudflare linking assets without publishing
+        run: >-
+          npm run prepare:voice-linking:cloudflare --
+          --project-ref aaaaaaaaaaaaaaaaaaaa
+          --site-origin https://linking.example.invalid
+          --account-id 00000000000000000000000000000000
+          --worker-name vantahome-linking-check
