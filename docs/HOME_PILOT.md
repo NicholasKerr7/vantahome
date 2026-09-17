@@ -7,19 +7,45 @@ This guide follows the [Product Constitution](./PRODUCT_CONSTITUTION.md),
 
 ## Equipment inventory
 
-The owner reports having an Amazon Echo Dot and a Philips Hue light bulb.
-Neither device has been verified through VantaHome.
+The owner confirmed on 2026-09-17 that the available smart-home equipment is
+only an Amazon Echo Dot and a Philips Hue light bulb. Neither device has been
+verified through VantaHome.
 
 - Echo Dot generation/model and firmware: unconfirmed.
 - Hue bulb model, capabilities, firmware, and current pairing: unconfirmed.
-- Hue Bridge availability/model: unconfirmed; awaiting the owner's reply.
-- Existing Home Assistant installation and its host: unconfirmed; awaiting reply.
+- Hue Bridge: not owned, according to the owner.
+- Home Assistant installation/host: none reported by the owner.
+- Whether Alexa currently controls the bulb: unconfirmed; awaiting reply.
 - An approved hub, integration transport, and compatible discovery/control path:
   not established. Do not infer them from the Echo or Hue product names.
 
 Inventory what already exists before recommending equipment. The architecture
 targets Home Assistant OS on an approved x86 host with Vanta Bridge; this is a
 design target, not evidence that such a host is installed or a purchase request.
+
+### Next decision for the confirmed equipment
+
+Do not buy a Hue Bridge or another hub yet. First identify the Echo generation
+and bulb model and establish whether the existing Alexa setup already controls
+the light. Record model/capability information, not serial numbers or setup codes.
+Preserve any working pairing; do not reset or re-pair the bulb for inventory.
+
+Bluetooth-capable Hue lights can support Bridge-free control, depending on the
+controller and model. This is not evidence of a VantaHome control path. See
+[Hue's Bridge-free options](https://www.philips-hue.com/en-us/explore-hue/faq/controls/how-to-connect-philips-hue-without-a-bridge).
+
+For the planned local hub architecture, Home Assistant's official
+[Hue integration](https://www.home-assistant.io/integrations/hue/) controls lights
+through a Hue Bridge. Alternatively, a compatible Zigbee bulb may connect via
+[ZHA and a supported coordinator](https://www.home-assistant.io/integrations/zha/),
+without a Hue Bridge. Both paths still need a Home Assistant host and completed
+Vanta Bridge integration. Choose only after model verification and approval;
+neither buying a Hue Bridge alone nor linking Alexa completes this architecture.
+
+Continue synthetic integration and security work without Docker on the Mac.
+Physical one-light validation remains pending a supported hardware path and the
+existing review gates; the equipment update does not authorize purchases,
+device changes, or a cloud-only replacement for the local-first design.
 
 ## Current implementation boundary
 
