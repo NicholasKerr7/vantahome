@@ -8,16 +8,23 @@ This guide follows the [Product Constitution](./PRODUCT_CONSTITUTION.md),
 ## Equipment inventory
 
 The owner confirmed on 2026-09-17 that the available smart-home equipment is
-only an Amazon Echo Dot and a Philips Hue light bulb. Neither device has been
-verified through VantaHome.
+only an Amazon Echo Dot and a Philips Hue light bulb. On 2026-09-25, the owner
+provided the model family and confirmed successful Alexa control. These are
+owner-reported facts, not independently observed VantaHome test results.
 
-- Echo Dot generation/model and firmware: unconfirmed.
-- Hue bulb model, capabilities, firmware, and current pairing: unconfirmed.
+- Echo Dot: third generation; firmware unconfirmed.
+- Bulb: Philips Hue White and Color Ambiance A19 LED, described as Bluetooth
+  and Zigbee compatible with an optional Hue Hub. Exact manufacturer model ID
+  and firmware remain unconfirmed; the product title is not a discovered ID.
 - Hue Bridge: not owned, according to the owner.
 - Home Assistant installation/host: none reported by the owner.
-- Whether Alexa currently controls the bulb: unconfirmed; awaiting reply.
+- Spare computer for a dedicated hub: not currently available, confirmed by
+  the owner on 2026-09-25. No replacement hardware or budget is approved.
+- Existing control: Alexa successfully turns the bulb on, according to the
+  owner. Off, dimming, white-temperature, and color operations have not been
+  separately verified. The radio path and pairing details were not inspected.
 - An approved hub, integration transport, and compatible discovery/control path:
-  not established. Do not infer them from the Echo or Hue product names.
+  not established for VantaHome. Alexa success does not complete this gate.
 
 Inventory what already exists before recommending equipment. The architecture
 targets Home Assistant OS on an approved x86 host with Vanta Bridge; this is a
@@ -25,10 +32,18 @@ design target, not evidence that such a host is installed or a purchase request.
 
 ### Next decision for the confirmed equipment
 
-Do not buy a Hue Bridge or another hub yet. First identify the Echo generation
-and bulb model and establish whether the existing Alexa setup already controls
-the light. Record model/capability information, not serial numbers or setup codes.
-Preserve any working pairing; do not reset or re-pair the bulb for inventory.
+The basic equipment and working Alexa control are now recorded. Do not repeat
+those questions or buy a Hue Bridge by default. No spare hub computer is
+currently available. Keep purchases on hold; agree a hardware budget and the
+integration test plan before recommending a dedicated host and radio. Keep the
+storage-constrained development Mac out of the always-on hub plan. Software
+implementation and synthetic tests can continue, but they cannot close the
+physical-device gate without suitable hardware.
+
+Record model/capability information, not serial numbers or setup codes. Preserve
+the working Alexa setup; do not reset or re-pair the bulb for inventory. Do not
+assume a future Zigbee migration will preserve its current Alexa pairing.
+Any migration needs explicit approval and a plan to restore the working setup.
 
 Bluetooth-capable Hue lights can support Bridge-free control, depending on the
 controller and model. This is not evidence of a VantaHome control path. See
@@ -41,6 +56,13 @@ through a Hue Bridge. Alternatively, a compatible Zigbee bulb may connect via
 without a Hue Bridge. Both paths still need a Home Assistant host and completed
 Vanta Bridge integration. Choose only after model verification and approval;
 neither buying a Hue Bridge alone nor linking Alexa completes this architecture.
+
+For this single Zigbee-capable light, evaluate a supported coordinator on the
+dedicated Home Assistant host first, rather than assuming a separate Hue Bridge
+is also necessary. Confirm the exact bulb's discovery, exposed capabilities,
+state reporting, and Alexa coexistence before selecting that path. A Hue Bridge
+remains an alternative if its native Hue features are wanted; neither option is
+purchased, configured, or verified by this plan.
 
 Continue synthetic integration and security work without Docker on the Mac.
 Physical one-light validation remains pending a supported hardware path and the
