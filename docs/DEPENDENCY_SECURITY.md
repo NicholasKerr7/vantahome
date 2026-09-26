@@ -72,8 +72,8 @@ Last reviewed: 2026-09-26
   patch](https://github.com/react/metro/releases/tag/v0.83.8) instead. Its
   [upstream parser change](https://github.com/react/metro/pull/1860) removes the
   vulnerable package, uses bounded parsers for Metro-supported formats, and
-  reuses the asset bytes already read for hashing. No local parser fork or
-  additional postinstall patch is needed.
+  reuses the asset bytes already read for hashing. No local parser fork is
+  needed; Expo's development watcher contract needs the separate adapter below.
 - Expo SDK 54's `@expo/metro` 54.2.0 wrapper still pins Metro 0.83.3. Scope the
   override to that wrapper and move all 14 of its Metro-family dependencies
   together to 0.83.8; `ob1` follows through Metro's own dependency graph. The
@@ -94,6 +94,35 @@ Last reviewed: 2026-09-26
   rerun `expo install --check`, asset/navigation regressions, full verification,
   and the production web export. A clean dependency audit does not replace the
   independent review or physical/native validation gates.
+
+## Expo development watcher compatibility
+
+- A live development-server check found an incompatibility that a one-shot
+  export cannot reveal: Metro 0.83.8 emits grouped `changes` with a `rootDir`,
+  while Expo SDK 54's CLI 54.0.27 still expects `eventsQueue`. Without an adapter,
+  an observed file edit crashes Expo with `eventsQueue is not iterable`.
+- `scripts/patch-expo-metro-watchers.js` adapts all four affected observers in
+  the two reviewed CLI files. It converts added/modified/removed files and
+  directories to the existing absolute-path event contract, preserves symlink
+  metadata, and leaves filtering, callback signatures, throttling, and listener
+  cleanup unchanged. File size is unavailable in the new event and remains
+  explicitly `null`; these observers do not depend on it.
+- The patch resolves the CLI actually used by Expo, requires CLI 54.0.27 and
+  `metro-file-map` 0.83.8, and verifies exact original and patched source hashes.
+  It checks both files before writing, is idempotent, and refuses unknown input
+  or output. It does not change Metro's parser or restore vulnerable packages.
+- `postinstall` applies this adapter separately from the unchanged query-string
+  patch. `security:dependencies` checks both patches even when install lifecycle
+  scripts were skipped. Run `npm run postinstall` before verification in that
+  case, and restart any already-running development server to load the patch.
+- Tests exercise the real patched observer functions with synthetic watcher
+  events: TypeScript detection, specific/all-file changes, route generation,
+  root-relative paths, add/change/delete, directory/symlink metadata, ignored
+  dependency/declaration files, throttling, legacy events, and unsubscription.
+  Unknown event shapes fail explicitly rather than discarding changes.
+- Reassess and remove this adapter with the Metro overrides when Expo adopts
+  the new watcher contract. Keep a file-edit/live-reload smoke check alongside
+  asset regressions and production export validation for future bundler changes.
 
 Re-run `npm audit --omit=dev`, `npx expo install --check`, the web export, and
 `npm run verify` whenever Expo publishes patched SDK dependencies.
