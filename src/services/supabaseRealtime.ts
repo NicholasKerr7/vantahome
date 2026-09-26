@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import { parseDeviceStateEvent } from "./transportSchemas";
 import { runtimePolicy } from "../config/runtimeMode";
 import { selectVisibleDevices, useHomeStore } from "../store/useHomeStore";
+import { CommandTransportRejectedError, commandRejectionFromHttpError } from "./commandTransport";
 
 type SupabaseRealtimeOptions = {
   channel?: string;
@@ -86,18 +87,27 @@ export function startSupabaseDeviceRealtime(
   });
 
   const clearCommandTransport = deviceClient.setCommandTransport(async (command) => {
-    if (!canObserve(command.deviceId)) throw new Error("Device session is no longer active.");
+    if (!currentScope()) throw new CommandTransportRejectedError("session_changed");
+    if (!canObserve(command.deviceId)) throw new CommandTransportRejectedError("permission_denied");
     const { data: sessionData, error: sessionError } = await client.auth.getSession();
-    if (sessionError || sessionData.session?.user.id !== userId || !canObserve(command.deviceId)) {
-      throw new Error("Device session is no longer active.");
-    }
+    if (!currentScope()) throw new CommandTransportRejectedError("session_changed");
+    if (sessionError) throw new Error("Device session temporarily unavailable.");
+    if (sessionData.session?.user.id !== userId) throw new CommandTransportRejectedError("session_changed");
+    if (!canObserve(command.deviceId)) throw new CommandTransportRejectedError("permission_denied");
     const { data, error } = await client.functions.invoke("device-command", {
       body: command,
       headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
       signal: abort.signal,
     });
-    if (error || data?.command?.command_id !== command.commandId || data?.command?.status !== "created" || !currentScope()) {
-      throw new Error("Device command was not accepted.");
+    // A device may lose visibility while this request is in flight without a
+    // transport reset. Never consume its response under the old permission.
+    if (!currentScope()) throw new CommandTransportRejectedError("session_changed");
+    if (!canObserve(command.deviceId)) throw new CommandTransportRejectedError("permission_denied");
+    if (error) {
+      throw commandRejectionFromHttpError(error) ?? new Error("Device command temporarily unavailable.");
+    }
+    if (data?.command?.command_id !== command.commandId || data?.command?.status !== "created") {
+      throw new CommandTransportRejectedError("invalid_response");
     }
     // Acceptance is not physical confirmation. Only observed database state
     // updates the UI in a release runtime.

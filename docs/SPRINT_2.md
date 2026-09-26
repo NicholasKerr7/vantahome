@@ -235,6 +235,35 @@ tests cover explicit targets, header rules, exact public assets, and rejection
 of unexpected files, linked output files, and linked source paths. These are
 local checks, not Cloudflare-runtime, hosted-browser, or physical-device proof.
 
+## Local reliability follow-up — 2026-09-26
+
+The expired `image-size` exception is closed: Expo's scoped Metro dependency
+family now uses the compatible upstream 0.83.8 patch, which removes that
+vulnerable parser. The dependency gate no longer accepts advisory exceptions;
+see [Dependency Security](./DEPENDENCY_SECURITY.md) for compatibility evidence,
+asset regression coverage, and override removal criteria. Expo and React Native
+versions, release icons, and native configuration are unchanged.
+
+Service-level command progress now distinguishes submission, queued retries,
+refusal, expiry, exhaustion, and ambiguous timeout without claiming physical
+completion. Local metadata history is bounded and cleared on session reset.
+Transport waits and retry attempts are bounded; identity and current permission
+are rechecked around asynchronous work. Regression tests exercise stalled and
+late responses, concurrent commands, revoked visibility, duplicate IDs,
+subscriber failures/mutation, and reset isolation. See the [implemented command
+contract](./ARCHITECTURE.md#implemented-local-delivery-tracking).
+
+Local verification passed **891 tests across 62 suites**, application and Edge
+TypeScript, release/asset/auth-redirect checks, Expo dependency compatibility,
+the production web export, and tracked-file/Git-history secret scans. Full and
+production-only npm audits both reported zero vulnerabilities. All new command
+tests use synthetic intent and mocked transports, not household hardware.
+
+These are local, hardware-free changes. No new progress UI, backend deployment,
+provider linking, device command, Docker container, phone configuration change,
+or independent review is included. The external, hosted-browser, native, and
+physical-completion gates remain open.
+
 ## Remaining before the Sprint 2 gate
 
 - Store future hub credentials, Home Assistant tokens, recovery material, and
