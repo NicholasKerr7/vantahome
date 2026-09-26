@@ -12,7 +12,9 @@ after the scope and rules of engagement identify it in writing.
 - Accept scope, price, dates, test methods, rules of engagement, data handling,
   finding disclosure, emergency contacts, and retest terms in writing.
 - Resolve which application, API, database, OAuth, voice, and architecture work
-  packages are included and preserve the explicit exclusions.
+  packages are included and preserve the agreed third-party exclusions. Add the
+  actual candidate's Vanta Bridge, pairing, credential, command, and observation
+  boundaries; do not carry the historical bridge exclusion into a public release.
 - Merge only the changes intended for review. Keep the working tree clean and
   require the repository verification workflow to pass on the candidate commit.
 - Confirm the candidate includes no credentials, live household data, private
@@ -61,3 +63,7 @@ after the scope and rules of engagement identify it in writing.
 Sprint 2 remains open until the agreed assessment and retest satisfy the exit
 criteria in the [Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md).
 Commit only a non-sensitive completion summary after closure.
+
+The [private-pilot exception](./PRIVATE_PILOT_DECISION.md) does not satisfy this
+gate, freeze a review baseline, or authorize reviewer access. It only changes
+when supervised owner-only one-bulb testing may begin after its prerequisites.

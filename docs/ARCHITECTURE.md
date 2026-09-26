@@ -132,3 +132,12 @@ authentication, pairing, durable storage, or physical confirmation. Read the
 [one-light contract](./BRIDGE_LIGHT_CONTRACT.md) before extending these pure
 planning functions into a worker. In particular, `state_observed` is weaker
 than physical confirmation, and a fake journal test is not crash-safety evidence.
+
+## Private-pilot sequencing decision
+
+The [2026-09-26 decision](./PRIVATE_PILOT_DECISION.md) permits preparation for a
+supervised, owner-only one-bulb pilot before independent review. It changes no
+transport, runtime mode, trust boundary, or credential policy. A real durable
+worker, authenticated adapter, private-scope enforcement, verified native build,
+approved hardware path, and explicit session approval are still prerequisites.
+Independent review remains open and required before public/customer use.

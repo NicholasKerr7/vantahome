@@ -2,7 +2,7 @@
 
 Status: **ready for external scoping and quotation**
 
-- Prepared: 2026-08-18; refreshed: 2026-08-19
+- Prepared: 2026-08-18; gate sequencing updated: 2026-09-26
 - Repository: `NicholasKerr7/vantahome` (public)
 - Quotation baseline sent: `e1b8ea073b4892fb6655c1761d2795bfd8b80444`
 - Testing baseline: **not frozen; select only after written scope agreement**
@@ -17,11 +17,17 @@ Independently verify that a VantaHome user, device, integration, or public
 caller cannot read, modify, or command an unauthorized household, room,
 device, capability, camera, or administrative action.
 
-This review is the final Sprint 2 gate before work begins on the first physical
-Home Assistant device integration. Automated tests and internal review are
-supporting evidence, not substitutes for this assessment.
+This review remains an open Sprint 2 release requirement before any public or
+customer-facing alpha, beta, commercial pilot, or production use, paid or free.
+The [private-pilot decision](./PRIVATE_PILOT_DECISION.md) defers it only for
+owner-only supervised one-bulb testing after technical prerequisites and separate
+session approval. Automated tests and internal review are supporting evidence,
+not substitutes for this assessment.
 
-## System in scope
+## Historical quotation scope
+
+The inventory below describes the original quotation, not the current release
+candidate. Re-scope and recalculate it before authorizing an engagement.
 
 - Expo SDK 54 / React Native 0.81 mobile application written in TypeScript.
 - Supabase Auth, PostgreSQL, Row Level Security, RPCs, and 11 SQL migrations.
@@ -35,9 +41,9 @@ supporting evidence, not substitutes for this assessment.
 - Native deep-link handling for OAuth and password recovery.
 - Privacy-safe operational events and optional Sentry integration.
 
-The current candidate contains 180 TypeScript files and 51,194 lines across the
+The quotation candidate contained 180 TypeScript files and 51,194 lines across the
 application and Edge Functions, with 11 SQL migrations and 11 Edge Functions.
-The automated gate currently has 220 passing tests, including database
+The automated gate then had 220 passing tests, including database
 authorization and migration guardrails. Recalculate these inventory figures at
 the final frozen commit rather than treating them as engagement identifiers.
 
@@ -50,7 +56,7 @@ the final frozen commit rather than treating them as engagement identifiers.
   [Threat Model](./THREAT_MODEL.md).
 - Challenge trust boundaries, attacker assumptions, service-role use, and the
   security model for future local-hub pairing.
-- Identify missing abuse cases and systemic weaknesses before Sprint 3.
+- Identify missing abuse cases and systemic weaknesses before public/customer use.
 
 ### WP2 — Mobile application and authentication review
 
@@ -85,8 +91,18 @@ the final frozen commit rather than treating them as engagement identifiers.
 - Testing the active production Supabase project or any real household data.
 - Amazon, Google, Apple, Sentry, or Supabase infrastructure outside VantaHome's
   own configuration and integration code.
-- Home Assistant, Vanta Bridge, physical-device firmware, and physical-device
-  command confirmation, which do not exist in the Sprint 2 baseline.
+- The original quotation excluded Home Assistant, Vanta Bridge, physical-device
+  firmware, and physical-device command confirmation because the VantaHome
+  integration did not exist in that baseline. This is not an exclusion for a
+  later release candidate's newly implemented Vanta-owned integration code.
+
+Before public/customer use, the agreed assessment must include the actual
+candidate's Vanta Bridge, pairing, secure credential handling, durable command
+lifecycle, observation integrity, and app/hub/HA trust boundaries. Review the
+Vanta-owned adapter and configuration; testing third-party Home Assistant code,
+infrastructure, or device firmware remains outside scope unless separately
+authorized. Passing an assessment of only the historical mobile/backend
+baseline cannot clear a release containing unreviewed bridge functionality.
 
 Any requested scope expansion requires written approval before testing.
 

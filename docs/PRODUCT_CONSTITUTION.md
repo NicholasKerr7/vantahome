@@ -48,3 +48,9 @@ No sprint advances merely because code exists. Its documented gate must pass in
 tests and, where applicable, on physical hardware. The defining vertical slice
 is one automatically discovered light whose real capabilities and physical
 state remain truthful through app restart, hub restart, and internet loss.
+
+The owner-approved [private-pilot decision](./PRIVATE_PILOT_DECISION.md) defers
+independent review only for supervised, owner-only one-bulb testing after its
+technical prerequisites and separate session approval. It does not close Sprint
+2, waive other safeguards, or authorize public/customer use. Independent review
+remains required before any public or customer-facing release, paid or free.

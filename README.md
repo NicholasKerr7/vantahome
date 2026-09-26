@@ -7,6 +7,12 @@ local Vanta Bridge backed by Home Assistant. See
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Development and review practices
 are documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+The current roadmap is [private-home pilot first](docs/HOME_PILOT.md). The
+owner-approved [pilot decision](docs/PRIVATE_PILOT_DECISION.md) defers independent
+review only for supervised one-bulb testing after technical prerequisites and
+separate session approval. Hardware readiness is not yet established; review
+remains outstanding and required before any public/customer use.
+
 ## Features
 
 - Home dashboard with room carousel, climate/lighting orbs, and quick actions.
@@ -90,13 +96,17 @@ has comfortable storage headroom.
 
 ## Realtime dev server
 
-Spin up a local WebSocket bridge and point the app to it in Settings → Realtime (Dev):
+Use the loopback-only synthetic server for demo/development checks in
+Settings → Realtime (Dev):
 
 ```bash
 npm run realtime:server
 ```
 
-Use `ws://<your-ip>:8088` for physical devices or simulators that cannot reach `localhost`.
+Use `ws://127.0.0.1:8088` from the same host. This unauthenticated mock server is
+not a private-pilot or household control transport. Do not expose it on the LAN
+or Internet to connect a phone; the pilot requires the authenticated local
+bridge described in the readiness checklist.
 
 ## MQTT presence simulator
 

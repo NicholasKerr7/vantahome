@@ -123,7 +123,10 @@ The tests' fake journal demonstrates this ordering and refusal behavior. It is
 in-memory, not crash-safe storage; a real process restart is **not** validated.
 Pure planning functions cannot enforce a caller's storage/transaction discipline.
 Do not connect them to a device until the durable worker, authenticated adapter,
-secure pairing/storage, and review prerequisites are implemented and verified.
+secure pairing/storage, and applicable readiness prerequisites are implemented
+and verified. The [private-pilot decision](./PRIVATE_PILOT_DECISION.md) defers
+independent review only for its supervised one-bulb scope; technical readiness
+and separate session approval are still required.
 
 ## Verification and next gates
 
@@ -135,8 +138,10 @@ disconnect/restart without replay. No test contacts HA, Alexa, Hue, or Supabase.
 
 The next implementation boundary is a transactional journal/dispatcher with
 failure injection, followed by the authenticated HA session adapter. An actual
-host/hardware choice, independent security review, and controlled-device approval
-remain required. Native follow-up must verify portrait-only phones, both tablet
-orientations, sign-in/session isolation, background/reconnect behavior, accessible
-delivery notices, and truthful unknown-state rendering. Simulated results do not
-close any of those gates; see [Home-First Pilot](./HOME_PILOT.md).
+host/hardware choice and controlled-device approval remain required. Independent
+review is deferred only under the private-pilot exception and remains mandatory
+before public/customer use. Native follow-up must verify portrait-only phones,
+both tablet orientations, sign-in/session isolation, background/reconnect
+behavior, accessible delivery notices, and truthful unknown-state rendering.
+Simulated results do not close any of those gates; see
+[Home-First Pilot](./HOME_PILOT.md).

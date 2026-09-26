@@ -2,6 +2,12 @@
 
 Status: **hosted core and voice API checks passed; browser, native, and external review pending**
 
+The owner-approved [private-pilot decision](./PRIVATE_PILOT_DECISION.md) now
+allows a supervised, owner-only one-bulb path before independent review once
+technical prerequisites and separate session approval are satisfied. This is
+not a Sprint 2 pass; independent review remains required before any public or
+customer-facing alpha, beta, commercial pilot, or production release.
+
 The external review scope and non-binding vendor inquiry are prepared in
 [Independent Security Review Brief](./SECURITY_REVIEW_BRIEF.md) and
 [Independent Security Review Outreach](./SECURITY_REVIEW_OUTREACH.md). The
@@ -216,7 +222,9 @@ The near-term objective is dependable personal-home use while preserving the
 architecture for a later commercial product. [Home-First Pilot](./HOME_PILOT.md)
 records the one-light readiness path, equipment unknowns, and separation of
 disposable test data, personal household data, and future customer environments.
-This does not waive review, enable hardware control, or complete Sprint 2.
+The later [private-pilot decision](./PRIVATE_PILOT_DECISION.md) defers review only
+for its narrow supervised scope; it does not enable hardware control, pass the
+review, or complete Sprint 2.
 
 The isolated linking page now has a local-only Cloudflare preparation command.
 It packages the existing assets with native static security headers and keeps
@@ -322,11 +330,34 @@ restart testing remain required before any device connection. No dependency,
 Docker container, hardware purchase, existing feature, or Alexa setup changed.
 Native verification, physical-device evidence, and independent review remain open.
 
-## Remaining before the Sprint 2 gate
+## Private-pilot sequencing decision — 2026-09-26
+
+The owner approved a private-home-first roadmap rather than waiting indefinitely
+for an external assessment. Independent review is deferred for the bounded
+owner-only, supervised one-bulb pilot, not waived for public/customer use. The
+[decision and readiness checklist](./PRIVATE_PILOT_DECISION.md) define the scope,
+remaining risks, technical/native prerequisites, session approval, and stop
+conditions. Earlier entries describe historical evidence, not a gate override.
+
+Next work is the durable command journal/dispatcher and authenticated local
+adapter, followed by native checks and a separately approved hardware path.
+No runtime mode, security control, deployment, hardware configuration, purchase,
+or feature changed with this documentation decision. No physical test is yet
+authorized. Sprint 2 and the independent-review release gate remain open.
+
+Documentation-only verification passed: **1,309 tests across 69 suites**,
+application/Edge TypeScript, dependency/release checks, web export, tracked-file
+and history secret scans, and relative documentation links. These checks do not
+establish pilot hardware/native readiness or independent security assurance.
+
+## Remaining before the Sprint 2 release gate
 
 - Store future hub credentials, Home Assistant tokens, recovery material, and
   device keys in platform/hub secure storage when those flows are implemented.
-- Perform an external security review before alpha.
+- Complete independent security review, remediation, and retesting before any
+  public or customer-facing alpha, beta, commercial pilot, or production use,
+  paid or free. Include the then-current Vanta Bridge and pairing/command
+  boundaries in the agreed scope; the original quotation excluded them.
 - Establish the production ingress trust boundary before enabling permanent
   proxy trust; the bounded staging experiment is not production evidence.
 - Approve and verify a browser-capable account-linking host, then test real
@@ -346,4 +377,7 @@ Automated checks provide evidence for the cases tested; they are not a general
 security guarantee. Current staging evidence covers the recorded source and
 tested paths only; it does not update the active project's deployed policies.
 Browser/provider linking, physical completion, native verification, and the
-independent security review remain required before alpha or physical integration.
+independent security review remain required for the applicable public/customer
+release scope. Only the [private-pilot decision](./PRIVATE_PILOT_DECISION.md)
+permits supervised physical testing before independent review, after its other
+prerequisites and explicit session approval. It does not close this gate.

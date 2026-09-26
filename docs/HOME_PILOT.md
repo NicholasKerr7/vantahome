@@ -1,9 +1,16 @@
 # Home-First Pilot
 
-Status: **preparation only; real-device readiness is not established**.
+Status: **private-pilot roadmap approved; real-device readiness is not established**.
 Make VantaHome dependable for one personal home before planning commercial use.
 This guide follows the [Product Constitution](./PRODUCT_CONSTITUTION.md),
-[Architecture](./ARCHITECTURE.md), and unchanged [Sprint 2 gates](./SPRINT_2.md).
+[Architecture](./ARCHITECTURE.md), and [Sprint 2 gates](./SPRINT_2.md), with the
+explicit [private-pilot sequencing exception](./PRIVATE_PILOT_DECISION.md).
+
+The owner approved deferring independent review on 2026-09-26 for supervised,
+owner-only one-bulb testing once the decision's technical/native prerequisites
+and separate session approval are satisfied. Review remains outstanding and
+required before public/customer use. This is not hardware authorization or a
+Sprint 2 pass; the decision contains the authoritative scope and stop conditions.
 
 ## Equipment inventory
 
@@ -66,7 +73,7 @@ purchased, configured, or verified by this plan.
 
 Continue synthetic integration and security work without Docker on the Mac.
 Physical one-light validation remains pending a supported hardware path and the
-existing review gates; the equipment update does not authorize purchases,
+private-pilot readiness gates; the equipment update does not authorize purchases,
 device changes, or a cloud-only replacement for the local-first design.
 
 ## Current implementation boundary
@@ -104,13 +111,14 @@ and supervised hardware evidence remain outstanding.
 4. Exercise those boundaries using clearly labeled synthetic fixtures first.
    Verify replay rejection, authorization loss, unavailable integrations, stale
    observations, restart recovery, and the absence of duplicate command effects.
-5. Obtain the required independent review and explicit approval for controlled
-   hardware verification. Follow the existing Sprint 2 prerequisites; personal
-   use is not a waiver, and internal tests do not replace independent review.
-6. Record supervised one-light evidence: automatic discovery; on/off and only
-   genuinely supported additional controls; externally changed state reflected
-   in the app; and truthful behavior through app restart, hub restart, and
-   internet loss. Reconnect must not replay expired commands. Record failures
+5. Complete the [private-pilot readiness checklist](./PRIVATE_PILOT_DECISION.md#readiness-gates-before-the-first-bulb-command),
+   present remaining risks, and obtain explicit approval for each controlled
+   session. Independent review may be deferred only within that decision's
+   owner-only, supervised on/off scope; internal tests do not replace it.
+6. Record supervised one-light evidence: automatic discovery; manual on/off;
+   externally changed state reflected in the app; and truthful behavior through
+   app restart, hub restart, and internet loss. Reconnect must not replay expired
+   commands. Record failures
    and unknown state honestly rather than declaring the full gate passed.
 
 Keep the existing premium interface and features. Limit this pilot's device
@@ -139,8 +147,9 @@ cleanup for each approved test; keep synthetic and physical results separate.
 The [browser-linking work](./VOICE_ACCOUNT_LINKING.md) is separate from the
 bridge's ability to control a light truthfully. Hosting a login page does not
 establish physical completion. The current Sprint 2 browser/provider, ingress,
-native, physical-completion, and independent-review gates remain open until
-their evidence is verified; any scope change requires an explicit decision.
+native, physical-completion, and independent-review release gates remain open
+until their evidence is verified. The private-pilot exception does not enable
+VantaHome voice linking or remote actuation; existing Alexa control stays intact.
 
 Consider a small commercial pilot only after those gates and the dependable
 one-light slice pass, followed by customer isolation, recovery, update, support,

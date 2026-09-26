@@ -11,6 +11,11 @@ see the recorded results in [Sprint 2](./SPRINT_2.md). That environment is not a
 approved reviewer handoff and does not waive the written engagement, access,
 expiry, or independent-review requirements below.
 
+The [private-pilot decision](./PRIVATE_PILOT_DECISION.md) does not authorize this
+review environment, grant reviewer access, or turn personal-home data into test
+fixtures. It defers review only for its separately approved supervised scope;
+the engagement and isolation requirements here remain unchanged.
+
 ## Release gates
 
 1. Accept scope, price, dates, rules of engagement, data handling, and retest

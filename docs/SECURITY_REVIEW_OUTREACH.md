@@ -2,6 +2,13 @@
 
 Status: **inquiry sent 2026-08-18; response pending; no testing authorized**
 
+Roadmap update, 2026-09-26: the owner approved a narrowly scoped
+[private-pilot exception](./PRIVATE_PILOT_DECISION.md), so preparation and
+eligible supervised one-bulb testing need not wait for this inquiry. Independent
+review is still outstanding and required before public/customer use. The inquiry
+below is a historical record, not an updated scope or authorization for further
+outreach, spending, or testing. Re-scope the actual candidate before engagement.
+
 ## Recommended first contact
 
 Cure53 is the preferred first contact because its published services and reports

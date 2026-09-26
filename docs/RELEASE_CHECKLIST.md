@@ -2,6 +2,10 @@
 
 Use this checklist before shipping a production build.
 
+The [private-pilot exception](./PRIVATE_PILOT_DECISION.md) is not release approval
+and does not check off any item below. Independent review is required before
+public/customer use, including free alpha/beta testing.
+
 ## P0 Blockers
 - [ ] Replace demo camera URLs (`test-streams.mux.dev`, `picsum`) with real snapshot + stream endpoints.
 - [x] Keep explicit demo mode with labeled seeded data; require Supabase auth in every other mode.
@@ -9,6 +13,11 @@ Use this checklist before shipping a production build.
 - [x] Lock down realtime transport (MQTT/Supabase/WS) for alpha/production and disable mock fallback.
 
 ## Auth & Security
+
+- [ ] Complete independent review of the actual release candidate, including
+  newly implemented Vanta Bridge/pairing/command boundaries; remediate and
+  retest according to the [review exit criteria](./SECURITY_REVIEW_BRIEF.md#exit-criteria)
+  before any public/customer-facing alpha, beta, commercial pilot, or production use.
 - [x] Apply migrations through 011 and deploy every required Edge Function to
   the active project.
 - [ ] Enable the remaining intended OAuth provider in Supabase (Google is

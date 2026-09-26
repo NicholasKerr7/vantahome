@@ -34,6 +34,18 @@ the database boundary.
 See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for trust boundaries and
 [`docs/SPRINT_2.md`](docs/SPRINT_2.md) for current implementation status.
 
+## Private testing and public release
+
+The owner-approved [private-pilot decision](docs/PRIVATE_PILOT_DECISION.md)
+defers independent review only for supervised, owner-only one-bulb testing
+after technical prerequisites and explicit session approval. It does not waive
+authentication, authorization, secure storage, truthful state handling, or
+network isolation, and does not authorize hardware changes by itself.
+
+Independent review remains outstanding and required before any public or
+customer-facing alpha, beta, commercial pilot, or production release, paid or
+free. Internal tests do not replace it or close the Sprint 2 release gate.
+
 ## Reporting a Security Issue
 
 If you find a security issue, do not open a public issue with sensitive details. Contact the repository owner privately first.

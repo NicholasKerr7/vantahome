@@ -232,6 +232,9 @@ provider linking must then be verified on the approved hosted path. Local mock
 success and earlier HTTP-only API checks do not satisfy those gates.
 
 Native testing, authoritative bridge observations and physical command
-completion, and independent security review remain required before alpha or
-physical integration. This page does not make queued commands physically
-confirmed or enable additional device categories.
+completion, and independent security review remain required before public or
+customer-facing alpha, beta, commercial pilot, or production use. The
+[private-pilot exception](./PRIVATE_PILOT_DECISION.md) allows only supervised
+local one-bulb testing after its prerequisites and session approval; it does
+not enable real VantaHome voice linking or remote actuation. This page does not
+make queued commands physically confirmed or enable additional device categories.
