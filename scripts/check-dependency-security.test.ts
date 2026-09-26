@@ -1,9 +1,32 @@
 const {
   concreteAdvisories,
-  unexpectedAdvisories,
+  main,
+  readAuditResult,
 } = require("./check-dependency-security.js");
+const { spawnSync } = require("node:child_process");
 
-const acceptedAudit = {
+jest.mock("node:child_process", () => ({ spawnSync: jest.fn() }));
+
+/** Exercise the CLI gate without network calls or leaking exit state into Jest. */
+function auditExitCode(report: unknown, status = 0): number {
+  const previousExitCode = process.exitCode;
+  const log = jest.spyOn(console, "log").mockImplementation(() => {});
+  const error = jest.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    process.exitCode = undefined;
+    spawnSync.mockReturnValue({ status, stdout: JSON.stringify(report) });
+    main();
+    return Number(process.exitCode ?? 0);
+  } finally {
+    process.exitCode = previousExitCode;
+    log.mockRestore();
+    error.mockRestore();
+    spawnSync.mockReset();
+  }
+}
+
+const vulnerableAudit = {
+  auditReportVersion: 2,
   vulnerabilities: {
     "image-size": {
       via: [
@@ -22,40 +45,59 @@ const acceptedAudit = {
 };
 
 describe("dependency security audit", () => {
-  test("ignores npm's propagated dependency entries", () => {
-    expect(concreteAdvisories(acceptedAudit)).toHaveLength(2);
-    expect(unexpectedAdvisories(acceptedAudit)).toEqual([]);
-  });
-
-  test("fails a new concrete advisory", () => {
-    const audit = {
-      vulnerabilities: {
-        ...structuredClone(acceptedAudit.vulnerabilities),
-        postcss: {
-          via: [
-            {
-              title: "New PostCSS issue",
-              url: "https://github.com/advisories/GHSA-new-advisory",
-            },
-          ],
-        },
-      },
-    };
-
-    expect(unexpectedAdvisories(audit)).toEqual([
-      expect.objectContaining({ dependency: "postcss" }),
+  test("reports previously accepted advisories and excludes propagated duplicates", () => {
+    const audit = readAuditResult({ status: 1, stdout: JSON.stringify(vulnerableAudit) });
+    expect(concreteAdvisories(audit)).toEqual([
+      expect.objectContaining({
+        dependency: "image-size", url: vulnerableAudit.vulnerabilities["image-size"].via[0].url,
+      }),
+      expect.objectContaining({
+        dependency: "image-size", url: vulnerableAudit.vulnerabilities["image-size"].via[1].url,
+      }),
     ]);
   });
 
-  test("does not allow an accepted advisory URL on another package", () => {
-    const audit = {
-      vulnerabilities: {
-        impostor: {
-          via: [acceptedAudit.vulnerabilities["image-size"].via[0]],
-        },
-      },
-    };
+  test("accepts a completed clean audit report", () => {
+    const audit = { auditReportVersion: 2, vulnerabilities: {} };
+    expect(readAuditResult({ status: 0, stdout: JSON.stringify(audit) })).toEqual(audit);
+    expect(concreteAdvisories(audit)).toEqual([]);
+    expect(auditExitCode(audit)).toBe(0);
+  });
 
-    expect(unexpectedAdvisories(audit)).toHaveLength(1);
+  test("fails the CLI for either previously exempted advisory", () => {
+    for (const advisory of vulnerableAudit.vulnerabilities["image-size"].via) {
+      expect(auditExitCode({
+        auditReportVersion: 2,
+        vulnerabilities: { "image-size": { via: [advisory] } },
+      }, 1)).toBe(1);
+    }
+  });
+
+  test("fails the CLI even when npm provides only a propagated finding or a failing exit code", () => {
+    expect(auditExitCode({
+      auditReportVersion: 2,
+      vulnerabilities: { metro: { via: ["image-size"] } },
+    })).toBe(1);
+    expect(auditExitCode({ auditReportVersion: 2, vulnerabilities: {} }, 1)).toBe(1);
+  });
+
+  test.each([
+    { status: null, error: new Error("Unable to start npm") },
+    { status: null, signal: "SIGTERM" },
+    { status: 2 },
+  ])("fails closed when the audit process cannot complete: %j", (result) => {
+    expect(() => readAuditResult({ ...result, stdout: "{}" })).toThrow("could not complete");
+  });
+
+  test.each([
+    "not json",
+    JSON.stringify(null),
+    JSON.stringify({ error: { summary: "registry unavailable" } }),
+    JSON.stringify({}),
+    JSON.stringify({ auditReportVersion: 1, vulnerabilities: {} }),
+    JSON.stringify({ auditReportVersion: 2, vulnerabilities: [] }),
+    JSON.stringify({ auditReportVersion: 2, vulnerabilities: { metro: {} } }),
+  ])("rejects an invalid or unavailable audit report: %s", (stdout) => {
+    expect(() => readAuditResult({ status: 0, stdout })).toThrow();
   });
 });

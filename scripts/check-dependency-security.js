@@ -2,11 +2,7 @@
 
 const { spawnSync } = require("node:child_process");
 
-const ACCEPTED_ADVISORIES = new Set([
-  "https://github.com/advisories/GHSA-5p2g-fcmc-qvqq",
-  "https://github.com/advisories/GHSA-w3rx-r6r6-pgpr",
-]);
-
+/** Report concrete advisories once, excluding npm's propagated package names. */
 function concreteAdvisories(audit) {
   return Object.entries(audit?.vulnerabilities ?? {}).flatMap(
     ([dependency, vulnerability]) =>
@@ -16,59 +12,62 @@ function concreteAdvisories(audit) {
   );
 }
 
-function unexpectedAdvisories(audit) {
-  return concreteAdvisories(audit).filter(
-    ({ dependency, url }) =>
-      dependency !== "image-size" || !ACCEPTED_ADVISORIES.has(url),
-  );
-}
-
-function main() {
-  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-  const result = spawnSync(npmCommand, ["audit", "--omit=dev", "--json"], {
-    encoding: "utf8",
-  });
-
+/** Reject unavailable or malformed audits instead of mistaking them for a pass. */
+function readAuditResult(result) {
+  if (result.error || result.signal || ![0, 1].includes(result.status)) {
+    throw new Error("Dependency audit could not complete successfully.");
+  }
   let audit;
   try {
     audit = JSON.parse(result.stdout);
   } catch {
-    console.error("Dependency audit did not return valid JSON.");
-    if (result.stderr) console.error(result.stderr.trim());
-    process.exitCode = 1;
-    return;
+    throw new Error("Dependency audit did not return valid JSON.");
   }
-
-  if (audit.error) {
-    console.error(
-      `Dependency audit failed: ${audit.error.summary ?? "unknown npm audit error"}`,
-    );
-    process.exitCode = 1;
-    return;
+  if (audit?.error) {
+    throw new Error("Dependency audit service reported an error.");
   }
-
-  const unexpected = unexpectedAdvisories(audit);
-  if (unexpected.length > 0) {
-    console.error("Unaccepted production dependency advisories found:");
-    unexpected.forEach(({ dependency, title, url }) =>
-      console.error(`- ${dependency}: ${title} (${url})`),
-    );
-    process.exitCode = 1;
-    return;
+  if (
+    audit?.auditReportVersion !== 2 ||
+    !audit.vulnerabilities ||
+    typeof audit.vulnerabilities !== "object" ||
+    Array.isArray(audit.vulnerabilities) ||
+    !Object.values(audit.vulnerabilities).every(
+      (vulnerability) => vulnerability && Array.isArray(vulnerability.via),
+    )
+  ) {
+    throw new Error("Dependency audit returned an unsupported report.");
   }
+  return audit;
+}
 
-  const accepted = concreteAdvisories(audit).filter(({ url }) =>
-    ACCEPTED_ADVISORIES.has(url),
-  );
-  console.log(
-    `Dependency audit passed; ${accepted.length} documented image-size advisories remain accepted.`,
-  );
+/** Require a completed, clean production audit; no advisory exceptions remain. */
+function main() {
+  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+  const result = spawnSync(npmCommand, ["audit", "--omit=dev", "--json"], {
+    encoding: "utf8",
+    timeout: 60000,
+  });
+  try {
+    const audit = readAuditResult(result);
+    if (result.status !== 0 || Object.keys(audit.vulnerabilities).length > 0) {
+      console.error("Production dependency vulnerabilities found; none are accepted:");
+      concreteAdvisories(audit).forEach(({ dependency, title, url }) =>
+        console.error(`- ${dependency}: ${title} (${url})`),
+      );
+      process.exitCode = 1;
+      return;
+    }
+    console.log("Dependency audit passed; no production vulnerabilities found.");
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
 }
 
 if (require.main === module) main();
 
 module.exports = {
-  ACCEPTED_ADVISORIES,
   concreteAdvisories,
-  unexpectedAdvisories,
+  main,
+  readAuditResult,
 };
