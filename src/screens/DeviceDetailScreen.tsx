@@ -2325,6 +2325,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const energyHeroHeaderStyle: StyleProp<ViewStyle> = [
     styles.energyHeroHeader,
     isLandscape && styles.energyHeroHeaderStack,
+    !isTablet && styles.energyHeroHeaderPhone,
+  ];
+  // Give phone titles a full line above status pills instead of shrinking
+  // them into a narrow column. Tablet and camera title layouts stay unchanged.
+  const energyHeroTitleWrapStyle: StyleProp<ViewStyle> = [
+    styles.energyHeroTitleWrap,
+    !isTablet && styles.energyHeroTitleWrapPhone,
   ];
   const cameraHeroCardStyle: StyleProp<ViewStyle> = [
     styles.energyHeroCard,
@@ -4679,8 +4686,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       end={{ x: 1, y: 1 }}
       style={energyHeroCardStyle}
     >
-      <View style={energyHeroHeaderStyle}>
-        <View style={styles.energyHeroTitleWrap}>
+      <View testID="energy-hero-header" style={energyHeroHeaderStyle}>
+        <View testID="energy-hero-title" style={energyHeroTitleWrapStyle}>
           <Text style={styles.energyHeroTitle}>{device.name}</Text>
           <Text style={styles.energyHeroSub}>
             {powerOutage ? "Grid outage detected" : "Live energy flow"}
@@ -4878,8 +4885,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       end={{ x: 1, y: 1 }}
       style={energyHeroCardStyle}
     >
-      <View style={energyHeroHeaderStyle}>
-        <View style={styles.energyHeroTitleWrap}>
+      <View testID="coffee-hero-header" style={energyHeroHeaderStyle}>
+        <View testID="coffee-hero-title" style={energyHeroTitleWrapStyle}>
           <Text style={styles.energyHeroTitle}>{device.name}</Text>
           <Text style={styles.energyHeroSub}>
             {device.isOn ? "Brewing now" : "Ready to brew"} •{" "}
@@ -8039,8 +8046,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       end={{ x: 1, y: 1 }}
       style={cameraHeroCardStyle}
     >
-      <View style={cameraHeroHeaderStyle}>
-        <View style={cameraHeroTitleWrapStyle}>
+      <View testID="camera-hero-header" style={cameraHeroHeaderStyle}>
+        <View testID="camera-hero-title" style={cameraHeroTitleWrapStyle}>
           <Text style={styles.energyHeroTitle}>{device.name}</Text>
           <Text style={styles.energyHeroSub}>
             {roomName || "Camera"} • {device.isOn ? "Live view" : "Standby"}
@@ -10266,7 +10273,12 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "flex-start",
   },
+  energyHeroHeaderPhone: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
   energyHeroTitleWrap: { gap: 2, flexShrink: 1, flex: 1, minWidth: 0 },
+  energyHeroTitleWrapPhone: { flex: 0, width: "100%" },
   energyHeroTitle: {
     color: stylesVars.ink,
     fontWeight: "900",

@@ -38,6 +38,7 @@ import {
 import { deviceClient } from "../services/deviceClient";
 import Pressable from "../components/Pressable";
 import PasswordRecoveryScreen from "../screens/PasswordRecoveryScreen";
+import CommandFeedbackProvider from "../components/command-feedback/CommandFeedbackProvider";
 
 /**
  * Root stack for the app.
@@ -224,65 +225,72 @@ export default function AppNavigator() {
           checkingMembership ? "no-hide-descendants" : "auto"
         }
       >
-        <BottomSheetModalProvider>
-          <NavigationContainer
-            key={navigationScope}
-            theme={{
-              ...DefaultTheme,
-              // Ensure the “safe” default background matches our gradient base.
-              colors: { ...DefaultTheme.colors, background: theme.colors.bg0 },
-            }}
-          >
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              {passwordRecovery && session ? (
-                <Stack.Screen name="PasswordRecovery">
-                  {() => (
-                    <PasswordRecoveryScreen
-                      onComplete={() => setPasswordRecovery(false)}
+        <CommandFeedbackProvider
+          enabled={
+            !passwordRecovery && !checkingMembership &&
+            (authExperience === "authenticated" || authExperience === "demo")
+          }
+        >
+          <BottomSheetModalProvider>
+            <NavigationContainer
+              key={navigationScope}
+              theme={{
+                ...DefaultTheme,
+                // Ensure the “safe” default background matches our gradient base.
+                colors: { ...DefaultTheme.colors, background: theme.colors.bg0 },
+              }}
+            >
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                {passwordRecovery && session ? (
+                  <Stack.Screen name="PasswordRecovery">
+                    {() => (
+                      <PasswordRecoveryScreen
+                        onComplete={() => setPasswordRecovery(false)}
+                      />
+                    )}
+                  </Stack.Screen>
+                ) : authExperience === "configuration-required" ? (
+                  <Stack.Screen name="Auth" component={AuthRequiredScreen} />
+                ) : authExperience === "authenticated" ||
+                  authExperience === "demo" ? (
+                  <>
+                    <Stack.Screen
+                      name="Onboarding"
+                      component={OnboardingScreen}
                     />
-                  )}
-                </Stack.Screen>
-              ) : authExperience === "configuration-required" ? (
-                <Stack.Screen name="Auth" component={AuthRequiredScreen} />
-              ) : authExperience === "authenticated" ||
-                authExperience === "demo" ? (
-                <>
-                  <Stack.Screen
-                    name="Onboarding"
-                    component={OnboardingScreen}
-                  />
-                  <Stack.Screen name="Main" component={BottomTabs} />
-                  <Stack.Screen name="Room" component={RoomScreen} />
-                  <Stack.Screen
-                    name="DeviceDetail"
-                    component={DeviceDetailScreen}
-                  />
-                  <Stack.Screen
-                    name="Notifications"
-                    component={NotificationsScreen}
-                  />
-                  <Stack.Screen name="Profile" component={ProfileScreen} />
-                  <Stack.Screen
-                    name="ManageRooms"
-                    component={ManageRoomsScreen}
-                  />
-                  <Stack.Screen name="Cameras" component={CamerasScreen} />
-                  <Stack.Screen
-                    name="CameraViewer"
-                    component={CameraViewerScreen}
-                  />
-                  <Stack.Screen name="AuditLog" component={AuditLogScreen} />
-                  <Stack.Screen
-                    name="AutomationBuilder"
-                    component={AutomationBuilderScreen}
-                  />
-                </>
-              ) : (
-                <Stack.Screen name="Auth" component={AuthScreen} />
-              )}
-            </Stack.Navigator>
-          </NavigationContainer>
-        </BottomSheetModalProvider>
+                    <Stack.Screen name="Main" component={BottomTabs} />
+                    <Stack.Screen name="Room" component={RoomScreen} />
+                    <Stack.Screen
+                      name="DeviceDetail"
+                      component={DeviceDetailScreen}
+                    />
+                    <Stack.Screen
+                      name="Notifications"
+                      component={NotificationsScreen}
+                    />
+                    <Stack.Screen name="Profile" component={ProfileScreen} />
+                    <Stack.Screen
+                      name="ManageRooms"
+                      component={ManageRoomsScreen}
+                    />
+                    <Stack.Screen name="Cameras" component={CamerasScreen} />
+                    <Stack.Screen
+                      name="CameraViewer"
+                      component={CameraViewerScreen}
+                    />
+                    <Stack.Screen name="AuditLog" component={AuditLogScreen} />
+                    <Stack.Screen
+                      name="AutomationBuilder"
+                      component={AutomationBuilderScreen}
+                    />
+                  </>
+                ) : (
+                  <Stack.Screen name="Auth" component={AuthScreen} />
+                )}
+              </Stack.Navigator>
+            </NavigationContainer>
+          </BottomSheetModalProvider>
+        </CommandFeedbackProvider>
       </View>
       {checkingMembership && (
         <View

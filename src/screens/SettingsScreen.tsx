@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 import { runtimePolicy } from "../config/runtimeMode";
 import { makeVoiceLinkUri } from "../config/authRedirects";
+import { useCommandActivityLauncher } from "../components/command-feedback/CommandActivityContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -51,6 +52,7 @@ const supportedVoiceProviders = new Set<IntegrationProvider>([
 ]);
 
 export default function SettingsScreen() {
+  const commandActivity = useCommandActivityLauncher();
   const { width, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(900);
   const isWide = isTablet && isLandscape;
@@ -1019,6 +1021,17 @@ export default function SettingsScreen() {
         <Text style={rowLabelStyle}>Appearance</Text>
         <Text style={rowValueStyle}>Purple</Text>
       </View>
+      {commandActivity ? (
+        <Pressable
+          accessibilityLabel="Open command activity"
+          accessibilityHint="Review recent delivery attempts; device state is not confirmed."
+          onPress={commandActivity.open}
+          style={[styles.row, styles.commandActivityButton]}
+        >
+          <Text style={rowLabelStyle}>Command activity</Text>
+          <Text style={rowValueStyle}>{commandActivity.count} recent ›</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 
@@ -1240,6 +1253,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  commandActivityButton: { minHeight: 44 },
   root: { flex: 1 },
   content: { flex: 1, alignItems: "center" },
   sectionsScroll: { flex: 1 },

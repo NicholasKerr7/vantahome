@@ -97,6 +97,28 @@ before admission still reject without creating a history entry.
   late responses. Consumers must discard cached progress on `reset`. Intent and
   subscriber snapshots are isolated so a UI callback cannot mutate queued work.
 
-This is a tested foundation, not a new progress UI, durable bridge queue, or
-physical confirmation implementation. Authoritative bridge completion and
-native/physical testing remain required before real-home execution is claimed.
+### In-app command activity
+
+A dismissible delivery notice opens the same read-only **Command activity**
+dialog available in Settings. Fixed status/reason copy distinguishes retries,
+submission, refusal, and uncertainty; it never labels submission as physical
+success. Demo-capable runtimes label feedback as demo context, which is not
+proof that no external transport ran. Dismissing a notice does not cancel a
+command, and opening activity cannot retry or replay one. Active-command
+dismissals survive intervening commands; a terminal outcome can show a new
+notice, including a late failure from an older command.
+
+The single subscription admits only new commands observed while the current
+account/session/home/member scope is enabled. It deliberately does not rehydrate
+pre-existing service history, whose metadata cannot establish ownership across
+scopes with reused device IDs. Rows, notices, and counts use current device
+visibility and names. Scope changes, access gates, and service resets hide old
+activity; authentication and password-recovery screens cannot open it. Neither
+payloads nor raw error text is rendered or persisted. The list inherits the
+200-command history bound and preserves touch scrolling without bounce or
+scroll chaining; the dialog adds no motion.
+
+This is local delivery tracking, not a durable bridge queue or physical
+confirmation implementation. Pre-admission failures remain caller errors, not
+activity entries. Authoritative bridge completion and native/physical testing
+remain required before real-home execution is claimed.

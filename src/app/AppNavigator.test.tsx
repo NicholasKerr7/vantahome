@@ -1,6 +1,6 @@
 import React from "react";
 import { Linking } from "react-native";
-import { act, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import type { Session } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -9,6 +9,7 @@ const mockSetSession = jest.fn();
 const mockExchangeCode = jest.fn();
 const mockMembership = jest.fn();
 const mockNavigationMount = jest.fn();
+const mockFeedbackEnabled = jest.fn();
 let mockAuthChanged: (event: string, session: Session | null) => void;
 
 jest.mock("../services/supabaseClient", () => ({
@@ -58,6 +59,14 @@ jest.mock("@react-navigation/native-stack", () => ({
 jest.mock("@gorhom/bottom-sheet", () => ({
   BottomSheetModalProvider: ({ children }: { children: React.ReactNode }) =>
     children,
+}));
+jest.mock("../components/command-feedback/CommandFeedbackProvider", () => ({
+  __esModule: true,
+  /** Capture the privacy gate without mounting command subscriptions or a portal. */
+  default: ({ children, enabled }: { children: React.ReactNode; enabled: boolean }) => {
+    mockFeedbackEnabled(enabled);
+    return children;
+  },
 }));
 jest.mock("../screens/AuthScreen", () => () => null);
 jest.mock("../screens/AuthRequiredScreen", () => () => null);
@@ -132,6 +141,50 @@ describe("navigation session boundaries", () => {
     jest.restoreAllMocks();
   });
 
+  test("command feedback waits for authentication and verified home access", async () => {
+    let finishSession: (value: { data: { session: Session } }) => void = () => {};
+    let finishMembership: (value: MembershipSyncResult) => void = () => {};
+    mockGetSession.mockImplementationOnce(() => new Promise((resolve) => {
+      finishSession = resolve;
+    }));
+    mockMembership.mockImplementationOnce(() => new Promise((resolve) => {
+      finishMembership = resolve;
+    }));
+    const screen = render(<AppNavigator />);
+    expect(mockFeedbackEnabled).not.toHaveBeenCalled();
+    expect(mockNavigationMount).not.toHaveBeenCalled();
+
+    await act(async () => { finishSession({ data: { session: sessionFor("alice") } }); });
+    await waitFor(() => expect(mockMembership).toHaveBeenCalledWith("alice"));
+    expect(screen.getByText("Verifying your home…")).toBeTruthy();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockFeedbackEnabled).not.toHaveBeenCalledWith(true);
+    expect(mockNavigationMount).toHaveBeenCalled();
+
+    await act(async () => { finishMembership(membershipFor("alice")); });
+    await waitFor(() => expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true));
+    expect(screen.queryByText("Verifying your home…")).toBeNull();
+  });
+
+  test("a signed-out launch keeps command feedback disabled", async () => {
+    mockGetSession.mockResolvedValueOnce({ data: { session: null } });
+    render(<AppNavigator />);
+    await waitFor(() => expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false));
+    expect(mockFeedbackEnabled).not.toHaveBeenCalledWith(true);
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(mockNavigationMount).toHaveBeenCalled();
+  });
+
+  test("password recovery hides feedback even for an already verified account", async () => {
+    render(<AppNavigator />);
+    await waitFor(() => expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true));
+    const mounts = mockNavigationMount.mock.calls.length;
+    await act(async () => { mockAuthChanged("PASSWORD_RECOVERY", sessionFor("alice")); });
+    expect(useHomeStore.getState().membershipReady).toBe(true);
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockNavigationMount).toHaveBeenCalledTimes(mounts);
+  });
+
   test("an unsolicited token callback cannot replace an existing account", async () => {
     render(<AppNavigator />);
     await waitFor(() =>
@@ -155,11 +208,13 @@ describe("navigation session boundaries", () => {
     expect(selectVisibleDevices(useHomeStore.getState())[0].id).toBe(
       "alice-camera",
     );
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true);
     await act(async () => {
       mockAuthChanged("SIGNED_OUT", null);
       expect(useHomeStore.getState().devices).toEqual([]);
       expect(useHomeStore.getState().profile.email).toBeUndefined();
     });
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
     await act(async () => {
       mockAuthChanged("SIGNED_IN", sessionFor("bob"));
     });
@@ -169,6 +224,7 @@ describe("navigation session boundaries", () => {
     expect(
       selectVisibleDevices(useHomeStore.getState()).map((device) => device.id),
     ).toEqual(["bob-camera"]);
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true);
     expect(deviceClient.resetSession).toHaveBeenCalledTimes(3);
   });
 
@@ -203,6 +259,11 @@ describe("navigation session boundaries", () => {
     expect(screen.getByText("Retry")).toBeTruthy();
     expect(screen.getByText("Sign out")).toBeTruthy();
     expect(selectVisibleDevices(useHomeStore.getState())).toEqual([]);
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockFeedbackEnabled).not.toHaveBeenCalledWith(true);
+    fireEvent.press(screen.getByText("Retry"));
+    await waitFor(() => expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true));
+    expect(screen.queryByText("Unable to verify home access.")).toBeNull();
   });
 
   test("account changes remount private screen state but ordinary home refresh does not", async () => {
@@ -211,8 +272,13 @@ describe("navigation session boundaries", () => {
     const mounts = mockNavigationMount.mock.calls.length;
     act(() => {
       useHomeStore.setState({ activeHomeId: null, membershipReady: false });
+    });
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockNavigationMount).toHaveBeenCalledTimes(mounts);
+    act(() => {
       useHomeStore.setState({ activeHomeId: "alice-home", membershipReady: true });
     });
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true);
     expect(mockNavigationMount).toHaveBeenCalledTimes(mounts);
     await act(async () => { mockAuthChanged("SIGNED_IN", sessionFor("bob")); });
     await waitFor(() => expect(useHomeStore.getState().activeMemberId).toBe("bob"));

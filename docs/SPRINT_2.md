@@ -264,6 +264,42 @@ provider linking, device command, Docker container, phone configuration change,
 or independent review is included. The external, hosted-browser, native, and
 physical-completion gates remain open.
 
+## Command activity interface follow-up — 2026-09-26
+
+Admitted commands now have a dismissible delivery notice and a read-only
+**Settings → Command activity** dialog. Submission is explicitly unconfirmed,
+and demo-capable runtimes carry a demo label. Dismissal is not cancellation;
+there is no retry/replay button. Late results, multiple dismissed retries,
+current device visibility, account/home/member changes, recovery gates, and
+history reset/eviction are covered by regression tests. The subscription does
+not rehydrate unscoped service history or persist command details.
+
+The dialog sizes to short content and scrolls longer histories within the
+viewport. Local browser checks exercised control submission, notice opening,
+dismissal, Settings reopening, keyboard focus/Escape, reduced-motion mode, and
+bounded scrolling at phone and tablet sizes. The production-style demo preview
+used blank backend configuration; these checks did not send household commands.
+No Docker container, dependency install, or additional simulator was needed.
+Energy and coffee utility headings also now stack above their status pills on
+phones; tablet and camera layouts remain unchanged.
+
+The browser work exposed a development-watcher mismatch after the Metro
+security update. A version/source-hash-guarded compatibility adapter now
+preserves Expo's watcher contract without restoring vulnerable packages. See
+[Dependency Security](./DEPENDENCY_SECURITY.md#expo-development-watcher-compatibility).
+Production export alone is not enough to validate development file watching.
+
+Verification passed **995 tests across 66 suites**, application/Edge TypeScript,
+release and asset checks, the production web export, Expo's compatibility check,
+and both full and production-only zero-vulnerability audits. Browser checks used
+390×844 and 320×568 phones plus 834×1194 and 1194×834 tablets. A restarted,
+watch-enabled preview survived source changes and served a rebuilt bundle. The
+demo flow had no browser errors; existing Expo AV/notification warnings remain.
+These checks do not verify native VoiceOver, simulator rendering, or hardware.
+
+This remains delivery feedback, not authoritative physical-device completion.
+Native testing and the independent security-review gate remain open.
+
 ## Remaining before the Sprint 2 gate
 
 - Store future hub credentials, Home Assistant tokens, recovery material, and
@@ -277,7 +313,6 @@ physical-completion gates remain open.
   completion before real Alexa execution.
 - Rebuild and verify native sign-in/recovery, account isolation, background
   behavior, biometric prompts, and authorized realtime updates on physical devices.
-- Revisit the time-limited dependency exception before its documented deadline.
 
 The remote runner fails closed unless its target is explicitly confirmed as
 disposable and differs from the active app project. It executes the real pgTAP

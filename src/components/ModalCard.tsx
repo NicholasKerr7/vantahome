@@ -16,6 +16,8 @@ type ModalCardProps = PropsWithChildren<{
   visible: boolean;
   onRequestClose: () => void;
   onBackdropPress?: () => void;
+  /** Label the optional outside-tap dismissal target for assistive technology. */
+  backdropAccessibilityLabel?: string;
   colors: readonly [string, string, ...string[]];
   start?: { x: number; y: number };
   end?: { x: number; y: number };
@@ -30,6 +32,7 @@ export default function ModalCard({
   visible,
   onRequestClose,
   onBackdropPress,
+  backdropAccessibilityLabel,
   colors,
   start = { x: 0.1, y: 0.1 },
   end = { x: 1, y: 1 },
@@ -52,7 +55,11 @@ export default function ModalCard({
       onRequestClose={onRequestClose}
     >
       <View style={overlay}>
-        <Pressable style={backdrop} onPress={handleBackdropPress} />
+        <Pressable
+          style={backdrop}
+          onPress={handleBackdropPress}
+          accessibilityLabel={backdropAccessibilityLabel}
+        />
         <KeyboardAvoidingView behavior={keyboardBehavior}>
           <LinearGradient colors={colors} start={start} end={end} style={cardStyle}>
             {children}

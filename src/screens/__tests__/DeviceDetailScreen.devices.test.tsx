@@ -1,5 +1,6 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
+import { StyleSheet } from "react-native";
 import DeviceDetailScreen from "../DeviceDetailScreen";
 import {
   useHomeStore,
@@ -19,6 +20,7 @@ const mockLayout = {
   blockGap: 14,
   scale: 1,
 };
+const defaultLayout = { ...mockLayout };
 
 jest.mock("lottie-react-native", () => {
   const React = require("react");
@@ -336,6 +338,94 @@ const createDevice = (kind: DeviceKind): Device => {
 
 describe("DeviceDetailScreen device coverage", () => {
   const navigation = { goBack: jest.fn(), navigate: jest.fn() } as any;
+  afterEach(() => { Object.assign(mockLayout, defaultLayout); });
+
+  /** Mount the actual utility hero with synthetic data and no command dispatch. */
+  function renderUtilityHero(kind: "energy" | "coffee" | "camera") {
+    const device = createDevice(kind);
+    device.name = kind === "energy" ? "Energy Monitor" : kind === "coffee" ? "Coffee Machine" : "Entry Camera";
+    useHomeStore.setState({
+      rooms: baseRooms,
+      devices: [device],
+      indoor: seed.indoor ?? { tempC: 22, label: "Indoor" },
+      outdoor: seed.outdoor ?? { tempC: 24, label: "Outdoor" },
+      household: baseHousehold,
+    });
+    const route: React.ComponentProps<typeof DeviceDetailScreen>["route"] = {
+      key: "DeviceDetail",
+      name: "DeviceDetail",
+      params: { deviceId: device.id },
+    };
+    let tree!: ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(
+        <DeviceDetailScreen navigation={navigation} route={route} />,
+      );
+    });
+    return tree;
+  }
+
+  it.each(["energy", "coffee"] as const)("gives the %s title full width above status pills on a 390px phone", (kind) => {
+    const tree = renderUtilityHero(kind);
+    try {
+      const header = tree.root.findByProps({ testID: `${kind}-hero-header` });
+      const title = tree.root.findByProps({ testID: `${kind}-hero-title` });
+      expect(StyleSheet.flatten(header.props.style)).toMatchObject({
+        flexDirection: "column", alignItems: "stretch", gap: 12,
+      });
+      expect(StyleSheet.flatten(title.props.style)).toMatchObject({
+        flex: 0, width: "100%",
+      });
+    } finally {
+      act(() => { tree.unmount(); });
+    }
+  });
+
+  it("preserves the camera's centered phone header", () => {
+    const tree = renderUtilityHero("camera");
+    try {
+      const header = tree.root.findByProps({ testID: "camera-hero-header" });
+      const title = tree.root.findByProps({ testID: "camera-hero-title" });
+      expect(StyleSheet.flatten(header.props.style)).toMatchObject({
+        flexDirection: "column", alignItems: "center", gap: 10,
+      });
+      expect(StyleSheet.flatten(title.props.style)).toMatchObject({
+        flex: 1, alignItems: "center",
+      });
+      expect(StyleSheet.flatten(title.props.style).width).toBeUndefined();
+    } finally {
+      act(() => { tree.unmount(); });
+    }
+  });
+
+  it.each([
+    ["energy", false], ["energy", true],
+    ["coffee", false], ["coffee", true],
+    ["camera", false], ["camera", true],
+  ] as const)("preserves the %s tablet header with landscape=%s", (kind, isLandscape) => {
+    Object.assign(mockLayout, {
+      width: isLandscape ? 1194 : 834,
+      height: isLandscape ? 834 : 1194,
+      isTablet: true,
+      isLandscape,
+      contentWidth: 834,
+      scale: isLandscape ? 1.08 : 1.14,
+    });
+    const tree = renderUtilityHero(kind);
+    try {
+      const header = tree.root.findByProps({ testID: `${kind}-hero-header` });
+      const title = tree.root.findByProps({ testID: `${kind}-hero-title` });
+      expect(StyleSheet.flatten(header.props.style)).toMatchObject({
+        flexDirection: isLandscape ? "column" : "row",
+        alignItems: "flex-start",
+        gap: 12,
+      });
+      expect(StyleSheet.flatten(title.props.style).flex).toBe(1);
+      expect(StyleSheet.flatten(title.props.style).width).toBeUndefined();
+    } finally {
+      act(() => { tree.unmount(); });
+    }
+  });
 
   // Keep this list in sync with DeviceKind so every device view renders safely.
   it.each(deviceKinds)("renders %s details without crashing", (kind) => {
