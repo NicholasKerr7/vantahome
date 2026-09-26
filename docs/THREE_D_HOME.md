@@ -168,6 +168,13 @@ measured separately and does not establish a mobile loading-time target.
 
 Web, iOS, and Android JavaScript/Hermes exports passed. These are bundle checks, not physical device runs. Physical-device GPU, memory, battery, and native WebView behavior remain unverified. Automated scene success is not evidence of hardware readiness.
 
+On **2026-09-26**, the user confirmed that the local Safari demo opened during
+the iPad/iPhone check and reported that everything looked and felt good so far.
+The preview was exported from commit `dbc2eb4` with explicit demo mode. This is
+a positive initial, user-reported browser check; individual test cases, device
+models, OS versions, frame rates, memory use, and sustained heat/battery results
+were not recorded. Native iOS WebView testing remains outstanding.
+
 A future real-device adapter must use authorized household/device selectors,
 explicit scene-to-device mappings, and the existing `deviceClient` command path.
 Render pending, failed, stale, and confirmed states from the command lifecycle
