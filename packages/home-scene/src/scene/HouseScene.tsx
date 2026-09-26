@@ -1,7 +1,7 @@
 import { getModelUrl } from '../embeddedHost';
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { PerformanceMonitor, useGLTF } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import { ACESFilmicToneMapping, Group, MathUtils, Mesh, PCFSoftShadowMap, type Object3D } from 'three';
 import { CameraRig } from './CameraRig';
 import { Devices } from './Devices';
@@ -14,6 +14,8 @@ import { WeatherEffects } from './WeatherEffects';
 import siteLayout from '../site-layout.json';
 import { readDevice, type HouseSceneProps } from './types';
 import { usePageMotion } from './usePageMotion';
+import { AdaptiveQuality } from './AdaptiveQuality';
+import { RENDER_QUALITY, type RenderQualityTier } from './renderQuality';
 import './scene.css';
 
 type ModelProps = Pick<HouseSceneProps, 'view' | 'deviceStates' | 'reducedMotion' | 'onReady'>;
@@ -64,12 +66,6 @@ function HouseModel({ view, deviceStates, reducedMotion, onReady }: ModelProps) 
   </>;
 }
 
-/** Use measured render performance to reduce pixel cost on slower devices. */
-function AdaptiveQuality() {
-  const setDpr = useThree((state) => state.setDpr);
-  return <PerformanceMonitor bounds={() => [32, 52]} flipflops={2} onIncline={() => setDpr(Math.min(window.devicePixelRatio, 1.65))} onDecline={() => setDpr(1)} onFallback={() => setDpr(1)} />;
-}
-
 /** Stop rendering while the tab is hidden or a phone must return to portrait. */
 function VisibilityScheduling({ suspended }: { suspended: boolean }) {
   const setFrameloop = useThree((state) => state.setFrameloop);
@@ -90,16 +86,18 @@ function VisibilityScheduling({ suspended }: { suspended: boolean }) {
 
 /** Render the furnished house with accessible hotspots and synchronized devices. */
 export default function HouseScene({ suspended = false, ...props }: HouseSceneProps & { suspended?: boolean }) {
-  return <Canvas className={`house-canvas ${props.view === 'immersive' ? 'is-immersive' : ''}`} shadows dpr={[1, 1.65]} camera={{ position: [28, 20, 16], fov: 42, near: 0.08, far: 500 }} gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping }} onCreated={({ gl }) => {
+  const [qualityTier, setQualityTier] = useState<RenderQualityTier>('high');
+  const quality = RENDER_QUALITY[qualityTier];
+  return <Canvas className={`house-canvas ${props.view === 'immersive' ? 'is-immersive' : ''}`} shadows dpr={[1, quality.maxDpr]} camera={{ position: [28, 20, 16], fov: 42, near: 0.08, far: 500 }} gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping }} onCreated={({ gl }) => {
       gl.shadowMap.type = PCFSoftShadowMap;
       gl.domElement.tabIndex = 0;
       gl.domElement.setAttribute('role', 'img');
       gl.domElement.setAttribute('aria-label', 'Interactive furnished house. Drag to orbit, pinch or scroll to zoom. In immersive mode, drag or use arrow keys to look around.');
     }} fallback={null}>
-      <AdaptiveQuality />
+      <AdaptiveQuality onChange={setQualityTier} />
       <VisibilityScheduling suspended={suspended} />
       <MaterialEnvironment />
-      <SceneLighting daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} />
+      <SceneLighting daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
       <CameraRig view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} />
       <Suspense fallback={null}>
         <HouseModel view={props.view} deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />

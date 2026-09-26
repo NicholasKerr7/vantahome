@@ -57,6 +57,8 @@ function App() {
         ? JSON.stringify([
             state.authenticatedUserId,
             state.activeHomeId,
+            state.sessionEpoch,
+            state.activeMemberId,
             state.realtime.enabled,
             state.realtime.wsUrl,
             state.realtime.useMqtt,

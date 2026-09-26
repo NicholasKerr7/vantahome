@@ -1,20 +1,29 @@
 import React, { useEffect, useRef } from 'react';
 import { parseSceneStatus, type SceneSurfaceProps } from './protocol';
+import { SimulationSession } from './simulationSession';
 import './scene-surface.css';
 
+/** Keep an optional save-status callback stable when callers do not display it. */
+const ignoreSaveStatus = () => undefined;
+
 /** Run the self-contained scene in an opaque origin with no access to app storage or DOM. */
-export default function SceneSurface({ onStatus }: SceneSurfaceProps) {
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus }: SceneSurfaceProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
-    /** Accept readiness only from this exact frame, never a neighboring tab or window. */
+    const session = new SimulationSession((message) => {
+      // The sandbox has an opaque origin, so source identity is checked on receipt instead.
+      frame.current?.contentWindow?.postMessage(message, '*');
+    }, onSaveStatus);
+    /** Accept messages only from this exact frame, never a neighboring tab or window. */
     function handleMessage(event: MessageEvent<unknown>) {
       if (event.source !== frame.current?.contentWindow) return;
       const status = parseSceneStatus(event.data);
       if (status) onStatus(status);
+      else session.handleMessage(event.data);
     }
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [onStatus]);
+    return () => { window.removeEventListener('message', handleMessage); session.dispose(); };
+  }, [onStatus, onSaveStatus]);
   return <iframe
     ref={frame}
     className="vantahome-scene-frame"

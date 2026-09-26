@@ -63,8 +63,11 @@ loop and generated output paths.
 
 The browser host embeds `/home-scene/embedded.html` in an iframe with
 `sandbox="allow-scripts"` only. Its opaque origin cannot read the host app's DOM,
-storage, or authentication state. Readiness messages are accepted only from the
-specific iframe. No real device command bridge is exposed.
+storage, or authentication state. Readiness and simulation messages are accepted
+only from the specific iframe. A validated simulation protocol exchanges known
+scene device IDs, allowed control values, lighting preferences, and motion
+preferences. It has no real device command channel, account payload, media URL,
+or arbitrary storage access.
 
 Native loads a bundled local HTML asset through Expo Asset and copies it to a
 versioned cache path. JavaScript, CSS, and the five GLBs are embedded in that file;
@@ -74,10 +77,33 @@ file access. A narrow native broker fetches only the fixed public weather
 endpoint; it does not accept arbitrary URLs, coordinates, credentials, or device
 commands. The broker bounds request frequency, duration, and response size.
 
-Embedded simulation state is ephemeral. Leaving the screen or backgrounding the
-app unloads the scene; reopening starts a fresh session. Brief native inactive
-states, such as a system overlay, do not discard it. The standalone editing
-preview retains its separate browser simulation preferences.
+The host persists all 90 simulated device states, supported device settings,
+day/night mode, and the reduced-motion preference in a separate versioned local
+cache. Leaving the screen or backgrounding the app releases its graphics;
+reopening restores these settings. Camera position, room selection, and open
+control panels start from the default view. Brief native inactive states, such
+as a system overlay, do not unload the scene. The standalone editing preview
+retains its separate browser simulation preferences.
+
+In demo mode, an unauthenticated local Owner with no account, active home, or
+enabled realtime/MQTT transport shares **22 explicitly paired demo devices**
+with the original dashboard. Controls changed in either view update the other.
+The pairing registry is `src/features/three-d-home/demoDeviceMapping.ts`; it
+requires the expected device kind and never guesses a match from a name or room.
+The original drawing-room TV maps explicitly to the model's family-room TV;
+the demo's washer and utility devices map to their furnished laundry and utility
+placements. Devices without a curated pair remain independent. Camera arming
+does not change camera power, opening controls retain consistent position/status,
+and monitor readings remain samples rather than simulated power controls.
+
+Every other context uses an isolated saved preview, scoped to the signed-in
+account when present, or to the local preview otherwise. It neither reads nor
+updates the household's device observations. Account, home, member, role, or
+transport scope changes disconnect an open simulation bridge immediately;
+reopening establishes the new scope. Account identifiers remain in host storage
+keys and never enter the scene. Failed local saves show a notice, while current
+in-memory edits remain usable. Ordered writes and acknowledged scene updates
+preserve the latest edits during rapid sliders and quick close/reopen flows.
 
 Weather uses the existing model's fixed Hopewell, Jamaica location and
 `America/Jamaica` clock; it does not track the current user's location. Open-Meteo
@@ -100,13 +126,23 @@ browser's opaque-origin sandbox. This costs initial transfer, parsing, and peak
 memory even when only one floor is visible. The standalone web build loads
 separate model files for editing and inspection.
 
+Measured rendering windows select reversible high, balanced, or economy quality.
+High preserves the authored appearance at up to 1.65 DPR and 2048-pixel shadow
+maps; lower tiers cap DPR at 1.25 or 1 and use 1024-pixel shadows. Sustained low
+frame rate lowers a tier, while four healthy windows restore one. Repeated
+healthy windows no longer trigger a permanent low-resolution fallback. Hidden
+tabs and unsupported phone orientation still pause rendering; reduced motion
+retains its existing behavior.
+
 Physical iPad, iPhone, and Android profiling is required before promoting 3D Home
-to the default experience or a release. Check startup time, peak memory, frame
-rate, heat, battery use, background/resume, and GPU recovery. JavaScript exports,
-unit tests, and desktop browser rendering do not establish physical-device GPU
-performance. Verify tablet landscape, tablet portrait, mobile portrait, the
-desktop tablet preview, reduced motion, and the absence of page-level vertical
-scrolling.
+to the default experience or a release. Record cold/warm load time, peak memory,
+frame rate while orbiting the full landscape, and sustained heat/battery use
+with rain, irrigation, and device animations running. Then exercise
+background/resume, GPU recovery, fast edits followed by reopening, and storage
+failure notices. JavaScript exports, unit tests, and desktop browser rendering
+do not establish physical-device GPU performance. Verify tablet landscape,
+tablet portrait, mobile portrait, the desktop tablet preview, reduced motion,
+and the absence of page-level vertical scrolling.
 
 ## Validation and future device connections
 
@@ -117,10 +153,18 @@ npm run verify
 npm run build:home-scene
 ```
 
-`verify` includes the root Jest suite, scene Vitest suite, and six focused
-packaging tests. The implementation checkpoint covered 74 Jest suites with 1,343
-tests and 320 scene tests; counts may increase as integration checks are added.
-The integrated browser check passed 28 assertions: five viewport sizes without page scrolling, sandbox isolation, actual live weather, mobile quick/full controls, landscape/night mode, four solar poles, reduced motion, phone rotation, and return to dashboard. No scene runtime exceptions occurred.
+`verify` includes the root Jest suite, scene Vitest suite, and focused packaging
+tests. Simulation checks cover explicit device mappings, protocol validation,
+account/transport isolation, persistence, and delayed acknowledgements. The
+shared-state checkpoint passed 1,411 Jest tests, 352 scene tests, and six packaging
+tests. The integration browser check passed 28 assertions: five viewport sizes
+without page scrolling, sandbox isolation, actual live weather, mobile
+quick/full controls, landscape/night mode, four solar poles, reduced motion,
+phone rotation, and return to dashboard. Twelve additional browser assertions
+verified bidirectional dashboard/scene controls, rapid toggles, saved brightness,
+unmapped blinds, lighting preferences, and a cold app reload. Neither browser
+flow reported scene runtime exceptions. Desktop development scene readiness was
+measured separately and does not establish a mobile loading-time target.
 
 Web, iOS, and Android JavaScript/Hermes exports passed. These are bundle checks, not physical device runs. Physical-device GPU, memory, battery, and native WebView behavior remain unverified. Automated scene success is not evidence of hardware readiness.
 

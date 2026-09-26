@@ -5,7 +5,7 @@ type SceneGlobals = typeof globalThis & {
   ReactNativeWebView?: { postMessage: (message: string) => void };
 };
 
-/** Embedded sessions are ephemeral and never read the main app's household or account state. */
+/** Embedded sessions exchange only simulation preferences and never read account or household state. */
 export function isEmbeddedScene(): boolean {
   return (globalThis as SceneGlobals).__VANTAHOME_EMBEDDED__ === true;
 }
@@ -15,7 +15,7 @@ export function getModelUrl(model: ModelName): string {
   return (globalThis as SceneGlobals).__VANTAHOME_MODEL_URLS?.[model] ?? `${import.meta.env.BASE_URL}models/${model}.glb`;
 }
 
-/** Report only render readiness; the protocol intentionally has no device or authentication messages. */
+/** Report rendering status separately from the strictly validated simulation-state bridge. */
 export function reportSceneStatus(status: 'ready' | 'error'): void {
   if (!isEmbeddedScene()) return;
   const message = { channel: 'vantahome-scene', version: 1, status };

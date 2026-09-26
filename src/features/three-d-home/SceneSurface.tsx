@@ -4,12 +4,24 @@ import { WebView } from 'react-native-webview';
 import { isAllowedSceneNavigation, parseSceneStatus, type SceneSurfaceProps } from './protocol';
 import { prepareNativeScene } from './prepareNativeScene';
 import { NativeWeatherBroker, nativeWeatherResponseScript } from './nativeWeather';
+import { SimulationSession, nativeSimulationSnapshotScript } from './simulationSession';
 
-/** Load a packaged, ephemeral simulation without sharing cookies, tokens or device commands. */
-export default function SceneSurface({ onStatus }: SceneSurfaceProps) {
+/** Keep the optional persistence notification from restarting a simulation session. */
+const ignoreSaveStatus = () => undefined;
+
+/** Load a packaged simulation without sharing cookies, tokens or real device commands. */
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus }: SceneSurfaceProps) {
   const [uri, setUri] = useState<string | null>(null);
   const webView = useRef<WebView>(null);
   const weather = useRef<NativeWeatherBroker | null>(null);
+  const simulation = useRef<SimulationSession | null>(null);
+  useEffect(() => {
+    const session = new SimulationSession((message) => {
+      webView.current?.injectJavaScript(nativeSimulationSnapshotScript(message));
+    }, onSaveStatus);
+    simulation.current = session;
+    return () => { session.dispose(); simulation.current = null; };
+  }, [onSaveStatus]);
   useEffect(() => {
     const broker = new NativeWeatherBroker((response) => {
       webView.current?.injectJavaScript(nativeWeatherResponseScript(response));
@@ -38,7 +50,7 @@ export default function SceneSurface({ onStatus }: SceneSurfaceProps) {
     onMessage={(event) => {
       const status = parseSceneStatus(event.nativeEvent.data);
       if (status) onStatus(status);
-      else weather.current?.handleMessage(event.nativeEvent.data);
+      else if (!simulation.current?.handleMessage(event.nativeEvent.data)) weather.current?.handleMessage(event.nativeEvent.data);
     }}
     onError={() => onStatus('error')}
     onHttpError={() => onStatus('error')}

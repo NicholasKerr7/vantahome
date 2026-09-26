@@ -1,11 +1,12 @@
 import { isEmbeddedScene } from './embeddedHost';
+import { createDefaultSimulationSnapshot } from './simulationBridgeProtocol';
 import { create } from 'zustand';
 import { synchronizeSolarLights, type LightingMode } from './lightingAutomation';
 import { getCapabilities, isMonitor, readDeviceSetting, validateSetting, type SettingValue } from './deviceCapabilities';
 import { DEVICES, getDevice, getRoom, isPositionDevice, ROOMS, type DeviceId, type FloorId, type PresetId, type RoomId, type ViewId } from './data';
 
-export interface DeviceState { on: boolean; level: number; settings?: Record<string, SettingValue> }
-export type DeviceStates = Record<DeviceId, DeviceState>;
+import type { DeviceState, DeviceStates } from './simulationTypes';
+export type { DeviceState, DeviceStates } from './simulationTypes';
 type IndoorRoomId = RoomId;
 
 interface IndoorContext {
@@ -51,11 +52,10 @@ export const STORAGE_VERSION = 6;
 /** Construct independent defaults so one state update cannot alter another. */
 export function createDefaultState(): HomeSnapshot {
   return {
-    deviceStates: Object.fromEntries(DEVICES.map((device) => [device.id, isPositionDevice(device)
-      ? createPositionState(device.defaultLevel) : { on: device.defaultOn, level: device.defaultLevel }])),
+    ...createDefaultSimulationSnapshot(),
     floor: 'ground', roomId: 'living', view: 'ground', selectedDevice: 'living-light',
     indoorContext: { roomId: 'living', selectedDevice: 'living-light' },
-    night: false, lightingMode: 'auto', motionDisabled: false, activePreset: 'morning',
+    activePreset: 'morning',
   };
 }
 

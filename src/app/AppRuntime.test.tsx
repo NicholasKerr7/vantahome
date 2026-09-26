@@ -105,3 +105,14 @@ test("a new deny policy restarts transports synchronously before more work can r
   expect(startDeviceRealtime).toHaveBeenCalledTimes(2);
   screen.unmount();
 });
+
+test.each(['sessionEpoch', 'activeMemberId'] as const)('a new %s replaces scoped runtime subscriptions', (field) => {
+  const screen = render(<App />);
+  act(() => {
+    if (field === 'sessionEpoch') useHomeStore.setState({ sessionEpoch: useHomeStore.getState().sessionEpoch + 1 });
+    else useHomeStore.setState({ activeMemberId: 'another-member' });
+  });
+  expect(mockStopRealtime).toHaveBeenCalledTimes(1);
+  expect(startDeviceRealtime).toHaveBeenCalledTimes(2);
+  screen.unmount();
+});

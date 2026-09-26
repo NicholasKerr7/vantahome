@@ -8,18 +8,25 @@ import type { RootStackParamList } from '../app/AppNavigator';
 import Pressable from '../components/Pressable';
 import SceneSurface from '../features/three-d-home/SceneSurface';
 import type { SceneStatus } from '../features/three-d-home/protocol';
+import type { SimulationSaveStatus } from '../features/three-d-home/simulationPersistence';
 import { theme } from '../theme/theme';
 
 /** Bound loading time and let users recover without ever losing the dashboard return action. */
 function SceneSession({ onRetry }: { onRetry: () => void }) {
   const [status, setStatus] = useState<SceneStatus | 'loading'>('loading');
+  const [saveStatus, setSaveStatus] = useState<SimulationSaveStatus>('saving');
   useEffect(() => {
     if (status !== 'loading') return;
     const timeout = setTimeout(() => setStatus('error'), 90_000);
     return () => clearTimeout(timeout);
   }, [status]);
   return <View style={styles.scene}>
-    {status !== 'error' && <SceneSurface onStatus={setStatus} />}
+    {status !== 'error' && <SceneSurface onStatus={setStatus} onSaveStatus={setSaveStatus} />}
+    {status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected') && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
+      <Text style={styles.saveNoticeText}>{saveStatus === 'error'
+        ? 'Changes work for this session, but couldn’t be saved on this device.'
+        : 'Your app session changed. Reopen 3D Home to reconnect the simulation.'}</Text>
+    </View>}
     {status === 'loading' && <View style={styles.feedback} accessibilityLiveRegion="polite">
       <ActivityIndicator size="large" color={theme.colors.accent} />
       <Text style={styles.feedbackTitle}>Preparing your 3D home…</Text>
@@ -73,6 +80,8 @@ const styles = StyleSheet.create({
   title: { color: theme.colors.text, fontSize: 15, fontWeight: '700' },
   caption: { color: theme.colors.subtext, fontSize: 10, marginTop: 2, textAlign: 'right' },
   scene: { flex: 1, overflow: 'hidden', backgroundColor: '#101516' },
+  saveNotice: { position: 'absolute', bottom: 8, left: 12, right: 12, padding: 10, borderRadius: theme.radius.sm, backgroundColor: theme.colors.bg0, borderWidth: 1, borderColor: theme.colors.stroke },
+  saveNoticeText: { color: theme.colors.text, fontSize: 12, textAlign: 'center' },
   feedback: { ...StyleSheet.absoluteFillObject, padding: theme.spacing(3), justifyContent: 'center', alignItems: 'center', gap: theme.spacing(2), backgroundColor: '#101516' },
   feedbackTitle: { color: theme.colors.text, fontWeight: '600', fontSize: 18, textAlign: 'center' },
   feedbackText: { color: theme.colors.subtext, fontSize: 14, textAlign: 'center' },

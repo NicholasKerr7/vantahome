@@ -1,4 +1,4 @@
-import { getModelUrl, reportSceneStatus, type ModelName } from './embeddedHost';
+import { getModelUrl, isEmbeddedScene, reportSceneStatus, type ModelName } from './embeddedHost';
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { Home, Layers3, MoveUpRight, RotateCcw } from 'lucide-react';
@@ -12,6 +12,7 @@ import { DashboardHeader, DashboardRooms, DashboardRoomBar, DashboardScenes, Das
 import { DashboardInspector } from './DashboardInspector';
 import { DashboardLibrary, type DashboardLibraryView } from './DashboardLibrary';
 import { useHomeStore } from './state';
+import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
 import './styles.css';
 import './device-catalog.css';
@@ -146,14 +147,17 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
 
 /** Compose a fixed dashboard while keeping the scene and simulation state mounted. */
 export default function App(): ReactNode {
+  const { hydrated: simulationHydrated, syncError: simulationSyncError } = useSimulationBridge();
   const prefersReduced = usePrefersReducedMotion();
   const environment = useLiveEnvironment();
   const lightingMode = useHomeStore((state) => state.lightingMode);
   const syncAutomaticLighting = useHomeStore((state) => state.syncAutomaticLighting);
   // Apply dawn/dusk once per transition, leaving individual light overrides usable.
   useEffect(() => {
-    if (lightingMode === 'auto') syncAutomaticLighting(environment.isNight);
-  }, [environment.isNight, lightingMode, syncAutomaticLighting]);
+    if (!simulationHydrated || lightingMode !== 'auto') return;
+    // Reopening an embedded scene preserves pole overrides until the next dawn or dusk.
+    if (!isEmbeddedScene() || useHomeStore.getState().night !== environment.isNight) syncAutomaticLighting(environment.isNight);
+  }, [environment.isNight, lightingMode, simulationHydrated, syncAutomaticLighting]);
   const motionDisabled = useHomeStore((state) => state.motionDisabled);
   const persistenceError = useHomeStore((state) => state.persistenceError);
   const selectDevice = useHomeStore((state) => state.selectDevice);
@@ -201,6 +205,6 @@ export default function App(): ReactNode {
     <DashboardDock onRooms={() => setLibrary('rooms')} onDevices={() => setLibrary('devices')} />
     {!orientationPaused && library ? <DashboardLibrary environment={environment} onEnvironment={() => setLibrary('environment')} key={library} view={library} reducedMotion={reducedMotion} systemReducedMotion={prefersReduced} onClose={() => setLibrary(null)} onDevice={(id) => { selectDevice(id); openFullControls(id); }} /> : null}
     {!orientationPaused && sheetDeviceId ? <DeviceControlSheet deviceId={sheetDeviceId} onClose={closeFullControls} /> : null}
-    {persistenceError ? <p className="storage-notice" role="status">Your browser couldn’t save these settings. The preview still works for this session.</p> : null}
+    {simulationSyncError || persistenceError ? <p className="storage-notice" role="status">{simulationSyncError ? "Your saved simulation couldn’t sync. Changes in this view may not be saved." : "Your browser couldn’t save these settings. The preview still works for this session."}</p> : null}
   </div>;
 }

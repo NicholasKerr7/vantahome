@@ -1,5 +1,5 @@
 import { DEVICES } from './data';
-import type { DeviceStates } from './state';
+import type { DeviceStates } from './simulationTypes';
 
 export type LightingMode = 'auto' | 'day' | 'night';
 

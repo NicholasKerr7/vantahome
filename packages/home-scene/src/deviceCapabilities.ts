@@ -1,10 +1,10 @@
 import inventory from './device-capabilities.json';
 import type { DeviceDefinition } from './data';
-import type { DeviceState } from './state';
+import type { DeviceState, SettingValue } from './simulationTypes';
+export type { SettingValue } from './simulationTypes';
 
 export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar'] as const;
 export type DeviceKind = typeof DEVICE_KINDS[number];
-export type SettingValue = string | number | boolean;
 interface CapabilityBase { id: string; label: string }
 export type DeviceCapability = CapabilityBase & (
   | { type: 'range'; field: string; min: number; max: number; step?: number; unit?: string }

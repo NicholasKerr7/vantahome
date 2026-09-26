@@ -1,8 +1,9 @@
 import { deviceClient } from "./deviceClient";
-import { useHomeStore } from "../store/useHomeStore";
+import { useHomeStore, type HomeState } from "../store/useHomeStore";
 import { startMqttBridge } from "./mqttBridge";
 import { supabase } from "./supabaseClient";
 import { startSupabaseDeviceRealtime } from "./supabaseRealtime";
+import { parseDeviceStateEvent } from "./transportSchemas";
 import {
   isAllowedDirectWebSocketUrl,
   runtimePolicy,
@@ -25,8 +26,79 @@ type RealtimeOptions = {
   mqttFallbackTimeoutMs?: number;
 };
 
+/** Restrict local demo observations to an offline Owner without any account scope. */
+function allowsOfflineDemoState(
+  state: HomeState,
+  options: RealtimeOptions,
+): boolean {
+  return (
+    runtimePolicy.mode === "demo" &&
+    runtimePolicy.allowUnauthenticatedDemo &&
+    options.userId == null &&
+    options.homeId == null &&
+    options.useMqtt !== true &&
+    options.useSupabase !== true &&
+    state.accountUserId === null &&
+    state.authenticatedUserId === null &&
+    state.accountHomeId === null &&
+    state.activeHomeId === null &&
+    !state.realtime.enabled &&
+    !state.realtime.useMqtt &&
+    state.household.some(
+      (member) => member.id === state.activeMemberId && member.role === "Owner",
+    )
+  );
+}
+
+/** Apply local demo commands without starting sockets, cloud listeners, or telemetry. */
+function subscribeOfflineDemoState(options: RealtimeOptions): () => void {
+  const initial = useHomeStore.getState();
+  if (!allowsOfflineDemoState(initial, options)) return () => {};
+  const { sessionEpoch, activeMemberId } = initial;
+  let stopped = false;
+  let unsubscribeEvents: (() => void) | undefined;
+  let unsubscribeStore: (() => void) | undefined;
+
+  /** Close synchronously so a previous demo session cannot modify a new account. */
+  function stop() {
+    if (stopped) return;
+    stopped = true;
+    unsubscribeEvents?.();
+    unsubscribeStore?.();
+  }
+
+  /** Check current authority before every patch as well as on store transitions. */
+  function currentScope(state: HomeState): boolean {
+    return (
+      !stopped &&
+      state.sessionEpoch === sessionEpoch &&
+      state.activeMemberId === activeMemberId &&
+      allowsOfflineDemoState(state, options)
+    );
+  }
+
+  unsubscribeEvents = deviceClient.subscribeState((event) => {
+    const state = useHomeStore.getState();
+    if (!currentScope(state)) {
+      stop();
+      return;
+    }
+    const parsed = parseDeviceStateEvent(event);
+    if (!parsed || !state.devices.some((device) => device.id === parsed.deviceId)) {
+      return;
+    }
+    state.setDevice(parsed.deviceId, parsed.patch);
+  });
+  unsubscribeStore = useHomeStore.subscribe((state) => {
+    if (!currentScope(state)) stop();
+  });
+  return stop;
+}
+
+/** Subscribe within the active runtime scope and start only explicitly enabled transports. */
 export function startDeviceRealtime(options: RealtimeOptions = {}) {
   const enabled = options.enabled ?? true;
+  if (!enabled) return subscribeOfflineDemoState(options);
   const configuredWsUrl =
     options.wsUrl === null
       ? null
@@ -49,8 +121,7 @@ export function startDeviceRealtime(options: RealtimeOptions = {}) {
   const fallbackTimeoutMs = options.mqttFallbackTimeoutMs ?? 6000;
 
   if (
-    !enabled ||
-    (runtimePolicy.requireRealTransport && (!options.userId || !options.homeId))
+    runtimePolicy.requireRealTransport && (!options.userId || !options.homeId)
   ) {
     return () => {};
   }

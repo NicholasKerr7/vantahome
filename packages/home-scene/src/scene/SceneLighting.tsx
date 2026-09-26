@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Color, MathUtils, Object3D } from 'three';
 import { ROOM_POSITIONS, UPPER_ELEVATION, type HouseSceneProps } from './types';
+import { resizeShadowMap } from './shadowQuality';
 
 /** Blend studio ambience while keeping interior rooms comfortably readable. */
-export function SceneLighting({ night, daylight, environment, view, floor, roomId, reducedMotion }: Pick<HouseSceneProps, 'night' | 'daylight' | 'environment' | 'view' | 'floor' | 'roomId' | 'reducedMotion'>) {
+export function SceneLighting({ night, daylight, environment, view, floor, roomId, reducedMotion, shadowMapSize }: Pick<HouseSceneProps, 'night' | 'daylight' | 'environment' | 'view' | 'floor' | 'roomId' | 'reducedMotion'> & { shadowMapSize: number }) {
   const { scene } = useThree();
   const shadowTarget = useMemo(() => new Object3D(), []);
   const room = ROOM_POSITIONS[roomId] ?? ROOM_POSITIONS.living;
@@ -22,6 +23,9 @@ export function SceneLighting({ night, daylight, environment, view, floor, roomI
   }, [shadowTarget, focus[0], focus[1], focus[2]]);
   const ambient = useRef<import('three').AmbientLight>(null);
   const key = useRef<import('three').DirectionalLight>(null);
+  useLayoutEffect(() => {
+    if (key.current) resizeShadowMap(key.current.shadow, shadowMapSize);
+  }, [shadowMapSize]);
   useEffect(() => {
     // The same light survives view changes; refresh its orthographic shadow projection.
     key.current?.shadow.camera.updateProjectionMatrix();
@@ -48,7 +52,7 @@ export function SceneLighting({ night, daylight, environment, view, floor, roomI
   return <>
     <ambientLight ref={ambient} intensity={1.15} />
     <hemisphereLight args={['#d8e5ed', '#a39c78', full ? 0.65 : 0.85]} />
-    <directionalLight ref={key} position={[focus[0] - 12, focus[1] + 26, focus[2] + 16]} target={shadowTarget} color="#fff0d4" intensity={3.8} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-shadowRadius} shadow-camera-right={shadowRadius} shadow-camera-top={shadowRadius} shadow-camera-bottom={-shadowRadius} shadow-camera-near={0.1} shadow-camera-far={110} shadow-bias={-0.0006} shadow-normalBias={0.04} />
+    <directionalLight ref={key} position={[focus[0] - 12, focus[1] + 26, focus[2] + 16]} target={shadowTarget} color="#fff0d4" intensity={3.8} castShadow shadow-camera-left={-shadowRadius} shadow-camera-right={shadowRadius} shadow-camera-top={shadowRadius} shadow-camera-bottom={-shadowRadius} shadow-camera-near={0.1} shadow-camera-far={110} shadow-bias={-0.0006} shadow-normalBias={0.04} />
     <directionalLight position={[20, 10, -18]} intensity={night ? 0.6 : 1.25} color="#c3dfe7" />
     {(full || floor === 'ground') && <>
       <pointLight position={[7.6, 2.1, -9]} intensity={night ? 4 : 7} distance={9} color="#ffe6c2" />

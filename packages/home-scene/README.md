@@ -2,8 +2,9 @@
 
 This workspace contains the editable browser implementation of VantaHome's
 optional 3D Home simulation: furnished house, landscape, 90 simulated devices,
-lighting, weather, and animations. The host app's dashboard and real device
-services remain separate. See [integration notes](../../docs/THREE_D_HOME.md) for
+lighting, weather, and animations. The host can share explicitly paired local
+demo controls with its dashboard; real device services remain separate. See
+[integration notes](../../docs/THREE_D_HOME.md) for
 isolation, lifecycle, feature configuration, and release limitations.
 
 ## Develop
@@ -50,10 +51,28 @@ add the Blender project to runtime assets.
 
 ## Behavior and checks
 
-All controls are simulated. Embedded sessions reset when closed or backgrounded;
-the standalone preview can persist its own local simulation preferences. Weather
-uses fixed Hopewell, Jamaica coordinates, and automatic solar lights affect only
-the visual model. Weather failures do not stop the local daylight clock.
+All controls are simulated. The embedded host saves all 90 devices' supported
+state, lighting mode, and motion preference, and restores them after closing or
+backgrounding. Graphics are released while closed; camera/room selection starts
+from the default view on reopening. The standalone editing preview retains its
+own browser-local preferences.
+
+Only an offline, unauthenticated demo Owner without account/home scope shares
+the 22 curated device pairs with the original dashboard. Every pair requires
+its explicit demo ID, scene ID, and expected kind; room labels and names do not
+infer a mapping. Other contexts use a separate saved preview per account, or a
+local isolated preview when signed out. Changing account, home, member, role,
+or realtime/MQTT scope disconnects the bridge until the scene is reopened.
+
+`simulationBridgeProtocol.ts` bounds and validates the simulation-only messages;
+`simulationBridgeClient.ts` preserves pending edits during host acknowledgements.
+Neither sends device commands, authentication data, private media URLs, or
+household observations. Persistence belongs to the host, and save failures are
+reported there. The narrow protocol does not give the scene host-storage access.
+
+Weather uses fixed Hopewell, Jamaica coordinates, and automatic solar lights
+affect only the visual model. Weather failures do not stop the local daylight
+clock.
 
 ```bash
 npm run test:home-scene
@@ -63,6 +82,11 @@ npm run build:home-scene
 
 Run those commands from the repository root. Packaging rejects missing,
 unexpected, external, malformed, or oversized assets. The self-contained scene
-is approximately 27.4 MiB, so physical-device loading and memory profiling remain
-required. See the [validation and performance notes](../../docs/THREE_D_HOME.md)
-before interpreting desktop or automated test results as release readiness.
+is approximately 27.4 MiB before transport compression, so physical-device
+profiling remains required: cold/warm startup, peak memory, frame rate during
+landscape/weather animations, sustained heat and battery use, and recovery
+after backgrounding. Verify tablet landscape, tablet portrait, and mobile
+portrait, including touch controls, reduced motion, saved state, and no
+page-level vertical scrolling. See the
+[validation and performance notes](../../docs/THREE_D_HOME.md) before interpreting
+desktop or automated test results as release readiness.

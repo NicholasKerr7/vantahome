@@ -1,6 +1,11 @@
-/** The only messages the simulation can send; there is deliberately no command channel. */
+import type { SimulationSaveStatus } from './simulationPersistence';
+
+/** Renderer health is separate from the validated, simulation-only state bridge. */
 export type SceneStatus = 'ready' | 'error';
-export type SceneSurfaceProps = { onStatus: (status: SceneStatus) => void };
+export type SceneSurfaceProps = {
+  onStatus: (status: SceneStatus) => void;
+  onSaveStatus?: (status: SimulationSaveStatus) => void;
+};
 
 /** Reject arbitrary WebView messages, oversized payloads and future command-like messages. */
 export function parseSceneStatus(input: unknown): SceneStatus | null {
