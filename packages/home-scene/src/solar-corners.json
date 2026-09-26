@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "units": "metres",
+  "coordinateSystem": "Blender anchors [east, north, up], rotation in runtime Y radians.",
+  "description": "Four proposed modern solar LED streetlights, one inside each traced property corner. Slim bases clear the gate and southwest pavilion; lamp heads project inward.",
+  "dimensions": [
+    0.6,
+    4.24,
+    1.08
+  ],
+  "corners": [
+    {
+      "id": "grounds-solar-nw",
+      "corner": "Northwest",
+      "parcelVertex": 0,
+      "positionBlender": [
+        -12.96,
+        21.8,
+        -0.35
+      ],
+      "rotationY": -2.356194490192345
+    },
+    {
+      "id": "grounds-solar-ne",
+      "corner": "Northeast",
+      "parcelVertex": 1,
+      "positionBlender": [
+        33.1,
+        21.8,
+        -0.35
+      ],
+      "rotationY": 2.356194490192345
+    },
+    {
+      "id": "grounds-solar-se",
+      "corner": "Southeast",
+      "parcelVertex": 2,
+      "positionBlender": [
+        33.7,
+        5.8,
+        -0.35
+      ],
+      "rotationY": 0.7853981633974483
+    },
+    {
+      "id": "grounds-solar-sw",
+      "corner": "Southwest",
+      "parcelVertex": 3,
+      "positionBlender": [
+        1.05,
+        -12.01,
+        -0.35
+      ],
+      "rotationY": -0.3490658503988659
+    }
+  ]
+}

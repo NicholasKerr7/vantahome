@@ -1,0 +1,35 @@
+.environment-panel { min-height: 0; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.environment-location { display: flex; align-items: center; gap: 14px; padding-top: 8px; }
+.environment-location > svg { color: var(--accent); flex-shrink: 0; }
+.environment-location h3 { font-size: 20px; font-weight: 500; letter-spacing: -.5px; }
+.environment-location p, .environment-status { font-size: 12px; color: #b1c1a4; line-height: 1.5; }
+.environment-location strong { margin-left: auto; font-size: 36px; font-weight: 450; }
+.environment-status { color: #d5e6bc; }
+.environment-measurements { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.environment-measurements > div { padding: 14px 10px; border: 1px solid #758d5638; border-radius: 14px; background: #ffffff04; }
+.environment-measurements dt { font-size: 10px; color: #afc19c; }
+.environment-measurements dd { margin: 8px 0 0; font-size: 21px; }
+.environment-measurements small { font-size: 11px; color: #afc19c; }
+.environment-modes { border: 0; padding: 0; margin: 0; }
+.environment-modes legend { padding: 0; margin-bottom: 10px; font-size: 12px; color: #c7d7b9; }
+.environment-modes > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.environment-modes button { min-height: 58px; border-radius: 12px; background: #34422a; color: #d4e2c7; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 12px; }
+.environment-modes button[aria-pressed='true'] { background: #d8e9b0; color: #26371d; }
+.environment-explanation, .environment-footer p { font-size: 12px; line-height: 1.65; color: #acbda0; margin: 0; }
+.environment-footer { display: flex; align-items: center; gap: 14px; border-top: 1px solid #758d5638; padding-top: 14px; }
+.environment-footer a { color: #d6e7b8; text-decoration: underline; text-underline-offset: 3px; }
+.library-settings .dashboard-preferences { min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.library-settings .dashboard-preference { flex-shrink: 0; }
+@container app-viewport (max-width: 599px) {
+  .environment-panel { gap: 14px; }
+  .environment-location h3 { font-size: 18px; }
+  .environment-modes button { flex-direction: column; font-size: 10px; gap: 5px; }
+}
+@container app-viewport (max-width: 359px) {
+  .dashboard-shell .dashboard-brand-mark { display: none; }
+  .dashboard-shell .dashboard-header { gap: 6px; }
+  .dashboard-brand { font-size: 11px; letter-spacing: .6px; }
+  .dashboard-brand small { font-size: 6px; letter-spacing: .9px; }
+}
+@media (prefers-reduced-motion: reduce) { .environment-panel, .library-settings .dashboard-preferences { scroll-behavior: auto; } }
+.reduce-motion .environment-panel, .reduce-motion .library-settings .dashboard-preferences { scroll-behavior: auto; }

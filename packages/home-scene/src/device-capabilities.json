@@ -1,0 +1,244 @@
+{
+  "source": "Vantahome sprint-two 0abc4d5e143a35461e07ddda7fa72553569e3344; local simulation profiles, plus proposed blinds/generator/battery/solar.",
+  "profiles": {
+    "ac": [
+      {"id": "ac-temp","label": "Temp","type": "range","field": "tempC","min": 15,"max": 28,"unit": "°C"},
+      {"id": "ac-mode","label": "Mode","type": "enum","field": "mode","options": [{"label": "Cold","value": "cold"},{"label": "Fan","value": "fan"},{"label": "Dry","value": "dry"}]}
+    ],
+    "light": [
+      {"id": "light-brightness","label": "Brightness","type": "range","field": "brightness","min": 0,"max": 100,"unit": "%"}
+    ],
+    "tv": [
+      {"id": "tv-volume","label": "Volume","type": "range","field": "volume","min": 0,"max": 100,"unit": "%"},
+      {"id": "tv-mute","label": "Mute","type": "toggle","field": "muted","onLabel": "Muted","offLabel": "Sound"}
+    ],
+    "coffee": [
+      {"id": "coffee-brew","label": "Brew now","type": "action","patch": {"isOn": true}},
+      {"id": "coffee-stop","label": "Stop","type": "action","patch": {"isOn": false}},
+      {"id": "coffee-strength","label": "Strength","type": "enum","field": "coffeeStrength","options": [{"label": "Mild","value": "mild"},{"label": "Normal","value": "normal"},{"label": "Strong","value": "strong"}]},
+      {"id": "coffee-size","label": "Cup size","type": "range","field": "coffeeSizeOz","min": 4,"max": 12,"unit": "oz"},
+      {"id": "coffee-water","label": "Water reservoir","type": "stat","field": "coffeeWaterLevel","unit": "%"}
+    ],
+    "fridge": [
+      {"id": "fridge-temp","label": "Temp","type": "range","field": "tempC","min": 1,"max": 8,"unit": "°C"}
+    ],
+    "garage": [
+      {"id": "garage-open","label": "Open","type": "range","field": "openPercent","min": 0,"max": 100,"unit": "%"}
+    ],
+    "fan": [
+      {"id": "fan-speed","label": "Speed","type": "range","field": "speed","min": 0,"max": 100,"unit": "%"}
+    ],
+    "door": [
+      {"id": "door-open","label": "Open","type": "range","field": "openPercent","min": 0,"max": 100,"unit": "%"}
+    ],
+    "gate": [
+      {"id": "gate-open","label": "Open","type": "range","field": "openPercent","min": 0,"max": 100,"unit": "%"}
+    ],
+    "vacuum": [
+      {"id": "vacuum-start","label": "Start","type": "action","patch": {"isOn": true,"status": "cleaning"}},
+      {"id": "vacuum-dock","label": "Dock","type": "action","patch": {"isOn": false,"status": "docked"}},
+      {"id": "vacuum-status","label": "Activity","type": "stat","field": "status","unit": ""},
+      {"id": "vacuum-battery","label": "Battery","type": "stat","field": "battery","unit": "%"}
+    ],
+    "camera": [
+      {"id": "camera-armed","label": "Armed","type": "toggle","field": "armed","onLabel": "On","offLabel": "Off"},
+      {"id": "camera-recording","label": "Recording","type": "toggle","field": "recording","onLabel": "On","offLabel": "Off"},
+      {"id": "camera-night","label": "Night","type": "toggle","field": "nightVision","onLabel": "On","offLabel": "Off"},
+      {"id": "camera-alerts","label": "Alerts","type": "toggle","field": "motionAlerts","onLabel": "On","offLabel": "Off"},
+      {"id": "camera-mic","label": "Mute microphone","type": "toggle","field": "micMuted","onLabel": "Muted","offLabel": "Live"},
+      {"id": "camera-talk","label": "Talk","type": "toggle","field": "twoWayAudio","onLabel": "On","offLabel": "Off"},
+      {"id": "camera-sensitivity","label": "Sensitivity","type": "range","field": "motionSensitivity","min": 1,"max": 10,"unit": ""}
+    ],
+    "window": [
+      {"id": "window-open","label": "Open","type": "range","field": "openPercent","min": 0,"max": 100,"unit": "%"}
+    ],
+    "stove": [
+      {"id": "stove-burner","label": "Burner","type": "range","field": "burnerLevel","min": 0,"max": 10,"unit": ""},
+      {"id": "stove-mode","label": "Mode","type": "enum","field": "stoveMode","options": [{"label": "Simmer","value": "simmer"},{"label": "Boil","value": "boil"},{"label": "Sear","value": "sear"},{"label": "Keep Warm","value": "keep-warm"}]},
+      {"id": "stove-timer","label": "Timer","type": "range","field": "stoveTimerMin","min": 0,"max": 60,"step": 5,"unit": "min"},
+      {"id": "stove-lock","label": "Child Lock","type": "toggle","field": "stoveLock","onLabel": "On","offLabel": "Off"}
+    ],
+    "washer": [
+      {"id": "washer-cycle","label": "Cycle","type": "enum","field": "cycle","options": [{"label": "Normal","value": "Normal"},{"label": "Quick","value": "Quick"},{"label": "Delicate","value": "Delicate"},{"label": "Bedding","value": "Bedding"},{"label": "Eco","value": "Eco"}]},
+      {"id": "washer-progress","label": "Cycle progress","type": "stat","field": "progress","min": 0,"max": 100,"unit": "%"},
+      {"id": "washer-start","label": "Start","type": "action","patch": {"isOn": true}},
+      {"id": "washer-pause","label": "Pause","type": "action","patch": {"isOn": false}},
+      {"id": "washer-temp","label": "Temp","type": "enum","field": "washTemp","options": [{"label": "Cold","value": "Cold"},{"label": "Warm","value": "Warm"},{"label": "Hot","value": "Hot"}]},
+      {"id": "washer-spin","label": "Spin","type": "enum","field": "spinSpeedRpm","options": [{"label": "800 rpm","value": 800},{"label": "1000 rpm","value": 1000},{"label": "1200 rpm","value": 1200}]},
+      {"id": "washer-soil","label": "Soil","type": "enum","field": "soilLevel","options": [{"label": "Light","value": "Light"},{"label": "Normal","value": "Normal"},{"label": "Heavy","value": "Heavy"}]},
+      {"id": "washer-load","label": "Load","type": "enum","field": "loadSize","options": [{"label": "Small","value": "Small"},{"label": "Medium","value": "Medium"},{"label": "Large","value": "Large"}]},
+      {"id": "washer-rinse","label": "Rinse","type": "enum","field": "rinseCount","options": [{"label": "1x","value": 1},{"label": "2x","value": 2},{"label": "3x","value": 3}]},
+      {"id": "washer-prewash","label": "Prewash","type": "toggle","field": "prewash","onLabel": "On","offLabel": "Off"},
+      {"id": "washer-steam","label": "Steam","type": "toggle","field": "steamWash","onLabel": "On","offLabel": "Off"},
+      {"id": "washer-sanitize","label": "Sanitize","type": "toggle","field": "sanitizeWash","onLabel": "On","offLabel": "Off"},
+      {"id": "washer-smart-dose","label": "Smart Dose","type": "toggle","field": "smartDispense","onLabel": "On","offLabel": "Off"},
+      {"id": "washer-extra-spin","label": "Extra Spin","type": "toggle","field": "extraSpin","onLabel": "On","offLabel": "Off"},
+      {"id": "washer-eco","label": "Eco Boost","type": "toggle","field": "ecoWash","onLabel": "On","offLabel": "Off"},
+      {"id": "washer-remaining","label": "Remaining","type": "stat","field": "remainingMin","unit": "min"}
+    ],
+    "dryer": [
+      {"id": "dryer-cycle","label": "Cycle","type": "enum","field": "cycle","options": [{"label": "Normal","value": "Normal"},{"label": "Quick","value": "Quick"},{"label": "Delicate","value": "Delicate"},{"label": "Bedding","value": "Bedding"},{"label": "Towels","value": "Towels"},{"label": "Air Fluff","value": "Air Fluff"}]},
+      {"id": "dryer-progress","label": "Cycle progress","type": "stat","field": "progress","min": 0,"max": 100,"unit": "%"},
+      {"id": "dryer-start","label": "Start","type": "action","patch": {"isOn": true}},
+      {"id": "dryer-pause","label": "Pause","type": "action","patch": {"isOn": false}},
+      {"id": "dryer-heat","label": "Heat","type": "enum","field": "heatLevel","options": [{"label": "Low","value": "Low"},{"label": "Med","value": "Med"},{"label": "High","value": "High"}]},
+      {"id": "dryer-dryness","label": "Dryness","type": "enum","field": "drynessLevel","options": [{"label": "Damp","value": "Damp"},{"label": "Dry","value": "Dry"},{"label": "Extra","value": "Extra"}]},
+      {"id": "dryer-sensor","label": "Sensor Dry","type": "toggle","field": "sensorDry","onLabel": "On","offLabel": "Off"},
+      {"id": "dryer-wrinkle","label": "Wrinkle Guard","type": "toggle","field": "wrinkleGuard","onLabel": "On","offLabel": "Off"},
+      {"id": "dryer-steam","label": "Steam Refresh","type": "toggle","field": "steamRefresh","onLabel": "On","offLabel": "Off"},
+      {"id": "dryer-eco","label": "Eco Dry","type": "toggle","field": "ecoDry","onLabel": "On","offLabel": "Off"},
+      {"id": "dryer-air","label": "Air Fluff","type": "toggle","field": "airFluff","onLabel": "On","offLabel": "Off"},
+      {"id": "dryer-cool","label": "Cool Down","type": "toggle","field": "coolDown","onLabel": "On","offLabel": "Off"},
+      {"id": "dryer-filter","label": "Lint filter clear","type": "stat","field": "lintFilterOk","onLabel": "OK","offLabel": "Clean"},
+      {"id": "dryer-static","label": "Anti-Static","type": "toggle","field": "antiStatic","onLabel": "On","offLabel": "Off"},
+      {"id": "dryer-remaining","label": "Remaining","type": "stat","field": "remainingMin","unit": "min"}
+    ],
+    "dishwasher": [
+      {"id": "dishwasher-cycle","label": "Cycle","type": "enum","field": "cycle","options": [{"label": "Auto","value": "Auto"},{"label": "Normal","value": "Normal"},{"label": "Quick","value": "Quick"},{"label": "Eco","value": "Eco"},{"label": "Intensive","value": "Intensive"},{"label": "Rinse","value": "Rinse"}]},
+      {"id": "dishwasher-progress","label": "Cycle progress","type": "stat","field": "progress","min": 0,"max": 100,"unit": "%"},
+      {"id": "dishwasher-start","label": "Start","type": "action","patch": {"isOn": true}},
+      {"id": "dishwasher-pause","label": "Pause","type": "action","patch": {"isOn": false}},
+      {"id": "dishwasher-temp","label": "Temp","type": "enum","field": "washTemp","options": [{"label": "Cold","value": "Cold"},{"label": "Warm","value": "Warm"},{"label": "Hot","value": "Hot"}]},
+      {"id": "dishwasher-soil","label": "Soil","type": "enum","field": "soilLevel","options": [{"label": "Light","value": "Light"},{"label": "Normal","value": "Normal"},{"label": "Heavy","value": "Heavy"}]},
+      {"id": "dishwasher-rinse","label": "Rinse","type": "enum","field": "rinseCount","options": [{"label": "1x","value": 1},{"label": "2x","value": 2},{"label": "3x","value": 3}]},
+      {"id": "dishwasher-prewash","label": "Prewash","type": "toggle","field": "prewash","onLabel": "On","offLabel": "Off"},
+      {"id": "dishwasher-steam","label": "Steam","type": "toggle","field": "steamWash","onLabel": "On","offLabel": "Off"},
+      {"id": "dishwasher-sanitize","label": "Sanitize","type": "toggle","field": "sanitizeWash","onLabel": "On","offLabel": "Off"},
+      {"id": "dishwasher-smart-dose","label": "Auto Dose","type": "toggle","field": "smartDispense","onLabel": "On","offLabel": "Off"},
+      {"id": "dishwasher-dry-boost","label": "Dry Boost","type": "toggle","field": "extraSpin","onLabel": "On","offLabel": "Off"},
+      {"id": "dishwasher-eco","label": "Eco Wash","type": "toggle","field": "ecoWash","onLabel": "On","offLabel": "Off"},
+      {"id": "dishwasher-remaining","label": "Remaining","type": "stat","field": "remainingMin","unit": "min"}
+    ],
+    "microwave": [
+      {"id": "microwave-time","label": "Time","type": "range","field": "timeRemainingSec","min": 0,"max": 900,"step": 30,"unit": "sec"},
+      {"id": "microwave-start","label": "Start 1 min","type": "action","patch": {"isOn": true,"timeRemainingSec": 60}},
+      {"id": "microwave-stop","label": "Stop","type": "action","patch": {"isOn": false,"timeRemainingSec": 0}},
+      {"id": "microwave-power","label": "Power","type": "range","field": "microwavePower","min": 1,"max": 10,"step": 1},
+      {"id": "microwave-mode","label": "Mode","type": "enum","field": "microwaveMode","options": [{"label": "Reheat","value": "Reheat"},{"label": "Defrost","value": "Defrost"},{"label": "Grill","value": "Grill"},{"label": "Popcorn","value": "Popcorn"}]}
+    ],
+    "energy": [
+      {"id": "energy-now","label": "Power","type": "stat","field": "powerW","unit": "W"},
+      {"id": "energy-today","label": "Today","type": "stat","field": "energyTodayKwh","unit": "kWh"},
+      {"id": "energy-peak","label": "Peak","type": "stat","field": "energyPeakW","unit": "W"},
+      {"id": "energy-month","label": "Month","type": "stat","field": "energyMonthKwh","unit": "kWh"},
+      {"id": "energy-cost","label": "Cost","type": "stat","field": "energyCostToday"},
+      {"id": "energy-budget","label": "Budget","type": "range","field": "energyBudgetKwh","min": 50,"max": 200,"step": 10,"unit": "kWh"},
+      {"id": "energy-grid","label": "Grid available","type": "stat","field": "gridAvailable","onLabel": "Online","offLabel": "Outage"},
+      {"id": "energy-outage-alerts","label": "Outage alerts","type": "toggle","field": "gridOutageAlerts","onLabel": "On","offLabel": "Off"},
+      {"id": "energy-solar","label": "Solar","type": "stat","field": "solarW","unit": "W"},
+      {"id": "energy-solar-today","label": "Solar Today","type": "stat","field": "solarTodayKwh","unit": "kWh"},
+      {"id": "energy-grid-today","label": "Grid Today","type": "stat","field": "gridTodayKwh","unit": "kWh"}
+    ],
+    "water": [
+      {"id": "water-flow","label": "Flow","type": "stat","field": "waterLpm","unit": "L/m"},
+      {"id": "water-today","label": "Today","type": "stat","field": "waterTodayL","unit": "L"},
+      {"id": "water-pressure","label": "Pressure","type": "stat","field": "waterPressurePsi","unit": "psi"},
+      {"id": "water-temp","label": "Temp","type": "stat","field": "waterTempC","unit": "°C"},
+      {"id": "water-leak","label": "Leak","type": "stat","field": "waterLeakDetected"},
+      {"id": "water-alerts","label": "Alerts","type": "toggle","field": "waterLeakAlerts","onLabel": "On","offLabel": "Off"},
+      {"id": "water-shutoff","label": "Automatic shutoff","type": "toggle","field": "waterAutoShutoff","onLabel": "On","offLabel": "Off"},
+      {"id": "water-budget","label": "Budget","type": "range","field": "waterBudgetL","min": 100,"max": 400,"step": 20,"unit": "L"},
+      {"id": "water-pressure-low","label": "Low pressure","type": "range","field": "waterPressureLowPsi","min": 20,"max": 60,"step": 5,"unit": "psi"},
+      {"id": "water-pressure-high","label": "High pressure","type": "range","field": "waterPressureHighPsi","min": 60,"max": 100,"step": 5,"unit": "psi"},
+      {"id": "water-pressure-alerts","label": "Pressure alerts","type": "toggle","field": "waterPressureAlerts","onLabel": "On","offLabel": "Off"}
+    ],
+    "water-heater": [
+      {"id": "heater-temp","label": "Temp","type": "range","field": "tempC","min": 40,"max": 70,"unit": "°C"},
+      {"id": "heater-mode","label": "Mode","type": "enum","field": "heaterMode","options": [{"label": "Eco","value": "eco"},{"label": "Standard","value": "standard"},{"label": "Boost","value": "boost"},{"label": "Vacation","value": "vacation"}]},
+      {"id": "heater-recirculation","label": "Recirc","type": "toggle","field": "recirculation","onLabel": "On","offLabel": "Off"},
+      {"id": "heater-sanitize","label": "Sanitize","type": "toggle","field": "antiLegionella","onLabel": "On","offLabel": "Off"},
+      {"id": "heater-schedule","label": "Schedule","type": "toggle","field": "heaterScheduleEnabled","onLabel": "On","offLabel": "Off"},
+      {"id": "heater-vacation","label": "Vacation","type": "range","field": "vacationDays","min": 0,"max": 30,"step": 1,"unit": "days"}
+    ],
+    "air": [
+      {"id": "air-aqi","label": "AQI","type": "stat","field": "airQualityIndex"},
+      {"id": "air-humidity","label": "Humidity","type": "stat","field": "humidity","unit": "%"},
+      {"id": "air-pm25","label": "PM2.5","type": "stat","field": "airPm25","unit": "ug/m3"},
+      {"id": "air-pm10","label": "PM10","type": "stat","field": "airPm10","unit": "ug/m3"},
+      {"id": "air-co2","label": "CO2","type": "stat","field": "airCo2","unit": "ppm"},
+      {"id": "air-voc","label": "VOC","type": "stat","field": "airVoc","unit": "ppb"},
+      {"id": "air-hcho","label": "Formaldehyde","type": "stat","field": "airFormaldehyde","unit": "mg/m3"},
+      {"id": "air-pollen","label": "Pollen","type": "stat","field": "airPollen","unit": "idx"},
+      {"id": "air-purifier-mode","label": "Mode","type": "enum","field": "airPurifierMode","options": [{"label": "Auto","value": "auto"},{"label": "Manual","value": "manual"},{"label": "Sleep","value": "sleep"},{"label": "Boost","value": "boost"}]},
+      {"id": "air-purifier-speed","label": "Fan speed","type": "range","field": "airPurifierSpeed","min": 0,"max": 100,"unit": "%"},
+      {"id": "air-ionizer","label": "Ionizer","type": "toggle","field": "airIonizerEnabled","onLabel": "On","offLabel": "Off"},
+      {"id": "air-ventilation","label": "Auto vent","type": "toggle","field": "airAutoVentilation","onLabel": "On","offLabel": "Off"},
+      {"id": "air-alerts","label": "Alerts","type": "toggle","field": "airAlertsEnabled","onLabel": "On","offLabel": "Off"},
+      {"id": "air-filter-life","label": "Filter life","type": "stat","field": "airFilterLife","unit": "%"}
+    ],
+    "sprinkler": [
+      {"id": "sprinkler-duration","label": "Duration","type": "range","field": "durationMin","min": 0,"max": 60,"unit": "min"},
+      {"id": "sprinkler-zone","label": "Zone","type": "enum","field": "zone","options": [{"label": "Front Yard","value": "Front Yard"},{"label": "Back Yard","value": "Back Yard"},{"label": "Garden","value": "Garden"}]},
+      {"id": "sprinkler-state","label": "Active","type": "toggle","field": "isOn","onLabel": "On","offLabel": "Off"}
+    ],
+    "speaker": [
+      {"id": "speaker-volume","label": "Volume","type": "range","field": "volume","min": 0,"max": 100,"unit": "%"},
+      {"id": "speaker-mute","label": "Mute","type": "toggle","field": "muted","onLabel": "Muted","offLabel": "Sound"},
+      {"id": "speaker-source","label": "Source","type": "enum","field": "speakerSource","options": [{"label": "Spotify","value": "Spotify"},{"label": "AirPlay","value": "AirPlay"},{"label": "Bluetooth","value": "Bluetooth"},{"label": "AUX","value": "AUX"},{"label": "TV","value": "TV"}]},
+      {"id": "speaker-eq","label": "EQ","type": "enum","field": "speakerPreset","options": [{"label": "Flat","value": "Flat"},{"label": "Warm","value": "Warm"},{"label": "Bright","value": "Bright"},{"label": "Bass","value": "Bass"},{"label": "Vocal","value": "Vocal"}]},
+      {"id": "speaker-bass","label": "Bass","type": "range","field": "bass","min": 0,"max": 100,"unit": "%"},
+      {"id": "speaker-treble","label": "Treble","type": "range","field": "treble","min": 0,"max": 100,"unit": "%"},
+      {"id": "speaker-spatial","label": "Spatial","type": "toggle","field": "spatialAudio","onLabel": "On","offLabel": "Off"},
+      {"id": "speaker-party","label": "Party","type": "toggle","field": "partyMode","onLabel": "On","offLabel": "Off"},
+      {"id": "speaker-night","label": "Night","type": "toggle","field": "nightMode","onLabel": "On","offLabel": "Off"},
+      {"id": "speaker-assistant","label": "Assistant","type": "toggle","field": "voiceAssistantEnabled","onLabel": "On","offLabel": "Off"},
+      {"id": "speaker-mic","label": "Mic","type": "toggle","field": "micEnabled","onLabel": "On","offLabel": "Off"},
+      {"id": "speaker-shuffle","label": "Shuffle","type": "toggle","field": "shuffle","onLabel": "On","offLabel": "Off"},
+      {"id": "speaker-repeat","label": "Repeat","type": "enum","field": "repeat","options": [{"label": "Off","value": "off"},{"label": "All","value": "all"},{"label": "One","value": "one"}]}
+    ],
+    "smoke": [
+      {"id": "smoke-status","label": "Status","type": "stat","field": "smokeDetected"},
+      {"id": "smoke-co","label": "Carbon monoxide","type": "stat","field": "coPpm","unit": "ppm"},
+      {"id": "smoke-battery","label": "Sensor battery","type": "stat","field": "smokeBattery","unit": "%"}
+    ],
+    "blinds": [
+      {"id": "blinds-open","label": "Open position","type": "range","field": "openPercent","min": 0,"max": 100,"unit": "%"}
+    ],
+    "generator": [
+      {"id": "generator-mode","label": "Start mode","type": "enum","field": "generatorMode","options": [{"label": "Manual","value": "manual"},{"label": "Auto","value": "auto"}]},
+      {"id": "generator-output","label": "Output","type": "stat","field": "powerW","unit": "W"},
+      {"id": "generator-fuel","label": "Fuel remaining","type": "stat","field": "fuelPercent","unit": "%"}
+    ],
+    "battery": [
+      {"id": "battery-mode","label": "Storage mode","type": "enum","field": "storageMode","options": [{"label": "Backup","value": "backup"},{"label": "Self-Use","value": "self-use"},{"label": "Charge","value": "charge"}]},
+      {"id": "battery-reserve","label": "Backup reserve","type": "range","field": "reservePercent","min": 10,"max": 100,"unit": "%"},
+      {"id": "battery-charge","label": "State of charge","type": "stat","field": "chargePercent","unit": "%"},
+      {"id": "battery-capacity","label": "Capacity","type": "stat","field": "capacityKwh","unit": "kWh"}
+    ],
+    "solar": [
+      {"id": "solar-output","label": "Solar generation","type": "stat","field": "solarW","unit": "W"},
+      {"id": "solar-yield","label": "Today’s generation","type": "stat","field": "solarTodayKwh","unit": "kWh"},
+      {"id": "solar-status","label": "Inverter status","type": "stat","field": "inverterStatus","unit": ""}
+    ]
+  },
+  "defaults": {
+    "ac": {"tempC": 22,"mode": "cold"},
+    "light": {"brightness": 70},
+    "tv": {"volume": 30},
+    "coffee": {"coffeeStrength": "normal","coffeeSizeOz": 8,"coffeeWaterLevel": 70},
+    "gate": {"openPercent": 0},
+    "fan": {"speed": 60},
+    "fridge": {"tempC": 4},
+    "garage": {"openPercent": 0},
+    "door": {"openPercent": 0},
+    "vacuum": {"status": "docked","battery": 86},
+    "camera": {"armed": true,"recording": false,"nightVision": true,"motionAlerts": true,"motionSensitivity": 6,"micMuted": false,"twoWayAudio": true},
+    "window": {"openPercent": 30},
+    "stove": {"burnerLevel": 0,"stoveMode": "simmer","stoveTimerMin": 0,"stoveLock": false},
+    "washer": {"cycle": "Normal","progress": 0,"washTemp": "Warm","spinSpeedRpm": 1000,"soilLevel": "Normal","remainingMin": 42,"loadSize": "Medium","rinseCount": 2,"prewash": false,"steamWash": false,"sanitizeWash": false,"smartDispense": true,"extraSpin": false,"ecoWash": false},
+    "dishwasher": {"cycle": "Auto","progress": 0,"washTemp": "Hot","soilLevel": "Normal","remainingMin": 58,"rinseCount": 2,"prewash": false,"steamWash": false,"sanitizeWash": true,"smartDispense": true,"extraSpin": false,"ecoWash": false},
+    "microwave": {"timeRemainingSec": 0,"microwavePower": 7,"microwaveMode": "Reheat"},
+    "energy": {"powerW": 680,"energyTodayKwh": 4.2,"energyPeakW": 980,"energyMonthKwh": 78,"energyCostToday": 2.4,"energyBudgetKwh": 120,"gridAvailable": true,"gridOutageAlerts": true,"solarW": 420,"solarTodayKwh": 1.4,"gridTodayKwh": 2.8},
+    "water": {"waterLpm": 8,"waterTodayL": 120,"waterPressurePsi": 52,"waterPressureLowPsi": 40,"waterPressureHighPsi": 80,"waterTempC": 18,"waterLeakDetected": false,"waterLeakAlerts": true,"waterPressureAlerts": true,"waterAutoShutoff": false,"waterBudgetL": 220},
+    "air": {"airQualityIndex": 32,"humidity": 44,"airPm25": 8,"airPm10": 14,"airCo2": 620,"airVoc": 120,"airFormaldehyde": 0.04,"airPollen": 1,"airAlertsEnabled": true,"airPurifierMode": "auto","airPurifierSpeed": 40,"airIonizerEnabled": false,"airFilterLife": 78,"airAutoVentilation": true},
+    "sprinkler": {"zone": "Front Yard","durationMin": 15},
+    "speaker": {"volume": 28,"speakerSource": "Spotify","speakerPreset": "Warm","bass": 58,"treble": 46,"spatialAudio": true,"partyMode": false,"nightMode": false,"micEnabled": true,"voiceAssistantEnabled": true,"shuffle": true,"repeat": "all"},
+    "smoke": {"smokeDetected": false,"coPpm": 0,"smokeBattery": 96},
+    "water-heater": {"tempC": 52,"heaterMode": "eco","recirculation": true,"antiLegionella": false,"vacationDays": 0,"heaterScheduleEnabled": true},
+    "dryer": {"cycle": "Normal","heatLevel": "Med","drynessLevel": "Dry","progress": 0,"remainingMin": 45,"lintFilterOk": true,"sensorDry": true},
+    "blinds": {"openPercent": 85},
+    "generator": {"generatorMode": "auto","powerW": 0,"fuelPercent": 82},
+    "battery": {"storageMode": "backup","reservePercent": 25,"chargePercent": 84,"capacityKwh": 13.5},
+    "solar": {"solarW": 3200,"solarTodayKwh": 18.4,"inverterStatus": "Generating"}
+  }
+}

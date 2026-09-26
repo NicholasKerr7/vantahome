@@ -40,3 +40,11 @@ google-services.json
 GoogleService-Info.plist
 docs/self-hosted/mosquitto/config/passwords
 docs/self-hosted/mosquitto/config/certs/
+
+# Reproducible 3D scene bundles (npm run build:home-scene)
+public/home-scene/
+assets/home-scene/
+src/features/three-d-home/generated/
+packages/home-scene/dist/
+packages/home-scene/dist-native/
+packages/home-scene/*.tsbuildinfo

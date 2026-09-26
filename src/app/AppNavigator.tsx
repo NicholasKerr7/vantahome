@@ -30,6 +30,7 @@ import {
 import { bootstrapHome } from "../services/cloudRegistry";
 import { hydrateHomeAccount, useHomeStore } from "../store/useHomeStore";
 import { resolveAuthExperience, runtimePolicy } from "../config/runtimeMode";
+import { isThreeDHomeEnabled } from "../config/threeDHome";
 import {
   cancelAuthFlow,
   completeAuthCallback,
@@ -54,6 +55,7 @@ export type RootStackParamList = {
   PasswordRecovery: undefined;
   Onboarding: undefined;
   Main: NavigatorScreenParams<BottomTabParamList>;
+  ThreeDHome: undefined;
   Room: { roomId?: string; showAll?: boolean };
   DeviceDetail: { deviceId: string };
   Notifications: undefined;
@@ -66,6 +68,12 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/** Load the optional renderer only after navigation opens the 3D Home screen. */
+function loadThreeDHomeScreen() {
+  return require("../screens/ThreeDHomeScreen")
+    .default as typeof import("../screens/ThreeDHomeScreen").default;
+}
 
 export default function AppNavigator() {
   const [session, setSession] = useState<Session | null>(null);
@@ -259,6 +267,12 @@ export default function AppNavigator() {
                       component={OnboardingScreen}
                     />
                     <Stack.Screen name="Main" component={BottomTabs} />
+                    {isThreeDHomeEnabled() && (
+                      <Stack.Screen
+                        name="ThreeDHome"
+                        getComponent={loadThreeDHomeScreen}
+                      />
+                    )}
                     <Stack.Screen name="Room" component={RoomScreen} />
                     <Stack.Screen
                       name="DeviceDetail"

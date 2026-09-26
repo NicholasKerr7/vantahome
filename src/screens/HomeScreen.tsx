@@ -20,6 +20,7 @@ import RoomCarousel from "../components/RoomCarousel";
 import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
 import HeaderPill from "../components/HeaderPill";
+import ThreeDHomeEntry from "../components/ThreeDHomeEntry";
 import {
   AC_TEMP_MAX_C,
   AC_TEMP_MIN_C,
@@ -861,6 +862,7 @@ export default function HomeScreen() {
                   {greeting}, {profile.name || userName}!
                 </Text>
                 <View style={styles.topActions}>
+                  <ThreeDHomeEntry />
                   <Pressable
                     accessibilityLabel="Notifications"
                     style={bellStyle}

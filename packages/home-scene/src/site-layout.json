@@ -1,0 +1,448 @@
+{
+  "version": 1,
+  "units": "metres",
+  "source": "Revised House Plan with Stamp.pdf, A002 site plan; A001 cover for planting character",
+  "coordinateSystem": "Blender x/east, y/north, z/up; original house unchanged. Three = [x,z,-y].",
+  "accuracy": "Site edges and driveway traced from A002 and aligned to the existing interpreted house; not a survey or construction model.",
+  "assumptions": [
+    "Flat grade: the source site plan has no contours or spot elevations.",
+    "Automatic sliding gate, wall heights, materials, planting species/counts and gate motor are design proposals; the source only dimensions the driveway entrance.",
+    "Road width and short flared apron are presentation interpretations. A002 labels a 1.2192 m curb-return radius; the low-poly apron uses straight facets.",
+    "Buried services are represented with discreet proposed access covers; tile-field grass remains free of trees and structures.",
+    "The proposed energy pavilion sits at the far southwest lot corner, aligned with its western edge. The southwest palm is moved to the open lawn and a narrow path skirts the buried cistern."
+  ],
+  "parcel": {
+    "vertices": [
+      [
+        -13.88,
+        22.77
+      ],
+      [
+        34.02,
+        22.74
+      ],
+      [
+        34.71,
+        5.31
+      ],
+      [
+        0.65,
+        -12.65
+      ]
+    ],
+    "sourceEdgeLengths": {
+      "north": 47.863,
+      "east": 17.461,
+      "south": 38.463,
+      "west": 38.282
+    },
+    "lawnElevation": -0.35,
+    "slabThickness": 0.46
+  },
+  "driveway": {
+    "polygon": [
+      [
+        -13.1,
+        22.75
+      ],
+      [
+        -6.48,
+        22.75
+      ],
+      [
+        -3.81,
+        15.94
+      ],
+      [
+        -0.93,
+        15.94
+      ],
+      [
+        -0.93,
+        10.85
+      ],
+      [
+        1.92,
+        10.85
+      ],
+      [
+        1.92,
+        10.24
+      ],
+      [
+        2.53,
+        10.24
+      ],
+      [
+        2.53,
+        2.91
+      ],
+      [
+        -4.25,
+        3.13
+      ]
+    ],
+    "elevation": -0.275,
+    "entryWidth": 6.62,
+    "curbReturnRadius": 1.2192
+  },
+  "road": {
+    "bounds": [
+      -15.5,
+      35.5,
+      23.5,
+      29.0
+    ],
+    "elevation": -0.32,
+    "widthIsAssumed": true
+  },
+  "apron": {
+    "polygon": [
+      [
+        -13.1,
+        22.75
+      ],
+      [
+        -6.48,
+        22.75
+      ],
+      [
+        -5.55,
+        23.5
+      ],
+      [
+        -14.03,
+        23.5
+      ]
+    ],
+    "elevation": -0.28
+  },
+  "paths": [
+    {
+      "name": "Front entry link",
+      "polygon": [
+        [
+          1.92,
+          8.1
+        ],
+        [
+          2.72,
+          8.1
+        ],
+        [
+          2.72,
+          10.24
+        ],
+        [
+          1.92,
+          10.24
+        ]
+      ],
+      "elevation": -0.12
+    },
+    {
+      "name": "Eastern terrace landing",
+      "polygon": [
+        [
+          16.55,
+          7.1
+        ],
+        [
+          17.55,
+          7.1
+        ],
+        [
+          17.55,
+          10.42
+        ],
+        [
+          16.55,
+          10.42
+        ]
+      ],
+      "elevation": -0.16
+    }
+  ],
+  "boundary": {
+    "wallHeight": 0.62,
+    "wallThickness": 0.2,
+    "capThickness": 0.065,
+    "gatePostHeight": 1.92,
+    "gatePostWidth": 0.3
+  },
+  "gate": {
+    "id": "site-gate",
+    "style": "single sliding slatted gate; proposed",
+    "opening": [
+      [
+        -13.1,
+        22.75
+      ],
+      [
+        -6.48,
+        22.75
+      ]
+    ],
+    "position": [
+      -9.79,
+      22.37,
+      0.575
+    ],
+    "width": 6.62,
+    "height": 1.6,
+    "depth": 0.12,
+    "rotationZ": 0,
+    "slideVector": [
+      6.8,
+      0,
+      0
+    ],
+    "slatCount": 46,
+    "frameColor": "#294137",
+    "positionPercentMeaning": "0 closed, 100 fully open",
+    "roadSide": "north"
+  },
+  "services": {
+    "tileField": {
+      "bounds": [
+        26.13,
+        31.41,
+        11.4,
+        20.68
+      ],
+      "sourceDimensions": [
+        5.278,
+        9.279
+      ]
+    },
+    "septicTank": {
+      "bounds": [
+        22.7,
+        24.6,
+        8.9,
+        12.6
+      ]
+    },
+    "rainwaterCistern": {
+      "polygon": [
+        [
+          2.47,
+          -5.12
+        ],
+        [
+          7.82,
+          -2.3
+        ],
+        [
+          9.59,
+          -5.48
+        ],
+        [
+          4.19,
+          -8.33
+        ]
+      ]
+    }
+  },
+  "planting": {
+    "palms": [
+      [
+        -5.0,
+        20.9,
+        3.7
+      ],
+      [
+        4.1,
+        20.55,
+        4.0
+      ],
+      [
+        18.8,
+        20.55,
+        3.5
+      ],
+      [
+        32.2,
+        7.4,
+        3.7
+      ],
+      [
+        21.9,
+        1.2,
+        3.4
+      ],
+      [
+        13.0,
+        -3.0,
+        3.6
+      ],
+      [
+        -1.5,
+        -1.5,
+        3.2
+      ]
+    ],
+    "shrubs": [
+      {
+        "a": [
+          -0.39,
+          12.1
+        ],
+        "b": [
+          -0.39,
+          15.35
+        ],
+        "width": 0.5
+      },
+      {
+        "a": [
+          2.83,
+          0.75
+        ],
+        "b": [
+          2.83,
+          2.05
+        ],
+        "width": 0.4
+      },
+      {
+        "a": [
+          2.97,
+          7.0
+        ],
+        "b": [
+          2.97,
+          7.65
+        ],
+        "width": 0.48
+      },
+      {
+        "a": [
+          2.97,
+          10.7
+        ],
+        "b": [
+          2.97,
+          11.2
+        ],
+        "width": 0.48
+      },
+      {
+        "a": [
+          0.9,
+          21.75
+        ],
+        "b": [
+          6.1,
+          21.75
+        ],
+        "width": 0.78
+      },
+      {
+        "a": [
+          13.8,
+          21.72
+        ],
+        "b": [
+          20.65,
+          21.72
+        ],
+        "width": 0.74
+      },
+      {
+        "a": [
+          32.95,
+          7.1
+        ],
+        "b": [
+          33.32,
+          10.05
+        ],
+        "width": 0.8
+      },
+      {
+        "a": [
+          15.7,
+          -2.72
+        ],
+        "b": [
+          22.0,
+          0.55
+        ],
+        "width": 0.74
+      }
+    ]
+  },
+  "runtime": {
+    "replaceExistingGroup": "floor-site",
+    "staticModel": "/models/landscape.glb",
+    "gate": {
+      "id": "site-gate",
+      "position": [
+        -9.79,
+        0.575,
+        -22.37
+      ],
+      "rotationY": 0,
+      "width": 6.62,
+      "height": 1.6,
+      "depth": 0.12,
+      "openTranslation": [
+        6.8,
+        0,
+        0
+      ],
+      "slatCount": 46,
+      "frameColor": "#294137",
+      "travelDistance": 6.8,
+      "travelDirection": [
+        1,
+        0,
+        0
+      ],
+      "groundY": -0.275,
+      "openingStart": [
+        -13.1,
+        -0.275,
+        -22.75
+      ],
+      "openingEnd": [
+        -6.48,
+        -0.275,
+        -22.75
+      ]
+    },
+    "center": [
+      10.0,
+      0.7,
+      -7.0
+    ],
+    "overviewCamera": [
+      -37,
+      44,
+      -49
+    ],
+    "entranceEye": [
+      -9.8,
+      2.0,
+      -27.5
+    ],
+    "entranceLook": [
+      -9.8,
+      0.85,
+      -21.5
+    ],
+    "bounds": {
+      "min": [
+        -15.5,
+        -0.81,
+        -29.0
+      ],
+      "max": [
+        35.5,
+        7.9,
+        12.845
+      ]
+    }
+  }
+}

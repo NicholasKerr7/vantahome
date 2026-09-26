@@ -1,0 +1,29 @@
+.device-viewport {
+  container: app-viewport / inline-size;
+  width: 100%;
+  max-width: 1366px;
+  min-height: 100svh;
+  margin-inline: auto;
+}
+
+/* Keep WebGL mounted across rotation without exposing hidden controls. */
+.supported-device-app {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.supported-device-app[hidden] { display: none; }
+
+.orientation-prompt {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: max(20px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  background: radial-gradient(ellipse at top, var(--surface-raised), #141713 75%);
+}
+
+.orientation-card { max-width: 440px; text-align: center; }
+.orientation-mark { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--accent); margin-bottom: 18px; }
+.orientation-brand { font-size: 11px; font-weight: 650; letter-spacing: 3px; color: var(--accent); }
+.orientation-card h1 { font-size: clamp(22px, 4vw, 30px); line-height: 1.25; letter-spacing: -.7px; margin-block: 12px; }
+.orientation-card > p:last-of-type { color: var(--text-soft); font-size: 14px; line-height: 1.7; }
+.orientation-supported { display: flex; justify-content: center; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 22px; }
+.orientation-supported svg { flex-shrink: 0; }

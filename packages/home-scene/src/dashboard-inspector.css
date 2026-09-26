@@ -1,0 +1,82 @@
+/* Three compact rows and one action rail fit the shortest landscape tablet. */
+.device-viewport .device-inspector.dashboard-inspector {
+  container: dashboard-panel / size;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  color: var(--text-soft);
+  background: linear-gradient(150deg, var(--surface-raised), var(--surface));
+}
+
+.dashboard-inspector-heading { display: flex; align-items: center; gap: 10px; min-width: 0; flex-shrink: 0; }
+.dashboard-inspector-heading h2 { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 18px/22px 'Manrope', system-ui, sans-serif; letter-spacing: -.5px; color: #e5eadb; }
+.dashboard-room-mark { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px #d5e7a40c; }
+.dashboard-selected-device { min-width: 0; flex-shrink: 0; }
+.dashboard-selected-heading { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.dashboard-device-icon { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; color: #8fa382; border: 1px solid #3c4833; border-radius: 10px; background: #283123; }
+.dashboard-device-icon.is-on { color: var(--accent); border-color: #566c3e; background: #344229; }
+.dashboard-selected-copy { min-width: 0; }
+.dashboard-selected-copy h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; line-height: 20px; color: #e5eadb; letter-spacing: -.2px; }
+.dashboard-selected-copy p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: #a0af91; }
+.dashboard-primary-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-top: 8px; }
+.dashboard-primary-action,
+.dashboard-full-controls { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 44px; padding: 6px; border: 1px solid #4d5c3e; border-radius: 9px; font-size: 11px; line-height: 15px; color: #e6edda; background: #303c28; }
+.dashboard-primary-action[aria-checked='true'] { color: #25351d; background: var(--accent); border-color: var(--accent); }
+.dashboard-full-controls { background: #222c1d; white-space: nowrap; }
+.dashboard-primary-action:hover,
+.dashboard-full-controls:hover { filter: brightness(1.1); }
+.dashboard-switch-mark { display: flex; align-items: center; flex-shrink: 0; width: 25px; height: 15px; padding: 3px; border-radius: 12px; background: #69795b; }
+.dashboard-switch-mark > span { width: 9px; height: 9px; border-radius: 50%; background: #e3eadc; transition: transform 160ms ease; }
+[aria-checked='true'] .dashboard-switch-mark > span { transform: translateX(10px); }
+.dashboard-level-control { min-width: 0; margin-top: 4px; }
+.dashboard-level-heading { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 10px; line-height: 14px; color: #a6b697; }
+.dashboard-level-heading output { color: #d8e9c5; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dashboard-level-control input[type='range'] { display: block; width: 100%; height: 44px; margin: 0; padding: 0; background: transparent; accent-color: var(--accent); cursor: pointer; }
+.dashboard-room-devices { display: flex; flex: 1; flex-direction: column; gap: 6px; min-width: 0; min-height: 160px; }
+.dashboard-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 10px; line-height: 14px; color: var(--muted); }
+.dashboard-list-heading h3 { font: inherit; letter-spacing: .8px; text-transform: uppercase; }
+.dashboard-list-heading > span { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dashboard-device-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dashboard-device-row { display: flex; align-items: center; gap: 8px; min-width: 0; height: 44px; flex-shrink: 0; padding: 6px 8px; border: 1px solid transparent; border-radius: 9px; color: #8d9e7e; background: #1b2418; text-align: left; }
+.dashboard-device-row:hover { border-color: #465739; background: #2a3623; }
+.dashboard-device-row.is-selected { border-color: #50633e; color: var(--accent); background: #303e27; }
+.dashboard-device-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.dashboard-device-copy > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d5dfc9; font-size: 11px; line-height: 16px; }
+.dashboard-device-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #98aa87; font-size: 10px; line-height: 13px; }
+.dashboard-device-indicator { width: 4px; height: 4px; flex-shrink: 0; border-radius: 50%; background: #59654f; }
+.dashboard-device-indicator.is-on { background: var(--accent); }
+.dashboard-device-footer { display: grid; grid-template-columns: 44px 44px minmax(0, 1fr); gap: 6px; flex-shrink: 0; }
+.dashboard-page-button,
+.dashboard-browse-devices { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 7px; border: 1px solid #3b4930; border-radius: 9px; background: #26321f; color: #cadab7; font-size: 11px; white-space: nowrap; }
+.dashboard-page-button { padding: 0; }
+.dashboard-page-button:hover:not(:disabled),
+.dashboard-browse-devices:hover { color: var(--accent); background: #33432a; border-color: #5b7047; }
+.dashboard-page-button:disabled { opacity: .35; }
+.dashboard-empty { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 88px; flex-shrink: 0; }
+.dashboard-empty h3 { color: #d5dfc9; font-size: 14px; font-weight: 500; }
+.dashboard-empty p,
+.dashboard-no-devices { color: #98aa87; font-size: 11px; line-height: 1.6; }
+.dashboard-no-devices { padding: 14px 0; }
+
+/* Taller panels add breathing room without compromising the 520px layout. */
+@container dashboard-panel (min-height: 600px) {
+  .dashboard-level-control { margin-top: 12px; }
+  .dashboard-room-devices { gap: 10px; }
+  .dashboard-device-row { height: 52px; }
+}
+@container dashboard-panel (min-height: 600px) and (min-width: 224px) {
+  .dashboard-selected-device { padding: 10px; border: 1px solid #59704733; border-radius: 13px; background: #141d1155; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-switch-mark > span { transition: none; }
+}
+.reduce-motion .dashboard-switch-mark > span { transition: none; }

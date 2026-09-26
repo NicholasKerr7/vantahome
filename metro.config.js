@@ -1,6 +1,8 @@
 const { getDefaultConfig } = require("expo/metro-config");
 
 const config = getDefaultConfig(__dirname);
+// Generated offline 3D scene is bundled as an opaque asset, never Metro source.
+config.resolver.assetExts.push("vhscene");
 const defaultResolveRequest = config.resolver.resolveRequest;
 const zustandMiddlewareCommonJs = require.resolve("zustand/middleware");
 

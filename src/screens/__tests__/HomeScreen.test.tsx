@@ -107,6 +107,8 @@ jest.mock("../../components/BackgroundLines", () => {
 });
 
 describe("HomeScreen", () => {
+  const previousThreeDFlag = process.env.EXPO_PUBLIC_ENABLE_3D_HOME;
+
   beforeAll(() => {
     jest.useFakeTimers();
   });
@@ -116,6 +118,11 @@ describe("HomeScreen", () => {
   });
 
   afterEach(() => {
+    if (previousThreeDFlag === undefined) {
+      delete process.env.EXPO_PUBLIC_ENABLE_3D_HOME;
+    } else {
+      process.env.EXPO_PUBLIC_ENABLE_3D_HOME = previousThreeDFlag;
+    }
     jest.clearAllTimers();
     Object.assign(mockLayout, {
       width: 390,
@@ -131,6 +138,7 @@ describe("HomeScreen", () => {
   });
 
   beforeEach(() => {
+    process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "true";
     mockParentNavigate = jest.fn();
     mockNavigate = jest.fn();
     act(() => {
@@ -159,6 +167,36 @@ describe("HomeScreen", () => {
         indoor: { tempC: 22, label: "Indoor" },
       });
     });
+  });
+
+  it("opens the typed 3D simulation route without changing household devices", () => {
+    const previousDevices = useHomeStore.getState().devices;
+    let tree: ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<HomeScreen />);
+    });
+    const entry = tree.root.findByProps({ testID: "home-three-d-button" });
+    expect(entry.props.accessibilityLabel).toBe("Open 3D Home simulation");
+    act(() => entry.props.onPress());
+    expect(mockNavigate).toHaveBeenCalledWith("ThreeDHome");
+    expect(useHomeStore.getState().devices).toBe(previousDevices);
+    act(() => tree.unmount());
+  });
+
+  it("omits the 3D entry when disabled while preserving dashboard actions", () => {
+    process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "false";
+    let tree: ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<HomeScreen />);
+    });
+    expect(
+      tree.root.findAllByProps({ testID: "home-three-d-button" }),
+    ).toHaveLength(0);
+    expect(tree.root.findByProps({ testID: "home-avatar-button" })).toBeTruthy();
+    expect(
+      tree.root.findByProps({ testID: "home-notifications-button" }),
+    ).toBeTruthy();
+    act(() => tree.unmount());
   });
 
   it("navigates to Profile when avatar is pressed", () => {

@@ -19,6 +19,8 @@ remains outstanding and required before any public/customer use.
 - Device detail screens for lights, climate, media, appliances, security camera, and front gate.
 - Scenes and automations with device state previews and ON highlighting.
 - Profile, settings, notifications, onboarding, and management flows.
+- Optional [3D Home simulation](docs/THREE_D_HOME.md) with the furnished property,
+  interactive devices, and weather effects; the existing dashboard remains available.
 
 ## Screenshots
 

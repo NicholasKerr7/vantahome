@@ -1,0 +1,137 @@
+# 3D Home integration
+
+3D Home is an optional, explicitly labeled simulation inside the existing
+VantaHome app. The original dashboard, authentication, household permissions,
+runtime mode policy, and device command services remain in place. Its 90 scene
+devices are simulated; toggles, presets, the gate, irrigation, and automatic
+exterior lighting do not control physical equipment.
+
+## Build and run
+
+Run these commands from the repository root:
+
+```bash
+npm ci
+npm run web
+```
+
+The root lockfile covers the app and `@vantahome/home-scene` workspace. Install
+runs the existing dependency patches and compiles the scene through `postinstall`.
+The `start`, `web`, `build`, `ios`, and `android` scripts rebuild scene assets
+before Expo starts; EAS builds also prepare them after dependency installation.
+After editing scene code or models, rebuild explicitly with:
+
+```bash
+npm run build:home-scene
+```
+
+For a local demonstration without loading a developer's `.env` configuration:
+
+```bash
+EXPO_NO_DOTENV=1 EXPO_PUBLIC_VANTA_MODE=demo npm run web
+```
+
+This is a local demo command, not a release configuration. The integration does
+not weaken the existing runtime or authentication policy.
+
+The feature is enabled by default on this integration branch. Set
+`EXPO_PUBLIC_ENABLE_3D_HOME=false` and restart/rebuild Expo to remove both its
+dashboard entry and navigation route. This public build setting contains no
+credentials. The original dashboard remains available when the feature is
+enabled, while the 3D screen provides a dashboard return action, loading status,
+and retry behavior.
+
+## Editing the model
+
+The scene's React/Three.js source lives in `packages/home-scene/src`. Its five
+runtime GLBs are `exterior.glb`, `ground.glb`, `upper.glb`, `landscape.glb`, and
+`gate.glb` in `packages/home-scene/public/models`.
+
+The editable Blender master remains the separately delivered
+`seaview-luxury-smart-home.blend`. It is not included in this repository or loaded
+at runtime. Continue editing that master, export the affected GLBs, and rebuild
+the scene. Export uncompressed GLBs with embedded textures; the build rejects assets that require extra decoders. Keep the established units, orientation, object names, and origins.
+When moving interactive objects, update their hotspot positions and relevant
+geometry in `house-manifest.json`, `device-geometry.json`, and site metadata as
+needed. Preserve scene device IDs across visual changes; these are simulation
+IDs and must never be inferred to be physical device IDs.
+
+See the [scene workspace README](../packages/home-scene/README.md) for the editing
+loop and generated output paths.
+
+## Isolation and lifecycle
+
+The browser host embeds `/home-scene/embedded.html` in an iframe with
+`sandbox="allow-scripts"` only. Its opaque origin cannot read the host app's DOM,
+storage, or authentication state. Readiness messages are accepted only from the
+specific iframe. No real device command bridge is exposed.
+
+Native loads a bundled local HTML asset through Expo Asset and copies it to a
+versioned cache path. JavaScript, CSS, and the five GLBs are embedded in that file;
+the scene needs neither a localhost server nor a remote scene host. The WebView
+does not share cookies or persistent DOM storage and restricts navigation and
+file access. A narrow native broker fetches only the fixed public weather
+endpoint; it does not accept arbitrary URLs, coordinates, credentials, or device
+commands. The broker bounds request frequency, duration, and response size.
+
+Embedded simulation state is ephemeral. Leaving the screen or backgrounding the
+app unloads the scene; reopening starts a fresh session. Brief native inactive
+states, such as a system overlay, do not discard it. The standalone editing
+preview retains its separate browser simulation preferences.
+
+Weather uses the existing model's fixed Hopewell, Jamaica location and
+`America/Jamaica` clock; it does not track the current user's location. Open-Meteo
+conditions drive rain and wind visuals, while the local solar clock drives
+day/night appearance. Automatic solar streetlights are visual simulation only.
+When weather is unavailable, the scene reports that state and retains its local
+daylight clock. These effects are not background hardware automations.
+
+## Packaging and performance
+
+`scripts/build-home-scene.mjs` generates both a normal web build and the
+self-contained embedded document. It validates the closed asset inventory, GLB
+structure, absence of external model resources, and size budgets. The generated
+manifest records deterministic SHA-256 hashes and byte sizes. Generated outputs
+are ignored by Git and rebuilt from committed source and the root lockfile.
+
+The embedded document is approximately **27.4 MiB before transport compression**.
+All five models are encoded in it to support native offline loading and the
+browser's opaque-origin sandbox. This costs initial transfer, parsing, and peak
+memory even when only one floor is visible. The standalone web build loads
+separate model files for editing and inspection.
+
+Physical iPad, iPhone, and Android profiling is required before promoting 3D Home
+to the default experience or a release. Check startup time, peak memory, frame
+rate, heat, battery use, background/resume, and GPU recovery. JavaScript exports,
+unit tests, and desktop browser rendering do not establish physical-device GPU
+performance. Verify tablet landscape, tablet portrait, mobile portrait, the
+desktop tablet preview, reduced motion, and the absence of page-level vertical
+scrolling.
+
+## Validation and future device connections
+
+Run the repository checks and scene-specific tests with:
+
+```bash
+npm run verify
+npm run build:home-scene
+```
+
+`verify` includes the root Jest suite, scene Vitest suite, and six focused
+packaging tests. The implementation checkpoint covered 74 Jest suites with 1,343
+tests and 320 scene tests; counts may increase as integration checks are added.
+The integrated browser check passed 28 assertions: five viewport sizes without page scrolling, sandbox isolation, actual live weather, mobile quick/full controls, landscape/night mode, four solar poles, reduced motion, phone rotation, and return to dashboard. No scene runtime exceptions occurred.
+
+Web, iOS, and Android JavaScript/Hermes exports passed. These are bundle checks, not physical device runs. Physical-device GPU, memory, battery, and native WebView behavior remain unverified. Automated scene success is not evidence of hardware readiness.
+
+A future real-device adapter must use authorized household/device selectors,
+explicit scene-to-device mappings, and the existing `deviceClient` command path.
+Render pending, failed, stale, and confirmed states from the command lifecycle
+and authorized observations; do not treat animation or optimistic simulation
+state as physical confirmation. Real sunset or irrigation automation belongs in
+the approved automation/bridge architecture if it must execute while the app is
+closed.
+
+Live hardware readiness and the private pilot remain governed separately by
+[HOME_PILOT.md](HOME_PILOT.md). This integration does not change that readiness
+status or connect any of the 90 simulated devices to hardware.

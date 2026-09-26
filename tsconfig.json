@@ -3,5 +3,11 @@
   "compilerOptions": {
     "strict": true
   },
-  "exclude": ["supabase/functions/**", "dist/**", "voice-linking-dist/**", "voice-linking-cloudflare/**"]
+  "exclude": [
+    "supabase/functions/**",
+    "dist/**",
+    "voice-linking-dist/**",
+    "voice-linking-cloudflare/**",
+    "packages/home-scene/**"
+  ]
 }

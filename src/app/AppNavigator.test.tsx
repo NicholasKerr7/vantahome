@@ -53,7 +53,11 @@ jest.mock("@react-navigation/native", () => ({
 jest.mock("@react-navigation/native-stack", () => ({
   createNativeStackNavigator: () => ({
     Navigator: ({ children }: { children: React.ReactNode }) => children,
-    Screen: () => null,
+    /** Expose registration only; private screens stay unmounted in auth tests. */
+    Screen: ({ name }: { name: string }) =>
+      require("react").createElement(require("react-native").View, {
+        testID: `registered-route-${name}`,
+      }),
   }),
 }));
 jest.mock("@gorhom/bottom-sheet", () => ({
@@ -118,8 +122,10 @@ const membershipFor = (id: string): MembershipSyncResult => ({
 });
 
 describe("navigation session boundaries", () => {
+  const previousThreeDFlag = process.env.EXPO_PUBLIC_ENABLE_3D_HOME;
   let deliverLink: (event: { url: string }) => void;
   beforeEach(async () => {
+    process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "true";
     jest.clearAllMocks();
     await AsyncStorage.clear();
     await hydrateHomeAccount(null);
@@ -138,7 +144,35 @@ describe("navigation session boundaries", () => {
       });
   });
   afterEach(() => {
+    if (previousThreeDFlag === undefined) {
+      delete process.env.EXPO_PUBLIC_ENABLE_3D_HOME;
+    } else {
+      process.env.EXPO_PUBLIC_ENABLE_3D_HOME = previousThreeDFlag;
+    }
     jest.restoreAllMocks();
+  });
+
+  test("3D Home is available within the authenticated stack only", async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() =>
+      expect(useHomeStore.getState().membershipReady).toBe(true),
+    );
+    expect(screen.getByTestId("registered-route-ThreeDHome")).toBeTruthy();
+    await act(async () => {
+      mockAuthChanged("SIGNED_OUT", null);
+    });
+    expect(screen.queryByTestId("registered-route-ThreeDHome")).toBeNull();
+  });
+
+  test("disabling 3D Home removes its route and preserves the original stack", async () => {
+    process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "false";
+    const screen = render(<AppNavigator />);
+    await waitFor(() =>
+      expect(useHomeStore.getState().membershipReady).toBe(true),
+    );
+    expect(screen.queryByTestId("registered-route-ThreeDHome")).toBeNull();
+    expect(screen.getByTestId("registered-route-Main")).toBeTruthy();
+    expect(screen.getByTestId("registered-route-DeviceDetail")).toBeTruthy();
   });
 
   test("command feedback waits for authentication and verified home access", async () => {

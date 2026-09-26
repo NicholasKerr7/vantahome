@@ -1,0 +1,140 @@
+.house-canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.house-canvas:active {
+  cursor: grabbing;
+}
+
+.house-canvas canvas:focus-visible {
+  outline: 2px solid #c7e0a8;
+  outline-offset: -4px;
+}
+
+.device-hotspot-anchor {
+  pointer-events: none;
+}
+
+.device-hotspot {
+  --hotspot-accent: #bdc5b7;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  color: #e8eee4;
+  background: rgb(32 45 37 / 90%);
+  border: 1px solid rgb(219 230 204 / 42%);
+  border-radius: 50%;
+  box-shadow: 0 2px 12px rgb(12 30 22 / 28%);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: border-color 180ms, background-color 180ms, transform 180ms;
+}
+
+.device-hotspot.is-on {
+  --hotspot-accent: #d4edb2;
+  color: #233626;
+  background: #d3e8ae;
+  border-color: #edffd8;
+  box-shadow: 0 0 0 4px rgb(211 232 174 / 17%), 0 3px 14px rgb(12 30 22 / 25%);
+}
+
+.device-hotspot:hover,
+.device-hotspot.is-selected,
+.device-hotspot[aria-expanded="true"] {
+  transform: scale(1.12);
+  border-color: white;
+}
+
+.device-hotspot[aria-expanded="true"] {
+  box-shadow: 0 0 0 3px #294c3b, 0 0 0 5px #e5f3c8, 0 3px 14px rgb(12 30 22 / 30%);
+}
+
+.device-hotspot:focus-visible {
+  outline: 3px solid #fff5c6;
+  outline-offset: 4px;
+}
+
+.device-hotspot-symbol {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.device-hotspot-label {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  padding: 6px 9px;
+  color: #edf2e6;
+  background: rgb(23 35 27 / 94%);
+  border: 1px solid rgb(220 234 209 / 20%);
+  border-radius: 6px;
+  font: 500 13px/1.2 sans-serif;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 3px);
+  transition: opacity 150ms, transform 150ms;
+}
+
+.device-hotspot:hover .device-hotspot-label,
+.device-hotspot:focus-visible .device-hotspot-label,
+.device-hotspot.is-selected .device-hotspot-label,
+.device-hotspot[aria-expanded="true"] .device-hotspot-label {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.scene-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  padding: 32px;
+  color: #edf1e8;
+  background: #24332a;
+  text-align: center;
+}
+
+.scene-error p {
+  margin: 0;
+  font-size: 22px;
+}
+
+.scene-error span {
+  max-width: 340px;
+  color: #bdc8ba;
+  font-size: 14px;
+}
+
+.scene-error button {
+  padding: 10px 16px;
+  color: #233426;
+  background: #d3e8ae;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .device-hotspot,
+  .device-hotspot-label {
+    transition: none;
+  }
+}
+
+/* Keep selected labels inside the model viewport while preserving marker coordinates. */
+.device-hotspot[data-label-edge='left'] .device-hotspot-label { left: 0; transform: translateY(0); }
+.device-hotspot[data-label-edge='right'] .device-hotspot-label { left: auto; right: 0; transform: translateY(0); }
