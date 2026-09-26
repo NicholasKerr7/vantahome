@@ -85,6 +85,12 @@ appear functional.
 
 ## Smallest useful readiness path
 
+The [offline one-light bridge contract](./BRIDGE_LIGHT_CONTRACT.md) now covers
+power-only planning and synthetic replay, observation, and interruption cases.
+It does not connect to the existing Echo/Hue setup or complete the bridge-side
+implementation below. Durable storage, authenticated pairing/adapter sessions,
+and supervised hardware evidence remain outstanding.
+
 1. Confirm the equipment inventory and choose one supported, existing light.
    Preserve its current working setup until an explicit test plan is approved.
 2. Complete the bridge-side design and implementation: authenticated pairing,

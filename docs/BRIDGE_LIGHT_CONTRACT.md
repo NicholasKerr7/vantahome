@@ -1,0 +1,142 @@
+# One-light bridge contract
+
+Status: **offline reference model and synthetic tests only**. The modules in
+`bridge/` have no network, filesystem, credential, timer, or device-control side
+effects. They are not imported by the application and do not enable a production
+bridge. The only service calls produced are inert descriptions inspected by
+tests. Existing screens and controls are unchanged.
+
+## Trust boundary
+
+The future bridge must authenticate the phone, pair the home/bridge, load the
+trusted registry, and supply current action-level authorization. A supplied
+`LightPrincipal`, callback, binding, or session ID is **not authentication**.
+None of these may be copied from an untrusted command body. The callback in
+tests is a synthetic policy seam, not a security implementation.
+
+Home Assistant credentials belong in bridge secure storage, not the app. Only
+an authenticated adapter session may supply discovery, service results, and
+observations. The future adapter must bound incoming frame sizes, validate the
+WebSocket message/subscription envelope, and assign receipt times and increasing
+revisions itself. The normalization functions do not authenticate raw objects.
+
+## Explicit power contract
+
+The first slice uses the existing command envelope: `deviceId`, `commandId`,
+`nonce`, `idempotencyKey`, `createdAt`, `expiresAt`, `op: "toggle"`, and an
+explicit boolean `on`. It rejects implicit toggles, extra authority fields,
+arbitrary property writes, unsupported operations, and malformed identifiers.
+The generated HA operation is `light.turn_on` or `light.turn_off`, never toggle.
+Brightness/color are outside this model, not removed from the application.
+
+Timestamps are explicit safe-integer milliseconds. Admission permits at most
+30 seconds of command age, five seconds of future creation skew, and a 60-second
+maximum lifetime. An expired command cannot dispatch. Missing timestamps never
+receive a current-time fallback. Policy exceptions fail closed.
+
+An exact authorized retry returns the existing record. Conflicting command IDs,
+nonces, or idempotency keys are rejected, including changed actors or targets.
+The model serializes active commands per bound light. Its 32-entry journal
+capacity refuses new entries instead of evicting replay evidence. This deliberately
+small, non-evicting model is not a production retention policy.
+
+## Identity and capabilities
+
+The trusted binding includes home, bridge, integration instance, Vanta device,
+and HA entity-registry entry IDs. Discovery resolves the selected registry ID
+to its current `entity_id`; names/addresses cannot silently adopt a different
+device. Missing/disabled entries, malformed discovery, duplicate IDs, and
+address collisions fail closed. The registry's separately retained IDs allow
+an entity address to change without replacing its identity.
+[HA entity registry implementation](https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/entity_registry.py).
+
+The pilot profile exposes power only for a valid HA light. A color-capable light
+does not need to list `onoff` among its color modes; that value is exclusive, not
+a required companion to richer modes. No brightness, color, or temperature
+support is invented from a product name.
+[HA light entity contract](https://developers.home-assistant.io/docs/core/entity/light/).
+
+## Delivery and observation
+
+```text
+reserved → dispatching → service_completed → state_observed
+```
+
+| Outcome | Meaning in this reference model |
+| --- | --- |
+| `reserved` | An admission plan exists; no call has been sent. |
+| `dispatching` | The plan crosses the send boundary; its effects may be unknown. |
+| `service_completed` | HA reported service completion, not device confirmation. |
+| `state_observed` | Fresh, matching, non-assumed HA state with supporting context was observed. |
+| `expired`, `refused`, `unavailable` | This model stopped before dispatch. |
+| `outcome_unknown` | Delivery may have occurred; automatic replay is unsafe. |
+
+Service replies must match both authenticated session and request ID. A real
+adapter must never reuse an ID within that session, including for subscriptions,
+timed-out requests, and other service calls. The model additionally refuses IDs
+already recorded in its retained same-session journal. It accepts successful
+on/off results with omitted or null `response`; the current HA handler only
+adds response data when requested.
+[WebSocket protocol](https://developers.home-assistant.io/docs/api/websocket/),
+[service handler](https://github.com/home-assistant/core/blob/dev/homeassistant/components/websocket_api/commands.py).
+
+Observations preserve available, unknown, and unavailable separately. Unknown
+state is never converted to off. They require explicit valid `last_updated`,
+receipt time, positive revision, session, and full target binding. The decoder
+allows five seconds of source timestamp skew; the lifecycle does not use a
+future-dated frame as evidence. A control needs a known, available baseline
+received within 30 seconds. After dispatch, newer revision and source-time
+watermarks prevent stale matching frames from replacing contrary evidence.
+Eligible higher-revision frames with unusable source chronology clear supporting
+evidence; malformed frames or invalid receipt times are ignored.
+
+State can arrive before or after the service result. Both are needed for
+`state_observed`; wrong/absent context, stale frames, assumed state, unrelated
+state changes, and wrong targets cannot advance that outcome. An already-at-target
+light with no new report remains unverified rather than borrowing the baseline.
+Deadline, policy loss, or disconnect after dispatch yields unknown effect. A
+result arriving after a terminal outcome cannot revive it.
+
+**`state_observed` is not physical confirmation or proof of causation.** HA
+context can be reused or expire, and an integration may optimistically update
+state. The normalizer preserves `assumed_state`; true means inferred rather than
+read state. False/absent does not prove every integration reports hardware
+faithfully. The real Hue path still needs independent observation and supervised
+hardware evidence.
+[Assumed-state definition](https://developers.home-assistant.io/docs/core/entity/#generic-properties),
+[HA context implementation](https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/entity.py).
+
+## Required journal/worker ordering — not implemented persistence
+
+1. Serialize admission and atomically reserve identity/replay records in durable
+   bridge storage. A failed reservation must not send anything.
+2. Re-resolve the light, check current authorization/capability/session, and
+   commit dispatch intent before the network write. A failed commit must not send.
+3. Persist results and observation evidence without command credentials or raw
+   errors. Apply status transitions and replay retention atomically.
+4. On restart, retain replay records but invalidate the old session and live
+   snapshot. Work that may have been dispatched becomes outcome-unknown and is
+   never automatically sent again. Reconnect starts a fresh authenticated
+   session and fresh discovery/state subscription.
+
+The tests' fake journal demonstrates this ordering and refusal behavior. It is
+in-memory, not crash-safe storage; a real process restart is **not** validated.
+Pure planning functions cannot enforce a caller's storage/transaction discipline.
+Do not connect them to a device until the durable worker, authenticated adapter,
+secure pairing/storage, and review prerequisites are implemented and verified.
+
+## Verification and next gates
+
+Run `npm test -- --runInBand bridge` for deterministic invented-data tests.
+Cases cover renamed/colliding discovery, strict parsing, action denial/revocation,
+replay conflicts, capacity, commit failures, both response orderings, invalid
+timestamps, stale/wrong-session evidence, assumed/unknown state, and modeled
+disconnect/restart without replay. No test contacts HA, Alexa, Hue, or Supabase.
+
+The next implementation boundary is a transactional journal/dispatcher with
+failure injection, followed by the authenticated HA session adapter. An actual
+host/hardware choice, independent security review, and controlled-device approval
+remain required. Native follow-up must verify portrait-only phones, both tablet
+orientations, sign-in/session isolation, background/reconnect behavior, accessible
+delivery notices, and truthful unknown-state rendering. Simulated results do not
+close any of those gates; see [Home-First Pilot](./HOME_PILOT.md).

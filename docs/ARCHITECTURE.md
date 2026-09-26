@@ -122,3 +122,13 @@ This is local delivery tracking, not a durable bridge queue or physical
 confirmation implementation. Pre-admission failures remain caller errors, not
 activity entries. Authoritative bridge completion and native/physical testing
 remain required before real-home execution is claimed.
+
+## Offline bridge protocol preparation
+
+The isolated `bridge/` modules now define and simulate explicit one-light power
+admission, registry identity, HA data normalization, and conservative lifecycle
+transitions. They are not connected to the app or a network and do not implement
+authentication, pairing, durable storage, or physical confirmation. Read the
+[one-light contract](./BRIDGE_LIGHT_CONTRACT.md) before extending these pure
+planning functions into a worker. In particular, `state_observed` is weaker
+than physical confirmation, and a fake journal test is not crash-safety evidence.

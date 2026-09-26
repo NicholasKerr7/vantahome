@@ -300,6 +300,28 @@ These checks do not verify native VoiceOver, simulator rendering, or hardware.
 This remains delivery feedback, not authoritative physical-device completion.
 Native testing and the independent security-review gate remain open.
 
+## Offline one-light bridge preparation — 2026-09-26
+
+An isolated [one-light bridge reference model](./BRIDGE_LIGHT_CONTRACT.md) now
+defines explicit on/off intent, stable registry binding, bounded replay records,
+current-permission checks, and truthful service/observation outcomes. Synthetic
+tests cover malformed discovery, renamed entities, conflicting retries, failed
+journal commits, stale or assumed state, response ordering, and modeled
+disconnect/restart without replay. Supporting Home Assistant state is named
+`state_observed`, never physical confirmation.
+
+Verification passed **1,309 tests across 69 suites**, including 314 new bridge
+tests, application/Edge TypeScript, dependency/release/asset/auth-redirect checks,
+and the production web export. The dependency audit reported no production
+vulnerabilities. These checks used invented data and no household connections.
+
+The model is not imported by the app and performs no network or storage IO.
+Its test journal is in-memory, not a crash-safe implementation. A transactional
+durable worker, authenticated adapter, secure pairing/storage, and actual
+restart testing remain required before any device connection. No dependency,
+Docker container, hardware purchase, existing feature, or Alexa setup changed.
+Native verification, physical-device evidence, and independent review remain open.
+
 ## Remaining before the Sprint 2 gate
 
 - Store future hub credentials, Home Assistant tokens, recovery material, and
