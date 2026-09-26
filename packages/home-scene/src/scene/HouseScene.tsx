@@ -88,11 +88,6 @@ function VisibilityScheduling({ suspended }: { suspended: boolean }) {
   return null;
 }
 
-/** Canvas fallback children mount even with working WebGL; they must not signal readiness or failure. */
-function GraphicsFallback() {
-  return <div className="scene-error" role="alert"><p>3D graphics are unavailable.</p><span>This browser does not support the 3D view. Device controls are still available.</span></div>;
-}
-
 /** Render the furnished house with accessible hotspots and synchronized devices. */
 export default function HouseScene({ suspended = false, ...props }: HouseSceneProps & { suspended?: boolean }) {
   return <Canvas className={`house-canvas ${props.view === 'immersive' ? 'is-immersive' : ''}`} shadows dpr={[1, 1.65]} camera={{ position: [28, 20, 16], fov: 42, near: 0.08, far: 500 }} gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping }} onCreated={({ gl }) => {
@@ -100,7 +95,7 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       gl.domElement.tabIndex = 0;
       gl.domElement.setAttribute('role', 'img');
       gl.domElement.setAttribute('aria-label', 'Interactive furnished house. Drag to orbit, pinch or scroll to zoom. In immersive mode, drag or use arrow keys to look around.');
-    }} fallback={<GraphicsFallback />}>
+    }} fallback={null}>
       <AdaptiveQuality />
       <VisibilityScheduling suspended={suspended} />
       <MaterialEnvironment />
