@@ -197,9 +197,10 @@ assets matched their manifest hashes. The built app passed strict signature
 verification and contained the JavaScript bundle and offline scene. Its local
 preview identity was restored to the original app identity in the source
 checkout after packaging; signing overrides stayed local to the build.
-The initial launch was rejected by iOS with a signing/trust
-message; developer trust on the phone remains to be confirmed. Installation
-does not establish native 3D interaction or performance results.
+The initial launch was rejected by iOS with a signing/trust message. The user
+then trusted the developer profile and confirmed that the app opened; a
+subsequent device-tool launch also succeeded. Native 3D interactions, state
+restoration, and sustained performance still need physical-device validation.
 
 A future real-device adapter must use authorized household/device selectors,
 explicit scene-to-device mappings, and the existing `deviceClient` command path.
