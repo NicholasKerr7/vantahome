@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
-import { useFilamentContext } from "react-native-filament";
+import { useFilamentContext, type RNFCamera } from "react-native-filament";
 import { useSharedValue } from "react-native-worklets-core";
 import presets from '../../../packages/home-scene/src/renderer-lab/presets.json';
 
@@ -15,6 +15,12 @@ type CameraOptions = {
   onPick: (x: number, y: number) => void;
   minDistance?: number;
   maxDistance?: number;
+};
+
+// Filament 1.11.0 omits the required native FOV direction from its TypeScript API.
+// Match RNFCameraWrapper::setProjection explicitly: four arguments can crash JSI.
+type NativeCamera = Omit<RNFCamera, "setProjection"> & {
+  setProjection(fov: number, aspect: number, near: number, far: number, direction: "vertical"): void;
 };
 
 type OrbitPosition = {
@@ -96,7 +102,8 @@ export function useLabCamera({
   minDistance,
   maxDistance,
 }: CameraOptions) {
-  const { camera, view } = useFilamentContext();
+  const { camera: sourceCamera, view } = useFilamentContext();
+  const camera = sourceCamera as NativeCamera;
   const initialPosition = createOrbitPosition(preset);
   const isPropertyPreset = initialPosition.radius >= 25;
   const minimumRadius = Math.max(0.1, minDistance ?? (isPropertyPreset ? 8 : 3));
@@ -145,7 +152,7 @@ export function useLabCamera({
     const nativeAspect = view.getAspectRatio();
     const aspect = nativeAspect > 0 ? nativeAspect : layoutAspect.value;
     if (aspect !== previousAspect.value) {
-      camera.setProjection(CAMERA_FOV, aspect, CAMERA_NEAR, CAMERA_FAR);
+      camera.setProjection(CAMERA_FOV, aspect, CAMERA_NEAR, CAMERA_FAR, "vertical");
       previousAspect.value = aspect;
     }
 

@@ -3,7 +3,8 @@ import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import { useLabCamera } from '../useLabCamera';
 
 const mockLookAt = jest.fn<void, [number[], number[], number[]]>();
-const mockSetProjection = jest.fn();
+// Mirror the native signature; the published four-argument TypeScript signature is incomplete.
+const mockSetProjection = jest.fn<void, [number, number, number, number, 'vertical']>();
 const mockGetAspectRatio = jest.fn(() => 1);
 const mockContext = {
   camera: { lookAt: mockLookAt, setProjection: mockSetProjection },
@@ -128,7 +129,7 @@ test('portrait fitting uses layout until the native aspect arrives and avoids re
     result.current.updateCamera();
   });
   expect(mockSetProjection).toHaveBeenCalledTimes(1);
-  expect(mockSetProjection).toHaveBeenLastCalledWith(42, 0.5, 0.1, 180);
+  expect(mockSetProjection).toHaveBeenLastCalledWith(42, 0.5, 0.1, 180, 'vertical');
   expect(Math.hypot(...lastEye())).toBeCloseTo(16);
   mockGetAspectRatio.mockReturnValue(2);
   act(() => {
@@ -136,7 +137,7 @@ test('portrait fitting uses layout until the native aspect arrives and avoids re
     result.current.updateCamera();
   });
   expect(mockSetProjection).toHaveBeenCalledTimes(2);
-  expect(mockSetProjection).toHaveBeenLastCalledWith(42, 2, 0.1, 180);
+  expect(mockSetProjection).toHaveBeenLastCalledWith(42, 2, 0.1, 180, 'vertical');
   expect(Math.hypot(...lastEye())).toBeCloseTo(10);
 });
 

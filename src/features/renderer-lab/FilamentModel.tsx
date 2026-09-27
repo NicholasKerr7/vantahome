@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import {
-  EntitySelector, ModelRenderer, RenderCallbackContext, useFilamentContext, useModel,
+  ModelRenderer, RenderCallbackContext, useFilamentContext, useModel, useWorkletEffect,
 } from 'react-native-filament';
 import { useSharedValue } from 'react-native-worklets-core';
 import type { LabSettings } from './protocol';
@@ -18,7 +18,7 @@ const LIGHT_NODES = ['lab-light-master-light', 'lab-light-master-bedside-left', 
 /** Render the original GLB and animate named parts entirely on Filament's render thread. */
 export function FilamentModel({ source, kind, settings, onLoaded }: Props) {
   const model = useModel(source, { addToScene: kind !== 'rain' || settings.rain });
-  const { transformManager } = useFilamentContext();
+  const { transformManager, renderableManager } = useFilamentContext();
   const asset = model.state === 'loaded' ? model.asset : undefined;
   const root = model.state === 'loaded' ? model.rootEntity : undefined;
   const animated = useMemo(() => {
@@ -34,6 +34,23 @@ export function FilamentModel({ source, kind, settings, onLoaded }: Props) {
   const target = kind === 'gate' ? settings.gate : settings.blinds;
   const motion = settings.motion;
   const rain = settings.rain;
+
+  const lights = useMemo(() => {
+    if (kind !== 'fixtures' || !asset) return [];
+    return LIGHT_NODES.map((name) => {
+      const entity = asset.getFirstEntityByName(name);
+      if (!entity) throw new Error(`The fixture model is missing ${name}.`);
+      return renderableManager.getMaterialInstanceAt(entity, 0);
+    });
+  }, [asset, kind, renderableManager]);
+  const lightsOn = settings.lights;
+  useWorkletEffect(() => {
+    'worklet';
+    // glTF emissiveFactor is float3; EntitySelector incorrectly writes float4 in SDK 1.11.
+    lights.forEach((material) => {
+      material.setFloat3Parameter('emissiveFactor', lightsOn ? [1, 0.76, 0.42] : [0, 0, 0]);
+    });
+  });
 
   useEffect(() => { if (asset) onLoaded(kind); }, [asset, kind, onLoaded]);
   RenderCallbackContext.useRenderCallback(({ timeSinceLastFrame }) => {
@@ -57,10 +74,5 @@ export function FilamentModel({ source, kind, settings, onLoaded }: Props) {
     }
   }, [animated, oldSite, oldSiteRest, transformManager, kind, position, elapsed, target, motion, rain]);
 
-  return <ModelRenderer model={model} castShadow={kind !== 'rain'} receiveShadow={kind !== 'rain'}>
-    {kind === 'fixtures' && LIGHT_NODES.map((name) => <EntitySelector key={name} byName={name}
-      materialParameters={{ index: 0, parameters: {
-        emissiveFactor: settings.lights ? [1, 0.76, 0.42, 1] : [0, 0, 0, 1],
-      } }} />)}
-  </ModelRenderer>;
+  return <ModelRenderer model={model} castShadow={kind !== 'rain'} receiveShadow={kind !== 'rain'} />;
 }

@@ -104,5 +104,61 @@ established by these tests.
   original 3D Home worked. Existing dashboard/library warnings remain unrelated.
 - The standalone physical UI test runner compiled, but installation was rejected
   by Apple's three-app limit for the free developer profile. No existing app was
-  removed. Physical Filament interactions are awaiting manual confirmation.
+  removed. The subsequent physical test reported a crash when selecting Filament;
+  build success did not establish runtime correctness.
 - Sustained GPU, memory, heat and energy comparisons remain unmeasured.
+
+### Native startup crash investigation
+
+The iPhone reports identified invalid memory access on `filament.render.queue`.
+Two reports point to `CameraWrapper::setProjection`: Filament 1.11.0 publishes a
+four-argument TypeScript declaration, but its C++ method requires a fifth FOV
+direction and its JSI dispatcher does not check the argument count. The comparison
+camera now supplies an explicit `vertical` direction through a narrowly corrected
+type. The camera regression test asserts the complete native call.
+
+The first report instead failed while constructing a nested Worklets Core callback.
+The SDK's shared-value light subscriptions create that nested callback during scene
+initialization. The comparison therefore owns its light entities and performs
+updates on the render thread without those subscriptions. This also allows light
+components to be removed and destroyed explicitly when leaving a scene.
+
+The same API audit found that the SDK's `EntitySelector` writes `emissiveFactor`
+as four floats, although the glTF material declares three. Lamp glow now uses
+the native material's `setFloat3Parameter` directly.
+
+Release preview build 5 passed compilation and signature verification, and was
+installed on the same iPhone. It got past renderer initialization, but physical
+testing still produced crash reports. An iPhone simulator test reproduced the
+failure after loading the native bedroom and toggling lights, blinds and night
+mode. LLDB caught the original JavaScript exception during the switch to Property:
+light cleanup called `.catch()` on the Worklets Core native thenable, which does
+not expose that method correctly. Cleanup now uses its supported `.then(undefined, onError)`
+rejection callback. The regression mock matches that restricted native contract.
+
+After the cleanup correction, TypeScript and all 26 focused tests passed, including
+seven new light ownership/material regression tests. Release build 6 passed
+compilation and signature verification and was installed on the physical iPhone.
+
+An automated iPhone 17 simulator test passed the full native flow with zero
+failures: bedroom lights/blinds/night, property gate/rain/motion/day, switching
+between Three.js and Filament, recreating both scenes, background/resume, and
+returning to the original 3D Home. Screenshots confirmed visible native geometry.
+The debugger caught no exception in that corrected run.
+
+An additional idle check found blank native interval diagnostics. Worklets Core
+reuses its shared array wrapper when the sampling window resets, clearing the
+array before its asynchronous JavaScript callback reads it. The collector now
+copies each completed window into an independent array before reporting it.
+Two regression tests cover delayed delivery, consecutive windows, warm-up resets,
+and callbacks after unmount. TypeScript and all 28 focused tests pass.
+
+A second native simulator test, with no debugger attached, passed ten-second idle
+checks in both scenes: P50/P95 and positive sample counts appeared, the scenes
+remained responsive, and returning to the original 3D Home succeeded. Its logs
+contain no JavaScript fatal error or native crash. Release preview build 7 includes
+this diagnostics correction, passed compilation and signature verification, and
+was installed on the same physical iPhone.
+Physical iPhone confirmation remains pending; simulator success does not establish
+device performance. Android native verification and sustained profiling remain
+outstanding; physical iPad testing is deferred.
