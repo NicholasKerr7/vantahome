@@ -1,10 +1,12 @@
 import { isWeatherSettings, type WeatherSettings } from './weather';
+import { parseLabLightStates, type LabLightStates } from './lightStates';
 
 /** Deliberately small, simulation-only controls shared with the native renderer lab. */
 export interface LabState extends WeatherSettings {
   view: 'bedroom' | 'property';
   night: boolean;
   lights: boolean;
+  lightStates?: LabLightStates;
   blinds: number;
   gate: number;
   motion: boolean;
@@ -46,11 +48,14 @@ export function parseLabState(value: unknown): LabState | null {
     if (typeof input[key] !== 'number' || !Number.isFinite(input[key]) || input[key] < 0 || input[key] > 100) return null;
   }
   if (typeof input.resetKey !== 'number' || !Number.isSafeInteger(input.resetKey) || input.resetKey < 0) return null;
+  const lightStates = input.lightStates === undefined ? undefined : parseLabLightStates(input.lightStates);
+  if (lightStates === null) return null;
   return {
     view: input.view, night: input.night as boolean, lights: input.lights as boolean,
     blinds: input.blinds as number, gate: input.gate as number,
     weather: input.weather, windSpeed: input.windSpeed, windDirection: input.windDirection,
     motion: input.motion as boolean, resetKey: input.resetKey,
+    ...(lightStates === undefined ? {} : { lightStates }),
   };
 }
 

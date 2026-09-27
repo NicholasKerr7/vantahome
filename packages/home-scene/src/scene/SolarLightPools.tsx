@@ -4,6 +4,7 @@ import { MathUtils, Object3D, SpotLight } from 'three';
 import { DEVICES, type DeviceDefinition } from '../data';
 import type { DeviceState } from '../state';
 import { readDevice } from './types';
+import { readLabLightState } from '../lightAppearance';
 
 interface SolarLightPoolsProps {
   deviceStates: Record<string, DeviceState>;
@@ -12,7 +13,7 @@ interface SolarLightPoolsProps {
 
 const SOLAR_LIGHTS = DEVICES.filter((device) => device.model === 'solar-streetlight');
 
-/** Cast a soft, inward warm pool from the actual solar luminaire, without extra shadow maps. */
+/** Cast a soft inward pool in the selected LED color, without extra shadow maps. */
 function SolarLightPool({
   device,
   state,
@@ -28,7 +29,8 @@ function SolarLightPool({
     aim.position.set(0, 0.02, -0.95);
     return aim;
   }, []);
-  const intensity = state.on ? state.level * 0.8 : 0;
+  const appearance = readLabLightState(device, state);
+  const intensity = appearance.on ? appearance.brightness * 0.8 : 0;
   const initialIntensity = useRef(intensity);
   useFrame((_, delta) => {
     if (!lamp.current || document.hidden) return;
@@ -44,7 +46,7 @@ function SolarLightPool({
         name={`${device.id}-downlight`}
         position={[0, 3.868, -0.45]}
         target={target}
-        color="#ffdda7"
+        color={appearance.colorHex}
         intensity={initialIntensity.current}
         angle={0.88}
         penumbra={1}

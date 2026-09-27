@@ -3,12 +3,12 @@ import { Color } from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   BEDROOM_DIFFUSER_OFFSET, BEDROOM_LIGHT_COLOR, BEDROOM_LIGHT_INTENSITY,
-  BEDROOM_LIGHT_LINEAR_COLOR, BEDROOM_LIGHT_RADIUS, BEDROOM_LIGHT_RIG,
+  BEDROOM_LIGHT_LINEAR_COLOR, BEDROOM_LIGHT_RADIUS, BEDROOM_LIGHT_RIG, bedroomLightAppearance,
 } from './bedroomLighting';
 
 interface FixtureDocument {
   nodes: { name: string; translation: number[]; mesh: number }[];
-  meshes: { primitives: { attributes: { POSITION: number } }[] }[];
+  meshes: { primitives: { attributes: { POSITION: number }; material: number }[] }[];
   accessors: { min: number[]; max: number[] }[];
 }
 
@@ -26,6 +26,8 @@ describe('shared bedroom light rig', () => {
     const nodes = document.nodes.filter(({ name }) => name.startsWith('lab-light-'));
     expect(BEDROOM_LIGHT_RIG).toHaveLength(nodes.length);
     expect(new Set(BEDROOM_LIGHT_RIG.map(({ id }) => id)).size).toBe(3);
+    // Sharing one glTF material would make the last edited fixture recolor its neighbors.
+    expect(new Set(nodes.map((node) => document.meshes[node.mesh].primitives[0].material)).size).toBe(3);
     for (const light of BEDROOM_LIGHT_RIG) {
       const fixture = nodes.find(({ name }) => name === `lab-light-${light.id}`)!;
       expect(fixture).toBeDefined();
@@ -46,5 +48,13 @@ describe('shared bedroom light rig', () => {
     for (let channel = 0; channel < 3; channel++) {
       expect(BEDROOM_LIGHT_LINEAR_COLOR[channel]).toBeCloseTo(linear[channel], 10);
     }
+  });
+
+  it('maps each fixture independently and falls back only for omitted fixtures', () => {
+    const states = { left: { on: true, brightness: 25, colorTemperature: 3200, colorHex: '#0000FF' } };
+    expect(bedroomLightAppearance('master-bedside-left', false, states))
+      .toMatchObject({ gain: 0.25, color: '#0000FF', linearColor: [0, 0, 1], customized: true });
+    expect(bedroomLightAppearance('master-light', false, states)).toMatchObject({ gain: 0, customized: false });
+    expect(bedroomLightAppearance('master-bedside-right', true, states)).toMatchObject({ gain: 1, customized: false });
   });
 });

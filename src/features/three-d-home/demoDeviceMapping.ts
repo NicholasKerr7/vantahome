@@ -51,6 +51,14 @@ const SHARED_CONTROL_FIELDS = [
   "spatialAudio", "partyMode", "nightMode", "voiceAssistantEnabled", "micEnabled",
   "shuffle", "repeat", "heaterMode", "recirculation", "antiLegionella",
   "heaterScheduleEnabled", "vacationDays", "coffeeStrength", "coffeeSizeOz",
+  "color", "colorTempK", "lightEffect", "adaptiveLighting", "motionBoost", "nightShift", "autoOffMin",
+  "autoOpenEnabled", "channel", "source", "fanOscillation", "fanDirection", "fanTimerMin", "fanAutoMode", "fanLightOn", "fanSleepMode",
+  "vacuumSuction", "vacuumMode", "vacuumMop", "vacuumQuietMode", "heatLevel", "drynessLevel", "sensorDry", "wrinkleGuard",
+  "steamRefresh", "ecoDry", "airFluff", "coolDown", "antiStatic", "freezerTempC", "fridgeMode", "fridgeDoorAlarm", "fridgeIceMaker",
+  "fridgeQuickCool", "fridgeQuickFreeze", "fridgeEnergySaver", "fridgeHumidity",
+  "acFanSpeed", "acSwingMode", "acEcoMode", "acTurboMode", "acQuietMode", "acTargetHumidity",
+  "coffeeCupCount", "coffeeTempC", "coffeeKeepWarmMin", "coffeeGrinder", "coffeeMilkFrother", "coffeeAutoBrewTime",
+  "waterHeaterType", "airAlertAqi", "airAlertCo2", "airAlertPm25", "airAlertPm10", "airAlertVoc", "airAlertPollen",
 ] as const satisfies readonly (keyof Device)[];
 type SharedControlField = (typeof SHARED_CONTROL_FIELDS)[number];
 
@@ -85,6 +93,24 @@ function writeSceneControl(
   return { ...state, on, level, settings: { ...state.settings, [field]: value } };
 }
 
+/** Infer white/color intent from original demo edits and mirror its absent cleared effect. */
+function synchronizeDemoLightAppearance(device: Device, previous: DeviceState, state: DeviceState): DeviceState {
+  if (device.kind !== 'light') return state;
+  let next = state;
+  if (device.lightEffect === undefined && next.settings?.lightEffect && next.settings.lightEffect !== 'none') {
+    next = { ...next, settings: { ...next.settings, lightEffect: 'none' } };
+  }
+  const color = getCapabilities('light').find((capability) => 'field' in capability && capability.field === 'color');
+  const temperature = getCapabilities('light').find((capability) => 'field' in capability && capability.field === 'colorTempK');
+  const validColor = color && validateSetting(color, device.color);
+  const validTemperature = temperature && validateSetting(temperature, device.colorTempK);
+  const colorChanged = validColor !== undefined && previous.settings?.color !== validColor;
+  const temperatureChanged = validTemperature !== undefined && previous.settings?.colorTempK !== validTemperature;
+  const mode = colorChanged ? 'color' : validTemperature !== undefined && (temperatureChanged || validColor === undefined) ? 'temperature' : undefined;
+  if (mode && next.settings?.lightColorMode !== mode) next = { ...next, settings: { ...next.settings, lightColorMode: mode } };
+  return next;
+}
+
 /**
  * Apply explicitly paired dashboard demo controls to a simulation snapshot.
  * Callers must separately enforce demo mode, no authenticated user and no active home.
@@ -111,6 +137,7 @@ export function overlayDemoDevices(
       const value = validateSetting(capability, device[capability.field]);
       if (value !== undefined) next = writeSceneControl(device.kind, next, capability.field, value);
     }
+    next = synchronizeDemoLightAppearance(device, previous, next);
     if (next !== previous) {
       if (deviceStates === snapshot.deviceStates) deviceStates = { ...deviceStates };
       deviceStates[mapping.sceneId] = next;
@@ -121,6 +148,8 @@ export function overlayDemoDevices(
 
 /** Apply a validated catalog value to its allowlisted dashboard control field. */
 function patchControl(device: Device, field: SharedControlField, value: SettingValue): Device {
+  // The original light screen represents a cleared effect by an absent value.
+  if (field === 'lightEffect' && value === 'none') return device.lightEffect === undefined ? device : { ...device, lightEffect: undefined };
   // The explicit key list prevents identity/URL writes; catalog validation supplies
   // the matching primitive or enum for every listed field.
   return device[field] === value ? device : { ...device, [field]: value };

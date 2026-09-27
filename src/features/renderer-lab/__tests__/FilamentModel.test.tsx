@@ -113,3 +113,15 @@ test('the gate reaches its exact target and stops submitting matrices while sett
   act(() => { mockCallbacks.forEach((callback) => callback({ timeSinceLastFrame: 0.08 })); });
   expect(mockMatrix.translate).toHaveBeenLastCalledWith([-9.79, 0.575, -22.37]);
 });
+
+test('fixture diffusers follow independent color, dimming, and power while retaining night gain', () => {
+  render(<FilamentModel source={1} kind="fixtures" onLoaded={jest.fn()}
+    settings={{ ...INITIAL_LAB_SETTINGS, night: true, lightStates: {
+      ceiling: { on: true, brightness: 25, colorTemperature: 3200, colorHex: '#FF0000' },
+      left: { on: true, brightness: 50, colorTemperature: 3200, colorHex: '#0000FF' },
+      right: { on: false, brightness: 100, colorTemperature: 3200, colorHex: '#00FF00' },
+    } }} />);
+  expect(mockFloat3.mock.calls).toEqual([
+    ['emissiveFactor', [10240, 0, 0]], ['emissiveFactor', [0, 0, 20480]], ['emissiveFactor', [0, 0, 0]],
+  ]);
+});

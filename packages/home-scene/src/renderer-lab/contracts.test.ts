@@ -12,6 +12,18 @@ describe('renderer comparison host boundary', () => {
     expect(parseLabState(value)).toEqual(value);
   });
 
+  it('accepts independent fixture controls and strips fields unrelated to their appearance', () => {
+    const ceiling = { on: false, brightness: 24, colorTemperature: 3200, colorHex: '#FF0000' };
+    expect(parseLabState({ ...INITIAL_STATE, lightStates: { ceiling: { ...ceiling, command: 'pair' } } }))
+      .toEqual({ ...INITIAL_STATE, lightStates: { ceiling } });
+    for (const lightStates of [null, [], { kitchen: ceiling }, { ceiling: false },
+      { ceiling: { ...ceiling, brightness: NaN } }, { ceiling: { ...ceiling, brightness: 101 } },
+      { ceiling: { ...ceiling, colorTemperature: 1999 } }, { ceiling: { ...ceiling, colorTemperature: 6501 } },
+      { ceiling: { ...ceiling, colorHex: 'red' } }, { ceiling: { ...ceiling, on: 1 } }]) {
+      expect(parseLabState({ ...INITIAL_STATE, lightStates })).toBeNull();
+    }
+  });
+
   it('rejects non-finite transforms and malformed settings without partially applying them', () => {
     for (const value of [null, [], {}, { ...INITIAL_STATE, gate: NaN }, { ...INITIAL_STATE, blinds: Infinity },
       { ...INITIAL_STATE, gate: -1 }, { ...INITIAL_STATE, blinds: 101 }, { ...INITIAL_STATE, lights: 'true' },

@@ -1,13 +1,20 @@
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
-import { X } from 'lucide-react';
-import { DeviceControlCard } from './DeviceControlCard';
+import { Power, X } from 'lucide-react';
+import { DEVICE_ICONS } from './DeviceControlCard';
+import { PagedDeviceControls } from './PagedDeviceControls';
+import { deviceActionFeedback, deviceStatus, quickActionLabel } from './deviceCapabilities';
 import { getDevice, getRoom, type DeviceId } from './data';
+import { useHomeStore } from './state';
 import './device-control-sheet.css';
 
-/** Keep full controls within thumb reach while preserving the house and its camera. */
+/** Keep complete device controls in one screen without moving the home or its camera. */
 export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const title = useRef<HTMLHeadingElement>(null);
   const device = getDevice(deviceId)!;
+  const current = useHomeStore((state) => state.deviceStates[deviceId]);
+  const toggleDevice = useHomeStore((state) => state.toggleDevice);
+  const Icon = DEVICE_ICONS[device.kind];
 
   // Release native modality during the commit, before the parent restores focus.
   useLayoutEffect(() => {
@@ -15,7 +22,7 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
     if (!element) return;
     element.showModal();
     document.documentElement.classList.add('device-sheet-open');
-    document.getElementById('sheet-device-control-title')?.focus({ preventScroll: true });
+    title.current?.focus({ preventScroll: true });
     return () => {
       element.close();
       document.documentElement.classList.remove('device-sheet-open');
@@ -28,20 +35,20 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
     onClose();
   }
 
-  /** Wrap both keyboard directions explicitly, including the initial title focus. */
+  /** Wrap keyboard focus without intercepting ordinary movement inside a control. */
   function trapFocus(event: KeyboardEvent<HTMLDialogElement>) {
     if (event.key !== 'Tab') return;
-    const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), summary'));
+    const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled):not([tabindex="-1"]), input:not(:disabled), select:not(:disabled)'));
     const visibleControls = controls.filter((control) => control.getClientRects().length > 0);
     const first = visibleControls[0];
     const last = visibleControls.at(-1);
     if (!first || !last) return;
     const active = document.activeElement;
-    const isControl = visibleControls.some((control) => control === active);
-    if (event.shiftKey && (active === first || !isControl)) {
+    const initialFocus = active === title.current || active === dialog.current;
+    if (event.shiftKey && (active === first || initialFocus)) {
       event.preventDefault();
       last.focus({ preventScroll: true });
-    } else if (!event.shiftKey && (active === last || !isControl)) {
+    } else if (!event.shiftKey && (active === last || initialFocus)) {
       event.preventDefault();
       first.focus({ preventScroll: true });
     }
@@ -49,10 +56,17 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
 
   return <dialog ref={dialog} id="full-device-controls" className="device-control-sheet" aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
-      <div className="device-sheet-handle" aria-hidden="true" />
-      <header className="device-sheet-heading"><div><span className="eyebrow">FULL CONTROLS</span><p>{getRoom(device.roomId).name}</p></div><button type="button" className="quick-device-close" aria-label="Close full controls" onClick={dismiss}><X size={20} aria-hidden="true" /></button></header>
-      <DeviceControlCard deviceId={deviceId} inSheet />
-      <p className="device-sheet-note">Changes appear in your home. Close to keep exploring.</p>
+      <header className="device-sheet-heading">
+        <span className={`device-sheet-icon ${current.on ? 'is-on' : ''}`}><Icon size={24} strokeWidth={1.5} aria-hidden="true" /></span>
+        <div className="device-sheet-identity">
+          <p className="device-sheet-location">{getRoom(device.roomId).name}<span aria-hidden="true"> · </span>Full controls</p>
+          <h2 id="sheet-device-control-title" ref={title} tabIndex={-1}>{device.name}</h2>
+          <p className="device-sheet-state" aria-live="polite"><span className={current.on ? 'is-on' : ''} aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}</p>
+        </div>
+        <button type="button" className="quick-device-close" aria-label="Close full controls" onClick={dismiss}><X size={20} aria-hidden="true" /></button>
+      </header>
+      <button type="button" className="device-sheet-primary" onClick={() => toggleDevice(deviceId)}><Power size={17} aria-hidden="true" /><span>{quickActionLabel(device, current)}</span></button>
+      <PagedDeviceControls key={deviceId} device={device} current={current} />
     </div>
   </dialog>;
 }

@@ -53,6 +53,25 @@ describe("explicit demo device correspondence", () => {
 });
 
 describe("dashboard controls to scene", () => {
+  test('reflects original white-temperature edits and cleared effects without overriding unchanged color intent', () => {
+    const previous = change(snapshot(), 'master-bedside-left', { settings: { color: '#FF9AA2', colorTempK: 3200, lightColorMode: 'color', lightEffect: 'party' } });
+    const white = overlayDemoDevices(previous, [demo('d5', 'light', { color: '#FF9AA2', colorTempK: 5200 })]);
+    expect(white.deviceStates['master-bedside-left'].settings).toMatchObject({ lightColorMode: 'temperature', lightEffect: 'none', colorTempK: 5200 });
+    const color = overlayDemoDevices(white, [demo('d5', 'light', { color: '#A0E9FF', colorTempK: 5200 })]);
+    expect(color.deviceStates['master-bedside-left'].settings?.lightColorMode).toBe('color');
+    expect(overlayDemoDevices(color, [demo('d5', 'light', { color: '#A0E9FF', colorTempK: 5200 })])).toBe(color);
+  });
+  test('shares audited advanced preferences without changing unrelated devices', () => {
+    const result = overlayDemoDevices(snapshot(), [
+      demo('d5', 'light', { color: '#A0E9FF', colorTempK: 4200, lightEffect: 'party', motionBoost: true }),
+      demo('d6', 'ac', { acSwingMode: 'vertical', acEcoMode: true, acTargetHumidity: 48 }),
+      demo('d26', 'gate', { autoOpenEnabled: true }),
+    ]);
+    expect(result.deviceStates['master-bedside-left'].settings).toMatchObject({ color: '#A0E9FF', colorTempK: 4200, lightEffect: 'party', motionBoost: true });
+    expect(result.deviceStates['master-ac'].settings).toMatchObject({ acSwingMode: 'vertical', acEcoMode: true, acTargetHumidity: 48 });
+    expect(result.deviceStates['entry-gate'].settings).toMatchObject({ autoOpenEnabled: true });
+    expect(result.deviceStates['master-bedside-right'].settings).toBeUndefined();
+  });
   test("overlays only the paired light and preserves scene preferences and unrelated objects", () => {
     const previous = snapshot();
     const result = overlayDemoDevices(previous, [demo("d2", "light", { isOn: false, brightness: 31 })]);
@@ -124,6 +143,16 @@ describe("dashboard controls to scene", () => {
 });
 
 describe("scene controls to dashboard", () => {
+  test('clears an effect using the original optional type and keeps preview outcomes local', () => {
+    const previous = change(snapshot(), 'master-bedside-left', { settings: { lightEffect: 'party' } });
+    const next = change(previous, 'master-bedside-left', { settings: { lightEffect: 'none', scheduleHour: 18, scheduleEnabled: true, color: '#FF9AA2' } });
+    const devices = [demo('d5', 'light', { lightEffect: 'party' })];
+    const result = projectSimulationToDemo(next, previous, devices);
+    expect(result[0]).toMatchObject({ color: '#FF9AA2' });
+    expect(result[0].lightEffect).toBeUndefined();
+    expect(result[0]).not.toHaveProperty('scheduleHour');
+    expect(result[0]).not.toHaveProperty('scheduleEnabled');
+  });
   test("updates only changed fields and keeps all unrelated object references", () => {
     const previous = snapshot();
     const devices = [demo("d2", "light", { brightness: 72, color: "#123456" }), demo("d8", "light", { brightness: 83 })];

@@ -9,7 +9,7 @@ import { FrameMetrics } from './frameMetrics';
 import { disposeModels, loadEmbeddedModel, modelsForView } from './models';
 import { createSolarLights, setSolarNight, type SolarLamp } from './solarLights';
 import { createStormEffects, type StormEffects } from './stormEffects';
-import { BEDROOM_LIGHT_COLOR, BEDROOM_LIGHT_INTENSITY, BEDROOM_LIGHT_RADIUS, BEDROOM_LIGHT_RIG } from './bedroomLighting';
+import { BEDROOM_LIGHT_COLOR, BEDROOM_LIGHT_INTENSITY, BEDROOM_LIGHT_RADIUS, BEDROOM_LIGHT_RIG, bedroomLightAppearance, type BedroomLightRig } from './bedroomLighting';
 import presets from './presets.json';
 import './renderer-lab.css';
 
@@ -75,9 +75,9 @@ async function startLab(): Promise<void> {
   let currentBlinds = state.blinds;
   let currentGate = state.gate;
   let cameraFit = 1;
-  const pointLights: PointLight[] = [];
+  const pointLights: { light: PointLight; id: BedroomLightRig['id'] }[] = [];
   let solarLamps: SolarLamp[] = [];
-  const emissiveMaterials = new Map<MeshStandardMaterial, Color>();
+  const emissiveMaterials = new Map<MeshStandardMaterial, { original: Color; id: BedroomLightRig['id'] }>();
   const metrics = new FrameMetrics();
   const raycaster = new Raycaster();
   const pointer = new Vector2();
@@ -121,11 +121,17 @@ async function startLab(): Promise<void> {
     sun.intensity = state.night ? 0.32 : 3.1;
     sun.color.set(state.night ? '#a5bdff' : '#fff2d9');
     controls.enableDamping = state.motion;
-    for (const light of pointLights) light.intensity = bedroom && state.lights ? BEDROOM_LIGHT_INTENSITY : 0;
+    for (const { light, id } of pointLights) {
+      const appearance = bedroomLightAppearance(id, state.lights, state.lightStates);
+      light.intensity = bedroom ? BEDROOM_LIGHT_INTENSITY * appearance.gain : 0;
+      light.color.set(appearance.color);
+    }
     setSolarNight(solarLamps, !bedroom && state.night);
-    for (const [material, original] of emissiveMaterials) {
-      material.emissive.copy(original);
-      material.emissiveIntensity = state.lights ? 1.5 : 0;
+    for (const [material, { original, id }] of emissiveMaterials) {
+      const appearance = bedroomLightAppearance(id, state.lights, state.lightStates);
+      if (appearance.customized) material.emissive.set(appearance.color);
+      else material.emissive.copy(original);
+      material.emissiveIntensity = appearance.gain * 1.5;
     }
     stormEffects?.apply(state);
   }
@@ -211,7 +217,7 @@ async function startLab(): Promise<void> {
     }
     // Fixture bodies belong to the original merged floor mesh. A nearby visible hit
     // should still select the light when its small emissive underside is occluded.
-    if (state.view === 'bedroom' && hit && pointLights.some((light) => light.position.distanceTo(hit.point) < 0.5)) {
+    if (state.view === 'bedroom' && hit && pointLights.some(({ light }) => light.position.distanceTo(hit.point) < 0.5)) {
       postLabMessage({ type: 'select', device: 'lights' });
     }
   }
@@ -267,7 +273,7 @@ async function startLab(): Promise<void> {
     stormEffects?.dispose();
     stormEffects = null;
     for (const root of loadedRoots) scene.remove(root);
-    for (const light of pointLights) scene.remove(light);
+    for (const { light } of pointLights) scene.remove(light);
     for (const { light } of solarLamps) light.dispose();
     disposeModels(loadedRoots);
     loadedRoots = [];
@@ -312,13 +318,13 @@ async function startLab(): Promise<void> {
       fixture.traverse((node) => {
         if (!(node instanceof Mesh)) return;
         for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
-          if (material instanceof MeshStandardMaterial) emissiveMaterials.set(material, material.emissive.clone());
+          if (material instanceof MeshStandardMaterial) emissiveMaterials.set(material, { original: material.emissive.clone(), id: rig.id });
         }
       });
       const lamp = new PointLight(BEDROOM_LIGHT_COLOR, BEDROOM_LIGHT_INTENSITY, BEDROOM_LIGHT_RADIUS, 2);
       lamp.position.fromArray(rig.position);
       scene.add(lamp);
-      pointLights.push(lamp);
+      pointLights.push({ light: lamp, id: rig.id });
     }
     applyState();
     animate(0);

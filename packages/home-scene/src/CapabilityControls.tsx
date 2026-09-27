@@ -1,13 +1,20 @@
-import { formatCapabilityValue, readDeviceSetting, type DeviceCapability } from './deviceCapabilities';
+import { formatCapabilityValue, hasLegacyLevel, readDeviceSetting, type DeviceCapability } from './deviceCapabilities';
 import type { DeviceDefinition } from './data';
 import { useHomeStore, type DeviceState } from './state';
+
+/** Preserve established primary-slider identifiers when full controls use the shared schema. */
+function controlId(device: DeviceDefinition, capability: DeviceCapability, prefix: string): string {
+  const primaryRange = capability.type === 'range' && ['brightness', 'speed', 'openPercent', 'tempC'].includes(capability.field);
+  return prefix === 'sheet-' && hasLegacyLevel(device) && primaryRange
+    ? `sheet-level-${device.id}` : `${prefix}${device.id}-${capability.id}`;
+}
 
 /** Render schema-backed controls with native labels, bounds and keyboard behavior. */
 export function CapabilityControls({ device, current, capabilities, prefix }: { device: DeviceDefinition; current: DeviceState; capabilities: readonly DeviceCapability[]; prefix: string }) {
   const setSetting = useHomeStore((state) => state.setDeviceSetting);
   const runAction = useHomeStore((state) => state.runDeviceAction);
   return <div className="capability-controls">{capabilities.map((capability) => {
-    const id = `${prefix}${device.id}-${capability.id}`;
+    const id = controlId(device, capability, prefix);
     if (capability.type === 'action') return <button key={capability.id} type="button" className="capability-action" onClick={() => runAction(device.id, capability.id)}>{capability.label}</button>;
     const value = readDeviceSetting(device, current, capability.field);
     if (capability.type === 'stat') return <div key={capability.id} className="capability-reading"><span>{capability.label}</span><output>{formatCapabilityValue(capability, value)}</output></div>;

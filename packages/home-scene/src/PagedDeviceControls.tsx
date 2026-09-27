@@ -1,0 +1,88 @@
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CapabilityControls } from './CapabilityControls';
+import { getControlPages } from './deviceCapabilities';
+import { SIMULATION_SCHEDULE_NOTE } from './deviceControlCatalog';
+import type { DeviceDefinition } from './data';
+import type { DeviceState } from './state';
+import './paged-device-controls.css';
+
+const GROUPS = [
+  { id: 'controls', label: 'Controls' }, { id: 'modes', label: 'Modes' },
+  { id: 'schedule', label: 'Schedule' }, { id: 'status', label: 'Status' },
+] as const;
+type GroupId = typeof GROUPS[number]['id'];
+
+/** Reserve space for touch targets and safe areas on a short phone or tablet. */
+function useShortControlPages(): boolean {
+  const [short, setShort] = useState(() => window.matchMedia('(max-height: 680px)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(max-height: 680px)');
+    const update = () => setShort(query.matches);
+    query.addEventListener('change', update);
+    update();
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return short;
+}
+
+/** Present the shared control pages with visible navigation and accessible category tabs. */
+export function PagedDeviceControls({ device, current }: { device: DeviceDefinition; current: DeviceState }) {
+  const short = useShortControlPages();
+  const pages = getControlPages(device, { maxControlsPerPage: short ? 2 : 3 });
+  const availableGroups = GROUPS.filter(({ id }) => pages.some((page) => page.group === id));
+  const [selectedGroup, setSelectedGroup] = useState<GroupId>(pages[0]?.group ?? 'controls');
+  const [pageIndex, setPageIndex] = useState(0);
+  const panel = useRef<HTMLDivElement>(null);
+  const tabs = useRef<HTMLDivElement>(null);
+  const groupPages = pages.filter((page) => page.group === selectedGroup);
+  const currentIndex = Math.min(pageIndex, Math.max(0, groupPages.length - 1));
+  const page = groupPages[currentIndex];
+  const panelId = `sheet-pages-${device.id}`;
+
+  /** Start each category at its first shared page; keep focus on the selected tab. */
+  function selectGroup(group: GroupId) {
+    setSelectedGroup(group);
+    setPageIndex(0);
+  }
+
+  /** Provide the standard arrow, Home and End behavior for a horizontal tab list. */
+  function navigateTabs(event: KeyboardEvent<HTMLDivElement>) {
+    const focusedGroup = event.target instanceof HTMLElement
+      ? event.target.closest<HTMLButtonElement>('[role="tab"]')?.dataset.controlGroup : undefined;
+    const index = availableGroups.findIndex(({ id }) => id === (focusedGroup ?? selectedGroup));
+    let next = index;
+    if (event.key === 'ArrowRight') next = (index + 1) % availableGroups.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + availableGroups.length) % availableGroups.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = availableGroups.length - 1;
+    else return;
+    const group = availableGroups[next];
+    if (!group) return;
+    event.preventDefault();
+    selectGroup(group.id);
+    tabs.current?.querySelector<HTMLButtonElement>(`[data-control-group="${group.id}"]`)?.focus({ preventScroll: true });
+  }
+
+  /** Focus the changed panel so keyboard users can continue into its first field. */
+  function changePage(next: number) {
+    setPageIndex(next);
+    panel.current?.focus({ preventScroll: true });
+  }
+
+  return <section className="paged-device-controls" aria-label="Device settings">
+    <div ref={tabs} className="device-control-tabs" role="tablist" aria-label="Control categories" onKeyDown={navigateTabs}>
+      {GROUPS.map(({ id, label }) => <button key={id} id={`sheet-tab-${device.id}-${id}`} type="button" role="tab" data-control-group={id} aria-selected={selectedGroup === id} aria-controls={panelId} disabled={!availableGroups.some((group) => group.id === id)} tabIndex={selectedGroup === id ? 0 : -1} onClick={() => selectGroup(id)}>{label}</button>)}
+    </div>
+    <div ref={panel} id={panelId} className={`device-control-page ${page?.compact ? 'is-compact' : ''}`} role="tabpanel" aria-labelledby={`sheet-tab-${device.id}-${selectedGroup}`} tabIndex={-1}>
+      {selectedGroup === 'schedule' ? <p className="device-control-context">{SIMULATION_SCHEDULE_NOTE}</p> : null}
+      {selectedGroup === 'status' ? <p className="device-control-context">Simulation readings</p> : null}
+      {page ? <CapabilityControls device={device} current={current} capabilities={page.capabilities} prefix="sheet-" /> : <p className="device-control-empty">No additional settings for this device.</p>}
+    </div>
+    <footer className="device-control-pagination">
+      <button type="button" aria-label="Previous controls page" aria-controls={panelId} disabled={currentIndex === 0} onClick={() => changePage(currentIndex - 1)}><ChevronLeft size={16} aria-hidden="true" /><span>Previous</span></button>
+      <p role="status" aria-live="polite" aria-atomic="true">{currentIndex + 1} / {Math.max(1, groupPages.length)}<span className="sr-only"> {selectedGroup} pages</span></p>
+      <button type="button" aria-label="Next controls page" aria-controls={panelId} disabled={currentIndex >= groupPages.length - 1} onClick={() => changePage(currentIndex + 1)}><span>Next</span><ChevronRight size={16} aria-hidden="true" /></button>
+    </footer>
+  </section>;
+}

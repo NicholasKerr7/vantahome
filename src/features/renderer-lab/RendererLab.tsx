@@ -7,6 +7,10 @@ import WebLabSurface from "./WebLabSurface";
 import { INITIAL_LAB_SETTINGS, type LabDevice, type LabEvent, type LabMetrics, type LabRenderer, type LabSettings, type WeatherChoice } from "./protocol";
 import { useLabWeather } from "./useLabWeather";
 import { labColors, labStyles as styles } from "./styles";
+import { getDevice } from '../../../packages/home-scene/src/data';
+import { readLabLightState } from '../../../packages/home-scene/src/lightAppearance';
+import { useSimulationControls } from '../three-d-home/useSimulationControls';
+import { DeviceControlsSheet } from '../three-d-home/DeviceControlsSheet';
 
 type BoundaryProps = { children: React.ReactNode; onError: () => void };
 
@@ -23,11 +27,14 @@ class SurfaceBoundary extends Component<BoundaryProps, { failed: boolean }> {
 
 type RendererLabProps = { active: boolean };
 type LoadState = { phase: "loading" | "ready" | "error"; milliseconds: number | null; message?: string };
+const BEDROOM_LIGHTS = ['master-light', 'master-bedside-left', 'master-bedside-right'] as const;
+const LAB_DEVICE_IDS = { lights: 'master-light', blinds: 'master-blinds', gate: 'entry-gate' } as const;
 
 /** Compare the same scene and device state while mounting only one rendering engine. */
 export default function RendererLab({ active }: RendererLabProps) {
   const { width, height } = useWindowDimensions();
   const landscape = width >= 760 && width > height;
+  const compact = height < 700;
   const [renderer, setRenderer] = useState<LabRenderer>("three");
   const [settings, setSettings] = useState<LabSettings>({ ...INITIAL_LAB_SETTINGS });
   const [weatherChoice, setWeatherChoice] = useState<WeatherChoice>("clear");
@@ -36,10 +43,24 @@ export default function RendererLab({ active }: RendererLabProps) {
   const [foreground, setForeground] = useState(AppState.currentState === "active");
   const [load, setLoad] = useState<LoadState>({ phase: "loading", milliseconds: null });
   const [metrics, setMetrics] = useState<LabMetrics | null>(null);
+  const controls = useSimulationControls();
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [controlDeviceId, setControlDeviceId] = useState<string | null>(null);
   const surfaceActive = active && foreground;
   const motionAllowed = useDecorativeMotion(active);
   const weather = useLabWeather(weatherChoice, surfaceActive && settings.view === "property");
-  const resolvedSettings = useMemo(() => ({ ...settings, ...weather.settings }), [settings, weather.settings]);
+  const resolvedSettings = useMemo(() => {
+    const states = controls.state.deviceStates;
+    return { ...settings, ...weather.settings,
+      lights: BEDROOM_LIGHTS.some((id) => states[id].on),
+      blinds: states['master-blinds'].level, gate: states['entry-gate'].level,
+      lightStates: {
+        ceiling: readLabLightState(getDevice(BEDROOM_LIGHTS[0])!, states[BEDROOM_LIGHTS[0]]),
+        left: readLabLightState(getDevice(BEDROOM_LIGHTS[1])!, states[BEDROOM_LIGHTS[1]]),
+        right: readLabLightState(getDevice(BEDROOM_LIGHTS[2])!, states[BEDROOM_LIGHTS[2]]),
+      },
+    };
+  }, [settings, weather.settings, controls.state]);
   const surfaceSettings = useMemo(() => ({ ...resolvedSettings, motion: settings.motion && motionAllowed }), [resolvedSettings, settings.motion, motionAllowed]);
   const surfaceKey = `${renderer}-${settings.view}-${attempt}`;
   const sessionToken = useMemo(() => ({ startedAt: Date.now(), settled: false }), [surfaceKey, surfaceActive]);
@@ -91,8 +112,18 @@ export default function RendererLab({ active }: RendererLabProps) {
 
   /** Retain all device settings when selecting another rendering engine. */
   const changeSettings = useCallback((patch: Partial<LabSettings>) => {
+    if (patch.lights !== undefined) controls.client.setPower(BEDROOM_LIGHTS, patch.lights);
+    if (patch.blinds !== undefined) controls.client.setLevel('master-blinds', patch.blinds);
+    if (patch.gate !== undefined) controls.client.setLevel('entry-gate', patch.gate);
     setSettings((current) => ({ ...current, ...patch }));
-  }, []);
+  }, [controls.client]);
+
+  /** Open one full device inspector while keeping its state independent from the rendering engine. */
+  const openControls = (device: LabDevice | null) => {
+    setControlDeviceId(device ? LAB_DEVICE_IDS[device] : null);
+    if (device) setSelectedDevice(device);
+    setControlsOpen(true);
+  };
 
   /** Route thrown initialization errors into the same recoverable load state. */
   const onSurfaceError = useCallback(() => {
@@ -136,17 +167,23 @@ export default function RendererLab({ active }: RendererLabProps) {
               <Text style={styles.overlayBody}>{renderer === "filament" ? "Opening the native renderer" : "Opening the Three.js renderer"}</Text></>}
           </View>}
         </View>
-        <View style={styles.metrics} accessibilityLabel="Renderer diagnostics">
+        {!compact && <View style={styles.metrics} accessibilityLabel="Renderer diagnostics">
           <View style={styles.metric}><Text style={styles.metricValue}>{load.milliseconds === null ? "—" : `${(load.milliseconds / 1000).toFixed(2)}s`}</Text><Text style={styles.metricLabel}>ASSETS READY</Text></View>
           <View style={styles.metric}><Text style={styles.metricValue}>{metrics ? `${metrics.p50.toFixed(1)}ms` : "—"}</Text><Text style={styles.metricLabel}>INTERVAL P50</Text></View>
           <View style={styles.metric}><Text style={styles.metricValue}>{metrics ? `${metrics.p95.toFixed(1)}ms` : "—"}</Text><Text style={styles.metricLabel}>INTERVAL P95</Text></View>
           <View style={styles.metric}><Text style={styles.metricValue}>{metrics?.frames ?? "—"}</Text><Text style={styles.metricLabel}>SAMPLES</Text></View>
-        </View>
-        <Text style={styles.footnote}>{Platform.OS === "web" ? "Filament requires the native preview. " : ""}Callback intervals measure cadence, not GPU completion or FPS.</Text>
+        </View>}
+        {!compact && <Text style={styles.footnote}>{Platform.OS === "web" ? "Filament requires the native preview. " : ""}Callback intervals measure cadence, not GPU completion or FPS.</Text>}
       </View>
       <LabControls settings={resolvedSettings} selectedDevice={selectedDevice} landscape={landscape}
         motionAllowed={motionAllowed} onChange={changeSettings} onSelect={setSelectedDevice}
+        onFullControls={openControls} controlsReady={controls.ready} saveError={controls.status === 'error'}
         weatherChoice={weatherChoice} weather={weather} onWeatherChange={setWeatherChoice} />
     </View>
+    {controls.status === 'disconnected' && <Pressable accessibilityRole="button" onPress={controls.reconnect} style={styles.button}>
+      <Text style={styles.buttonText}>Reconnect simulation controls</Text>
+    </Pressable>}
+    {controlsOpen && <DeviceControlsSheet deviceId={controlDeviceId} client={controls.client} snapshot={controls}
+      motionAllowed={motionAllowed} onClose={() => setControlsOpen(false)} onSelect={setControlDeviceId} />}
   </View>;
 }

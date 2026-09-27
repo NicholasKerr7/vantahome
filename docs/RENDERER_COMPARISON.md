@@ -2,8 +2,9 @@
 
 This preview evaluates React Native Filament alongside a controlled Three.js
 WebView scene. It does not replace 3D Home or connect to physical devices.
-The original scene, saved simulation, authentication, and device transports are
-unchanged. Comparison controls are temporary and reset when leaving the preview.
+Authentication and device transports remain unchanged. Device controls now use
+the same scoped local simulation as 3D Home and persist when leaving the preview.
+Camera, weather-preview, and day/night comparison choices remain temporary.
 
 ## Build and open
 
@@ -51,6 +52,29 @@ Both cases share camera presets, full device pixel density, gate travel, animati
 easing, and reduced-motion behavior. Native controls use at least 44-point targets.
 Phone portrait and tablet portrait put controls below the scene; tablet landscape
 uses a side panel. The screen does not introduce vertical scrolling.
+
+### Full device controls
+
+Quick light, blind, and gate actions remain beside the scene. **Full controls**
+opens the selected device in a fixed-height sheet (portrait) or right drawer
+(tablet landscape). **Devices** browses every house device by room. Controls,
+Modes, Schedule, and Status use explicit pages; short displays show fewer fields
+per page instead of introducing vertical scrolling. The bedroom's ceiling and two
+bedside fixtures now have independent power, brightness, color, temperature,
+scene presets, and steady effect previews in both renderers.
+
+The catalog and pure action reducers are shared with the full Three.js model.
+Extra controls include AC fan/swing/Eco/Turbo, TV navigation and media previews,
+appliance options, and gate auto-open preferences. Media commands report local
+preview outcomes; they do not open streams or launch apps. Schedules, timers,
+sensor-driven lighting, and automatic gate triggers are stored simulation
+preferences, not background automation services. Camera events do not activate
+the camera or microphone. Local save failures are surfaced in the controls.
+
+The native client waits for hydration, rebases later edits over older
+acknowledgements, and finishes accepted saves when the inspector closes. The
+existing strict demo-only mapping may mirror allowlisted settings to the original
+offline dashboard; authenticated households and hardware transports stay isolated.
 
 ### Surface-aware storms
 

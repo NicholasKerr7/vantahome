@@ -3,11 +3,22 @@ import { AppState, type AppStateStatus } from "react-native";
 import { act, cleanup, fireEvent, render } from "@testing-library/react-native";
 import RendererLab from "./RendererLab";
 import type { LabSurfaceProps } from "./protocol";
+import { SimulationControlClient } from '../three-d-home/simulationControlClient';
+import { createDefaultSimulationSnapshot, mergeSimulationChanges, parseSimulationRequest } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 
 let mockWebProps: LabSurfaceProps;
 let mockNativeProps: LabSurfaceProps;
 let mockMotionAllowed = true;
 let mockNativeThrows = false;
+let mockControls: SimulationControlClient;
+let mockDimensions = { width: 402, height: 874, scale: 1, fontScale: 1 };
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({ __esModule: true, default: () => mockDimensions }));
+
+jest.mock('../three-d-home/useSimulationControls', () => ({ useSimulationControls: () => {
+  const { useSyncExternalStore } = require('react');
+  const snapshot = useSyncExternalStore(mockControls.subscribe, mockControls.getSnapshot, mockControls.getSnapshot);
+  return { ...snapshot, client: mockControls, reconnect: jest.fn() };
+} }));
 
 jest.mock("../../components/useDecorativeMotion", () => ({ useDecorativeMotion: () => mockMotionAllowed }));
 jest.mock("@react-native-community/slider", () => require("react-native").View);
@@ -29,6 +40,22 @@ beforeEach(() => {
   AppState.currentState = "active";
   mockMotionAllowed = true;
   mockNativeThrows = false;
+  mockDimensions = { width: 402, height: 874, scale: 1, fontScale: 1 };
+  mockControls = new SimulationControlClient((deliver) => {
+    let state = createDefaultSimulationSnapshot();
+    state.deviceStates['master-blinds'] = { on: false, level: 0 };
+    state.deviceStates['entry-gate'] = { on: false, level: 0 };
+    for (const id of ['master-light', 'master-bedside-left', 'master-bedside-right']) state.deviceStates[id] = { on: true, level: 65 };
+    return { dispose: jest.fn(), handleMessage: (input) => {
+      const message = parseSimulationRequest(input);
+      if (!message) return false;
+      if (message.type === 'patch') state = mergeSimulationChanges(state, message.changes);
+      deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state,
+        ...(message.type === 'patch' ? { acknowledgedRequestId: message.requestId } : {}) });
+      return true;
+    } };
+  });
+  mockControls.connect();
   jest.spyOn(AppState, "addEventListener").mockImplementation((_event, listener) => {
     onAppState = listener;
     return { remove: jest.fn() };
@@ -36,6 +63,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  mockControls.dispose();
   jest.clearAllTimers();
   jest.useRealTimers();
   jest.restoreAllMocks();
@@ -54,6 +82,10 @@ test("starts with Three.js and keeps shared device settings across renderer swit
   expect(screen.getByTestId("native-lab")).toBeTruthy();
   expect(mockNativeProps.settings.lights).toBe(false);
   expect(mockNativeProps.settings.blinds).toBe(100);
+  fireEvent.press(screen.getByLabelText('Lights'));
+  expect(mockNativeProps.settings.lightStates?.ceiling?.on).toBe(true);
+  expect(mockNativeProps.settings.lightStates?.left?.on).toBe(true);
+  expect(mockNativeProps.settings.lightStates?.right?.on).toBe(true);
   fireEvent.press(screen.getByLabelText("Use Three.js renderer"));
   expect(mockWebProps.settings.blinds).toBe(100);
 });
@@ -123,7 +155,37 @@ test("respects reduced motion while keeping device controls and model selection 
   fireEvent.press(screen.getByLabelText("Lights"));
   expect(mockWebProps.settings.lights).toBe(false);
   fireEvent.press(screen.getByLabelText("Blinds full controls"));
-  expect(screen.getByLabelText("Blinds opening")).toBeTruthy();
+  expect(screen.getByLabelText("Close device controls")).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Schedule' })).toBeTruthy();
+});
+
+test('full controls change one fixture and both engines receive its brightness and color', () => {
+  const screen = render(<RendererLab active />);
+  const left = mockWebProps.settings.lightStates?.left;
+  fireEvent.press(screen.getByLabelText('Lights full controls'));
+  fireEvent(screen.getByLabelText('Brightness'), 'valueChange', 25);
+  expect(mockWebProps.settings.lightStates?.ceiling?.brightness).toBe(24);
+  expect(mockWebProps.settings.lightStates?.left).toEqual(left);
+  fireEvent.press(screen.getByLabelText(/Color: .*Choose option/));
+  fireEvent.press(screen.getByRole('radio', { name: /Ice/ }));
+  expect(mockWebProps.settings.lightStates?.ceiling?.colorHex).toBe('#A0E9FF');
+  fireEvent.press(screen.getByLabelText('Close device controls'));
+  fireEvent.press(screen.getByLabelText('Use Filament renderer'));
+  expect(mockNativeProps.settings.lightStates).toEqual(mockWebProps.settings.lightStates);
+});
+
+test('native full controls expose paged schedules and preserve gate preferences through quick actions', () => {
+  const screen = render(<RendererLab active />);
+  fireEvent.press(screen.getByLabelText('Property'));
+  fireEvent.press(screen.getByLabelText('Gate full controls'));
+  fireEvent.press(screen.getByRole('tab', { name: 'Modes' }));
+  fireEvent(screen.getByLabelText('Auto-open preference'), 'valueChange', true);
+  fireEvent.press(screen.getByRole('tab', { name: 'Schedule' }));
+  expect(screen.getByText('Saved preview preferences. Timers do not run devices.')).toBeTruthy();
+  fireEvent(screen.getByLabelText('Save schedule preference'), 'valueChange', true);
+  fireEvent.press(screen.getByLabelText('Close device controls'));
+  fireEvent.press(screen.getByLabelText('Gate'));
+  expect(mockControls.getSnapshot().state.deviceStates['entry-gate']).toMatchObject({ on: true, level: 100, settings: { autoOpenEnabled: true, scheduleEnabled: true } });
 });
 
 test("offers only implemented property controls and bounds the gate slider", () => {
@@ -156,4 +218,21 @@ test("previews each weather mode without scrolling and preserves weather across 
   fireEvent.press(screen.getByLabelText("Weather: Thunderstorm. Preview. Change weather"));
   fireEvent.press(screen.getByLabelText("Preview clear"));
   expect(mockNativeProps.settings).toMatchObject({ weather: "clear", windSpeed: 0 });
+});
+
+test('rotation keeps the last schedule-options page populated when more choices fit', () => {
+  mockDimensions = { width: 320, height: 562, scale: 1, fontScale: 1 };
+  const screen = render(<RendererLab active />);
+  fireEvent.press(screen.getByLabelText('Blinds full controls'));
+  fireEvent.press(screen.getByRole('tab', { name: 'Schedule' }));
+  fireEvent.press(screen.getByLabelText('Next controls page'));
+  fireEvent.press(screen.getByLabelText(/Days: .*Choose option/));
+  fireEvent.press(screen.getByLabelText('Next controls page'));
+  fireEvent.press(screen.getByLabelText('Next controls page'));
+  expect(screen.getByText('3 / 3')).toBeTruthy();
+  mockDimensions = { width: 1194, height: 834, scale: 1, fontScale: 1 };
+  screen.rerender(<RendererLab active />);
+  expect(screen.getByText('2 / 2')).toBeTruthy();
+  fireEvent.press(screen.getByRole('radio', { name: 'Sunday' }));
+  expect(mockControls.getSnapshot().state.deviceStates['master-blinds'].settings?.scheduleDays).toBe('sunday');
 });

@@ -7,6 +7,7 @@ import type { LabSettings } from './protocol';
 import { BEDROOM_LIGHTS, SOLAR_LIGHTS, filamentEmission } from './nativeLightingConfig';
 import { useFilamentWetSurfaces } from './useFilamentWetSurfaces';
 import { ORIGINAL_WEATHER_FOLIAGE_NAMES } from '../../../packages/home-scene/src/renderer-lab/weatherAnimation';
+import { bedroomLightAppearance } from '../../../packages/home-scene/src/renderer-lab/bedroomLighting';
 
 export type ModelKind = 'house' | 'landscape' | 'gate' | 'fixtures' | 'rain' | 'solar';
 interface Props {
@@ -58,12 +59,17 @@ export function FilamentModel({ source, kind, settings, onLoaded }: Props) {
       return renderableManager.getMaterialInstanceAt(entity, 0);
     });
   }, [asset, kind, renderableManager]);
-  const emission = filamentEmission(kind === 'solar' ? settings.night : settings.lights, settings.night);
+  const emissions = lights.map((_, index) => {
+    if (kind === 'solar') return filamentEmission(settings.night, settings.night);
+    const appearance = bedroomLightAppearance(BEDROOM_LIGHTS[index].id, settings.lights, settings.lightStates);
+    return filamentEmission(appearance.gain > 0, settings.night,
+      appearance.customized ? appearance.linearColor : undefined, appearance.gain);
+  });
   useWorkletEffect(() => {
     'worklet';
     // glTF emissiveFactor is float3; EntitySelector incorrectly writes float4 in SDK 1.11.
-    lights.forEach((material) => {
-      material.setFloat3Parameter('emissiveFactor', emission);
+    lights.forEach((material, index) => {
+      material.setFloat3Parameter('emissiveFactor', emissions[index]);
     });
   });
 

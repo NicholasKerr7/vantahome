@@ -13,6 +13,9 @@ type ControlsProps = {
   motionAllowed: boolean;
   onChange: (settings: Partial<LabSettings>) => void;
   onSelect: (device: LabDevice) => void;
+  onFullControls: (device: LabDevice | null) => void;
+  controlsReady: boolean;
+  saveError: boolean;
   weatherChoice: WeatherChoice;
   weather: LabWeather;
   onWeatherChange: (choice: WeatherChoice) => void;
@@ -31,18 +34,18 @@ function SmallButton({ label, selected, onPress, accessibilityLabel }: SmallButt
 
 type DeviceCardProps = {
   label: string; state: string; enabled: boolean; selected: boolean;
-  onToggle: () => void; onDetails: () => void;
+  onToggle: () => void; onDetails: () => void; disabled: boolean;
 };
 
 /** Keep quick device actions separate from the full control entry point. */
-function DeviceCard({ label, state, enabled, selected, onToggle, onDetails }: DeviceCardProps) {
+function DeviceCard({ label, state, enabled, selected, onToggle, onDetails, disabled }: DeviceCardProps) {
   return <View style={[styles.device, selected && styles.deviceSelected]}>
-    <Pressable accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: enabled }} aria-checked={enabled}
+    <Pressable accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: enabled, disabled }} aria-checked={enabled} disabled={disabled}
       onPress={onToggle} style={({ pressed }) => [styles.deviceToggle, pressed && styles.pressFeedback]}>
       <Text style={styles.deviceName}>{label}</Text><Text style={styles.deviceState}>{state}</Text>
     </Pressable>
     <Pressable accessibilityRole="button" accessibilityLabel={`${label} full controls`}
-      accessibilityState={{ expanded: selected }} aria-expanded={selected} onPress={onDetails}
+      onPress={onDetails}
       style={({ pressed }) => [styles.deviceDetails, pressed && styles.pressFeedback]}>
       <Text style={styles.deviceDetailsText}>Full controls ↗</Text>
     </Pressable>
@@ -50,7 +53,7 @@ function DeviceCard({ label, state, enabled, selected, onToggle, onDetails }: De
 }
 
 /** Shared controls ensure both renderers receive identical simulation settings. */
-export function LabControls({ settings, selectedDevice, landscape, motionAllowed, onChange, onSelect, weatherChoice, weather, onWeatherChange }: ControlsProps) {
+export function LabControls({ settings, selectedDevice, landscape, motionAllowed, onChange, onSelect, onFullControls, controlsReady, saveError, weatherChoice, weather, onWeatherChange }: ControlsProps) {
   const property = settings.view === "property";
   const mechanicalDevice = property ? "gate" : "blinds";
   const mechanicalValue = property ? settings.gate : settings.blinds;
@@ -86,25 +89,27 @@ export function LabControls({ settings, selectedDevice, landscape, motionAllowed
         <SmallButton label={settings.motion && motionAllowed ? "Motion on" : "Motion off"} selected={settings.motion && motionAllowed}
           accessibilityLabel={`Turn scene motion ${settings.motion ? "off" : "on"}`}
           onPress={() => onChange({ motion: !settings.motion })} />
+        <SmallButton label="Devices ↗" accessibilityLabel="Browse all devices" selected={false} onPress={() => onFullControls(null)} />
       </View>
     </View>
     <View style={styles.panelSection}>
       <View style={styles.deviceRow}>
         {!property && <DeviceCard label="Lights" state={settings.lights ? "On" : "Off"} enabled={settings.lights}
           selected={selectedDevice === "lights"} onToggle={() => onChange({ lights: !settings.lights })}
-          onDetails={() => onSelect("lights")} />}
+          disabled={!controlsReady} onDetails={() => onFullControls("lights")} />}
         <DeviceCard label={mechanicalLabel} state={mechanicalState} enabled={mechanicalValue > 0}
           selected={selectedDevice === mechanicalDevice} onToggle={() => setOpening(mechanicalValue > 0 ? 0 : 100)}
-          onDetails={() => onSelect(mechanicalDevice)} />
+          disabled={!controlsReady} onDetails={() => onFullControls(mechanicalDevice)} />
       </View>
       <View style={styles.detail}>
+        {saveError && <Text accessibilityRole="alert" style={styles.footnote}>Could not save locally. Changes may not survive a restart.</Text>}
         {detailDevice === "lights" ? <>
           <Text style={styles.detailHeading}>Bedroom lighting</Text>
-          <Text style={styles.detailDescription}>Bedside and ceiling lights switch together for this comparison.</Text>
+          <Text style={styles.detailDescription}>Quick switch controls all three lights. Full controls adjust each fixture.</Text>
         </> : <>
           <View style={styles.row}><Text style={[styles.detailHeading, styles.grow]}>{mechanicalLabel} opening</Text>
             <Text style={styles.detailValue}>{mechanicalValue}%</Text></View>
-          <LabSlider label={`${mechanicalLabel} opening`} value={mechanicalValue} onValueChange={setOpening} />
+          <LabSlider label={`${mechanicalLabel} opening`} value={mechanicalValue} onValueChange={setOpening} disabled={!controlsReady} />
         </>}
       </View>
     </View>

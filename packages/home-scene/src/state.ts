@@ -2,7 +2,9 @@ import { isEmbeddedScene } from './embeddedHost';
 import { createDefaultSimulationSnapshot } from './simulationBridgeProtocol';
 import { create } from 'zustand';
 import { synchronizeSolarLights, type LightingMode } from './lightingAutomation';
-import { getCapabilities, isMonitor, readDeviceSetting, validateSetting, type SettingValue } from './deviceCapabilities';
+import { isMonitor, validateStoredSetting, type SettingValue } from './deviceCapabilities';
+import { applyDeviceSetting, clampLevel, createPositionState, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from './deviceControlActions';
+export { applyDeviceSetting, clampLevel, createPositionState, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from './deviceControlActions';
 import { DEVICES, getDevice, getRoom, isPositionDevice, ROOMS, type DeviceId, type FloorId, type PresetId, type RoomId, type ViewId } from './data';
 
 import type { DeviceState, DeviceStates } from './simulationTypes';
@@ -59,17 +61,6 @@ export function createDefaultState(): HomeSnapshot {
   };
 }
 
-/** Keep all scene inputs finite and within the supported percentage range. */
-export function clampLevel(value: number): number {
-  return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
-}
-
-/** Keep blinds and gates consistent: zero is closed, every positive position is open. */
-export function createPositionState(level: number): DeviceState {
-  const position = clampLevel(level);
-  return { on: position > 0, level: position };
-}
-
 /** Narrow parsed data before touching any untrusted persisted properties. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -106,27 +97,26 @@ export function parseStoredState(raw: string | null): HomeSnapshot {
           level: typeof candidate.level === 'number' && Number.isFinite(candidate.level) ? clampLevel(candidate.level) : deviceStates[device.id].level,
         };
         if (isRecord(candidate.settings)) {
-          for (const capability of getCapabilities(device.kind)) {
-            if (!('field' in capability)) continue;
-            const value = validateSetting(capability, candidate.settings[capability.field]);
-            if (value !== undefined) deviceStates[device.id] = applyDeviceSetting(device.id, deviceStates[device.id], capability.field, value);
+          const settings: Record<string, SettingValue> = {};
+          for (const [field, input] of Object.entries(candidate.settings)) {
+            const value = validateStoredSetting(device.kind, field, input);
+            if (value !== undefined) settings[field] = value;
           }
-          // Persist only action-owned statuses and the explicit local sample acknowledgement.
-          for (const capability of getCapabilities(device.kind)) {
-            if (capability.type !== 'action') continue;
-            for (const [field, allowed] of Object.entries(capability.patch)) {
-              if (field !== 'isOn' && candidate.settings[field] === allowed) deviceStates[device.id].settings = { ...deviceStates[device.id].settings, [field]: allowed };
-            }
+          // Restore canonical aliases first, then preserve explicit color modes/effects exactly.
+          let restored = deviceStates[device.id];
+          for (const field of ['openPercent', 'brightness', 'speed', 'armed', 'tempC']) {
+            if (settings[field] !== undefined) restored = applyDeviceSetting(device.id, restored, field, settings[field]);
           }
-          if (isMonitor(device.kind) && candidate.settings.sampleChecked === true) deviceStates[device.id].settings = { ...deviceStates[device.id].settings, sampleChecked: true };
+          if (Object.keys(settings).length) restored = { ...restored, settings: { ...restored.settings, ...settings } };
+          deviceStates[device.id] = restored;
         }
-        if (isPositionDevice(device) && !(parsed.version === 2 && device.id === 'master-blinds')) deviceStates[device.id] = createPositionState(deviceStates[device.id].level);
+        if (isPositionDevice(device) && !(parsed.version === 2 && device.id === 'master-blinds')) deviceStates[device.id] = { ...deviceStates[device.id], ...createPositionState(deviceStates[device.id].level) };
       }
     }
     // Version 2 hid the remembered position whenever power was off; keep its appearance.
     const savedBlinds = deviceStates['master-blinds'];
-    deviceStates['master-blinds'] = createPositionState(parsed.version === 2 && !savedBlinds.on ? 0 : savedBlinds.level);
-    deviceStates['entry-gate'] = createPositionState(deviceStates['entry-gate'].level);
+    deviceStates['master-blinds'] = { ...savedBlinds, ...createPositionState(parsed.version === 2 && !savedBlinds.on ? 0 : savedBlinds.level) };
+    deviceStates['entry-gate'] = { ...deviceStates['entry-gate'], ...createPositionState(deviceStates['entry-gate'].level) };
     const room = typeof saved.roomId === 'string' && ROOMS.some((item) => item.id === saved.roomId) ? getRoom(saved.roomId) : getRoom(fallback.roomId);
     const selected = typeof saved.selectedDevice === 'string' ? getDevice(saved.selectedDevice) : undefined;
     const validSelection = selected?.roomId === room.id ? selected.id : null;
@@ -192,38 +182,6 @@ function outdoorNavigation(state: HomeSnapshot, roomId: RoomId = 'grounds', sele
   return { roomId, floor: getRoom(indoorContext.roomId).floor, view, selectedDevice, indoorContext };
 }
 
-/** Apply one supported setting, preserving scene level contracts and opening semantics. */
-export function applyDeviceSetting(id: DeviceId, current: DeviceState, field: string, input: SettingValue): DeviceState {
-  const device = getDevice(id);
-  if (!device) return current;
-  const capability = getCapabilities(device.kind).find((item) => 'field' in item && item.field === field);
-  if (!capability) return current;
-  const value = validateSetting(capability, input);
-  if (value === undefined) return current;
-  if (field === 'openPercent') {
-    return { ...current, ...createPositionState(Number(value)) };
-  }
-  if ((device.kind === 'light' && field === 'brightness') || (device.kind === 'fan' && field === 'speed')) return { ...current, level: clampLevel(Number(value)) };
-  if (field === 'isOn') return { ...current, on: Boolean(value) };
-  const next = { ...current, settings: { ...current.settings, [field]: value } };
-  if (field === 'armed') next.on = Boolean(value);
-  if (device.kind === 'ac' && field === 'tempC') next.level = clampLevel((26 - Number(value)) / 0.08);
-  return next;
-}
-
-/** Resolve a primary action through the device's semantics, never through a fake sensor switch. */
-export function toggleDeviceState(id: DeviceId, current: DeviceState): DeviceState {
-  const device = getDevice(id);
-  if (!device) return current;
-  if (isMonitor(device.kind)) return { ...current, on: true, settings: { ...current.settings, sampleChecked: true } };
-  if (device.kind === 'camera') return applyDeviceSetting(id, current, 'armed', !readDeviceSetting(device, current, 'armed'));
-  if (isPositionDevice(device)) return { ...current, ...createPositionState(current.level > 0 ? 0 : 100) };
-  const next = { ...current, on: !current.on };
-  if (device.kind === 'vacuum') next.settings = { ...current.settings, status: next.on ? 'cleaning' : 'docked' };
-  if (device.kind === 'microwave' && next.on && Number(readDeviceSetting(device, current, 'timeRemainingSec')) === 0) next.settings = { ...current.settings, timeRemainingSec: 60 };
-  return next;
-}
-
 export const useHomeStore = create<HomeStore>((set) => ({
   ...readInitialState(), persistenceError: false,
   /** Navigate to a room and select its first controllable object when present. */
@@ -270,10 +228,8 @@ export const useHomeStore = create<HomeStore>((set) => ({
   } : {}),
   /** Preserve existing percentage-based animation inputs and cover behavior. */
   setDeviceLevel: (id, level) => set((state) => {
-    const device = getDevice(id); if (!device) return {};
-    const current = state.deviceStates[id];
-    const next = isPositionDevice(device) ? { ...current, ...createPositionState(level) } : { ...current, level: clampLevel(level) };
-    if (device.kind === 'ac' && next.settings?.tempC !== undefined) next.settings = { ...next.settings, tempC: 26 - Math.round(next.level * 0.08) };
+    if (!getDevice(id)) return {};
+    const next = setDeviceLevelState(id, state.deviceStates[id], level);
     return { deviceStates: { ...state.deviceStates, [id]: next }, activePreset: null };
   }),
   /** Validate schema-backed controls before applying them to the simulation. */
@@ -284,14 +240,10 @@ export const useHomeStore = create<HomeStore>((set) => ({
   }),
   /** Run only explicitly cataloged action patches; arbitrary input cannot add state. */
   runDeviceAction: (id, actionId) => set((state) => {
-    const device = getDevice(id); if (!device) return {};
-    const action = getCapabilities(device.kind).find((item) => item.id === actionId);
-    if (action?.type !== 'action') return {};
-    const next = { ...state.deviceStates[id], settings: { ...state.deviceStates[id].settings } };
-    for (const [field, value] of Object.entries(action.patch)) {
-      if (field === 'isOn') next.on = Boolean(value); else next.settings[field] = value;
-    }
-    return { deviceStates: { ...state.deviceStates, [id]: next }, activePreset: null };
+    if (!getDevice(id)) return {};
+    const current = state.deviceStates[id];
+    const next = runDeviceActionState(id, current, actionId);
+    return next === current ? {} : { deviceStates: { ...state.deviceStates, [id]: next }, activePreset: null };
   }),
   /** A manual preview also synchronizes the simulated dusk-to-dawn solar poles. */
   setNight: (night) => set((state) => ({ night, lightingMode: night ? 'night' : 'day', deviceStates: synchronizeSolarLights(state.deviceStates, night), activePreset: null })),

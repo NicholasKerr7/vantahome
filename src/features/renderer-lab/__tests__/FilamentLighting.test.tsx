@@ -3,7 +3,7 @@ import { render } from '@testing-library/react-native';
 import { FilamentLighting } from '../FilamentLighting';
 import { INITIAL_LAB_SETTINGS } from '../protocol';
 import { BEDROOM_LIGHT_RIG, BEDROOM_LIGHT_LINEAR_COLOR, BEDROOM_LIGHT_RADIUS } from '../../../../packages/home-scene/src/renderer-lab/bedroomLighting';
-import { filamentEnvironment, filamentLightGain } from '../nativeLightingConfig';
+import { BEDROOM_LIGHTS, filamentEnvironment, filamentLightGain } from '../nativeLightingConfig';
 
 const mockLight = jest.fn((_props: unknown) => null);
 jest.mock('../FilamentLight', () => ({ FilamentLight: (props: unknown) => mockLight(props) }));
@@ -80,4 +80,15 @@ test('a thunderstorm shares the one directional light supported by Filament', ()
     .filter(({ type }) => type === 'directional');
   expect(directional).toHaveLength(1);
   expect(directional[0].flash).toEqual({ weather: 'storm', motion: true, peakIntensity: 16000 });
+});
+
+test('advanced controls independently color and dim each practical without changing calibrated output', () => {
+  render(<FilamentLighting settings={{ ...INITIAL_LAB_SETTINGS, lights: false, lightStates: {
+    ceiling: { on: true, brightness: 25, colorTemperature: 3200, colorHex: '#FF0000' },
+    left: { on: true, brightness: 50, colorTemperature: 3200, colorHex: '#0000FF' },
+    right: { on: false, brightness: 100, colorTemperature: 3200, colorHex: '#00FF00' },
+  } }} onError={jest.fn()} />);
+  const lights = practicalLights();
+  expect(lights.map(({ intensity }) => intensity)).toEqual([BEDROOM_LIGHTS[0].intensity * 0.25, BEDROOM_LIGHTS[1].intensity * 0.5, 0]);
+  expect(lights.map(({ color }) => color)).toEqual([[1, 0, 0], [0, 0, 1], [0, 1, 0]]);
 });

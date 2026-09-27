@@ -1,3 +1,5 @@
+import { linearLightColor, type LabLightSlot, type LabLightStates } from './lightStates';
+
 type VectorTuple = [number, number, number];
 
 /** Simulation fixtures shared by both renderers, in the upper-floor GLB's local coordinates. */
@@ -22,3 +24,18 @@ export const BEDROOM_LIGHT_RIG: BedroomLightRig[] = [
   { id: 'master-bedside-left', position: [8.655, 0.716, -15.9] },
   { id: 'master-bedside-right', position: [11.345, 0.716, -15.9] },
 ];
+
+const BEDROOM_LIGHT_SLOTS: Record<BedroomLightRig['id'], LabLightSlot> = {
+  'master-light': 'ceiling', 'master-bedside-left': 'left', 'master-bedside-right': 'right',
+};
+
+/** Resolve a single fixture while preserving the original grouped switch as a legacy fallback. */
+export function bedroomLightAppearance(id: BedroomLightRig['id'], lights: boolean, states?: LabLightStates) {
+  const state = states?.[BEDROOM_LIGHT_SLOTS[id]];
+  return {
+    gain: state ? (state.on ? state.brightness / 100 : 0) : lights ? 1 : 0,
+    color: state?.colorHex ?? BEDROOM_LIGHT_COLOR,
+    linearColor: state ? linearLightColor(state.colorHex) : BEDROOM_LIGHT_LINEAR_COLOR,
+    customized: state !== undefined,
+  };
+}

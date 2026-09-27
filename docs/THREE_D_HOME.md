@@ -6,6 +6,14 @@ runtime mode policy, and device command services remain in place. Its 90 scene
 devices are simulated; toggles, presets, the gate, irrigation, and automatic
 exterior lighting do not control physical equipment.
 
+Full device inspectors share a typed capability catalog with the native renderer
+preview. Quick actions stay compact; Controls, Modes, Schedule, and Status expose
+the advanced settings on fixed-height pages. Portrait uses a sheet and tablet
+landscape uses a right drawer, with no vertical scrolling. Schedules and timers
+are local preferences only. Media, remote, and camera buttons produce labeled
+simulation outcomes. Independent light brightness, color, white temperature, and
+steady effect previews update the corresponding fixture in the model.
+
 ## Build and run
 
 Run these commands from the repository root:

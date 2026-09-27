@@ -1,5 +1,5 @@
 import { DEVICES, getDevice, isPositionDevice } from './data';
-import { getCapabilities, isMonitor, validateSetting } from './deviceCapabilities';
+import { validateStoredSetting } from './deviceCapabilities';
 import type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
 
 export type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
@@ -59,14 +59,10 @@ function readDeviceState(id: string, value: unknown): DeviceState | null {
   const state: DeviceState = { on: value.on, level: value.level };
   if (Object.hasOwn(value, 'settings')) {
     if (!isRecord(value.settings)) return null;
-    const capabilities = getCapabilities(device.kind);
     const settings: Record<string, SettingValue> = {};
     for (const [field, candidate] of Object.entries(value.settings)) {
-      const capability = capabilities.find((item) => 'field' in item && item.field === field);
-      const acceptedSetting = capability && validateSetting(capability, candidate);
-      const acceptedAction = field !== 'isOn' && capabilities.some((item) => item.type === 'action' && Object.hasOwn(item.patch, field) && item.patch[field] === candidate);
-      const acceptedSample = field === 'sampleChecked' && candidate === true && isMonitor(device.kind);
-      if ((acceptedSetting === undefined || acceptedSetting !== candidate) && !acceptedAction && !acceptedSample) return null;
+      const accepted = validateStoredSetting(device.kind, field, candidate);
+      if (accepted === undefined || accepted !== candidate) return null;
       settings[field] = candidate as SettingValue;
     }
     state.settings = settings;

@@ -1,4 +1,6 @@
 import type { WeatherSettings } from '../../../packages/home-scene/src/renderer-lab/weather';
+import type { LabLightStates } from '../../../packages/home-scene/src/renderer-lab/lightStates';
+export type { LabLightState, LabLightStates } from '../../../packages/home-scene/src/renderer-lab/lightStates';
 
 export type { WeatherKind, WeatherChoice, WeatherSettings } from '../../../packages/home-scene/src/renderer-lab/weather';
 
@@ -10,6 +12,7 @@ export interface LabSettings extends WeatherSettings {
   view: LabView;
   night: boolean;
   lights: boolean;
+  lightStates?: LabLightStates;
   blinds: number;
   gate: number;
   motion: boolean;

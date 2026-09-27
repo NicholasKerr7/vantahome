@@ -32,9 +32,9 @@ export function filamentLightGain(night: boolean): number {
 }
 
 /** Supply shader-compatible linear emissive radiance, including a true off state. */
-export function filamentEmission(on: boolean, night: boolean): Float3 {
-  const strength = on ? 80 * filamentLightGain(night) : 0;
-  return WARM_EMISSION.map((channel) => channel * strength) as Float3;
+export function filamentEmission(on: boolean, night: boolean, color: Float3 = WARM_EMISSION, gain = 1): Float3 {
+  const strength = on ? 80 * filamentLightGain(night) * gain : 0;
+  return color.map((channel) => channel * strength) as Float3;
 }
 
 /** Calibrate the fixed native exposure against the shared scene's day/night reference. */

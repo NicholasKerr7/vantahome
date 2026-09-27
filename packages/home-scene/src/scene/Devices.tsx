@@ -22,6 +22,8 @@ import { UPPER_ELEVATION, readDevice, type HouseSceneProps } from './types';
 import { usePageMotion } from './usePageMotion';
 import { openingFraction, shutterPose } from './deviceMotion';
 import { BLINDS_GEOMETRY, getBlindsPose } from '../blinds';
+import { readLabLightState } from '../lightAppearance';
+import type { LabLightState } from '../renderer-lab/lightStates';
 
 type DeviceProps = Pick<
   HouseSceneProps,
@@ -70,10 +72,12 @@ const SYMBOLS: Record<string, string> = {
 function FixturePartMesh({
   part,
   state,
+  light,
   offset = [0, 0, 0],
 }: {
   part: FixturePart;
   state: DeviceState;
+  light?: LabLightState;
   offset?: VectorTuple;
 }) {
   const surface = FIXTURE_LIBRARY.materials[part.material];
@@ -82,7 +86,7 @@ function FixturePartMesh({
     ? state.on
       ? part.role === 'display'
         ? '#a8d5bb'
-        : '#ffe2ad'
+        : light?.colorHex ?? '#ffe2ad'
       : '#44483f'
     : surface.color;
   const material = (
@@ -97,7 +101,7 @@ function FixturePartMesh({
         glow && state.on
           ? (part.role === 'display'
               ? Math.max(0.18, state.level / 100)
-              : state.level / 100) * 1.35
+              : (light?.brightness ?? state.level) / 100) * 1.35
           : 0
       }
       toneMapped={!glow}
@@ -188,6 +192,7 @@ function MovingAssembly({
       ),
     [parts],
   );
+  const light = device.kind === 'light' ? readLabLightState(device, state) : undefined;
   useFrame((_, delta) => {
     if (document.hidden) return;
     const dt = Math.min(delta, 0.07);
@@ -253,6 +258,7 @@ function MovingAssembly({
       key={`${part.role}:${parts.indexOf(part)}:${part.name}`}
       part={part}
       state={state}
+      light={light}
       offset={offset}
     />
   );
@@ -409,6 +415,7 @@ export function Devices({
       {practical.map((device) => {
         const room = getRoom(device.roomId);
         const y = full && room.floor === 'upper' ? UPPER_ELEVATION : 0;
+        const light = readLabLightState(device, readDevice(deviceStates, device.id));
         return (
           <pointLight
             key={device.id}
@@ -417,8 +424,8 @@ export function Devices({
               device.position[1] + y - 0.08,
               device.position[2],
             ]}
-            color="#ffd5a0"
-            intensity={deviceStates[device.id].level * 0.13}
+            color={light.colorHex}
+            intensity={light.brightness * 0.13}
             distance={device.model === 'table-lamp' ? 2.5 : 6}
             decay={2}
           />
