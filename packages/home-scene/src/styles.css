@@ -27,6 +27,8 @@ a { color: inherit; text-decoration: none; }
 button:disabled { cursor: default; }
 button, a, input, summary { outline-offset: 5px; }
 :focus-visible { outline: 2px solid var(--accent); }
+/* Static headings receive focus for screen-reader announcements, not interaction. */
+:is(h1, h2, h3, h4, h5, h6)[tabindex='-1']:focus { outline: none; }
 button { transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 button svg, a svg { flex-shrink: 0; }
 button:disabled { opacity: .75; }
