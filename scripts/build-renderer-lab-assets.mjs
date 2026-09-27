@@ -1,0 +1,200 @@
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  BoxGeometry,
+  CylinderGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Scene,
+  SphereGeometry,
+} from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const outputDirectory = path.join(repository, 'assets/renderer-lab');
+const sceneDirectory = path.join(repository, 'packages/home-scene/src');
+const library = JSON.parse(await readFile(path.join(sceneDirectory, 'device-geometry.json'), 'utf8'));
+const manifest = JSON.parse(await readFile(path.join(sceneDirectory, 'house-manifest.json'), 'utf8'));
+const layout = JSON.parse(await readFile(path.join(sceneDirectory, 'site-layout.json'), 'utf8'));
+
+/** Supply the browser FileReader methods used by Three's binary-only exporter. */
+class ExportFileReader {
+  result = null;
+  onloadend = null;
+  onerror = null;
+
+  /** Resolve a binary GLB buffer without requiring a browser or network access. */
+  readAsArrayBuffer(blob) {
+    blob.arrayBuffer().then(
+      (result) => {
+        this.result = result;
+        this.onloadend?.({ target: this });
+      },
+      (error) => this.onerror?.(error),
+    );
+  }
+}
+
+globalThis.FileReader ??= ExportFileReader;
+
+/** Reproduce a catalog primitive in the same metre-based, Y-up coordinate system. */
+function createPartGeometry(part) {
+  if (part.shape === 'box') return new BoxGeometry(...part.size);
+  if (part.shape === 'cylinder') {
+    return new CylinderGeometry(0.5, 0.5, 1, 20).scale(...part.size);
+  }
+  if (part.shape === 'sphere') {
+    return new SphereGeometry(0.5, 16, 10).scale(...part.size);
+  }
+  throw new Error(`Unsupported fixture primitive: ${part.shape}`);
+}
+
+/** Preserve the shared catalog's physically based surface settings. */
+function createPartMaterial(part, name) {
+  const surface = library.materials[part.material];
+  if (!surface) throw new Error(`Missing fixture material: ${part.material}`);
+  const luminous = part.role === 'glow';
+  return new MeshStandardMaterial({
+    name,
+    color: luminous ? '#ffe2ad' : surface.color,
+    roughness: surface.roughness,
+    metalness: surface.metalness,
+    transparent: (surface.opacity ?? 1) < 1,
+    opacity: surface.opacity ?? 1,
+    emissive: luminous ? '#ffe2ad' : '#000000',
+    emissiveIntensity: luminous ? 1 : 0,
+  });
+}
+
+/** Export only live fixture parts: the room GLB already contains the static shells. */
+function createFixtures() {
+  const scene = new Scene();
+  scene.name = 'VantaHome renderer comparison fixtures';
+  const deviceIds = ['master-light', 'master-bedside-left', 'master-bedside-right'];
+  for (const deviceId of deviceIds) {
+    const device = manifest.devices.find(({ id }) => id === deviceId);
+    const geometry = library.devices[deviceId];
+    if (!device || !geometry) throw new Error(`Missing fixture: ${deviceId}`);
+    const parts = geometry.parts.filter(({ role }) => role === 'glow');
+    if (parts.length !== 1) throw new Error(`Expected one light diffuser: ${deviceId}`);
+    const [part] = parts;
+    const name = `lab-light-${deviceId}`;
+    const mesh = new Mesh(createPartGeometry(part), createPartMaterial(part, name));
+    mesh.name = name;
+    mesh.position.set(...device.position).add({ x: part.position[0], y: part.position[1], z: part.position[2] });
+    mesh.rotation.set(...part.rotation);
+    scene.add(mesh);
+  }
+
+  const blind = manifest.devices.find(({ id }) => id === 'master-blinds');
+  if (!blind) throw new Error('Missing primary suite blinds');
+  const fabric = new Group();
+  fabric.name = 'lab-blind-fabric';
+  fabric.position.set(blind.position[0], 2.1, blind.position[2]);
+  const movingParts = library.devices[blind.id].parts.filter(({ role }) => role !== 'static');
+  const blindMaterials = new Map();
+  let slatGeometry;
+  for (const part of movingParts) {
+    const name = part.role === 'slat'
+      ? `lab-blind-slat-${String(part.index).padStart(2, '0')}`
+      : 'lab-blind-bottom';
+    if (!blindMaterials.has(part.material)) {
+      blindMaterials.set(part.material, createPartMaterial(part, `lab-${part.material}`));
+    }
+    if (part.role === 'slat') slatGeometry ??= createPartGeometry(part);
+    const mesh = new Mesh(
+      part.role === 'slat' ? slatGeometry : createPartGeometry(part),
+      blindMaterials.get(part.material),
+    );
+    mesh.name = name;
+    mesh.position.set(part.position[0], blind.position[1] + part.position[1] - 2.1, part.position[2]);
+    mesh.rotation.set(...part.rotation);
+    fabric.add(mesh);
+  }
+  scene.add(fabric);
+  return scene;
+}
+
+/** Generate stable pseudo-random values so both renderers receive identical rain. */
+function seed(index) {
+  const value = Math.sin(index * 127.1 + 311.7) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+/** Test the traced irregular parcel, retaining the southwest diagonal boundary. */
+function isInsideParcel(x, z, polygon) {
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const [ax, az] = polygon[index];
+    const [bx, bz] = polygon[previous];
+    if ((az > z) !== (bz > z) && x < ((bx - ax) * (z - az)) / (bz - az) + ax) inside = !inside;
+  }
+  return inside;
+}
+
+/** Keep this simple shared particle column clear of the house and service shed. */
+function isOpenYard(x, z) {
+  if (x >= -1.4 && x <= 18 && z >= -17.6 && z <= 1.4) return false;
+  const shed = manifest.rooms.find(({ id }) => id === 'utility')?.bounds;
+  return !shed || x < shed[0] - 0.7 || x > shed[1] + 0.7 || z < shed[2] - 0.7 || z > shed[3] + 0.7;
+}
+
+/** Merge 180 drops into one draw primitive, repeating two twelve-metre cells. */
+function createRain() {
+  const polygon = layout.parcel.vertices.map(([x, y]) => [x, -y]);
+  const xs = polygon.map(([x]) => x);
+  const zs = polygon.map(([, z]) => z);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minZ = Math.min(...zs), maxZ = Math.max(...zs);
+  const geometries = [];
+  for (let attempt = 0; geometries.length < 180 && attempt < 10000; attempt++) {
+    const x = minX + seed(attempt * 3 + 1) * (maxX - minX);
+    const z = minZ + seed(attempt * 3 + 2) * (maxZ - minZ);
+    if (!isInsideParcel(x, z, polygon) || !isOpenYard(x, z)) continue;
+    const y = 0.1 + seed(attempt * 3 + 3) * 12;
+    for (let cell = 0; cell < 2; cell++) {
+      geometries.push(new BoxGeometry(0.014, 0.28, 0.014).translate(x, y + cell * 12, z));
+    }
+  }
+  if (geometries.length !== 180) throw new Error('Could not fit rain into the property');
+  const merged = mergeGeometries(geometries, false);
+  geometries.forEach((geometry) => geometry.dispose());
+  if (!merged) throw new Error('Rain geometry could not be merged');
+  const material = new MeshStandardMaterial({
+    name: 'lab-rain',
+    color: '#bfd8e3',
+    roughness: 0.53,
+    metalness: 0,
+    transparent: true,
+    opacity: 0.32,
+    depthWrite: false,
+  });
+  const mesh = new Mesh(merged, material);
+  mesh.name = 'lab-rain';
+  const scene = new Scene();
+  scene.name = 'VantaHome renderer comparison rain';
+  scene.add(mesh);
+  return scene;
+}
+
+/** Write a self-contained GLB without changing the existing scene asset inventory. */
+async function exportBinary(name, scene) {
+  const exporter = new GLTFExporter();
+  const binary = await exporter.parseAsync(scene, { binary: true, trs: true });
+  if (!(binary instanceof ArrayBuffer)) throw new Error(`Expected binary GLB for ${name}`);
+  await writeFile(path.join(outputDirectory, name), new Uint8Array(binary));
+  scene.traverse((object) => {
+    if (object instanceof Mesh) {
+      object.geometry.dispose();
+      object.material.dispose();
+    }
+  });
+  process.stdout.write(`${name}: ${binary.byteLength} bytes\n`);
+}
+
+await mkdir(outputDirectory, { recursive: true });
+await exportBinary('fixtures.glb', createFixtures());
+await exportBinary('rain.glb', createRain());

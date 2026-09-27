@@ -246,3 +246,8 @@ closed.
 Live hardware readiness and the private pilot remain governed separately by
 [HOME_PILOT.md](HOME_PILOT.md). This integration does not change that readiness
 status or connect any of the 90 simulated devices to hardware.
+
+## Renderer comparison preview
+
+The optional Filament comparison is documented in [RENDERER_COMPARISON.md](RENDERER_COMPARISON.md).
+It uses separate temporary simulation controls and does not replace this scene.

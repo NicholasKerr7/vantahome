@@ -48,3 +48,7 @@ src/features/three-d-home/generated/
 packages/home-scene/dist/
 packages/home-scene/dist-native/
 packages/home-scene/*.tsbuildinfo
+
+# Reproducible, offline renderer comparison document.
+assets/renderer-lab/comparison*.vhscene
+public/renderer-lab/
