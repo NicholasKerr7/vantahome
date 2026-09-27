@@ -9,6 +9,7 @@ import { FrameMetrics } from './frameMetrics';
 import { disposeModels, loadEmbeddedModel, modelsForView } from './models';
 import { createSolarLights, setSolarNight, type SolarLamp } from './solarLights';
 import { createStormEffects, type StormEffects } from './stormEffects';
+import { BEDROOM_LIGHT_COLOR, BEDROOM_LIGHT_INTENSITY, BEDROOM_LIGHT_RADIUS, BEDROOM_LIGHT_RIG } from './bedroomLighting';
 import presets from './presets.json';
 import './renderer-lab.css';
 
@@ -112,7 +113,7 @@ async function startLab(): Promise<void> {
     sun.intensity = state.night ? 0.32 : 3.1;
     sun.color.set(state.night ? '#a5bdff' : '#fff2d9');
     controls.enableDamping = state.motion;
-    for (const light of pointLights) light.intensity = bedroom && state.lights ? 18 : 0;
+    for (const light of pointLights) light.intensity = bedroom && state.lights ? BEDROOM_LIGHT_INTENSITY : 0;
     setSolarNight(solarLamps, !bedroom && state.night);
     for (const [material, original] of emissiveMaterials) {
       material.emissive.copy(original);
@@ -294,8 +295,8 @@ async function startLab(): Promise<void> {
     }
     const blind = models.fixtures?.getObjectByName('lab-blind-fabric');
     if (blind) blind.userData.labDevice = 'blinds';
-    for (const name of ['master-light', 'master-bedside-left', 'master-bedside-right']) {
-      const fixture = models.fixtures?.getObjectByName(`lab-light-${name}`);
+    for (const rig of BEDROOM_LIGHT_RIG) {
+      const fixture = models.fixtures?.getObjectByName(`lab-light-${rig.id}`);
       if (!fixture) continue;
       fixture.userData.labDevice = 'lights';
       fixture.traverse((node) => {
@@ -304,10 +305,8 @@ async function startLab(): Promise<void> {
           if (material instanceof MeshStandardMaterial) emissiveMaterials.set(material, material.emissive.clone());
         }
       });
-      fixture.updateWorldMatrix(true, false);
-      const lamp = new PointLight('#ffe2b8', 18, 7, 2);
-      lamp.position.copy(fixture.getWorldPosition(new Vector3()));
-      lamp.position.y -= 0.12;
+      const lamp = new PointLight(BEDROOM_LIGHT_COLOR, BEDROOM_LIGHT_INTENSITY, BEDROOM_LIGHT_RADIUS, 2);
+      lamp.position.fromArray(rig.position);
       scene.add(lamp);
       pointLights.push(lamp);
     }

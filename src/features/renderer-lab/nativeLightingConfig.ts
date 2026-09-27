@@ -1,24 +1,34 @@
 import { SOLAR_LIGHT_RIG } from '../../../packages/home-scene/src/renderer-lab/solarLighting';
+import { BEDROOM_LIGHT_RIG } from '../../../packages/home-scene/src/renderer-lab/bedroomLighting';
 import type { Float3 } from 'react-native-filament';
 import type { WeatherKind } from '../../../packages/home-scene/src/renderer-lab/weather';
 
-// SDK 1.11 fixes its camera at f/16, 1/125 s, ISO 100 and exposes no exposure
-// setter. Scale night radiance by nine stops, equivalent to an indoor/night exposure,
-// while retaining a dim sky and readable pools from the actual luminaires.
-const NIGHT_EXPOSURE_GAIN = 512;
+// SDK 1.11 fixes its camera at f/16, 1/125 s, ISO 100 with no exposure setter.
+// Compensate practical radiance for this daylight exposure. Diffusers and water
+// retain their existing separate day/night emission response.
+const FIXED_EXPOSURE_GAIN = 512;
 const WARM_EMISSION: Float3 = [1, 0.76, 0.42];
 
-export const BEDROOM_LIGHTS = [
-  { id: 'master-light', position: [9.9665, 2.4232, -14.145] as Float3, lumens: 2200, kelvin: 2800, radius: 6 },
-  { id: 'master-bedside-left', position: [8.655, 0.91, -15.9] as Float3, lumens: 500, kelvin: 2700, radius: 3.5 },
-  { id: 'master-bedside-right', position: [11.345, 0.91, -15.9] as Float3, lumens: 500, kelvin: 2700, radius: 3.5 },
-];
+// These are renderer calibration values, not wattage or measured device output.
+// The fixed native camera needs bright practicals even during the day. Keeping
+// them independent of weather/exposure also prevents a lamp changing on a mode switch.
+export const BEDROOM_LIGHTS = BEDROOM_LIGHT_RIG.map((light) => ({
+  ...light, intensity: (light.id === 'master-light' ? 8800 : 3000) * FIXED_EXPOSURE_GAIN,
+}));
+export const SOLAR_LIGHT_INTENSITY = 9600 * FIXED_EXPOSURE_GAIN;
+// Linear sRGB forms of the reference's #ffdda7 solar, #fff2d9 sun,
+// #a5bdff moon, and #ccdeea overcast palette; no Three.js import in native.
+export const SOLAR_LIGHT_COLOR: Float3 = [1, 0.7230551289219693, 0.386429433787049];
+
+const SUN_COLOR: Float3 = [1, 0.8879231178819663, 0.6938717612919899];
+const MOON_COLOR: Float3 = [0.3762621229909065, 0.5088813208549338, 1];
+const OVERCAST_COLOR: Float3 = [0.6038273388553378, 0.7304607400903537, 0.8227857543962835];
 
 export const SOLAR_LIGHTS = SOLAR_LIGHT_RIG;
 
-/** Keep fixture exposure independent of the moonlight/ambient fill. */
+/** Preserve diffuser/water emission independently of practical and ambient lighting. */
 export function filamentLightGain(night: boolean): number {
-  return night ? NIGHT_EXPOSURE_GAIN : 1;
+  return night ? FIXED_EXPOSURE_GAIN : 1;
 }
 
 /** Supply shader-compatible linear emissive radiance, including a true off state. */
@@ -27,19 +37,20 @@ export function filamentEmission(on: boolean, night: boolean): Float3 {
   return WARM_EMISSION.map((channel) => channel * strength) as Float3;
 }
 
-/** Balance a readable blue night fill against warm lights instead of brightening the sky. */
+/** Calibrate the fixed native exposure against the shared scene's day/night reference. */
 export function filamentEnvironment(night: boolean, weather: WeatherKind = 'clear') {
-  // The SDK's hex converter omits sRGB decoding. Prelinearize the midnight color
-  // so the background stays dark instead of becoming a bright blue backdrop.
+  // Skybox hex bytes are treated as linear by SDK 1.11. These display-calibrated
+  // values keep the sky distinct from scene illumination; raising the fill must
+  // not turn a night backdrop into daylight.
   const dry = night
-    ? { ambient: 3200, directional: 640, kelvin: 9000, sky: '#010304' }
-    : { ambient: 25000, directional: 18000, kelvin: 6000, sky: '#dce4df' };
+    ? { ambient: 9000, directional: 2200, color: MOON_COLOR, sky: '#03070e' }
+    : { ambient: 32000, directional: 45000, color: SUN_COLOR, sky: '#b1caca' };
   if (weather === 'clear') return dry;
   const cloud = weather === 'light' ? 0.35 : weather === 'heavy' ? 0.72 : 1;
   return {
     ambient: dry.ambient * (1 - cloud * (night ? 0.18 : 0.36)),
     directional: dry.directional * (1 - cloud * 0.88),
-    kelvin: night ? 9000 : 7500,
+    color: night ? MOON_COLOR : OVERCAST_COLOR,
     sky: night ? dry.sky : weather === 'light' ? '#73878b' : weather === 'heavy' ? '#28343c' : '#131e29',
   };
 }

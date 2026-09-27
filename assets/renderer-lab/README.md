@@ -12,6 +12,15 @@ Add 2.9464 m to the fixtures only when using the complete exterior model.
   `lab-light-master-bedside-right` are meshes with same-named emissive materials.
   Only their diffusers are exported; their static fixture shells are already in
   the existing upper-floor model. Turn emission off to indicate an inactive light.
+  `packages/home-scene/src/renderer-lab/bedroomLighting.ts` shares their point-light
+  positions, seven-metre falloff radius, and warm sRGB/linear RGB color between
+  renderers. Emitters sit 0.12 m below the GLB diffuser centers: ceiling
+  `[9.9665, 2.3922, -14.145]`, left bedside `[8.655, 0.716, -15.9]`, and right
+  bedside `[11.345, 0.716, -15.9]`. The bedside emitters remain below the opaque
+  shades. The shared contract test checks these positions against `fixtures.glb`.
+  Three.js retains its 18-candela light intensity; native Filament calibrates its
+  lumen values separately for the fixed native camera exposure. Bedroom practical
+  output stays constant across day/night while environmental illumination changes.
 - `lab-blind-fabric` is a group whose closed transform is translation
   `[8.139, 2.1, -16.49]` and unit scale. Its children are twenty closed venetian
   slats named `lab-blind-slat-00` through `lab-blind-slat-19` and

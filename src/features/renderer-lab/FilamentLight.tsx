@@ -9,7 +9,10 @@ import type { WeatherKind } from '../../../packages/home-scene/src/renderer-lab/
 interface Props {
   type: 'directional' | 'point' | 'spot';
   intensity: number;
-  colorKelvin: number;
+  /** Temperature fallback when no linear RGB color is supplied. Defaults to neutral daylight. */
+  colorKelvin?: number;
+  /** Explicit linear sRGB overrides temperature, matching the shared Three.js palette. */
+  color?: Float3;
   direction?: Float3;
   position?: Float3;
   castShadows?: boolean;
@@ -41,18 +44,20 @@ function temperatureColor(kelvin: number): Float3 {
  * constructing listener worklets from inside another worklet.
  */
 export function FilamentLight({
-  type, intensity, colorKelvin, direction, position, castShadows, falloffRadius, spotLightCone, flash, onError,
+  type, intensity, colorKelvin = 6500, color, direction, position, castShadows, falloffRadius, spotLightCone, flash, onError,
 }: Props) {
   const { lightManager, scene, workletContext } = useFilamentContext();
   const entity = useSharedValue<Entity | undefined>(undefined);
   const active = useSharedValue(false);
   const lastIntensity = useSharedValue(Number.NaN);
-  const lastTemperature = useSharedValue(Number.NaN);
+  const lastRed = useSharedValue(Number.NaN);
+  const lastGreen = useSharedValue(Number.NaN);
+  const lastBlue = useSharedValue(Number.NaN);
   const elapsed = useSharedValue(0);
   const flashWeather = flash?.weather;
   const flashMotion = flash?.motion ?? false;
   const flashPeak = flash?.peakIntensity ?? 0;
-  const [red, green, blue] = temperatureColor(colorKelvin);
+  const [red, green, blue] = color ?? temperatureColor(colorKelvin);
 
   useEffect(() => {
     active.value = true;
@@ -85,22 +90,29 @@ export function FilamentLight({
       const created = lightManager.createLightEntity(
         type, colorKelvin, currentIntensity, direction, position, castShadows, falloffRadius, spotLightCone,
       );
+      // Use one linear-color conversion path on first render and subsequent updates.
+      // Otherwise returning to a previous temperature would differ from its initial native CCT color.
+      lightManager.setColor(created, [red, green, blue]);
       entity.value = created;
       scene.addEntity(created);
       lastIntensity.value = currentIntensity;
-      lastTemperature.value = colorKelvin;
+      lastRed.value = red;
+      lastGreen.value = green;
+      lastBlue.value = blue;
       return;
     }
     if (lastIntensity.value !== currentIntensity) {
       lightManager.setIntensity(entity.value, currentIntensity);
       lastIntensity.value = currentIntensity;
     }
-    if (lastTemperature.value !== colorKelvin) {
+    if (lastRed.value !== red || lastGreen.value !== green || lastBlue.value !== blue) {
       lightManager.setColor(entity.value, [red, green, blue]);
-      lastTemperature.value = colorKelvin;
+      lastRed.value = red;
+      lastGreen.value = green;
+      lastBlue.value = blue;
     }
   }, [active, entity, type, intensity, colorKelvin, direction, position, castShadows,
-    falloffRadius, spotLightCone, lightManager, scene, lastIntensity, lastTemperature, elapsed,
+    falloffRadius, spotLightCone, lightManager, scene, lastIntensity, lastRed, lastGreen, lastBlue, elapsed,
     flashWeather, flashMotion, flashPeak, red, green, blue]);
 
   return null;

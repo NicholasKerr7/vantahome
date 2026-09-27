@@ -75,6 +75,7 @@ test('creates one light on the render thread and updates it without nested workl
   frame();
   expect(mockCreate).toHaveBeenCalledWith('point', 2700, 500, undefined, [1, 2, 3], undefined, 2.5, undefined);
   expect(mockAdd).toHaveBeenCalledWith(mockEntity);
+  expect(mockColor).toHaveBeenCalledTimes(1);
   frame();
   expect(mockCreate).toHaveBeenCalledTimes(1);
   rerender(<FilamentLight type="point" intensity={0} colorKelvin={9000}
@@ -83,14 +84,60 @@ test('creates one light on the render thread and updates it without nested workl
   expect(mockCreate).toHaveBeenCalledTimes(1);
   expect(mockIntensity).toHaveBeenCalledWith(mockEntity, 0);
   expect(mockColor).toHaveBeenCalledWith(mockEntity, expect.arrayContaining([expect.any(Number)]));
-  const color = mockColor.mock.calls[0][1] as number[];
+  const color = mockColor.mock.calls.at(-1)![1] as number[];
   expect(color).toHaveLength(3);
   expect(color.every((channel) => Number.isFinite(channel) && channel >= 0 && channel <= 1)).toBe(true);
   frame();
   expect(mockIntensity).toHaveBeenCalledTimes(1);
-  expect(mockColor).toHaveBeenCalledTimes(1);
+  expect(mockColor).toHaveBeenCalledTimes(2);
   expect(mockRunAsync).not.toHaveBeenCalled();
   unmount();
+});
+
+test('applies exact linear RGB before scene insertion and preserves it through day/night round trips', () => {
+  const onError = jest.fn();
+  const day: [number, number, number] = [1, 0.887923, 0.693872];
+  const night: [number, number, number] = [0.376262, 0.508881, 1];
+  const { rerender } = render(<FilamentLight type="directional" intensity={45000}
+    color={day} onError={onError} />);
+  frame();
+  expect(mockCreate).toHaveBeenCalledWith('directional', 6500, 45000,
+    undefined, undefined, undefined, undefined, undefined);
+  expect(mockColor).toHaveBeenLastCalledWith(mockEntity, day);
+  expect(mockCreate.mock.invocationCallOrder[0]).toBeLessThan(mockColor.mock.invocationCallOrder[0]);
+  expect(mockColor.mock.invocationCallOrder[0]).toBeLessThan(mockAdd.mock.invocationCallOrder[0]);
+  frame();
+  expect(mockColor).toHaveBeenCalledTimes(1);
+  rerender(<FilamentLight type="directional" intensity={900} colorKelvin={9000}
+    color={night} onError={onError} />);
+  frame();
+  expect(mockColor).toHaveBeenLastCalledWith(mockEntity, night);
+  rerender(<FilamentLight type="directional" intensity={45000} colorKelvin={5500}
+    color={day} onError={onError} />);
+  frame();
+  expect(mockColor).toHaveBeenLastCalledWith(mockEntity, day);
+  // Identical channels in a fresh array, or a changed ignored temperature, need no native color write.
+  rerender(<FilamentLight type="directional" intensity={45000} colorKelvin={6000}
+    color={[...day]} onError={onError} />);
+  frame();
+  expect(mockColor).toHaveBeenCalledTimes(3);
+  expect(mockCreate).toHaveBeenCalledTimes(1);
+});
+
+test('temperature fallback uses the same linear color on creation, updates, and restoration', () => {
+  const onError = jest.fn();
+  const { rerender } = render(<FilamentLight type="point" intensity={500} colorKelvin={2700} onError={onError} />);
+  frame();
+  const original = mockColor.mock.calls[0][1] as number[];
+  rerender(<FilamentLight type="point" intensity={500} colorKelvin={9000} onError={onError} />);
+  frame();
+  expect(mockColor.mock.calls[1][1]).not.toEqual(original);
+  rerender(<FilamentLight type="point" intensity={500} colorKelvin={2700} onError={onError} />);
+  frame();
+  expect(mockColor).toHaveBeenLastCalledWith(mockEntity, original);
+  frame();
+  expect(mockColor).toHaveBeenCalledTimes(3);
+  expect(mockCreate).toHaveBeenCalledTimes(1);
 });
 
 test('stops queued frames before removing and destroying the owned native light', () => {

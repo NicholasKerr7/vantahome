@@ -260,3 +260,53 @@ and launched on the physical iPhone. Its packaged weather asset matches the fina
 verified source. Physical interaction/performance confirmation remains pending;
 Android hardware and sustained thermal/energy profiling were not performed.
 Physical iPad testing remains deferred.
+
+### Native lighting calibration
+
+The bedroom now shares its emitter positions, seven-metre falloff radius, and
+warm light color through `bedroomLighting.ts`. Each emitter sits exactly 0.12 m
+below its committed GLB diffuser: the ceiling light is at Y 2.3922 m, and both
+bedside lights are at Y 0.716 m. This moves the native bedside emitters below the
+opaque shades instead of leaving them inside the shade geometry. A contract test
+checks all three positions against the exported fixture nodes. Three.js retains
+its existing 18-candela lights and appearance; native lumen values remain a
+separate calibration for the SDK's fixed camera exposure.
+
+Native lights now use explicit linear RGB colors on both creation and updates.
+This avoids the previous difference between the SDK's initial Kelvin conversion
+and the application's later temperature conversion. Ambient fill, directional
+light, and practical output have been raised for the visual comparison. Bedroom
+practical output stays constant through day/night changes while the surrounding
+illumination changes; this supersedes the night-only practical-light gain recorded
+in the build 8 audit above. Solar lights still follow night independently of the
+bedroom power control. Diffuser emission retains its existing day/night behavior.
+
+The authored geometry, textures, normals, colors, and material roughness remain
+unchanged. Rain, impact, and runoff geometry, animation, and emission gain are
+also unchanged. This calibration changes the light rig without altering the
+weather effects or introducing broad material overrides.
+
+Ambient occlusion and bloom remain disabled. A low-cost contact-shadow trial
+introduced visible grain on wall and cabinet faces, so the final version retains
+the clean calibrated lighting without an additional GPU pass.
+
+Both TypeScript checks, 52 focused app tests, 23 shared-scene tests, and 10
+asset/packaging tests pass. The offline comparison documents rebuild successfully.
+Matching simulator captures across both engines cover bedroom day/night,
+lights on/off, and clear/storm property views. They confirm brighter ivory/sage
+finishes, a distinct lamp-off state, and clearer solar light pools. The engines
+retain differences in background color and material response; this is a visual
+calibration, not pixel-identical rendering.
+
+The native interaction test passed lamp switching, animated night storms, a gate
+drag to 64%, gate opening retained through renderer recreation/background resume,
+and real pinch gestures. An earlier harness assertion read the slider before its
+accessibility value updated; waiting for that value resolved the test failure.
+The native console contained no fatal, worklet, or graphics exception. This final
+interaction run included the subsequently rejected contact-shadow trial; the
+14 matching captures verify the final appearance with that effect disabled.
+
+Release preview build 10 compiled, passed signature verification, and was installed
+and launched on the physical iPhone. Physical interaction and sustained GPU/thermal
+profiling remain unverified; Android hardware was not tested and iPad testing is
+deferred. Callback cadence is not a measure of GPU completion or rendered FPS.
