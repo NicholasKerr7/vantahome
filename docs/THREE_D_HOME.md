@@ -34,6 +34,21 @@ EXPO_NO_DOTENV=1 EXPO_PUBLIC_VANTA_MODE=demo npm run web
 This is a local demo command, not a release configuration. The integration does
 not weaken the existing runtime or authentication policy.
 
+For a local iOS simulation, use a disposable checkout and build the `vantahome`
+scheme in Release with `EXPO_NO_DOTENV=1`, `EXPO_PUBLIC_VANTA_MODE=demo`, and
+`SENTRY_DISABLE_AUTO_UPLOAD=true`. Pass the local `DEVELOPMENT_TEAM` through
+build settings. With Xcode 27, also pass `IPHONEOS_DEPLOYMENT_TARGET=15.1` so
+dependency targets use the app's supported minimum.
+
+For Personal Team signing, use an untracked empty entitlements plist through
+`CODE_SIGN_ENTITLEMENTS` for this simulation build; retain the production
+push-notification entitlement. To preserve an installed VantaHome app, package
+the preview with bundle ID `com.anonymous.vantahome.preview`, display name
+`VantaHome Preview`, and URL schemes `vantahome-preview` and
+`com.anonymous.vantahome.preview`. Restore these local identity changes after
+packaging. Keep personal signing values and preview configuration out of the
+committed production configuration.
+
 The feature is enabled by default on this integration branch. Set
 `EXPO_PUBLIC_ENABLE_3D_HOME=false` and restart/rebuild Expo to remove both its
 dashboard entry and navigation route. This public build setting contains no
@@ -174,6 +189,17 @@ The preview was exported from commit `dbc2eb4` with explicit demo mode. This is
 a positive initial, user-reported browser check; individual test cases, device
 models, OS versions, frame rates, memory use, and sustained heat/battery results
 were not recorded. Native iOS WebView testing remains outstanding.
+
+On **2026-09-27**, Xcode 27 completed a signed Release demo build and installed
+`VantaHome Preview` alongside the existing app on an iPhone 16 Pro Max running
+iOS 26.6.2. The six packaging tests passed; the offline scene and all five model
+assets matched their manifest hashes. The built app passed strict signature
+verification and contained the JavaScript bundle and offline scene. Its local
+preview identity was restored to the original app identity in the source
+checkout after packaging; signing overrides stayed local to the build.
+The initial launch was rejected by iOS with a signing/trust
+message; developer trust on the phone remains to be confirmed. Installation
+does not establish native 3D interaction or performance results.
 
 A future real-device adapter must use authorized household/device selectors,
 explicit scene-to-device mappings, and the existing `deviceClient` command path.
