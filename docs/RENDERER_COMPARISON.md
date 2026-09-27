@@ -29,8 +29,10 @@ at a time. Backgrounding or leaving the screen releases its graphics surface.
 | Bedroom | Original furnished `upper.glb` plus exported live fixture parts | Ceiling/bedside lights, blind opening, day/night, orbit/pinch |
 | Property | Original `exterior.glb`, landscape, gate, solar diffusers, and shared weather geometry | Sliding gate, weather preview/Auto, day/night with four solar lights, orbit/pinch |
 
-Each WebView document embeds only its case's assets, matching the native inventory.
-The bedroom package is approximately 5.3 MiB and the property package 17.6 MiB.
+Each WebView document embeds the same source GLBs as its native case. Three.js
+also creates its own GPU water pools from the surveyed weather metadata, so the
+rendered particle inventory differs. The bedroom package is approximately 5.4 MiB
+and the property package 17.7 MiB.
 The packaged documents make no network requests. Manual Clear, Light rain, Heavy
 rain, and Thunderstorm modes are deterministic and work offline. Auto uses the
 host's validated Open-Meteo service for the existing Hopewell, Jamaica location;
@@ -40,9 +42,10 @@ hours. Day/night remains a separate comparison control.
 
 The house and furniture exports remain editable and unchanged. The asset exporter
 reads the existing device catalog and emits separate named blind and light parts.
-The simplified blind gather and shared weather poses match both previews; this
-is not a port of every existing device or weather effect. The detailed asset
-contract is in `assets/renderer-lab/README.md`.
+The simplified blind gather and rooted foliage poses match both previews; water
+animation now uses separate rendering paths. This is not a port of every existing
+device or weather effect. The detailed asset contract is in
+`assets/renderer-lab/README.md`.
 
 Both cases share camera presets, full device pixel density, gate travel, animation
 easing, and reduced-motion behavior. Native controls use at least 44-point targets.
@@ -52,8 +55,8 @@ uses a side panel. The screen does not introduce vertical scrolling.
 ### Surface-aware storms
 
 The shared weather asset traces the committed roof and landscape triangles.
-Storms use 360 rain streaks, 112 hard-surface impact clusters, and 56 roof-edge
-drips in fixed batches. Lighter modes activate fewer batches. Roof, driveway,
+Filament storms use 360 rain streaks, 112 hard-surface impact clusters, and 56
+roof-edge drips in fixed batches. Lighter modes activate fewer batches. Roof, driveway,
 road, paths, and service covers receive their own sampled impacts; foliage and
 indoor floors do not receive pavement splashes. Every roof-drip anchor is checked
 for clearance from adjoining roofs.
@@ -71,6 +74,30 @@ Thunderstorm codes alone enable a soft 0.85-second lightning envelope once per
 supports only one directional light. Reduce Motion or Motion off hides moving
 precipitation, disables lightning, and rests the plants while keeping wet surfaces.
 Original scene exports and the existing full 3D Home experience remain unchanged.
+
+### Three.js water rendering
+
+Three.js now renders water through three fixed GPU-instanced quad pools: 720 rain
+streaks, 336 splash arms representing the same 112 impacts, and 56 roof-edge drips.
+These pools contain 2,224 water triangles in total. They use the exact surveyed
+contact points without spatial jitter; two independently phased raindrops share
+each existing rain anchor. Particle ages advance on the GPU, with synchronized
+arms for each splash burst. Soft streak edges and a viewport-aware minimum width
+keep rain legible at property scale without adding a bloom pass.
+
+The controller hides the original 20 GLB water batches while its replacement
+pools are mounted and restores their previous visibility on disposal. It also
+borrows the existing wet-overlay geometry for a procedural ripple material.
+The authored pavement triangles clip the ripple field at driveway, road, path,
+and service-cover boundaries, preventing rings from spilling onto grass. Reduce
+Motion or Motion off hides moving water and ripple rings while retaining the
+static wet finish. Generated geometry and materials are released on disposal,
+and the original overlay material is restored.
+
+This polish is confined to Three.js. The native GLB, Filament weather effects,
+particle budgets, and emission gain remain unchanged. The shared site, fixture,
+and foliage geometry also remain unchanged. No new textures or dependencies are
+required.
 
 ## What the numbers mean
 
@@ -90,7 +117,9 @@ controller, not the full React Three Fiber application. Its hemisphere lighting,
 ACES exposure, PCF shadows and MSAA differ from Filament's image-based illumination,
 native tone mapping, shadows and FXAA. Visual calibration is required before using
 these results to claim equal-quality performance. Resolution and asset parity
-alone do not prove equal rendering work.
+alone do not prove equal rendering work. Three.js now uses 720 rain instances
+against Filament's 360, with different shaders and draw counts. Their callback
+timings are not an equal-work rain benchmark.
 
 ## Decision procedure
 
@@ -111,8 +140,8 @@ alone do not prove equal rendering work.
 Automated coverage checks preview gating, bounded messages, shared interval
 statistics, state retention when switching engines, stale callbacks, background
 unmounting, reduced motion, load timeouts and initialization-error recovery. Asset
-tests verify blind pivots, lamp locations, shared rain geometry and offline bundle
-inventory. Browser checks exercise selection, gate/blind movement, rain, and layout.
+tests verify blind pivots, lamp locations, surveyed rain anchors, fixed GPU pool
+budgets, and offline bundle inventory. Browser checks exercise selection, gate/blind movement, rain, and layout.
 
 The React error boundary covers JavaScript/import failures. A native graphics or
 asynchronous worklet failure can still terminate the process; installing and
@@ -310,3 +339,25 @@ Release preview build 10 compiled, passed signature verification, and was instal
 and launched on the physical iPhone. Physical interaction and sustained GPU/thermal
 profiling remain unverified; Android hardware was not tested and iPad testing is
 deferred. Callback cadence is not a measure of GPU completion or rendered FPS.
+
+### Three.js water polish verification
+
+Both TypeScript checks, 35 shared-scene tests, and 10 asset/packaging checks pass.
+The offline comparison documents rebuild successfully. Chrome compiled the water
+and wet-surface shaders successfully. Geometry tests cover fixed pool sizes,
+finite and deterministic seeds, unchanged surveyed anchors, coherent splash arms,
+visibility tiers, and conservative bounds; controller tests cover borrowed-resource
+restoration and generated-resource disposal.
+
+The iPhone simulator's WKWebView passed Light/Heavy/Storm, day/night, motion off,
+gate drag/toggle, real pinch, switching to Filament and back, and background/resume.
+Visual captures confirm soft wind-slanted streaks and wet pavement without bright
+ripple discs. A 13-second simulator recording captures the running effect. No
+shader recovery UI or shader/WebGL/fatal exception appeared. An initial automation
+run missed a weather radio tap; the corrected harness passed against the same app.
+The host slowed during concurrent builds; these runs are functional verification,
+not a controlled performance comparison.
+
+Release preview build 11 compiled, passed signature verification, and was installed
+and launched on the physical iPhone. Physical interaction, sustained GPU/thermal
+profiling, and Android verification remain pending; physical iPad testing is deferred.

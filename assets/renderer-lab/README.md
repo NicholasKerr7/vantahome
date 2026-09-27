@@ -30,18 +30,34 @@ Add 2.9464 m to the fixtures only when using the complete exterior model.
   the headrail; it is a simplified comparison animation. Exact existing blind
   motion can instead update individual slats using `src/blinds.ts` in the scene
   package, keeping the group at unit scale.
-- `rain.glb` contains 36 batched meshes, with the shared absolute pose contract in
-  `packages/home-scene/src/renderer-lab/weatherAnimation.ts`. Its generated
+- `rain.glb` contains 36 batched meshes. Native water and shared foliage use the
+  absolute pose contract in `packages/home-scene/src/renderer-lab/weatherAnimation.ts`. Its generated
   `weather-surfaces.json` records node anchors, source surfaces, and fixed budgets.
-  Twelve rain phases expose 120, 240, or 360 drops for light rain, heavy rain, or
-  thunderstorms. Additional heavy-rain batches use 0.5–0.8 m streaks; storm batches
-  use 0.85–1.2 m streaks so stronger rain remains visible at property scale. Drops terminate on sampled roof, road, driveway, or yard surfaces;
+  Twelve native rain phases expose 120, 240, or 360 drops for light rain, heavy
+  rain, or thunderstorms. Additional heavy-rain batches use 0.5–0.8 m streaks; storm batches
+  use 0.85–1.2 m streaks so stronger rain remains visible at property scale. Drops
+  terminate on sampled roof, road, driveway, or yard surfaces;
   the house and shed interior envelopes exclude ground-level drops.
 - Four impact batches contain 112 splashes sampled from actual roof triangles,
   driveway/apron, road, paths, and service covers. Four runoff batches contain
   56 drops immediately outside exposed roof eaves, with clearance from lower roofs.
   `lab-weather-wet` copies upward-facing hardscape triangles with a thin wet overlay.
   Each phase uses one transform; individual particles never require native calls.
+- Three.js replaces the 20 rain/splash/runoff batches at runtime using
+  `threeRainGeometry.ts`, `threeRainShaders.ts`, and `threeRain.ts`. Its three fixed
+  GPU pools contain 720 rain quads, 336 splash-arm quads for the same 112 impacts,
+  and 56 runoff quads: 2,224 triangles total. Anchors remain exact copies of
+  `weather-surfaces.json`; rain has two independently phased instances per anchor,
+  and each splash's three arms share a phase. Shader animation gives streaks soft
+  edges and a minimum viewport footprint without per-particle JavaScript updates.
+  The source water batches are hidden while replacements are mounted and restored
+  on disposal; their GLB geometry and native behavior remain unchanged.
+  The existing wet-overlay triangles mask procedural ripple rings, including at
+  narrow pavement edges, so rings do not spill onto grass. Motion off removes
+  moving water and rings while keeping static wetness. The controller restores the
+  original overlay material and releases generated GPU resources on disposal.
+  Three.js and Filament therefore have different rain counts and shader work;
+  their timings do not represent an equal-work weather benchmark.
 - Fifteen `lab-weather-plant-*` meshes contain exactly the original foliage triangles
   split into seven palm crowns and eight shrub beds. Original material colors are
   baked into vertex colors, allowing one draw per anchor. Hide the three original

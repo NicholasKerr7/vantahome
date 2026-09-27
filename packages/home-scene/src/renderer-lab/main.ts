@@ -84,6 +84,14 @@ async function startLab(): Promise<void> {
   const activePointers = new Set<number>();
   let tap: { id: number; x: number; y: number; time: number } | null = null;
 
+  // Shader compilation errors do not throw from Three.js. Route them through the
+  // same visible error boundary, releasing the scene after the current draw returns.
+  renderer.debug.onShaderError = () => {
+    if (disposed) return;
+    reportError(new Error('The scene shaders could not render on this device. Reopen the comparison to retry.'));
+    queueMicrotask(dispose);
+  };
+
   /** Reset framing deterministically when switching test cases or using Reset view. */
   function resetCamera(): void {
     const preset = presets[state.view];
@@ -128,6 +136,7 @@ async function startLab(): Promise<void> {
     const height = Math.max(container!.clientHeight, 1);
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(width, height, false);
+    stormEffects?.resize(height);
     camera.aspect = width / height;
     const nextFit = Math.max(1, 0.8 / camera.aspect);
     camera.position.sub(controls.target).multiplyScalar(nextFit / cameraFit).add(controls.target);
@@ -288,6 +297,7 @@ async function startLab(): Promise<void> {
     if (models.rain && models.landscape && models.exterior) {
       try {
         stormEffects = createStormEffects({ scene, weatherModel: models.rain, landscape: models.landscape, exterior: models.exterior, ambient, sun });
+        stormEffects.resize(container!.clientHeight);
       } catch (error) {
         dispose();
         throw error;

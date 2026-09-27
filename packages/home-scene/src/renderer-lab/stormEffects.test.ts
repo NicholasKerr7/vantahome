@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, DirectionalLight, Group, HemisphereLight, Mesh, MeshStandardMaterial, Scene } from 'three';
+import { BoxGeometry, Color, DirectionalLight, Group, HemisphereLight, Mesh, MeshStandardMaterial, Scene, ShaderMaterial } from 'three';
 import { INITIAL_STATE, type LabState } from './contracts';
 import { createStormEffects } from './stormEffects';
 import { ORIGINAL_WEATHER_FOLIAGE_NAMES, WEATHER_GROUPS } from './weatherAnimation';
@@ -62,14 +62,20 @@ describe('property weather resource ownership', () => {
   it('retains replacement plants and static wetness while reduced motion removes precipitation and flashes', () => {
     const fixture = testScene();
     const effects = createStormEffects(fixture);
+    effects.apply(settings());
+    for (let frame = 0; frame < 74; frame++) effects.update(0.08);
+    const flash = fixture.scene.getObjectByName('lab-weather-sky-flash') as DirectionalLight;
+    const field = fixture.weatherModel.getObjectByName('lab-three-rain-field')!;
+    expect(field.visible).toBe(true);
+    expect(flash.intensity).toBeGreaterThan(0);
     effects.apply(settings({ motion: false }));
     for (const group of WEATHER_GROUPS) {
       const node = fixture.weatherModel.getObjectByName(group.name)!;
       if (group.kind === 'plant' || group.kind === 'wet') expect(node.visible).toBe(true);
       else expect(node.visible).toBe(false);
     }
+    expect(field.visible).toBe(false);
     expect(fixture.pavement.roughness).toBeCloseTo(0.2);
-    const flash = fixture.scene.getObjectByName('lab-weather-sky-flash') as DirectionalLight;
     effects.update(0.08);
     expect(flash.intensity).toBe(0);
     effects.dispose();
@@ -82,21 +88,54 @@ describe('property weather resource ownership', () => {
     const flash = fixture.scene.getObjectByName('lab-weather-sky-flash') as DirectionalLight;
     const release = vi.spyOn(flash, 'dispose');
     effects.apply(settings());
-    const initialPositions = fixture.weatherModel.children.map((node) => node.position.clone());
+    const plant = fixture.weatherModel.getObjectByName(WEATHER_GROUPS.find(({ kind }) => kind === 'plant')!.name)!;
+    const initialRotation = plant.rotation.clone();
     for (let index = 0; index < 180; index += 1) effects.update(0.08);
-    expect(fixture.weatherModel.children.length).toBe(WEATHER_GROUPS.length);
+    expect(fixture.weatherModel.children.length).toBe(WEATHER_GROUPS.length + 1);
     expect(fixture.scene.children.length).toBe(originalCount + 2);
-    expect(fixture.weatherModel.children.some((node, index) => !node.position.equals(initialPositions[index]))).toBe(true);
+    expect(plant.rotation.equals(initialRotation)).toBe(false);
+    for (const group of WEATHER_GROUPS.filter(({ kind }) => ['rain', 'splash', 'runoff'].includes(kind))) {
+      expect(fixture.weatherModel.getObjectByName(group.name)?.visible).toBe(false);
+    }
     for (const name of ORIGINAL_WEATHER_FOLIAGE_NAMES) {
       expect(fixture.landscape.getObjectByName(name.replaceAll(' ', '_'))?.visible).toBe(false);
     }
     effects.dispose();
     effects.dispose();
+    expect(fixture.weatherModel.children).toHaveLength(WEATHER_GROUPS.length);
     expect(fixture.scene.children.length).toBe(originalCount);
     expect(release).toHaveBeenCalledTimes(1);
     for (const name of ORIGINAL_WEATHER_FOLIAGE_NAMES) {
       expect(fixture.landscape.getObjectByName(name.replaceAll(' ', '_'))?.visible).toBe(true);
     }
+  });
+
+  it('resets the shared rain clock, foliage pose, and sky flash deterministically without rebuilding pools', () => {
+    const fixture = testScene();
+    const effects = createStormEffects(fixture);
+    effects.apply(settings());
+    const rain = fixture.weatherModel.getObjectByName('lab-three-rain') as Mesh<BoxGeometry, ShaderMaterial>;
+    const wet = fixture.weatherModel.getObjectByName('lab-weather-wet') as Mesh<BoxGeometry, ShaderMaterial>;
+    const plant = fixture.weatherModel.getObjectByName(WEATHER_GROUPS.find(({ kind }) => kind === 'plant')!.name)!;
+    const flash = fixture.scene.getObjectByName('lab-weather-sky-flash') as DirectionalLight;
+    const initialRotation = plant.rotation.clone();
+    const initialSky = (fixture.scene.background as Color).clone();
+    const initialAmbient = fixture.ambient.intensity;
+    const geometry = rain.geometry;
+    for (let frame = 0; frame < 74; frame++) effects.update(0.08);
+    expect(rain.material.uniforms.uTime.value).toBeCloseTo(5.92);
+    expect(flash.intensity).toBeGreaterThan(0);
+    effects.resize(552);
+    expect(rain.material.uniforms.uViewportHeight.value).toBe(552);
+    effects.reset();
+    expect(rain.material.uniforms.uTime.value).toBe(0);
+    expect(wet.material.uniforms.uTime.value).toBe(0);
+    expect(rain.geometry).toBe(geometry);
+    expect(plant.rotation.equals(initialRotation)).toBe(true);
+    expect(flash.intensity).toBe(0);
+    expect(fixture.ambient.intensity).toBe(initialAmbient);
+    expect(fixture.scene.background).toEqual(initialSky);
+    effects.dispose();
   });
 
   it('does not hide live foliage or allocate lights when packaged weather nodes are missing', () => {
