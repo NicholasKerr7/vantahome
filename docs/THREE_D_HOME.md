@@ -213,6 +213,28 @@ user-reported functional results, not measured frame rates or memory results.
 Force-quit persistence, offline reopening, sustained heat/battery behavior, and
 native iPad portrait/landscape testing remain outstanding.
 
+Further inspection on the same iPhone confirmed a saved simulation snapshot
+with all 90 device entries and the 27.4 MiB local scene cache. A 31.244-second
+Time Profiler attachment recorded no potential hangs above 250 ms and no
+hang-risk events. The trace did not establish the foreground screen or user
+activity, and it excluded the separate WebView graphics process. This is an
+initial native-host baseline, not a scene frame-rate, thermal, or battery pass.
+
+The same trace showed sustained Reanimated-driven border rasterization. Source
+review found that the dashboard orb's perpetual pulse updated its bordered,
+shadowed view and continued while the dashboard was covered. Preview build 2
+moves animation to a plain wrapper and cancels the pulse and prompt timer when
+the screen is hidden, the app is inactive, or reduced motion is enabled. A live
+accessibility subscription handles preference changes without restarting the app.
+Fourteen component/screen tests, ten navigation tests, root TypeScript, the
+native Release build, and strict signature verification passed. Build 2 was
+installed and launched; its 90-device saved snapshot matched the pre-update
+snapshot exactly. A comparable post-change native profile is still required to
+measure the performance benefit.
+
+The full-restart/offline and three-minute interaction checks for build 2 are
+awaiting user results; iPad testing is deferred at the user's request.
+
 A future real-device adapter must use authorized household/device selectors,
 explicit scene-to-device mappings, and the existing `deviceClient` command path.
 Render pending, failed, stale, and confirmed states from the command lifecycle

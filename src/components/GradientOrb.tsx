@@ -12,6 +12,8 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
+  cancelAnimation,
+  ReduceMotion,
   Easing,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,7 +21,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Pressable from "./Pressable";
 import { theme } from "../theme/theme";
 import { useResponsive } from "../theme/layout";
+import { useDecorativeMotion } from "./useDecorativeMotion";
 
+/** Present the climate and voice control with a pulse only while the screen is active. */
 export default function GradientOrb({
   outdoor,
   indoor,
@@ -29,6 +33,7 @@ export default function GradientOrb({
   onVoicePressIn,
   onVoicePressOut,
   compact = false,
+  active = true,
 }: {
   outdoor: { tempC: number; label: string };
   indoor: { tempC: number; label: string };
@@ -38,6 +43,7 @@ export default function GradientOrb({
   onVoicePressIn?: () => void;
   onVoicePressOut?: () => void;
   compact?: boolean;
+  active?: boolean;
 }) {
   const { width, isTablet, isLandscape, scale } = useResponsive();
   const baseSize = compact
@@ -85,20 +91,31 @@ export default function GradientOrb({
         "rgba(122,92,255,0.88)",
       ];
   const pulse = useSharedValue(0);
+  const motionEnabled = useDecorativeMotion(active);
   const [showPrompt, setShowPrompt] = useState(false);
 
+  /** Format both climate readings in the selected temperature unit. */
   const formatTemp = (value: number) => {
     if (unit === "F") return Math.round(value * 1.8 + 32);
     return Math.round(value);
   };
 
   useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
-    );
-  }, []);
+    // Cancel UI-thread work when a retained screen is hidden or motion is disabled.
+    cancelAnimation(pulse);
+    pulse.value = 0;
+    if (motionEnabled) {
+      // The live hook enforces the current OS preference; avoid Reanimated's launch-time cache.
+      pulse.value = withRepeat(
+        withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.quad), reduceMotion: ReduceMotion.Never }),
+        -1,
+        true,
+        undefined,
+        ReduceMotion.Never,
+      );
+    }
+    return () => cancelAnimation(pulse);
+  }, [motionEnabled, pulse]);
 
   const glowStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + pulse.value * 0.03 }],
@@ -127,7 +144,6 @@ export default function GradientOrb({
       shadowOpacity: isTablet ? 0.5 : 0.45,
       shadowRadius: isTablet ? 30 : 24,
     },
-    glowStyle,
   ];
   const orbInnerStyle: StyleProp<ViewStyle> = [
     styles.orbInner,
@@ -182,11 +198,13 @@ export default function GradientOrb({
       return;
     }
     setShowPrompt(false);
+    if (!motionEnabled) return;
+    // Decorative prompt rotation follows the same focus and motion policy as the pulse.
     const interval = setInterval(() => {
       setShowPrompt((prev) => !prev);
     }, 5200);
     return () => clearInterval(interval);
-  }, [hasVoice, voiceActive]);
+  }, [hasVoice, voiceActive, motionEnabled]);
 
   return (
     <View style={styles.wrap}>
@@ -203,62 +221,65 @@ export default function GradientOrb({
           onPressIn={onVoicePressIn}
           onPressOut={onVoicePressOut}
         >
-          <Animated.View style={orbStyle}>
-            <LinearGradient
-              colors={gradientColors}
-              start={{ x: 0.15, y: 0.05 }}
-              end={{ x: 0.95, y: 0.95 }}
-              style={orbInnerStyle}
-            >
-              {showVoicePrompt ? (
-                <View style={styles.voicePrompt}>
-                  <Text style={voicePromptTitleStyle}>
-                    {voicePromptTitle}
-                  </Text>
-                  <Text style={voicePromptSubStyle}>
-                    {voicePromptSub}
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  <View style={styles.section}>
-                    <View style={rowStyle}>
-                      <Ionicons
-                        name="partly-sunny"
-                        size={iconSize}
-                        color="rgba(255,255,255,0.92)"
-                      />
-                      <Text style={tempTextStyle}>
-                        {formatTemp(outdoor.tempC)}°{unit}
-                      </Text>
-                    </View>
-                    <Text style={labelTextStyle}>{outdoor.label}</Text>
+          {/* Keep static border/shadow paint off the node updated on every animation frame. */}
+          <Animated.View style={glowStyle} testID="gradient-orb-motion">
+            <View style={orbStyle} testID="gradient-orb-surface">
+              <LinearGradient
+                colors={gradientColors}
+                start={{ x: 0.15, y: 0.05 }}
+                end={{ x: 0.95, y: 0.95 }}
+                style={orbInnerStyle}
+              >
+                {showVoicePrompt ? (
+                  <View style={styles.voicePrompt}>
+                    <Text style={voicePromptTitleStyle}>
+                      {voicePromptTitle}
+                    </Text>
+                    <Text style={voicePromptSubStyle}>
+                      {voicePromptSub}
+                    </Text>
                   </View>
-
-                  <View style={dividerStyle} />
-
-                  <View style={styles.section}>
-                    <View style={rowStyle}>
-                      <Ionicons
-                        name="home"
-                        size={iconSize}
-                        color="rgba(255,255,255,0.92)"
-                      />
-                      <Text style={tempTextStyle}>
-                        {formatTemp(indoor.tempC)}°{unit}
-                      </Text>
+                ) : (
+                  <>
+                    <View style={styles.section}>
+                      <View style={rowStyle}>
+                        <Ionicons
+                          name="partly-sunny"
+                          size={iconSize}
+                          color="rgba(255,255,255,0.92)"
+                        />
+                        <Text style={tempTextStyle}>
+                          {formatTemp(outdoor.tempC)}°{unit}
+                        </Text>
+                      </View>
+                      <Text style={labelTextStyle}>{outdoor.label}</Text>
                     </View>
-                    <Text style={labelTextStyle}>{indoor.label}</Text>
-                  </View>
-                </>
-              )}
-            </LinearGradient>
 
-            {/* inner ring highlight */}
-            <View
-              pointerEvents="none"
-              style={innerRingStyle}
-            />
+                    <View style={dividerStyle} />
+
+                    <View style={styles.section}>
+                      <View style={rowStyle}>
+                        <Ionicons
+                          name="home"
+                          size={iconSize}
+                          color="rgba(255,255,255,0.92)"
+                        />
+                        <Text style={tempTextStyle}>
+                          {formatTemp(indoor.tempC)}°{unit}
+                        </Text>
+                      </View>
+                      <Text style={labelTextStyle}>{indoor.label}</Text>
+                    </View>
+                  </>
+                )}
+              </LinearGradient>
+
+              {/* inner ring highlight */}
+              <View
+                pointerEvents="none"
+                style={innerRingStyle}
+              />
+            </View>
           </Animated.View>
         </Pressable>
       </View>

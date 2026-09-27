@@ -10,7 +10,7 @@ import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { theme } from "../theme/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AvatarChip from "../components/AvatarChip";
@@ -39,6 +39,7 @@ import { deviceClient } from "../services/deviceClient";
 import Voice from "@react-native-voice/voice";
 
 export default function HomeScreen() {
+  const focused = useIsFocused();
   const { contentWidth, gutter, isTablet, isLandscape, topPad, scale, height } =
     useResponsive(720);
   const greetingSize = Math.round((isTablet ? 22 : 16) * scale);
@@ -896,6 +897,7 @@ export default function HomeScreen() {
             <View testID="home-hero-stack" style={heroStackStyle}>
               <View testID="home-orb-wrap" style={heroOrbWrapStyle}>
                 <GradientOrb
+                  active={focused}
                   outdoor={outdoor}
                   indoor={indoor}
                   unit={tempUnit}

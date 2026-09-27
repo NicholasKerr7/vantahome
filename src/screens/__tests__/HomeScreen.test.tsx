@@ -6,6 +6,7 @@ import { useHomeStore } from "../../store/useHomeStore";
 
 let mockParentNavigate: jest.Mock;
 let mockNavigate: jest.Mock;
+let mockFocused = true;
 const mockLayout = {
   width: 390,
   height: 844,
@@ -19,6 +20,7 @@ const mockLayout = {
 };
 
 jest.mock("@react-navigation/native", () => ({
+  useIsFocused: () => mockFocused,
   useNavigation: () => ({
     navigate: mockNavigate,
     getParent: () => ({ navigate: mockParentNavigate }),
@@ -88,11 +90,12 @@ jest.mock("../../components/RoomCarousel", () => {
 jest.mock("../../components/GradientOrb", () => {
   const React = require("react");
   const { View } = require("react-native");
-  return function MockGradientOrb(props: { compact?: boolean }) {
+  return function MockGradientOrb(props: { compact?: boolean; active?: boolean }) {
     return (
       <View
         testID="gradient-orb-mock"
         accessibilityLabel={props.compact ? "compact" : "standard"}
+        accessibilityState={{ disabled: !props.active }}
       />
     );
   };
@@ -108,6 +111,16 @@ jest.mock("../../components/BackgroundLines", () => {
 
 describe("HomeScreen", () => {
   const previousThreeDFlag = process.env.EXPO_PUBLIC_ENABLE_3D_HOME;
+
+  it("pauses retained dashboard decoration when another route has focus", () => {
+    let tree: ReactTestRenderer;
+    act(() => { tree = renderer.create(<HomeScreen />); });
+    expect(tree!.root.findByProps({ testID: "gradient-orb-mock" }).props.accessibilityState.disabled).toBe(false);
+    mockFocused = false;
+    act(() => { tree!.update(<HomeScreen />); });
+    expect(tree!.root.findByProps({ testID: "gradient-orb-mock" }).props.accessibilityState.disabled).toBe(true);
+    act(() => { tree!.unmount(); });
+  });
 
   beforeAll(() => {
     jest.useFakeTimers();
@@ -138,6 +151,7 @@ describe("HomeScreen", () => {
   });
 
   beforeEach(() => {
+    mockFocused = true;
     process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "true";
     mockParentNavigate = jest.fn();
     mockNavigate = jest.fn();
