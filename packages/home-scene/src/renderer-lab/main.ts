@@ -7,6 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { INITIAL_STATE, parseLabState, postLabMessage, type LabDevice, type ModelName } from './contracts';
 import { FrameMetrics } from './frameMetrics';
 import { disposeModels, loadEmbeddedModel, modelsForView } from './models';
+import { createSolarLights, setSolarNight, type SolarLamp } from './solarLights';
 import presets from './presets.json';
 import './renderer-lab.css';
 
@@ -73,6 +74,7 @@ async function startLab(): Promise<void> {
   let currentGate = state.gate;
   let cameraFit = 1;
   const pointLights: PointLight[] = [];
+  let solarLamps: SolarLamp[] = [];
   const emissiveMaterials = new Map<MeshStandardMaterial, Color>();
   const metrics = new FrameMetrics();
   const raycaster = new Raycaster();
@@ -101,7 +103,7 @@ async function startLab(): Promise<void> {
   function applyState(): void {
     const bedroom = state.view === 'bedroom';
     for (const name of ['upper', 'fixtures'] as const) if (models[name]) models[name].visible = bedroom;
-    for (const name of ['exterior', 'landscape', 'gate'] as const) if (models[name]) models[name].visible = !bedroom;
+    for (const name of ['exterior', 'landscape', 'gate', 'solar'] as const) if (models[name]) models[name].visible = !bedroom;
     if (models.rain) models.rain.visible = state.rain && !bedroom;
     scene.background = new Color(state.night ? '#101d2d' : '#d9e6e5');
     ambient.intensity = state.night ? 0.6 : 1.9;
@@ -109,6 +111,7 @@ async function startLab(): Promise<void> {
     sun.color.set(state.night ? '#a5bdff' : '#fff2d9');
     controls.enableDamping = state.motion;
     for (const light of pointLights) light.intensity = bedroom && state.lights ? 18 : 0;
+    setSolarNight(solarLamps, !bedroom && state.night);
     for (const [material, original] of emissiveMaterials) {
       material.emissive.copy(original);
       material.emissiveIntensity = state.lights ? 1.5 : 0;
@@ -237,6 +240,7 @@ async function startLab(): Promise<void> {
     canvas.removeEventListener('webglcontextlost', contextLost);
     window.__VANTA_LAB_UPDATE__ = undefined;
     controls.dispose();
+    for (const { light } of solarLamps) light.dispose();
     disposeModels(loadedRoots);
     sun.shadow.map?.dispose();
     renderer.dispose();
@@ -249,10 +253,12 @@ async function startLab(): Promise<void> {
     cancelAnimationFrame(frameId);
     for (const root of loadedRoots) scene.remove(root);
     for (const light of pointLights) scene.remove(light);
+    for (const { light } of solarLamps) light.dispose();
     disposeModels(loadedRoots);
     loadedRoots = [];
     models = {};
     pointLights.length = 0;
+    solarLamps = [];
     emissiveMaterials.clear();
     if (statusElement) { statusElement.textContent = 'Preparing house comparison…'; statusElement.hidden = false; }
     const names = modelsForView(state.view);
@@ -271,9 +277,8 @@ async function startLab(): Promise<void> {
     loadedRoots = roots;
     models = Object.fromEntries(names.map((name, index) => [name, roots[index]]));
     for (const model of loadedRoots) scene.add(model);
-    const originalSite = models.exterior?.getObjectByName('floor-site');
-    if (originalSite) originalSite.visible = false;
     if (models.gate) models.gate.userData.labDevice = 'gate';
+    if (models.solar) solarLamps = createSolarLights(models.solar);
     const blind = models.fixtures?.getObjectByName('lab-blind-fabric');
     if (blind) blind.userData.labDevice = 'blinds';
     for (const name of ['master-light', 'master-bedside-left', 'master-bedside-right']) {

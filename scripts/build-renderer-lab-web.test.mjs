@@ -37,6 +37,7 @@ test('offline comparison embeds only its case assets, hashes scripts, and allows
 test('packaging rejects external dependencies, missing assets, and stylesheet injection', () => {
   const models = Object.fromEntries(LAB_MODEL_NAMES.map((name) => [name, createGlb()]));
   assert.throws(() => createRendererLabHtml('', '', { ...models, fixtures: undefined }), /Missing renderer/u);
+  assert.throws(() => createRendererLabHtml('', '', { ...models, solar: undefined }, 'property'), /Missing renderer comparison model: solar/u);
   assert.throws(() => createRendererLabHtml('', '', models, 'unexpected'), /Unknown renderer/u);
   assert.throws(() => createRendererLabHtml('', '', { ...models, upper: createGlb({ asset: { version: '2.0' }, images: [{ uri: 'https://example.com/texture.png' }] }) }), /external model/u);
   assert.throws(() => createRendererLabHtml('', '</style><script>', models), /closing style/u);

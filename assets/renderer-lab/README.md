@@ -26,6 +26,13 @@ Add 2.9464 m to the fixtures only when using the complete exterior model.
   metres above the first cell. Translate the mesh Y from `0` to `-12` and repeat.
   The house and energy shed envelopes are excluded. Below-ground particles are
   occluded by the landscape. Reduced motion should freeze or hide this effect.
+- `solar.glb` contains the four named `lab-light-grounds-solar-*` diffusers.
+  Their world positions and rotations come from the existing device catalog;
+  static poles, panels, and housings remain in `landscape.glb`. Both comparison
+  renderers illuminate these diffusers and their inward-facing light pools in
+  night mode. `solarLighting.ts` shares the exact downlight positions, directions,
+  nine-metre falloff, and soft cone across engines. Solar power follows night
+  mode independently of the bedroom switch.
 
 The representative bedroom bounds are X `[7.457, 12.476]`, Z
 `[-16.545, -11.745]`. Existing immersive camera: position `[10, 1.5, -13.05]`,

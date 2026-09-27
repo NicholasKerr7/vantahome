@@ -27,10 +27,10 @@ at a time. Backgrounding or leaving the screen releases its graphics surface.
 | Case | Assets | Controls |
 | --- | --- | --- |
 | Bedroom | Original furnished `upper.glb` plus exported live fixture parts | Ceiling/bedside lights, blind opening, day/night, orbit/pinch |
-| Property | Original `exterior.glb`, landscape, gate, and shared rain geometry | Sliding gate, rain, day/night, orbit/pinch |
+| Property | Original `exterior.glb`, landscape, gate, solar diffusers, and shared rain geometry | Sliding gate, rain, day/night with four solar lights, orbit/pinch |
 
 Each WebView document embeds only its case's assets, matching the native inventory.
-The bedroom package is approximately 5.3 MiB and the property package 16.1 MiB.
+The bedroom package is approximately 5.3 MiB and the property package 16.2 MiB.
 The packaged documents make no network requests and require no weather location.
 Rain is a deterministic sample, independent of live weather, so runs are repeatable.
 
@@ -162,3 +162,50 @@ was installed on the same physical iPhone.
 Physical iPhone confirmation remains pending; simulator success does not establish
 device performance. Android native verification and sustained profiling remain
 outstanding; physical iPad testing is deferred.
+
+### Native interaction and night-lighting audit
+
+Native simulator gestures reproduced the reported pinch failure: the property
+rotated instead of zooming. The SDK's internal Metal `UIView` does not enable
+multiple touches. A standard React Native view now owns the complete touch
+sequence while the child render surface ignores hit testing. Finger identifiers
+keep a pinch stable when events reorder touches or a third finger arrives.
+Zoom bounds now limit the actual camera distance after portrait fitting, preventing
+over-zoom and allowing an immediate reversal at either limit.
+
+Night screenshots also reproduced almost identical bedroom lighting in the on and
+off states. Filament 1.11 hardcodes a daylight camera exposure and exposes no
+exposure setter. The native rig now applies nine stops of night radiance gain to
+fixtures, with separately balanced dim ambient/moonlight, and scales diffuser
+emission consistently. This follows Filament's [physical lighting and exposure
+model](https://google.github.io/filament/main/filament.html#lighting); the resulting
+intensities are display calibration, not a claim about installed bulb output.
+The SDK's skybox hex parser also skips sRGB decoding; a prelinearized midnight
+color prevents the intended dark background from becoming bright blue-gray.
+Both engines now include the four solar diffusers and inward light pools that
+were missing from the property comparison. Day/night controls switch them
+automatically; the bedroom power setting does not affect them.
+
+Static house/landscape models no longer perform device-animation math. Blinds
+and the gate settle exactly at their target and stop allocating native matrices;
+paused rain keeps its last pose without repeated transform submissions.
+Reduced-motion device changes still apply immediately.
+Fixture-shell picking is restricted to device batches so walls and floors cannot
+activate a nearby projected lamp. Native picking already converts display points
+to pixels internally; no extra density scaling is applied.
+
+TypeScript and 38 focused app tests pass, including native spotlight arguments,
+night/off lighting, solar automation, finger transitions, portrait distance limits,
+settled animations, and paused rain. Six asset/packaging tests and three shared
+solar geometry/runtime tests pass; both offline comparison documents rebuild.
+
+The final iPhone simulator run passed two native UI flows with zero failures:
+night lights on/off, property pinch in/out and orbit/reset, fixture selection,
+blinds/gate controls, rain, motion toggling, renderer/scene recreation, and
+background/resume. Screenshots confirmed warm room illumination, visible solar
+light pools, and the corrected midnight background. No Filament, fatal JavaScript,
+or worklet exception appeared in the captured native error log. Release preview
+build 8 compiled, passed signature verification, and was installed/launched on
+the physical iPhone. The owner's device retest remains pending; Android native
+verification, physical iPad testing, and sustained performance profiling remain
+outside this verification run.

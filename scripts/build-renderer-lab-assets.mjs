@@ -4,11 +4,14 @@ import { fileURLToPath } from 'node:url';
 import {
   BoxGeometry,
   CylinderGeometry,
+  Euler,
   Group,
   Mesh,
   MeshStandardMaterial,
+  Quaternion,
   Scene,
   SphereGeometry,
+  Vector3,
 } from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -118,6 +121,29 @@ function createFixtures() {
   return scene;
 }
 
+/** Add only the four live solar diffusers; landscape.glb owns their poles and housings. */
+function createSolarFixtures() {
+  const scene = new Scene();
+  scene.name = 'VantaHome renderer comparison solar diffusers';
+  const devices = manifest.devices.filter(({ model }) => model === 'solar-streetlight');
+  if (devices.length !== 4) throw new Error('Expected four property-corner solar streetlights');
+  for (const device of devices) {
+    const parts = library.devices[device.id]?.parts.filter(({ role }) => role === 'glow');
+    if (parts?.length !== 1) throw new Error(`Expected one solar diffuser: ${device.id}`);
+    const [part] = parts;
+    const name = `lab-light-${device.id}`;
+    const mesh = new Mesh(createPartGeometry(part), createPartMaterial(part, name));
+    mesh.name = name;
+    // Flatten the device hierarchy while preserving its inward-facing corner rotation.
+    const rotation = new Euler(...device.rotation);
+    mesh.position.fromArray(part.position).applyEuler(rotation).add(new Vector3(...device.position));
+    mesh.rotation.set(...part.rotation);
+    mesh.quaternion.premultiply(new Quaternion().setFromEuler(rotation));
+    scene.add(mesh);
+  }
+  return scene;
+}
+
 /** Generate stable pseudo-random values so both renderers receive identical rain. */
 function seed(index) {
   const value = Math.sin(index * 127.1 + 311.7) * 43758.5453;
@@ -197,4 +223,5 @@ async function exportBinary(name, scene) {
 
 await mkdir(outputDirectory, { recursive: true });
 await exportBinary('fixtures.glb', createFixtures());
+await exportBinary('solar.glb', createSolarFixtures());
 await exportBinary('rain.glb', createRain());

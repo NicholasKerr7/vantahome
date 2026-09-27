@@ -4,7 +4,7 @@ import type { ModelName } from './contracts';
 
 /** Keep each comparison's decoded working set equal to its native counterpart. */
 export function modelsForView(view: 'bedroom' | 'property'): ModelName[] {
-  return view === 'bedroom' ? ['upper', 'fixtures'] : ['exterior', 'landscape', 'gate', 'rain'];
+  return view === 'bedroom' ? ['upper', 'fixtures'] : ['exterior', 'landscape', 'gate', 'solar', 'rain'];
 }
 
 /** Decode packaged bytes directly, without HTTP, file fetches, or external decoders. */
@@ -22,8 +22,8 @@ export async function loadEmbeddedModel(name: ModelName): Promise<Group> {
   const gltf = await new GLTFLoader(manager).parseAsync(bytes.buffer, '');
   gltf.scene.traverse((node) => {
     if (node instanceof Mesh) {
-      node.castShadow = name !== 'rain';
-      node.receiveShadow = name !== 'rain';
+      node.castShadow = name !== 'rain' && name !== 'solar';
+      node.receiveShadow = name !== 'rain' && name !== 'solar';
     }
   });
   return gltf.scene;

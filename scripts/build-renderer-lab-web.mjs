@@ -6,8 +6,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { escapeScriptContent, sha256, validateGlb } from './build-home-scene.mjs';
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-export const LAB_MODEL_NAMES = ['upper', 'exterior', 'landscape', 'gate', 'fixtures', 'rain'];
-export const LAB_CASE_MODELS = { bedroom: ['upper', 'fixtures'], property: ['exterior', 'landscape', 'gate', 'rain'] };
+export const LAB_MODEL_NAMES = ['upper', 'exterior', 'landscape', 'gate', 'fixtures', 'solar', 'rain'];
+export const LAB_CASE_MODELS = { bedroom: ['upper', 'fixtures'], property: ['exterior', 'landscape', 'gate', 'solar', 'rain'] };
 const MAX_BUNDLE_BYTES = 32 * 1024 * 1024;
 
 /** Package audited GLBs and compiled code into a network-independent comparison document. */
@@ -52,7 +52,7 @@ export async function buildRendererLabWeb(projectRoot = PROJECT_ROOT) {
   const require = createRequire(join(sceneRoot, 'package.json'));
   const { build } = await import(pathToFileURL(require.resolve('vite')).href);
   const models = Object.fromEntries(await Promise.all(LAB_MODEL_NAMES.map(async (name) => {
-    const folder = ['fixtures', 'rain'].includes(name) ? join(projectRoot, 'assets/renderer-lab') : join(sceneRoot, 'public/models');
+    const folder = ['fixtures', 'solar', 'rain'].includes(name) ? join(projectRoot, 'assets/renderer-lab') : join(sceneRoot, 'public/models');
     return [name, await readFile(join(folder, `${name}.glb`))];
   })));
   const scratch = await mkdtemp(join(tmpdir(), 'vantahome-renderer-lab-'));

@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import { useLabCamera } from '../useLabCamera';
+import presets from '../../../../packages/home-scene/src/renderer-lab/presets.json';
 
 const mockLookAt = jest.fn<void, [number[], number[], number[]]>();
 // Mirror the native signature; the published four-argument TypeScript signature is incomplete.
@@ -19,13 +20,15 @@ jest.mock('react-native-worklets-core', () => ({
 }));
 
 const PRESET = { eye: [0, 6, 8], target: [0, 0, 0] };
-type Point = [number, number];
+type Point = [number, number, string?];
 
 /** Construct only the native touch fields consumed by the camera's public handlers. */
 function touchEvent(points: Point[], ended?: Point): GestureResponderEvent {
-  const touches = points.map(([locationX, locationY]) => ({ locationX, locationY }));
+  const touches = points.map(([locationX, locationY, identifier], index) => ({
+    locationX, locationY, identifier: identifier ?? String(index),
+  }));
   const changedTouches = ended
-    ? [{ locationX: ended[0], locationY: ended[1] }]
+    ? [{ locationX: ended[0], locationY: ended[1], identifier: ended[2] ?? '0' }]
     : touches;
   return { nativeEvent: { touches, changedTouches } } as GestureResponderEvent;
 }
@@ -117,6 +120,110 @@ test('extreme pinch input remains within the configured viewing distances', () =
     result.current.updateCamera();
   });
   expect(Math.hypot(...lastEye())).toBeCloseTo(12);
+});
+
+test('property pinch zooms in and out in a tall phone viewport without changing the look target', () => {
+  mockGetAspectRatio.mockReturnValue(0.6);
+  const onPick = jest.fn();
+  const { result } = renderHook(() => useLabCamera({
+    preset: presets.property, resetKey: 0, onPick,
+    minDistance: presets.property.minDistance, maxDistance: presets.property.maxDistance,
+  }));
+  act(() => result.current.updateCamera());
+  const initialEye = lastEye();
+  const initialRadius = Math.hypot(...initialEye.map((value, index) => value - presets.property.target[index]));
+  act(() => {
+    result.current.onTouchStart(touchEvent([[80, 180, 'left'], [160, 180, 'right']]));
+    result.current.onTouchMove(touchEvent([[40, 180, 'left'], [200, 180, 'right']]));
+    result.current.updateCamera();
+  });
+  const closeRadius = Math.hypot(...lastEye().map((value, index) => value - presets.property.target[index]));
+  expect(closeRadius).toBeCloseTo(initialRadius / 2);
+  expect(mockLookAt).toHaveBeenLastCalledWith(expect.any(Array), presets.property.target, [0, 1, 0]);
+  act(() => {
+    result.current.onTouchMove(touchEvent([[80, 180, 'left'], [160, 180, 'right']]));
+    result.current.onTouchEnd(touchEvent([], [80, 180, 'left']));
+    result.current.updateCamera();
+  });
+  lastEye().forEach((value, index) => expect(value).toBeCloseTo(initialEye[index]));
+  expect(onPick).not.toHaveBeenCalled();
+});
+
+test('portrait property zoom respects actual camera limits and responds immediately when reversed', () => {
+  mockGetAspectRatio.mockReturnValue(0.5);
+  const { result } = renderHook(() => useLabCamera({
+    preset: presets.property, resetKey: 0, onPick: jest.fn(),
+    minDistance: presets.property.minDistance, maxDistance: presets.property.maxDistance,
+  }));
+  act(() => {
+    result.current.updateCamera();
+    result.current.onTouchStart(touchEvent([[0, 0], [100, 0]]));
+    result.current.onTouchMove(touchEvent([[0, 0], [1, 0]]));
+    result.current.updateCamera();
+  });
+  const atFarLimit = Math.hypot(...lastEye().map((value, index) => value - presets.property.target[index]));
+  expect(atFarLimit).toBeCloseTo(120);
+  act(() => {
+    result.current.onTouchMove(touchEvent([[0, 0], [2, 0]]));
+    result.current.updateCamera();
+  });
+  const reversed = Math.hypot(...lastEye().map((value, index) => value - presets.property.target[index]));
+  expect(reversed).toBeCloseTo(60);
+  act(() => {
+    result.current.onTouchMove(touchEvent([[0, 0], [1000, 0]]));
+    result.current.updateCamera();
+  });
+  const atNearLimit = Math.hypot(...lastEye().map((value, index) => value - presets.property.target[index]));
+  expect(atNearLimit).toBeCloseTo(12);
+});
+
+test('reordered touch arrays and an extra finger preserve the active pinch pair', () => {
+  const onPick = jest.fn();
+  const { result } = renderHook(() => useLabCamera({ preset: PRESET, resetKey: 0, onPick }));
+  act(() => {
+    result.current.onTouchStart(touchEvent([[0, 0, 'left'], [100, 0, 'right']]));
+    result.current.onTouchMove(touchEvent([[200, 0, 'right'], [0, 0, 'left']]));
+    result.current.updateCamera();
+  });
+  expect(Math.hypot(...lastEye())).toBeCloseTo(5);
+  const beforeThirdFinger = lastEye();
+  act(() => {
+    result.current.onTouchStart(touchEvent([[800, 0, 'extra'], [200, 0, 'right'], [0, 0, 'left']]));
+    result.current.onTouchMove(touchEvent([[900, 20, 'extra'], [200, 0, 'right'], [0, 0, 'left']]));
+    result.current.onTouchEnd(touchEvent([[200, 0, 'right'], [0, 0, 'left']], [900, 20, 'extra']));
+    result.current.updateCamera();
+  });
+  expect(lastEye()).toEqual(beforeThirdFinger);
+  act(() => {
+    result.current.onTouchEnd(touchEvent([[0, 0, 'left']], [200, 0, 'right']));
+    result.current.onTouchMove(touchEvent([[0, 0, 'left']]));
+    result.current.updateCamera();
+    result.current.onTouchEnd(touchEvent([], [0, 0, 'left']));
+  });
+  expect(lastEye()).toEqual(beforeThirdFinger);
+  expect(onPick).not.toHaveBeenCalled();
+});
+
+test('lifting the primary pinch finger rebases orbit onto the remaining finger without a jump', () => {
+  const { result } = renderHook(() => useLabCamera({ preset: PRESET, resetKey: 0, onPick: jest.fn() }));
+  act(() => {
+    result.current.onTouchStart(touchEvent([[20, 30, 'left'], [100, 30, 'right']]));
+    result.current.onTouchMove(touchEvent([[0, 30, 'left'], [160, 30, 'right']]));
+    result.current.updateCamera();
+  });
+  const beforeLift = lastEye();
+  act(() => {
+    result.current.onTouchEnd(touchEvent([[160, 30, 'right']], [0, 30, 'left']));
+    result.current.onTouchMove(touchEvent([[160, 30, 'right']]));
+    result.current.updateCamera();
+  });
+  expect(lastEye()).toEqual(beforeLift);
+  act(() => {
+    result.current.onTouchMove(touchEvent([[170, 30, 'right']]));
+    result.current.updateCamera();
+  });
+  expect(Math.hypot(...lastEye())).toBeCloseTo(Math.hypot(...beforeLift));
+  expect(lastEye()[0]).toBeLessThan(beforeLift[0]);
 });
 
 test('portrait fitting uses layout until the native aspect arrives and avoids repeated projection updates', () => {

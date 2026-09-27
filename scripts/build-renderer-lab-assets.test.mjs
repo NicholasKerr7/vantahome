@@ -56,6 +56,33 @@ test('blinds retain a top anchor and all twenty individually named moving slats'
   close(nodes.get('lab-blind-bottom').translation[1], -1.223);
 });
 
+test('solar export contains only four diffusers aligned to the inward-facing lamp heads', async () => {
+  const { document } = await readGlb('solar.glb');
+  const manifest = JSON.parse(await readFile(new URL('packages/home-scene/src/house-manifest.json', repository), 'utf8'));
+  const library = JSON.parse(await readFile(new URL('packages/home-scene/src/device-geometry.json', repository), 'utf8'));
+  assert.equal(document.nodes.length, 4, 'existing poles and housings must not be duplicated');
+  assert.equal(document.meshes.length, 4);
+  const nodes = new Map(document.nodes.map((node) => [node.name, node]));
+  for (const device of manifest.devices.filter(({ model }) => model === 'solar-streetlight')) {
+    const node = nodes.get(`lab-light-${device.id}`);
+    assert.ok(node, `${device.id} must retain its own emissive diffuser`);
+    const part = library.devices[device.id].parts.find(({ role }) => role === 'glow');
+    const angle = device.rotation[1];
+    close(node.translation[0], device.position[0] + part.position[2] * Math.sin(angle));
+    close(node.translation[1], device.position[1] + part.position[1]);
+    close(node.translation[2], device.position[2] + part.position[2] * Math.cos(angle));
+    close(node.rotation[0], 0);
+    close(node.rotation[1], Math.sin(angle / 2));
+    close(node.rotation[2], 0);
+    close(node.rotation[3], Math.cos(angle / 2));
+    const primitive = document.meshes[node.mesh].primitives[0];
+    const position = document.accessors[primitive.attributes.POSITION];
+    for (let axis = 0; axis < 3; axis++) close(position.max[axis] - position.min[axis], part.size[axis]);
+    assert.ok(document.materials[primitive.material].emissiveFactor.some((value) => value > 0));
+  }
+  assert.equal(document.images, undefined, 'solar lights must not introduce remote textures');
+});
+
 test('rain stays a single lightweight draw primitive with repeatable vertical cells', async () => {
   const { document, binary } = await readGlb('rain.glb');
   assert.equal(document.nodes.length, 1);

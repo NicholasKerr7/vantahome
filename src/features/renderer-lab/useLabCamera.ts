@@ -32,7 +32,7 @@ type OrbitPosition = {
   targetZ: number;
 };
 
-type TouchPoint = { locationX: number; locationY: number };
+type TouchPoint = { locationX: number; locationY: number; identifier: string };
 
 type TouchSession = {
   startedAt: number;
@@ -40,6 +40,8 @@ type TouchSession = {
   startY: number;
   lastX: number;
   lastY: number;
+  primaryTouchId: string;
+  secondaryTouchId?: string;
   pinchDistance: number;
   suppressPick: boolean;
 };
@@ -64,6 +66,14 @@ function touchDistance(first: TouchPoint, second: TouchPoint): number {
     first.locationX - second.locationX,
     first.locationY - second.locationY,
   );
+}
+
+/** Keeps a pinch tied to the same fingers even when native touch-array order changes. */
+function sessionTouches(touches: readonly TouchPoint[], session: TouchSession) {
+  const first = touches.find((touch) => touch.identifier === session.primaryTouchId) ?? touches[0];
+  const second = touches.find((touch) => touch.identifier === session.secondaryTouchId && touch !== first)
+    ?? touches.find((touch) => touch !== first);
+  return { first, second };
 }
 
 /** Converts a preset's eye and target into the orbit state used by the render thread. */
@@ -93,7 +103,9 @@ function createOrbitPosition(preset: CameraPreset): OrbitPosition {
 /**
  * Supplies a native orbit/pinch camera without scheduling React renders per frame.
  * Call updateCamera from Filament's render callback and attach the returned native
- * handlers to its view. Only short, stationary, single-finger gestures can pick.
+ * handlers to a regular React Native View with a non-interactive Filament child.
+ * The SDK's internal Metal UIView does not enable iOS multitouch; letting the RN
+ * view own touches preserves pinch input. Only stationary single-finger taps pick.
  */
 export function useLabCamera({
   preset,
@@ -157,7 +169,10 @@ export function useLabCamera({
     }
 
     const position = orbit.value;
-    const fittedRadius = position.radius * Math.max(1, 0.8 / aspect);
+    // Distance limits describe world-space camera distance, including portrait fitting.
+    const fittedRadius = Math.min(maximumRadius, Math.max(
+      minimumRadius, position.radius * Math.max(1, 0.8 / aspect),
+    ));
     const horizontalRadius = fittedRadius * Math.cos(position.elevation);
     camera.lookAt(
       [
@@ -168,7 +183,7 @@ export function useLabCamera({
       [position.targetX, position.targetY, position.targetZ],
       [0, 1, 0],
     );
-  }, [camera, view, orbit, layoutAspect, previousAspect]);
+  }, [camera, view, orbit, layoutAspect, previousAspect, minimumRadius, maximumRadius]);
 
   /** Records a fallback aspect while the native render surface is being created. */
   const onLayout = useCallback(
@@ -192,15 +207,18 @@ export function useLabCamera({
         startY: first.locationY,
         lastX: first.locationX,
         lastY: first.locationY,
+        primaryTouchId: first.identifier,
         pinchDistance: 0,
         suppressPick: false,
       };
     }
 
-    const second = touches[1];
+    const pair = sessionTouches(touches, session.current);
+    const second = pair.second;
     if (second) {
       session.current.suppressPick = true;
-      session.current.pinchDistance = touchDistance(first, second);
+      session.current.secondaryTouchId = second.identifier;
+      session.current.pinchDistance = touchDistance(pair.first, second);
     }
   }, []);
 
@@ -209,22 +227,26 @@ export function useLabCamera({
     (event: GestureResponderEvent) => {
       const gesture = session.current;
       const touches = event.nativeEvent.touches;
-      const first = touches[0];
-      if (!gesture || !first) return;
+      if (!gesture) return;
+      const { first, second } = sessionTouches(touches, gesture);
+      if (!first) return;
 
-      const second = touches[1];
       if (second) {
         gesture.suppressPick = true;
         const distance = touchDistance(first, second);
         if (gesture.pinchDistance > 0 && distance > 0) {
           const current = orbit.value;
+          const aspect = previousAspect.value > 0 ? previousAspect.value : layoutAspect.value;
+          const fit = Math.max(1, 0.8 / aspect);
+          const visibleRadius = clamp(current.radius * fit, minimumRadius, maximumRadius);
           orbit.value = {
             ...current,
+            // Start at the displayed distance so reversing at a zoom limit responds immediately.
             radius: clamp(
-              current.radius * (gesture.pinchDistance / distance),
+              visibleRadius * (gesture.pinchDistance / distance),
               minimumRadius,
               maximumRadius,
-            ),
+            ) / fit,
           };
         }
         gesture.pinchDistance = distance;
@@ -252,7 +274,7 @@ export function useLabCamera({
       gesture.lastX = first.locationX;
       gesture.lastY = first.locationY;
     },
-    [orbit, minimumRadius, maximumRadius],
+    [orbit, layoutAspect, previousAspect, minimumRadius, maximumRadius],
   );
 
   /** Picks only after every finger is released and the entire gesture qualified as a tap. */
@@ -261,13 +283,15 @@ export function useLabCamera({
       const gesture = session.current;
       if (!gesture) return;
       const remaining = event.nativeEvent.touches;
-      const first = remaining[0];
+      const { first, second } = sessionTouches(remaining, gesture);
       if (first) {
         gesture.suppressPick = true;
+        gesture.primaryTouchId = first.identifier;
+        gesture.secondaryTouchId = second?.identifier;
         gesture.lastX = first.locationX;
         gesture.lastY = first.locationY;
-        gesture.pinchDistance = remaining[1]
-          ? touchDistance(first, remaining[1])
+        gesture.pinchDistance = second
+          ? touchDistance(first, second)
           : 0;
         return;
       }

@@ -130,3 +130,11 @@ test('reports a native thenable rejection without calling an unsupported catch m
   act(() => { mockCleanupQueue.forEach((callback) => callback()); });
   expect(onError).toHaveBeenCalledTimes(1);
 });
+
+test('passes a solar spotlight cone through the complete eight-argument native contract', () => {
+  render(<FilamentLight type="spot" intensity={200000} colorKelvin={3000}
+    position={[1, 3.5, -2]} direction={[0, -1, 0]} falloffRadius={9}
+    spotLightCone={[0.01, 0.88]} onError={jest.fn()} />);
+  frame();
+  expect(mockCreate).toHaveBeenCalledWith('spot', 3000, 200000, [0, -1, 0], [1, 3.5, -2], undefined, 9, [0.01, 0.88]);
+});

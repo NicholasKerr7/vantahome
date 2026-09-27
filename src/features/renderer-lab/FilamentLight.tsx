@@ -5,13 +5,14 @@ import {
 import { useSharedValue } from 'react-native-worklets-core';
 
 interface Props {
-  type: 'directional' | 'point';
+  type: 'directional' | 'point' | 'spot';
   intensity: number;
   colorKelvin: number;
   direction?: Float3;
   position?: Float3;
   castShadows?: boolean;
   falloffRadius?: number;
+  spotLightCone?: [number, number];
   onError: () => void;
 }
 
@@ -37,7 +38,7 @@ function temperatureColor(kelvin: number): Float3 {
  * constructing listener worklets from inside another worklet.
  */
 export function FilamentLight({
-  type, intensity, colorKelvin, direction, position, castShadows, falloffRadius, onError,
+  type, intensity, colorKelvin, direction, position, castShadows, falloffRadius, spotLightCone, onError,
 }: Props) {
   const { lightManager, scene, workletContext } = useFilamentContext();
   const entity = useSharedValue<Entity | undefined>(undefined);
@@ -69,7 +70,7 @@ export function FilamentLight({
     if (!entity.value) {
       // Supply every native argument, including explicit undefined optionals.
       const created = lightManager.createLightEntity(
-        type, colorKelvin, intensity, direction, position, castShadows, falloffRadius, undefined,
+        type, colorKelvin, intensity, direction, position, castShadows, falloffRadius, spotLightCone,
       );
       entity.value = created;
       scene.addEntity(created);
@@ -86,7 +87,7 @@ export function FilamentLight({
       lastTemperature.value = colorKelvin;
     }
   }, [active, entity, type, intensity, colorKelvin, direction, position, castShadows,
-    falloffRadius, lightManager, scene, lastIntensity, lastTemperature, red, green, blue]);
+    falloffRadius, spotLightCone, lightManager, scene, lastIntensity, lastTemperature, red, green, blue]);
 
   return null;
 }

@@ -11,7 +11,7 @@ export interface LabState {
 }
 
 export type LabDevice = 'lights' | 'blinds' | 'gate';
-export type ModelName = 'upper' | 'exterior' | 'landscape' | 'gate' | 'fixtures' | 'rain';
+export type ModelName = 'upper' | 'exterior' | 'landscape' | 'gate' | 'fixtures' | 'solar' | 'rain';
 export type LabMessage =
   | { type: 'ready' }
   | { type: 'error'; message: string }

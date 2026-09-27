@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
-  EnvironmentalLight, FilamentScene, FilamentView, Skybox, useFilamentContext,
+  FilamentScene, FilamentView, useFilamentContext,
   type RenderCallback, type Float3,
 } from 'react-native-filament';
 import presets from '../../../packages/home-scene/src/renderer-lab/presets.json';
 import { FilamentModel, type ModelKind } from './FilamentModel';
-import { FilamentLight } from './FilamentLight';
+import { FilamentLighting } from './FilamentLighting';
 import { useLabCamera } from './useLabCamera';
 import { useLabMetrics } from './useLabMetrics';
 import type { LabSurfaceProps, LabDevice } from './protocol';
@@ -18,8 +18,8 @@ const ASSETS = {
   gate: require('../../../packages/home-scene/public/models/gate.glb'),
   fixtures: require('../../../assets/renderer-lab/fixtures.glb'),
   rain: require('../../../assets/renderer-lab/rain.glb'),
+  solar: require('../../../assets/renderer-lab/solar.glb'),
 };
-const ENVIRONMENT = { uri: 'RNF_default_env_ibl.ktx' };
 const NO_EXTRA_EFFECTS = { enabled: false };
 const LIGHT_PICK_POINTS: Float3[] = [[9.9665, 2.5032, -14.145], [8.655, 0.95, -15.9], [11.345, 0.95, -15.9]];
 
@@ -47,7 +47,7 @@ function NativeScene({ settings, onEvent }: LabSurfaceProps) {
   }, []);
   const onLoaded = useCallback((kind: ModelKind) => {
     loaded.current.add(kind);
-    if (loaded.current.size === (property ? 4 : 2)) setReady(true);
+    if (loaded.current.size === (property ? 5 : 2)) setReady(true);
   }, [property]);
   useEffect(() => { if (ready) onEvent({ type: 'ready' }); }, [ready, onEvent]);
 
@@ -59,10 +59,11 @@ function NativeScene({ settings, onEvent }: LabSurfaceProps) {
     void view.pickEntity(x, y).then((entity) => {
       if (!entity || !mounted.current) return;
       const name = nameComponentManager.getEntityName(entity) ?? '';
-      let device: LabDevice | null = name.startsWith('lab-blind') ? 'blinds'
-        : name.startsWith('lab-light') ? 'lights' : name.startsWith('gate-') ? 'gate' : null;
-      // Fixture shells are merged into the house mesh. Include their visible bodies in the tap target.
-      if (!device && !property && LIGHT_PICK_POINTS.some((point) => {
+      let device: LabDevice | null = !property && name.startsWith('lab-blind') ? 'blinds'
+        : !property && name.startsWith('lab-light') ? 'lights' : name.startsWith('gate-') ? 'gate' : null;
+      // Fixture shells are merged into device batches. Widen their tap targets
+      // without selecting a lamp through an unrelated wall or floor surface.
+      if (!device && !property && name.startsWith('upper--luxury-device-') && LIGHT_PICK_POINTS.some((point) => {
         const projected = view.projectWorldToScreen(point);
         return Math.hypot(projected[0] - x, projected[1] - y) <= 24;
       })) device = 'lights';
@@ -82,25 +83,22 @@ function NativeScene({ settings, onEvent }: LabSurfaceProps) {
     collectInterval(timeSinceLastFrame);
   }, [updateCamera, collectInterval]);
 
-  return <FilamentView style={styles.surface} {...touchHandlers} renderCallback={animate}
-    enableTransparentRendering={false}>
-    <Skybox colorInHex={settings.night ? '#101b22' : '#dce4df'} />
-    <EnvironmentalLight key={settings.night ? 'night' : 'day'} source={ENVIRONMENT} intensity={settings.night ? 1800 : 25000} />
-    <FilamentLight type="directional" intensity={settings.night ? 1200 : 18000} colorKelvin={settings.night ? 9000 : 6000}
-      onError={onLightError}
-      direction={[0.594, -0.762, 0.262]} castShadows />
-    <FilamentModel source={property ? ASSETS.exterior : ASSETS.upper} kind="house" settings={settings} onLoaded={onLoaded} />
-    {property ? <>
-      <FilamentModel source={ASSETS.landscape} kind="landscape" settings={settings} onLoaded={onLoaded} />
-      <FilamentModel source={ASSETS.gate} kind="gate" settings={settings} onLoaded={onLoaded} />
-      <FilamentModel source={ASSETS.rain} kind="rain" settings={settings} onLoaded={onLoaded} />
-    </> : <>
-      <FilamentModel source={ASSETS.fixtures} kind="fixtures" settings={settings} onLoaded={onLoaded} />
-      <FilamentLight type="point" colorKelvin={2800} intensity={settings.lights ? 2200 : 0} onError={onLightError} position={[9.9665, 2.4232, -14.145]} falloffRadius={5.5} />
-      <FilamentLight type="point" colorKelvin={2700} intensity={settings.lights ? 500 : 0} onError={onLightError} position={[8.655, 0.91, -15.9]} falloffRadius={2.5} />
-      <FilamentLight type="point" colorKelvin={2700} intensity={settings.lights ? 500 : 0} onError={onLightError} position={[11.345, 0.91, -15.9]} falloffRadius={2.5} />
-    </>}
-  </FilamentView>;
+  // The SDK's bare iOS Metal UIView drops additional fingers. A standard RN View
+  // owns every touch so pinch/orbit/picking share one reliable coordinate space.
+  return <View style={styles.surface} {...touchHandlers} accessible accessibilityRole="image"
+    accessibilityLabel="Interactive house model" accessibilityHint="Drag to orbit, pinch to zoom, or tap a device to select its controls.">
+    <FilamentView style={styles.surface} pointerEvents="none" renderCallback={animate}
+      enableTransparentRendering={false}>
+      <FilamentLighting settings={settings} onError={onLightError} />
+      <FilamentModel source={property ? ASSETS.exterior : ASSETS.upper} kind="house" settings={settings} onLoaded={onLoaded} />
+      {property ? <>
+        <FilamentModel source={ASSETS.landscape} kind="landscape" settings={settings} onLoaded={onLoaded} />
+        <FilamentModel source={ASSETS.gate} kind="gate" settings={settings} onLoaded={onLoaded} />
+        <FilamentModel source={ASSETS.rain} kind="rain" settings={settings} onLoaded={onLoaded} />
+        <FilamentModel source={ASSETS.solar} kind="solar" settings={settings} onLoaded={onLoaded} />
+      </> : <FilamentModel source={ASSETS.fixtures} kind="fixtures" settings={settings} onLoaded={onLoaded} />}
+    </FilamentView>
+  </View>;
 }
 
 const styles = StyleSheet.create({ surface: { flex: 1, backgroundColor: '#101b22' } });
