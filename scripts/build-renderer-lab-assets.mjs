@@ -14,7 +14,7 @@ import {
   Vector3,
 } from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createWeatherAssets } from './renderer-lab-weather-assets.mjs';
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputDirectory = path.join(repository, 'assets/renderer-lab');
@@ -144,68 +144,6 @@ function createSolarFixtures() {
   return scene;
 }
 
-/** Generate stable pseudo-random values so both renderers receive identical rain. */
-function seed(index) {
-  const value = Math.sin(index * 127.1 + 311.7) * 43758.5453;
-  return value - Math.floor(value);
-}
-
-/** Test the traced irregular parcel, retaining the southwest diagonal boundary. */
-function isInsideParcel(x, z, polygon) {
-  let inside = false;
-  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
-    const [ax, az] = polygon[index];
-    const [bx, bz] = polygon[previous];
-    if ((az > z) !== (bz > z) && x < ((bx - ax) * (z - az)) / (bz - az) + ax) inside = !inside;
-  }
-  return inside;
-}
-
-/** Keep this simple shared particle column clear of the house and service shed. */
-function isOpenYard(x, z) {
-  if (x >= -1.4 && x <= 18 && z >= -17.6 && z <= 1.4) return false;
-  const shed = manifest.rooms.find(({ id }) => id === 'utility')?.bounds;
-  return !shed || x < shed[0] - 0.7 || x > shed[1] + 0.7 || z < shed[2] - 0.7 || z > shed[3] + 0.7;
-}
-
-/** Merge 180 drops into one draw primitive, repeating two twelve-metre cells. */
-function createRain() {
-  const polygon = layout.parcel.vertices.map(([x, y]) => [x, -y]);
-  const xs = polygon.map(([x]) => x);
-  const zs = polygon.map(([, z]) => z);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minZ = Math.min(...zs), maxZ = Math.max(...zs);
-  const geometries = [];
-  for (let attempt = 0; geometries.length < 180 && attempt < 10000; attempt++) {
-    const x = minX + seed(attempt * 3 + 1) * (maxX - minX);
-    const z = minZ + seed(attempt * 3 + 2) * (maxZ - minZ);
-    if (!isInsideParcel(x, z, polygon) || !isOpenYard(x, z)) continue;
-    const y = 0.1 + seed(attempt * 3 + 3) * 12;
-    for (let cell = 0; cell < 2; cell++) {
-      geometries.push(new BoxGeometry(0.014, 0.28, 0.014).translate(x, y + cell * 12, z));
-    }
-  }
-  if (geometries.length !== 180) throw new Error('Could not fit rain into the property');
-  const merged = mergeGeometries(geometries, false);
-  geometries.forEach((geometry) => geometry.dispose());
-  if (!merged) throw new Error('Rain geometry could not be merged');
-  const material = new MeshStandardMaterial({
-    name: 'lab-rain',
-    color: '#bfd8e3',
-    roughness: 0.53,
-    metalness: 0,
-    transparent: true,
-    opacity: 0.32,
-    depthWrite: false,
-  });
-  const mesh = new Mesh(merged, material);
-  mesh.name = 'lab-rain';
-  const scene = new Scene();
-  scene.name = 'VantaHome renderer comparison rain';
-  scene.add(mesh);
-  return scene;
-}
-
 /** Write a self-contained GLB without changing the existing scene asset inventory. */
 async function exportBinary(name, scene) {
   const exporter = new GLTFExporter();
@@ -224,4 +162,6 @@ async function exportBinary(name, scene) {
 await mkdir(outputDirectory, { recursive: true });
 await exportBinary('fixtures.glb', createFixtures());
 await exportBinary('solar.glb', createSolarFixtures());
-await exportBinary('rain.glb', createRain());
+const weather = await createWeatherAssets(repository, layout, manifest);
+await exportBinary('rain.glb', weather.scene);
+await writeFile(path.join(sceneDirectory, 'renderer-lab/weather-surfaces.json'), `${JSON.stringify(weather.metadata)}\n`);

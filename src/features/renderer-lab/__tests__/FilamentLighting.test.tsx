@@ -43,3 +43,11 @@ test('all four corner downlights switch on at night independently of bedroom pow
   expect(practicalLights()).toHaveLength(4);
   expect(practicalLights().every(({ type, intensity }) => type === 'spot' && intensity > 0)).toBe(true);
 });
+
+test('a thunderstorm shares the one directional light supported by Filament', () => {
+  render(<FilamentLighting settings={{ ...INITIAL_LAB_SETTINGS, view: 'property', weather: 'storm' }} onError={jest.fn()} />);
+  const directional = mockLight.mock.calls.map(([props]) => props as { type: string; flash?: unknown })
+    .filter(({ type }) => type === 'directional');
+  expect(directional).toHaveLength(1);
+  expect(directional[0].flash).toEqual({ weather: 'storm', motion: true, peakIntensity: 16000 });
+});

@@ -1,6 +1,9 @@
 import { LoadingManager, Material, Mesh, Texture, type Group, type Object3D } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { ModelName } from './contracts';
+import { WEATHER_GROUPS } from './weatherAnimation';
+
+const WEATHER_PLANTS = new Set(WEATHER_GROUPS.filter(({ kind }) => kind === 'plant').map(({ name }) => name));
 
 /** Keep each comparison's decoded working set equal to its native counterpart. */
 export function modelsForView(view: 'bedroom' | 'property'): ModelName[] {
@@ -22,8 +25,9 @@ export async function loadEmbeddedModel(name: ModelName): Promise<Group> {
   const gltf = await new GLTFLoader(manager).parseAsync(bytes.buffer, '');
   gltf.scene.traverse((node) => {
     if (node instanceof Mesh) {
-      node.castShadow = name !== 'rain' && name !== 'solar';
-      node.receiveShadow = name !== 'rain' && name !== 'solar';
+      const solid = name === 'rain' ? WEATHER_PLANTS.has(node.name) : name !== 'solar';
+      node.castShadow = solid;
+      node.receiveShadow = solid;
     }
   });
   return gltf.scene;

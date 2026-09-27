@@ -3,6 +3,8 @@ import {
   RenderCallbackContext, useFilamentContext, type Entity, type Float3,
 } from 'react-native-filament';
 import { useSharedValue } from 'react-native-worklets-core';
+import { stormFlash } from '../../../packages/home-scene/src/renderer-lab/weatherAnimation';
+import type { WeatherKind } from '../../../packages/home-scene/src/renderer-lab/weather';
 
 interface Props {
   type: 'directional' | 'point' | 'spot';
@@ -13,6 +15,7 @@ interface Props {
   castShadows?: boolean;
   falloffRadius?: number;
   spotLightCone?: [number, number];
+  flash?: { weather: WeatherKind; motion: boolean; peakIntensity: number };
   onError: () => void;
 }
 
@@ -38,13 +41,17 @@ function temperatureColor(kelvin: number): Float3 {
  * constructing listener worklets from inside another worklet.
  */
 export function FilamentLight({
-  type, intensity, colorKelvin, direction, position, castShadows, falloffRadius, spotLightCone, onError,
+  type, intensity, colorKelvin, direction, position, castShadows, falloffRadius, spotLightCone, flash, onError,
 }: Props) {
   const { lightManager, scene, workletContext } = useFilamentContext();
   const entity = useSharedValue<Entity | undefined>(undefined);
   const active = useSharedValue(false);
   const lastIntensity = useSharedValue(Number.NaN);
   const lastTemperature = useSharedValue(Number.NaN);
+  const elapsed = useSharedValue(0);
+  const flashWeather = flash?.weather;
+  const flashMotion = flash?.motion ?? false;
+  const flashPeak = flash?.peakIntensity ?? 0;
   const [red, green, blue] = temperatureColor(colorKelvin);
 
   useEffect(() => {
@@ -64,30 +71,37 @@ export function FilamentLight({
     };
   }, [active, entity, lightManager, scene, workletContext, onError]);
 
-  RenderCallbackContext.useRenderCallback(() => {
+  RenderCallbackContext.useRenderCallback(({ timeSinceLastFrame }) => {
     'worklet';
     if (!active.value) return;
+    if (flashWeather === 'storm' && flashMotion) elapsed.value += Math.min(Math.max(timeSinceLastFrame, 0), 0.08);
+    else elapsed.value = 0;
+    // Filament supports one directional source. Add the soft flash to the
+    // existing sun/moon, preserving its direction and shadow ownership.
+    const currentIntensity = intensity + (flashWeather === undefined ? 0
+      : flashPeak * stormFlash(elapsed.value, flashWeather, flashMotion));
     if (!entity.value) {
       // Supply every native argument, including explicit undefined optionals.
       const created = lightManager.createLightEntity(
-        type, colorKelvin, intensity, direction, position, castShadows, falloffRadius, spotLightCone,
+        type, colorKelvin, currentIntensity, direction, position, castShadows, falloffRadius, spotLightCone,
       );
       entity.value = created;
       scene.addEntity(created);
-      lastIntensity.value = intensity;
+      lastIntensity.value = currentIntensity;
       lastTemperature.value = colorKelvin;
       return;
     }
-    if (lastIntensity.value !== intensity) {
-      lightManager.setIntensity(entity.value, intensity);
-      lastIntensity.value = intensity;
+    if (lastIntensity.value !== currentIntensity) {
+      lightManager.setIntensity(entity.value, currentIntensity);
+      lastIntensity.value = currentIntensity;
     }
     if (lastTemperature.value !== colorKelvin) {
       lightManager.setColor(entity.value, [red, green, blue]);
       lastTemperature.value = colorKelvin;
     }
   }, [active, entity, type, intensity, colorKelvin, direction, position, castShadows,
-    falloffRadius, spotLightCone, lightManager, scene, lastIntensity, lastTemperature, red, green, blue]);
+    falloffRadius, spotLightCone, lightManager, scene, lastIntensity, lastTemperature, elapsed,
+    flashWeather, flashMotion, flashPeak, red, green, blue]);
 
   return null;
 }

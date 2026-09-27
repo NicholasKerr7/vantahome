@@ -8,6 +8,7 @@ import { INITIAL_STATE, parseLabState, postLabMessage, type LabDevice, type Mode
 import { FrameMetrics } from './frameMetrics';
 import { disposeModels, loadEmbeddedModel, modelsForView } from './models';
 import { createSolarLights, setSolarNight, type SolarLamp } from './solarLights';
+import { createStormEffects, type StormEffects } from './stormEffects';
 import presets from './presets.json';
 import './renderer-lab.css';
 
@@ -69,7 +70,7 @@ async function startLab(): Promise<void> {
   let loadGeneration = 0;
   let frameId = 0;
   let previousFrame = 0;
-  let rainElapsed = 0;
+  let stormEffects: StormEffects | null = null;
   let currentBlinds = state.blinds;
   let currentGate = state.gate;
   let cameraFit = 1;
@@ -104,7 +105,8 @@ async function startLab(): Promise<void> {
     const bedroom = state.view === 'bedroom';
     for (const name of ['upper', 'fixtures'] as const) if (models[name]) models[name].visible = bedroom;
     for (const name of ['exterior', 'landscape', 'gate', 'solar'] as const) if (models[name]) models[name].visible = !bedroom;
-    if (models.rain) models.rain.visible = state.rain && !bedroom;
+    // The weather asset also owns replacement rooted foliage, including on clear days.
+    if (models.rain) models.rain.visible = !bedroom;
     scene.background = new Color(state.night ? '#101d2d' : '#d9e6e5');
     ambient.intensity = state.night ? 0.6 : 1.9;
     sun.intensity = state.night ? 0.32 : 3.1;
@@ -116,6 +118,7 @@ async function startLab(): Promise<void> {
       material.emissive.copy(original);
       material.emissiveIntensity = state.lights ? 1.5 : 0;
     }
+    stormEffects?.apply(state);
   }
 
   /** Keep the render target matched to the host viewport without inline authored styling. */
@@ -145,8 +148,7 @@ async function startLab(): Promise<void> {
     if (models.gate) {
       models.gate.position.set(presets.gateOrigin[0] + presets.gateTravel * currentGate / 100, presets.gateOrigin[1], presets.gateOrigin[2]);
     }
-    if (state.rain && state.motion && state.view === 'property') rainElapsed += delta;
-    if (models.rain) models.rain.position.y = -(rainElapsed * presets.rainSpeed % presets.rainPeriod);
+    stormEffects?.update(delta);
   }
 
   /** Record callback cadence independently of GPU timing, while pausing hidden pages. */
@@ -240,6 +242,7 @@ async function startLab(): Promise<void> {
     canvas.removeEventListener('webglcontextlost', contextLost);
     window.__VANTA_LAB_UPDATE__ = undefined;
     controls.dispose();
+    stormEffects?.dispose();
     for (const { light } of solarLamps) light.dispose();
     disposeModels(loadedRoots);
     sun.shadow.map?.dispose();
@@ -251,6 +254,8 @@ async function startLab(): Promise<void> {
   async function loadView(): Promise<void> {
     const generation = ++loadGeneration;
     cancelAnimationFrame(frameId);
+    stormEffects?.dispose();
+    stormEffects = null;
     for (const root of loadedRoots) scene.remove(root);
     for (const light of pointLights) scene.remove(light);
     for (const { light } of solarLamps) light.dispose();
@@ -279,6 +284,14 @@ async function startLab(): Promise<void> {
     for (const model of loadedRoots) scene.add(model);
     if (models.gate) models.gate.userData.labDevice = 'gate';
     if (models.solar) solarLamps = createSolarLights(models.solar);
+    if (models.rain && models.landscape && models.exterior) {
+      try {
+        stormEffects = createStormEffects({ scene, weatherModel: models.rain, landscape: models.landscape, exterior: models.exterior, ambient, sun });
+      } catch (error) {
+        dispose();
+        throw error;
+      }
+    }
     const blind = models.fixtures?.getObjectByName('lab-blind-fabric');
     if (blind) blind.userData.labDevice = 'blinds';
     for (const name of ['master-light', 'master-bedside-left', 'master-bedside-right']) {
@@ -311,7 +324,7 @@ async function startLab(): Promise<void> {
     const viewChanged = next.view !== state.view;
     const shouldReset = next.view !== state.view || next.resetKey !== state.resetKey;
     state = next;
-    if (shouldReset) { rainElapsed = 0; resetCamera(); }
+    if (shouldReset) { stormEffects?.reset(); resetCamera(); }
     applyState();
     metrics.reset();
     if (viewChanged) void loadView().catch(reportError);

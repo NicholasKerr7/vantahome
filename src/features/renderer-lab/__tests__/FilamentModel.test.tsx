@@ -113,15 +113,3 @@ test('the gate reaches its exact target and stops submitting matrices while sett
   act(() => { mockCallbacks.forEach((callback) => callback({ timeSinceLastFrame: 0.08 })); });
   expect(mockMatrix.translate).toHaveBeenLastCalledWith([-9.79, 0.575, -22.37]);
 });
-
-test('paused rain retains its pose without repeated native matrix allocations', () => {
-  const onLoaded = jest.fn();
-  const { rerender } = render(<FilamentModel source={1} kind="rain"
-    settings={{ ...INITIAL_LAB_SETTINGS, rain: true }} onLoaded={onLoaded} />);
-  act(() => { mockCallbacks.forEach((callback) => callback({ timeSinceLastFrame: 0.08 })); });
-  const count = mockSetTransform.mock.calls.length;
-  rerender(<FilamentModel source={1} kind="rain"
-    settings={{ ...INITIAL_LAB_SETTINGS, rain: true, motion: false }} onLoaded={onLoaded} />);
-  act(() => { mockCallbacks.forEach((callback) => callback({ timeSinceLastFrame: 0.08 })); });
-  expect(mockSetTransform).toHaveBeenCalledTimes(count);
-});

@@ -1,11 +1,12 @@
+import { isWeatherSettings, type WeatherSettings } from './weather';
+
 /** Deliberately small, simulation-only controls shared with the native renderer lab. */
-export interface LabState {
+export interface LabState extends WeatherSettings {
   view: 'bedroom' | 'property';
   night: boolean;
   lights: boolean;
   blinds: number;
   gate: number;
-  rain: boolean;
   motion: boolean;
   resetKey: number;
 }
@@ -29,7 +30,7 @@ declare global {
 
 export const INITIAL_STATE: LabState = {
   view: 'bedroom', night: false, lights: true, blinds: 0,
-  gate: 0, rain: false, motion: true, resetKey: 0,
+  gate: 0, weather: 'clear', windSpeed: 0, windDirection: 0, motion: true, resetKey: 0,
 };
 
 /** Reject malformed host payloads before they can reach the camera or transforms. */
@@ -37,7 +38,8 @@ export function parseLabState(value: unknown): LabState | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const input = value as Record<string, unknown>;
   if (input.view !== 'bedroom' && input.view !== 'property') return null;
-  for (const key of ['night', 'lights', 'rain', 'motion']) {
+  if (!isWeatherSettings(input)) return null;
+  for (const key of ['night', 'lights', 'motion']) {
     if (typeof input[key] !== 'boolean') return null;
   }
   for (const key of ['blinds', 'gate']) {
@@ -47,7 +49,8 @@ export function parseLabState(value: unknown): LabState | null {
   return {
     view: input.view, night: input.night as boolean, lights: input.lights as boolean,
     blinds: input.blinds as number, gate: input.gate as number,
-    rain: input.rain as boolean, motion: input.motion as boolean, resetKey: input.resetKey,
+    weather: input.weather, windSpeed: input.windSpeed, windDirection: input.windDirection,
+    motion: input.motion as boolean, resetKey: input.resetKey,
   };
 }
 

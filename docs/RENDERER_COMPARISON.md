@@ -27,16 +27,20 @@ at a time. Backgrounding or leaving the screen releases its graphics surface.
 | Case | Assets | Controls |
 | --- | --- | --- |
 | Bedroom | Original furnished `upper.glb` plus exported live fixture parts | Ceiling/bedside lights, blind opening, day/night, orbit/pinch |
-| Property | Original `exterior.glb`, landscape, gate, solar diffusers, and shared rain geometry | Sliding gate, rain, day/night with four solar lights, orbit/pinch |
+| Property | Original `exterior.glb`, landscape, gate, solar diffusers, and shared weather geometry | Sliding gate, weather preview/Auto, day/night with four solar lights, orbit/pinch |
 
 Each WebView document embeds only its case's assets, matching the native inventory.
-The bedroom package is approximately 5.3 MiB and the property package 16.2 MiB.
-The packaged documents make no network requests and require no weather location.
-Rain is a deterministic sample, independent of live weather, so runs are repeatable.
+The bedroom package is approximately 5.3 MiB and the property package 17.6 MiB.
+The packaged documents make no network requests. Manual Clear, Light rain, Heavy
+rain, and Thunderstorm modes are deterministic and work offline. Auto uses the
+host's validated Open-Meteo service for the existing Hopewell, Jamaica location;
+it needs no device location permission. The host pauses polling in the background,
+labels stale/unavailable conditions, and stops using observations older than six
+hours. Day/night remains a separate comparison control.
 
 The house and furniture exports remain editable and unchanged. The asset exporter
 reads the existing device catalog and emits separate named blind and light parts.
-The simplified blind gather and rain motion are identical in both previews; this
+The simplified blind gather and shared weather poses match both previews; this
 is not a port of every existing device or weather effect. The detailed asset
 contract is in `assets/renderer-lab/README.md`.
 
@@ -44,6 +48,29 @@ Both cases share camera presets, full device pixel density, gate travel, animati
 easing, and reduced-motion behavior. Native controls use at least 44-point targets.
 Phone portrait and tablet portrait put controls below the scene; tablet landscape
 uses a side panel. The screen does not introduce vertical scrolling.
+
+### Surface-aware storms
+
+The shared weather asset traces the committed roof and landscape triangles.
+Storms use 360 rain streaks, 112 hard-surface impact clusters, and 56 roof-edge
+drips in fixed batches. Lighter modes activate fewer batches. Roof, driveway,
+road, paths, and service covers receive their own sampled impacts; foliage and
+indoor floors do not receive pavement splashes. Every roof-drip anchor is checked
+for clearance from adjoining roofs.
+
+Fifteen rooted foliage groups preserve the source leaf triangles and colors.
+Only crowns and shrubs sway; trunks and bark stay fixed. Exposed roof/pavement
+materials darken and become smoother in wet conditions, with a fitted wet-surface
+overlay. These are bounded visual effects, not a fluid simulation or planar
+reflection pass. The 36-group asset is about 1.25 MiB, uses no new textures, and
+never grows its particle pool. Native weather transforms update at most 30 times
+per second independently of camera input.
+
+Thunderstorm codes alone enable a soft 0.85-second lightning envelope once per
+19 seconds. Filament adds this to its single sun/moon source because the SDK
+supports only one directional light. Reduce Motion or Motion off hides moving
+precipitation, disables lightning, and rests the plants while keeping wet surfaces.
+Original scene exports and the existing full 3D Home experience remain unchanged.
 
 ## What the numbers mean
 
@@ -209,3 +236,27 @@ build 8 compiled, passed signature verification, and was installed/launched on
 the physical iPhone. The owner's device retest remains pending; Android native
 verification, physical iPad testing, and sustained performance profiling remain
 outside this verification run.
+
+### Surface-weather preview verification
+
+Both TypeScript projects pass, as do 49 focused app tests, 21 shared-scene tests,
+and 10 asset/packaging tests. Geometry tests check roof/hardscape impact positions,
+runoff clearance, intensity-specific streak dimensions, particle budgets, and
+exact preservation of the source foliage triangles. A sampled trajectory audit
+found no roof penetration across eight wind directions and six fall heights.
+
+The iPhone 17 simulator passed a complete storm interaction flow and a final
+geometry visual check. Coverage includes every manual mode, day/night, motion
+off with wet surfaces retained, gate drag/toggle, real pinch gestures, switching
+between engines, background/resume, and returning to the original scene. Auto
+successfully fetched current Hopewell conditions and displayed Clear / Live.
+Screenshots confirmed visible roof sheen, longer rain streaks, surface impacts,
+and roof drips. The native console contained no fatal JavaScript, worklet, or
+graphics exception. The first test attempt hit an ambiguous XCTest slider label;
+the corrected harness passed against the same app logic.
+
+Release preview build 9 compiled, passed signature verification, and was installed
+and launched on the physical iPhone. Its packaged weather asset matches the final
+verified source. Physical interaction/performance confirmation remains pending;
+Android hardware and sustained thermal/energy profiling were not performed.
+Physical iPad testing remains deferred.

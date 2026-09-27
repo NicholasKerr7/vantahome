@@ -21,11 +21,27 @@ Add 2.9464 m to the fixtures only when using the complete exterior model.
   the headrail; it is a simplified comparison animation. Exact existing blind
   motion can instead update individual slats using `src/blinds.ts` in the scene
   package, keeping the group at unit scale.
-- `rain.glb` contains one mesh and one translucent material, both `lab-rain`.
-  Its 180 thin drops use ninety deterministic yard anchors, each repeated twelve
-  metres above the first cell. Translate the mesh Y from `0` to `-12` and repeat.
-  The house and energy shed envelopes are excluded. Below-ground particles are
-  occluded by the landscape. Reduced motion should freeze or hide this effect.
+- `rain.glb` contains 36 batched meshes, with the shared absolute pose contract in
+  `packages/home-scene/src/renderer-lab/weatherAnimation.ts`. Its generated
+  `weather-surfaces.json` records node anchors, source surfaces, and fixed budgets.
+  Twelve rain phases expose 120, 240, or 360 drops for light rain, heavy rain, or
+  thunderstorms. Additional heavy-rain batches use 0.5–0.8 m streaks; storm batches
+  use 0.85–1.2 m streaks so stronger rain remains visible at property scale. Drops terminate on sampled roof, road, driveway, or yard surfaces;
+  the house and shed interior envelopes exclude ground-level drops.
+- Four impact batches contain 112 splashes sampled from actual roof triangles,
+  driveway/apron, road, paths, and service covers. Four runoff batches contain
+  56 drops immediately outside exposed roof eaves, with clearance from lower roofs.
+  `lab-weather-wet` copies upward-facing hardscape triangles with a thin wet overlay.
+  Each phase uses one transform; individual particles never require native calls.
+- Fifteen `lab-weather-plant-*` meshes contain exactly the original foliage triangles
+  split into seven palm crowns and eight shrub beds. Original material colors are
+  baked into vertex colors, allowing one draw per anchor. Hide the three original
+  `landscape-Site Leaf dark/light/middle` meshes while this replacement asset is
+  mounted, and restore them on disposal. Three.js sanitizes spaces in these names
+  to underscores. Trunks and bark stay in the original landscape and remain fixed.
+  The weather asset stays resident in clear weather so plants never disappear.
+  Reduced motion hides all precipitation, disables lightning and foliage movement,
+  and retains wet surfaces whenever a rainy mode is selected.
 - `solar.glb` contains the four named `lab-light-grounds-solar-*` diffusers.
   Their world positions and rotations come from the existing device catalog;
   static poles, panels, and housings remain in `landscape.glb`. Both comparison

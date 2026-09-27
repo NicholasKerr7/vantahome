@@ -1,14 +1,17 @@
+import type { WeatherSettings } from '../../../packages/home-scene/src/renderer-lab/weather';
+
+export type { WeatherKind, WeatherChoice, WeatherSettings } from '../../../packages/home-scene/src/renderer-lab/weather';
+
 export type LabDevice = 'lights' | 'blinds' | 'gate';
 export type LabView = 'bedroom' | 'property';
 export type LabRenderer = 'three' | 'filament';
 
-export interface LabSettings {
+export interface LabSettings extends WeatherSettings {
   view: LabView;
   night: boolean;
   lights: boolean;
   blinds: number;
   gate: number;
-  rain: boolean;
   motion: boolean;
   resetKey: number;
 }
@@ -30,7 +33,7 @@ export interface LabSurfaceProps {
 
 export const INITIAL_LAB_SETTINGS: LabSettings = {
   view: 'bedroom', night: false, lights: true, blinds: 0, gate: 0,
-  rain: false, motion: true, resetKey: 0,
+  weather: 'clear', windSpeed: 0, windDirection: 0, motion: true, resetKey: 0,
 };
 
 /** Accept only bounded renderer diagnostics; this protocol has no hardware commands. */

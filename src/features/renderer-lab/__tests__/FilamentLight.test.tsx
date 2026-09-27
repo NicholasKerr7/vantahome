@@ -2,7 +2,7 @@ import React from 'react';
 import { act, render } from '@testing-library/react-native';
 import { FilamentLight } from '../FilamentLight';
 
-const mockCallbacks = new Set<() => void>();
+const mockCallbacks = new Set<(frame: { timeSinceLastFrame: number }) => void>();
 const mockCleanupQueue: Array<() => void> = [];
 const mockLifecycle: string[] = [];
 const mockEntity = { id: 42 };
@@ -43,7 +43,7 @@ const mockContext = {
 jest.mock('react-native-filament', () => ({
   useFilamentContext: () => mockContext,
   RenderCallbackContext: {
-    useRenderCallback: (callback: () => void, dependencies: unknown[]) => {
+    useRenderCallback: (callback: (frame: { timeSinceLastFrame: number }) => void, dependencies: unknown[]) => {
       require('react').useEffect(() => {
         mockCallbacks.add(callback);
         return () => { mockCallbacks.delete(callback); };
@@ -56,8 +56,8 @@ jest.mock('react-native-worklets-core', () => ({
 }));
 
 /** Execute a native frame without mocking the component's ownership decisions. */
-function frame() {
-  act(() => { mockCallbacks.forEach((callback) => callback()); });
+function frame(dt = 0.016) {
+  act(() => { mockCallbacks.forEach((callback) => callback({ timeSinceLastFrame: dt })); });
 }
 
 beforeEach(() => {
@@ -100,7 +100,7 @@ test('stops queued frames before removing and destroying the owned native light'
   const queuedFrame = [...mockCallbacks][0];
   unmount();
   expect(mockRunAsync).toHaveBeenCalledTimes(1);
-  act(() => { queuedFrame(); });
+  act(() => { queuedFrame({ timeSinceLastFrame: 0.016 }); });
   expect(mockCreate).toHaveBeenCalledTimes(1);
   expect(mockDestroy).not.toHaveBeenCalled();
   act(() => { mockCleanupQueue.forEach((callback) => callback()); });
@@ -137,4 +137,22 @@ test('passes a solar spotlight cone through the complete eight-argument native c
     spotLightCone={[0.01, 0.88]} onError={jest.fn()} />);
   frame();
   expect(mockCreate).toHaveBeenCalledWith('spot', 3000, 200000, [0, -1, 0], [1, 3.5, -2], undefined, 9, [0.01, 0.88]);
+});
+
+test('lightning pulses only during an animated storm and stops immediately when motion is disabled', () => {
+  const onError = jest.fn();
+  const { rerender } = render(<FilamentLight type="directional" intensity={640} colorKelvin={10000}
+    flash={{ weather: 'storm', motion: true, peakIntensity: 7000 }} onError={onError} />);
+  for (let index = 0; index < 400; index += 1) frame(0.08);
+  expect(mockCreate).toHaveBeenCalledTimes(1);
+  expect(mockIntensity.mock.calls.some(([, intensity]) => intensity > 640)).toBe(true);
+  expect(mockIntensity.mock.calls.every(([, intensity]) => intensity >= 640 && intensity <= 7640)).toBe(true);
+  rerender(<FilamentLight type="directional" intensity={640} colorKelvin={10000}
+    flash={{ weather: 'storm', motion: false, peakIntensity: 7000 }} onError={onError} />);
+  frame();
+  const calls = mockIntensity.mock.calls.length;
+  expect(mockIntensity).toHaveBeenLastCalledWith(mockEntity, 640);
+  for (let index = 0; index < 200; index += 1) frame(0.08);
+  expect(mockIntensity).toHaveBeenCalledTimes(calls);
+  expect(mockCreate).toHaveBeenCalledTimes(1);
 });

@@ -62,5 +62,13 @@ export const labStyles = StyleSheet.create({
   detailValue: { color: labColors.sage, fontSize: 12, fontVariant: ["tabular-nums"] },
   slider: { width: "100%", height: 44 },
   detailDescription: { color: labColors.muted, fontSize: 11, lineHeight: 16 },
+  weatherStatus: { color: labColors.muted, fontSize: 9, lineHeight: 12 },
+  weatherModal: { flex: 1, padding: 20, alignItems: "center", justifyContent: "center" },
+  weatherBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(4,13,11,0.78)" },
+  weatherCard: { width: "100%", maxWidth: 380, padding: 16, gap: 12, borderRadius: 22, backgroundColor: labColors.panel, borderColor: labColors.stroke, borderWidth: 1 },
+  weatherHeading: { flexDirection: "row", alignItems: "center", gap: 8 },
+  weatherClose: { minHeight: 44, minWidth: 48, alignItems: "center", justifyContent: "center" },
+  weatherOptions: { gap: 6 },
+  weatherOption: { minHeight: 44, borderRadius: 12, paddingHorizontal: 14, backgroundColor: labColors.raised, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   pressFeedback: { opacity: 0.72 },
 });

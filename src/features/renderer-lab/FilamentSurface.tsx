@@ -7,6 +7,7 @@ import {
 import presets from '../../../packages/home-scene/src/renderer-lab/presets.json';
 import { FilamentModel, type ModelKind } from './FilamentModel';
 import { FilamentLighting } from './FilamentLighting';
+import { FilamentWeather } from './FilamentWeather';
 import { useLabCamera } from './useLabCamera';
 import { useLabMetrics } from './useLabMetrics';
 import type { LabSurfaceProps, LabDevice } from './protocol';
@@ -94,7 +95,7 @@ function NativeScene({ settings, onEvent }: LabSurfaceProps) {
       {property ? <>
         <FilamentModel source={ASSETS.landscape} kind="landscape" settings={settings} onLoaded={onLoaded} />
         <FilamentModel source={ASSETS.gate} kind="gate" settings={settings} onLoaded={onLoaded} />
-        <FilamentModel source={ASSETS.rain} kind="rain" settings={settings} onLoaded={onLoaded} />
+        <FilamentWeather source={ASSETS.rain} settings={settings} onLoaded={onLoaded} />
         <FilamentModel source={ASSETS.solar} kind="solar" settings={settings} onLoaded={onLoaded} />
       </> : <FilamentModel source={ASSETS.fixtures} kind="fixtures" settings={settings} onLoaded={onLoaded} />}
     </FilamentView>

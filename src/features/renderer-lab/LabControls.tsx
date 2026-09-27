@@ -1,7 +1,9 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import type { LabDevice, LabSettings, LabView } from "./protocol";
+import type { LabDevice, LabSettings, LabView, WeatherChoice } from "./protocol";
 import LabSlider from "./LabSlider";
+import { LabWeatherPicker } from "./LabWeatherPicker";
+import type { LabWeather } from "./useLabWeather";
 import { labStyles as styles } from "./styles";
 
 type ControlsProps = {
@@ -11,6 +13,9 @@ type ControlsProps = {
   motionAllowed: boolean;
   onChange: (settings: Partial<LabSettings>) => void;
   onSelect: (device: LabDevice) => void;
+  weatherChoice: WeatherChoice;
+  weather: LabWeather;
+  onWeatherChange: (choice: WeatherChoice) => void;
 };
 
 type SmallButtonProps = { label: string; selected: boolean; onPress: () => void; accessibilityLabel?: string };
@@ -45,7 +50,7 @@ function DeviceCard({ label, state, enabled, selected, onToggle, onDetails }: De
 }
 
 /** Shared controls ensure both renderers receive identical simulation settings. */
-export function LabControls({ settings, selectedDevice, landscape, motionAllowed, onChange, onSelect }: ControlsProps) {
+export function LabControls({ settings, selectedDevice, landscape, motionAllowed, onChange, onSelect, weatherChoice, weather, onWeatherChange }: ControlsProps) {
   const property = settings.view === "property";
   const mechanicalDevice = property ? "gate" : "blinds";
   const mechanicalValue = property ? settings.gate : settings.blinds;
@@ -76,8 +81,8 @@ export function LabControls({ settings, selectedDevice, landscape, motionAllowed
       <View style={styles.row}>
         <SmallButton label={settings.night ? "Night" : "Day"} selected={settings.night}
           accessibilityLabel={`Switch to ${settings.night ? "day" : "night"}`} onPress={() => onChange({ night: !settings.night })} />
-        {property && <SmallButton label="Rain" selected={settings.rain} accessibilityLabel={`Turn rain ${settings.rain ? "off" : "on"}`}
-          onPress={() => onChange({ rain: !settings.rain })} />}
+        {property && <LabWeatherPicker choice={weatherChoice} weather={weather}
+          motionAllowed={motionAllowed && settings.motion} onChange={onWeatherChange} />}
         <SmallButton label={settings.motion && motionAllowed ? "Motion on" : "Motion off"} selected={settings.motion && motionAllowed}
           accessibilityLabel={`Turn scene motion ${settings.motion ? "off" : "on"}`}
           onPress={() => onChange({ motion: !settings.motion })} />

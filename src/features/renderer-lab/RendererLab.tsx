@@ -4,7 +4,8 @@ import { useDecorativeMotion } from "../../components/useDecorativeMotion";
 import { LabControls } from "./LabControls";
 import NativeLabSurface from "./NativeLabSurface";
 import WebLabSurface from "./WebLabSurface";
-import { INITIAL_LAB_SETTINGS, type LabDevice, type LabEvent, type LabMetrics, type LabRenderer, type LabSettings } from "./protocol";
+import { INITIAL_LAB_SETTINGS, type LabDevice, type LabEvent, type LabMetrics, type LabRenderer, type LabSettings, type WeatherChoice } from "./protocol";
+import { useLabWeather } from "./useLabWeather";
 import { labColors, labStyles as styles } from "./styles";
 
 type BoundaryProps = { children: React.ReactNode; onError: () => void };
@@ -29,6 +30,7 @@ export default function RendererLab({ active }: RendererLabProps) {
   const landscape = width >= 760 && width > height;
   const [renderer, setRenderer] = useState<LabRenderer>("three");
   const [settings, setSettings] = useState<LabSettings>({ ...INITIAL_LAB_SETTINGS });
+  const [weatherChoice, setWeatherChoice] = useState<WeatherChoice>("clear");
   const [selectedDevice, setSelectedDevice] = useState<LabDevice>("blinds");
   const [attempt, setAttempt] = useState(0);
   const [foreground, setForeground] = useState(AppState.currentState === "active");
@@ -36,7 +38,9 @@ export default function RendererLab({ active }: RendererLabProps) {
   const [metrics, setMetrics] = useState<LabMetrics | null>(null);
   const surfaceActive = active && foreground;
   const motionAllowed = useDecorativeMotion(active);
-  const surfaceSettings = useMemo(() => ({ ...settings, motion: settings.motion && motionAllowed }), [settings, motionAllowed]);
+  const weather = useLabWeather(weatherChoice, surfaceActive && settings.view === "property");
+  const resolvedSettings = useMemo(() => ({ ...settings, ...weather.settings }), [settings, weather.settings]);
+  const surfaceSettings = useMemo(() => ({ ...resolvedSettings, motion: settings.motion && motionAllowed }), [resolvedSettings, settings.motion, motionAllowed]);
   const surfaceKey = `${renderer}-${settings.view}-${attempt}`;
   const sessionToken = useMemo(() => ({ startedAt: Date.now(), settled: false }), [surfaceKey, surfaceActive]);
   const currentSession = useRef<object | null>(sessionToken);
@@ -140,8 +144,9 @@ export default function RendererLab({ active }: RendererLabProps) {
         </View>
         <Text style={styles.footnote}>{Platform.OS === "web" ? "Filament requires the native preview. " : ""}Callback intervals measure cadence, not GPU completion or FPS.</Text>
       </View>
-      <LabControls settings={settings} selectedDevice={selectedDevice} landscape={landscape}
-        motionAllowed={motionAllowed} onChange={changeSettings} onSelect={setSelectedDevice} />
+      <LabControls settings={resolvedSettings} selectedDevice={selectedDevice} landscape={landscape}
+        motionAllowed={motionAllowed} onChange={changeSettings} onSelect={setSelectedDevice}
+        weatherChoice={weatherChoice} weather={weather} onWeatherChange={setWeatherChoice} />
     </View>
   </View>;
 }

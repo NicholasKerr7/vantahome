@@ -136,3 +136,24 @@ test("offers only implemented property controls and bounds the gate slider", () 
   fireEvent(screen.getByLabelText("Gate opening"), "valueChange", -20);
   expect(mockWebProps.settings.gate).toBe(0);
 });
+
+test("previews each weather mode without scrolling and preserves weather across engines", () => {
+  const screen = render(<RendererLab active />);
+  fireEvent.press(screen.getByLabelText("Property"));
+  fireEvent.press(screen.getByLabelText("Weather: Clear. Preview. Change weather"));
+  fireEvent.press(screen.getByLabelText("Preview light rain"));
+  expect(mockWebProps.settings).toMatchObject({ weather: "light", windSpeed: 8 });
+  fireEvent.press(screen.getByLabelText("Weather: Light rain. Preview. Change weather"));
+  fireEvent.press(screen.getByLabelText("Preview heavy rain"));
+  expect(mockWebProps.settings.weather).toBe("heavy");
+  fireEvent.press(screen.getByLabelText("Weather: Heavy rain. Preview. Change weather"));
+  fireEvent.press(screen.getByLabelText("Preview thunderstorm"));
+  expect(mockWebProps.settings).toMatchObject({ weather: "storm", windSpeed: 48 });
+  fireEvent.press(screen.getByLabelText("Use Filament renderer"));
+  expect(mockNativeProps.settings).toMatchObject({ weather: "storm", windSpeed: 48 });
+  fireEvent.press(screen.getByLabelText("Turn scene motion off"));
+  expect(mockNativeProps.settings).toMatchObject({ weather: "storm", motion: false });
+  fireEvent.press(screen.getByLabelText("Weather: Thunderstorm. Preview. Change weather"));
+  fireEvent.press(screen.getByLabelText("Preview clear"));
+  expect(mockNativeProps.settings).toMatchObject({ weather: "clear", windSpeed: 0 });
+});

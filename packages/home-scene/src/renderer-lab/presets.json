@@ -8,7 +8,5 @@
   "blindOrigin": [8.139, 2.1, -16.49],
   "blindScaleTravel": 0.82,
   "blindLift": 0.28,
-  "animationResponse": 4,
-  "rainSpeed": 6,
-  "rainPeriod": 12
+  "animationResponse": 4
 }
