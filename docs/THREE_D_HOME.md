@@ -181,14 +181,17 @@ unmapped blinds, lighting preferences, and a cold app reload. Neither browser
 flow reported scene runtime exceptions. Desktop development scene readiness was
 measured separately and does not establish a mobile loading-time target.
 
-Web, iOS, and Android JavaScript/Hermes exports passed. These are bundle checks, not physical device runs. Physical-device GPU, memory, battery, and native WebView behavior remain unverified. Automated scene success is not evidence of hardware readiness.
+Web, iOS, and Android JavaScript/Hermes exports passed. These are bundle checks,
+not physical device runs. Physical-device checks are recorded below; quantitative
+GPU, memory, and battery measurements remain outstanding. Automated scene success
+is not evidence of hardware readiness.
 
 On **2026-09-26**, the user confirmed that the local Safari demo opened during
 the iPad/iPhone check and reported that everything looked and felt good so far.
 The preview was exported from commit `dbc2eb4` with explicit demo mode. This is
 a positive initial, user-reported browser check; individual test cases, device
 models, OS versions, frame rates, memory use, and sustained heat/battery results
-were not recorded. Native iOS WebView testing remains outstanding.
+were not recorded. Native iOS WebView testing was still outstanding at that point.
 
 On **2026-09-27**, Xcode 27 completed a signed Release demo build and installed
 `VantaHome Preview` alongside the existing app on an iPhone 16 Pro Max running
@@ -199,8 +202,16 @@ preview identity was restored to the original app identity in the source
 checkout after packaging; signing overrides stayed local to the build.
 The initial launch was rejected by iOS with a signing/trust message. The user
 then trusted the developer profile and confirmed that the app opened; a
-subsequent device-tool launch also succeeded. Native 3D interactions, state
-restoration, and sustained performance still need physical-device validation.
+subsequent device-tool launch also succeeded.
+
+In the same iPhone preview, the user then confirmed that 3D Home loaded, orbit
+and pinch zoom responded, and the light, blinds, and gate controls worked.
+Settings survived leaving and reopening 3D Home, and switching to another app
+and back worked. A fresh device-tool launch succeeded and its captured console
+contained no fatal or uncaught-error indicators during this check. These are
+user-reported functional results, not measured frame rates or memory results.
+Force-quit persistence, offline reopening, sustained heat/battery behavior, and
+native iPad portrait/landscape testing remain outstanding.
 
 A future real-device adapter must use authorized household/device selectors,
 explicit scene-to-device mappings, and the existing `deviceClient` command path.
