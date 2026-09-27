@@ -1,8 +1,10 @@
 # Shared renderer comparison assets
 
-Regenerate with `node scripts/build-renderer-lab-assets.mjs`. The script reads the
-existing house manifest, fixture catalog, and property boundary. It does not edit
-the house exports. Verify with `node --test scripts/build-renderer-lab-assets.test.mjs`.
+Regenerate and validate with `npm run build:renderer-lab`. The shared exporter
+reads the existing house manifest, fixture catalog, and property boundary;
+the native water exporter reuses the Three.js particle factory. Neither edits
+the house exports. Verify with `node --test scripts/build-renderer-lab-assets.test.mjs
+scripts/build-filament-rain.test.mjs scripts/build-filament-materials.test.mjs`.
 
 All coordinates are metres, Y-up, with X east and Z south. `fixtures.glb` uses the
 upper floor's local elevation, matching `packages/home-scene/public/models/upper.glb`.
@@ -30,10 +32,10 @@ Add 2.9464 m to the fixtures only when using the complete exterior model.
   the headrail; it is a simplified comparison animation. Exact existing blind
   motion can instead update individual slats using `src/blinds.ts` in the scene
   package, keeping the group at unit scale.
-- `rain.glb` contains 36 batched meshes. Native water and shared foliage use the
+- `rain.glb` contains 36 batched meshes. Original water batches and shared foliage use the
   absolute pose contract in `packages/home-scene/src/renderer-lab/weatherAnimation.ts`. Its generated
   `weather-surfaces.json` records node anchors, source surfaces, and fixed budgets.
-  Twelve native rain phases expose 120, 240, or 360 drops for light rain, heavy
+  Twelve original rain phases expose 120, 240, or 360 drops for light rain, heavy
   rain, or thunderstorms. Additional heavy-rain batches use 0.5–0.8 m streaks; storm batches
   use 0.85–1.2 m streaks so stronger rain remains visible at property scale. Drops
   terminate on sampled roof, road, driveway, or yard surfaces;
@@ -51,13 +53,29 @@ Add 2.9464 m to the fixtures only when using the complete exterior model.
   and each splash's three arms share a phase. Shader animation gives streaks soft
   edges and a minimum viewport footprint without per-particle JavaScript updates.
   The source water batches are hidden while replacements are mounted and restored
-  on disposal; their GLB geometry and native behavior remain unchanged.
+  on disposal; their shared GLB geometry remains unchanged.
   The existing wet-overlay triangles mask procedural ripple rings, including at
   narrow pavement edges, so rings do not spill onto grass. Motion off removes
   moving water and rings while keeping static wetness. The controller restores the
   original overlay material and releases generated GPU resources on disposal.
-  Three.js and Filament therefore have different rain counts and shader work;
-  their timings do not represent an equal-work weather benchmark.
+- Filament hides all original water batches and the wet overlay, retaining the
+  shared foliage. `filament-rain.glb` holds three native quad batches with the same
+  720/336/56 particle counts, anchors and seeds, plus an exact pavement-mask copy.
+  The generator invokes `threeRainGeometry.ts` so seed laws cannot drift. Each
+  batch adds two zero-alpha, degenerate bounds guard triangles, preserving the
+  full shader-motion envelope through glTF loading without changing any anchor.
+  UV0 holds corners, UV1 phase/size, and COLOR_0 tier/3, variation, zero, guard alpha.
+  A one-pixel embedded placeholder texture retains both UV channels in glTF loaders;
+  custom materials replace it before water is reported ready.
+  `filament-water.filamat` and `filament-wet.filamat` port the soft streaks, impacts,
+  runoff and procedural pavement rings. Their sources live in `materials/`.
+  They include Metal, Vulkan and OpenGL shaders in material format 68. Run
+  `FILAMENT_MATC=/path/to/matc npm run build:filament-materials` using Filament
+  1.68.3 tools after shader edits; normal scene builds verify committed binaries
+  against source hashes and both installed SDK headers. Runtime cleanup restores
+  borrowed materials and removes renderables before custom material owners release.
+  Counts and timing laws now match Three.js, but rendering paths differ; callback
+  timings still do not establish equal GPU work or a performance winner.
 - Fifteen `lab-weather-plant-*` meshes contain exactly the original foliage triangles
   split into seven palm crowns and eight shrub beds. Original material colors are
   baked into vertex colors, allowing one draw per anchor. Hide the three original

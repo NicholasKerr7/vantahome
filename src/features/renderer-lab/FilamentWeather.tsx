@@ -1,10 +1,10 @@
-import { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RenderCallbackContext, useFilamentContext, useModel, useWorkletEffect } from 'react-native-filament';
 import { useSharedValue } from 'react-native-worklets-core';
 import { WEATHER_GROUPS, weatherGroupPose } from '../../../packages/home-scene/src/renderer-lab/weatherAnimation';
 import type { LabSettings } from './protocol';
 import type { ModelKind } from './FilamentModel';
-import { filamentLightGain } from './nativeLightingConfig';
+import { FilamentRain } from './FilamentRain';
 
 interface Props {
   source: number;
@@ -12,7 +12,7 @@ interface Props {
   onLoaded: (kind: ModelKind) => void;
 }
 
-/** Animate bounded, surface-aligned batches instead of submitting one native transform per drop. */
+/** Keep rooted foliage on shared geometry while a native-only shader owns the four water batches. */
 export function FilamentWeather({ source, settings, onLoaded }: Props) {
   // Clear weather still needs the rooted replacement foliage; wet surfaces also
   // remain visible when decorative motion is disabled.
@@ -28,20 +28,15 @@ export function FilamentWeather({ source, settings, onLoaded }: Props) {
     });
   }, [asset]);
   const identity = useMemo(() => transformManager.createIdentityMatrix(), [transformManager]);
-  const waterMaterials = useMemo(() => {
-    // The exporter shares one material across every batch of the same effect.
-    return (['rain', 'splash', 'runoff'] as const).flatMap((kind) => {
-      const batch = batches.find(({ group }) => group.kind === kind);
-      return batch ? [renderableManager.getMaterialInstanceAt(batch.entity, 0)] : [];
-    });
-  }, [batches, renderableManager]);
-  const glow = filamentLightGain(settings.night);
+  const [waterReady, setWaterReady] = useState(false);
+  const onWaterReady = useCallback(() => setWaterReady(true), []);
   const elapsed = useSharedValue(0);
   const lastFrame = useSharedValue(-1);
   const lastSettings = useSharedValue('');
   const lastWeather = useSharedValue('');
-  const { weather, windSpeed, windDirection, motion } = settings;
-  const signature = `${weather}:${windSpeed}:${windDirection}:${motion}`;
+  const { weather, windSpeed, windDirection, motion, resetKey } = settings;
+  const mode = `${weather}:${resetKey}`;
+  const signature = `${weather}:${windSpeed}:${windDirection}:${motion}:${resetKey}`;
 
   useWorkletEffect(() => {
     'worklet';
@@ -49,22 +44,19 @@ export function FilamentWeather({ source, settings, onLoaded }: Props) {
       const foliage = group.kind === 'plant';
       renderableManager.setCastShadow(entity, foliage);
       renderableManager.setReceiveShadow(entity, foliage);
+      // This asset remains resident for its foliage. Its original water and wet
+      // overlay must stay hidden so the new GPU fields never render twice.
+      if (!foliage) transformManager.setTransform(entity, identity.scaling([0, 0, 0]));
     });
   });
-  useWorkletEffect(() => {
-    'worklet';
-    // A restrained cool fill keeps fine water visible under the SDK's fixed
-    // camera exposure at night; pavement and plants still use real scene lights.
-    waterMaterials.forEach((material) => material.setFloat3Parameter('emissiveFactor', [4 * glow, 5.5 * glow, 7 * glow]));
-  });
-  useEffect(() => { if (asset) onLoaded('rain'); }, [asset, onLoaded]);
+  useEffect(() => { if (asset && waterReady) onLoaded('rain'); }, [asset, waterReady, onLoaded]);
 
   RenderCallbackContext.useRenderCallback(({ timeSinceLastFrame }) => {
     'worklet';
     if (!batches.length) return;
-    if (lastWeather.value !== weather) {
+    if (lastWeather.value !== mode) {
       elapsed.value = 0;
-      lastWeather.value = weather;
+      lastWeather.value = mode;
     }
     const animated = motion && (weather !== 'clear' || windSpeed > 0);
     if (animated) elapsed.value += Math.min(Math.max(timeSinceLastFrame, 0), 0.08);
@@ -74,7 +66,7 @@ export function FilamentWeather({ source, settings, onLoaded }: Props) {
     lastSettings.value = signature;
     lastFrame.value = elapsed.value;
     batches.forEach(({ group, entity }) => {
-      if (!changed && group.kind === 'wet') return;
+      if (group.kind !== 'plant') return;
       const pose = weatherGroupPose(group, elapsed.value, weather, windSpeed, windDirection, motion);
       let matrix = identity.scaling(pose.scale);
       // SDK helpers pre-multiply; reverse the calls to match Three's XYZ Euler order.
@@ -84,9 +76,9 @@ export function FilamentWeather({ source, settings, onLoaded }: Props) {
       transformManager.setTransform(entity, matrix.translate(pose.position));
     });
   }, [batches, identity, transformManager, elapsed, lastFrame, lastSettings, lastWeather, weather,
-    windSpeed, windDirection, motion, signature]);
+    windSpeed, windDirection, motion, signature, mode]);
 
   // useModel owns scene membership and destruction. Shadow flags and transforms
   // are managed above per batch, so a whole-asset ModelRenderer is unnecessary.
-  return null;
+  return <FilamentRain settings={settings} onReady={onWaterReady} />;
 }

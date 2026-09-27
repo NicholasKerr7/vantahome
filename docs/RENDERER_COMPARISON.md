@@ -29,9 +29,9 @@ at a time. Backgrounding or leaving the screen releases its graphics surface.
 | Bedroom | Original furnished `upper.glb` plus exported live fixture parts | Ceiling/bedside lights, blind opening, day/night, orbit/pinch |
 | Property | Original `exterior.glb`, landscape, gate, solar diffusers, and shared weather geometry | Sliding gate, weather preview/Auto, day/night with four solar lights, orbit/pinch |
 
-Each WebView document embeds the same source GLBs as its native case. Three.js
-also creates its own GPU water pools from the surveyed weather metadata, so the
-rendered particle inventory differs. The bedroom package is approximately 5.4 MiB
+Each WebView document embeds the shared source GLBs. Three.js creates instanced
+water pools at runtime; Filament loads a separate compact water GLB and compiled
+materials derived from the same surveyed anchors and seeds. The bedroom package is approximately 5.4 MiB
 and the property package 17.7 MiB.
 The packaged documents make no network requests. Manual Clear, Light rain, Heavy
 rain, and Thunderstorm modes are deterministic and work offline. Auto uses the
@@ -55,8 +55,8 @@ uses a side panel. The screen does not introduce vertical scrolling.
 ### Surface-aware storms
 
 The shared weather asset traces the committed roof and landscape triangles.
-Filament storms use 360 rain streaks, 112 hard-surface impact clusters, and 56
-roof-edge drips in fixed batches. Lighter modes activate fewer batches. Roof, driveway,
+Both storms use 720 rain streaks, 112 hard-surface impact clusters (three arms
+each), and 56 roof-edge drips in fixed GPU batches. Lighter modes activate fewer particles. Roof, driveway,
 road, paths, and service covers receive their own sampled impacts; foliage and
 indoor floors do not receive pavement splashes. Every roof-drip anchor is checked
 for clearance from adjoining roofs.
@@ -66,8 +66,9 @@ Only crowns and shrubs sway; trunks and bark stay fixed. Exposed roof/pavement
 materials darken and become smoother in wet conditions, with a fitted wet-surface
 overlay. These are bounded visual effects, not a fluid simulation or planar
 reflection pass. The 36-group asset is about 1.25 MiB, uses no new textures, and
-never grows its particle pool. Native weather transforms update at most 30 times
-per second independently of camera input.
+never grows its particle pool. Native foliage transforms update at most 30 times
+per second independently of camera input. Native water receives a shared clock
+each frame; individual particle motion runs entirely in its vertex shader.
 
 Thunderstorm codes alone enable a soft 0.85-second lightning envelope once per
 19 seconds. Filament adds this to its single sun/moon source because the SDK
@@ -94,10 +95,38 @@ Motion or Motion off hides moving water and ripple rings while retaining the
 static wet finish. Generated geometry and materials are released on disposal,
 and the original overlay material is restored.
 
-This polish is confined to Three.js. The native GLB, Filament weather effects,
-particle budgets, and emission gain remain unchanged. The shared site, fixture,
-and foliage geometry also remain unchanged. No new textures or dependencies are
-required.
+### Filament water rendering
+
+`filament-rain.glb` expands the same Three.js anchor/seed factory into three batched
+quad meshes, plus an exact copy of the wet-overlay triangles. Each water batch
+contains two invisible, degenerate bounds guards so the native loader accounts
+for vertex-shader motion. UV0 holds corners; UV1 holds phase/size; vertex color
+holds tier/variation and a guard mask. A bundled one-pixel placeholder texture
+preserves both UV streams through glTF loading and is unused by the final shaders.
+
+Two custom, unlit Filament materials reproduce soft camera-facing streaks,
+ballistic splash arms, eave runoff and pavement-clipped procedural rings. They
+use premultiplied alpha, depth testing and no depth writes. Water color is
+independent of the physical camera exposure so fine streaks remain readable at
+night. A logical viewport height preserves the same minimum streak width across
+device densities. Motion off hides particles and animated rings while retaining
+static wetness; weather changes and Reset restart the deterministic clock.
+
+`FilamentRain` owns the two materials and their instances. Setup validates every
+named primitive, initializes uniforms before attachment and rolls back partial
+failures. Teardown stops frame updates, detaches water renderables and restores
+their original materials before releasing custom owners. `useModel` retains
+ownership of loaded geometry. The shared site, fixtures, foliage and full 3D Home
+remain unchanged.
+
+Material sources are in `assets/renderer-lab/materials/`. Committed binaries
+contain Metal, Vulkan and OpenGL shaders compiled with Filament 1.68.3 (`matc`
+material format 68), matching both SDKs bundled in react-native-filament 1.11.0.
+`npm run build:renderer-lab` regenerates native geometry and checks source/binary
+hashes, shader backends and installed material versions before packaging. To edit
+shaders, install the [matching Filament tools](https://github.com/google/filament/releases/tag/v1.68.3)
+outside the repo, set `FILAMENT_MATC` to that `matc` executable, and run
+`npm run build:filament-materials`. Normal app builds need no shader compiler.
 
 ## What the numbers mean
 
@@ -117,9 +146,9 @@ controller, not the full React Three Fiber application. Its hemisphere lighting,
 ACES exposure, PCF shadows and MSAA differ from Filament's image-based illumination,
 native tone mapping, shadows and FXAA. Visual calibration is required before using
 these results to claim equal-quality performance. Resolution and asset parity
-alone do not prove equal rendering work. Three.js now uses 720 rain instances
-against Filament's 360, with different shaders and draw counts. Their callback
-timings are not an equal-work rain benchmark.
+alone do not prove equal rendering work. Water particle counts, sampled surfaces
+and timing laws now match, but instancing, shader compilation, transparency and
+tone mapping still differ. Their callback timings are not an equal-work GPU benchmark.
 
 ## Decision procedure
 
@@ -361,3 +390,33 @@ not a controlled performance comparison.
 Release preview build 11 compiled, passed signature verification, and was installed
 and launched on the physical iPhone. Physical interaction, sustained GPU/thermal
 profiling, and Android verification remain pending; physical iPad testing is deferred.
+
+### Filament water port verification
+
+TypeScript and all 79 targeted automated checks pass: 58 native comparison tests,
+8 native geometry tests, 3 material packaging checks, and 10 existing shared
+asset/offline packaging checks. The complete scene build passes; the Three.js
+document hashes remain unchanged. The native GLB reproduces every Three.js anchor
+and seed and preserves the exact paved mask. Material validation checks all
+three mobile graphics backends, format 68 compatibility, and source/binary hashes.
+
+The compiled Metal shaders were inspected as well as their sources. Mobile half
+precision initially collapsed the ripple hash and quantized its clock; explicit
+high precision now preserves independent surface rings and smooth time evolution.
+Coordinate transforms, premultiplied alpha, UV channel mapping, and bounds guards
+also passed independent review.
+
+The Release iPhone simulator passed the full native water audit in 167.3 seconds:
+clear/light/heavy/storm, day/night, motion off/on, wet-surface pause, gate
+drag/toggle, pinch, Three.js roundtrip, background/resume, and clear restoration.
+The 13-second video and close views confirm tapered streaks and subtle pavement
+rings without opaque cards or bright ripple discs. There were no shader recovery
+screens or shader/worklet/fatal native errors. These are functional and visual
+checks, not a controlled GPU or battery benchmark.
+
+Release preview build 12 compiled, passed signature verification, and was installed
+and launched on the physical iPhone. Packaged native water geometry and both
+materials match the verified source artifacts byte for byte. Production app
+identity metadata was restored after the isolated preview build. Physical water
+interaction and sustained GPU/thermal profiling remain unverified. No Android
+SDK or device was available for runtime testing; physical iPad testing stays deferred.

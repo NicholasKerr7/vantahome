@@ -34,7 +34,8 @@
     "preandroid": "npm run build:scenes",
     "preios": "npm run build:scenes",
     "eas-build-post-install": "npm run build:scenes",
-    "build:renderer-lab": "node scripts/build-renderer-lab-assets.mjs && node scripts/build-renderer-lab-web.mjs",
+    "build:filament-materials": "node scripts/build-filament-materials.mjs",
+    "build:renderer-lab": "node scripts/build-renderer-lab-assets.mjs && node scripts/build-filament-rain.mjs && node scripts/build-filament-materials.mjs --check && node scripts/build-renderer-lab-web.mjs",
     "build:scenes": "npm run build:home-scene && npm run build:renderer-lab"
   },
   "dependencies": {

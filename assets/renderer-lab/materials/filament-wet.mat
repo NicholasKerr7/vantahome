@@ -1,0 +1,53 @@
+// Procedural rings are drawn on the existing surveyed pavement triangles, so
+// grass, interiors and the outside of narrow path edges can never receive them.
+material {
+    name : VantaWetPavement,
+    shadingModel : unlit,
+    blending : transparent,
+    culling : none,
+    depthWrite : false,
+    depthCulling : true,
+    parameters : [
+        { type : float, name : time, precision : high },
+        { type : float, name : intensity },
+        { type : float, name : night },
+        { type : float, name : motion }
+    ]
+}
+fragment {
+    // Mobile's default half precision collapses the hash and quantizes the clock.
+    // Surface coordinates and ring phases need full precision to stay independent.
+    precision highp float;
+
+    // Stable surface-space hash keeps the rings attached to the lot while orbiting.
+    float rainHash(float2 p) {
+        return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+    }
+    // Coverage compensation preserves a thin ring rather than a bright distant disc.
+    float ripple(float2 position, float offset) {
+        float2 grid = position / 2.3 + offset;
+        float2 cell = floor(grid);
+        float seed = rainHash(cell);
+        float2 center = 0.28 + 0.44 * float2(seed, rainHash(cell + 9.7));
+        float age = fract(materialParams.time * (0.7 + materialParams.intensity * 0.24) + seed);
+        float distance = length((fract(grid) - center) * 2.3);
+        float radius = mix(0.025, 0.37, age);
+        float antialias = max(fwidth(distance) * 0.5, 0.006);
+        float ring = 1.0 - smoothstep(0.009, 0.009 + antialias, abs(distance - radius));
+        ring *= 0.012 / max(0.012, antialias);
+        return ring * (1.0 - age) * smoothstep(0.0, 0.07, age)
+            * step(seed, materialParams.intensity * 0.25);
+    }
+    // Motion off retains the static coat, with no animated rings or flashing.
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        float3 surface = getUserWorldPosition();
+        float grazing = pow(1.0 - abs(getWorldViewVector().y), 3.0);
+        float rings = (ripple(surface.xz, 0.0) + ripple(surface.xz, 5.37)) * materialParams.motion;
+        float wetness = materialParams.intensity / 3.0;
+        float3 coat = mix(float3(0.16, 0.23, 0.29), float3(0.055, 0.095, 0.15), materialParams.night);
+        float3 color = mix(coat, float3(0.59, 0.77, 0.88), min(rings * 0.6 + grazing * 0.18, 0.6));
+        float alpha = wetness * (0.12 + grazing * 0.10 + rings * 0.18);
+        material.baseColor = float4(color * alpha, alpha);
+    }
+}

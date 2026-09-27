@@ -1,0 +1,87 @@
+// GPU water port of threeRainShaders.ts. GLB vertices carry exact surveyed anchors;
+// UV0 carries the quad corner, UV1 phase/size, and COLOR tier/variation/guard flag.
+material {
+    name : VantaWater,
+    shadingModel : unlit,
+    blending : transparent,
+    culling : none,
+    depthWrite : false,
+    depthCulling : true,
+    flipUV : false,
+    requires : [uv0, uv1, color],
+    variables : [water],
+    parameters : [
+        { type : float, name : time, precision : high },
+        { type : float, name : intensity },
+        { type : float, name : night },
+        { type : float, name : motion },
+        { type : float, name : viewportHeight },
+        { type : float3, name : wind },
+        { type : float, name : kind }
+    ]
+}
+vertex {
+    // One deterministic age per particle; coherent splash arms share phase/height.
+    void materialVertex(inout MaterialVertexInputs material) {
+        float4 seed = float4(material.uv1, floor(material.color.r * 3.0 + 0.5), material.color.g);
+        float intensity = materialParams.intensity;
+        float time = materialParams.time;
+        float3 wind = materialParams.wind;
+        float3 head = getPosition().xyz;
+        float3 tail;
+        float width;
+        float fade = step(seed.z, intensity) * material.color.a * materialParams.motion;
+        if (materialParams.kind < 0.5) {
+            float speed = mix(7.0, 15.0, (intensity - 1.0) * 0.5);
+            float age = fract(time * speed / 6.0 + seed.x);
+            float height = 6.0 * (1.0 - age);
+            float streak = mix(0.32, 1.05, (intensity - 1.0) * 0.5) * (0.75 + seed.y * 0.5);
+            head += float3(wind.x * height, height + 0.018, wind.z * height);
+            tail = head + float3(wind.x * streak, streak, wind.z * streak);
+            width = 0.018 + seed.w * 0.009;
+            fade *= smoothstep(0.0, 0.06, age) * (0.62 + seed.y * 0.38);
+        } else if (materialParams.kind < 1.5) {
+            float age = fract(time * (1.7 + intensity * 0.28) + seed.x);
+            float life = min(age / 0.58, 1.0);
+            float radius = life * (0.09 + seed.w * 0.13);
+            head += float3(sin(seed.y) * radius,
+                0.03 + sin(life * 3.14159265) * (0.09 + seed.w * 0.16), cos(seed.y) * radius);
+            tail = head + float3(0.0, 0.045, 0.0);
+            width = 0.015;
+            fade *= (1.0 - smoothstep(0.35, 0.58, age)) * smoothstep(0.0, 0.04, age);
+        } else {
+            float age = fract(time * (1.6 + seed.y * 0.7) + seed.x);
+            head.y -= 0.26 + age * 0.72;
+            tail = head + float3(0.0, 0.16 + seed.y * 0.07, 0.0);
+            width = 0.014;
+            fade *= smoothstep(0.0, 0.05, age) * (1.0 - smoothstep(0.82, 1.0, age));
+        }
+        // Filament's world matrices account for its camera-relative origin. Work
+        // in view space for billboarding, then return to that shifted world space.
+        float4x4 viewFromModel = getViewFromWorldMatrix() * getWorldFromModelMatrix();
+        float4 viewHead = viewFromModel * float4(head, 1.0);
+        float4 viewTail = viewFromModel * float4(tail, 1.0);
+        float2 projected = viewTail.xy - viewHead.xy;
+        float2 side = float2(-projected.y, projected.x) / max(length(projected), 0.0001);
+        float4 viewPoint = mix(viewHead, viewTail, material.uv0.y);
+        float pixelWidth = 0.52 * max(-viewPoint.z, 0.1)
+            / (max(materialParams.viewportHeight, 1.0) * abs(getClipFromViewMatrix()[1][1]));
+        viewPoint.xy += side * (material.uv0.x * 2.0 - 1.0) * max(width, pixelWidth);
+        material.worldPosition = getWorldFromViewMatrix() * viewPoint;
+        material.water = float4(material.uv0, fade, 0.0);
+    }
+}
+fragment {
+    // Filament uses premultiplied alpha. Unlit water remains legible at night
+    // without multiplying its output by the physical camera's exposure.
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        float2 uv = variable_water.xy;
+        float edge = 1.0 - smoothstep(0.12, 1.0, abs(uv.x * 2.0 - 1.0));
+        float taper = smoothstep(0.0, 0.09, uv.y) * pow(max(1.0 - uv.y, 0.0), 0.65);
+        float alpha = edge * taper * variable_water.z * mix(0.65, 0.86, materialParams.night);
+        if (alpha < 0.008) discard;
+        float3 color = mix(float3(0.56, 0.73, 0.83), float3(0.66, 0.82, 0.94), materialParams.night);
+        material.baseColor = float4(color * alpha, alpha);
+    }
+}

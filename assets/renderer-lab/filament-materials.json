@@ -1,0 +1,21 @@
+{
+  "compilerRelease": "1.68.3",
+  "materialVersion": 68,
+  "backends": [
+    "opengl",
+    "vulkan",
+    "metal"
+  ],
+  "materials": {
+    "filament-water": {
+      "sourceSha256": "418499e54577b2ffaaae5da779931467d7db92a3424810aabf210ec039433d5c",
+      "binarySha256": "2c9b86d0a862670eda8a8eefe5ebbec27475717c16f913f51198e00fbaacb5e5",
+      "bytes": 45913
+    },
+    "filament-wet": {
+      "sourceSha256": "7d09572e1819591bc8787bbfcb35d5844128f4f4c6d9e43e7229b467d53dae58",
+      "binarySha256": "292f5657fda037a1734292390ea15cf0a4fb306984caf238046a9ac2fd7582b9",
+      "bytes": 40676
+    }
+  }
+}
