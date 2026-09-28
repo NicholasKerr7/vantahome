@@ -1,0 +1,54 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { Keyboard, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { theme } from '../../theme/theme';
+import { useSimulationControls } from '../three-d-home/useSimulationControls';
+import { parseHomeVoiceCommand } from './voiceCommandParser';
+import { executeVoiceCommand } from './executeVoiceCommand';
+import { useVoiceRecognition } from './useVoiceRecognition';
+import { homeVoiceStyles as styles } from './homeVoiceStyles';
+
+/** A tap-to-speak simulation surface shared by the 3D home and its full device controls. */
+export default function HomeVoicePanel({ onClose }: { onClose: () => void }) {
+  const { client, ready, status } = useSimulationControls();
+  const { height } = useWindowDimensions();
+  const [input, setInput] = useState('');
+  const [typing, setTyping] = useState(false);
+  const [feedback, setFeedback] = useState('Try “turn on kitchen lights” or “open primary suite blinds”.');
+  /** Validate one phrase before entering the renderer-independent local control client. */
+  const runCommand = useCallback((phrase: string) => {
+    const result = parseHomeVoiceCommand(phrase);
+    if ('error' in result) { setFeedback(result.error); return; }
+    const applied = executeVoiceCommand(client, result.command);
+    setFeedback(applied ? `${result.description}. Simulation updated.` : 'Controls are reconnecting. Close and reopen voice control.');
+    if (applied) setInput('');
+    Keyboard.dismiss();
+  }, [client]);
+  const { listening, error, start, stop, cancel } = useVoiceRecognition(runCommand);
+  useEffect(() => { if (!ready) cancel(); }, [ready, cancel]);
+  const message = status === 'disconnected' ? 'Your account or connection changed. Close and reopen voice control.'
+    : status === 'error' ? 'Changes are in this session, but could not be saved on this device.' : error ?? feedback;
+  return <View accessibilityViewIsModal style={[styles.card, height < 700 && styles.compact]}>
+    <View style={styles.row}>
+      <View style={styles.grow}><Text style={styles.eyebrow}>YOUR HOME · SIMULATION</Text><Text accessibilityRole="header" style={styles.title}>Voice control</Text></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Close voice control" onPress={() => { cancel(); onClose(); }} style={styles.button}><Text style={styles.label}>Done</Text></Pressable>
+    </View>
+    {!typing && <Text style={styles.detail}>Control the house by room or device name. Voice and touch share the same saved simulation.</Text>}
+    {Platform.OS !== 'web' && !typing && <Pressable accessibilityRole="button" accessibilityLabel={listening ? 'Finish speaking' : 'Start speaking'}
+      accessibilityState={{ disabled: !ready, busy: listening }} disabled={!ready}
+      onPress={() => { Keyboard.dismiss(); if (listening) stop(); else void start(); }}
+      style={({ pressed }) => [styles.microphone, !ready && styles.disabled, pressed && styles.pressed]}>
+      <Ionicons name={listening ? 'stop-circle-outline' : 'mic-outline'} size={24} color={theme.colors.bg0} />
+      <Text style={styles.microphoneText}>{listening ? 'Listening · Tap to finish' : 'Tap to speak'}</Text>
+    </Pressable>}
+    <View style={styles.row}>
+      <TextInput accessibilityLabel="Home voice command" placeholder="Type a command" placeholderTextColor={theme.colors.muted}
+        value={input} onChangeText={setInput} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} maxLength={240} editable={ready && !listening} returnKeyType="send"
+        onSubmitEditing={() => { if (input.trim() && ready && !listening) runCommand(input); }} style={styles.input} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Run typed command" disabled={!ready || listening || !input.trim()}
+        onPress={() => runCommand(input)} style={[styles.button, (!ready || listening || !input.trim()) && styles.disabled]}><Text style={styles.label}>Run</Text></Pressable>
+    </View>
+    <View style={styles.feedback}><Text accessibilityLiveRegion="polite" style={styles.feedbackText}>{listening ? 'Say one command. Listening stops automatically after 10 seconds.' : message}</Text></View>
+    {!typing && <Text style={styles.detail}>{Platform.OS === 'web' ? 'Type to try voice commands in this preview.' : 'The microphone listens only after you tap. Your phone’s speech service may require a network connection.'}</Text>}
+  </View>;
+}

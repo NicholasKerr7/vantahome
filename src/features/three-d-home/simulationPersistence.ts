@@ -17,6 +17,7 @@ type StoredSimulation = {
   pending: string | null;
   writing: boolean;
   listeners: Set<(status: SimulationSaveStatus) => void>;
+  stateListeners: Set<(state: SimulationSnapshot) => void>;
 };
 
 /** Keep simulation preferences outside the account/device cache and serialize disk writes. */
@@ -41,11 +42,19 @@ export class SimulationPersistence {
     return () => record.listeners.delete(listener);
   }
 
+  /** Broadcast canonical state to every open renderer/control surface in this local scope. */
+  subscribeState(scope: string, listener: (state: SimulationSnapshot) => void): () => void {
+    const record = this.record(scope);
+    record.stateListeners.add(listener);
+    return () => record.stateListeners.delete(listener);
+  }
+
   /** Update memory immediately and coalesce rapid edits behind the current disk write. */
   save(scope: string, state: SimulationSnapshot): void {
     const record = this.record(scope);
     record.state = state;
     record.pending = JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state });
+    for (const listener of record.stateListeners) listener(state);
     this.notify(record, 'saving');
     if (!record.writing) void this.flush(scope, record);
   }
@@ -56,14 +65,15 @@ export class SimulationPersistence {
     if (cached) return cached;
     const record: StoredSimulation = {
       state: createDefaultSimulationSnapshot(), status: 'saving', loading: Promise.resolve(),
-      pending: null, writing: false, listeners: new Set(),
+      pending: null, writing: false, listeners: new Set(), stateListeners: new Set(),
     };
     this.records.set(scope, record);
     record.loading = this.storage.getItem(this.key(scope)).then((raw) => {
       const message = raw === null ? null : parseStoredSimulationSnapshotMessage(raw);
       if (raw !== null && !message) throw new Error('Invalid simulation cache');
-      if (message) record.state = message.state;
-      this.notify(record, 'saved');
+      // An accepted edit before hydration finishes takes precedence over the old disk snapshot.
+      if (message && record.pending === null) record.state = message.state;
+      this.notify(record, record.pending === null ? 'saved' : 'saving');
     }).catch(() => this.notify(record, 'error'));
     return record;
   }

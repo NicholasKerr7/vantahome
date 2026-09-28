@@ -5,9 +5,11 @@ import ThreeDHomeScreen from '../../../screens/ThreeDHomeScreen';
 import type { SceneSurfaceProps } from '../protocol';
 
 const mockGoBack = jest.fn();
+const mockNavigate = jest.fn();
+const mockDispatch = jest.fn();
 let mockFocused = true;
 let mockStatus: SceneSurfaceProps['onStatus'];
-jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ goBack: mockGoBack }), useIsFocused: () => mockFocused }));
+jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, dispatch: mockDispatch }), useIsFocused: () => mockFocused }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
 jest.mock('../SceneSurface', () => ({ __esModule: true, default: (props: SceneSurfaceProps) => {
@@ -16,17 +18,31 @@ jest.mock('../SceneSurface', () => ({ __esModule: true, default: (props: SceneSu
   return <Text testID="scene-surface">Packaged scene</Text>;
 } }));
 
-beforeEach(() => { mockFocused = true; mockGoBack.mockClear(); jest.useFakeTimers(); });
+beforeEach(() => { mockFocused = true; mockGoBack.mockClear(); mockNavigate.mockClear(); mockDispatch.mockClear(); jest.useFakeTimers(); });
 afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
 
-test('keeps the simulation label and dashboard exit available during load', () => {
+test('keeps the simulation boundary and main feature menu available during load', () => {
   const screen = render(<ThreeDHomeScreen />);
   expect(screen.getByText('Simulation · no real device control')).toBeTruthy();
-  expect(screen.getByText('Preparing your 3D home…')).toBeTruthy();
-  fireEvent.press(screen.getByLabelText('Back to dashboard'));
-  expect(mockGoBack).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('Preparing your home…')).toBeTruthy();
+  expect(screen.queryByLabelText('Back to dashboard')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Open home menu'));
+  fireEvent.press(screen.getByLabelText('Scenes'));
+  expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'NAVIGATE', payload: { name: 'Main', params: { screen: 'Scenes', pop: true }, pop: true } }));
   act(() => mockStatus('ready'));
-  expect(screen.queryByText('Preparing your 3D home…')).toBeNull();
+  expect(screen.queryByText('Preparing your home…')).toBeNull();
+});
+
+test('opens integrations and household tools from the home menu', () => {
+  const screen = render(<ThreeDHomeScreen />);
+  fireEvent.press(screen.getByLabelText('Open home menu'));
+  fireEvent.press(screen.getByText('Connections'));
+  fireEvent.press(screen.getByLabelText('Integrations'));
+  expect(mockNavigate).toHaveBeenCalledWith('Integrations');
+  fireEvent.press(screen.getByLabelText('Open home menu'));
+  fireEvent.press(screen.getByText('Manage'));
+  fireEvent.press(screen.getByLabelText('Household'));
+  expect(mockNavigate).toHaveBeenCalledWith('Profile');
 });
 test('recovers from renderer errors and slow loads with a fresh scene', () => {
   const screen = render(<ThreeDHomeScreen />);

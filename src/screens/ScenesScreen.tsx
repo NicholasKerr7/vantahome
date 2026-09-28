@@ -38,7 +38,13 @@ import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { runtimePolicy } from "../config/runtimeMode";
 
-export default function ScenesScreen() {
+export type ScenesScreenProps = {
+  /** The root feature wrapper provides the title, safe areas and back navigation. */
+  embedded?: boolean;
+};
+
+/** Keep scene controls reusable in the original tab or the 3D home's feature wrapper. */
+export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {}) {
   const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
   const minSize = Math.min(width, contentWidth);
@@ -198,7 +204,7 @@ export default function ScenesScreen() {
       })),
     [rooms, scenes],
   );
-  const frameEnabled = isPortrait || isWide;
+  const frameEnabled = !embedded && (isPortrait || isWide);
   const frameWidth = isTablet
     ? undefined
     : Math.max(0, contentWidth - outerGutter * 2);
@@ -252,6 +258,7 @@ export default function ScenesScreen() {
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
+    embedded && styles.embeddedContent,
   ];
   const headerWrapStyle: StyleProp<ViewStyle> = {
     paddingHorizontal: innerGutter,
@@ -260,6 +267,7 @@ export default function ScenesScreen() {
     styles.header,
     !isTablet && styles.headerPhone,
     isCompactPhone && styles.headerCompact,
+    embedded && styles.embeddedHeader,
   ];
   const headerActionsStyle: StyleProp<ViewStyle> = [
     styles.headerActions,
@@ -289,6 +297,7 @@ export default function ScenesScreen() {
     { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
     !isTablet && styles.headerActionPillPhoneFull,
     isCompactPhone && { paddingHorizontal: 10 },
+    embedded && styles.embeddedAction,
   ];
   const clearTextStyle: StyleProp<TextStyle> = [
     styles.clearText,
@@ -299,6 +308,7 @@ export default function ScenesScreen() {
     { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
     !isTablet && styles.headerActionPillPhone,
     isCompactPhone && { paddingHorizontal: 10 },
+    embedded && styles.embeddedAction,
   ];
   const addTextStyle: StyleProp<TextStyle> = [
     styles.addText,
@@ -578,8 +588,8 @@ export default function ScenesScreen() {
       colors={[theme.colors.bg1, theme.colors.bg0]}
       style={styles.root}
     >
-      <BackgroundLines />
-      <View style={contentStyle}>
+      {!embedded && <BackgroundLines />}
+      <View style={contentStyle} testID="scenes-screen-content">
         <ScreenFrame
           isPortrait={isPortrait}
           enabled={frameEnabled}
@@ -591,12 +601,12 @@ export default function ScenesScreen() {
           <ScreenSectionLayout
             header={
               <View style={headerStyle}>
-                <View>
+                {!embedded && <View>
                   <Text style={headerTitleStyle}>Scenes</Text>
                   <Text style={headerSubtitleStyle}>
                     One-tap moods for each room.
                   </Text>
-                </View>
+                </View>}
                 <View style={headerActionsStyle}>
                   <HeaderPill
                     label={`${scenes.length} Scenes`}
@@ -663,7 +673,7 @@ export default function ScenesScreen() {
           setShowCreate(false);
           setEditingSceneId(null);
         }}
-        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.92)"]}
+        colors={[theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <ScrollView
@@ -685,7 +695,7 @@ export default function ScenesScreen() {
               value={sceneName}
               onChangeText={setSceneName}
               placeholder="Movie Night"
-              placeholderTextColor="rgba(12,12,18,0.45)"
+              placeholderTextColor={theme.colors.muted}
               style={modalInputStyle}
             />
           </ModalField>
@@ -734,7 +744,7 @@ export default function ScenesScreen() {
                         <DeviceIcon
                           kind={device.kind}
                           size={Math.round(14 * scale)}
-                          color={active ? "#fff" : "#2B0A73"}
+                          color={active ? theme.colors.text : theme.colors.accent}
                         />
                       </View>
                       <Text
@@ -804,7 +814,7 @@ export default function ScenesScreen() {
         visible={Boolean(detailScene)}
         onRequestClose={() => setDetailSceneId(null)}
         onBackdropPress={() => setDetailSceneId(null)}
-        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.92)"]}
+        colors={[theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <ScrollView
@@ -831,7 +841,7 @@ export default function ScenesScreen() {
                         : "moon"
                     }
                     size={Math.round(14 * scale)}
-                    color="rgba(12,12,18,0.75)"
+                    color={theme.colors.text}
                   />
                   <Text style={detailStatusTextStyle}>
                     {detailScene?.id === activeSceneId ? "Active" : "Idle"}
@@ -868,7 +878,7 @@ export default function ScenesScreen() {
                       <DeviceIcon
                         kind={device.kind}
                         size={Math.round(14 * scale)}
-                        color="rgba(12,12,18,0.85)"
+                        color={theme.colors.text}
                       />
                     </View>
                     <Text style={deviceTextStyle(false)} numberOfLines={1}>
@@ -917,9 +927,12 @@ export default function ScenesScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  content: { flex: 1, alignItems: "center" },
-  sectionsScroll: { flex: 1 },
+  root: { flex: 1, minHeight: 0 },
+  content: { flex: 1, minHeight: 0, alignItems: "center" },
+  embeddedContent: { paddingTop: 0, paddingBottom: 0 },
+  embeddedHeader: { marginBottom: 8 },
+  embeddedAction: { minHeight: 44 },
+  sectionsScroll: { flex: 1, minHeight: 0 },
   sectionsGrid: { gap: 12 },
   sectionsGridLandscape: { flexDirection: "row", alignItems: "flex-start" },
   sectionsColumn: { flex: 1, minWidth: 0 },
@@ -968,7 +981,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
@@ -980,7 +993,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 999,
-    backgroundColor: "rgba(180,107,255,0.25)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
@@ -992,16 +1005,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
   clearText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
   section: { marginTop: 18 },
   roomPanel: {
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: theme.colors.stroke,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -1014,7 +1027,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 16,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
@@ -1029,8 +1042,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
   },
   sceneCardActive: {
-    backgroundColor: "rgba(180,107,255,0.24)",
-    borderColor: "rgba(180,107,255,0.6)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent,
     shadowColor: theme.colors.glow,
     shadowOpacity: 0.35,
     shadowRadius: 18,
@@ -1051,16 +1064,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 999,
-    backgroundColor: "rgba(180,107,255,0.25)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
   runPillActive: {
     backgroundColor: theme.colors.accent2,
-    borderColor: "rgba(255,255,255,0.4)",
+    borderColor: theme.colors.stroke,
   },
   runText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
-  runTextActive: { color: "#fff" },
+  runTextActive: { color: theme.colors.text },
   iconRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1071,15 +1084,15 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   iconChipOn: {
-    backgroundColor: "rgba(180,107,255,0.32)",
-    borderColor: "rgba(180,107,255,0.65)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent,
     shadowColor: theme.colors.glow,
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -1089,7 +1102,7 @@ const styles = StyleSheet.create({
     height: 36,
     paddingHorizontal: 10,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     alignItems: "center",
@@ -1101,7 +1114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
@@ -1109,14 +1122,14 @@ const styles = StyleSheet.create({
   modalCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
+    borderColor: theme.colors.stroke,
     maxHeight: "85%",
   },
   modalContent: { padding: 18 },
-  modalTitle: { color: "rgba(12,12,18,0.9)", fontWeight: "900", fontSize: 18 },
-  modalSub: { color: "rgba(12,12,18,0.55)", fontWeight: "700", marginTop: 6 },
+  modalTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 18 },
+  modalSub: { color: theme.colors.subtext, fontWeight: "700", marginTop: 6 },
   modalLabel: {
-    color: "rgba(12,12,18,0.75)",
+    color: theme.colors.text,
     fontWeight: "800",
     marginTop: 12,
     marginBottom: 6,
@@ -1124,11 +1137,11 @@ const styles = StyleSheet.create({
   modalInput: {
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     paddingHorizontal: 12,
-    color: "rgba(12,12,18,0.9)",
+    color: theme.colors.text,
     fontWeight: "700",
   },
   roomRow: { gap: 8, paddingVertical: 6 },
@@ -1136,22 +1149,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 34,
     borderRadius: 999,
-    backgroundColor: "rgba(12,12,18,0.06)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   roomPillActive: {
-    backgroundColor: "rgba(107,60,255,0.2)",
-    borderColor: "rgba(107,60,255,0.3)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent,
   },
   roomPillText: {
-    color: "rgba(12,12,18,0.7)",
+    color: theme.colors.subtext,
     fontWeight: "800",
     fontSize: 12,
   },
-  roomPillTextActive: { color: "rgba(12,12,18,0.9)" },
+  roomPillTextActive: { color: theme.colors.text },
   deviceGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   deviceChip: {
     flexDirection: "row",
@@ -1160,29 +1173,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: 36,
     borderRadius: 14,
-    backgroundColor: "rgba(12,12,18,0.05)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     maxWidth: "48%",
   },
-  deviceChipActive: { backgroundColor: "#6B3CFF", borderColor: "#6B3CFF" },
+  deviceChipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
   deviceIcon: {
     width: 22,
     height: 22,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.bg0,
   },
-  deviceIconActive: { backgroundColor: "rgba(255,255,255,0.2)" },
+  deviceIconActive: { backgroundColor: theme.colors.accent2 },
   deviceText: {
-    color: "rgba(12,12,18,0.8)",
+    color: theme.colors.text,
     fontWeight: "800",
     fontSize: 12,
     flexShrink: 1,
   },
-  deviceTextActive: { color: "#fff" },
-  modalHint: { marginTop: 8, color: "rgba(12,12,18,0.55)", fontWeight: "700" },
+  deviceTextActive: { color: theme.colors.bg0 },
+  modalHint: { marginTop: 8, color: theme.colors.subtext, fontWeight: "700" },
   detailStatusPill: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -1190,15 +1203,15 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     marginTop: 12,
-    backgroundColor: "rgba(12,12,18,0.06)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
+    borderColor: theme.colors.stroke,
   },
   detailStatusPillActive: {
-    backgroundColor: "rgba(107,60,255,0.18)",
-    borderColor: "rgba(107,60,255,0.35)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent,
   },
-  detailStatusText: { color: "rgba(12,12,18,0.75)", fontWeight: "800" },
+  detailStatusText: { color: theme.colors.text, fontWeight: "800" },
   detailActionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1209,53 +1222,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: "rgba(12,12,18,0.06)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
+    borderColor: theme.colors.stroke,
   },
-  detailActionText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
+  detailActionText: { color: theme.colors.subtext, fontWeight: "800" },
   modalRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   modalGhost: {
     flex: 1,
     height: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  modalGhostText: { color: "rgba(12,12,18,0.75)", fontWeight: "800" },
+  modalGhostText: { color: theme.colors.text, fontWeight: "800" },
   modalPrimary: {
     flex: 1,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
   },
   modalPrimaryDisabled: { opacity: 0.6 },
-  modalPrimaryText: { color: "#FFFFFF", fontWeight: "900" },
+  modalPrimaryText: { color: theme.colors.bg0, fontWeight: "900" },
   controlsStack: { gap: 12, marginTop: 6 },
   deviceControlCard: {
     padding: 12,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
   },
   deviceControlHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   deviceControlIcon: {
     width: 32,
     height: 32,
     borderRadius: 12,
-    backgroundColor: "rgba(107,60,255,0.12)",
+    backgroundColor: theme.colors.accent2,
     alignItems: "center",
     justifyContent: "center",
   },
-  deviceControlTitle: { color: "rgba(12,12,18,0.95)", fontWeight: "900" },
+  deviceControlTitle: { color: theme.colors.text, fontWeight: "900" },
   deviceControlSub: {
     marginTop: 4,
-    color: "rgba(12,12,18,0.55)",
+    color: theme.colors.subtext,
     fontWeight: "700",
     fontSize: 12,
   },
@@ -1265,52 +1278,52 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
-    backgroundColor: "rgba(12,12,18,0.04)",
+    borderColor: theme.colors.stroke,
+    backgroundColor: theme.colors.card2,
     alignItems: "center",
     justifyContent: "center",
   },
   inlineTogglePillActive: {
-    backgroundColor: "#6B3CFF",
-    borderColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
   },
   inlineToggleText: {
-    color: "rgba(12,12,18,0.7)",
+    color: theme.colors.subtext,
     fontWeight: "800",
     fontSize: 12,
   },
-  inlineToggleTextActive: { color: "#fff" },
+  inlineToggleTextActive: { color: theme.colors.bg0 },
   sliderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 10,
   },
-  sliderLabel: { color: "rgba(12,12,18,0.7)", fontWeight: "800", fontSize: 12 },
-  sliderValue: { color: "rgba(12,12,18,0.9)", fontWeight: "900", fontSize: 12 },
+  sliderLabel: { color: theme.colors.subtext, fontWeight: "800", fontSize: 12 },
+  sliderValue: { color: theme.colors.text, fontWeight: "900", fontSize: 12 },
   choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   choicePill: {
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 999,
-    backgroundColor: "rgba(12,12,18,0.06)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  choicePillActive: { backgroundColor: "#6B3CFF", borderColor: "#6B3CFF" },
-  choiceText: { color: "rgba(12,12,18,0.7)", fontWeight: "800", fontSize: 12 },
-  choiceTextActive: { color: "#fff" },
+  choicePillActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  choiceText: { color: theme.colors.subtext, fontWeight: "800", fontSize: 12 },
+  choiceTextActive: { color: theme.colors.bg0 },
   colorRow: { flexDirection: "row", gap: 10, marginTop: 10 },
   colorDot: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.15)",
+    borderColor: theme.colors.stroke,
   },
-  colorDotActive: { borderColor: "#6B3CFF", borderWidth: 2 },
+  colorDotActive: { borderColor: theme.colors.accent, borderWidth: 2 },
   stepRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1321,19 +1334,19 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 12,
-    backgroundColor: "rgba(12,12,18,0.08)",
+    backgroundColor: theme.colors.card2,
     alignItems: "center",
     justifyContent: "center",
   },
   stepValue: {
     minWidth: 72,
     textAlign: "center",
-    color: "rgba(12,12,18,0.9)",
+    color: theme.colors.text,
     fontWeight: "900",
   },
   controlHint: {
     marginTop: 8,
-    color: "rgba(12,12,18,0.55)",
+    color: theme.colors.subtext,
     fontWeight: "700",
     fontSize: 12,
   },
@@ -1479,9 +1492,9 @@ function DeviceControlCard({
               minimumValue={AC_TEMP_MIN_C}
               maximumValue={AC_TEMP_MAX_C}
               value={temp}
-              minimumTrackTintColor="#6B3CFF"
-              maximumTrackTintColor="rgba(12,12,18,0.1)"
-              thumbTintColor="#FFFFFF"
+              minimumTrackTintColor={theme.colors.accent}
+              maximumTrackTintColor={theme.colors.stroke}
+              thumbTintColor={theme.colors.accent}
               onValueChange={(v) => onPatch({ tempC: Math.round(v) })}
             />
             <View style={styles.choiceRow}>
@@ -1518,9 +1531,9 @@ function DeviceControlCard({
               minimumValue={0}
               maximumValue={100}
               value={brightness}
-              minimumTrackTintColor="#6B3CFF"
-              maximumTrackTintColor="rgba(12,12,18,0.1)"
-              thumbTintColor="#FFFFFF"
+              minimumTrackTintColor={theme.colors.accent}
+              maximumTrackTintColor={theme.colors.stroke}
+              thumbTintColor={theme.colors.accent}
               onValueChange={(v) => onPatch({ brightness: Math.round(v) })}
             />
             <View style={styles.colorRow}>
@@ -1552,9 +1565,9 @@ function DeviceControlCard({
               minimumValue={0}
               maximumValue={100}
               value={volume}
-              minimumTrackTintColor="#6B3CFF"
-              maximumTrackTintColor="rgba(12,12,18,0.1)"
-              thumbTintColor="#FFFFFF"
+              minimumTrackTintColor={theme.colors.accent}
+              maximumTrackTintColor={theme.colors.stroke}
+              thumbTintColor={theme.colors.accent}
               onValueChange={(v) => onPatch({ volume: Math.round(v) })}
             />
             <View style={styles.stepRow}>
@@ -1566,7 +1579,7 @@ function DeviceControlCard({
                 <Ionicons
                   name="remove"
                   size={stepIconSize}
-                  color="rgba(12,12,18,0.75)"
+                  color={theme.colors.text}
                 />
               </Pressable>
               <Text style={stepValueStyle}>Ch {channel}</Text>
@@ -1578,7 +1591,7 @@ function DeviceControlCard({
                 <Ionicons
                   name="add"
                   size={stepIconSize}
-                  color="rgba(12,12,18,0.75)"
+                  color={theme.colors.text}
                 />
               </Pressable>
             </View>
@@ -1620,9 +1633,9 @@ function DeviceControlCard({
               minimumValue={0}
               maximumValue={100}
               value={speed}
-              minimumTrackTintColor="#6B3CFF"
-              maximumTrackTintColor="rgba(12,12,18,0.1)"
-              thumbTintColor="#FFFFFF"
+              minimumTrackTintColor={theme.colors.accent}
+              maximumTrackTintColor={theme.colors.stroke}
+              thumbTintColor={theme.colors.accent}
               onValueChange={(v) => onPatch({ speed: Math.round(v) })}
             />
           </>
@@ -1648,9 +1661,9 @@ function DeviceControlCard({
               minimumValue={0}
               maximumValue={100}
               value={openPercent}
-              minimumTrackTintColor="#6B3CFF"
-              maximumTrackTintColor="rgba(12,12,18,0.1)"
-              thumbTintColor="#FFFFFF"
+              minimumTrackTintColor={theme.colors.accent}
+              maximumTrackTintColor={theme.colors.stroke}
+              thumbTintColor={theme.colors.accent}
               onValueChange={(v) => onPatch({ openPercent: Math.round(v) })}
             />
           </>
@@ -1735,9 +1748,9 @@ function DeviceControlCard({
               minimumValue={0}
               maximumValue={5}
               value={burnerLevel}
-              minimumTrackTintColor="#6B3CFF"
-              maximumTrackTintColor="rgba(12,12,18,0.1)"
-              thumbTintColor="#FFFFFF"
+              minimumTrackTintColor={theme.colors.accent}
+              maximumTrackTintColor={theme.colors.stroke}
+              thumbTintColor={theme.colors.accent}
               onValueChange={(v) => onPatch({ burnerLevel: Math.round(v) })}
             />
           </>
@@ -1781,9 +1794,9 @@ function DeviceControlCard({
               minimumValue={60}
               maximumValue={900}
               value={timeRemainingSec}
-              minimumTrackTintColor="#6B3CFF"
-              maximumTrackTintColor="rgba(12,12,18,0.1)"
-              thumbTintColor="#FFFFFF"
+              minimumTrackTintColor={theme.colors.accent}
+              maximumTrackTintColor={theme.colors.stroke}
+              thumbTintColor={theme.colors.accent}
               onValueChange={(v) =>
                 onPatch({ timeRemainingSec: Math.round(v / 30) * 30 })
               }
@@ -1808,9 +1821,9 @@ function DeviceControlCard({
               minimumValue={1}
               maximumValue={8}
               value={temp}
-              minimumTrackTintColor="#6B3CFF"
-              maximumTrackTintColor="rgba(12,12,18,0.1)"
-              thumbTintColor="#FFFFFF"
+              minimumTrackTintColor={theme.colors.accent}
+              maximumTrackTintColor={theme.colors.stroke}
+              thumbTintColor={theme.colors.accent}
               onValueChange={(v) => onPatch({ tempC: Math.round(v) })}
             />
           </>
@@ -1835,7 +1848,7 @@ function DeviceControlCard({
     <View style={cardStyle}>
       <View style={styles.deviceControlHeader}>
         <View style={iconStyle}>
-          <DeviceIcon kind={device.kind} size={iconSize} color="#6B3CFF" />
+          <DeviceIcon kind={device.kind} size={iconSize} color={theme.colors.accent} />
         </View>
         <View style={headerBodyStyle}>
           <Text style={titleStyle}>{device.name}</Text>

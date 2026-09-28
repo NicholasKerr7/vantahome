@@ -21,6 +21,7 @@ import {
 } from "../store/useHomeStore";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
+import { openHomeFeature } from "../app/homeNavigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { roleHasPermission } from "../security/permissions";
@@ -278,7 +279,7 @@ export default function CamerasScreen({ navigation }: Props) {
       navigation.goBack();
       return;
     }
-    navigation.navigate("Main", { screen: "Home" } as never);
+    openHomeFeature(navigation.dispatch, "Home");
   }, [navigation]);
 
   if (!canViewCamera || protectedAccess.state !== "granted") {
@@ -357,10 +358,7 @@ export default function CamerasScreen({ navigation }: Props) {
                     <Pressable
                       style={navPillStyle}
                       onPress={() =>
-                        navigation.navigate(
-                          "Main",
-                          { screen: "Home" } as never,
-                        )
+                        openHomeFeature(navigation.dispatch, "Home")
                       }
                     >
                       <Ionicons

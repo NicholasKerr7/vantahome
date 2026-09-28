@@ -140,3 +140,41 @@ test('a renderer delivery failure cannot break dashboard edits or strand an acti
   await settle();
   expect(store.getState().devices[0]).toMatchObject({ isOn: true, brightness: 42 });
 });
+
+test('shares every scene device across open native and WebView sessions without losing concurrent edits', async () => {
+  const { session, deliver, store, persistence } = setup();
+  const voiceDeliver = jest.fn();
+  const voice = new SimulationSession(voiceDeliver, jest.fn(), { store, persistence, mode: 'demo' });
+  session.handleMessage(request);
+  voice.handleMessage(request);
+  await settle();
+  const initial = deliver.mock.lastCall![0].state;
+  session.handleMessage({ ...request, type: 'patch', requestId: 1, changes: { deviceStates: {
+    'bedroom-4-bedside-right': { ...initial.deviceStates['bedroom-4-bedside-right'], level: 31 },
+  } } });
+  voice.handleMessage({ ...request, type: 'patch', requestId: 1, changes: { deviceStates: {
+    'bedroom-4-bedside-right': { ...initial.deviceStates['bedroom-4-bedside-right'], settings: { color: '#A0E9FF' } },
+    'bath-7-fan': { ...initial.deviceStates['bath-7-fan'], on: false },
+  } } });
+  await settle();
+  for (const receive of [deliver, voiceDeliver]) {
+    expect(receive.mock.lastCall![0].state.deviceStates['bedroom-4-bedside-right']).toMatchObject({ level: 31, settings: { color: '#A0E9FF' } });
+    expect(receive.mock.lastCall![0].state.deviceStates['bath-7-fan'].on).toBe(false);
+  }
+  expect((await persistence.load('demo')).deviceStates['bedroom-4-bedside-right']).toMatchObject({ level: 31, settings: { color: '#A0E9FF' } });
+  session.dispose(); voice.dispose();
+});
+
+test('scope changes disconnect every subscribed surface before a different account can receive updates', async () => {
+  const { session, store, persistence } = setup();
+  const voiceDeliver = jest.fn(); const voiceStatus = jest.fn();
+  const voice = new SimulationSession(voiceDeliver, voiceStatus, { store, persistence, mode: 'demo' });
+  session.handleMessage(request); voice.handleMessage(request); await settle();
+  const count = voiceDeliver.mock.calls.length;
+  store.setState({ authenticatedUserId: 'other-account' });
+  persistence.save('demo', { ...createDefaultSimulationSnapshot(), motionDisabled: true });
+  await settle();
+  expect(voiceStatus).toHaveBeenLastCalledWith('disconnected');
+  expect(voiceDeliver).toHaveBeenCalledTimes(count);
+  voice.dispose();
+});

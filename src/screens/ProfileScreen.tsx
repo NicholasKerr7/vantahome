@@ -51,6 +51,9 @@ import {
 } from "../security/permissions";
 import { runtimePolicy } from "../config/runtimeMode";
 import { cancelAuthFlow, waitForAuthExchange } from "../services/authFlow";
+import { integrationStatusLabel } from "../features/integrations/integrationCatalog";
+import { getVoiceLinkConfiguration } from "../features/integrations/voiceLinkService";
+import { isVoiceProvider } from "../features/integrations/voiceLinking";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -917,8 +920,9 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   };
 
-  const openSettings = () => {
-    navigation.navigate("Main", { screen: "Settings" });
+  /** Keep account-level integration links inside the dedicated 3D setup flow. */
+  const openIntegrations = () => {
+    navigation.navigate("Integrations");
   };
 
   const handleSignOut = () => {
@@ -1129,7 +1133,7 @@ export default function ProfileScreen({ navigation }: Props) {
               : "rgba(255,255,255,0.8)"
           }
           trackColor={{
-            true: "rgba(180,107,255,0.45)",
+            true: theme.colors.glow,
             false: "rgba(255,255,255,0.24)",
           }}
           style={switchScaleStyle}
@@ -1147,7 +1151,7 @@ export default function ProfileScreen({ navigation }: Props) {
               : "rgba(255,255,255,0.8)"
           }
           trackColor={{
-            true: "rgba(180,107,255,0.45)",
+            true: theme.colors.glow,
             false: "rgba(255,255,255,0.24)",
           }}
           style={switchScaleStyle}
@@ -1157,7 +1161,7 @@ export default function ProfileScreen({ navigation }: Props) {
     <View key="connected-services" style={cardBaseStyle}>
       <View style={styles.cardHeader}>
         <View>
-          <Text style={sectionTitleTextStyle}>Connected services</Text>
+          <Text style={sectionTitleTextStyle}>Voice & integrations</Text>
           <Text style={sectionSubTextStyle}>
             Voice assistants and bridges
           </Text>
@@ -1170,25 +1174,11 @@ export default function ProfileScreen({ navigation }: Props) {
       </View>
       {serviceItems.map((item) => {
         const state = integrations[item.provider];
-        const status = state?.status ?? "not-linked";
-        const linked = status === "linked";
-        const statusLabel =
-          state?.accountName ??
-          (status === "linked"
-            ? "Linked"
-            : status === "linking"
-              ? "Linking…"
-              : status === "error"
-                ? "Error"
-                : "Not linked");
-        const pillLabel = linked
-          ? "Manage"
-          : status === "linking"
-            ? "Linking…"
-            : status === "error"
-              ? "Retry"
-              : "Connect";
-        const pillDisabled = status === "linking";
+        const linked = isVoiceProvider(item.provider) && state?.status === "linked";
+        const statusLabel = integrationStatusLabel(
+          item.provider, state?.status, Boolean(getVoiceLinkConfiguration(item.provider)),
+        );
+        const pillLabel = linked ? "Manage" : "Review";
         return (
           <View key={item.provider} style={styles.serviceRow}>
             <View style={styles.serviceIcon}>
@@ -1203,9 +1193,9 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={settingSubTextStyle}>{statusLabel}</Text>
             </View>
             <Pressable
-              style={servicePillStyle(linked, pillDisabled)}
-              onPress={openSettings}
-              disabled={pillDisabled}
+              style={servicePillStyle(linked, false)}
+              accessibilityLabel={`Review ${item.label} setup`}
+              onPress={openIntegrations}
             >
               <Text style={servicePillTextStyle(linked)}>
                 {pillLabel}
@@ -1244,7 +1234,7 @@ export default function ProfileScreen({ navigation }: Props) {
               item.value ? theme.colors.accent : "rgba(255,255,255,0.8)"
             }
             trackColor={{
-              true: "rgba(180,107,255,0.45)",
+              true: theme.colors.glow,
               false: "rgba(255,255,255,0.24)",
             }}
             style={switchScaleStyle}
@@ -1281,7 +1271,7 @@ export default function ProfileScreen({ navigation }: Props) {
               item.value ? theme.colors.accent : "rgba(255,255,255,0.8)"
             }
             trackColor={{
-              true: "rgba(180,107,255,0.45)",
+              true: theme.colors.glow,
               false: "rgba(255,255,255,0.24)",
             }}
             style={switchScaleStyle}
@@ -1604,7 +1594,7 @@ export default function ProfileScreen({ navigation }: Props) {
                 <View style={heroCardStyle}>
                   <LinearGradient
                     colors={[
-                      "rgba(122,92,255,0.22)",
+                      theme.colors.glow,
                       "rgba(255,255,255,0.06)",
                     ]}
                     start={{ x: 0.1, y: 0.1 }}
@@ -1657,7 +1647,7 @@ export default function ProfileScreen({ navigation }: Props) {
                                   size={Math.round(12 * scale)}
                                   color={
                                     email.trim()
-                                      ? "rgba(122,92,255,0.9)"
+                                      ? theme.colors.accent2
                                       : "rgba(255,190,120,0.9)"
                                   }
                                 />
@@ -1869,7 +1859,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.85)",
+    backgroundColor: theme.colors.accent2,
   },
   inviteActionSecondary: {
     paddingHorizontal: 12,
@@ -1902,7 +1892,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: "rgba(122,92,255,0.35)",
+    backgroundColor: theme.colors.glow,
   },
   heroGlowSecondary: {
     position: "absolute",
@@ -1911,7 +1901,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: "rgba(180,107,255,0.25)",
+    backgroundColor: theme.colors.glow,
   },
   heroContent: { position: "relative", zIndex: 1 },
   heroPanel: {
@@ -1965,7 +1955,7 @@ const styles = StyleSheet.create({
   },
   heroAvatarHalo: {
     position: "absolute",
-    backgroundColor: "rgba(122,92,255,0.35)",
+    backgroundColor: theme.colors.glow,
     shadowColor: "#7A5CFF",
     shadowOpacity: 0.35,
     shadowRadius: 22,
@@ -2051,7 +2041,7 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.9)",
+    backgroundColor: theme.colors.accent2,
   },
   progressMeta: {
     flexDirection: "row",
@@ -2145,8 +2135,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   chipActive: {
-    backgroundColor: "rgba(180,107,255,0.32)",
-    borderColor: "rgba(180,107,255,0.45)",
+    backgroundColor: theme.colors.glow,
+    borderColor: theme.colors.glow,
   },
   chipText: { color: theme.colors.subtext, fontWeight: "800" },
   chipTextActive: { color: theme.colors.text },
@@ -2215,8 +2205,8 @@ const styles = StyleSheet.create({
   },
   servicePillDisabled: { opacity: 0.6 },
   servicePillActive: {
-    backgroundColor: "rgba(122,92,255,0.18)",
-    borderColor: "rgba(122,92,255,0.45)",
+    backgroundColor: theme.colors.glow,
+    borderColor: theme.colors.glow,
   },
   servicePillText: { color: theme.colors.subtext, fontWeight: "800" },
   servicePillTextActive: { color: theme.colors.text },
@@ -2288,7 +2278,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     height: 50,
     borderRadius: 16,
-    backgroundColor: "rgba(180,107,255,0.85)",
+    backgroundColor: theme.colors.accent2,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,

@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { RootStackParamList } from "../app/AppNavigator";
+import { openHomeFeature } from "../app/homeNavigation";
 import VantaHomeMark from "../components/VantaHomeMark";
 import BackgroundLines from "../components/BackgroundLines";
 import { theme } from "../theme/theme";
@@ -256,7 +257,7 @@ export default function OnboardingScreen({ navigation }: Props) {
             <Pressable
               style={ctaWrapStyle}
               pressedStyle={styles.ctaWrapPressed}
-              onPress={() => navigation.replace("Main", { screen: "Home" })}
+              onPress={() => openHomeFeature(navigation.dispatch, "Home")}
             >
               <LinearGradient
                 colors={["#B08CFF", "#6B3CFF"]}

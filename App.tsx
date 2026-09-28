@@ -1,6 +1,6 @@
 import "react-native-gesture-handler";
 import React, { useEffect } from "react";
-import { AppState } from "react-native";
+import { AppState, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -159,7 +159,7 @@ function App() {
 
   return (
     // Required by RNGH (and libraries built on it like @gorhom/bottom-sheet).
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar style="light" />
         <AppNavigator />
@@ -169,3 +169,7 @@ function App() {
 }
 
 export default sentryEnabled ? Sentry.wrap(App) : App;
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#080C08', justifyContent: 'center' },
+});

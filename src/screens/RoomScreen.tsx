@@ -17,6 +17,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { RootStackParamList } from "../app/AppNavigator";
+import { openHomeFeature } from "../app/homeNavigation";
 import BackgroundLines from "../components/BackgroundLines";
 import RoomScenesRow from "../components/RoomScenesRow";
 import DeviceTile from "../components/DeviceTile";
@@ -813,9 +814,7 @@ export default function RoomScreen({ route, navigation }: Props) {
         }}
         onGoToAutomations={() => {
           sheetRef.current?.dismiss();
-          // Jump to the Automations tab (typing is simplified here; can be refined
-          // by properly typing nested navigators).
-          navigation.navigate("Main" as any, { screen: "Automations" } as any);
+          openHomeFeature(navigation.dispatch, "Automations");
         }}
         onToggle={() => {
           if (!selectedId) return;

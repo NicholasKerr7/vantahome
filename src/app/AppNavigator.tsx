@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Linking, View, Text, ActivityIndicator } from "react-native";
+import { Linking, View, Text, ActivityIndicator, StyleSheet, Platform, useWindowDimensions } from "react-native";
 import {
   NavigationContainer,
   DefaultTheme,
@@ -11,7 +11,7 @@ import type { Session } from "@supabase/supabase-js";
 import AuthScreen from "../screens/AuthScreen";
 import AuthRequiredScreen from "../screens/AuthRequiredScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
-import BottomTabs, { type BottomTabParamList } from "../components/BottomTabs";
+import HomeNavigator, { loadThreeDHomeScreen, type HomeStackParamList } from "./HomeNavigator";
 import DeviceDetailScreen from "../screens/DeviceDetailScreen";
 import RoomScreen from "../screens/RoomScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
@@ -30,7 +30,6 @@ import {
 import { bootstrapHome } from "../services/cloudRegistry";
 import { hydrateHomeAccount, useHomeStore } from "../store/useHomeStore";
 import { resolveAuthExperience, runtimePolicy } from "../config/runtimeMode";
-import { isThreeDHomeEnabled } from "../config/threeDHome";
 import {
   cancelAuthFlow,
   completeAuthCallback,
@@ -54,8 +53,9 @@ export type RootStackParamList = {
   Auth: undefined;
   PasswordRecovery: undefined;
   Onboarding: undefined;
-  Main: NavigatorScreenParams<BottomTabParamList>;
+  Main: NavigatorScreenParams<HomeStackParamList>;
   ThreeDHome: undefined;
+  Integrations: undefined;
   Room: { roomId?: string; showAll?: boolean };
   DeviceDetail: { deviceId: string };
   Notifications: undefined;
@@ -69,13 +69,14 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-/** Load the optional renderer only after navigation opens the 3D Home screen. */
-function loadThreeDHomeScreen() {
-  return require("../screens/ThreeDHomeScreen")
-    .default as typeof import("../screens/ThreeDHomeScreen").default;
+/** Defer provider setup and browser-auth code until integrations are opened. */
+function loadIntegrationsScreen() {
+  return require('../screens/IntegrationsScreen').default as typeof import('../screens/IntegrationsScreen').default;
 }
 
 export default function AppNavigator() {
+  const { width } = useWindowDimensions();
+  const desktopPreview = Platform.OS === 'web' && width > 1366;
   const [session, setSession] = useState<Session | null>(null);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [authReady, setAuthReady] = useState(false);
@@ -224,9 +225,9 @@ export default function AppNavigator() {
     hasSession: Boolean(session),
   });
   return (
-    <View style={{ flex: 1 }}>
+    <View style={[styles.viewport, desktopPreview && styles.desktopViewport]}>
       <View
-        style={{ flex: 1 }}
+        style={styles.fill}
         pointerEvents={checkingMembership ? "none" : "auto"}
         accessibilityElementsHidden={checkingMembership}
         importantForAccessibility={
@@ -248,7 +249,7 @@ export default function AppNavigator() {
                 colors: { ...DefaultTheme.colors, background: theme.colors.bg0 },
               }}
             >
-              <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Navigator screenOptions={{ headerShown: false, animation: 'none' }}>
                 {passwordRecovery && session ? (
                   <Stack.Screen name="PasswordRecovery">
                     {() => (
@@ -262,17 +263,13 @@ export default function AppNavigator() {
                 ) : authExperience === "authenticated" ||
                   authExperience === "demo" ? (
                   <>
+                    <Stack.Screen name="Main" component={HomeNavigator} />
                     <Stack.Screen
                       name="Onboarding"
                       component={OnboardingScreen}
                     />
-                    <Stack.Screen name="Main" component={BottomTabs} />
-                    {isThreeDHomeEnabled() && (
-                      <Stack.Screen
-                        name="ThreeDHome"
-                        getComponent={loadThreeDHomeScreen}
-                      />
-                    )}
+                    <Stack.Screen name="ThreeDHome" getComponent={loadThreeDHomeScreen} />
+                    <Stack.Screen name="Integrations" getComponent={loadIntegrationsScreen} />
                     <Stack.Screen name="Room" component={RoomScreen} />
                     <Stack.Screen
                       name="DeviceDetail"
@@ -309,22 +306,12 @@ export default function AppNavigator() {
       {checkingMembership && (
         <View
           accessibilityViewIsModal
-          style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 16,
-            backgroundColor: theme.colors.bg0,
-          }}
+          style={styles.membershipOverlay}
         >
           {!membershipError && (
             <ActivityIndicator color={theme.colors.accent2} />
           )}
-          <Text style={{ color: theme.colors.text }}>
+          <Text style={styles.text}>
             {membershipError
               ? "Unable to verify home access."
               : "Verifying your home…"}
@@ -333,7 +320,7 @@ export default function AppNavigator() {
             accessibilityRole="button"
             onPress={() => setMembershipRetry((value) => value + 1)}
           >
-            <Text style={{ color: theme.colors.accent2 }}>Retry</Text>
+            <Text style={styles.actionText}>Retry</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -343,10 +330,20 @@ export default function AppNavigator() {
                 .then(() => supabase?.auth.signOut({ scope: "local" }));
             }}
           >
-            <Text style={{ color: theme.colors.subtext }}>Sign out</Text>
+            <Text style={styles.subtext}>Sign out</Text>
           </Pressable>
         </View>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  viewport: { flex: 1, width: '100%', alignSelf: 'center', overflow: 'hidden', backgroundColor: theme.colors.bg0 },
+  desktopViewport: { maxWidth: 1366, maxHeight: 1024 },
+  fill: { flex: 1, minHeight: 0 },
+  membershipOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: theme.colors.bg0 },
+  text: { color: theme.colors.text },
+  actionText: { color: theme.colors.accent },
+  subtext: { color: theme.colors.subtext },
+});

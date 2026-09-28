@@ -30,14 +30,22 @@ import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
 import ModalField from "../components/ModalField";
 
-export default function AutomationsScreen() {
+const SWITCH_TRACK_COLORS = { false: theme.colors.stroke, true: theme.colors.accent2 };
+
+export type AutomationsScreenProps = {
+  /** The root feature wrapper provides the title, safe areas and back navigation. */
+  embedded?: boolean;
+};
+
+/** Reuse flow and schedule controls without reserving space for removed bottom tabs. */
+export default function AutomationsScreen({ embedded = false }: AutomationsScreenProps = {}) {
   const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
   const minSize = Math.min(width, contentWidth);
   const isCompactPhone = !isTablet && minSize < 360;
   const isWide = isTablet && isLandscape;
   const isPortrait = !isLandscape;
-  const frameEnabled = isPortrait || isWide;
+  const frameEnabled = !embedded && (isPortrait || isWide);
   const titleSize = Math.round(
     (isTablet ? 30 : isCompactPhone ? 22 : 24) * scale,
   );
@@ -250,6 +258,7 @@ export default function AutomationsScreen() {
       paddingTop: topPad,
       paddingBottom: tabBarPad,
     },
+    embedded && styles.embeddedContent,
   ];
   const headerWrapStyle: StyleProp<ViewStyle> = {
     paddingHorizontal: innerGutter,
@@ -257,6 +266,7 @@ export default function AutomationsScreen() {
   const headerStyle: StyleProp<ViewStyle> = [
     styles.header,
     isCompactPhone && styles.headerCompact,
+    embedded && styles.embeddedHeader,
   ];
   const headerTitleStyle: StyleProp<TextStyle> = [
     styles.h1,
@@ -334,6 +344,7 @@ export default function AutomationsScreen() {
     isSplit && styles.sectionActionWide,
     isPhone && styles.sectionActionPhone,
     isCompactPhone && styles.sectionActionCompact,
+    embedded && styles.embeddedAction,
   ];
   const sectionActionTextStyle: StyleProp<TextStyle> = [
     styles.sectionActionText,
@@ -568,11 +579,8 @@ export default function AutomationsScreen() {
               accessibilityLabel={`${flow.name} enabled`}
               value={flow.enabled}
               onValueChange={() => toggleFlow(flow.id)}
-              trackColor={{
-                false: "rgba(255,255,255,0.18)",
-                true: "rgba(180,107,255,0.55)",
-              }}
-              thumbColor={flow.enabled ? "#FFFFFF" : "rgba(255,255,255,0.9)"}
+              trackColor={SWITCH_TRACK_COLORS}
+              thumbColor={theme.colors.text}
               style={switchScaleStyle}
             />
           </Pressable>
@@ -603,11 +611,8 @@ export default function AutomationsScreen() {
             accessibilityLabel={`${r.name} enabled`}
             value={r.enabled}
             onValueChange={() => toggleRule(r.id)}
-            trackColor={{
-              false: "rgba(255,255,255,0.18)",
-              true: "rgba(180,107,255,0.55)",
-            }}
-            thumbColor={r.enabled ? "#FFFFFF" : "rgba(255,255,255,0.9)"}
+            trackColor={SWITCH_TRACK_COLORS}
+            thumbColor={theme.colors.text}
             style={switchScaleStyle}
           />
         </Pressable>
@@ -634,7 +639,7 @@ export default function AutomationsScreen() {
             <Ionicons
               name="add"
               size={Math.round(14 * scale)}
-              color="rgba(255,255,255,0.95)"
+              color={theme.colors.text}
             />
             <Text style={sectionActionTextStyle}>New flow</Text>
           </Pressable>
@@ -663,7 +668,7 @@ export default function AutomationsScreen() {
             <Ionicons
               name="add"
               size={Math.round(14 * scale)}
-              color="rgba(255,255,255,0.95)"
+              color={theme.colors.text}
             />
             <Text style={sectionActionTextStyle}>Add schedule</Text>
           </Pressable>
@@ -678,8 +683,8 @@ export default function AutomationsScreen() {
       colors={[theme.colors.bg1, theme.colors.bg0]}
       style={styles.root}
     >
-      <BackgroundLines />
-      <View style={contentStyle}>
+      {!embedded && <BackgroundLines />}
+      <View style={contentStyle} testID="automations-screen-content">
         <ScreenFrame
           isPortrait={isPortrait}
           enabled={frameEnabled}
@@ -691,12 +696,12 @@ export default function AutomationsScreen() {
           <ScreenSectionLayout
             header={
               <View style={headerStyle}>
-                <View>
+                {!embedded && <View>
                   <Text style={headerTitleStyle}>Automations</Text>
                   <Text style={headerSubtitleStyle}>
                     Build flows and schedules.
                   </Text>
-                </View>
+                </View>}
                 <HeaderPill
                   label={headerSummary}
                   icon="flash-outline"
@@ -732,7 +737,7 @@ export default function AutomationsScreen() {
         visible={modalMode !== null}
         onRequestClose={() => setModalMode(null)}
         onBackdropPress={() => setModalMode(null)}
-        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
+        colors={[theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <Text style={modalTitleStyle}>
@@ -750,7 +755,7 @@ export default function AutomationsScreen() {
             value={ruleName}
             onChangeText={setRuleName}
             placeholder="Morning routine"
-            placeholderTextColor="rgba(12,12,18,0.45)"
+            placeholderTextColor={theme.colors.muted}
             style={modalInputStyle}
           />
         </ModalField>
@@ -812,9 +817,9 @@ export default function AutomationsScreen() {
                 minimumValue={AC_TEMP_MIN_C}
                 maximumValue={AC_TEMP_MAX_C}
                 value={temp}
-                minimumTrackTintColor="rgba(180,107,255,0.8)"
-                maximumTrackTintColor="rgba(12,12,18,0.1)"
-                thumbTintColor="#fff"
+                minimumTrackTintColor={theme.colors.accent}
+                maximumTrackTintColor={theme.colors.stroke}
+                thumbTintColor={theme.colors.accent}
                 onValueChange={(v) => setTemp(Math.round(v))}
               />
             </View>
@@ -829,7 +834,7 @@ export default function AutomationsScreen() {
                 <Ionicons
                   name="power"
                   size={Math.round(16 * scale)}
-                  color={toggleOn ? "#fff" : "rgba(12,12,18,0.7)"}
+                  color={toggleOn ? theme.colors.bg0 : theme.colors.subtext}
                 />
                 <Text style={toggleTextStyle(toggleOn)}>On</Text>
               </Pressable>
@@ -840,7 +845,7 @@ export default function AutomationsScreen() {
                 <Ionicons
                   name="power"
                   size={Math.round(16 * scale)}
-                  color={!toggleOn ? "#fff" : "rgba(12,12,18,0.7)"}
+                  color={!toggleOn ? theme.colors.bg0 : theme.colors.subtext}
                 />
                 <Text style={toggleTextStyle(!toggleOn)}>Off</Text>
               </Pressable>
@@ -884,16 +889,19 @@ export default function AutomationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  content: { flex: 1, alignItems: "center" },
-  sectionsScroll: { flex: 1 },
+  root: { flex: 1, minHeight: 0 },
+  content: { flex: 1, minHeight: 0, alignItems: "center" },
+  embeddedContent: { paddingTop: 0, paddingBottom: 0 },
+  embeddedHeader: { marginBottom: 8 },
+  embeddedAction: { minHeight: 44 },
+  sectionsScroll: { flex: 1, minHeight: 0 },
   sectionsGridLandscape: { flexDirection: "row", alignItems: "flex-start" },
   sectionsColumn: { flex: 1, minWidth: 0 },
   sectionsStack: { width: "100%" },
   sectionCard: {
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: theme.colors.stroke,
   },
   header: {
     flexDirection: "row",
@@ -914,9 +922,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.20)",
+    borderColor: theme.colors.stroke,
   },
   headerPillText: { color: theme.colors.text, fontWeight: "800" },
   sectionHeader: {
@@ -976,9 +984,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
     maxWidth: "100%",
   },
   sectionBadgeText: {
@@ -991,9 +999,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(180,107,255,0.18)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
-    borderColor: "rgba(180,107,255,0.35)",
+    borderColor: theme.colors.accent,
   },
   sectionActionWide: {
     maxWidth: "100%",
@@ -1014,9 +1022,9 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.10)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -1025,9 +1033,9 @@ const styles = StyleSheet.create({
   sub: { color: theme.colors.subtext, marginTop: 6, fontWeight: "700" },
   emptyCard: {
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: theme.colors.stroke,
   },
   emptyTitle: { color: theme.colors.text, fontWeight: "900" },
   emptySub: { color: theme.colors.subtext, marginTop: 6, fontWeight: "700" },
@@ -1035,12 +1043,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.40)",
+    borderColor: theme.colors.stroke,
   },
-  modalTitle: { color: "rgba(12,12,18,0.9)", fontWeight: "900", fontSize: 18 },
-  modalSub: { color: "rgba(12,12,18,0.55)", fontWeight: "700", marginTop: 6 },
+  modalTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 18 },
+  modalSub: { color: theme.colors.subtext, fontWeight: "700", marginTop: 6 },
   modalLabel: {
-    color: "rgba(12,12,18,0.75)",
+    color: theme.colors.text,
     fontWeight: "800",
     marginTop: 12,
     marginBottom: 6,
@@ -1048,11 +1056,11 @@ const styles = StyleSheet.create({
   modalInput: {
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     paddingHorizontal: 12,
-    color: "rgba(12,12,18,0.9)",
+    color: theme.colors.text,
     fontWeight: "700",
   },
   deviceRow: { gap: 8, paddingVertical: 6 },
@@ -1060,83 +1068,83 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 34,
     borderRadius: 999,
-    backgroundColor: "rgba(12,12,18,0.06)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   devicePillActive: {
-    backgroundColor: "rgba(107,60,255,0.2)",
-    borderColor: "rgba(107,60,255,0.3)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent,
   },
   devicePillText: {
-    color: "rgba(12,12,18,0.7)",
+    color: theme.colors.subtext,
     fontWeight: "800",
     fontSize: 12,
   },
-  devicePillTextActive: { color: "rgba(12,12,18,0.9)" },
+  devicePillTextActive: { color: theme.colors.text },
   timeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   timeInput: {
     width: 60,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     textAlign: "center",
-    color: "rgba(12,12,18,0.9)",
+    color: theme.colors.text,
     fontWeight: "800",
   },
-  timeColon: { fontSize: 18, fontWeight: "900", color: "rgba(12,12,18,0.65)" },
+  timeColon: { fontSize: 18, fontWeight: "900", color: theme.colors.subtext },
   sliderRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  sliderValue: { width: 64, color: "rgba(12,12,18,0.9)", fontWeight: "900" },
+  sliderValue: { width: 64, color: theme.colors.text, fontWeight: "900" },
   toggleRow: { flexDirection: "row", gap: 10 },
   toggleBtn: {
     flex: 1,
     height: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    borderColor: theme.colors.stroke,
+    backgroundColor: theme.colors.bg0,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
   },
-  toggleBtnActive: { backgroundColor: "#6B3CFF", borderColor: "#6B3CFF" },
-  toggleText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
-  toggleTextActive: { color: "#fff" },
+  toggleBtnActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  toggleText: { color: theme.colors.subtext, fontWeight: "800" },
+  toggleTextActive: { color: theme.colors.bg0 },
   modalRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   modalGhost: {
     flex: 1,
     height: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  modalGhostText: { color: "rgba(12,12,18,0.75)", fontWeight: "800" },
+  modalGhostText: { color: theme.colors.text, fontWeight: "800" },
   modalPrimary: {
     flex: 1,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
   },
   modalPrimaryDisabled: { opacity: 0.6 },
-  modalPrimaryText: { color: "#FFFFFF", fontWeight: "900" },
+  modalPrimaryText: { color: theme.colors.bg0, fontWeight: "900" },
   modalDelete: {
     marginTop: 12,
     height: 44,
     borderRadius: 12,
     backgroundColor: "rgba(255, 99, 132, 0.18)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.45)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  modalDeleteText: { color: "#8b1e3a", fontWeight: "900" },
+  modalDeleteText: { color: "#FFB4C3", fontWeight: "900" },
 });

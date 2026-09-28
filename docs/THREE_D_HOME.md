@@ -1,10 +1,30 @@
 # 3D Home integration
 
-3D Home is an optional, explicitly labeled simulation inside the existing
-VantaHome app. The original dashboard, authentication, household permissions,
+3D Home is the main VantaHome interface after authentication. The old dashboard
+and bottom tabs have been retired; authentication, household permissions,
 runtime mode policy, and device command services remain in place. Its 92 scene
 devices are simulated; toggles, presets, the gate, irrigation, and automatic
 exterior lighting do not control physical equipment.
+
+The home menu opens Scenes, Automations, Cameras, Notifications, room/device
+management, Household, Settings, Integrations, command activity, and audit history.
+The former feature screens retain their existing services and return to the same
+home stack. The renderer comparison remains in Connections for explicitly enabled
+demo/development builds. A native device library remains available if graphics fail.
+The menu and new voice/integration panels fit on bounded pages; existing management
+screens retain their internal scrolling for long forms and lists.
+
+Tap-to-speak and typed commands control the same persisted simulation as touch.
+Room/device power, brightness, Celsius AC temperature, and open/close position
+commands are supported. Gas/monitor commands require their full inspectors.
+Dictation is opt-in, stops on close/background/session changes, and has a typed
+fallback. It is not a Siri shortcut or an always-listening wake-word integration.
+All open simulation surfaces share local updates, including unmapped scene devices.
+
+Integrations shows Alexa/Google authorization setup, planned Apple/Matter support,
+and the unfinished Vanta Bridge path. An authorization callback records local
+progress only; it does not verify a provider connection or physical execution.
+See [Browser Account Linking](./VOICE_ACCOUNT_LINKING.md) for deployment boundaries.
 
 Full device inspectors share a typed capability catalog with the native renderer
 preview. Quick actions stay compact; Controls, Modes, Schedule, and Status expose
@@ -66,12 +86,11 @@ the preview with bundle ID `com.anonymous.vantahome.preview`, display name
 packaging. Keep personal signing values and preview configuration out of the
 committed production configuration.
 
-The feature is enabled by default on this integration branch. Set
-`EXPO_PUBLIC_ENABLE_3D_HOME=false` and restart/rebuild Expo to remove both its
-dashboard entry and navigation route. This public build setting contains no
-credentials. The original dashboard remains available when the feature is
-enabled, while the 3D screen provides a dashboard return action, loading status,
-and retry behavior.
+The house graphics are enabled by default. Set `EXPO_PUBLIC_ENABLE_3D_HOME=false`
+and restart/rebuild Expo to pause the graphics surface for recovery. The home menu,
+device library, and feature routes remain available. This public build setting
+contains no credentials. The house has loading, retry, save-error, and session
+reconnection feedback; it is no longer an optional dashboard destination.
 
 ## Editing the model
 
@@ -268,3 +287,21 @@ status or connect any of the 92 simulated devices to hardware.
 
 The optional Filament comparison is documented in [RENDERER_COMPARISON.md](RENDERER_COMPARISON.md).
 It uses separate temporary simulation controls and does not replace this scene.
+
+## 3D-first shell verification
+
+The migration replaces the dashboard/tab navigator with the house as the first
+private route. Existing authentication, recovery, membership, scene, automation,
+registry, camera, and household paths remain behind their prior access boundaries.
+Navigation regression tests exercise repeated trips through the actual stack
+router and retain the original Home route instead of accumulating duplicates.
+
+The migration passed the full 100-suite / 1,596-test app run, followed by focused
+checks for the final panel-recovery, navigation, and microphone lifecycle changes.
+TypeScript and dependency checks passed. Browser checks exercised all menu pages,
+all five integration pages, typed simulation commands, feature returns, and the
+native device library at 320×562, 390×844, 834×1194, 1194×834, and 960×600.
+The iOS Release preview uses build 16. Native spoken recognition still requires
+an owner check on the phone; browser commands do not establish microphone accuracy,
+provider linking, or physical hardware operation. Physical iPad testing remains
+deferred and no Android device result is claimed.

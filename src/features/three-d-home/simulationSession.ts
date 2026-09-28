@@ -3,7 +3,7 @@ import { runtimePolicy, type RuntimeMode } from '../../config/runtimeMode';
 import { useHomeStore, type HomeState } from '../../store/useHomeStore';
 import {
   mergeSimulationChanges, parseSimulationRequest,
-  type SimulationSnapshot, type SimulationSnapshotMessage,
+  type SimulationChanges, type SimulationSnapshot, type SimulationSnapshotMessage,
 } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { overlayDemoDevices, projectSimulationToDemo } from './demoDeviceMapping';
 import { simulationPersistence, type SimulationPersistence, type SimulationSaveStatus } from './simulationPersistence';
@@ -43,6 +43,8 @@ export class SimulationSession {
   private lastRequestId = 0;
   private unsubscribeStore: () => void;
   private unsubscribePersistence: () => void;
+  private unsubscribeState: () => void;
+  private pendingPatches = new Map<number, { base: SimulationSnapshot; changes: SimulationChanges }>();
 
   /** Capture the current scope before asynchronous hydration can race an account change. */
   constructor(
@@ -58,6 +60,11 @@ export class SimulationSession {
     // Account identifiers stay in the host's local storage key and never cross the frame boundary.
     this.scope = this.sharedDemo ? 'demo' : `preview:${home.accountUserId ?? home.authenticatedUserId ?? 'local'}`;
     this.unsubscribePersistence = this.persistence.subscribe(this.scope, onSaveStatus);
+    this.unsubscribeState = this.persistence.subscribeState(this.scope, (next) => {
+      if (this.disposed || !this.state || next === this.state) return;
+      this.state = next;
+      if (this.requested) this.sendSnapshot();
+    });
     this.unsubscribeStore = this.store.subscribe((state, previous) => {
       if (sessionIdentity(state) !== this.identity) {
         this.dispose();
@@ -82,6 +89,13 @@ export class SimulationSession {
     const message = parseSimulationRequest(input);
     if (!message) return false;
     if (this.disposed) return true;
+    // Capture the sender's baseline before another surface commits. Rebase independent
+    // fields later, retaining rapid queued edits from this sender in their original order.
+    if (message.type === 'patch' && this.state && this.requested && message.requestId > this.lastRequestId && !this.pendingPatches.has(message.requestId)) {
+      let base = this.state;
+      for (const pending of this.pendingPatches.values()) base = rebaseChanges(base, pending.base, pending.changes);
+      this.pendingPatches.set(message.requestId, { base, changes: message.changes });
+    }
     this.ready = this.ready.then(() => {
       if (this.disposed || !this.state) return;
       if (message.type === 'request') {
@@ -89,10 +103,15 @@ export class SimulationSession {
         this.sendSnapshot();
         return;
       }
-      if (!this.requested || message.requestId <= this.lastRequestId) return;
+      if (!this.requested || message.requestId <= this.lastRequestId) { this.pendingPatches.delete(message.requestId); return; }
       this.lastRequestId = message.requestId;
       const previous = this.state;
-      this.state = mergeSimulationChanges(previous, message.changes);
+      const pending = this.pendingPatches.get(message.requestId);
+      this.pendingPatches.delete(message.requestId);
+      this.state = pending ? rebaseChanges(previous, pending.base, pending.changes) : mergeSimulationChanges(previous, message.changes);
+      // Publish first so another session cannot project a stale dashboard snapshot over
+      // unrelated scene devices while the shared host store notifies its subscribers.
+      this.persistence.save(this.scope, this.state);
       if (this.sharedDemo) {
         const current = this.store.getState();
         const devices = projectSimulationToDemo(this.state, previous, current.devices);
@@ -100,7 +119,6 @@ export class SimulationSession {
         try { if (devices !== current.devices) this.store.setState({ devices }); }
         finally { this.projecting = false; }
       }
-      this.persistence.save(this.scope, this.state);
       this.sendSnapshot(message.requestId);
     }).catch(() => {
       // Renderer teardown can reject delivery; stop the session and expose recovery instead of stranding its queue.
@@ -118,6 +136,8 @@ export class SimulationSession {
     this.disposed = true;
     this.unsubscribeStore();
     this.unsubscribePersistence();
+    this.unsubscribeState();
+    this.pendingPatches.clear();
   }
 
   /** Send the complete canonical snapshot so either renderer can recover after reopening. */
@@ -138,4 +158,30 @@ export class SimulationSession {
 export function nativeSimulationSnapshotScript(message: SimulationSnapshotMessage): string {
   const payload = JSON.stringify(message).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   return `window.dispatchEvent(new CustomEvent('vantahome-simulation',{detail:${payload}}));true;`;
+}
+
+/** Rebase only changed fields so concurrent voice and scene edits do not undo one another. */
+function rebaseChanges(current: SimulationSnapshot, base: SimulationSnapshot, changes: SimulationChanges): SimulationSnapshot {
+  const rebased: SimulationChanges = { ...changes };
+  if (changes.deviceStates) {
+    rebased.deviceStates = {};
+    for (const [id, submitted] of Object.entries(changes.deviceStates)) {
+      const before = base.deviceStates[id];
+      const latest = current.deviceStates[id];
+      if (!before || !latest) continue;
+      const next = { ...latest };
+      if (submitted.on !== before.on) next.on = submitted.on;
+      if (submitted.level !== before.level) next.level = submitted.level;
+      const settings = { ...latest.settings };
+      for (const key of new Set([...Object.keys(before.settings ?? {}), ...Object.keys(submitted.settings ?? {})])) {
+        if (submitted.settings?.[key] === before.settings?.[key]) continue;
+        if (submitted.settings?.[key] === undefined) delete settings[key];
+        else settings[key] = submitted.settings[key];
+      }
+      if (Object.keys(settings).length) next.settings = settings;
+      else delete next.settings;
+      rebased.deviceStates[id] = next;
+    }
+  }
+  return mergeSimulationChanges(current, rebased);
 }

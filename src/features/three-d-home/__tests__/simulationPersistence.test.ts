@@ -87,3 +87,28 @@ test('retains in-memory edits after a failed write and reports recovery on the n
   await settle();
   expect(statuses).toHaveBeenLastCalledWith('saved');
 });
+
+test('broadcasts local changes only within their scope and detaches closed surfaces', async () => {
+  const persistence = new SimulationPersistence({ getItem: async () => null, setItem: async () => undefined });
+  const state = await persistence.load('demo');
+  const sameScope = jest.fn(); const differentScope = jest.fn();
+  const unsubscribe = persistence.subscribeState('demo', sameScope);
+  persistence.subscribeState('preview:account', differentScope);
+  persistence.save('demo', { ...state, motionDisabled: true });
+  expect(sameScope).toHaveBeenCalledTimes(1);
+  expect(sameScope.mock.lastCall![0].motionDisabled).toBe(true);
+  expect(differentScope).not.toHaveBeenCalled();
+  unsubscribe();
+  persistence.save('demo', state);
+  expect(sameScope).toHaveBeenCalledTimes(1);
+});
+
+test('a late disk read cannot overwrite a newly accepted in-memory edit', async () => {
+  let hydrate!: (value: string) => void;
+  const persistence = new SimulationPersistence({ getItem: () => new Promise((resolve) => { hydrate = resolve; }), setItem: async () => undefined });
+  const state = createDefaultSimulationSnapshot();
+  const loaded = persistence.load('demo');
+  persistence.save('demo', { ...state, motionDisabled: true });
+  hydrate(JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state }));
+  expect((await loaded).motionDisabled).toBe(true);
+});

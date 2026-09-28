@@ -75,7 +75,7 @@ jest.mock("../components/command-feedback/CommandFeedbackProvider", () => ({
 jest.mock("../screens/AuthScreen", () => () => null);
 jest.mock("../screens/AuthRequiredScreen", () => () => null);
 jest.mock("../screens/OnboardingScreen", () => () => null);
-jest.mock("../components/BottomTabs", () => () => null);
+jest.mock("./HomeNavigator", () => ({ __esModule: true, default: () => null, loadThreeDHomeScreen: () => () => null }));
 jest.mock("../screens/DeviceDetailScreen", () => () => null);
 jest.mock("../screens/RoomScreen", () => () => null);
 jest.mock("../screens/NotificationsScreen", () => () => null);
@@ -164,14 +164,16 @@ describe("navigation session boundaries", () => {
     expect(screen.queryByTestId("registered-route-ThreeDHome")).toBeNull();
   });
 
-  test("disabling 3D Home removes its route and preserves the original stack", async () => {
+  test("the 3D shell is the first private route and retains features when graphics are disabled", async () => {
     process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "false";
     const screen = render(<AppNavigator />);
     await waitFor(() =>
       expect(useHomeStore.getState().membershipReady).toBe(true),
     );
-    expect(screen.queryByTestId("registered-route-ThreeDHome")).toBeNull();
+    expect(screen.getByTestId("registered-route-ThreeDHome")).toBeTruthy();
     expect(screen.getByTestId("registered-route-Main")).toBeTruthy();
+    expect(screen.getAllByTestId(/^registered-route-/)[0].props.testID).toBe('registered-route-Main');
+    expect(screen.getByTestId("registered-route-Integrations")).toBeTruthy();
     expect(screen.getByTestId("registered-route-DeviceDetail")).toBeTruthy();
   });
 

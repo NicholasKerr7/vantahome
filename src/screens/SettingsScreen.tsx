@@ -28,16 +28,13 @@ import {
 import { useResponsive } from "../theme/layout";
 import { deviceClient, type ConnectionStatus } from "../services/deviceClient";
 import { bootstrapHome } from "../services/cloudRegistry";
-import * as WebBrowser from "expo-web-browser";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 import { runtimePolicy } from "../config/runtimeMode";
-import { makeVoiceLinkUri } from "../config/authRedirects";
 import { useCommandActivityLauncher } from "../components/command-feedback/CommandActivityContext";
 
-WebBrowser.maybeCompleteAuthSession();
-
-const voiceRedirectUri = makeVoiceLinkUri();
+import { getVoiceLinkConfiguration, linkVoiceAccount } from "../features/integrations/voiceLinkService";
+import { VOICE_LINK_FEEDBACK } from "../features/integrations/voiceLinking";
 
 type IntegrationRowProps = {
   provider: IntegrationProvider;
@@ -51,7 +48,8 @@ const supportedVoiceProviders = new Set<IntegrationProvider>([
   "google",
 ]);
 
-export default function SettingsScreen() {
+/** Reuse settings inside the 3D shell without reserving space for the retired tab bar. */
+export default function SettingsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const commandActivity = useCommandActivityLauncher();
   const { width, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(900);
@@ -111,35 +109,12 @@ export default function SettingsScreen() {
   const integrations = useHomeStore((s) => s.integrations);
   const prefs = useHomeStore((s) => s.preferences);
   const realtime = useHomeStore((s) => s.realtime);
-  const linkIntegration = useHomeStore((s) => s.linkIntegration);
-  const setIntegrationStatus = useHomeStore((s) => s.setIntegrationStatus);
   const unlinkIntegration = useHomeStore((s) => s.unlinkIntegration);
-  const resyncIntegration = useHomeStore((s) => s.resyncIntegration);
   const setPreferences = useHomeStore((s) => s.setPreferences);
   const setRealtime = useHomeStore((s) => s.setRealtime);
   const userName = useHomeStore((s) => s.userName);
   const navigation = useNavigation<any>();
-  const voiceFunctionsBase = useMemo(() => {
-    const explicit = process.env.EXPO_PUBLIC_VOICE_FUNCTIONS_URL?.trim();
-    if (explicit) return explicit.replace(/\/$/, "");
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-    if (!supabaseUrl) return null;
-    const normalized = supabaseUrl.replace(/\/$/, "");
-    if (normalized.includes(".functions.supabase.co")) return normalized;
-    return normalized.replace(/\.supabase\.co$/, ".functions.supabase.co");
-  }, []);
-  const voiceAuthorizeUrl = voiceFunctionsBase
-    ? `${voiceFunctionsBase}/voice-authorize`
-    : null;
-  const voiceClientIds = useMemo<Record<IntegrationProvider, string>>(
-    () => ({
-      alexa: process.env.EXPO_PUBLIC_VOICE_ALEXA_CLIENT_ID?.trim() ?? "",
-      google: process.env.EXPO_PUBLIC_VOICE_GOOGLE_CLIENT_ID?.trim() ?? "",
-      homekit: "",
-      matter: "",
-    }),
-    [],
-  );
+  const voiceConfigured = Boolean(getVoiceLinkConfiguration("alexa") || getVoiceLinkConfiguration("google"));
   const appVersion = Constants.expoConfig?.version ?? "Unknown";
   const configuredSupportEmail = process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim();
   const supportEmail =
@@ -185,8 +160,8 @@ export default function SettingsScreen() {
     styles.content,
     {
       paddingHorizontal: outerGutter,
-      paddingTop: topPad,
-      paddingBottom: tabBarPad,
+      paddingTop: embedded ? 8 : topPad,
+      paddingBottom: embedded ? 8 : tabBarPad,
     },
   ];
   const cardStyle: StyleProp<ViewStyle> = [
@@ -331,11 +306,11 @@ export default function SettingsScreen() {
   ];
   const heroBackdropColors: [string, string, ...string[]] = isWide
     ? [
-        "rgba(122,92,255,0.32)",
+        theme.colors.glow,
         "rgba(210,180,255,0.18)",
         "rgba(255,255,255,0.06)",
       ]
-    : ["rgba(122,92,255,0.22)", "rgba(255,255,255,0.06)"];
+    : [theme.colors.glow, "rgba(255,255,255,0.06)"];
   const heroBackdropStart = isWide ? { x: 0.02, y: 0.08 } : { x: 0.1, y: 0.1 };
   const heroBackdropEnd = isWide ? { x: 1, y: 0.95 } : { x: 1, y: 1 };
   const heroGlowStyle: StyleProp<ViewStyle> = [
@@ -521,66 +496,11 @@ export default function SettingsScreen() {
     }
   };
 
+  /** Share strict callback and account-scope validation with the 3D integration screen. */
   const handleVoiceLink = async (provider: IntegrationProvider) => {
-    if (!supportedVoiceProviders.has(provider)) return;
-    if (!voiceAuthorizeUrl) {
-      Alert.alert(
-        "Missing configuration",
-        "Set EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_VOICE_FUNCTIONS_URL first.",
-      );
-      return;
-    }
-    const clientId = voiceClientIds[provider];
-    if (!clientId) {
-      Alert.alert(
-        "Missing configuration",
-        "Set the voice client ID in your .env file to enable linking.",
-      );
-      return;
-    }
-    if (integrations[provider]?.status === "linking") return;
-
-    const state = `${provider}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    setIntegrationStatus(provider, "linking");
-    try {
-      const authUrl = `${voiceAuthorizeUrl}?${new URLSearchParams({
-        client_id: clientId,
-        redirect_uri: voiceRedirectUri,
-        response_type: "code",
-        state,
-      }).toString()}`;
-      const result = await WebBrowser.openAuthSessionAsync(
-        authUrl,
-        voiceRedirectUri,
-      );
-      if (result.type !== "success" || !result.url) {
-        setIntegrationStatus(provider, "not-linked");
-        return;
-      }
-
-      const params = new URL(result.url).searchParams;
-      const code = params.get("code");
-      const returnedState = params.get("state");
-      if (!code) {
-        setIntegrationStatus(provider, "not-linked");
-        Alert.alert("Linking failed", "No authorization code returned.");
-        return;
-      }
-      if (returnedState !== state) {
-        setIntegrationStatus(provider, "not-linked");
-        Alert.alert("Linking failed", "Invalid state returned.");
-        return;
-      }
-
-      const accountLabel =
-        profile.email?.trim() || userName?.trim() || "Linked account";
-      linkIntegration(provider, accountLabel);
-    } catch (err: any) {
-      setIntegrationStatus(provider, "not-linked");
-      Alert.alert(
-        "Linking failed",
-        err?.message ?? "Unable to complete linking.",
-      );
+    const result = await linkVoiceAccount(provider);
+    if (result !== "cancelled" && result !== "busy") {
+      Alert.alert("Voice authorization", VOICE_LINK_FEEDBACK[result]);
     }
   };
 
@@ -663,7 +583,7 @@ export default function SettingsScreen() {
           <Animated.View style={statusPillInlineStyle}>
             <Text style={statusTextToneStyle}>
               {linked
-                ? "Linked"
+                ? "Authorization saved"
                 : linking
                   ? "Linking…"
                   : supported
@@ -676,11 +596,11 @@ export default function SettingsScreen() {
             {linked ? (
               <>
                 <Pressable
-                  onPress={() => resyncIntegration(provider)}
+                  onPress={() => { void handleVoiceLink(provider); }}
                   style={secondaryBtnStyle}
                   hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel={`Resync ${label}`}
+                  accessibilityLabel={`Review ${label} authorization`}
                 >
                   <Ionicons
                     name="refresh"
@@ -757,16 +677,16 @@ export default function SettingsScreen() {
   }> = [
     {
       icon: linkedCount ? "checkmark-circle" : "time-outline",
-      label: linkedCount ? `${linkedCount} linked` : "No links yet",
+      label: linkedCount ? `${linkedCount} authorizations` : "No authorizations",
       tone: linkedCount
-        ? "rgba(122,92,255,0.9)"
+        ? theme.colors.accent2
         : "rgba(255,190,120,0.9)",
     },
     {
-      icon: voiceAuthorizeUrl ? "mic" : "alert-circle",
-      label: voiceAuthorizeUrl ? "Voice ready" : "Voice link off",
-      tone: voiceAuthorizeUrl
-        ? "rgba(122,92,255,0.9)"
+      icon: voiceConfigured ? "mic" : "alert-circle",
+      label: voiceConfigured ? "Verification pending" : "Setup required",
+      tone: voiceConfigured
+        ? theme.colors.accent2
         : "rgba(255,120,140,0.9)",
     },
   ];
@@ -774,12 +694,12 @@ export default function SettingsScreen() {
     heroBadges.push({
       icon: "sync",
       label: `${linkingCount} linking`,
-      tone: "rgba(122,92,255,0.9)",
+      tone: theme.colors.accent2,
     });
   }
-  const heroHint = voiceAuthorizeUrl
-    ? "Connect assistants and bridges to trigger routines and scenes."
-    : "Voice linking needs a configured functions URL.";
+  const heroHint = voiceConfigured
+    ? "Authorization does not confirm a provider connection or physical device control."
+    : "Assistant authorization needs a configured secure endpoint and provider client.";
   const integrationItems: IntegrationRowProps[] = [
     {
       provider: "alexa",
@@ -817,7 +737,7 @@ export default function SettingsScreen() {
     <>
       <View style={styles.heroStatsRow}>
         {[
-          { label: "Linked", value: linkedCount },
+          { label: "Saved", value: linkedCount },
           { label: "Pending", value: pendingCount },
           { label: "Available", value: availableCount },
         ].map((stat) => (
@@ -834,7 +754,7 @@ export default function SettingsScreen() {
         </View>
         <View style={styles.heroProgressMeta}>
           <Text style={heroStatTextStyle}>
-            Connected {linkedCount}/{availableCount}
+            Authorizations {linkedCount}/{availableCount}
           </Text>
           <Text style={heroStatTextStyle}>
             {Math.round(integrationProgress * 100)}%
@@ -865,7 +785,7 @@ export default function SettingsScreen() {
       )}
       {isWide && (
         <LinearGradient
-          colors={["rgba(255,255,255,0.6)", "rgba(122,92,255,0.1)"]}
+          colors={["rgba(255,255,255,0.6)", theme.colors.glow]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.heroAccentBar}
@@ -888,7 +808,7 @@ export default function SettingsScreen() {
               <View style={styles.heroIdentityText}>
                 <Text style={heroTitleStyle}>Voice & Integrations</Text>
                 <Text style={heroSubStyle}>
-                  Link assistants and bridges for hands-free control.
+                  Review assistant authorization and planned local connections.
                 </Text>
                 <View style={styles.heroBadges}>
                   {heroBadges.map((badge) => (
@@ -993,7 +913,7 @@ export default function SettingsScreen() {
               : "rgba(255,255,255,0.8)"
           }
           trackColor={{
-            true: "rgba(180,107,255,0.45)",
+            true: theme.colors.glow,
             false: "rgba(255,255,255,0.24)",
           }}
           style={switchScaleStyle}
@@ -1011,7 +931,7 @@ export default function SettingsScreen() {
               : "rgba(255,255,255,0.8)"
           }
           trackColor={{
-            true: "rgba(180,107,255,0.45)",
+            true: theme.colors.glow,
             false: "rgba(255,255,255,0.24)",
           }}
           style={switchScaleStyle}
@@ -1019,7 +939,7 @@ export default function SettingsScreen() {
       </View>
       <View style={styles.row}>
         <Text style={rowLabelStyle}>Appearance</Text>
-        <Text style={rowValueStyle}>Purple</Text>
+        <Text style={rowValueStyle}>Olive & charcoal</Text>
       </View>
       {commandActivity ? (
         <Pressable
@@ -1051,7 +971,7 @@ export default function SettingsScreen() {
               : "rgba(255,255,255,0.8)"
           }
           trackColor={{
-            true: "rgba(180,107,255,0.45)",
+            true: theme.colors.glow,
             false: "rgba(255,255,255,0.24)",
           }}
           style={switchScaleStyle}
@@ -1069,7 +989,7 @@ export default function SettingsScreen() {
               : "rgba(255,255,255,0.8)"
           }
           trackColor={{
-            true: "rgba(180,107,255,0.45)",
+            true: theme.colors.glow,
             false: "rgba(255,255,255,0.24)",
           }}
           style={switchScaleStyle}
@@ -1185,7 +1105,7 @@ export default function SettingsScreen() {
     </View>
   );
 
-  const cards = __DEV__
+  const cards = runtimePolicy.allowDirectMqtt
     ? [
         homeProfileCard,
         preferencesCard,
@@ -1220,16 +1140,21 @@ export default function SettingsScreen() {
           radius={frameRadius}
         >
           <ScreenSectionLayout
-            header={<Text style={headerTitleStyle}>Settings</Text>}
+            header={embedded ? null : <Text style={headerTitleStyle}>Settings</Text>}
             headerWrapStyle={headerWrapStyle}
-            showDivider={isWide}
+            showDivider={isWide && !embedded}
             dividerWrapStyle={headerDividerWrapStyle}
             scrollStyle={styles.sectionsScroll}
             contentContainerStyle={sectionsScrollContentStyle}
             showsVerticalScrollIndicator={false}
           >
             <View style={cardsStackStyle}>
-              {integrationsCard}
+              {embedded ? (
+                <Pressable style={cardStyle} accessibilityLabel="Open voice and integrations" onPress={() => navigation.navigate("Integrations")}>
+                  <Text style={sectionTitleStyle}>Voice & integrations</Text>
+                  <Text style={sectionSubStyle}>Review assistants, authorization and local bridge setup.</Text>
+                </Pressable>
+              ) : integrationsCard}
               {isWide && columnCount > 1 ? (
                 <View style={cardsGridLandscapeStyle}>
                   {cardColumns.map((column, index) => (
@@ -1287,7 +1212,7 @@ const styles = StyleSheet.create({
   },
   heroCardLandscape: {
     backgroundColor: "rgba(255,255,255,0.22)",
-    borderColor: "rgba(122,92,255,0.5)",
+    borderColor: theme.colors.glow,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -1321,7 +1246,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: "rgba(122,92,255,0.35)",
+    backgroundColor: theme.colors.glow,
   },
   heroGlowLandscape: {
     top: -120,
@@ -1337,7 +1262,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: "rgba(180,107,255,0.25)",
+    backgroundColor: theme.colors.glow,
   },
   heroGlowSecondaryLandscape: {
     bottom: -140,
@@ -1371,7 +1296,7 @@ const styles = StyleSheet.create({
   heroPanelLandscape: {
     backgroundColor: "rgba(255,255,255,0.18)",
     borderColor: "rgba(255,255,255,0.32)",
-    shadowColor: "rgba(70,50,130,0.3)",
+    shadowColor: theme.colors.glow,
     shadowOpacity: 0.1,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
@@ -1398,7 +1323,7 @@ const styles = StyleSheet.create({
   heroIconWrapLandscape: {
     backgroundColor: "rgba(255,255,255,0.98)",
     borderColor: "rgba(255,255,255,0.6)",
-    shadowColor: "rgba(122,92,255,0.45)",
+    shadowColor: theme.colors.glow,
     shadowOpacity: 0.45,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
@@ -1476,7 +1401,7 @@ const styles = StyleSheet.create({
   heroProgressFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.9)",
+    backgroundColor: theme.colors.accent2,
   },
   heroProgressMeta: {
     flexDirection: "row",
@@ -1566,8 +1491,8 @@ const styles = StyleSheet.create({
   },
   statusPillLandscape: { maxWidth: 120 },
   statusOn: {
-    backgroundColor: "rgba(180,107,255,0.22)",
-    borderColor: "rgba(180,107,255,0.35)",
+    backgroundColor: theme.colors.glow,
+    borderColor: theme.colors.glow,
   },
   statusOff: {
     backgroundColor: "rgba(255,255,255,0.14)",
@@ -1607,7 +1532,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(180,107,255,0.85)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.30)",
   },

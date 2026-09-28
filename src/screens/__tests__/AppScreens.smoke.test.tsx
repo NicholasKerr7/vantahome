@@ -1,5 +1,6 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
+import { StyleSheet, Text } from "react-native";
 import AuthScreen from "../AuthScreen";
 import OnboardingScreen from "../OnboardingScreen";
 import SettingsScreen from "../SettingsScreen";
@@ -11,6 +12,10 @@ import NotificationsScreen from "../NotificationsScreen";
 import ProfileScreen from "../ProfileScreen";
 import RoomScreen from "../RoomScreen";
 import PasswordRecoveryScreen from "../PasswordRecoveryScreen";
+import HeaderPill from "../../components/HeaderPill";
+import ModalCard from "../../components/ModalCard";
+import Pressable from "../../components/Pressable";
+import ScreenFrame from "../../components/ScreenFrame";
 import {
   useHomeStore,
   type AutomationFlow,
@@ -31,6 +36,13 @@ const mockLayout = {
   topPad: 56,
   blockGap: 14,
   scale: 1,
+};
+const defaultLayout = { ...mockLayout };
+
+/** Describe only the rendered node fields used by the feature-screen assertions. */
+type RenderedScreenNode = {
+  props: { children?: React.ReactNode; label?: string; visible?: boolean };
+  findAllByType: (component: unknown) => RenderedScreenNode[];
 };
 
 let mockNavigate: jest.Mock;
@@ -228,6 +240,7 @@ const renderScreen = (element: React.ReactElement) => {
 
 describe("App screens smoke coverage", () => {
   beforeEach(() => {
+    Object.assign(mockLayout, defaultLayout);
     mockNavigate = jest.fn();
     mockGoBack = jest.fn();
     mockReplace = jest.fn();
@@ -273,6 +286,66 @@ describe("App screens smoke coverage", () => {
 
   it("renders ScenesScreen", () => {
     renderScreen(<ScenesScreen />);
+  });
+
+  it.each([
+    ["phone", 320, 562, false, false],
+    ["tablet portrait", 834, 1194, true, false],
+    ["tablet landscape", 1194, 834, true, true],
+  ] as const)("fits embedded feature screens inside the %s wrapper without duplicate chrome", (_label, width, height, isTablet, isLandscape) => {
+    Object.assign(mockLayout, { width, height, isTablet, isLandscape, contentWidth: Math.min(width, 920) });
+    for (const [Component, id, title] of [
+      [ScenesScreen, "scenes-screen-content", "Scenes"],
+      [AutomationsScreen, "automations-screen-content", "Automations"],
+    ] as const) {
+      let tree!: ReactTestRenderer;
+      act(() => { tree = renderer.create(<Component embedded />); });
+      try {
+        const content = StyleSheet.flatten(tree.root.findByProps({ testID: id }).props.style);
+        expect(content).toMatchObject({ flex: 1, minHeight: 0, paddingTop: 0, paddingBottom: 0 });
+        expect(tree.root.findByType(ScreenFrame).props.enabled).toBe(false);
+        expect(tree.root.findAllByType(Text).some((node: RenderedScreenNode) => node.props.children === title)).toBe(false);
+      } finally {
+        act(() => { tree.unmount(); });
+      }
+    }
+  });
+
+  it("retains scene creation and legacy padding when the wrapper is absent", () => {
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<ScenesScreen />); });
+    try {
+      const content = StyleSheet.flatten(tree.root.findByProps({ testID: "scenes-screen-content" }).props.style);
+      expect(content.paddingTop).toBe(defaultLayout.topPad);
+      expect(content.paddingBottom).toBeGreaterThan(60);
+      expect(tree.root.findByType(ScreenFrame).props.enabled).toBe(true);
+      act(() => { tree.update(<ScenesScreen embedded />); });
+      const create = tree.root.findAllByType(HeaderPill).find((node: RenderedScreenNode) => node.props.label === "Create")!;
+      expect(StyleSheet.flatten(create.props.style).minHeight).toBe(44);
+      act(() => { create.props.onPress(); });
+      expect(tree.root.findAllByType(ModalCard).some((node: RenderedScreenNode) => node.props.visible)).toBe(true);
+      expect(tree.root.findAllByType(Text).some((node: RenderedScreenNode) => node.props.children === "Create scene")).toBe(true);
+    } finally {
+      act(() => { tree.unmount(); });
+    }
+  });
+
+  it("retains embedded automation builder navigation and schedule creation", () => {
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<AutomationsScreen embedded />); });
+    try {
+      /** Locate real labeled controls instead of depending on their current visual order. */
+      const button = (label: string) => tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.findAllByType(Text).some((text) => text.props.children === label))!;
+      const newFlow = button("New flow");
+      expect(StyleSheet.flatten(newFlow.props.style).minHeight).toBe(44);
+      act(() => { newFlow.props.onPress(); });
+      expect(mockNavigate).toHaveBeenCalledWith("AutomationBuilder");
+      act(() => { button("Add schedule").props.onPress(); });
+      expect(tree.root.findByType(ModalCard).props.visible).toBe(true);
+      expect(tree.root.findAllByType(Text).some((node: RenderedScreenNode) => node.props.children === "New schedule")).toBe(true);
+    } finally {
+      act(() => { tree.unmount(); });
+    }
   });
 
   it("renders ManageRoomsScreen", () => {

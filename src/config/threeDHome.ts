@@ -1,7 +1,7 @@
 /**
- * Enables the optional simulation on this integration branch. Explicitly set
- * EXPO_PUBLIC_ENABLE_3D_HOME=false to omit its dashboard entry and stack route.
- * Unrecognized values fail closed so a configuration typo cannot enable it.
+ * Pauses the graphics surface for recovery without removing home navigation.
+ * Device controls and original app features remain reachable through the shell.
+ * Unrecognized values fail closed so a configuration typo cannot enable graphics.
  */
 export function isThreeDHomeEnabled(
   configured = process.env.EXPO_PUBLIC_ENABLE_3D_HOME,

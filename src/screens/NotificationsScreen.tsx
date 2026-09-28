@@ -17,6 +17,7 @@ import { theme } from "../theme/theme";
 import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
 import type { RootStackParamList } from "../app/AppNavigator";
+import { openHomeFeature } from "../app/homeNavigation";
 import { useResponsive } from "../theme/layout";
 import { useHomeStore } from "../store/useHomeStore";
 import { Swipeable } from "react-native-gesture-handler";
@@ -449,7 +450,7 @@ export default function NotificationsScreen() {
           style={iconButtonStyle}
           onPress={() => {
             if (navigation.canGoBack()) navigation.goBack();
-            else navigation.navigate({ name: "Main", params: { screen: "Home" } });
+            else openHomeFeature(navigation.dispatch, "Home");
           }}
         >
           <Ionicons name="chevron-back" size={20} color={theme.colors.text} />

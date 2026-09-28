@@ -15,16 +15,18 @@ remains outstanding and required before any public/customer use.
 
 ## Features
 
-- Home dashboard with room carousel, climate/lighting orbs, and quick actions.
+- [3D Home](docs/THREE_D_HOME.md) as the main interface, with a furnished property,
+  interactive simulated devices, weather effects, and a compact feature menu.
 - Device detail screens for lights, climate, media, appliances, security camera, and front gate.
 - Scenes and automations with device state previews and ON highlighting.
 - Profile, settings, notifications, onboarding, and management flows.
-- Optional [3D Home simulation](docs/THREE_D_HOME.md) with the furnished property,
-  interactive devices, and weather effects; the existing dashboard remains available.
+- Tap-to-speak and typed simulation commands, plus assistant and bridge setup pages.
+  External provider connections and physical device control remain unverified.
 
 ## Screenshots
 
-These simulator captures use VantaHome's explicitly labeled seeded demo mode.
+These historical dashboard captures use VantaHome's explicitly labeled seeded demo
+mode. The current app opens into the 3D home described above.
 The phone views are portrait and the tablet views are landscape. No production
 household data or credentials are shown.
 

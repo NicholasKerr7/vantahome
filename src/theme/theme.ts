@@ -1,22 +1,22 @@
 /**
- * Design tokens (colors, radii, spacing) for the VantaHome purple theme.
+ * Shared olive and charcoal tokens align native controls with the 3D home.
  *
  * Keep this file “dumb”: no React/logic, just constants. That makes it safe to
  * import anywhere (components, store, utilities) without circular deps.
  */
 export const theme = {
   colors: {
-    bg0: "#2B0A73",
-    bg1: "#4B1AAE",
-    card: "rgba(255,255,255,0.14)",
-    card2: "rgba(255,255,255,0.10)",
-    stroke: "rgba(255,255,255,0.18)",
-    text: "#FFFFFF",
-    subtext: "rgba(255,255,255,0.72)",
-    muted: "rgba(255,255,255,0.55)",
-    accent: "#B46BFF",
-    accent2: "#7A5CFF",
-    glow: "rgba(180,107,255,0.55)",
+    bg0: "#141713",
+    bg1: "#222B1E",
+    card: "#22271F",
+    card2: "#1A1E19",
+    stroke: "#3C4635",
+    text: "#E9E9DF",
+    subtext: "#B3BBAA",
+    muted: "#99A18F",
+    accent: "#D5E7A4",
+    accent2: "#536736",
+    glow: "rgba(181,207,141,0.3)",
   },
   radius: { xl: 28, lg: 22, md: 18, sm: 14 },
   /** 8pt spacing scale helper: `spacing(2) === 16` */
