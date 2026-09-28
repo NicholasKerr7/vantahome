@@ -322,22 +322,22 @@ export default function RadialDial({
                 x2={String(dialSize)}
                 y2={String(dialSize)}
               >
-                <Stop offset="0" stopColor="rgba(180,107,255,0.20)" />
-                <Stop offset="1" stopColor="rgba(122,92,255,0.65)" />
+                <Stop offset="0" stopColor={theme.colors.accent2} />
+                <Stop offset="1" stopColor={theme.colors.accent} />
               </SvgLinearGradient>
             </Defs>
 
             {/* base track */}
             <Path
               d={baseArc}
-              stroke="rgba(255,255,255,0.36)"
+              stroke={theme.colors.card}
               strokeWidth={trackWidth}
               strokeLinecap="round"
               fill="none"
             />
             <Path
               d={baseArc}
-              stroke="rgba(255,255,255,0.72)"
+              stroke={theme.colors.stroke}
               strokeWidth={innerTrackWidth}
               strokeLinecap="round"
               fill="none"
@@ -360,7 +360,7 @@ export default function RadialDial({
                 y={t.y}
                 fontSize={tickFont}
                 fontWeight="700"
-                fill="rgba(12,12,18,0.48)"
+                fill={theme.colors.subtext}
                 textAnchor="middle"
                 alignmentBaseline="middle"
               >
@@ -372,14 +372,14 @@ export default function RadialDial({
             <AnimatedCircle
               animatedProps={bubbleHaloPos as any}
               r={bubbleHaloOuter}
-              fill="rgba(122,92,255,0.10)"
+              fill={theme.colors.glow}
               opacity={dimmed ? 0.35 : 1}
             />
             <AnimatedCircle
               animatedProps={bubbleHaloPos as any}
               r={bubbleHaloInner}
-              fill="rgba(255,255,255,0.58)"
-              stroke="rgba(0,0,0,0.05)"
+              fill={theme.colors.accent2}
+              stroke={theme.colors.stroke}
               strokeWidth={1}
               opacity={dimmed ? 0.35 : 1}
             />
@@ -414,11 +414,7 @@ export default function RadialDial({
               </View>
             ) : (
               <LinearGradient
-                colors={[
-                  "rgba(255,255,255,0.94)",
-                  "rgba(246,238,255,0.86)",
-                  "rgba(240,232,255,0.80)",
-                ]}
+                colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
                 start={{ x: 0.2, y: 0.2 }}
                 end={{ x: 1, y: 1 }}
                 style={centerDiscStyle(centerSize)}
@@ -476,7 +472,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     shadowColor: "rgba(0,0,0,0.10)",
     shadowOpacity: 0.18,
     shadowRadius: 16,
@@ -487,17 +483,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   big: {
-    color: "rgba(12,12,18,0.92)",
-    fontWeight: "900",
+    color: theme.colors.text,
+    fontWeight: "700",
     letterSpacing: -0.8,
     marginTop: 6,
   },
-  sub: { color: "rgba(12,12,18,0.48)", fontWeight: "800", marginTop: 6 },
+  sub: { color: theme.colors.subtext, fontWeight: "600", marginTop: 6 },
   textDimmed: { opacity: 0.55 },
 
   bubble: {
     position: "absolute",
-    shadowColor: "rgba(122,92,255,0.65)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.35,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
@@ -506,7 +502,7 @@ const styles = StyleSheet.create({
   bubbleInner: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.55)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -515,9 +511,9 @@ const styles = StyleSheet.create({
     width: 46,
     height: 20,
     borderRadius: 7,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.10)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -527,7 +523,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 2,
     borderRadius: 2,
-    backgroundColor: "rgba(12,12,18,0.28)",
+    backgroundColor: theme.colors.stroke,
   },
   acUnitBar: {
     position: "absolute",
@@ -535,13 +531,13 @@ const styles = StyleSheet.create({
     width: 16,
     height: 2,
     borderRadius: 2,
-    backgroundColor: "rgba(122,92,255,0.70)",
+    backgroundColor: theme.colors.accent,
   },
   acFlow: { flexDirection: "row", gap: 5, marginTop: 6 },
   acFlowLine: {
     width: 2,
     height: 6,
     borderRadius: 2,
-    backgroundColor: "rgba(122,92,255,0.70)",
+    backgroundColor: theme.colors.accent,
   },
 });

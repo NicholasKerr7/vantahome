@@ -1,3 +1,4 @@
+import { theme } from "../../../theme/theme";
 import React from "react";
 import { View, Text } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
@@ -221,7 +222,7 @@ export default function AirDetailSection({
             onSlidingComplete={onChange}
             minimumTrackTintColor="transparent"
             maximumTrackTintColor="transparent"
-            thumbTintColor="rgba(255,255,255,0.92)"
+            thumbTintColor={theme.colors.text}
             style={styles.airAlertSlider}
           />
         </View>
@@ -231,11 +232,7 @@ export default function AirDetailSection({
 
   const heroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.98)",
-        "rgba(236,242,255,0.92)",
-        "rgba(222,230,255,0.88)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.05, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={airHeroCardStyle}
@@ -284,7 +281,7 @@ export default function AirDetailSection({
         <View style={styles.airHeroGaugeWrap}>
           <View style={airHeroGaugeRingStyle}>
             <LinearGradient
-              colors={[airBand.color, "rgba(255,255,255,0.92)"]}
+              colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
               start={{ x: 0.2, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.airHeroGaugeInner}
@@ -354,9 +351,9 @@ export default function AirDetailSection({
           onSlidingComplete={(value) =>
             onPatch({ airPurifierSpeed: Math.round(value), isOn: true })
           }
-          minimumTrackTintColor="rgba(122,92,255,0.9)"
-          maximumTrackTintColor="rgba(12,12,18,0.12)"
-          thumbTintColor="rgba(255,255,255,0.92)"
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.stroke}
+          thumbTintColor={theme.colors.text}
           style={styles.pressureSlider}
         />
         <View style={controlCardRowTopStyle}>
@@ -676,9 +673,9 @@ export default function AirDetailSection({
             onSlidingComplete={(value) =>
               onPatch({ airPurifierSpeed: Math.round(value), isOn: true })
             }
-            minimumTrackTintColor="rgba(122,92,255,0.9)"
-            maximumTrackTintColor="rgba(12,12,18,0.12)"
-            thumbTintColor="rgba(255,255,255,0.92)"
+            minimumTrackTintColor={theme.colors.accent}
+            maximumTrackTintColor={theme.colors.stroke}
+            thumbTintColor={theme.colors.text}
             style={styles.pressureSlider}
           />
           <View style={controlCardRowTopStyle}>
@@ -1078,9 +1075,9 @@ export default function AirDetailSection({
           onSlidingComplete={(value) =>
             onPatch({ airPurifierSpeed: Math.round(value), isOn: true })
           }
-          minimumTrackTintColor="rgba(122,92,255,0.9)"
-          maximumTrackTintColor="rgba(12,12,18,0.12)"
-          thumbTintColor="rgba(255,255,255,0.92)"
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.stroke}
+          thumbTintColor={theme.colors.text}
           style={styles.pressureSlider}
         />
         <View style={controlCardRowTopStyle}>

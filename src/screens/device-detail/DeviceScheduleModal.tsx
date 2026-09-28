@@ -1,3 +1,4 @@
+import { theme } from "../../theme/theme";
 import React from "react";
 import { View, Text, TextInput } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
@@ -6,10 +7,7 @@ import ModalActionRow from "../../components/ModalActionRow";
 import ModalField from "../../components/ModalField";
 import Pressable from "../../components/Pressable";
 
-const MODAL_COLORS = [
-  "rgba(255,255,255,0.96)",
-  "rgba(255,255,255,0.96)",
-] as const;
+const MODAL_COLORS = [theme.colors.card, theme.colors.card2] as const;
 
 type ScheduleDay = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 

@@ -8,6 +8,7 @@ import type { DeviceState } from '../../../packages/home-scene/src/simulationTyp
 import type { ControlSnapshot, SimulationControlClient } from './simulationControlClient';
 import { NativeCapabilityControl, type EnumCapability } from './NativeCapabilityControl';
 import { ControlPagination } from './ControlPagination';
+import CinematicSurface from '../../components/CinematicSurface';
 import { controlStyles as styles } from './deviceControlsStyles';
 
 const GROUPS = ['controls', 'modes', 'schedule', 'status'] as const;
@@ -31,7 +32,8 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   return <Modal transparent visible animationType={motionAllowed ? 'fade' : 'none'} onRequestClose={onClose}>
     <View style={[styles.overlay, landscape && styles.overlayLandscape]}>
       <SafeAreaView style={[styles.safeArea, landscape && styles.safeAreaLandscape]}>
-        <View accessibilityViewIsModal style={[styles.card, compact && styles.compact]}>
+        <CinematicSurface style={[styles.card, compact && styles.compact]}>
+          <View accessibilityViewIsModal style={[styles.cardContent, compact && styles.compactContent]}>
           <View style={styles.row}>
             <View style={styles.grow}><Text style={styles.eyebrow}>{browsing ? 'YOUR HOME' : getRoom(device?.roomId ?? '').name.toUpperCase()}</Text>
               <Text accessibilityRole="header" numberOfLines={2} style={styles.title}>{browsing ? 'Device library' : device?.name}</Text></View>
@@ -41,7 +43,8 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               client={client} disabled={!snapshot.ready} compact={compact} onBrowse={() => setBrowsing(true)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
-        </View>
+          </View>
+        </CinematicSurface>
       </SafeAreaView>
     </View>
   </Modal>;

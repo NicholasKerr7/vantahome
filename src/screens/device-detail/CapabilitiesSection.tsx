@@ -50,7 +50,7 @@ export default function CapabilitiesSection({
         <DeviceCapabilityControls
           device={device}
           context="detail"
-          variant="light"
+          variant="dark"
           layout="cards"
         />
       </View>

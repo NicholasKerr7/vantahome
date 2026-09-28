@@ -1,3 +1,4 @@
+import { theme } from "../../../theme/theme";
 import React from "react";
 import { View, Text } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
@@ -124,9 +125,9 @@ export default function SpeakerDetailSection({
           step={1}
           onValueChange={(value) => onChangeBassDraft(Math.round(value))}
           onSlidingComplete={(value) => onPatch({ bass: Math.round(value) })}
-          minimumTrackTintColor="rgba(122,92,255,0.9)"
-          maximumTrackTintColor="rgba(12,12,18,0.12)"
-          thumbTintColor="rgba(255,255,255,0.92)"
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.stroke}
+          thumbTintColor={theme.colors.text}
           style={styles.speakerSlider}
         />
 
@@ -141,9 +142,9 @@ export default function SpeakerDetailSection({
           step={1}
           onValueChange={(value) => onChangeTrebleDraft(Math.round(value))}
           onSlidingComplete={(value) => onPatch({ treble: Math.round(value) })}
-          minimumTrackTintColor="rgba(122,92,255,0.9)"
-          maximumTrackTintColor="rgba(12,12,18,0.12)"
-          thumbTintColor="rgba(255,255,255,0.92)"
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.stroke}
+          thumbTintColor={theme.colors.text}
           style={styles.speakerSlider}
         />
       </View>

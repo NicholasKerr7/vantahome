@@ -1,4 +1,5 @@
 import React from "react";
+import { theme } from "../theme/theme";
 import {
   View,
   StyleSheet,
@@ -39,9 +40,9 @@ export default function PortraitFrame({
 
 const styles = StyleSheet.create({
   frame: {
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: theme.colors.glass,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.28)",
+    borderColor: theme.colors.stroke,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 12,

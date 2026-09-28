@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   ScrollView,
-  Switch,
   Alert,
   type StyleProp,
   type TextStyle,
@@ -13,6 +12,8 @@ import {
 } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
+import CinematicSurface from "../components/CinematicSurface";
+import ThemedSwitch from "../components/ThemedSwitch";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
 import {
@@ -468,7 +469,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [homeName, setHomeName] = useState(profile.homeName ?? "");
   const [avatarColor, setAvatarColor] = useState(
-    profile.avatarColor ?? "#B46BFF",
+    profile.avatarColor ?? theme.colors.accent2,
   );
   const [avatarUri, setAvatarUri] = useState(profile.avatarUri ?? "");
   const [timeFormat, setTimeFormat] = useState(profile.timeFormat ?? "12h");
@@ -1011,7 +1012,7 @@ export default function ProfileScreen({ navigation }: Props) {
             value={name}
             onChangeText={setName}
             placeholder="Your name"
-            placeholderTextColor="rgba(255,255,255,0.45)"
+            placeholderTextColor={theme.colors.muted}
             style={inputFieldStyle}
           />
 
@@ -1021,7 +1022,7 @@ export default function ProfileScreen({ navigation }: Props) {
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor="rgba(255,255,255,0.45)"
+            placeholderTextColor={theme.colors.muted}
             style={inputFieldStyle}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -1034,7 +1035,7 @@ export default function ProfileScreen({ navigation }: Props) {
             value={phone}
             onChangeText={setPhone}
             placeholder="+1 (555) 000-0000"
-            placeholderTextColor="rgba(255,255,255,0.45)"
+            placeholderTextColor={theme.colors.muted}
             style={inputFieldStyle}
             keyboardType="phone-pad"
           />
@@ -1045,7 +1046,7 @@ export default function ProfileScreen({ navigation }: Props) {
             value={homeName}
             onChangeText={setHomeName}
             placeholder="Vanta Home"
-            placeholderTextColor="rgba(255,255,255,0.45)"
+            placeholderTextColor={theme.colors.muted}
             style={inputFieldStyle}
           />
         </View>
@@ -1105,7 +1106,7 @@ export default function ProfileScreen({ navigation }: Props) {
         value={timezone}
         onChangeText={setTimezone}
         placeholder="Auto"
-        placeholderTextColor="rgba(255,255,255,0.45)"
+        placeholderTextColor={theme.colors.muted}
         style={inputFieldStyle}
       />
     </View>,
@@ -1123,36 +1124,36 @@ export default function ProfileScreen({ navigation }: Props) {
       </View>
       <View style={styles.row}>
         <Text style={rowLabelTextStyle}>Haptics</Text>
-        <Switch
+        <ThemedSwitch
           accessibilityLabel="Haptics"
           value={prefs.haptics}
           onValueChange={(v) => setPreferences({ haptics: v })}
           thumbColor={
             prefs.haptics
               ? theme.colors.accent
-              : "rgba(255,255,255,0.8)"
+              : theme.colors.text
           }
           trackColor={{
             true: theme.colors.glow,
-            false: "rgba(255,255,255,0.24)",
+            false: theme.colors.stroke,
           }}
           style={switchScaleStyle}
         />
       </View>
       <View style={styles.row}>
         <Text style={rowLabelTextStyle}>Notifications</Text>
-        <Switch
+        <ThemedSwitch
           accessibilityLabel="Notifications"
           value={prefs.notifications}
           onValueChange={(v) => setPreferences({ notifications: v })}
           thumbColor={
             prefs.notifications
               ? theme.colors.accent
-              : "rgba(255,255,255,0.8)"
+              : theme.colors.text
           }
           trackColor={{
             true: theme.colors.glow,
-            false: "rgba(255,255,255,0.24)",
+            false: theme.colors.stroke,
           }}
           style={switchScaleStyle}
         />
@@ -1226,16 +1227,16 @@ export default function ProfileScreen({ navigation }: Props) {
             <Text style={settingLabelTextStyle}>{item.label}</Text>
             <Text style={settingSubTextStyle}>{item.sub}</Text>
           </View>
-          <Switch
+          <ThemedSwitch
             accessibilityLabel={item.label}
             value={item.value}
             onValueChange={item.onChange}
             thumbColor={
-              item.value ? theme.colors.accent : "rgba(255,255,255,0.8)"
+              item.value ? theme.colors.accent : theme.colors.text
             }
             trackColor={{
               true: theme.colors.glow,
-              false: "rgba(255,255,255,0.24)",
+              false: theme.colors.stroke,
             }}
             style={switchScaleStyle}
           />
@@ -1263,16 +1264,16 @@ export default function ProfileScreen({ navigation }: Props) {
             <Text style={settingLabelTextStyle}>{item.label}</Text>
             <Text style={settingSubTextStyle}>{item.sub}</Text>
           </View>
-          <Switch
+          <ThemedSwitch
             accessibilityLabel={item.label}
             value={item.value}
             onValueChange={item.onChange}
             thumbColor={
-              item.value ? theme.colors.accent : "rgba(255,255,255,0.8)"
+              item.value ? theme.colors.accent : theme.colors.text
             }
             trackColor={{
               true: theme.colors.glow,
-              false: "rgba(255,255,255,0.24)",
+              false: theme.colors.stroke,
             }}
             style={switchScaleStyle}
           />
@@ -1405,7 +1406,7 @@ export default function ProfileScreen({ navigation }: Props) {
           value={newMemberName}
           onChangeText={setNewMemberName}
           placeholder="Full name"
-          placeholderTextColor="rgba(255,255,255,0.45)"
+          placeholderTextColor={theme.colors.muted}
           style={inputFieldStyle}
           editable={canInviteMembers}
         />
@@ -1414,7 +1415,7 @@ export default function ProfileScreen({ navigation }: Props) {
           value={newMemberEmail}
           onChangeText={setNewMemberEmail}
           placeholder="Email address"
-          placeholderTextColor="rgba(255,255,255,0.45)"
+          placeholderTextColor={theme.colors.muted}
           style={inputFieldStyle}
           editable={canInviteMembers}
           autoCapitalize="none"
@@ -1515,7 +1516,7 @@ export default function ProfileScreen({ navigation }: Props) {
         <Ionicons
           name="log-out-outline"
           size={Math.round(16 * scale)}
-          color="#B74B5A"
+          color="#FFB4C1"
         />
       </Pressable>
     </View>,
@@ -1542,10 +1543,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const cardColumns = cardColumnBuckets.map((column) => column.cards);
 
   return (
-    <LinearGradient
-      colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={styles.root}
-    >
+    <CinematicSurface variant="quiet" style={styles.root}>
       <View
         style={contentStyle}
       >
@@ -1595,7 +1593,7 @@ export default function ProfileScreen({ navigation }: Props) {
                   <LinearGradient
                     colors={[
                       theme.colors.glow,
-                      "rgba(255,255,255,0.06)",
+                      theme.colors.card2,
                     ]}
                     start={{ x: 0.1, y: 0.1 }}
                     end={{ x: 1, y: 1 }}
@@ -1787,12 +1785,12 @@ export default function ProfileScreen({ navigation }: Props) {
           </FrameComponent>
         </View>
       </View>
-    </LinearGradient>
+    </CinematicSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: theme.colors.bg0 },
   content: { flex: 1, alignItems: "center" },
   frameWrap: { width: "100%", flex: 1 },
   frameFill: { flex: 1, alignSelf: "stretch" },
@@ -1802,7 +1800,7 @@ const styles = StyleSheet.create({
   headerDividerWrap: { width: "100%", paddingVertical: 12 },
   headerDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(255,255,255,0.4)",
+    backgroundColor: theme.colors.stroke,
   },
   top: {
     flexDirection: "row",
@@ -1822,21 +1820,21 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.10)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  title: { color: theme.colors.text, fontSize: 24, fontWeight: "900" },
+  title: { color: theme.colors.text, fontSize: 24, fontWeight: "700" },
 
   card: {
     width: "100%",
     borderRadius: 24,
     padding: 16,
-    backgroundColor: "rgba(255,255,255,0.11)",
+    backgroundColor: theme.colors.glass,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
     marginTop: 12,
     shadowColor: "#000",
     shadowOpacity: 0.04,
@@ -1850,9 +1848,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.16)",
+    borderTopColor: theme.colors.stroke,
   },
-  inviteTitle: { color: theme.colors.text, fontWeight: "800" },
+  inviteTitle: { color: theme.colors.text, fontWeight: "600" },
   inviteSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
   inviteActions: { flexDirection: "row", gap: 8 },
   inviteActionPrimary: {
@@ -1866,9 +1864,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
+    borderColor: theme.colors.stroke,
   },
-  inviteActionText: { color: theme.colors.text, fontWeight: "800" },
+  inviteActionText: { color: theme.colors.text, fontWeight: "600" },
   columnsGrid: { width: "100%", marginTop: 12 },
   columnsRow: { width: "100%", flexDirection: "row", alignItems: "flex-start" },
   columnStack: { alignItems: "stretch", flexShrink: 0 },
@@ -1876,8 +1874,8 @@ const styles = StyleSheet.create({
   fullSpan: { width: "100%", flexBasis: "100%" },
   heroCard: {
     marginTop: 0,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderColor: "rgba(255,255,255,0.38)",
+    backgroundColor: theme.colors.card,
+    borderColor: theme.colors.stroke,
     position: "relative",
     overflow: "hidden",
   },
@@ -1905,9 +1903,9 @@ const styles = StyleSheet.create({
   },
   heroContent: { position: "relative", zIndex: 1 },
   heroPanel: {
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -1956,7 +1954,7 @@ const styles = StyleSheet.create({
   heroAvatarHalo: {
     position: "absolute",
     backgroundColor: theme.colors.glow,
-    shadowColor: "#7A5CFF",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.35,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 10 },
@@ -1965,9 +1963,9 @@ const styles = StyleSheet.create({
   heroAvatarRing: {
     padding: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.32)",
+    borderColor: theme.colors.stroke,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -1976,7 +1974,7 @@ const styles = StyleSheet.create({
   },
   heroName: {
     color: theme.colors.text,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "left",
   },
   heroSub: {
@@ -1999,11 +1997,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.24)",
+    borderColor: theme.colors.stroke,
   },
-  badgeText: { color: theme.colors.text, fontWeight: "800" },
+  badgeText: { color: theme.colors.text, fontWeight: "600" },
   heroStatsRow: {
     marginTop: 6,
     flexDirection: "row",
@@ -2016,13 +2014,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
   },
   statText: {
     color: theme.colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   progressWrap: {
     marginTop: 16,
@@ -2035,7 +2033,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 520,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.24)",
+    backgroundColor: theme.colors.stroke,
     overflow: "hidden",
   },
   progressFill: {
@@ -2069,15 +2067,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
   },
   avatarBtnGhost: {
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: theme.colors.card2,
+    borderColor: theme.colors.stroke,
   },
-  avatarBtnText: { color: theme.colors.text, fontWeight: "800" },
+  avatarBtnText: { color: theme.colors.text, fontWeight: "600" },
   swatchRow: {
     flexDirection: "row",
     gap: 8,
@@ -2089,18 +2087,18 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.30)",
+    borderColor: theme.colors.stroke,
   },
   swatchActive: {
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.85)",
+    borderColor: theme.colors.accent,
   },
   formGrid: { gap: 12 },
   formColumn: { flexShrink: 0 },
-  label: { color: theme.colors.subtext, fontWeight: "800", marginTop: 10 },
+  label: { color: theme.colors.subtext, fontWeight: "600", marginTop: 10 },
   sectionTitle: {
     color: theme.colors.text,
-    fontWeight: "900",
+    fontWeight: "700",
     marginBottom: 10,
   },
   sectionTitleTight: { marginBottom: 2 },
@@ -2117,20 +2115,20 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 14,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
     color: theme.colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 6 },
   chip: {
     paddingHorizontal: 12,
     height: 34,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2138,7 +2136,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.glow,
     borderColor: theme.colors.glow,
   },
-  chipText: { color: theme.colors.subtext, fontWeight: "800" },
+  chipText: { color: theme.colors.subtext, fontWeight: "600" },
   chipTextActive: { color: theme.colors.text },
   row: {
     flexDirection: "row",
@@ -2146,8 +2144,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
   },
-  rowLabel: { color: theme.colors.subtext, fontWeight: "800" },
-  rowValue: { color: theme.colors.text, fontWeight: "800" },
+  rowLabel: { color: theme.colors.subtext, fontWeight: "600" },
+  rowValue: { color: theme.colors.text, fontWeight: "600" },
   settingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2156,10 +2154,10 @@ const styles = StyleSheet.create({
   },
   settingRowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.12)",
+    borderBottomColor: theme.colors.stroke,
   },
   settingText: { flex: 1, paddingRight: 12 },
-  settingLabel: { color: theme.colors.text, fontWeight: "800" },
+  settingLabel: { color: theme.colors.text, fontWeight: "600" },
   settingSub: { color: theme.colors.subtext, fontWeight: "700", marginTop: 2 },
   rowAction: {
     marginTop: 8,
@@ -2169,16 +2167,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: theme.colors.stroke,
   },
-  rowActionText: { color: theme.colors.text, fontWeight: "800" },
+  rowActionText: { color: theme.colors.text, fontWeight: "600" },
   signOutAction: {
-    backgroundColor: "rgba(255,255,255,0.92)",
+    backgroundColor: theme.colors.card,
     borderColor: "rgba(183,75,90,0.35)",
   },
-  signOutText: { color: "#B74B5A" },
+  signOutText: { color: "#FFB4C1" },
   serviceRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2191,24 +2189,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
   },
   servicePill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
   },
   servicePillDisabled: { opacity: 0.6 },
   servicePillActive: {
     backgroundColor: theme.colors.glow,
     borderColor: theme.colors.glow,
   },
-  servicePillText: { color: theme.colors.subtext, fontWeight: "800" },
+  servicePillText: { color: theme.colors.subtext, fontWeight: "600" },
   servicePillTextActive: { color: theme.colors.text },
   memberBlock: { marginTop: 6 },
   memberRow: {
@@ -2217,7 +2215,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.12)",
+    borderBottomColor: theme.colors.stroke,
   },
   memberAccess: {
     paddingBottom: 8,
@@ -2238,28 +2236,28 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     padding: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
   },
-  memberName: { color: theme.colors.text, fontWeight: "900" },
+  memberName: { color: theme.colors.text, fontWeight: "700" },
   memberRole: { color: theme.colors.subtext, fontWeight: "700" },
   memberBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
   },
-  memberBadgeText: { color: theme.colors.text, fontWeight: "800" },
+  memberBadgeText: { color: theme.colors.text, fontWeight: "600" },
   addMemberCard: {
     marginTop: 12,
     padding: 12,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
-    backgroundColor: "rgba(255,255,255,0.08)",
+    borderColor: theme.colors.stroke,
+    backgroundColor: theme.colors.card2,
   },
   secondaryBtn: {
     marginTop: 12,
@@ -2269,11 +2267,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
   },
-  secondaryBtnText: { color: theme.colors.text, fontWeight: "800" },
+  secondaryBtnText: { color: theme.colors.text, fontWeight: "600" },
   save: {
     marginTop: 18,
     height: 50,
@@ -2282,12 +2280,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.30)",
+    borderColor: theme.colors.stroke,
   },
-  saveText: { color: "#fff", fontWeight: "900" },
+  saveText: { color: "#fff", fontWeight: "700" },
   fullFrame: {
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderColor: "rgba(255,255,255,0.24)",
+    backgroundColor: "transparent",
+    borderColor: theme.colors.stroke,
     shadowOpacity: 0.04,
   },
 });

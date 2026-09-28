@@ -1,20 +1,25 @@
 :root {
   font-family: 'DM Sans', 'Avenir Next', system-ui, sans-serif;
-  color: #e9e9df;
-  background: #141713;
+  color: #eff7f3;
+  background: #080d12;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --surface: #1a1e19;
-  --surface-raised: #22271f;
-  --line: #30362c;
-  --line-soft: #272d24;
-  --muted: #858e7e;
-  --text-soft: #afb6a8;
-  --accent: #d5e7a4;
-  --accent-dark: #262f19;
+  --background: #080d12;
+  --surface: #0e1820;
+  --surface-raised: #13212b;
+  --line: #263e49;
+  --line-soft: #1b2e38;
+  --muted: #809aa6;
+  --text: #eff7f3;
+  --text-soft: #a4bac4;
+  --accent: #bdffe1;
+  --accent-dark: #16332e;
+  --ice: #a3c9ff;
+  --gold: #ebd0a6;
+  --hud: #0e1820ed;
   --device-alarm: #ffb7ac;
-  --device-warning: #efd391;
+  --device-warning: #ebd0a6;
   --radius: 18px;
 }
 

@@ -36,7 +36,7 @@ export function DashboardLibrary({ environment, onEnvironment, view, onClose, on
   const roomPage = paginateItems(rooms, requestedPage, 6);
   const devicePage = paginateItems(devices, requestedPage, 6);
   const current = view === 'rooms' ? roomPage : devicePage;
-  const title = view === 'rooms' ? 'Find your space.' : view === 'devices' ? 'Every device. One place.' : view === 'environment' ? 'Connected to the outdoors.' : 'Make yourself at home.';
+  const title = view === 'rooms' ? 'Explore your spaces.' : view === 'devices' ? 'Device library.' : view === 'environment' ? 'Time & atmosphere.' : 'Scene preferences.';
 
   useLayoutEffect(() => {
     const element = dialog.current;

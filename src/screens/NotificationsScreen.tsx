@@ -11,7 +11,7 @@ import {
 import Pressable from "../components/Pressable";
 import LandscapeFrame from "../components/LandscapeFrame";
 import PortraitFrame from "../components/PortraitFrame";
-import { LinearGradient } from "expo-linear-gradient";
+import CinematicSurface from "../components/CinematicSurface";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
 import { useNavigation } from "@react-navigation/native";
@@ -54,32 +54,32 @@ const CATEGORY_META: Record<
   device: {
     label: "Devices",
     icon: "hardware-chip",
-    accent: "#9AD6FF",
-    soft: "rgba(154,214,255,0.18)",
+    accent: theme.colors.electric,
+    soft: "rgba(163,201,255,0.14)",
   },
   scene: {
     label: "Scenes",
     icon: "sparkles",
     accent: theme.colors.accent,
-    soft: "rgba(180,107,255,0.18)",
+    soft: theme.colors.glow,
   },
   automation: {
     label: "Automations",
     icon: "timer",
-    accent: "#8DFFC9",
-    soft: "rgba(141,255,201,0.18)",
+    accent: theme.colors.accent,
+    soft: theme.colors.glow,
   },
   security: {
     label: "Security",
     icon: "shield-checkmark",
-    accent: "#FFD48A",
-    soft: "rgba(255,212,138,0.18)",
+    accent: theme.colors.ember,
+    soft: "rgba(235,208,166,0.14)",
   },
   info: {
     label: "Info",
     icon: "information-circle",
-    accent: "#C4D4FF",
-    soft: "rgba(196,212,255,0.18)",
+    accent: theme.colors.electric,
+    soft: "rgba(163,201,255,0.14)",
   },
 };
 
@@ -438,8 +438,8 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={[theme.colors.bg1, theme.colors.bg0]}
+    <CinematicSurface
+      variant="quiet"
       style={rootStyle}
     >
       <View
@@ -575,12 +575,12 @@ export default function NotificationsScreen() {
           />
         </View>
       </FrameComponent>
-    </LinearGradient>
+    </CinematicSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: theme.colors.bg0 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -602,13 +602,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.10)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  h1: { color: theme.colors.text, fontSize: 24, fontWeight: "900" },
+  h1: { color: theme.colors.text, fontSize: 24, fontWeight: "700" },
   clearBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -616,16 +616,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
   },
   clearBtnDisabled: { opacity: 0.5 },
   clearBtnCompact: {
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  clearBtnText: { color: theme.colors.text, fontWeight: "800" },
+  clearBtnText: { color: theme.colors.text, fontWeight: "600" },
   clearBtnTextDisabled: { color: theme.colors.subtext },
   card: {
     flexDirection: "row",
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 14,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.glass,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
@@ -646,11 +646,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
   },
   cardBody: { flex: 1 },
   cardMeta: {
@@ -667,10 +667,10 @@ const styles = StyleSheet.create({
   newPillText: {
     color: theme.colors.text,
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 0.6,
   },
-  title: { color: theme.colors.text, fontWeight: "900" },
+  title: { color: theme.colors.text, fontWeight: "700" },
   body: { color: theme.colors.subtext, fontWeight: "700", marginTop: 4 },
   time: { color: theme.colors.subtext, fontWeight: "700" },
   filtersRow: {
@@ -693,18 +693,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  swipeText: { color: theme.colors.text, fontWeight: "800" },
+  swipeText: { color: theme.colors.text, fontWeight: "600" },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "rgba(255,255,255,0.08)",
+    borderColor: theme.colors.stroke,
+    backgroundColor: theme.colors.card2,
   },
   filterChipActive: {
     backgroundColor: theme.colors.accent2,
-    borderColor: "rgba(255,255,255,0.65)",
+    borderColor: theme.colors.stroke,
   },
   filterChipText: {
     color: theme.colors.subtext,
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: theme.colors.text,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   emptyState: {
     alignItems: "center",
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: theme.colors.text,
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 16,
   },
   emptySub: {

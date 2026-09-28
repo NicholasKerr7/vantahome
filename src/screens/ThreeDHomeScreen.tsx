@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { RootStackParamList } from '../app/AppNavigator';
 import { openHomeFeature } from '../app/homeNavigation';
 import Pressable from '../components/Pressable';
+import CinematicSurface from '../components/CinematicSurface';
+import { useDecorativeMotion } from '../components/useDecorativeMotion';
 import { useCommandActivityLauncher } from '../components/command-feedback/CommandActivityContext';
 import SceneSurface from '../features/three-d-home/SceneSurface';
 import type { SceneStatus } from '../features/three-d-home/protocol';
@@ -64,6 +66,7 @@ export default function ThreeDHomeScreen() {
   const [showLab, setShowLab] = useState(false);
   const [panel, setPanel] = useState<'menu' | 'voice' | 'devices' | null>(null);
   const sceneEnabled = isThreeDHomeEnabled();
+  const motionAllowed = useDecorativeMotion(focused && active);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       // Brief system overlays retain graphics; actual backgrounding releases them and the mic.
@@ -100,22 +103,22 @@ export default function ThreeDHomeScreen() {
   }
 
   return <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
-    <View style={styles.header}>
+    <CinematicSurface style={styles.header}>
       <Pressable style={styles.iconButton} onPress={() => showLab ? setShowLab(false) : setPanel('menu')}
         accessibilityLabel={showLab ? 'Back to 3D Home' : 'Open home menu'}>
         <Ionicons name={showLab ? 'arrow-back' : 'menu-outline'} size={23} color={theme.colors.accent} />
       </Pressable>
       <View style={styles.identity}>
-        <Text style={styles.title}>{showLab ? 'RENDERER PREVIEW' : 'VANTAHOME'}</Text>
+        <Text style={styles.title}>{showLab ? 'RENDERER PREVIEW' : 'VANTA'}{!showLab && <Text style={styles.brandTail}>HOME</Text>}</Text>
         <Text style={styles.caption}>Simulation · no real device control</Text>
       </View>
       <Pressable style={[styles.iconButton, styles.voiceButton]} onPress={() => setPanel('voice')} accessibilityLabel="Open voice control"><Ionicons name="mic-outline" size={19} color={theme.colors.accent} /></Pressable>
       <Pressable style={styles.iconButton} onPress={() => setPanel('devices')} accessibilityLabel="Open house device library"><Ionicons name="options-outline" size={21} color={theme.colors.text} /></Pressable>
-    </View>
+    </CinematicSurface>
     {showLab ? <HomePanelBoundary onClose={() => setShowLab(false)}><Suspense fallback={<LoadingFeature />}><RendererLab active={focused && active} /></Suspense></HomePanelBoundary>
       : focused && active && sceneEnabled ? <SceneSession key={attempt} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}
-    {focused && active && panel === 'menu' && <HomeMenu onClose={() => setPanel(null)} onSelect={openDestination} rendererAvailable={isRendererLabEnabled()} activityAvailable={Boolean(commandActivity)} />}
+    {focused && active && panel === 'menu' && <HomeMenu motionAllowed={motionAllowed} onClose={() => setPanel(null)} onSelect={openDestination} rendererAvailable={isRendererLabEnabled()} activityAvailable={Boolean(commandActivity)} />}
     {focused && active && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeDeviceLibrary onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
     {focused && active && panel === 'voice' && <Modal transparent visible animationType="none" onRequestClose={() => setPanel(null)}>
       <SafeAreaView style={styles.modalOverlay}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.voiceWrap}>
@@ -136,11 +139,12 @@ const styles = StyleSheet.create({
   iconButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 22 },
   voiceButton: { borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2 },
   identity: { flex: 1, minWidth: 0 },
-  title: { color: theme.colors.text, fontSize: 12, letterSpacing: 2.2, fontWeight: '700' },
+  title: { color: theme.colors.text, fontSize: 12, letterSpacing: 2, fontWeight: '700' },
+  brandTail: { fontWeight: '300', color: theme.colors.accent },
   caption: { color: theme.colors.subtext, fontSize: 9, marginTop: 5 },
   scene: { flex: 1, minHeight: 0, overflow: 'hidden', backgroundColor: theme.colors.bg0 },
   featureLoading: { padding: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg0 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(5,9,5,0.78)', justifyContent: 'center', alignItems: 'center', padding: 14 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(3,8,12,0.84)', justifyContent: 'center', alignItems: 'center', padding: 14 },
   voiceWrap: { width: '100%', maxWidth: 520, maxHeight: '100%' },
   saveNotice: { position: 'absolute', bottom: 8, left: 12, right: 12, padding: 10, gap: 8, borderRadius: theme.radius.sm, backgroundColor: theme.colors.bg0, borderWidth: 1, borderColor: theme.colors.stroke },
   saveNoticeText: { color: theme.colors.text, fontSize: 12, textAlign: 'center' },

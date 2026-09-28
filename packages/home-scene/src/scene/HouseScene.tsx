@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { ACESFilmicToneMapping, Group, MathUtils, Mesh, PCFSoftShadowMap, type Object3D } from 'three';
 import { CameraRig } from './CameraRig';
+import { CinematicStage } from './CinematicStage';
 import { Devices } from './Devices';
 import { HotspotLayout } from './HotspotLayout';
 import { Landscape } from './Landscape';
@@ -98,7 +99,8 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       <VisibilityScheduling suspended={suspended} />
       <MaterialEnvironment />
       <SceneLighting daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
-      <CameraRig view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} />
+      <CameraRig view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} />
+      {props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
       <Suspense fallback={null}>
         <HouseModel view={props.view} deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
         <HotspotLayout roomId={props.roomId} view={props.view}>
@@ -108,7 +110,7 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
         {(props.view === 'exterior' || props.view === 'immersive') && <SolarLightPools deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} />}
         {props.environment.weather ? <WeatherEffects weather={props.environment.weather} view={props.view} roomId={props.roomId} reducedMotion={props.reducedMotion} /> : null}
       </Suspense>
-      <mesh position={[8, -1.02, -8]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[200, 200]} /><shadowMaterial color="#26382e" transparent opacity={0.22} depthWrite={false} /></mesh>
+      <mesh position={[8, -1.02, -8]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[200, 200]} /><shadowMaterial color="#02080c" transparent opacity={0.42} depthWrite={false} /></mesh>
     </Canvas>;
 }
 

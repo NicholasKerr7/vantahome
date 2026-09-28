@@ -4,9 +4,9 @@ The property is the primary interface. Supporting screens should feel like tools
 
 ## Visual language
 
-- Use the shared charcoal, warm ivory, and olive theme tokens. Reserve strong color for selection, primary actions, and meaningful device status.
+- Use shared obsidian, jade, pearl, ice, and warm gold tokens. Reserve strong color for selection, primary actions, and meaningful device status.
 - Use one VantaHome masthead. The embedded scene provides the environment controls; it does not repeat the brand.
-- Favor open space, thin dividing rules, and descriptive typography over stacks of outlined cards, decorative gradients, and duplicated headers.
+- Keep the model on a continuous dark studio stage. Floating rounded controls, fine edge lighting, and restrained atmospheric gradients give supporting panels depth while preserving readable contrast.
 - Use numbered destinations or collections where they help orientation. Numbers describe the collection order, never invented telemetry.
 - Keep the model readable and large. Put its room/floor controls within easy thumb reach; expose detailed device controls on demand.
 - Retain visible simulation labels. A polished interface must not imply a real device connection or verified assistant setup.
@@ -19,6 +19,14 @@ Use at least 44-point action targets, keyboard focus indicators, meaningful cont
 
 Preserve service boundaries: visual changes do not add device transports, change permissions, or reinterpret connection states. Continue using the shared device capability catalog for quick and full controls.
 
-## Current pass
+## Motion and rendering
 
-The home shell, embedded property layout, Home index, Scenes and Automations collections, Settings workspace, integrations, voice panel, and native device inspector establish this direction. Household, camera, history, and deeper management/editor screens can adopt the same composition in subsequent passes; their existing functions remain available.
+The optional Cinematic view gently sweeps the existing camera within a small arc. It preserves the current room, height, target, zoom, and device states. Touch, wheel, keyboard interaction, scene navigation, reduced motion, and suspension stop the sweep. Hotspots return when playback stops. The control is unavailable in immersive mode.
+
+The scene stage uses one static shader plane; it adds no bloom pipeline, full-screen blur, external video, or large media download. Warm interior lighting contrasts with a cool studio rim. Rain, irrigation, vegetation, day/night, and device effects keep their existing simulation behavior.
+
+Native supporting surfaces are still by default. Only the visible Home menu uses a slow orbital light treatment; voice feedback pulses only while actively listening. Motion respects live reduced-motion settings and app backgrounding. Hidden or retained quiet screens allocate no decorative animation subscriptions. Panel entrances use short opacity/transform transitions.
+
+## Coverage
+
+The home shell, property controls, Home menu, Scenes, Automations, Settings, integrations, voice, household, rooms, cameras, activity, and full device controls share the same visual language. Device color swatches still represent the actual selected lamp color, with contrasting text inside bright bulb previews. Long device forms retain contained scrolling; primary collections remain paged.

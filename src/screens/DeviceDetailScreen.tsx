@@ -54,7 +54,7 @@ import DoorDetailSection from "./device-detail/devices/DoorDetailSection";
 import GenericHeroSection from "./device-detail/GenericHeroSection";
 import CapabilitiesSection from "./device-detail/CapabilitiesSection";
 import OptionChips from "../components/OptionChips";
-import BackgroundLines from "../components/BackgroundLines";
+import CinematicSurface from "../components/CinematicSurface";
 import ModeTiles from "../components/ModeTiles";
 import AvatarChip from "../components/AvatarChip";
 import LiveVideoPlayer from "../components/LiveVideoPlayer";
@@ -126,10 +126,12 @@ function mixRgb(
   };
 }
 
-function mixHexWithWhite(hex: string, ratio: number) {
+/** Tint the dark hero surface without changing the selected light color or bulb preview. */
+function mixHexWithSurface(hex: string, ratio: number) {
   const base = hexToRgb(hex);
-  if (!base) return null;
-  return mixRgb(base, { r: 255, g: 255, b: 255 }, ratio);
+  const surface = hexToRgb(theme.colors.card2);
+  if (!base || !surface) return null;
+  return mixRgb(base, surface, ratio);
 }
 
 function rgbToRgba(
@@ -165,7 +167,7 @@ const AIR_QUALITY_BANDS = [
     max: 50,
     label: "Good",
     color: "#2F9E7D",
-    gradient: ["#C8F3E4", "#6B3CFF"],
+    gradient: [theme.colors.accent, theme.colors.accent2],
   },
   {
     max: 100,
@@ -1011,11 +1013,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   if (!device) {
     return (
-      <LinearGradient
-        colors={[theme.colors.bg1, theme.colors.bg0]}
-        style={styles.root}
-      >
-        <BackgroundLines />
+      <CinematicSurface variant="quiet" style={styles.root}>
         <View style={styles.emptyWrap}>
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>Access limited</Text>
@@ -1028,7 +1026,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
         </View>
-      </LinearGradient>
+      </CinematicSurface>
     );
   }
 
@@ -1061,22 +1059,22 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const bulbGradient: [string, string] = bulbIsLight
     ? [bulbColor, "rgba(200,200,216,0.96)"]
     : [bulbColor, "rgba(255,255,255,0.92)"];
-  const lightHeroTint = mixHexWithWhite(bulbColor, 0.75);
-  const lightHeroTintDeep = mixHexWithWhite(bulbColor, 0.6);
+  const lightHeroTint = mixHexWithSurface(bulbColor, 0.9);
+  const lightHeroTintDeep = mixHexWithSurface(bulbColor, 0.82);
   const lightHeroGradient: [string, string, string] = [
-    "rgba(255,255,255,0.97)",
+    theme.colors.card2,
     lightHeroTint
       ? rgbToRgba(lightHeroTint, 0.92)
-      : "rgba(255,244,226,0.92)",
+      : theme.colors.card,
     lightHeroTintDeep
       ? rgbToRgba(lightHeroTintDeep, 0.88)
-      : "rgba(255,234,214,0.88)",
+      : theme.colors.card2,
   ];
-  const bulbTextColor = bulbIsLight ? stylesVars.ink : "#fff";
+  const bulbTextColor = bulbIsLight ? theme.colors.bg0 : "#fff";
   const bulbSubColor = bulbIsLight
-    ? stylesVars.subtext
+    ? "#315A50"
     : "rgba(255,255,255,0.85)";
-  const bulbIconColor = bulbIsLight ? stylesVars.ink : "#fff";
+  const bulbIconColor = bulbIsLight ? theme.colors.bg0 : "#fff";
   const bulbInnerBorder = bulbIsLight
     ? "rgba(0,0,0,0.12)"
     : "rgba(255,255,255,0.18)";
@@ -4384,7 +4382,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     {
       backgroundColor: device.isOn
         ? theme.colors.accent
-        : "rgba(12,12,18,0.35)",
+        : theme.colors.muted,
     },
   ];
   const cameraPresencePillStyle = (isHome: boolean): StyleProp<ViewStyle> => [
@@ -4400,11 +4398,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     mode === "cold" ? "snow" : mode === "fan" ? "leaf" : "water";
   const acHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(230,242,255,0.92)",
-        "rgba(208,232,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={fanHeroCardStyle}
@@ -4421,7 +4415,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={acModeIcon}
               size={14}
-              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(device.isOn)}>
               {device.isOn ? acModeLabel : "Off"}
@@ -4431,7 +4425,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={acEcoMode ? "leaf" : "leaf-outline"}
               size={14}
-              color={acEcoMode ? theme.colors.accent2 : stylesVars.subtext}
+              color={acEcoMode ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(acEcoMode)}>
               {acEcoMode ? "Eco" : "Standard"}
@@ -4588,9 +4582,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               isOn: true,
             })
           }
-          minimumTrackTintColor="rgba(122,92,255,0.9)"
-          maximumTrackTintColor="rgba(12,12,18,0.12)"
-          thumbTintColor="rgba(255,255,255,0.92)"
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.stroke}
+          thumbTintColor={theme.colors.text}
           style={styles.pressureSlider}
         />
         <Text style={styles.cardHint}>Swing</Text>
@@ -4665,9 +4659,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               isOn: true,
             })
           }
-          minimumTrackTintColor="rgba(122,92,255,0.9)"
-          maximumTrackTintColor="rgba(12,12,18,0.12)"
-          thumbTintColor="rgba(255,255,255,0.92)"
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.stroke}
+          thumbTintColor={theme.colors.text}
           style={styles.pressureSlider}
         />
         <Text style={styles.budgetHint}>
@@ -4679,11 +4673,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   const energyHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(224,236,255,0.9)",
-        "rgba(204,218,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={energyHeroCardStyle}
@@ -4700,7 +4690,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={powerOutage ? "alert-circle" : "flash"}
               size={14}
-              color={powerOutage ? "#D8465B" : theme.colors.accent2}
+              color={powerOutage ? "#D8465B" : theme.colors.accent}
             />
             <Text style={energyHeroPillTextStyle(!powerOutage)}>
               {powerOutage ? "Outage" : "Grid Online"}
@@ -4722,11 +4712,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <View style={energyHeroBodyStyle}>
         <View style={energyHeroOrbStyle}>
           <LinearGradient
-            colors={[
-              "rgba(122,92,255,0.24)",
-              "rgba(180,107,255,0.18)",
-              "rgba(255,255,255,0.9)",
-            ]}
+            colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
             start={{ x: 0.2, y: 0.1 }}
             end={{ x: 1, y: 1 }}
             style={styles.energyHeroOrbGlow}
@@ -4878,11 +4864,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   const coffeeHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(224,236,255,0.9)",
-        "rgba(204,218,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={energyHeroCardStyle}
@@ -4901,7 +4883,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               name={device.isOn ? "cafe" : "cafe-outline"}
               size={14}
               color={
-                device.isOn ? theme.colors.accent2 : stylesVars.subtext
+                device.isOn ? theme.colors.accent : stylesVars.subtext
               }
             />
             <Text style={energyHeroPillTextStyle(device.isOn)}>
@@ -4925,11 +4907,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <View style={energyHeroBodyStyle}>
         <View style={energyHeroOrbStyle}>
           <LinearGradient
-            colors={[
-              "rgba(122,92,255,0.24)",
-              "rgba(180,107,255,0.18)",
-              "rgba(255,255,255,0.9)",
-            ]}
+            colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
             start={{ x: 0.2, y: 0.1 }}
             end={{ x: 1, y: 1 }}
             style={styles.energyHeroOrbGlow}
@@ -5077,9 +5055,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           onSlidingComplete={(value) =>
             sendPatch({ coffeeTempC: Math.round(value) })
           }
-          minimumTrackTintColor="rgba(122,92,255,0.9)"
-          maximumTrackTintColor="rgba(12,12,18,0.12)"
-          thumbTintColor="rgba(255,255,255,0.92)"
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.stroke}
+          thumbTintColor={theme.colors.text}
           style={styles.pressureSlider}
         />
         <Text style={styles.cardHint}>Keep warm</Text>
@@ -5136,11 +5114,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   const vacuumHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(229,240,255,0.92)",
-        "rgba(206,223,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={openHeroCardStyle}
@@ -5160,7 +5134,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               color={
                 vacuumStatus === "docked"
                   ? stylesVars.subtext
-                  : theme.colors.accent2
+                  : theme.colors.accent
               }
             />
             <Text style={utilityHeroPillTextStyle(vacuumStatus !== "docked")}>
@@ -5172,7 +5146,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <View style={vacuumHeroBodyStyle}>
         <View style={utilityHeroOrbStyle}>
           <LinearGradient
-            colors={["rgba(122,92,255,0.3)", "rgba(107,60,255,0.75)"]}
+            colors={[theme.colors.card, theme.colors.accent2]}
             start={{ x: 0.2, y: 0.1 }}
             end={{ x: 1, y: 1 }}
             style={styles.utilityHeroOrbGlow}
@@ -5223,7 +5197,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 >
                   {active ? (
                     <LinearGradient
-                      colors={[theme.colors.accent2, theme.colors.accent]}
+                      colors={[theme.colors.accent2, theme.colors.bg1]}
                       start={{ x: 0.1, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.modeIconBubbleActive}
@@ -5239,7 +5213,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       <Ionicons
                         name={action.icon as any}
                         size={18}
-                        color="rgba(12,12,18,0.65)"
+                        color={theme.colors.subtext}
                       />
                     </View>
                   )}
@@ -5305,9 +5279,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               isOn: true,
             })
           }
-          minimumTrackTintColor="rgba(122,92,255,0.9)"
-          maximumTrackTintColor="rgba(12,12,18,0.12)"
-          thumbTintColor="rgba(255,255,255,0.92)"
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.stroke}
+          thumbTintColor={theme.colors.text}
           style={styles.pressureSlider}
         />
         <View style={controlCardRowTopStyle}>
@@ -5374,7 +5348,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       >
         {device.isOn ? (
           <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
+            colors={[theme.colors.accent2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.modeIconBubbleActive}
@@ -5383,7 +5357,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </LinearGradient>
         ) : (
           <View style={styles.modeIconBubble}>
-            <Ionicons name="play" size={18} color="rgba(12,12,18,0.65)" />
+            <Ionicons name="play" size={18} color={theme.colors.subtext} />
           </View>
         )}
         <Text style={modeTextStyle(device.isOn)}>Start</Text>
@@ -5394,7 +5368,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       >
         {!device.isOn ? (
           <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
+            colors={[theme.colors.accent2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.modeIconBubbleActive}
@@ -5403,7 +5377,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           </LinearGradient>
         ) : (
           <View style={styles.modeIconBubble}>
-            <Ionicons name="pause" size={18} color="rgba(12,12,18,0.65)" />
+            <Ionicons name="pause" size={18} color={theme.colors.subtext} />
           </View>
         )}
         <Text style={modeTextStyle(!device.isOn)}>Pause</Text>
@@ -5432,14 +5406,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         colors={
           isDishwasher
             ? [
-                "rgba(120,200,255,0.35)",
-                "rgba(122,92,255,0.18)",
-                "rgba(255,255,255,0.95)",
+                theme.colors.card,
+                theme.colors.bg1,
+                theme.colors.card2,
               ]
             : [
-                "rgba(180,107,255,0.35)",
-                "rgba(122,92,255,0.2)",
-                "rgba(255,255,255,0.92)",
+                theme.colors.accent2,
+                theme.colors.card,
+                theme.colors.card2,
               ]
         }
         start={{ x: 0.2, y: 0.1 }}
@@ -5504,11 +5478,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const laundryHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(236,228,255,0.88)",
-        "rgba(214,200,255,0.82)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.05, y: 0.1 }}
       end={{ x: 1, y: 1 }}
       style={laundryHeroCardStyle}
@@ -5535,7 +5505,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             color={
               laundryPhaseNotice === "Done"
                 ? "#2F8A5B"
-                : theme.colors.accent2
+                : theme.colors.accent
             }
           />
           <Text style={laundryNoticeTextStyle}>{laundryNoticeLabel}</Text>
@@ -6002,7 +5972,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       >
         {isOpen ? (
           <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
+            colors={[theme.colors.accent2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={openModeIconBubbleActiveStyle}
@@ -6014,7 +5984,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name="arrow-up"
               size={openActionIconSize}
-              color="rgba(12,12,18,0.65)"
+              color={theme.colors.subtext}
             />
           </View>
         )}
@@ -6026,7 +5996,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       >
         {isClosed ? (
           <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
+            colors={[theme.colors.accent2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={openModeIconBubbleActiveStyle}
@@ -6042,7 +6012,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name="arrow-down"
               size={openActionIconSize}
-              color="rgba(12,12,18,0.65)"
+              color={theme.colors.subtext}
             />
           </View>
         )}
@@ -6080,11 +6050,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const garageHeroOrb = (
     <View style={garageHeroOrbStyle}>
       <LinearGradient
-        colors={[
-          "rgba(122,92,255,0.24)",
-          "rgba(180,107,255,0.16)",
-          "rgba(255,255,255,0.9)",
-        ]}
+        colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
         start={{ x: 0.2, y: 0.1 }}
         end={{ x: 1, y: 1 }}
         style={styles.utilityHeroOrbGlow}
@@ -6101,11 +6067,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const garageHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(228,240,255,0.92)",
-        "rgba(210,224,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={openHeroCardStyle}
@@ -6119,7 +6081,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={isOpen ? "arrow-up" : "arrow-down"}
               size={14}
-              color={isOpen ? theme.colors.accent2 : stylesVars.subtext}
+              color={isOpen ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(isOpen)}>
               {isOpen ? "Open" : "Closed"}
@@ -6169,7 +6131,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       >
         {isOpen ? (
           <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
+            colors={[theme.colors.accent2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={openModeIconBubbleActiveStyle}
@@ -6181,7 +6143,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name="lock-open"
               size={openActionIconSize}
-              color="rgba(12,12,18,0.65)"
+              color={theme.colors.subtext}
             />
           </View>
         )}
@@ -6193,7 +6155,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       >
         {isClosed ? (
           <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
+            colors={[theme.colors.accent2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={openModeIconBubbleActiveStyle}
@@ -6209,7 +6171,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name="lock-closed"
               size={openActionIconSize}
-              color="rgba(12,12,18,0.65)"
+              color={theme.colors.subtext}
             />
           </View>
         )}
@@ -6247,11 +6209,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const doorHeroOrb = (
     <View style={doorHeroOrbStyle}>
       <LinearGradient
-        colors={[
-          "rgba(122,92,255,0.24)",
-          "rgba(180,107,255,0.16)",
-          "rgba(255,255,255,0.9)",
-        ]}
+        colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
         start={{ x: 0.2, y: 0.1 }}
         end={{ x: 1, y: 1 }}
         style={styles.utilityHeroOrbGlow}
@@ -6268,11 +6226,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const doorHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(240,236,255,0.92)",
-        "rgba(224,214,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={utilityHeroCardStyle}
@@ -6286,7 +6240,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={isOpen ? "lock-open" : "lock-closed"}
               size={14}
-              color={isOpen ? theme.colors.accent2 : stylesVars.subtext}
+              color={isOpen ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(isOpen)}>
               {isOpen ? "Unlocked" : "Locked"}
@@ -6333,7 +6287,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <Pressable style={openModeTileStyle(isOpen)} onPress={openGate}>
         {isOpen ? (
           <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
+            colors={[theme.colors.accent2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={openModeIconBubbleActiveStyle}
@@ -6345,7 +6299,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name="lock-open"
               size={openActionIconSize}
-              color="rgba(12,12,18,0.65)"
+              color={theme.colors.subtext}
             />
           </View>
         )}
@@ -6354,7 +6308,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <Pressable style={openModeTileStyle(isClosed)} onPress={closeGate}>
         {isClosed ? (
           <LinearGradient
-            colors={[theme.colors.accent2, theme.colors.accent]}
+            colors={[theme.colors.accent2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={openModeIconBubbleActiveStyle}
@@ -6366,7 +6320,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name="lock-closed"
               size={openActionIconSize}
-              color="rgba(12,12,18,0.65)"
+              color={theme.colors.subtext}
             />
           </View>
         )}
@@ -6377,11 +6331,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const gateHeroOrb = (
     <View style={doorHeroOrbStyle}>
       <LinearGradient
-        colors={[
-          "rgba(122,92,255,0.24)",
-          "rgba(180,107,255,0.16)",
-          "rgba(255,255,255,0.9)",
-        ]}
+        colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
         start={{ x: 0.2, y: 0.1 }}
         end={{ x: 1, y: 1 }}
         style={styles.utilityHeroOrbGlow}
@@ -6401,11 +6351,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const gateHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(230,248,242,0.92)",
-        "rgba(210,240,232,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={openHeroCardStyle}
@@ -6419,7 +6365,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={isOpen ? "lock-open" : "lock-closed"}
               size={14}
-              color={isOpen ? theme.colors.accent2 : stylesVars.subtext}
+              color={isOpen ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(isOpen)}>
               {isOpen ? "Unlocked" : "Locked"}
@@ -6559,11 +6505,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const smokeHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(238,236,255,0.92)",
-        "rgba(220,214,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={utilityHeroCardStyle}
@@ -6603,8 +6545,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           <LinearGradient
             colors={
               smokeDetected || coDetected
-                ? ["#FFB4B4", "#B46BFF"]
-                : ["#D9F5E6", "#6B3CFF"]
+                ? ["#7B3846", theme.colors.card]
+                : [theme.colors.accent2, theme.colors.card]
             }
             start={{ x: 0.2, y: 0.1 }}
             end={{ x: 0.9, y: 1 }}
@@ -6710,7 +6652,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             >
               {active ? (
                 <LinearGradient
-                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  colors={[theme.colors.accent2, theme.colors.bg1]}
                   start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={stovePresetBubbleActiveStyle}
@@ -6726,7 +6668,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   <Ionicons
                     name={preset.icon}
                     size={stovePresetIconSize}
-                    color="rgba(12,12,18,0.65)"
+                    color={theme.colors.subtext}
                   />
                 </View>
               )}
@@ -6760,7 +6702,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             >
               {active ? (
                 <LinearGradient
-                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  colors={[theme.colors.accent2, theme.colors.bg1]}
                   start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.modeIconBubbleActive}
@@ -6776,7 +6718,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   <Ionicons
                     name={preset.icon}
                     size={presetTileIconSize}
-                    color="rgba(12,12,18,0.65)"
+                    color={theme.colors.subtext}
                   />
                 </View>
               )}
@@ -6811,11 +6753,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   ) : null;
   const fridgeHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(230,240,255,0.92)",
-        "rgba(210,226,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={fridgeHeroCardStyle}
@@ -6836,7 +6774,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={device.isOn ? "snow" : "power"}
               size={14}
-              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(device.isOn)}>
               {device.isOn ? "Cooling" : "Off"}
@@ -6848,7 +6786,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               size={14}
               color={
                 fridgeMode !== "normal"
-                  ? theme.colors.accent2
+                  ? theme.colors.accent
                   : stylesVars.subtext
               }
             />
@@ -6919,9 +6857,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             isOn: true,
           })
         }
-        minimumTrackTintColor="rgba(122,92,255,0.9)"
-        maximumTrackTintColor="rgba(12,12,18,0.12)"
-        thumbTintColor="rgba(255,255,255,0.92)"
+        minimumTrackTintColor={theme.colors.accent}
+        maximumTrackTintColor={theme.colors.stroke}
+        thumbTintColor={theme.colors.text}
         style={styles.pressureSlider}
       />
     </View>
@@ -7058,7 +6996,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             >
               {active ? (
                 <LinearGradient
-                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  colors={[theme.colors.accent2, theme.colors.bg1]}
                   start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={fanModeBubbleActiveStyle}
@@ -7074,7 +7012,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   <Ionicons
                     name={preset.icon}
                     size={fanModeIconSize}
-                    color="rgba(12,12,18,0.65)"
+                    color={theme.colors.subtext}
                   />
                 </View>
               )}
@@ -7105,11 +7043,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const fanHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(232,250,244,0.92)",
-        "rgba(208,240,232,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={fanHeroCardStyle}
@@ -7126,7 +7060,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={device.isOn ? "aperture" : "power"}
               size={14}
-              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(device.isOn)}>
               {device.isOn ? "On" : "Off"}
@@ -7136,7 +7070,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={fanOscillation ? "refresh" : "refresh-outline"}
               size={14}
-              color={fanOscillation ? theme.colors.accent2 : stylesVars.subtext}
+              color={fanOscillation ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(fanOscillation)}>
               {fanOscillation ? "Oscillate" : "Fixed"}
@@ -7180,11 +7114,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const waterHeaterHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(230,242,255,0.92)",
-        "rgba(208,232,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={fanHeroCardStyle}
@@ -7201,7 +7131,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={device.isOn ? "flame" : "power"}
               size={14}
-              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(device.isOn)}>
               {device.isOn ? heaterModeLabel : "Off"}
@@ -7211,7 +7141,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name="water"
               size={14}
-              color={theme.colors.accent2}
+              color={theme.colors.accent}
             />
             <Text style={utilityHeroPillTextStyle(true)}>
               {heaterTypeLabel}
@@ -7261,11 +7191,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const stoveHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(255,238,224,0.92)",
-        "rgba(255,224,206,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={utilityHeroCardStyle}
@@ -7406,11 +7332,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const microwaveHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(244,238,255,0.92)",
-        "rgba(228,222,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={microwaveHeroCardStyle}
@@ -7427,7 +7349,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={device.isOn ? "play" : "stop"}
               size={14}
-              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(device.isOn)}>
               {device.isOn ? "Running" : "Idle"}
@@ -7438,7 +7360,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               name={microwaveIsBoost ? "flash" : "flash-outline"}
               size={14}
               color={
-                microwaveIsBoost ? theme.colors.accent2 : stylesVars.subtext
+                microwaveIsBoost ? theme.colors.accent : stylesVars.subtext
               }
             />
             <Text
@@ -7484,7 +7406,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             >
               {device.isOn ? (
                 <LinearGradient
-                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  colors={[theme.colors.accent2, theme.colors.bg1]}
                   start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.modeIconBubbleActive}
@@ -7496,7 +7418,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   <Ionicons
                     name="play"
                     size={18}
-                    color="rgba(12,12,18,0.65)"
+                    color={theme.colors.subtext}
                   />
                 </View>
               )}
@@ -7508,7 +7430,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             >
               {!device.isOn ? (
                 <LinearGradient
-                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  colors={[theme.colors.accent2, theme.colors.bg1]}
                   start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.modeIconBubbleActive}
@@ -7520,7 +7442,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   <Ionicons
                     name="stop"
                     size={18}
-                    color="rgba(12,12,18,0.65)"
+                    color={theme.colors.subtext}
                   />
                 </View>
               )}
@@ -7587,11 +7509,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const sprinklerHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(232,246,240,0.92)",
-        "rgba(212,238,228,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={sprinklerHeroCardStyle}
@@ -7608,7 +7526,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={device.isOn ? "rainy" : "rainy-outline"}
               size={14}
-              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(device.isOn)}>
               {device.isOn ? "Running" : "Idle"}
@@ -7624,7 +7542,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               size={14}
               color={
                 sprinklerScheduleCount > 0
-                  ? theme.colors.accent2
+                  ? theme.colors.accent
                   : stylesVars.subtext
               }
             />
@@ -7670,7 +7588,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             >
               {device.isOn ? (
                 <LinearGradient
-                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  colors={[theme.colors.accent2, theme.colors.bg1]}
                   start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.modeIconBubbleActive}
@@ -7682,7 +7600,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   <Ionicons
                     name="play"
                     size={18}
-                    color="rgba(12,12,18,0.65)"
+                    color={theme.colors.subtext}
                   />
                 </View>
               )}
@@ -7694,7 +7612,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             >
               {!device.isOn ? (
                 <LinearGradient
-                  colors={[theme.colors.accent2, theme.colors.accent]}
+                  colors={[theme.colors.accent2, theme.colors.bg1]}
                   start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.modeIconBubbleActive}
@@ -7706,7 +7624,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   <Ionicons
                     name="stop"
                     size={18}
-                    color="rgba(12,12,18,0.65)"
+                    color={theme.colors.subtext}
                   />
                 </View>
               )}
@@ -7778,11 +7696,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const waterHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(224,240,255,0.92)",
-        "rgba(204,226,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={waterHeroCardStyle}
@@ -7797,7 +7711,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={waterLeakDetected ? "warning" : "water"}
               size={14}
-              color={waterLeakDetected ? "#D8465B" : theme.colors.accent2}
+              color={waterLeakDetected ? "#D8465B" : theme.colors.accent}
             />
             <Text style={utilityHeroPillTextStyle(waterLeakDetected)}>
               {waterLeakDetected ? "Leak" : "Normal"}
@@ -7940,9 +7854,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         step={1}
         onValueChange={(value) => setPressureLowDraft(Math.round(value))}
         onSlidingComplete={(value) => setPressureLow(Math.round(value))}
-        minimumTrackTintColor="rgba(122,92,255,0.9)"
-        maximumTrackTintColor="rgba(12,12,18,0.12)"
-        thumbTintColor="rgba(255,255,255,0.92)"
+        minimumTrackTintColor={theme.colors.accent}
+        maximumTrackTintColor={theme.colors.stroke}
+        thumbTintColor={theme.colors.text}
         style={styles.pressureSlider}
       />
       <View style={styles.pressureSliderRow}>
@@ -7956,9 +7870,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         step={1}
         onValueChange={(value) => setPressureHighDraft(Math.round(value))}
         onSlidingComplete={(value) => setPressureHigh(Math.round(value))}
-        minimumTrackTintColor="rgba(122,92,255,0.9)"
-        maximumTrackTintColor="rgba(12,12,18,0.12)"
-        thumbTintColor="rgba(255,255,255,0.92)"
+        minimumTrackTintColor={theme.colors.accent}
+        maximumTrackTintColor={theme.colors.stroke}
+        thumbTintColor={theme.colors.text}
         style={styles.pressureSlider}
       />
       <View style={controlCardRowTopStyle}>
@@ -8039,11 +7953,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     : [styles.energyHeroPillRow, { justifyContent: "center", flexWrap: "wrap" }];
   const cameraHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.97)",
-        "rgba(228,238,255,0.92)",
-        "rgba(214,226,255,0.88)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={cameraHeroCardStyle}
@@ -8060,7 +7970,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={device.isOn ? "videocam" : "videocam-off"}
               size={14}
-              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={energyHeroPillTextStyle(device.isOn)}>
               {device.isOn ? "Live" : "Offline"}
@@ -8070,7 +7980,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={cameraArmed ? "eye" : "eye-off"}
               size={14}
-              color={cameraArmed ? theme.colors.accent2 : stylesVars.subtext}
+              color={cameraArmed ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={energyHeroPillTextStyle(cameraArmed)}>
               {cameraArmed ? "Armed" : "Disarmed"}
@@ -8083,7 +7993,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               }
               size={14}
               color={
-                cameraRecording ? theme.colors.accent2 : stylesVars.subtext
+                cameraRecording ? theme.colors.accent : stylesVars.subtext
               }
             />
             <Text style={energyHeroPillTextStyle(cameraRecording)}>
@@ -8094,7 +8004,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       </View>
       <View style={cameraHeroBodyStyle}>
         <LinearGradient
-          colors={["rgba(255,255,255,0.9)", "rgba(236,228,255,0.85)"]}
+          colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
           start={{ x: 0.1, y: 0.1 }}
           end={{ x: 1, y: 1 }}
           style={cameraFeedCardStyle}
@@ -8155,7 +8065,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 <Ionicons
                   name="videocam"
                   size={cameraPreviewIconSize}
-                  color="rgba(12,12,18,0.35)"
+                  color={theme.colors.subtext}
                 />
                 <Text style={styles.cameraPreviewText}>
                   Live feed (simulated)
@@ -8199,7 +8109,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               >
                 {action.active ? (
                   <LinearGradient
-                    colors={[theme.colors.accent2, theme.colors.accent]}
+                    colors={[theme.colors.accent2, theme.colors.bg1]}
                     start={{ x: 0.1, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.modeIconBubbleActive}
@@ -8211,7 +8121,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     <Ionicons
                       name={action.icon}
                       size={18}
-                      color="rgba(12,12,18,0.65)"
+                      color={theme.colors.subtext}
                     />
                   </View>
                 )}
@@ -8475,14 +8385,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const speakerNowCard = (
     <View style={speakerNowHeroCardStyle}>
       <LinearGradient
-        colors={["#E6DAFF", "#8B5CFF"]}
+        colors={[theme.colors.card, theme.colors.accent2]}
         start={{ x: 0.1, y: 0.1 }}
         end={{ x: 1, y: 1 }}
         style={styles.speakerNowInner}
       >
         <View style={speakerCoverStyle}>
           <LinearGradient
-            colors={["rgba(255,255,255,0.95)", "#6B3CFF"]}
+            colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.speakerCoverInner}
@@ -8490,7 +8400,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name="musical-notes"
               size={Math.round(speakerCoverSize * 0.36)}
-              color="#2E1B6B"
+              color={theme.colors.accent}
             />
           </LinearGradient>
         </View>
@@ -8534,11 +8444,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const speakerHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(236,228,255,0.92)",
-        "rgba(220,210,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={utilityHeroCardStyle}
@@ -8553,7 +8459,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={device.isOn ? "volume-high" : "volume-mute"}
               size={14}
-              color={device.isOn ? theme.colors.accent2 : stylesVars.subtext}
+              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(device.isOn)}>
               {device.isOn ? "Playing" : "Muted"}
@@ -8588,7 +8494,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             centerContent={
               <View style={infoOrbCompactStyle}>
                 <LinearGradient
-                  colors={["#CDBBFF", "#6B3CFF"]}
+                  colors={[theme.colors.card, theme.colors.accent2]}
                   start={{ x: 0.2, y: 0.1 }}
                   end={{ x: 0.9, y: 1 }}
                   style={styles.infoOrbInner}
@@ -8642,11 +8548,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const tvHeroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.96)",
-        "rgba(226,242,255,0.92)",
-        "rgba(204,227,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0.05 }}
       end={{ x: 1, y: 1 }}
       style={tvHeroCardStyle}
@@ -8865,7 +8767,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             <Ionicons
               name={item.icon as any}
               size={18}
-              color="#0c0c12"
+              color={theme.colors.text}
             />
             <Text style={styles.remoteText} numberOfLines={1}>
               {item.label}
@@ -8886,7 +8788,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               .catch(() => {})
           }
         >
-          <Ionicons name="play-back" size={16} color="#0c0c12" />
+          <Ionicons name="play-back" size={16} color={theme.colors.text} />
           <Text style={styles.remoteText}>Rew</Text>
         </Pressable>
         <Pressable
@@ -8901,7 +8803,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               .catch(() => {})
           }
         >
-          <Ionicons name="play" size={16} color="#0c0c12" />
+          <Ionicons name="play" size={16} color={theme.colors.text} />
           <Text style={styles.remoteText}>Play/Pause</Text>
         </Pressable>
         <Pressable
@@ -8916,7 +8818,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               .catch(() => {})
           }
         >
-          <Ionicons name="play-forward" size={16} color="#0c0c12" />
+          <Ionicons name="play-forward" size={16} color={theme.colors.text} />
           <Text style={styles.remoteText}>Fwd</Text>
         </Pressable>
       </View>
@@ -8933,7 +8835,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               .catch(() => {})
           }
         >
-          <Ionicons name="play-skip-back" size={16} color="#0c0c12" />
+          <Ionicons name="play-skip-back" size={16} color={theme.colors.text} />
           <Text style={styles.remoteText}>Prev</Text>
         </Pressable>
         <Pressable
@@ -8948,7 +8850,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               .catch(() => {})
           }
         >
-          <Ionicons name="play-skip-forward" size={16} color="#0c0c12" />
+          <Ionicons name="play-skip-forward" size={16} color={theme.colors.text} />
           <Text style={styles.remoteText}>Next</Text>
         </Pressable>
       </View>
@@ -8989,7 +8891,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   .catch(() => {})
               }
             >
-              <Ionicons name="chevron-up" size={18} color="#0c0c12" />
+              <Ionicons name="chevron-up" size={18} color={theme.colors.text} />
             </Pressable>
             <Pressable
               accessibilityLabel="Navigate left"
@@ -9004,7 +8906,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   .catch(() => {})
               }
             >
-              <Ionicons name="chevron-back" size={18} color="#0c0c12" />
+              <Ionicons name="chevron-back" size={18} color={theme.colors.text} />
             </Pressable>
             <Pressable
               accessibilityLabel="Select"
@@ -9034,7 +8936,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   .catch(() => {})
               }
             >
-              <Ionicons name="chevron-forward" size={18} color="#0c0c12" />
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.text} />
             </Pressable>
             <Pressable
               accessibilityLabel="Navigate down"
@@ -9049,7 +8951,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   .catch(() => {})
               }
             >
-              <Ionicons name="chevron-down" size={18} color="#0c0c12" />
+              <Ionicons name="chevron-down" size={18} color={theme.colors.text} />
             </Pressable>
           </View>
           <Pressable
@@ -9088,7 +8990,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               .catch(() => {});
           }}
         >
-          <Ionicons name="caret-up" size={18} color="#0c0c12" />
+          <Ionicons name="caret-up" size={18} color={theme.colors.text} />
           <Text style={styles.remoteText}>Ch +</Text>
         </Pressable>
         <Pressable
@@ -9108,7 +9010,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               .catch(() => {});
           }}
         >
-          <Ionicons name="caret-down" size={18} color="#0c0c12" />
+          <Ionicons name="caret-down" size={18} color={theme.colors.text} />
           <Text style={styles.remoteText}>Ch -</Text>
         </Pressable>
       </View>
@@ -9117,20 +9019,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
   return (
     <RenderProfiler id="DeviceDetailScreen">
-      <LinearGradient
-        colors={[theme.colors.bg1, theme.colors.bg0]}
-        style={outerStyle}
-      >
-      <BackgroundLines />
+      <CinematicSurface variant="quiet" style={outerStyle}>
 
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <>
           <LinearGradient
-            colors={[
-              "rgba(255,255,255,0.92)",
-              "rgba(246,238,255,0.88)",
-              "rgba(238,228,255,0.86)",
-            ]}
+            colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
             start={{ x: 0.1, y: 0.1 }}
             end={{ x: 1, y: 1 }}
             style={panelStyle}
@@ -9410,7 +9304,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         quickSetIconColor={stylesVars.subtext}
                         quickSetIconActiveColor="#fff"
                         pillIconColor={stylesVars.subtext}
-                        pillIconActiveColor={theme.colors.accent2}
+                        pillIconActiveColor={theme.colors.accent}
                         showQuickSetCard={!isWindowTabletPortrait && !isLandscapeSplit}
                         landscapeGridStyle={landscapeGridStyle}
                         landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
@@ -9817,8 +9711,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 <LinearGradient
                   colors={
                     device.isOn
-                      ? [theme.colors.accent2, theme.colors.accent]
-                      : ["rgba(255,255,255,0.88)", "rgba(255,255,255,0.88)"]
+                      ? [theme.colors.accent2, theme.colors.card]
+                      : [theme.colors.card, theme.colors.card2]
                   }
                   start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -9827,7 +9721,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   <Ionicons
                     name="power"
                     size={24}
-                    color={device.isOn ? "#FFFFFF" : "rgba(12,12,18,0.45)"}
+                    color={device.isOn ? theme.colors.accent : theme.colors.subtext}
                   />
                 </LinearGradient>
               </View>
@@ -9906,15 +9800,15 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         canSave={schedDays.length > 0}
         onSave={handleScheduleSave}
       />
-      </LinearGradient>
+      </CinematicSurface>
     </RenderProfiler>
   );
 }
 
 const stylesVars = {
-  ink: "rgba(12,12,18,0.88)",
-  subtext: "rgba(12,12,18,0.55)",
-  muted: "rgba(12,12,18,0.38)",
+  ink: theme.colors.text,
+  subtext: theme.colors.subtext,
+  muted: theme.colors.muted,
 };
 
 const styles = StyleSheet.create({
@@ -9934,16 +9828,16 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     padding: 20,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
+    borderColor: theme.colors.stroke,
     shadowColor: "rgba(12,12,18,0.12)",
     shadowOpacity: 0.6,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
     alignItems: "center",
   },
-  emptyTitle: { color: theme.colors.text, fontSize: 20, fontWeight: "800" },
+  emptyTitle: { color: theme.colors.text, fontSize: 20, fontWeight: "600" },
   emptySub: {
     color: theme.colors.subtext,
     textAlign: "center",
@@ -9955,21 +9849,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     height: 42,
     borderRadius: 16,
-    backgroundColor: "rgba(180,107,255,0.22)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
-    borderColor: "rgba(180,107,255,0.4)",
+    borderColor: theme.colors.accent2,
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyActionText: { color: theme.colors.text, fontWeight: "800" },
+  emptyActionText: { color: theme.colors.text, fontWeight: "600" },
   panel: {
     flex: 1,
-    borderRadius: 42,
+    borderRadius: 30,
     paddingTop: 18,
     paddingHorizontal: 18,
     paddingBottom: 22,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: theme.colors.stroke,
     overflow: "hidden",
   },
   panelPortrait: { borderWidth: 0, borderColor: "transparent" },
@@ -9980,16 +9874,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
     justifyContent: "space-between",
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
+    borderColor: theme.colors.stroke,
   },
   landscapeColumn: { flex: 1, minWidth: 0, alignItems: "stretch" },
   landscapeColumnPrimary: {
     flex: 1.05,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.55)",
+    borderColor: theme.colors.stroke,
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -9998,9 +9892,9 @@ const styles = StyleSheet.create({
   },
   landscapeColumnSecondary: {
     flex: 0.95,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
+    borderColor: theme.colors.stroke,
     shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -10012,9 +9906,9 @@ const styles = StyleSheet.create({
   headerPill: {
     height: 56,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.60)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
@@ -10031,7 +9925,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
     zIndex: 1,
   },
 
@@ -10040,14 +9934,14 @@ const styles = StyleSheet.create({
   moodLabel: {
     textAlign: "center",
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     marginTop: 12,
   },
   moodValue: {
     textAlign: "center",
     color: stylesVars.ink,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "700",
     marginTop: 6,
   },
 
@@ -10055,9 +9949,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.70)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -10073,16 +9967,16 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: "rgba(255,255,255,0.55)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   powerRingOn: {
-    backgroundColor: "rgba(122,92,255,0.14)",
-    borderColor: "rgba(122,92,255,0.25)",
-    shadowColor: "rgba(122,92,255,0.55)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.35,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
@@ -10092,7 +9986,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.60)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -10103,18 +9997,18 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.82)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)",
+    borderColor: theme.colors.stroke,
   },
   capabilitiesWrap: { marginTop: 16 },
-  heroTitle: { color: stylesVars.ink, fontWeight: "900", fontSize: 18 },
+  heroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 18 },
   heroSub: { color: stylesVars.subtext, fontWeight: "700", marginTop: 4 },
   openPortraitMetaText: {
     marginTop: 4,
     textAlign: "center",
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   garageStatusText: {
@@ -10122,7 +10016,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     textAlign: "center",
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   heaterStatusText: {
@@ -10130,7 +10024,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     textAlign: "center",
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
 
@@ -10138,13 +10032,13 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 12,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
   },
   controlCardLandscape: {
-    backgroundColor: "rgba(255,255,255,0.26)",
-    borderColor: "rgba(255,255,255,0.5)",
+    backgroundColor: theme.colors.card2,
+    borderColor: theme.colors.stroke,
     shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 10,
@@ -10156,7 +10050,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-  cardLabel: { color: stylesVars.subtext, fontWeight: "800", marginBottom: 8 },
+  cardLabel: { color: stylesVars.subtext, fontWeight: "600", marginBottom: 8 },
   cardHint: {
     color: stylesVars.muted,
     fontWeight: "700",
@@ -10167,16 +10061,16 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 16,
-    backgroundColor: "rgba(180,107,255,0.20)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  controlPillText: { color: stylesVars.ink, fontWeight: "900" },
+  controlPillText: { color: stylesVars.ink, fontWeight: "700" },
   controlPillActive: {
-    backgroundColor: "rgba(122,92,255,0.28)",
-    borderColor: "rgba(122,92,255,0.4)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
   controlPillTextActive: { color: stylesVars.ink },
   chipRow: {
@@ -10194,12 +10088,12 @@ const styles = StyleSheet.create({
   },
   pressureSliderLabel: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   pressureSliderValue: {
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 12,
   },
   pressureSlider: { marginTop: 6, marginBottom: 2 },
@@ -10207,18 +10101,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 36,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.70)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   chipRowItem: { flexDirection: "row", gap: 6 },
   chipActive: {
-    backgroundColor: "rgba(180,107,255,0.24)",
-    borderColor: "rgba(122,92,255,0.3)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  chipText: { color: stylesVars.subtext, fontWeight: "900", fontSize: 12 },
+  chipText: { color: stylesVars.subtext, fontWeight: "700", fontSize: 12 },
   chipTextActive: { color: stylesVars.ink },
   infoOrb: {
     alignSelf: "center",
@@ -10226,7 +10120,7 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: 95,
     overflow: "hidden",
-    shadowColor: "rgba(180,107,255,0.35)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.3,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
@@ -10248,19 +10142,19 @@ const styles = StyleSheet.create({
   },
   energyLottie: { width: "100%", height: "100%" },
   energyOrbContent: { alignItems: "center", justifyContent: "center" },
-  infoValue: { marginTop: 8, color: "#fff", fontWeight: "900", fontSize: 24 },
+  infoValue: { marginTop: 8, color: "#fff", fontWeight: "700", fontSize: 24 },
   infoSub: {
     marginTop: 4,
     color: "rgba(255,255,255,0.85)",
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   energyHeroCard: {
     marginTop: 14,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.25)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
-    shadowColor: "rgba(122,92,255,0.28)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.22,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -10285,13 +10179,13 @@ const styles = StyleSheet.create({
   energyHeroTitleWrapPhone: { flex: 0, width: "100%" },
   energyHeroTitle: {
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 16,
     flexShrink: 1,
   },
   energyHeroSub: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
     flexShrink: 1,
   },
@@ -10304,29 +10198,29 @@ const styles = StyleSheet.create({
   },
   energyHeroPill: {
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 6,
   },
   energyHeroPillActive: {
-    backgroundColor: "rgba(122,92,255,0.22)",
-    borderColor: "rgba(122,92,255,0.4)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  energyHeroPillText: { color: stylesVars.subtext, fontWeight: "800" },
+  energyHeroPillText: { color: stylesVars.subtext, fontWeight: "600" },
   energyHeroPillTextActive: { color: stylesVars.ink },
   energyHeroBody: { marginTop: 12 },
   energyHeroOrb: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.24)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
-    shadowColor: "rgba(122,92,255,0.35)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.3,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
@@ -10354,22 +10248,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.65)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.7)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     minWidth: 80,
   },
   energyHeroStatActive: {
-    borderColor: "rgba(122,92,255,0.4)",
-    backgroundColor: "rgba(122,92,255,0.14)",
+    borderColor: theme.colors.accent2,
+    backgroundColor: theme.colors.accent2,
   },
-  energyHeroStatValue: { color: stylesVars.ink, fontWeight: "900" },
+  energyHeroStatValue: { color: stylesVars.ink, fontWeight: "700" },
   energyHeroStatLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   energyHeroProgressWrap: {
     marginTop: 16,
@@ -10380,13 +10274,13 @@ const styles = StyleSheet.create({
   energyHeroProgressTrack: {
     width: "100%",
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.15)",
+    backgroundColor: theme.colors.stroke,
     overflow: "hidden",
   },
   energyHeroProgressFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.7)",
+    backgroundColor: theme.colors.accent,
   },
   energyHeroProgressMeta: {
     flexDirection: "row",
@@ -10398,16 +10292,16 @@ const styles = StyleSheet.create({
   },
   energyHeroMetaText: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     flexShrink: 1,
   },
   energyHeroHint: { marginTop: 6, color: stylesVars.subtext, fontWeight: "700" },
   utilityHeroCard: {
     marginTop: 14,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.22)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
-    shadowColor: "rgba(122,92,255,0.18)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.22,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -10421,8 +10315,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   utilityHeroTitleWrap: { gap: 2, flexShrink: 1, flex: 1, minWidth: 0 },
-  utilityHeroTitle: { color: stylesVars.ink, fontWeight: "900", fontSize: 16 },
-  utilityHeroSub: { color: stylesVars.subtext, fontWeight: "800", fontSize: 12 },
+  utilityHeroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 16 },
+  utilityHeroSub: { color: stylesVars.subtext, fontWeight: "600", fontSize: 12 },
   utilityHeroPillRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -10432,29 +10326,29 @@ const styles = StyleSheet.create({
   },
   utilityHeroPill: {
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 6,
   },
   utilityHeroPillActive: {
-    backgroundColor: "rgba(122,92,255,0.22)",
-    borderColor: "rgba(122,92,255,0.4)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  utilityHeroPillText: { color: stylesVars.subtext, fontWeight: "800" },
+  utilityHeroPillText: { color: stylesVars.subtext, fontWeight: "600" },
   utilityHeroPillTextActive: { color: stylesVars.ink },
   utilityHeroBody: { marginTop: 12 },
   utilityHeroOrb: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.24)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
-    shadowColor: "rgba(122,92,255,0.35)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.3,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
@@ -10474,14 +10368,14 @@ const styles = StyleSheet.create({
   utilityHeroOrbValue: {
     marginTop: 8,
     color: "#fff",
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 20,
     textAlign: "center",
   },
   utilityHeroOrbSub: {
     marginTop: 4,
     color: "rgba(255,255,255,0.85)",
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
     textAlign: "center",
   },
@@ -10509,7 +10403,7 @@ const styles = StyleSheet.create({
   waterOrb: {
     alignSelf: "center",
     overflow: "hidden",
-    shadowColor: "rgba(180,107,255,0.35)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.3,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
@@ -10525,17 +10419,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  waterOrbValue: { color: "#fff", fontWeight: "900", fontSize: 22 },
+  waterOrbValue: { color: "#fff", fontWeight: "700", fontSize: 22 },
   waterOrbSub: {
     marginTop: 6,
     color: "rgba(255,255,255,0.85)",
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   waterOrbPercent: {
     marginTop: 6,
     color: "rgba(255,255,255,0.9)",
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 12,
     letterSpacing: 0.4,
   },
@@ -10544,25 +10438,25 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  metricValue: { color: stylesVars.ink, fontWeight: "900", fontSize: 16 },
+  metricValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 16 },
   metricLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 11,
   },
   airHeroCard: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.22)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
-    shadowColor: "rgba(122,92,255,0.28)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.25,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -10582,11 +10476,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  airHeroTitle: { color: stylesVars.ink, fontWeight: "900", fontSize: 18 },
+  airHeroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 18 },
   airHeroSub: {
     marginTop: 2,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   airHeroBadge: {
@@ -10596,19 +10490,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
   },
   airHeroBadgeDot: { width: 6, height: 6, borderRadius: 3 },
-  airHeroBadgeText: { color: stylesVars.ink, fontWeight: "800" },
+  airHeroBadgeText: { color: stylesVars.ink, fontWeight: "600" },
   airHeroBody: { marginTop: 16, alignItems: "center" },
   airHeroScore: { flex: 1, minWidth: 0 },
-  airHeroLabel: { color: stylesVars.subtext, fontWeight: "800" },
-  airHeroValue: { color: stylesVars.ink, fontWeight: "900" },
+  airHeroLabel: { color: stylesVars.subtext, fontWeight: "600" },
+  airHeroValue: { color: stylesVars.ink, fontWeight: "700" },
   airHeroDescriptor: {
     marginTop: 4,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   airHeroMetaRow: {
     marginTop: 10,
@@ -10624,11 +10518,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
-  airHeroMetaText: { color: stylesVars.ink, fontWeight: "800", fontSize: 12 },
+  airHeroMetaText: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
   airHeroGaugeWrap: {
     alignItems: "center",
     justifyContent: "center",
@@ -10638,7 +10532,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
   },
   airHeroGaugeInner: {
     flex: 1,
@@ -10647,16 +10541,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  airHeroGaugeValue: { color: "#fff", fontWeight: "900" },
+  airHeroGaugeValue: { color: "#fff", fontWeight: "700" },
   airHeroGaugeLabel: {
     marginTop: 2,
     color: "rgba(255,255,255,0.85)",
-    fontWeight: "800",
+    fontWeight: "600",
   },
   airHeroUpdated: {
     marginTop: 10,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 11,
   },
   airHeroMetricRow: {
@@ -10670,17 +10564,17 @@ const styles = StyleSheet.create({
     minWidth: 90,
     paddingVertical: 10,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  airHeroMetricValue: { color: stylesVars.ink, fontWeight: "900", fontSize: 14 },
+  airHeroMetricValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 14 },
   airHeroMetricLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 11,
   },
   airMetricGrid: {
@@ -10693,27 +10587,27 @@ const styles = StyleSheet.create({
   airMetricCard: {
     paddingVertical: 12,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.86)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.12)",
+    borderColor: theme.colors.accent2,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "rgba(122,92,255,0.2)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  airMetricValue: { color: stylesVars.ink, fontWeight: "900", fontSize: 15 },
+  airMetricValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 15 },
   airMetricLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 10,
   },
   airSurfaceCard: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderColor: "rgba(122,92,255,0.18)",
-    shadowColor: "rgba(122,92,255,0.22)",
+    backgroundColor: theme.colors.card2,
+    borderColor: theme.colors.accent2,
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.2,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
@@ -10723,30 +10617,30 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.18)",
+    borderColor: theme.colors.accent2,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "rgba(122,92,255,0.2)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  airKpiValue: { color: stylesVars.ink, fontWeight: "900", fontSize: 16 },
+  airKpiValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 16 },
   airKpiLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 11,
   },
   airTrendCard: {
     marginTop: 10,
-    backgroundColor: "rgba(255,255,255,0.86)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.18)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
-    shadowColor: "rgba(122,92,255,0.2)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.2,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
@@ -10763,18 +10657,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
   },
-  airTrendText: { color: stylesVars.ink, fontWeight: "900", fontSize: 12 },
+  airTrendText: { color: stylesVars.ink, fontWeight: "700", fontSize: 12 },
   airTrendChartFrame: {
     marginTop: 12,
     paddingHorizontal: 8,
     paddingVertical: 10,
     borderRadius: 18,
-    backgroundColor: "rgba(122,92,255,0.08)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.14)",
+    borderColor: theme.colors.accent2,
   },
   airChart: {
     flexDirection: "row",
@@ -10786,9 +10680,9 @@ const styles = StyleSheet.create({
   airChartBar: {
     flex: 1,
     borderRadius: 10,
-    backgroundColor: "rgba(122,92,255,0.6)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.7)",
+    borderColor: theme.colors.stroke,
   },
   airLegendRow: {
     marginTop: 12,
@@ -10800,14 +10694,14 @@ const styles = StyleSheet.create({
   airLegendDot: { width: 8, height: 8, borderRadius: 4 },
   airLegendText: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 11,
   },
   airTrendUpdated: {
     marginTop: 10,
     textAlign: "center",
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 11,
   },
   airRecommendationRow: {
@@ -10818,9 +10712,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.12)",
+    borderColor: theme.colors.accent2,
   },
   airRecommendationText: {
     flex: 1,
@@ -10833,19 +10727,19 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.88)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.16)",
-    shadowColor: "rgba(122,92,255,0.2)",
+    borderColor: theme.colors.accent2,
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.18,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  airCompareTitle: { color: stylesVars.subtext, fontWeight: "800" },
+  airCompareTitle: { color: stylesVars.subtext, fontWeight: "600" },
   airCompareValue: {
     marginTop: 6,
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 16,
   },
   airCompareSub: {
@@ -10862,27 +10756,27 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.14)",
-    shadowColor: "rgba(122,92,255,0.18)",
+    borderColor: theme.colors.accent2,
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.16,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
   airSensorRowActive: {
-    borderColor: "rgba(122,92,255,0.4)",
-    backgroundColor: "rgba(180,107,255,0.2)",
+    borderColor: theme.colors.accent2,
+    backgroundColor: theme.colors.accent2,
   },
   airSensorDot: { width: 10, height: 10, borderRadius: 5 },
-  airSensorName: { color: stylesVars.ink, fontWeight: "900", fontSize: 13 },
+  airSensorName: { color: stylesVars.ink, fontWeight: "700", fontSize: 13 },
   airSensorSub: {
     marginTop: 2,
     color: stylesVars.subtext,
     fontWeight: "700",
     fontSize: 11,
   },
-  airSensorValue: { color: stylesVars.ink, fontWeight: "900", fontSize: 12 },
+  airSensorValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 12 },
   airAlertCard: {
     marginTop: 10,
     flexDirection: "row",
@@ -10891,11 +10785,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
     borderColor: "rgba(216,70,91,0.28)",
   },
-  airAlertText: { color: "#D8465B", fontWeight: "800", fontSize: 12 },
+  airAlertText: { color: "#D8465B", fontWeight: "600", fontSize: 12 },
   airAlertSliderBlock: { marginTop: 10 },
   airAlertSliderRow: {
     flexDirection: "row",
@@ -10904,12 +10798,12 @@ const styles = StyleSheet.create({
   },
   airAlertSliderLabel: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   airAlertSliderValue: {
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 12,
   },
   airAlertSliderWrap: {
@@ -10920,14 +10814,14 @@ const styles = StyleSheet.create({
   airAlertTrack: {
     height: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.14)",
+    backgroundColor: theme.colors.stroke,
     borderWidth: 0,
     overflow: "hidden",
   },
   airAlertTrackFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.72)",
+    backgroundColor: theme.colors.accent,
   },
   airAlertSlider: {
     position: "absolute",
@@ -10939,27 +10833,27 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: "center",
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   statusMetaText: {
     marginTop: 8,
     textAlign: "center",
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   openStatusProgressTrack: {
     marginTop: 10,
     width: "100%",
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.14)",
+    backgroundColor: theme.colors.stroke,
     overflow: "hidden",
   },
   openStatusProgressFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.7)",
+    backgroundColor: theme.colors.accent,
   },
   alertRow: {
     marginTop: 8,
@@ -10968,15 +10862,15 @@ const styles = StyleSheet.create({
     gap: 6,
     justifyContent: "center",
   },
-  alertText: { color: "#D8465B", fontWeight: "800", fontSize: 12 },
-  alertTextWarn: { color: "#B7791F", fontWeight: "800", fontSize: 12 },
+  alertText: { color: "#D8465B", fontWeight: "600", fontSize: 12 },
+  alertTextWarn: { color: "#B7791F", fontWeight: "600", fontSize: 12 },
   cameraFeed: {
     height: 200,
     borderRadius: 20,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.45)",
-    shadowColor: "rgba(122,92,255,0.35)",
+    borderColor: theme.colors.stroke,
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.25,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
@@ -10993,9 +10887,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   cameraLiveDot: {
     width: 6,
@@ -11003,21 +10897,21 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: theme.colors.accent,
   },
-  cameraLiveText: { color: stylesVars.ink, fontWeight: "900", fontSize: 12 },
+  cameraLiveText: { color: stylesVars.ink, fontWeight: "700", fontSize: 12 },
   cameraStatusText: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   gateStatusPill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
-  gateStatusText: { color: stylesVars.ink, fontWeight: "900", fontSize: 12 },
+  gateStatusText: { color: stylesVars.ink, fontWeight: "700", fontSize: 12 },
   cameraFeedBody: {
     flex: 1,
     alignItems: "center",
@@ -11029,7 +10923,7 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 14,
   },
-  cameraPreviewText: { color: stylesVars.subtext, fontWeight: "800" },
+  cameraPreviewText: { color: stylesVars.subtext, fontWeight: "600" },
   cameraPreviewSubText: { color: stylesVars.subtext, fontWeight: "700" },
   waterUsageHint: {
     color: stylesVars.subtext,
@@ -11045,7 +10939,7 @@ const styles = StyleSheet.create({
   waterUsageBar: {
     width: 10,
     borderRadius: 8,
-    backgroundColor: "rgba(122,92,255,0.6)",
+    backgroundColor: theme.colors.accent2,
   },
   cameraDetectRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   cameraDetectPill: {
@@ -11055,9 +10949,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   cameraDetectPillAlert: {
     flexDirection: "row",
@@ -11066,11 +10960,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(255,214,214,0.7)",
+    backgroundColor: "#30212A",
     borderWidth: 1,
-    borderColor: "rgba(200,60,60,0.2)",
+    borderColor: "#A35C6C",
   },
-  cameraDetectText: { color: stylesVars.ink, fontWeight: "800", fontSize: 12 },
+  cameraDetectText: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
   cameraPresenceRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -11083,9 +10977,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   cameraMemberRow: {
     flexDirection: "row",
@@ -11093,9 +10987,9 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.14)",
+    borderBottomColor: theme.colors.stroke,
   },
-  cameraMemberName: { color: stylesVars.ink, fontWeight: "900", fontSize: 13 },
+  cameraMemberName: { color: stylesVars.ink, fontWeight: "700", fontSize: 13 },
   cameraMemberRole: {
     color: stylesVars.subtext,
     fontWeight: "700",
@@ -11106,13 +11000,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
-  cameraPresenceHome: { backgroundColor: "rgba(180,107,255,0.22)" },
-  cameraPresenceAway: { backgroundColor: "rgba(255,255,255,0.6)" },
+  cameraPresenceHome: { backgroundColor: theme.colors.accent2 },
+  cameraPresenceAway: { backgroundColor: theme.colors.card2 },
   cameraPresenceText: {
     color: stylesVars.ink,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 11,
   },
   cameraEventRow: {
@@ -11139,9 +11033,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     padding: 12,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
+    borderColor: theme.colors.stroke,
   },
   speakerNowInner: {
     borderRadius: 18,
@@ -11151,9 +11045,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   speakerCover: {
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
+    borderColor: theme.colors.stroke,
     overflow: "hidden",
   },
   speakerCoverInner: {
@@ -11164,7 +11058,7 @@ const styles = StyleSheet.create({
   speakerNowMeta: { flex: 1, minWidth: 0 },
   speakerTrackTitle: {
     color: "#fff",
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 16,
   },
   speakerTrackArtist: {
@@ -11183,13 +11077,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
   },
   speakerSourceText: {
-    color: "rgba(12,12,18,0.8)",
-    fontWeight: "900",
+    color: theme.colors.text,
+    fontWeight: "700",
     fontSize: 11,
   },
   speakerProgressRow: {
@@ -11202,19 +11096,19 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: theme.colors.card2,
     overflow: "hidden",
   },
   speakerProgressFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.accent,
   },
   speakerTime: {
     width: 42,
     textAlign: "center",
     color: "rgba(255,255,255,0.85)",
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 11,
   },
   speakerVisualizerRow: {
@@ -11229,7 +11123,7 @@ const styles = StyleSheet.create({
   speakerVisualizerBar: {
     width: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: theme.colors.card2,
   },
   speakerSliderRow: {
     flexDirection: "row",
@@ -11239,12 +11133,12 @@ const styles = StyleSheet.create({
   },
   speakerSliderLabel: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   speakerSliderValue: {
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 12,
   },
   speakerSlider: { marginTop: 6, marginBottom: 2 },
@@ -11252,15 +11146,15 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   mediaBtnActive: {
-    backgroundColor: "rgba(180,107,255,0.22)",
-    borderColor: "rgba(122,92,255,0.3)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
   actionRow: {
     flexDirection: "row",
@@ -11277,17 +11171,17 @@ const styles = StyleSheet.create({
     height: 92,
     width: 92,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.70)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
   },
   modeTileActive: {
-    backgroundColor: "rgba(255,255,255,0.84)",
-    borderColor: "rgba(122,92,255,0.25)",
-    shadowColor: "rgba(122,92,255,0.40)",
+    backgroundColor: theme.colors.card2,
+    borderColor: theme.colors.accent2,
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.25,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
@@ -11296,9 +11190,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -11308,13 +11202,13 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "rgba(122,92,255,0.65)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.35,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
-  modeText: { color: "rgba(12,12,18,0.58)", fontWeight: "900", fontSize: 12 },
-  modeTextActive: { color: "rgba(12,12,18,0.86)" },
+  modeText: { color: theme.colors.subtext, fontWeight: "700", fontSize: 12 },
+  modeTextActive: { color: theme.colors.text },
   fanHeroCardFill: { flex: 1, alignSelf: "stretch", marginTop: 0 },
   fanHeroBodyFill: { flex: 1 },
   gateAutoLabel: { marginBottom: 4 },
@@ -11325,9 +11219,9 @@ const styles = StyleSheet.create({
     width: 170,
     height: 200,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -11336,9 +11230,9 @@ const styles = StyleSheet.create({
     width: 120,
     height: 170,
     borderRadius: 16,
-    backgroundColor: "rgba(180,107,255,0.35)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.35)",
+    borderColor: theme.colors.accent2,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -11346,31 +11240,31 @@ const styles = StyleSheet.create({
     width: 26,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.8)",
+    backgroundColor: theme.colors.card2,
     position: "absolute",
     right: 14,
   },
   doorTitle: {
     marginTop: 12,
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 16,
   },
-  doorStatus: { marginTop: 4, color: stylesVars.subtext, fontWeight: "800" },
+  doorStatus: { marginTop: 4, color: stylesVars.subtext, fontWeight: "600" },
 
   // Light UI
   lightLayout: { gap: 12 },
   lightLayoutRow: { flexDirection: "row", alignItems: "stretch" },
   lightHeroMetaCard: {
-    backgroundColor: "rgba(255,255,255,0.28)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: theme.colors.stroke,
     gap: 8,
   },
   lightModeTileBase: {
-    backgroundColor: "rgba(255,255,255,0.70)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
@@ -11389,12 +11283,12 @@ const styles = StyleSheet.create({
   lightCenterOrb: {
     alignSelf: "center",
     overflow: "hidden",
-    shadowColor: "rgba(180,107,255,0.55)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.35,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
   },
-  lightCenterOrbLight: { borderWidth: 1, borderColor: "rgba(0,0,0,0.08)" },
+  lightCenterOrbLight: { borderWidth: 1, borderColor: theme.colors.stroke },
   lightCenterInner: {
     flex: 1,
     alignItems: "center",
@@ -11403,8 +11297,8 @@ const styles = StyleSheet.create({
   lightCenterInnerLight: {
     borderWidth: 1,
   },
-  lightCenterValue: { color: "#fff", fontWeight: "900" },
-  lightCenterRoom: { color: "rgba(255,255,255,0.85)", fontWeight: "800" },
+  lightCenterValue: { color: "#fff", fontWeight: "700" },
+  lightCenterRoom: { color: "rgba(255,255,255,0.85)", fontWeight: "600" },
 
   colorRow: {
     flexDirection: "row",
@@ -11415,9 +11309,9 @@ const styles = StyleSheet.create({
   },
   swatch: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: theme.colors.stroke,
   },
-  swatchActive: { borderColor: "rgba(180,107,255,0.8)", borderWidth: 2 },
+  swatchActive: { borderColor: theme.colors.accent2, borderWidth: 2 },
 
   sceneRow: {
     flexDirection: "row",
@@ -11426,20 +11320,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  sceneText: { color: stylesVars.ink, fontWeight: "900" },
+  sceneText: { color: stylesVars.ink, fontWeight: "700" },
   sceneCardItem: {
     flex: 1,
     minWidth: 86,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
   sceneIconWrap: {
     borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.05)",
+    backgroundColor: theme.colors.bg0,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -11475,11 +11369,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tvHeroTitleWrap: { flex: 1, minWidth: 0 },
-  tvHeroTitle: { color: stylesVars.ink, fontWeight: "900", fontSize: 18 },
+  tvHeroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 18 },
   tvHeroRoom: {
     marginTop: 2,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   tvHeroPill: {
@@ -11487,20 +11381,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   tvHeroPillActive: {
     backgroundColor: "rgba(46,169,201,0.18)",
     borderColor: "rgba(46,169,201,0.32)",
   },
-  tvHeroPillText: { color: stylesVars.subtext, fontWeight: "800" },
+  tvHeroPillText: { color: stylesVars.subtext, fontWeight: "600" },
   tvHeroPillTextActive: { color: stylesVars.ink },
   tvScreenFrame: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
+    borderColor: theme.colors.stroke,
     backgroundColor: "rgba(13,20,30,0.12)",
     overflow: "hidden",
   },
@@ -11519,11 +11413,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderColor: theme.colors.stroke,
   },
-  tvScreenBadgeText: { color: "#fff", fontWeight: "800" },
+  tvScreenBadgeText: { color: "#fff", fontWeight: "600" },
   tvScreenMeta: { color: "rgba(255,255,255,0.72)", fontWeight: "700" },
   tvScreenCenter: {
     flex: 1,
@@ -11531,7 +11425,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  tvScreenTitle: { color: "#fff", fontWeight: "900", textAlign: "center" },
+  tvScreenTitle: { color: "#fff", fontWeight: "700", textAlign: "center" },
   tvScreenSubtitle: {
     color: "rgba(255,255,255,0.82)",
     fontWeight: "700",
@@ -11549,15 +11443,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 6,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: theme.colors.stroke,
   },
   tvScreenFooterLabel: {
     color: "rgba(255,255,255,0.7)",
     fontWeight: "700",
   },
-  tvScreenFooterValue: { color: "#fff", fontWeight: "800" },
+  tvScreenFooterValue: { color: "#fff", fontWeight: "600" },
   tvVolumeCard: { alignItems: "center", gap: 8 },
   tvVolumeHeader: {
     width: "100%",
@@ -11570,17 +11464,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   tvVolumeMutePillActive: {
     backgroundColor: "rgba(236,88,88,0.18)",
     borderColor: "rgba(236,88,88,0.35)",
   },
-  tvVolumeMuteText: { color: stylesVars.subtext, fontWeight: "800" },
+  tvVolumeMuteText: { color: stylesVars.subtext, fontWeight: "600" },
   tvVolumeMuteTextActive: { color: stylesVars.ink },
-  tvVolumeValue: { marginTop: 6, color: "#fff", fontWeight: "900" },
+  tvVolumeValue: { marginTop: 6, color: "#fff", fontWeight: "700" },
   tvVolumeLabel: {
     marginTop: 2,
     color: "rgba(255,255,255,0.82)",
@@ -11597,7 +11491,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
   },
-  tvRemoteTitle: { color: stylesVars.subtext, fontWeight: "800" },
+  tvRemoteTitle: { color: stylesVars.subtext, fontWeight: "600" },
   tvRemoteBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -11605,18 +11499,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
-  tvRemoteBadgeText: { color: stylesVars.ink, fontWeight: "800", fontSize: 11 },
+  tvRemoteBadgeText: { color: stylesVars.ink, fontWeight: "600", fontSize: 11 },
   tvOffLottie: {},
   tvPortraitRow: { flexDirection: "row", alignItems: "stretch" },
   tvPortraitColumn: { flex: 1, minWidth: 0, alignItems: "stretch" },
   tvPortraitFrame: {
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
+    borderColor: theme.colors.stroke,
   },
   deviceLottieDock: {
     alignSelf: "center",
@@ -11634,7 +11528,7 @@ const styles = StyleSheet.create({
   },
   openStatusValue: {
     color: "#fff",
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 22,
     textAlign: "center",
     textShadowColor: "rgba(0,0,0,0.35)",
@@ -11643,7 +11537,7 @@ const styles = StyleSheet.create({
   openStatusLabel: {
     marginTop: 4,
     color: "rgba(255,255,255,0.85)",
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
     textAlign: "center",
     textShadowColor: "rgba(0,0,0,0.35)",
@@ -11652,9 +11546,9 @@ const styles = StyleSheet.create({
   laundryHeroCard: {
     marginTop: 14,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.28)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
-    shadowColor: "rgba(122,92,255,0.35)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.25,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -11675,48 +11569,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.16)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.28)",
+    borderColor: theme.colors.accent2,
   },
   laundryNoticeText: {
     color: stylesVars.ink,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
-  laundryNoticeTextDone: { color: "#2F8A5B" },
+  laundryNoticeTextDone: { color: theme.colors.accent },
   laundryHeroStatusPill: {
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   laundryHeroStatusPillActive: {
-    backgroundColor: "rgba(122,92,255,0.22)",
-    borderColor: "rgba(122,92,255,0.4)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  laundryHeroStatusText: { color: stylesVars.subtext, fontWeight: "800" },
+  laundryHeroStatusText: { color: stylesVars.subtext, fontWeight: "600" },
   laundryHeroStatusTextActive: { color: stylesVars.ink },
   laundryHeroBadge: {
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  laundryHeroBadgeText: { color: stylesVars.ink, fontWeight: "800" },
+  laundryHeroBadgeText: { color: stylesVars.ink, fontWeight: "600" },
   laundryHeroBody: {
     marginTop: 12,
   },
   laundryHeroLottieWrap: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.24)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
   },
   laundryHeroLottieGlow: {
@@ -11734,7 +11628,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     backgroundColor: "rgba(120,200,255,0.45)",
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.85)",
+    borderColor: theme.colors.stroke,
     shadowColor: "rgba(120,200,255,0.6)",
     shadowOpacity: 0.8,
     shadowRadius: 8,
@@ -11752,7 +11646,7 @@ const styles = StyleSheet.create({
   },
   laundryHeroPhase: {
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   laundryHeroStack: {
     alignSelf: "stretch",
@@ -11764,18 +11658,18 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   laundryHeroInfo: { flex: 1, minWidth: 0 },
-  laundryCycleText: { color: stylesVars.ink, fontWeight: "900" },
-  laundryCycleSubText: { color: stylesVars.subtext, fontWeight: "800" },
+  laundryCycleText: { color: stylesVars.ink, fontWeight: "700" },
+  laundryCycleSubText: { color: stylesVars.subtext, fontWeight: "600" },
   laundryProgressTrack: {
     marginTop: 10,
     alignSelf: "stretch",
-    backgroundColor: "rgba(122,92,255,0.15)",
+    backgroundColor: theme.colors.stroke,
     borderRadius: 999,
     overflow: "hidden",
   },
   laundryProgressFill: {
     height: "100%",
-    backgroundColor: "rgba(122,92,255,0.7)",
+    backgroundColor: theme.colors.accent,
     borderRadius: 999,
   },
   laundryStatsRow: {
@@ -11797,11 +11691,11 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
   },
-  laundryStatValue: { color: stylesVars.ink, fontWeight: "900" },
+  laundryStatValue: { color: stylesVars.ink, fontWeight: "700" },
   laundryStatLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   laundryControlGrid: {
     flexDirection: "column",
@@ -11820,9 +11714,9 @@ const styles = StyleSheet.create({
   windowHeroCard: {
     marginTop: 14,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.25)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
-    shadowColor: "rgba(122,92,255,0.28)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.22,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
@@ -11834,22 +11728,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   windowHeroTitleWrap: { gap: 2, flexShrink: 1 },
-  windowHeroTitle: { color: stylesVars.ink, fontWeight: "900", fontSize: 16 },
-  windowHeroSub: { color: stylesVars.subtext, fontWeight: "800", fontSize: 12 },
+  windowHeroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 16 },
+  windowHeroSub: { color: stylesVars.subtext, fontWeight: "600", fontSize: 12 },
   windowHeroPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   windowHeroPillActive: {
-    backgroundColor: "rgba(122,92,255,0.18)",
-    borderColor: "rgba(122,92,255,0.4)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  windowHeroPillText: { color: stylesVars.subtext, fontWeight: "800" },
+  windowHeroPillText: { color: stylesVars.subtext, fontWeight: "600" },
   windowHeroPillTextActive: { color: stylesVars.ink },
   windowHeroBody: {
     marginTop: 14,
@@ -11857,9 +11751,9 @@ const styles = StyleSheet.create({
   windowHeroOrb: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.2)",
+    borderColor: theme.colors.accent2,
     overflow: "hidden",
   },
   windowHeroOrbClosed: { opacity: 0.7 },
@@ -11879,12 +11773,12 @@ const styles = StyleSheet.create({
   },
   windowHeroMeterLabel: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   windowHeroMeterValue: {
     color: stylesVars.ink,
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 18,
   },
   windowHeroSliderWrap: {
@@ -11903,21 +11797,21 @@ const styles = StyleSheet.create({
     marginTop: 0,
     alignSelf: "stretch",
     height: 10,
-    backgroundColor: "rgba(122,92,255,0.14)",
+    backgroundColor: theme.colors.stroke,
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(122,92,255,0.22)",
+    borderColor: theme.colors.accent2,
   },
   windowHeroTrackFill: {
     height: "100%",
-    backgroundColor: "rgba(122,92,255,0.7)",
+    backgroundColor: theme.colors.accent,
     borderRadius: 999,
   },
   windowHeroHint: {
     marginTop: 8,
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     textAlign: "center",
   },
   windowQuickSetWrap: {
@@ -11929,30 +11823,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  windowQuickSetLabel: { color: stylesVars.subtext, fontWeight: "800" },
+  windowQuickSetLabel: { color: stylesVars.subtext, fontWeight: "600" },
   windowQuickSetRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   windowQuickSetButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 14,
-    backgroundColor: "rgba(255,255,255,0.82)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
+    borderColor: theme.colors.stroke,
   },
   windowQuickSetButtonActive: {
-    backgroundColor: "rgba(122,92,255,0.85)",
-    borderColor: "rgba(122,92,255,0.9)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  windowQuickSetText: { color: stylesVars.subtext, fontWeight: "800" },
+  windowQuickSetText: { color: stylesVars.subtext, fontWeight: "600" },
   windowQuickSetTextActive: { color: "#fff" },
   orbActionBtn: {
     width: 40,
     height: 40,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.65)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -11968,9 +11862,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
@@ -11984,14 +11878,14 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 38,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
   },
-  remoteText: { color: stylesVars.ink, fontWeight: "900", fontSize: 9 },
+  remoteText: { color: stylesVars.ink, fontWeight: "700", fontSize: 9 },
   remotePadWrap: {
     alignItems: "center",
     justifyContent: "center",
@@ -12011,9 +11905,9 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -12022,9 +11916,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 13,
-    backgroundColor: "rgba(255,255,255,0.35)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -12042,7 +11936,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  navCenterText: { color: stylesVars.ink, fontWeight: "900" },
+  navCenterText: { color: stylesVars.ink, fontWeight: "700" },
 
   // Coffee UI
   coffeeOrb: {
@@ -12050,53 +11944,53 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: "rgba(180,107,255,0.2)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
   },
   coffeeOrbInner: { alignItems: "center", gap: 6 },
-  coffeeName: { color: "#fff", fontWeight: "900", marginTop: 6 },
-  coffeeRoom: { color: "rgba(255,255,255,0.85)", fontWeight: "800" },
+  coffeeName: { color: "#fff", fontWeight: "700", marginTop: 6 },
+  coffeeRoom: { color: "rgba(255,255,255,0.85)", fontWeight: "600" },
   coffeeCup: {
     marginTop: 8,
     width: 68,
     height: 68,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.24)",
+    borderColor: theme.colors.stroke,
     overflow: "hidden",
     justifyContent: "flex-end",
   },
   coffeeFill: {
     width: "100%",
-    backgroundColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent2,
   },
 
   editCard: {
     borderRadius: 22,
     padding: 16,
-    backgroundColor: "rgba(255,255,255,0.96)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.55)",
+    borderColor: theme.colors.stroke,
   },
-  editTitle: { color: stylesVars.ink, fontWeight: "900", fontSize: 18 },
+  editTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 18 },
   editSub: { color: stylesVars.subtext, fontWeight: "700", marginTop: 6 },
   editLabel: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     marginTop: 12,
     marginBottom: 6,
   },
   editInput: {
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(12,12,18,0.04)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     paddingHorizontal: 12,
     color: stylesVars.ink,
     fontWeight: "700",
@@ -12106,17 +12000,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 34,
     borderRadius: 999,
-    backgroundColor: "rgba(12,12,18,0.05)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   roomPillActive: {
-    backgroundColor: "rgba(107,60,255,0.16)",
-    borderColor: "rgba(107,60,255,0.3)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  roomPillText: { color: stylesVars.subtext, fontWeight: "800", fontSize: 12 },
+  roomPillText: { color: stylesVars.subtext, fontWeight: "600", fontSize: 12 },
   roomPillTextActive: { color: stylesVars.ink },
   stackRow: {
     flexDirection: "row",
@@ -12130,15 +12024,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   stackPillActive: {
-    backgroundColor: "#6B3CFF",
-    borderColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent,
   },
-  stackPillText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
+  stackPillText: { color: theme.colors.subtext, fontWeight: "600" },
   stackPillTextActive: { color: "#fff" },
   stackTargetsRow: {
     flexDirection: "row",
@@ -12153,16 +12047,16 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(12,12,18,0.04)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
   },
   stackTargetPillActive: {
-    backgroundColor: "rgba(107,60,255,0.2)",
-    borderColor: "rgba(107,60,255,0.5)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  stackTargetText: { color: stylesVars.ink, fontWeight: "800" },
-  stackTargetTextActive: { color: "#6B3CFF" },
+  stackTargetText: { color: stylesVars.ink, fontWeight: "600" },
+  stackTargetTextActive: { color: theme.colors.accent },
   stackHint: {
     color: stylesVars.muted,
     fontWeight: "700",
@@ -12174,27 +12068,27 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  editGhostText: { color: stylesVars.subtext, fontWeight: "800" },
+  editGhostText: { color: stylesVars.subtext, fontWeight: "600" },
   editPrimary: {
     flex: 1,
     height: 42,
     borderRadius: 12,
-    backgroundColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent2,
     alignItems: "center",
     justifyContent: "center",
   },
   editPrimaryDisabled: { opacity: 0.6 },
-  editPrimaryText: { color: "#FFFFFF", fontWeight: "900" },
+  editPrimaryText: { color: "#FFFFFF", fontWeight: "700" },
   scheduleCard: {
     borderRadius: 22,
     padding: 16,
-    backgroundColor: "rgba(255,255,255,0.96)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.55)",
+    borderColor: theme.colors.stroke,
   },
   scheduleRow: {
     flexDirection: "row",
@@ -12203,11 +12097,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
   },
-  scheduleTime: { color: stylesVars.ink, fontWeight: "900" },
+  scheduleTime: { color: stylesVars.ink, fontWeight: "700" },
   scheduleDays: {
     color: stylesVars.subtext,
     fontWeight: "700",
@@ -12218,19 +12112,19 @@ const styles = StyleSheet.create({
     width: 54,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(12,12,18,0.08)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   scheduleToggleActive: {
-    backgroundColor: "rgba(122,92,255,0.28)",
-    borderColor: "rgba(122,92,255,0.35)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
   scheduleToggleText: {
     color: stylesVars.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   scheduleToggleTextActive: { color: stylesVars.ink },
@@ -12239,44 +12133,44 @@ const styles = StyleSheet.create({
     marginTop: 12,
     height: 40,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
   },
-  addScheduleText: { color: stylesVars.ink, fontWeight: "900" },
+  addScheduleText: { color: stylesVars.ink, fontWeight: "700" },
   timeRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   timeInput: {
     width: 60,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(12,12,18,0.04)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     textAlign: "center",
     color: stylesVars.ink,
     fontWeight: "700",
   },
-  timeColon: { fontSize: 18, fontWeight: "900", color: stylesVars.ink },
+  timeColon: { fontSize: 18, fontWeight: "700", color: stylesVars.ink },
   dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
   dayChip: {
     paddingHorizontal: 10,
     height: 30,
     borderRadius: 999,
-    backgroundColor: "rgba(12,12,18,0.05)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   dayChipActive: {
-    backgroundColor: "rgba(107,60,255,0.16)",
-    borderColor: "rgba(107,60,255,0.3)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent2,
   },
-  dayChipText: { color: stylesVars.subtext, fontWeight: "800", fontSize: 12 },
+  dayChipText: { color: stylesVars.subtext, fontWeight: "600", fontSize: 12 },
   dayChipTextActive: { color: stylesVars.ink },
   editDelete: {
     marginTop: 12,
@@ -12284,9 +12178,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "rgba(255, 99, 132, 0.18)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.45)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  editDeleteText: { color: "#8b1e3a", fontWeight: "900" },
+  editDeleteText: { color: "#FFB4C1", fontWeight: "700" },
 });

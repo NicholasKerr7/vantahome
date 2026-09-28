@@ -163,7 +163,7 @@ export default function RoomScenesRow({
             onPress={() => setShowInfo(false)}
           />
           <LinearGradient
-            colors={["rgba(255,255,255,0.98)", "rgba(245,238,255,0.92)"]}
+            colors={[theme.colors.card, theme.colors.card2]}
             start={{ x: 0.1, y: 0.1 }}
             end={{ x: 1, y: 1 }}
             style={infoCardStyle}
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  h: { color: theme.colors.text, fontWeight: "900", fontSize: 16 },
+  h: { color: theme.colors.text, fontWeight: "700", fontSize: 16 },
   hChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -201,33 +201,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
+    borderColor: theme.colors.stroke,
   },
   hChipPressed: { transform: [{ scale: 0.98 }] },
-  hChipText: { color: theme.colors.subtext, fontWeight: "800", fontSize: 12 },
+  hChipText: { color: theme.colors.subtext, fontWeight: "600", fontSize: 12 },
 
   row: { gap: 10, paddingTop: 12, paddingBottom: 6 },
   pill: {
     paddingHorizontal: 14,
     height: 40,
     borderRadius: 18,
-    backgroundColor: "rgba(180,107,255,0.20)",
+    backgroundColor: theme.colors.accent2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   pillActive: {
-    backgroundColor: "rgba(180,107,255,0.42)",
-    borderColor: "rgba(180,107,255,0.75)",
+    backgroundColor: theme.colors.accent2,
+    borderColor: theme.colors.accent,
     shadowColor: theme.colors.glow,
     shadowOpacity: 0.35,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  pillText: { color: theme.colors.text, fontWeight: "900" },
+  pillText: { color: theme.colors.text, fontWeight: "700" },
   pillTextActive: { color: "#FFFFFF" },
   infoOverlay: {
     flex: 1,
@@ -238,12 +238,12 @@ const styles = StyleSheet.create({
   infoBackdrop: { ...StyleSheet.absoluteFillObject },
   infoCard: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
+    borderColor: theme.colors.stroke,
     alignSelf: "center",
   },
-  infoTitle: { color: "#1B1535", fontWeight: "900" },
+  infoTitle: { color: theme.colors.text, fontWeight: "700" },
   infoText: {
-    color: "rgba(12,12,18,0.62)",
+    color: theme.colors.subtext,
     fontWeight: "700",
     marginTop: 8,
     lineHeight: 18,
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent,
   },
-  infoButtonText: { color: "#FFFFFF", fontWeight: "900" },
+  infoButtonText: { color: theme.colors.bg0, fontWeight: "700" },
 });

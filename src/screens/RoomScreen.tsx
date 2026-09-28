@@ -12,13 +12,12 @@ import {
   type ViewStyle,
 } from "react-native";
 import Pressable from "../components/Pressable";
-import { LinearGradient } from "expo-linear-gradient";
+import CinematicSurface from "../components/CinematicSurface";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { RootStackParamList } from "../app/AppNavigator";
 import { openHomeFeature } from "../app/homeNavigation";
-import BackgroundLines from "../components/BackgroundLines";
 import RoomScenesRow from "../components/RoomScenesRow";
 import DeviceTile from "../components/DeviceTile";
 import DeviceBottomSheet from "../components/DeviceBottomSheet";
@@ -693,8 +692,7 @@ export default function RoomScreen({ route, navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={styles.root}>
-      <BackgroundLines />
+    <CinematicSurface variant="quiet" style={styles.root}>
 
       <View
         style={contentStyle}
@@ -841,7 +839,7 @@ export default function RoomScreen({ route, navigation }: Props) {
         visible={showAddDevice}
         onRequestClose={() => setShowAddDevice(false)}
         onBackdropPress={() => setShowAddDevice(false)}
-        colors={["rgba(255,255,255,0.96)", "rgba(246,238,255,0.90)"]}
+        colors={[theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <Text style={modalTitleTextStyle}>Add device</Text>
@@ -872,7 +870,7 @@ export default function RoomScreen({ route, navigation }: Props) {
                   <DeviceIcon
                     kind={option.kind}
                     size={16}
-                    color={active ? "#fff" : "rgba(12,12,18,0.7)"}
+                    color={active ? theme.colors.bg0 : theme.colors.subtext}
                   />
                   <Text style={modalTypeTextStyle(active)}>
                     {option.label}
@@ -924,7 +922,7 @@ export default function RoomScreen({ route, navigation }: Props) {
               setNewName(value);
             }}
             placeholder="Device name"
-            placeholderTextColor="rgba(12,12,18,0.45)"
+            placeholderTextColor={theme.colors.muted}
             style={modalInputStyle}
           />
         </ModalField>
@@ -948,12 +946,12 @@ export default function RoomScreen({ route, navigation }: Props) {
           ]}
         />
       </ModalCard>
-    </LinearGradient>
+    </CinematicSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: theme.colors.bg0 },
   content: { flex: 1, alignSelf: "stretch" },
   gridList: { width: "100%", alignSelf: "stretch", flex: 1 },
   gridContent: { width: "100%", flexGrow: 1 },
@@ -968,14 +966,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.10)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   iconBtnSpacer: { width: 40, height: 40 },
-  title: { color: theme.colors.text, fontWeight: "900" },
+  title: { color: theme.colors.text, fontWeight: "700" },
   sub: {
     color: theme.colors.subtext,
     fontWeight: "700",
@@ -987,27 +985,27 @@ const styles = StyleSheet.create({
     bottom: 22,
     height: 48,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: theme.colors.stroke,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
   },
-  undoText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
-  undoAction: { color: "#6B3CFF", fontWeight: "900" },
+  undoText: { color: theme.colors.subtext, fontWeight: "600" },
+  undoAction: { color: theme.colors.accent, fontWeight: "700" },
   modalCard: {
     borderRadius: 22,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.55)",
+    borderColor: theme.colors.stroke,
   },
-  modalTitle: { color: "#1B1535", fontWeight: "900", fontSize: 18 },
-  modalSub: { color: "rgba(12,12,18,0.55)", fontWeight: "700", marginTop: 6 },
+  modalTitle: { color: theme.colors.text, fontWeight: "700", fontSize: 18 },
+  modalSub: { color: theme.colors.subtext, fontWeight: "700", marginTop: 6 },
   modalLabel: {
-    color: "rgba(12,12,18,0.6)",
-    fontWeight: "800",
+    color: theme.colors.subtext,
+    fontWeight: "600",
     marginTop: 12,
     marginBottom: 6,
   },
@@ -1019,20 +1017,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 38,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   deviceTypePillActive: {
-    backgroundColor: "#6B3CFF",
-    borderColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
   },
   deviceTypeText: {
-    color: "rgba(12,12,18,0.7)",
-    fontWeight: "800",
+    color: theme.colors.subtext,
+    fontWeight: "600",
     fontSize: 12,
   },
-  deviceTypeTextActive: { color: "#fff" },
+  deviceTypeTextActive: { color: theme.colors.bg0 },
   stackRow: {
     flexDirection: "row",
     gap: 10,
@@ -1045,29 +1043,29 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
   },
   stackPillActive: {
-    backgroundColor: "#6B3CFF",
-    borderColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
   },
-  stackPillText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
-  stackPillTextActive: { color: "#fff" },
+  stackPillText: { color: theme.colors.subtext, fontWeight: "600" },
+  stackPillTextActive: { color: theme.colors.bg0 },
   stackHint: {
-    color: "rgba(12,12,18,0.5)",
+    color: theme.colors.subtext,
     fontWeight: "700",
     marginBottom: 6,
   },
   modalInput: {
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(12,12,18,0.04)",
+    backgroundColor: theme.colors.bg0,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     paddingHorizontal: 12,
-    color: "#1B1535",
+    color: theme.colors.text,
     fontWeight: "700",
   },
   modalRow: { flexDirection: "row", gap: 10, marginTop: 16 },
@@ -1076,19 +1074,19 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.12)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  modalGhostText: { color: "rgba(12,12,18,0.7)", fontWeight: "800" },
+  modalGhostText: { color: theme.colors.subtext, fontWeight: "600" },
   modalPrimary: {
     flex: 1,
     height: 42,
     borderRadius: 12,
-    backgroundColor: "#6B3CFF",
+    backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
   },
   modalPrimaryDisabled: { opacity: 0.5 },
-  modalPrimaryText: { color: "#fff", fontWeight: "900" },
+  modalPrimaryText: { color: theme.colors.bg0, fontWeight: "700" },
 });

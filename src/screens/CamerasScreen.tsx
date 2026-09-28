@@ -2,11 +2,10 @@ import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { LinearGradient } from "expo-linear-gradient";
+import CinematicSurface from "../components/CinematicSurface";
 import ScreenFrame from "../components/ScreenFrame";
 import ScreenSectionLayout from "../components/ScreenSectionLayout";
 import HeaderPill from "../components/HeaderPill";
-import BackgroundLines from "../components/BackgroundLines";
 import Pressable from "../components/Pressable";
 import LiveVideoPlayer from "../components/LiveVideoPlayer";
 import CameraThumbnail from "../components/CameraThumbnail";
@@ -183,11 +182,11 @@ export default function CamerasScreen({ navigation }: Props) {
       height: pillHeight,
       borderRadius: Math.round(pillHeight / 2),
       backgroundColor: active
-        ? "rgba(122,92,255,0.28)"
-        : "rgba(255,255,255,0.6)",
+        ? theme.colors.accent2
+        : theme.colors.card2,
       borderColor: active
-        ? "rgba(122,92,255,0.6)"
-        : "rgba(0,0,0,0.08)",
+        ? theme.colors.accent2
+        : theme.colors.stroke,
     },
   ];
   const statusTextStyle = (active: boolean): StyleProp<TextStyle> => [
@@ -285,10 +284,7 @@ export default function CamerasScreen({ navigation }: Props) {
   if (!canViewCamera || protectedAccess.state !== "granted") {
     const checking = canViewCamera && protectedAccess.state === "checking";
     return (
-      <LinearGradient
-        colors={[theme.colors.bg1, theme.colors.bg0]}
-        style={styles.protectedRoot}
-      >
+      <CinematicSurface variant="quiet" style={styles.protectedRoot}>
         <Ionicons
           name={checking ? "scan-outline" : "lock-closed-outline"}
           size={36}
@@ -321,17 +317,13 @@ export default function CamerasScreen({ navigation }: Props) {
             </Pressable>
           ) : null}
         </View>
-      </LinearGradient>
+      </CinematicSurface>
     );
   }
 
   return (
     <RenderProfiler id="CamerasScreen">
-      <LinearGradient
-        colors={[theme.colors.bg1, theme.colors.bg0]}
-        style={styles.root}
-      >
-        <BackgroundLines />
+      <CinematicSurface variant="quiet" style={styles.root}>
         <View style={contentStyle}>
           <ScreenFrame
             isPortrait={isPortrait}
@@ -579,8 +571,8 @@ export default function CamerasScreen({ navigation }: Props) {
                               size={Math.round(12 * scale)}
                               color={
                                 isOnline
-                                  ? "rgba(36,28,72,0.9)"
-                                  : "rgba(30,30,40,0.7)"
+                                  ? theme.colors.accent
+                                  : theme.colors.subtext
                               }
                             />
                             <Text style={statusTextStyle(isOnline)}>
@@ -628,13 +620,13 @@ export default function CamerasScreen({ navigation }: Props) {
             </ScreenSectionLayout>
           </ScreenFrame>
         </View>
-      </LinearGradient>
+      </CinematicSurface>
     </RenderProfiler>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: theme.colors.bg0 },
   protectedRoot: {
     flex: 1,
     alignItems: "center",
@@ -645,7 +637,7 @@ const styles = StyleSheet.create({
   protectedTitle: {
     color: theme.colors.text,
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
   },
   protectedText: {
@@ -660,10 +652,10 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "rgba(255,255,255,0.12)",
+    borderColor: theme.colors.stroke,
+    backgroundColor: theme.colors.card,
   },
-  protectedButtonText: { color: theme.colors.text, fontWeight: "800" },
+  protectedButtonText: { color: theme.colors.text, fontWeight: "600" },
   content: { flex: 1, alignItems: "center" },
   sectionsScroll: { flex: 1 },
   headerBlock: { gap: 12 },
@@ -687,28 +679,28 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     gap: 10,
   },
-  h1: { color: theme.colors.text, fontWeight: "900" },
+  h1: { color: theme.colors.text, fontWeight: "700" },
   p: { color: theme.colors.subtext, marginTop: 6, fontWeight: "700" },
   headerPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: theme.colors.stroke,
   },
-  headerPillText: { color: theme.colors.text, fontWeight: "800" },
+  headerPillText: { color: theme.colors.text, fontWeight: "600" },
   navPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
   },
-  navPillText: { color: theme.colors.text, fontWeight: "800" },
+  navPillText: { color: theme.colors.text, fontWeight: "600" },
   noticeCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -716,19 +708,19 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     marginBottom: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: theme.colors.stroke,
   },
   noticeText: { color: theme.colors.text, fontWeight: "700", flexShrink: 1 },
   emptyCard: {
     padding: 18,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
   },
-  emptyTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 16 },
+  emptyTitle: { color: theme.colors.text, fontWeight: "700", fontSize: 16 },
   emptySub: {
     marginTop: 6,
     color: theme.colors.subtext,
@@ -754,8 +746,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: theme.colors.stroke,
+    backgroundColor: theme.colors.bg0,
   },
   previewContent: {
     flex: 1,
@@ -763,11 +755,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  previewText: { color: theme.colors.text, fontWeight: "800" },
+  previewText: { color: theme.colors.text, fontWeight: "600" },
   card: {
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: theme.colors.glass,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
     gap: 12,
   },
   cardHeader: {
@@ -777,7 +769,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardTitleWrap: { flex: 1, minWidth: 0 },
-  cardTitle: { color: theme.colors.text, fontWeight: "900" },
+  cardTitle: { color: theme.colors.text, fontWeight: "700" },
   cardSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
   cardMetaRow: {
     flexDirection: "row",
@@ -789,7 +781,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: theme.colors.muted,
   },
   metaText: { color: theme.colors.subtext, fontWeight: "700" },
   statusPill: {
@@ -799,15 +791,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderWidth: 1,
   },
-  statusText: { color: "rgba(30,30,40,0.75)", fontWeight: "800" },
-  statusTextActive: { color: "rgba(36,28,72,0.95)" },
+  statusText: { color: theme.colors.subtext, fontWeight: "600" },
+  statusTextActive: { color: theme.colors.accent },
   cardActionRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginTop: 14,
   },
-  cardActionText: { color: theme.colors.text, fontWeight: "800" },
+  cardActionText: { color: theme.colors.text, fontWeight: "600" },
   previewOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
@@ -825,7 +817,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(20,20,28,0.45)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: theme.colors.stroke,
   },
   previewButton: {
     flexDirection: "row",
@@ -834,17 +826,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(122,92,255,0.75)",
+    backgroundColor: theme.colors.accent2,
   },
   previewButtonCompact: {
     gap: 4,
   },
   previewButtonDisabled: {
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: theme.colors.card,
   },
   previewButtonText: {
     color: "rgba(255,255,255,0.95)",
-    fontWeight: "800",
+    fontWeight: "600",
   },
   statRow: {
     flexDirection: "row",
@@ -857,11 +849,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: theme.colors.stroke,
   },
-  statText: { color: theme.colors.text, fontWeight: "800" },
+  statText: { color: theme.colors.text, fontWeight: "600" },
   stopAllPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -874,6 +866,6 @@ const styles = StyleSheet.create({
   },
   stopAllText: {
     color: "rgba(255,255,255,0.95)",
-    fontWeight: "800",
+    fontWeight: "600",
   },
 });

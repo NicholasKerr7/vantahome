@@ -66,6 +66,11 @@ export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear
           const ordinal = pagination.start + rowIndex * pagination.columns + columnIndex + 1;
           const roomName = rooms.find((room) => room.id === scene.roomId)?.name ?? 'Home';
           return <View key={scene.id} testID={`scene-tile-${scene.id}`} style={[styles.sceneTile, active && styles.sceneTileActive]}>
+            <View pointerEvents="none" accessible={false} style={styles.sceneAtmosphere}>
+              <View style={[styles.sceneOrbit, active && styles.sceneOrbitActive]} />
+              <View style={styles.sceneOrbitInner} />
+              <View style={styles.sceneSignal} />
+            </View>
             <View style={styles.tileTop}>
               <Text style={styles.ordinal}>{String(ordinal).padStart(2, '0')}</Text>
               <Text style={[styles.tileStatus, active && styles.tileStatusActive]}>{active ? 'ACTIVE' : 'READY'}</Text>
@@ -143,14 +148,14 @@ export function EmbeddedAutomations({ flows, rules, onNewFlow, onOpenFlow, onTog
       </Pressable>
     </View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="routine-page-area">
-      {showingFlows ? flows.slice(pagination.start, pagination.end).map((flow, index) => <View style={styles.routineRow} key={flow.id} testID={`routine-row-${flow.id}`}>
+      {showingFlows ? flows.slice(pagination.start, pagination.end).map((flow, index) => <View style={[styles.routineRow, flow.enabled && styles.routineRowActive]} key={flow.id} testID={`routine-row-${flow.id}`}>
         <Pressable accessibilityLabel={`Edit ${flow.name}`} style={styles.routineMain} onPress={() => onOpenFlow(flow.id)}>
           <Text style={styles.routineNumber}>{String(pagination.start + index + 1).padStart(2, '0')}</Text>
           <View style={styles.routineCopy}><Text style={styles.routineName} numberOfLines={2}>{flow.name}</Text><Text style={styles.routineMeta} numberOfLines={1}>{flow.triggers.length} triggers · {flow.conditions.length} conditions · {flow.actions.length} actions</Text></View>
           <Ionicons name="chevron-forward" size={14} color={theme.colors.muted} />
         </Pressable>
         <View style={styles.routineState}><ThemedSwitch style={styles.routineSwitch} accessibilityLabel={`${flow.name} enabled`} value={flow.enabled} onValueChange={() => onToggleFlow(flow.id)} /><Text style={[styles.stateLabel, flow.enabled && styles.stateLabelOn]}>{flow.enabled ? 'ON' : 'OFF'}</Text></View>
-      </View>) : rules.slice(pagination.start, pagination.end).map((rule) => <View style={styles.routineRow} key={rule.id} testID={`routine-row-${rule.id}`}>
+      </View>) : rules.slice(pagination.start, pagination.end).map((rule) => <View style={[styles.routineRow, rule.enabled && styles.routineRowActive]} key={rule.id} testID={`routine-row-${rule.id}`}>
         <Pressable accessibilityLabel={`Edit ${rule.name}`} style={styles.routineMain} onPress={() => onOpenSchedule(rule.id)}>
           <View style={styles.routineCopy}>
             <Text style={styles.scheduleTime}>{String(rule.trigger.hour).padStart(2, '0')}:{String(rule.trigger.minute).padStart(2, '0')}<Text style={styles.dailyLabel}>  DAILY</Text></Text>
@@ -171,10 +176,10 @@ const styles = StyleSheet.create({
   collection: { flex: 1, minHeight: 0, width: '100%', maxWidth: 1040, alignSelf: 'center', paddingTop: 18 },
   collectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 12 },
   headingCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: theme.colors.muted, fontSize: 9, fontWeight: '600', letterSpacing: 1.7, marginBottom: 8 },
-  headline: { color: theme.colors.text, fontSize: 25, fontWeight: '500', letterSpacing: -0.9 },
+  eyebrow: { color: theme.colors.accent, fontSize: 9, fontWeight: '600', letterSpacing: 1.7, marginBottom: 8 },
+  headline: { color: theme.colors.text, fontSize: 26, fontWeight: '600', letterSpacing: -0.9 },
   headlineCount: { color: theme.colors.muted, fontSize: 18, fontWeight: '400' },
-  createButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 12, backgroundColor: theme.colors.accent, borderRadius: 3 },
+  createButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 12, backgroundColor: theme.colors.accent, borderRadius: 16, shadowColor: theme.colors.accent, shadowOpacity: 0.14, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
   createText: { color: theme.colors.bg0, fontSize: 12, fontWeight: '700' },
   contextRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.stroke },
   statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.muted },
@@ -185,12 +190,17 @@ const styles = StyleSheet.create({
   collectionBody: { flex: 1, minHeight: 0, gap: 10 },
   tileRow: { flex: 1, minHeight: 0, flexDirection: 'row', gap: 10 },
   tileRowStandard: { maxHeight: 244 },
-  sceneTile: { flex: 1, minWidth: 0, paddingHorizontal: 14, paddingTop: 12, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 3 },
-  sceneTileActive: { borderColor: theme.colors.accent },
+  sceneTile: { flex: 1, minWidth: 0, paddingHorizontal: 16, paddingTop: 14, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 22, overflow: 'hidden' },
+  sceneTileActive: { borderColor: theme.colors.accent2, backgroundColor: theme.colors.card },
+  sceneAtmosphere: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', opacity: 0.5 },
+  sceneOrbit: { position: 'absolute', width: 180, height: 180, right: -72, top: -66, borderRadius: 90, borderWidth: 1, borderColor: theme.colors.accent2, backgroundColor: theme.colors.glow, opacity: 0.32 },
+  sceneOrbitActive: { opacity: 0.65, borderColor: theme.colors.accent },
+  sceneOrbitInner: { position: 'absolute', width: 124, height: 124, right: -44, top: -38, borderRadius: 62, borderWidth: 1, borderColor: theme.colors.accent2, opacity: 0.55 },
+  sceneSignal: { position: 'absolute', left: 0, top: 38, height: 38, width: 2, backgroundColor: theme.colors.accent, opacity: 0.6 },
   tileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  ordinal: { color: theme.colors.muted, fontSize: 22, fontWeight: '300', fontVariant: ['tabular-nums'] },
+  ordinal: { color: theme.colors.accent, fontSize: 18, fontWeight: '300', fontVariant: ['tabular-nums'] },
   tileStatus: { color: theme.colors.muted, fontSize: 9, fontWeight: '600', letterSpacing: 1.4 },
-  tileStatusActive: { color: theme.colors.accent },
+  tileStatusActive: { color: theme.colors.accent, textShadowColor: theme.colors.glow, textShadowRadius: 8 },
   tileCopy: { flex: 1, justifyContent: 'center', minHeight: 0, paddingVertical: 6 },
   sceneName: { color: theme.colors.text, fontSize: 20, fontWeight: '500', letterSpacing: -0.4 },
   sceneMeta: { color: theme.colors.subtext, fontSize: 11, marginTop: 6 },
@@ -210,21 +220,22 @@ const styles = StyleSheet.create({
   emptyNumber: { color: theme.colors.stroke, fontSize: 42, fontWeight: '300', marginBottom: 12 },
   emptyTitle: { color: theme.colors.text, fontSize: 21, fontWeight: '500', letterSpacing: -0.5 },
   emptyCopy: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20, marginTop: 10 },
-  enabledSummary: { alignItems: 'flex-end', minWidth: 48 },
+  enabledSummary: { alignItems: 'center', minWidth: 62, paddingVertical: 6, borderRadius: 18, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke },
   enabledCount: { color: theme.colors.accent, fontSize: 28, fontWeight: '300', fontVariant: ['tabular-nums'] },
   enabledLabel: { color: theme.colors.muted, fontSize: 8, letterSpacing: 1.2, marginTop: 2 },
-  tabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.stroke, gap: 24 },
-  tab: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: theme.colors.accent },
+  tabs: { flexDirection: 'row', backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 18, padding: 4, gap: 4 },
+  tab: { flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 13 },
+  tabActive: { backgroundColor: theme.colors.accent2 },
   tabText: { color: theme.colors.muted, fontSize: 15, fontWeight: '500' },
   tabTextActive: { color: theme.colors.text },
   tabCount: { color: theme.colors.muted, fontSize: 11 },
   listToolbar: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   listLegend: { color: theme.colors.muted, fontSize: 8, letterSpacing: 1.4 },
   addRoutineButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  routineRow: { minHeight: 92, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.stroke, gap: 12 },
+  routineRow: { minHeight: 92, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2, borderRadius: 20, paddingHorizontal: 12, gap: 8 },
+  routineRowActive: { borderColor: theme.colors.accent2 },
   routineMain: { flex: 1, minWidth: 0, minHeight: 92, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  routineNumber: { color: theme.colors.muted, fontSize: 18, fontWeight: '300', minWidth: 24, fontVariant: ['tabular-nums'] },
+  routineNumber: { color: theme.colors.accent, fontSize: 16, fontWeight: '400', minWidth: 20, fontVariant: ['tabular-nums'] },
   routineCopy: { flex: 1, minWidth: 0 },
   routineName: { color: theme.colors.text, fontSize: 16, fontWeight: '500', letterSpacing: -0.3 },
   routineMeta: { color: theme.colors.subtext, fontSize: 11, marginTop: 7 },

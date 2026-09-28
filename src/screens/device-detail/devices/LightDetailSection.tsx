@@ -1,3 +1,4 @@
+import { theme } from "../../../theme/theme";
 import React from "react";
 import { Animated, Text, View } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
@@ -26,7 +27,7 @@ type LightTempPreset = { label: string; value: number };
 type LightDetailSectionProps = {
   device: Device;
   roomName: string;
-  theme: { colors: { accent: string; accent2: string } };
+  theme: typeof theme;
   styles: Record<string, any>;
   stylesVars: { ink: string; subtext: string };
   lightLayoutStyle: StyleProp<ViewStyle>;
@@ -199,7 +200,7 @@ export default function LightDetailSection({
                   name={device.isOn ? "bulb" : "bulb-outline"}
                   size={14}
                   color={
-                    device.isOn ? theme.colors.accent2 : stylesVars.subtext
+                    device.isOn ? theme.colors.accent : stylesVars.subtext
                   }
                 />
                 <Text style={utilityHeroPillTextStyle(device.isOn)}>
@@ -308,7 +309,7 @@ export default function LightDetailSection({
                             <LinearGradient
                               colors={[
                                 theme.colors.accent2,
-                                theme.colors.accent,
+                                theme.colors.bg1,
                               ]}
                               start={{ x: 0.1, y: 0 }}
                               end={{ x: 1, y: 1 }}
@@ -325,7 +326,7 @@ export default function LightDetailSection({
                               <Ionicons
                                 name={scene.icon}
                                 size={lightSceneIconSize}
-                                color="rgba(12,12,18,0.65)"
+                                color={theme.colors.subtext}
                               />
                             </View>
                           )
@@ -402,7 +403,7 @@ export default function LightDetailSection({
                             <LinearGradient
                               colors={[
                                 theme.colors.accent2,
-                                theme.colors.accent,
+                                theme.colors.bg1,
                               ]}
                               start={{ x: 0.1, y: 0 }}
                               end={{ x: 1, y: 1 }}
@@ -419,7 +420,7 @@ export default function LightDetailSection({
                               <Ionicons
                                 name={effect.icon}
                                 size={lightSceneIconSize}
-                                color="rgba(12,12,18,0.65)"
+                                color={theme.colors.subtext}
                               />
                             </View>
                           )}
@@ -539,7 +540,7 @@ export default function LightDetailSection({
                           <LinearGradient
                             colors={[
                               theme.colors.accent2,
-                              theme.colors.accent,
+                              theme.colors.bg1,
                             ]}
                             start={{ x: 0.1, y: 0 }}
                             end={{ x: 1, y: 1 }}
@@ -556,7 +557,7 @@ export default function LightDetailSection({
                             <Ionicons
                               name={effect.icon}
                               size={lightSceneIconSize}
-                              color="rgba(12,12,18,0.65)"
+                              color={theme.colors.subtext}
                             />
                           </View>
                         )}
@@ -674,7 +675,7 @@ export default function LightDetailSection({
                           <LinearGradient
                             colors={[
                               theme.colors.accent2,
-                              theme.colors.accent,
+                              theme.colors.bg1,
                             ]}
                             start={{ x: 0.1, y: 0 }}
                             end={{ x: 1, y: 1 }}
@@ -691,7 +692,7 @@ export default function LightDetailSection({
                             <Ionicons
                               name={effect.icon}
                               size={lightSceneIconSize}
-                              color="rgba(12,12,18,0.65)"
+                              color={theme.colors.subtext}
                             />
                           </View>
                         )}
@@ -802,7 +803,7 @@ export default function LightDetailSection({
                         <LinearGradient
                           colors={[
                             theme.colors.accent2,
-                            theme.colors.accent,
+                            theme.colors.bg1,
                           ]}
                           start={{ x: 0.1, y: 0 }}
                           end={{ x: 1, y: 1 }}
@@ -819,7 +820,7 @@ export default function LightDetailSection({
                           <Ionicons
                             name={effect.icon}
                             size={lightSceneIconSize}
-                            color="rgba(12,12,18,0.65)"
+                            color={theme.colors.subtext}
                           />
                         </View>
                       )}

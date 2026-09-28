@@ -17,7 +17,7 @@
   display: grid;
   place-items: center;
   padding: max(20px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
-  background: radial-gradient(ellipse at top, var(--surface-raised), #141713 75%);
+  background: radial-gradient(ellipse at top, var(--surface-raised), var(--background) 75%);
 }
 
 .orientation-card { max-width: 440px; text-align: center; }

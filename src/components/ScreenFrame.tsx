@@ -1,3 +1,4 @@
+import { theme } from "../theme/theme";
 import React, { type PropsWithChildren } from "react";
 import { View, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import LandscapeFrame from "./LandscapeFrame";
@@ -52,8 +53,8 @@ const styles = StyleSheet.create({
   frameFill: { flex: 1, alignSelf: "stretch" },
   frameInner: { width: "100%", flex: 1 },
   fullFrame: {
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderColor: "rgba(255,255,255,0.24)",
+    backgroundColor: theme.colors.glass,
+    borderColor: theme.colors.stroke,
     shadowOpacity: 0.04,
   },
 });

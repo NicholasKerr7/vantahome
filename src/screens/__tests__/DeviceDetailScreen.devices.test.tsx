@@ -1,7 +1,10 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
-import { StyleSheet } from "react-native";
+import { StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import DeviceDetailScreen from "../DeviceDetailScreen";
+import LightDetailSection from "../device-detail/devices/LightDetailSection";
+import CinematicSurface from "../../components/CinematicSurface";
+import { theme } from "../../theme/theme";
 import {
   useHomeStore,
   type Device,
@@ -341,9 +344,11 @@ describe("DeviceDetailScreen device coverage", () => {
   afterEach(() => { Object.assign(mockLayout, defaultLayout); });
 
   /** Mount the actual utility hero with synthetic data and no command dispatch. */
-  function renderUtilityHero(kind: "energy" | "coffee" | "camera") {
-    const device = createDevice(kind);
-    device.name = kind === "energy" ? "Energy Monitor" : kind === "coffee" ? "Coffee Machine" : "Entry Camera";
+  function renderUtilityHero(kind: DeviceKind, overrides: Partial<Device> = {}) {
+    const device = { ...createDevice(kind), ...overrides };
+    if (kind === "energy") device.name = "Energy Monitor";
+    if (kind === "coffee") device.name = "Coffee Machine";
+    if (kind === "camera") device.name = "Entry Camera";
     useHomeStore.setState({
       rooms: baseRooms,
       devices: [device],
@@ -380,6 +385,51 @@ describe("DeviceDetailScreen device coverage", () => {
       act(() => { tree.unmount(); });
     }
   });
+
+  it("keeps a white bulb preview legible without restoring a light app surface", () => {
+    const tree = renderUtilityHero("light", { color: "#FFFFFF", isOn: true });
+    try {
+      const surface = tree.root.findByType(CinematicSurface);
+      const light = tree.root.findByType(LightDetailSection);
+      expect(surface.props.variant).toBe("quiet");
+      expect(surface.props.active).toBeUndefined();
+      expect(light.props.bulbGradient[0]).toBe("#FFFFFF");
+      expect(light.props.bulbIconColor).toBe(theme.colors.bg0);
+      expect(StyleSheet.flatten(light.props.lightCenterValueStyle).color).toBe(theme.colors.bg0);
+      expect(light.props.lightHeroGradient[0]).toBe(theme.colors.card2);
+      expect(light.props.lightHeroGradient).not.toContain("#FFFFFF");
+      expect(useHomeStore.getState().devices[0].color).toBe("#FFFFFF");
+    } finally {
+      act(() => { tree.unmount(); });
+    }
+  });
+
+  it.each(["energy", "coffee", "washer", "gate", "window", "air"] as const)(
+    "keeps the %s progress fill distinct from its track",
+    (kind) => {
+      // Gate position is displayed in its landscape status card.
+      if (kind === "gate") Object.assign(mockLayout, {
+        width: 1194, height: 834, isTablet: true, isLandscape: true,
+      });
+      const tree = renderUtilityHero(kind);
+      try {
+        const tracks = tree.root.findAll((node: { props: { children?: React.ReactNode; style?: StyleProp<ViewStyle> } }) => {
+          const child = node.props.children;
+          if (!React.isValidElement<{ style?: StyleProp<ViewStyle> }>(child)) return false;
+          const fill = StyleSheet.flatten(child.props.style);
+          return StyleSheet.flatten(node.props.style)?.backgroundColor === theme.colors.stroke &&
+            fill?.height === "100%" && typeof fill.width === "string" && fill.width.endsWith("%");
+        });
+        expect(tracks.length).toBeGreaterThan(0);
+        for (const track of tracks) {
+          const child = track.props.children as React.ReactElement<{ style: StyleProp<ViewStyle> }>;
+          expect(StyleSheet.flatten(child.props.style).backgroundColor).toBe(theme.colors.accent);
+        }
+      } finally {
+        act(() => { tree.unmount(); });
+      }
+    },
+  );
 
   it("preserves the camera's centered phone header", () => {
     const tree = renderUtilityHero("camera");

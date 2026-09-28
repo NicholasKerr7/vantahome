@@ -1,22 +1,25 @@
 /**
- * Shared olive and charcoal tokens align native controls with the 3D home.
+ * Shared obsidian, jade and pearl tokens connect the cinematic home and native controls.
  *
  * Keep this file “dumb”: no React/logic, just constants. That makes it safe to
  * import anywhere (components, store, utilities) without circular deps.
  */
 export const theme = {
   colors: {
-    bg0: "#141713",
-    bg1: "#222B1E",
-    card: "#22271F",
-    card2: "#1A1E19",
-    stroke: "#3C4635",
-    text: "#E9E9DF",
-    subtext: "#B3BBAA",
-    muted: "#99A18F",
-    accent: "#D5E7A4",
-    accent2: "#536736",
-    glow: "rgba(181,207,141,0.3)",
+    bg0: "#080D12",
+    bg1: "#102027",
+    card: "#13212B",
+    card2: "#0E1820",
+    stroke: "#263E49",
+    text: "#EFF7F3",
+    subtext: "#A4BAC4",
+    muted: "#819AA6",
+    accent: "#BDFFE1",
+    accent2: "#315A50",
+    electric: "#A3C9FF",
+    ember: "#EBD0A6",
+    glass: "rgba(18,35,44,0.86)",
+    glow: "rgba(127,235,196,0.25)",
   },
   radius: { xl: 28, lg: 22, md: 18, sm: 14 },
   /** 8pt spacing scale helper: `spacing(2) === 16` */

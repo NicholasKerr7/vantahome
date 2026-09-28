@@ -10,8 +10,10 @@ const mockDispatch = jest.fn();
 let mockFocused = true;
 let mockStatus: SceneSurfaceProps['onStatus'];
 jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, dispatch: mockDispatch }), useIsFocused: () => mockFocused }));
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
+jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
+// Decorative motion has separate lifecycle coverage; keep navigation tests synchronous.
+jest.mock('../../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false }));
 jest.mock('../SceneSurface', () => ({ __esModule: true, default: (props: SceneSurfaceProps) => {
   const Text = require('react-native').Text;
   mockStatus = props.onStatus;
@@ -41,6 +43,9 @@ test('opens integrations and household tools from the home menu', () => {
   expect(mockNavigate).toHaveBeenCalledWith('Integrations');
   fireEvent.press(screen.getByLabelText('Open home menu'));
   fireEvent.press(screen.getByText('Manage'));
+  for (let page = 0; page < 3 && !screen.queryByLabelText('Household'); page += 1) {
+    fireEvent.press(screen.getByLabelText('Next menu destinations'));
+  }
   fireEvent.press(screen.getByLabelText('Household'));
   expect(mockNavigate).toHaveBeenCalledWith('Profile');
 });

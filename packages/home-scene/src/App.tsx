@@ -14,9 +14,12 @@ import { DashboardLibrary, type DashboardLibraryView } from './DashboardLibrary'
 import { useHomeStore } from './state';
 import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
+import { CinematicViewControl } from './CinematicViewControl';
+import { useCinematicStore } from './cinematicStore';
 import './styles.css';
 import './device-catalog.css';
 import './dashboard.css';
+import './cinematic-ui.css';
 
 /** React to live operating-system motion changes without polling or duplicate listeners. */
 function usePrefersReducedMotion(): boolean {
@@ -55,6 +58,8 @@ class SceneErrorBoundary extends Component<{ children: ReactNode; onRetry: () =>
 
 /** Show the home with persistent, accessible scene controls and loading feedback. */
 function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceId, onCloseFullControls }: { environment: LiveEnvironment; reducedMotion: boolean; onFullControls: (id: DeviceId) => void; sheetDeviceId: DeviceId | null; onCloseFullControls: () => void }): ReactNode {
+  const showcase = useCinematicStore((state) => state.showcase);
+  const setShowcase = useCinematicStore((state) => state.setShowcase);
   const orientationPaused = useOrientationPaused();
   const view = useHomeStore((state) => state.view);
   const floor = useHomeStore((state) => state.floor);
@@ -81,11 +86,12 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
   const openDeviceControls = useCallback((id: string) => {
     const device = getDevice(id);
     if (!device) return;
+    setShowcase(false);
     quickTrigger.current = device.id;
     selectHotspotDevice(device.id);
     setQuickDeviceId((current) => inlineInspector ? null : current === device.id ? null : device.id);
     if (inlineInspector) requestAnimationFrame(() => document.getElementById('device-control-title')?.focus({ preventScroll: true }));
-  }, [inlineInspector, selectHotspotDevice]);
+  }, [inlineInspector, selectHotspotDevice, setShowcase]);
 
   /** Restore the opening hotspot only for an explicit dismiss, not an outside tap. */
   const closeQuickControls = useCallback((restoreFocus = true) => {
@@ -101,6 +107,8 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
 
   // Floor cutaways have distinct views; exterior picks can cross floors in place.
   useEffect(() => { setQuickDeviceId(null); }, [view]);
+  // Keyboard-started playback dismisses the non-modal quick panel just like an outside tap.
+  useEffect(() => { if (showcase) setQuickDeviceId(null); }, [showcase]);
   // Dismiss transient controls while retaining the mounted scene and its camera.
   useEffect(() => {
     if (!orientationPaused) return;
@@ -132,8 +140,8 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
     setAttempt((value) => value + 1);
   }, []);
   const room = getRoom(roomId);
-  return <section id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''}`} aria-label="Interactive furnished house preview">
-    <div className="viewport-top"><div><span className="eyebrow">{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : `${floor.toUpperCase()} FLOOR`}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div></div>
+  return <section id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''} ${showcase ? 'is-cinematic' : ''}`} aria-label="Interactive furnished house preview">
+    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : `${floor.toUpperCase()} FLOOR`}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div><CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} /></div>
     <div className="scene-container">
       <SceneErrorBoundary key={attempt} onRetry={retryScene}>
         <HouseScene daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
@@ -166,16 +174,19 @@ export default function App(): ReactNode {
   const orientationPaused = useOrientationPaused();
   const [library, setLibrary] = useState<DashboardLibraryView | null>(null);
   const [sheetDeviceId, setSheetDeviceId] = useState<DeviceId | null>(null);
+  const [documentHidden, setDocumentHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
+  const setShowcase = useCinematicStore((state) => state.setShowcase);
   const sheetTrigger = useRef<HTMLElement | null>(null);
   const sheetHotspot = useRef<string | null>(null);
 
   /** Remember the actual opening control so every device sheet can return focus. */
   const openFullControls = useCallback((id: DeviceId) => {
+    setShowcase(false);
     sheetTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     sheetHotspot.current = sheetTrigger.current?.closest('#quick-device-controls') ? id : null;
     setLibrary(null);
     setSheetDeviceId(id);
-  }, []);
+  }, [setShowcase]);
 
   /** Restore a live trigger, with a scene fallback when a browser card was removed. */
   const closeFullControls = useCallback(() => {
@@ -194,9 +205,25 @@ export default function App(): ReactNode {
     setSheetDeviceId(null);
   }, [orientationPaused]);
 
-  return <div className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''}`}>
+  // Cinematic playback never competes with dialogs or an accessibility motion preference.
+  useEffect(() => {
+    if (library || sheetDeviceId || reducedMotion || orientationPaused) setShowcase(false);
+  }, [library, sheetDeviceId, reducedMotion, orientationPaused, setShowcase]);
+
+  // Pause CSS transitions and camera playback while the WebView is backgrounded.
+  useEffect(() => {
+    const updateVisibility = () => {
+      setDocumentHidden(document.hidden);
+      if (document.hidden) setShowcase(false);
+    };
+    document.addEventListener('visibilitychange', updateVisibility);
+    updateVisibility();
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, [setShowcase]);
+
+  return <div className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''}`}>
     <a className="skip-link" href="#house-preview">Skip to house controls</a>
-    <DashboardHeader embedded={embedded} environment={environment} onSettings={() => setLibrary('settings')} />
+    <DashboardHeader embedded={embedded} environment={environment} onSettings={() => setLibrary('settings')} onEnvironment={() => setLibrary('environment')} />
     <DashboardRoomBar onRooms={() => setLibrary('rooms')} />
     <main id="home-workspace" className="workspace dashboard-workspace">
       <DashboardRooms onBrowse={() => setLibrary('rooms')} />

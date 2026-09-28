@@ -937,7 +937,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
 
 const styles = StyleSheet.create({
   root: { flex: 1, minHeight: 0 },
-  embeddedRoot: { backgroundColor: theme.colors.bg0 },
+  embeddedRoot: { backgroundColor: "transparent" },
   content: { flex: 1, minHeight: 0, alignItems: "center" },
   embeddedContent: { paddingTop: 0, paddingBottom: 0 },
   embeddedHeader: { marginBottom: 8 },

@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../app/AppNavigator";
 import Pressable from "../../components/Pressable";
 import ThemedSwitch from "../../components/ThemedSwitch";
+import CinematicSurface from "../../components/CinematicSurface";
 import { theme } from "../../theme/theme";
 import { settingsStyles as styles } from "./settingsWorkspaceStyles";
 import { useSettingsWorkspace, type SettingsWorkspaceModel } from "./useSettingsWorkspace";
@@ -89,7 +90,7 @@ export default function SettingsWorkspace() {
     Keyboard.dismiss(); setEditing(false); setToolPage(0); setCategory(next);
   }
 
-  return <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={64}>
+  return <CinematicSurface variant="quiet" style={styles.root}><KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={64}>
     <View style={[styles.workspace, compact && styles.compactWorkspace, wide && styles.wideWorkspace]}>
       {!editing && <View accessibilityRole="tablist" style={[styles.navigation, wide && styles.sideNavigation]}>
         {categories.map((item) => <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={`${item.label} settings`} accessibilityState={{ selected: category === item.id }}
@@ -99,6 +100,7 @@ export default function SettingsWorkspace() {
         </Pressable>)}
       </View>}
       <View style={[styles.panel, compact && styles.compactPanel]}>
+        <View pointerEvents="none" accessible={false} style={styles.panelOrbit} />
         <View style={styles.panelHeading}><Text style={styles.eyebrow}>{String(chapter).padStart(2, "0")} / {category === "development" ? "DEVELOPMENT" : category.toUpperCase()}</Text>
           <Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>{titles[category]}</Text></View>
 
@@ -110,7 +112,7 @@ export default function SettingsWorkspace() {
         {category === "preferences" && <View style={styles.rows}>
           <SettingToggle label="Haptics" value={model.preferences.haptics} onChange={(haptics) => model.setPreferences({ haptics })} />
           <SettingToggle label="Notifications" value={model.preferences.notifications} onChange={(notifications) => model.setPreferences({ notifications })} />
-          <SettingValue label="Appearance" value="Olive & charcoal" />
+          <SettingValue label="Appearance" value="Midnight & mint" />
         </View>}
         {category === "voice" && <>
           <Text style={styles.description}>Your assistants and home connections, together in one place.</Text>
@@ -137,5 +139,5 @@ export default function SettingsWorkspace() {
         </>}
       </View>
     </View>
-  </KeyboardAvoidingView>;
+  </KeyboardAvoidingView></CinematicSurface>;
 }

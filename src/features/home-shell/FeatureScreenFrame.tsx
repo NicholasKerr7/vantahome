@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import type { HomeStackParamList } from '../../app/HomeNavigator';
+import CinematicSurface from '../../components/CinematicSurface';
 import Pressable from '../../components/Pressable';
 import { theme } from '../../theme/theme';
 
@@ -21,16 +22,16 @@ export default function FeatureScreenFrame({ title, children }: PropsWithChildre
         <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>{title}</Text>
       </View>
     </View>
-    <View style={styles.content}>{children}</View>
+    <CinematicSurface style={styles.content}>{children}</CinematicSurface>
   </SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.bg0 },
   header: { minHeight: 66, paddingHorizontal: 18, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: theme.colors.stroke, gap: 18 },
-  back: { minHeight: 44, minWidth: 58, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  back: { minHeight: 44, minWidth: 68, paddingHorizontal: 10, borderRadius: 22, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, flexDirection: 'row', alignItems: 'center', gap: 5 },
   backText: { color: theme.colors.accent, fontSize: 12, fontWeight: '500' },
-  identity: { flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: theme.colors.stroke, paddingLeft: 18 },
+  identity: { flex: 1, minWidth: 0, paddingLeft: 4 },
   eyebrow: { color: theme.colors.muted, fontSize: 8, fontWeight: '600', letterSpacing: 1.5, marginBottom: 5 },
   title: { color: theme.colors.text, fontSize: 16, letterSpacing: -0.3, fontWeight: '500' },
   content: { flex: 1, minHeight: 0, overflow: 'hidden' },

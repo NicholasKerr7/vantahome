@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import CinematicSurface from "../components/CinematicSurface";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import ScreenFrame from "../components/ScreenFrame";
 import { theme } from "../theme/theme";
@@ -118,7 +118,7 @@ export default function AuditLogScreen({ navigation }: Props) {
   );
 
   return (
-    <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={styles.root}>
+    <CinematicSurface variant="quiet" style={styles.root}>
       <View style={contentStyle}>
         <ScreenFrame
           enabled={!isWide}
@@ -152,12 +152,12 @@ export default function AuditLogScreen({ navigation }: Props) {
           )}
         </ScreenFrame>
       </View>
-    </LinearGradient>
+    </CinematicSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: theme.colors.bg0 },
   content: { flex: 1 },
   header: {
     flexDirection: "row",
@@ -171,15 +171,15 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: theme.colors.card,
   },
   headerText: { flex: 1 },
-  title: { color: theme.colors.text, fontWeight: "900" },
+  title: { color: theme.colors.text, fontWeight: "700" },
   subTitle: { color: theme.colors.subtext, fontWeight: "700", marginTop: 4 },
   card: {
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.glass,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.colors.stroke,
   },
   rowHeader: {
     flexDirection: "row",
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
-  action: { color: theme.colors.text, fontWeight: "900" },
+  action: { color: theme.colors.text, fontWeight: "700" },
   time: { color: theme.colors.subtext, fontWeight: "700" },
   rowText: { color: theme.colors.text, fontWeight: "700" },
   payloadText: {

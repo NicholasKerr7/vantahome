@@ -100,7 +100,7 @@ export default function ModeTiles({
           >
             {active ? (
               <LinearGradient
-                colors={[theme.colors.accent2, theme.colors.accent]}
+                colors={[theme.colors.accent2, theme.colors.bg1]}
                 start={{ x: 0.1, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={iconBubbleActiveStyle}
@@ -112,7 +112,7 @@ export default function ModeTiles({
                 <Ionicons
                   name={m.icon}
                   size={iconSize}
-                  color="rgba(12,12,18,0.65)"
+                  color={theme.colors.subtext}
                 />
               </View>
             )}
@@ -138,17 +138,17 @@ const styles = StyleSheet.create({
     width: 92,
     height: 92,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.70)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
   },
   modeTileActive: {
-    backgroundColor: "rgba(255,255,255,0.84)",
-    borderColor: "rgba(122,92,255,0.25)",
-    shadowColor: "rgba(122,92,255,0.40)",
+    backgroundColor: theme.colors.card2,
+    borderColor: theme.colors.accent2,
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.25,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
@@ -157,9 +157,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -169,11 +169,11 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "rgba(122,92,255,0.65)",
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.35,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
-  modeText: { color: "rgba(12,12,18,0.58)", fontWeight: "900", fontSize: 12 },
-  modeTextActive: { color: "rgba(12,12,18,0.86)" },
+  modeText: { color: theme.colors.subtext, fontWeight: "700", fontSize: 12 },
+  modeTextActive: { color: theme.colors.text },
 });

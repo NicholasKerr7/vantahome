@@ -8,14 +8,16 @@ import { getOverviewDistanceScale } from './overviewFraming';
 import siteLayout from '../site-layout.json';
 import { getRoom } from '../data';
 import { ROOM_POSITIONS, type HouseSceneProps } from './types';
+import { useCinematicStore } from '../cinematicStore';
+import { advanceCinematicOrbit, bindCinematicInterruptions, canPlayCinematic } from './cinematicMotion';
 
 type CameraProps = Pick<
   HouseSceneProps,
   'view' | 'floor' | 'roomId' | 'reducedMotion'
->;
+> & { suspended: boolean };
 
 /** Animate camera presets, then hand complete control back to the visitor. */
-export function CameraRig({ view, floor, roomId, reducedMotion }: CameraProps) {
+export function CameraRig({ view, floor, roomId, reducedMotion, suspended }: CameraProps) {
   const controls = useRef<OrbitControlsImpl>(null);
   const { camera, gl, size } = useThree();
   const destination = useRef(new Vector3(27, 23, 14));
@@ -24,6 +26,29 @@ export function CameraRig({ view, floor, roomId, reducedMotion }: CameraProps) {
   const direction = useRef(new Vector3());
   const moving = useRef(true);
   const lookAngles = useRef({ yaw: 0, pitch: 0 });
+  const cinematicElapsed = useRef(0);
+  const showcase = useCinematicStore((state) => state.showcase);
+
+  useEffect(() => {
+    const unbind = bindCinematicInterruptions(document, stopShowcase);
+    return () => {
+      unbind();
+      stopShowcase();
+    };
+  }, []);
+
+  useEffect(() => {
+    // A presentation never follows a navigation change into a different room or floor.
+    stopShowcase();
+  }, [view, floor, roomId]);
+
+  useEffect(() => {
+    if (!canPlayCinematic(view, reducedMotion, suspended, document.hidden)) stopShowcase();
+  }, [reducedMotion, suspended, view, showcase]);
+
+  useEffect(() => {
+    cinematicElapsed.current = 0;
+  }, [showcase]);
 
   // Device inspection must not reset an orbit; only immersive room navigation moves it.
   const cameraFloor = view === 'exterior' ? 'ground' : floor;
@@ -189,7 +214,7 @@ export function CameraRig({ view, floor, roomId, reducedMotion }: CameraProps) {
 
   // Negative priority orders camera motion before hotspot projection without taking over rendering.
   useFrame((_, delta) => {
-    if (document.hidden) return;
+    if (document.hidden || suspended) return;
     if (camera instanceof PerspectiveCamera) {
       const desiredFov = view === 'immersive' ? 72 : 42;
       const nextFov = reducedMotion
@@ -224,6 +249,16 @@ export function CameraRig({ view, floor, roomId, reducedMotion }: CameraProps) {
       camera.lookAt(currentLook.current);
     } else if (controls.current) {
       currentLook.current.copy(controls.current.target);
+      // Read the transient store directly so capture-phase input stops the very next frame.
+      if (useCinematicStore.getState().showcase && canPlayCinematic(view, reducedMotion, suspended, document.hidden)) {
+        cinematicElapsed.current = advanceCinematicOrbit(
+          camera.position,
+          controls.current.target,
+          cinematicElapsed.current,
+          delta,
+        );
+        camera.lookAt(controls.current.target);
+      }
     }
     camera.updateMatrixWorld();
   }, -2);
@@ -231,6 +266,12 @@ export function CameraRig({ view, floor, roomId, reducedMotion }: CameraProps) {
   /** Refresh world and view matrices after OrbitControls changes the pose later in the frame. */
   function syncOrbitMatrices() {
     camera.updateMatrixWorld();
+  }
+
+  /** Hand control over immediately and retain the exact pose where playback stopped. */
+  function beginManualOrbit() {
+    moving.current = false;
+    stopShowcase();
   }
 
   if (view === 'immersive') return null;
@@ -248,9 +289,12 @@ export function CameraRig({ view, floor, roomId, reducedMotion }: CameraProps) {
       maxPolarAngle={Math.PI / 2.06}
       minPolarAngle={0.08}
       onChange={syncOrbitMatrices}
-      onStart={() => {
-        moving.current = false;
-      }}
+      onStart={beginManualOrbit}
     />
   );
+}
+
+/** Cancel transient camera playback without touching any saved simulation preferences. */
+function stopShowcase() {
+  if (useCinematicStore.getState().showcase) useCinematicStore.getState().setShowcase(false);
 }

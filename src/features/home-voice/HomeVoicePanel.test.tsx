@@ -5,9 +5,13 @@ import HomeVoicePanel from './HomeVoicePanel';
 
 const mockClient = { getSnapshot: jest.fn(() => ({ ready: true })), setPower: jest.fn(), setLevel: jest.fn(), setSetting: jest.fn() };
 const mockCancel = jest.fn();
+// Background decoration is covered separately from command execution.
+jest.mock('../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false }));
+
 jest.mock('../three-d-home/useSimulationControls', () => ({ useSimulationControls: () => ({ client: mockClient, ready: true, status: 'saved' }) }));
 jest.mock('./useVoiceRecognition', () => ({ useVoiceRecognition: () => ({ listening: false, error: null, start: jest.fn(), stop: jest.fn(), cancel: mockCancel }) }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -36,5 +40,17 @@ test('typing compacts the panel so the keyboard does not compete with microphone
   fireEvent(screen.getByLabelText('Home voice command'), 'focus');
   expect(screen.queryByLabelText('Start speaking')).toBeNull();
   fireEvent(screen.getByLabelText('Home voice command'), 'blur');
+  expect(screen.getByLabelText('Start speaking')).toBeTruthy();
+});
+
+test('keeps typed controls stationary on blur until Run completes', () => {
+  const screen = render(<HomeVoicePanel onClose={jest.fn()} />);
+  const input = screen.getByLabelText('Home voice command');
+  fireEvent(input, 'focus');
+  fireEvent.changeText(input, 'turn off kitchen lights');
+  fireEvent(input, 'blur');
+  expect(screen.queryByLabelText('Start speaking')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Run typed command'));
+  expect(screen.getByText('2 devices turned off. Simulation updated.')).toBeTruthy();
   expect(screen.getByLabelText('Start speaking')).toBeTruthy();
 });

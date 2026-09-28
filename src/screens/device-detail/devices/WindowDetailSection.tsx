@@ -1,3 +1,4 @@
+import { theme } from "../../../theme/theme";
 import React from "react";
 import { View, Text } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
@@ -115,11 +116,7 @@ export default function WindowDetailSection({
 }: WindowDetailSectionProps) {
   const heroCard = (
     <LinearGradient
-      colors={[
-        "rgba(255,255,255,0.95)",
-        "rgba(226,236,255,0.9)",
-        "rgba(214,224,255,0.86)",
-      ]}
+      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
       start={{ x: 0.1, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={windowHeroCardStyle}
@@ -143,11 +140,7 @@ export default function WindowDetailSection({
       <View style={windowHeroBodyStyle}>
         <View style={windowHeroOrbStyle(isOpen)}>
           <LinearGradient
-            colors={[
-              "rgba(122,92,255,0.24)",
-              "rgba(180,107,255,0.18)",
-              "rgba(255,255,255,0.9)",
-            ]}
+            colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
             start={{ x: 0.2, y: 0.1 }}
             end={{ x: 1, y: 1 }}
             style={windowHeroOrbGlowStyle}
@@ -180,7 +173,7 @@ export default function WindowDetailSection({
               }
               minimumTrackTintColor="transparent"
               maximumTrackTintColor="transparent"
-              thumbTintColor="rgba(255,255,255,0.92)"
+              thumbTintColor={theme.colors.text}
               style={windowHeroSliderStyle}
             />
           </View>

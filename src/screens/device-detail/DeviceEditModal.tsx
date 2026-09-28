@@ -1,3 +1,4 @@
+import { theme } from "../../theme/theme";
 import React from "react";
 import { View, Text, TextInput } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
@@ -7,10 +8,7 @@ import ModalField from "../../components/ModalField";
 import Pressable from "../../components/Pressable";
 import type { Device } from "../../store/useHomeStore";
 
-const MODAL_COLORS = [
-  "rgba(255,255,255,0.96)",
-  "rgba(255,255,255,0.96)",
-] as const;
+const MODAL_COLORS = [theme.colors.card, theme.colors.card2] as const;
 
 type RoomRef = { id: string; name: string };
 
@@ -119,7 +117,7 @@ export default function DeviceEditModal({
             value={draftName}
             onChangeText={onChangeDraftName}
             placeholder="Device name"
-            placeholderTextColor="rgba(12,12,18,0.45)"
+            placeholderTextColor={theme.colors.muted}
             style={inputStyle}
             autoCapitalize="words"
           />

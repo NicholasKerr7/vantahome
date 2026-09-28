@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import { openHomeFeature } from "../app/homeNavigation";
 import Pressable from "../components/Pressable";
+import CinematicSurface from "../components/CinematicSurface";
 import { runtimePolicy } from "../config/runtimeMode";
 import { INTEGRATION_ENTRIES, integrationStatusLabel } from "../features/integrations/integrationCatalog";
 import { getVoiceLinkConfiguration, linkVoiceAccount } from "../features/integrations/voiceLinkService";
@@ -66,7 +67,7 @@ export default function IntegrationsScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top", "bottom", "left", "right"]}>
+    <CinematicSurface variant="quiet" style={styles.screen}><SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
       <View style={[styles.content, compact && styles.compactContent]}>
         <View style={styles.header}>
           <Pressable accessibilityLabel="Back to home" onPress={() => openHomeFeature(navigation.dispatch, "Home")} style={styles.iconButton}>
@@ -90,11 +91,12 @@ export default function IntegrationsScreen({ navigation }: Props) {
         </View>
 
         <View style={[styles.card, compact && styles.compactCard]}>
+          <View pointerEvents="none" accessible={false} style={styles.providerOrbit} />
           <View style={styles.cardHeading}>
-            <Ionicons name={entry.icon} size={30} color={theme.colors.accent} />
+            <View style={styles.providerIcon}><Ionicons name={entry.icon} size={30} color={theme.colors.accent} /></View>
             <Text accessibilityRole="header" style={[styles.providerTitle, compact && styles.compactTitle]}>{entry.title}</Text>
           </View>
-          <View style={styles.statusLine}><View style={styles.statusMark} /><Text style={styles.status}>{integrationStatusLabel(entry.id, savedStatus, configured)}</Text></View>
+          <View style={styles.statusLine}><View style={[styles.statusMark, saved && styles.statusMarkSaved]} /><Text style={styles.status}>{integrationStatusLabel(entry.id, savedStatus, configured)}</Text></View>
           <Text style={[styles.description, compact && styles.compactDescription]}>{compact && showDetails ? entry.nextStep : entry.description}</Text>
           {!compact && <Text style={styles.detail}>{entry.nextStep}</Text>}
           {!compact && voiceProvider && !authenticatedUserId && <Text style={styles.detail}>Sign in to authorize an assistant for your home.</Text>}
@@ -132,37 +134,41 @@ export default function IntegrationsScreen({ navigation }: Props) {
           </Pressable>
         </View>
       </View>
-    </SafeAreaView>
+    </SafeAreaView></CinematicSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.colors.bg0 },
+  screen: { flex: 1 },
+  safeArea: { flex: 1 },
   content: { flex: 1, width: "100%", maxWidth: 900, alignSelf: "center", padding: 24, gap: 20 },
   compactContent: { padding: 12, gap: 8 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 8 },
   headerText: { flex: 1 },
   eyebrow: { color: theme.colors.subtext, fontSize: 10, fontWeight: "500", letterSpacing: 2 },
   title: { color: theme.colors.text, fontSize: 23, fontWeight: "400", letterSpacing: -0.5 },
-  iconButton: { width: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
-  tabs: { flexDirection: "row", gap: 5, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
-  tab: { flex: 1, minWidth: 44, minHeight: 58, gap: 5, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: "transparent", paddingBottom: 8 },
-  selectedTab: { borderBottomColor: theme.colors.accent },
+  iconButton: { width: 44, minHeight: 44, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 16 },
+  tabs: { flexDirection: "row", gap: 4, padding: 4, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 22 },
+  tab: { flex: 1, minWidth: 44, minHeight: 58, gap: 5, alignItems: "center", justifyContent: "center", borderRadius: 17, paddingBottom: 4 },
+  selectedTab: { backgroundColor: theme.colors.accent2 },
   tabLabel: { color: theme.colors.subtext, fontSize: 11, fontWeight: "600" },
   selectedText: { color: theme.colors.accent },
-  card: { flex: 1, minHeight: 0, paddingVertical: 24, paddingHorizontal: 4, gap: 20, justifyContent: "center" },
-  compactCard: { paddingVertical: 8, gap: 10 },
+  card: { flex: 1, minHeight: 0, padding: 28, gap: 20, justifyContent: "center", backgroundColor: theme.colors.glass, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 30, overflow: "hidden" },
+  compactCard: { padding: 14, gap: 10, borderRadius: 24 },
+  providerOrbit: { position: "absolute", width: 300, height: 300, right: -190, top: -140, borderRadius: 150, backgroundColor: theme.colors.glow, borderWidth: 1, borderColor: theme.colors.accent2, opacity: 0.2 },
+  providerIcon: { width: 52, height: 52, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.accent2, borderWidth: 1, borderColor: theme.colors.stroke },
   cardHeading: { flexDirection: "row", alignItems: "center", gap: 12 },
-  providerTitle: { flex: 1, color: theme.colors.text, fontSize: 38, fontWeight: "400", letterSpacing: -1 },
-  compactTitle: { fontSize: 27, letterSpacing: -0.5 },
+  providerTitle: { flex: 1, color: theme.colors.text, fontSize: 36, fontWeight: "500", letterSpacing: -1 },
+  compactTitle: { fontSize: 24, letterSpacing: -0.5 },
   statusLine: { flexDirection: "row", alignItems: "center", gap: 8 },
-  statusMark: { width: 16, height: 1, backgroundColor: theme.colors.accent },
+  statusMark: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.muted },
+  statusMarkSaved: { backgroundColor: theme.colors.accent },
   status: { color: theme.colors.accent, fontSize: 11, fontWeight: "500", letterSpacing: 0.5 },
   description: { color: theme.colors.text, fontSize: 17, lineHeight: 25, maxWidth: 560 },
   compactDescription: { fontSize: 13, lineHeight: 18 },
   detail: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20, maxWidth: 560 },
   cardActions: { paddingTop: 8, alignItems: "flex-start" },
-  action: { minHeight: 48, minWidth: 220, maxWidth: "100%", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 4, backgroundColor: theme.colors.accent, alignItems: "center", justifyContent: "center" },
+  action: { minHeight: 48, minWidth: 0, width: "100%", maxWidth: 380, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 16, backgroundColor: theme.colors.accent, alignItems: "center", justifyContent: "center" },
   actionText: { color: theme.colors.bg0, fontSize: 13, fontWeight: "700", textAlign: "center" },
   disabled: { opacity: 0.45 },
   planned: { color: theme.colors.muted, fontSize: 13, lineHeight: 18 },
