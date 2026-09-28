@@ -4,6 +4,7 @@ import { createDefaultSimulationSnapshot, mergeSimulationChanges, parseSimulatio
 import { SimulationControlClient } from '../simulationControlClient';
 import { SimulationPersistence } from '../simulationPersistence';
 import { SimulationSession } from '../simulationSession';
+import { readGasSetting } from '../../../../packages/home-scene/src/gasSimulation';
 
 /** Drain the hydration, ordered transport and coalesced disk-save queues. */
 async function settle(): Promise<void> { for (let index = 0; index < 24; index++) await Promise.resolve(); }
@@ -68,6 +69,36 @@ test('disables controls immediately when account identity changes', async () => 
   client.toggle('master-light');
   expect(client.getSnapshot()).toMatchObject({ ready: false, status: 'disconnected', state: previous });
   client.dispose();
+});
+
+test('keeps linked gas actions coherent across optimistic updates, acknowledgement, and reopening', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const persistence = new SimulationPersistence({ getItem: async () => null, setItem: async () => undefined });
+  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'production' });
+  const client = new SimulationControlClient(factory);
+  client.connect();
+  await settle();
+  client.runAction('kitchen-gas-leak', 'gas-leak-simulate-leak');
+  client.runAction('kitchen-gas-leak', 'gas-leak-silence');
+  client.runAction('utility-gas-meter', 'gas-meter-open-valve');
+  expect(readGasSetting('gas-meter', client.getSnapshot().state.deviceStates['utility-gas-meter'], 'gasValveOpen')).toBe(false);
+  client.dispose();
+  await settle();
+  const reopened = new SimulationControlClient(factory);
+  reopened.connect();
+  await settle();
+  expect(readGasSetting('gas-leak', reopened.getSnapshot().state.deviceStates['kitchen-gas-leak'], 'gasLeakDetected')).toBe(true);
+  expect(readGasSetting('gas-leak', reopened.getSnapshot().state.deviceStates['kitchen-gas-leak'], 'gasAlarmSilenced')).toBe(true);
+  expect(readGasSetting('gas-meter', reopened.getSnapshot().state.deviceStates['utility-gas-meter'], 'gasValveOpen')).toBe(false);
+  reopened.runAction('kitchen-gas-leak', 'gas-leak-clear-leak');
+  await settle();
+  expect(readGasSetting('gas-meter', reopened.getSnapshot().state.deviceStates['utility-gas-meter'], 'gasValveOpen')).toBe(false);
+  reopened.runAction('utility-gas-meter', 'gas-meter-open-valve');
+  reopened.runAction('utility-gas-meter', 'gas-meter-use-sample');
+  await settle();
+  expect(readGasSetting('gas-meter', reopened.getSnapshot().state.deviceStates['utility-gas-meter'], 'gasRemainingKg')).toBe(8.5);
+  expect(store.getState().devices).toEqual([]);
+  reopened.dispose();
 });
 
 test('can reconnect after the setup/cleanup cycle used by React StrictMode', async () => {

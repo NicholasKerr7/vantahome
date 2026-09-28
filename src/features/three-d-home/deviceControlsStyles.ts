@@ -16,6 +16,8 @@ export const controlStyles = StyleSheet.create({
   label: { color: colors.text, fontSize: 14, fontWeight: '600', flexShrink: 1 },
   value: { color: colors.sage, fontSize: 14, fontWeight: '600' },
   detail: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+  alarm: { color: colors.alarm },
+  warning: { color: colors.warning },
   status: { color: colors.muted, fontSize: 11, textAlign: 'center', minHeight: 16 },
   button: { minHeight: 44, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.raised, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   primary: { backgroundColor: colors.sage },

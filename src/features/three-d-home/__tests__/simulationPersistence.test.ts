@@ -4,6 +4,28 @@ import { SimulationPersistence } from '../simulationPersistence';
 /** Drain persistence microtasks without relying on wall-clock delays. */
 async function settle(): Promise<void> { for (let index = 0; index < 12; index += 1) await Promise.resolve(); }
 
+test('adds gas devices on upgrade without resetting the previous 90-device simulation', async () => {
+  const legacy = createDefaultSimulationSnapshot();
+  delete legacy.deviceStates['utility-gas-meter'];
+  delete legacy.deviceStates['kitchen-gas-leak'];
+  legacy.deviceStates['master-bedside-left'] = { on: false, level: 23, settings: { color: '#FF9AA2', lightColorMode: 'color' } };
+  legacy.deviceStates['master-blinds'] = { on: true, level: 37 };
+  legacy.lightingMode = 'night';
+  legacy.night = true;
+  const storage = { getItem: jest.fn().mockResolvedValue(JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: legacy })), setItem: jest.fn() };
+  const persistence = new SimulationPersistence(storage);
+  const status = jest.fn();
+  persistence.subscribe('demo', status);
+  const restored = await persistence.load('demo');
+  expect(restored.deviceStates['master-bedside-left']).toEqual(legacy.deviceStates['master-bedside-left']);
+  expect(restored.deviceStates['master-blinds']).toEqual(legacy.deviceStates['master-blinds']);
+  expect(restored.lightingMode).toBe('night');
+  expect(restored.deviceStates['utility-gas-meter'].on).toBe(true);
+  expect(restored.deviceStates['kitchen-gas-leak'].on).toBe(true);
+  expect(Object.keys(restored.deviceStates)).toHaveLength(92);
+  expect(status).toHaveBeenLastCalledWith('saved');
+});
+
 test('validates stored snapshots and exposes corrupt or unavailable storage', async () => {
   const storage = { getItem: jest.fn().mockResolvedValue('{"token":"private"}'), setItem: jest.fn() };
   const persistence = new SimulationPersistence(storage);

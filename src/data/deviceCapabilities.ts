@@ -1476,6 +1476,17 @@ const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
       order: 1,
     },
   ],
+  // The dedicated gas panel owns simulated actions; generic controls stay read-only.
+  "gas-meter": [
+    { id: "gas-flow", label: "Sample flow", type: "stat", field: "gasFlowKgH", unit: "kg/h" },
+    { id: "gas-remaining", label: "Supply remaining", type: "stat", field: "gasRemainingKg", unit: "kg" },
+    { id: "gas-today", label: "Today", type: "stat", field: "gasTodayKg", unit: "kg" },
+  ],
+  "gas-leak": [
+    { id: "gas-leak-status", label: "Demo leak", type: "stat", field: "gasLeakDetected", format: (value) => value ? "Detected" : "Clear" },
+    { id: "gas-concentration", label: "Sample concentration", type: "stat", field: "gasConcentrationPercentLel", unit: "% LEL" },
+    { id: "gas-battery", label: "Sensor battery", type: "stat", field: "gasBatteryPercent", unit: "%" },
+  ],
 };
 
 export function getDeviceCapabilities(

@@ -3,6 +3,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, Grid2X2, type LucideIcon } fro
 import { DEVICES, formatDeviceLevel, getDevice, getRoom, isPositionDevice, type DeviceDefinition, type DeviceId } from './data';
 import { DEVICE_ICONS } from './DeviceControlCard';
 import { deviceStatus, hasLegacyLevel, isMonitor, quickActionLabel, readDeviceSetting } from './deviceCapabilities';
+import { gasStatusTone } from './gasSimulation';
 import { useHomeStore } from './state';
 import './dashboard-inspector.css';
 
@@ -34,7 +35,7 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
     ? `${current.level > 0 ? 'Close' : 'Open'} smart ${device.kind === 'garage' ? 'shutter' : device.kind}`
     : isSwitch ? `${device.name} quick power` : `${actionLabel} ${device.name}`;
 
-  return <section className="dashboard-selected-device" aria-labelledby="device-control-title">
+  return <section className="dashboard-selected-device" data-device-tone={gasStatusTone(device.kind, current)} aria-labelledby="device-control-title">
     <div className="dashboard-selected-heading">
       <span className={`dashboard-device-icon ${current.on ? 'is-on' : ''}`}><Icon size={19} strokeWidth={1.5} aria-hidden="true" /></span>
       <div className="dashboard-selected-copy">
@@ -64,7 +65,7 @@ function DashboardDeviceRow({ device, selected }: { device: DeviceDefinition; se
   const selectDevice = useHomeStore((state) => state.selectDevice);
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
   const Icon = DEVICE_ICONS[device.kind];
-  return <button type="button" className={`dashboard-device-row ${selected ? 'is-selected' : ''}`} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
+  return <button type="button" className={`dashboard-device-row ${selected ? 'is-selected' : ''}`} data-device-tone={gasStatusTone(device.kind, current)} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
     <Icon size={17} strokeWidth={1.5} aria-hidden="true" />
     <span className="dashboard-device-copy"><span title={device.name}>{device.name}</span><small>{deviceStatus(device, current)}</small></span>
     <span className={`dashboard-device-indicator ${current.on || isMonitor(device.kind) ? 'is-on' : ''}`} aria-hidden="true" />

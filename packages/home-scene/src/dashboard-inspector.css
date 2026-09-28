@@ -22,10 +22,10 @@
 .dashboard-selected-device { min-width: 0; flex-shrink: 0; }
 .dashboard-selected-heading { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .dashboard-device-icon { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; color: #8fa382; border: 1px solid #3c4833; border-radius: 10px; background: #283123; }
-.dashboard-device-icon.is-on { color: var(--accent); border-color: #566c3e; background: #344229; }
+.dashboard-device-icon.is-on { color: var(--device-status-accent, var(--accent)); border-color: #566c3e; background: #344229; }
 .dashboard-selected-copy { min-width: 0; }
 .dashboard-selected-copy h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; line-height: 20px; color: #e5eadb; letter-spacing: -.2px; }
-.dashboard-selected-copy p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: #a0af91; }
+.dashboard-selected-copy p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--device-status-accent, #a0af91); }
 .dashboard-primary-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-top: 8px; }
 .dashboard-primary-action,
 .dashboard-full-controls { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 44px; padding: 6px; border: 1px solid #4d5c3e; border-radius: 9px; font-size: 11px; line-height: 15px; color: #e6edda; background: #303c28; }
@@ -52,7 +52,7 @@
 .dashboard-device-copy > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d5dfc9; font-size: 11px; line-height: 16px; }
 .dashboard-device-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #98aa87; font-size: 10px; line-height: 13px; }
 .dashboard-device-indicator { width: 4px; height: 4px; flex-shrink: 0; border-radius: 50%; background: #59654f; }
-.dashboard-device-indicator.is-on { background: var(--accent); }
+.dashboard-device-indicator.is-on { background: var(--device-status-accent, var(--accent)); }
 .dashboard-device-footer { display: grid; grid-template-columns: 44px 44px minmax(0, 1fr); gap: 6px; flex-shrink: 0; }
 .dashboard-page-button,
 .dashboard-browse-devices { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 7px; border: 1px solid #3b4930; border-radius: 9px; background: #26321f; color: #cadab7; font-size: 11px; white-space: nowrap; }

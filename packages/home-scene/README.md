@@ -1,7 +1,7 @@
 # VantaHome scene workspace
 
 This workspace contains the editable browser implementation of VantaHome's
-optional 3D Home simulation: furnished house, landscape, 90 simulated devices,
+optional 3D Home simulation: furnished house, landscape, 92 simulated devices,
 lighting, weather, and animations. The host can share explicitly paired local
 demo controls with its dashboard; real device services remain separate. See
 [integration notes](../../docs/THREE_D_HOME.md) for
@@ -51,7 +51,7 @@ add the Blender project to runtime assets.
 
 ## Behavior and checks
 
-All controls are simulated. The embedded host saves all 90 devices' supported
+All controls are simulated. The embedded host saves all 92 devices' supported
 state, lighting mode, and motion preference, and restores them after closing or
 backgrounding. Graphics are released while closed; camera/room selection starts
 from the default view on reopening. The standalone editing preview retains its

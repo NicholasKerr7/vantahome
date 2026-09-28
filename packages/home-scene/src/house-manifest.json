@@ -3627,10 +3627,79 @@
         3.9899999999999998,
         12.01
       ]
+    },
+    {
+      "id": "utility-gas-meter",
+      "kind": "gas-meter",
+      "name": "Smart gas meter",
+      "roomId": "grounds",
+      "description": "Simulated exterior gas service meter beside the kitchen wall. Meter only; no gas storage tank.",
+      "levelLabel": "Reading",
+      "lowLabel": "Low",
+      "highLabel": "High",
+      "position": [
+        16.735,
+        0.46,
+        -13.35
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.48,
+        0.64,
+        0.25
+      ],
+      "mount": "wall",
+      "model": "gas-meter",
+      "defaultOn": true,
+      "defaultLevel": 100,
+      "hotspot": [
+        17.02,
+        1.38,
+        -13.35
+      ]
+    },
+    {
+      "id": "kitchen-gas-leak",
+      "kind": "gas-leak",
+      "name": "Gas leak detector",
+      "roomId": "kitchen",
+      "description": "Simulated LPG monitor on the low kitchen return wall; separate from the ceiling heat and CO sensor.",
+      "levelLabel": "Reading",
+      "lowLabel": "Low",
+      "highLabel": "High",
+      "position": [
+        15.1,
+        0.22,
+        -10.625
+      ],
+      "rotation": [
+        0,
+        3.141592653589793,
+        0
+      ],
+      "dimensions": [
+        0.18,
+        0.18,
+        0.065
+      ],
+      "mount": "wall",
+      "model": "gas-leak",
+      "defaultOn": true,
+      "defaultLevel": 100,
+      "hotspot": [
+        15.1,
+        0.65,
+        -10.8
+      ]
     }
   ],
   "designNotes": [
     "Furniture and fixtures are visualization proposals within the interpreted plan.",
-    "Service pavilion is proposed outside septic/tile-field service areas; generator and battery occupy separate bays. Installation clearances and electrical/exhaust design require the chosen equipment specifications."
+    "Service pavilion is proposed outside septic/tile-field service areas; generator and battery occupy separate bays. Installation clearances and electrical/exhaust design require the chosen equipment specifications.",
+    "Gas service additions are illustrative simulation devices: compact exterior meter on the east kitchen wall, no storage tank, and low kitchen LPG monitor on the south return. They do not specify a real installation."
   ]
 }

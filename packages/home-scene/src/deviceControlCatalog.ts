@@ -1,3 +1,4 @@
+import { gasCapabilities, gasDefaults, gasStoredFields } from './gasDeviceCatalog';
 import type { ControlGroup, DeviceActionOperation, DeviceCapability, DeviceKind } from './deviceCapabilities';
 import type { SettingValue } from './simulationTypes';
 
@@ -44,6 +45,7 @@ const lightColors: [string, string][] = [['Amber', '#FFD166'], ['Ice', '#A0E9FF'
 
 // These fields are the extra controls authored directly in the original detail screens.
 export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapability[]>> = {
+  ...gasCapabilities,
   light: [
     choice('light', 'color', 'Color', lightColors, 'controls'),
     range('light', 'colorTempK', 'White temperature', 2000, 6500, 'K', 'controls', 100),
@@ -145,6 +147,7 @@ export function scheduleCapabilities(kind: DeviceKind): DeviceCapability[] {
 const playbackDefaults = { playbackState: 'stopped', playbackPositionSec: 0, trackIndex: 1 };
 const scheduleDefaults = Object.fromEntries(scheduledKinds.map((kind) => [kind, { scheduleEnabled: false, scheduleHour: 7, scheduleMinute: 0, scheduleDays: 'daily' }])) as Partial<Record<DeviceKind, Record<string, SettingValue>>>;
 const customDefaults: Partial<Record<DeviceKind, Record<string, SettingValue>>> = {
+  ...gasDefaults,
   light: { color: '#FFD166', colorTempK: 3200, lightColorMode: 'color', lightEffect: 'none', adaptiveLighting: false, motionBoost: false, nightShift: false, autoOffMin: 0 },
   tv: { source: 'Live TV', channel: 1, ...playbackDefaults, remoteFocus: 5, remoteSelection: 0, remoteAction: 'none' },
   ac: { acFanSpeed: 60, acSwingMode: 'both', acEcoMode: false, acTurboMode: false, acQuietMode: false, acTargetHumidity: 45, acFilterLife: 100 },
@@ -167,6 +170,7 @@ function playbackStatus(kind: 'tv' | 'speaker'): DeviceCapability[] {
   return [choice(kind, 'playbackState', '', ['stopped', 'playing', 'paused']), range(kind, 'playbackPositionSec', '', 0, 3600), range(kind, 'trackIndex', '', 1, 99)];
 }
 export const simulatedStatusFields: Partial<Record<DeviceKind, DeviceCapability[]>> = {
+  ...gasStoredFields,
   tv: [...playbackStatus('tv'), range('tv', 'remoteFocus', '', 1, 9), range('tv', 'remoteSelection', '', 0, 9), choice('tv', 'remoteAction', '', ['none', 'up', 'down', 'left', 'right', 'select', 'home'])],
   speaker: playbackStatus('speaker'),
 };

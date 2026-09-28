@@ -3,6 +3,7 @@ import { Modal, Pressable, Text, View, useWindowDimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DEVICES, ROOMS, getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { deviceActionFeedback, deviceStatus, getControlPages, quickActionLabel, readDeviceSetting } from '../../../packages/home-scene/src/deviceCapabilities';
+import { gasStatusTone } from '../../../packages/home-scene/src/gasSimulation';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
 import type { ControlSnapshot, SimulationControlClient } from './simulationControlClient';
 import { NativeCapabilityControl, type EnumCapability } from './NativeCapabilityControl';
@@ -83,6 +84,7 @@ function DeviceInspector({ device, state, client, disabled, compact, onBrowse }:
   const optionCount = Math.ceil((option?.options.length ?? 0) / optionSize);
   const visibleOptionPage = Math.min(optionPage, Math.max(0, optionCount - 1));
   const options = option?.options.slice(visibleOptionPage * optionSize, (visibleOptionPage + 1) * optionSize);
+  const tone = gasStatusTone(device.kind, state);
   return <>
     <View style={styles.row}>
       <Pressable accessibilityRole="button" disabled={disabled} onPress={() => client.toggle(device.id)}
@@ -110,7 +112,7 @@ function DeviceInspector({ device, state, client, disabled, compact, onBrowse }:
           <Text style={[styles.tabText, group === item && styles.primaryText]}>{GROUP_LABELS[item]}</Text>
         </Pressable>;
       })}</View>
-      <Text accessibilityLiveRegion="polite" style={styles.detail}>{group === 'schedule' ? 'Saved preview preferences. Timers do not run devices.'
+      <Text accessibilityLiveRegion="polite" style={[styles.detail, tone === 'alarm' && styles.alarm, (tone === 'warning' || tone === 'closed') && styles.warning]}>{group === 'schedule' ? 'Saved preview preferences. Timers do not run devices.'
         : group === 'status' ? `${deviceStatus(device, state)} · Simulated readings`
           : deviceActionFeedback(device, state) ?? deviceStatus(device, state)}</Text>
       <View style={[styles.content, current?.compact && styles.grid]}>

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createDefaultSimulationSnapshot,
-  parseSimulationSnapshotMessage,
+  parseStoredSimulationSnapshotMessage,
   type SimulationSnapshot,
 } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 
@@ -60,7 +60,7 @@ export class SimulationPersistence {
     };
     this.records.set(scope, record);
     record.loading = this.storage.getItem(this.key(scope)).then((raw) => {
-      const message = raw === null ? null : parseSimulationSnapshotMessage(raw);
+      const message = raw === null ? null : parseStoredSimulationSnapshotMessage(raw);
       if (raw !== null && !message) throw new Error('Invalid simulation cache');
       if (message) record.state = message.state;
       this.notify(record, 'saved');

@@ -9,7 +9,7 @@ export const DEVICE_ICONS: Record<DeviceDefinition['kind'], LucideIcon> = {
   coffee: Coffee, fridge: Refrigerator, garage: PanelTop, door: DoorClosed, vacuum: Gauge, camera: Camera, window: PanelTop,
   stove: Flame, dryer: Wind, dishwasher: Droplets, microwave: Microwave, energy: PlugZap, water: Droplets,
   'water-heater': Flame, air: Wind, sprinkler: Droplets, speaker: Volume2, smoke: ShieldAlert,
-  generator: PlugZap, battery: BatteryCharging, solar: Sun,
+  generator: PlugZap, battery: BatteryCharging, solar: Sun, 'gas-meter': Gauge, 'gas-leak': ShieldAlert,
 };
 
 /** Share meaningful appliance, security and monitoring controls across both inspectors. */

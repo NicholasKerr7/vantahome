@@ -13,6 +13,7 @@ interface HotspotProps {
   expanded: boolean;
   controlMode: 'inspector' | 'quick';
   stateLabel?: string;
+  tone?: 'normal' | 'warning' | 'alarm' | 'closed';
   onSelect: (id: string) => void;
 }
 
@@ -27,6 +28,7 @@ export function Hotspot({
   expanded,
   controlMode,
   stateLabel,
+  tone = 'normal',
   onSelect,
 }: HotspotProps) {
   const layout = useHotspotLayout();
@@ -68,6 +70,7 @@ export function Hotspot({
           type="button"
           className={`device-hotspot ${on ? 'is-on' : ''} ${selected ? 'is-selected' : ''}`}
           data-device-hotspot={id}
+          data-device-tone={tone}
           aria-label={`${label}: ${stateLabel ?? (on ? 'on' : 'off')}. ${quickControls ? 'Quick controls.' : 'Show full controls.'}`}
           aria-haspopup={quickControls ? 'dialog' : undefined}
           aria-expanded={quickControls ? expanded : undefined}

@@ -3,6 +3,7 @@ import { readDeviceSetting } from "../../../../packages/home-scene/src/deviceCap
 import type { SimulationSnapshot } from "../../../../packages/home-scene/src/simulationBridgeProtocol";
 import type { Device } from "../../../store/useHomeStore";
 import { DEMO_DEVICE_MAPPINGS, overlayDemoDevices, projectSimulationToDemo } from "../demoDeviceMapping";
+import { applyGasCommand, GAS_DEFAULTS, readGasSetting, synchronizeGasSafety } from '../../../../packages/home-scene/src/gasSimulation';
 
 /** Build independent scene samples without loading either application's store. */
 function snapshot(): SimulationSnapshot {
@@ -49,6 +50,62 @@ describe("explicit demo device correspondence", () => {
     const devices = [demo("d2", "camera", { armed: false, isOn: false })];
     expect(overlayDemoDevices(previous, devices)).toBe(previous);
     expect(projectSimulationToDemo(change(previous, "living-light", { on: false, level: 0 }), previous, devices)).toBe(devices);
+  });
+});
+
+describe('paired gas simulation outcomes', () => {
+  test('host valve closure clears raw flow before the scene can reopen the valve', () => {
+    const original = snapshot();
+    const flowing = change(original, 'utility-gas-meter', applyGasCommand('gas-meter', original.deviceStates['utility-gas-meter'], 'use-sample'));
+    const closed = overlayDemoDevices(flowing, [demo('d40', 'gas-meter', { gasValveOpen: false, gasFlowKgH: 0 })]);
+    const reopened = applyGasCommand('gas-meter', closed.deviceStates['utility-gas-meter'], 'open-valve');
+    expect(readGasSetting('gas-meter', reopened, 'gasFlowKgH')).toBe(0);
+  });
+
+  test('clearing a host leak also clears raw silencing state', () => {
+    const previous = change(snapshot(), 'kitchen-gas-leak', { settings: { gasLeakDetected: true, gasAlarmSilenced: true } });
+    const cleared = overlayDemoDevices(previous, [demo('d41', 'gas-leak', { gasLeakDetected: false, gasAlarmSilenced: false })]);
+    expect(cleared.deviceStates['kitchen-gas-leak'].settings?.gasAlarmSilenced).toBe(false);
+  });
+
+  test('updates the original remaining percentage from simulated consumption', () => {
+    const previous = snapshot();
+    const used = change(previous, 'utility-gas-meter', applyGasCommand('gas-meter', previous.deviceStates['utility-gas-meter'], 'use-sample'));
+    const [meter] = projectSimulationToDemo(used, previous, [demo('d40', 'gas-meter', GAS_DEFAULTS['gas-meter'])]);
+    expect(meter).toMatchObject({ gasRemainingKg: 8.5, gasRemainingPercent: 68, gasTodayKg: 1, gasMonthKg: 6.5 });
+  });
+
+  test('shares a leak and linked closed valve while retaining unrelated host metadata', () => {
+    const previous = snapshot();
+    const triggered = change(previous, 'kitchen-gas-leak', applyGasCommand('gas-leak', previous.deviceStates['kitchen-gas-leak'], 'simulate-leak'));
+    const next = { ...triggered, deviceStates: synchronizeGasSafety(triggered.deviceStates, previous.deviceStates) };
+    const devices = [demo('d40', 'gas-meter', { ...GAS_DEFAULTS['gas-meter'], observedAt: 42 }), demo('d41', 'gas-leak', GAS_DEFAULTS['gas-leak'])];
+    const projected = projectSimulationToDemo(next, previous, devices);
+    expect(projected[0]).toMatchObject({ gasValveOpen: false, gasLeakInterlock: true, observedAt: 42 });
+    expect(projected[1]).toMatchObject({ gasLeakDetected: true, gasConcentrationPercentLel: 35 });
+    const reopened = overlayDemoDevices(previous, projected);
+    expect(readGasSetting('gas-meter', reopened.deviceStates['utility-gas-meter'], 'gasValveOpen')).toBe(false);
+    expect(readGasSetting('gas-leak', reopened.deviceStates['kitchen-gas-leak'], 'gasLeakDetected')).toBe(true);
+    expect(overlayDemoDevices(reopened, projected)).toBe(reopened);
+  });
+
+  test('keeps a silenced leak active when switching between original and 3D controls', () => {
+    const previous = snapshot();
+    const devices = [demo('d40', 'gas-meter', { gasValveOpen: true }), demo('d41', 'gas-leak', { gasLeakDetected: true, gasAlarmSilenced: true, gasConcentrationPercentLel: 35 })];
+    const overlaid = overlayDemoDevices(previous, devices);
+    expect(readGasSetting('gas-leak', overlaid.deviceStates['kitchen-gas-leak'], 'gasAlarmSilenced')).toBe(true);
+    expect(readGasSetting('gas-leak', overlaid.deviceStates['kitchen-gas-leak'], 'gasLeakDetected')).toBe(true);
+    expect(readGasSetting('gas-meter', overlaid.deviceStates['utility-gas-meter'], 'gasValveOpen')).toBe(false);
+  });
+
+  test('validates gas quantities and never maps an unpaired gas device', () => {
+    const previous = snapshot();
+    const devices = [demo('unpaired', 'gas-meter', { gasRemainingKg: 0 }), demo('d40', 'gas-meter', { gasRemainingKg: Number.NaN, gasFlowKgH: Infinity, streamUrl: 'https://private.invalid/gas' })];
+    const next = overlayDemoDevices(previous, devices);
+    expect(readGasSetting('gas-meter', next.deviceStates['utility-gas-meter'], 'gasRemainingKg')).toBe(8.75);
+    expect(readGasSetting('gas-meter', next.deviceStates['utility-gas-meter'], 'gasFlowKgH')).toBe(0);
+    expect(JSON.stringify(next)).not.toContain('private.invalid');
+    expect(next.deviceStates['living-light']).toBe(previous.deviceStates['living-light']);
   });
 });
 

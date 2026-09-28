@@ -19,6 +19,7 @@ import {
 } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import DeviceIcon from "./DeviceIcon";
+import { isGasDevice } from "../features/gas/gasDemoDevices";
 
 /**
  * “Glass” device tile used in the Room grid.
@@ -94,6 +95,10 @@ const deviceMeta = (device: Device): string => {
         : `Vol ${device.volume ?? 20}`;
     case "smoke":
       return device.smokeDetected ? "Alert" : "Clear";
+    case "gas-meter":
+      return `${device.gasRemainingKg ?? 0} kg sample • ${device.gasValveOpen ? "Supply open" : "Supply closed"}`;
+    case "gas-leak":
+      return device.gasLeakDetected ? "Leak demo active" : "Monitoring sample";
     default:
       return device.isOn ? "On" : "Off";
   }
@@ -280,11 +285,11 @@ export default function DeviceTile({
         </View>
 
         <Pressable
-          accessibilityLabel={`${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
+          accessibilityLabel={isGasDevice(device.kind) ? `Open controls for ${device.name}` : `${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
           accessibilityState={{ selected: device.isOn }}
           onPress={(e) =>
             stop(e, () =>
-              isOpenableKind(device.kind)
+              isGasDevice(device.kind) ? onPress() : isOpenableKind(device.kind)
                 ? toggleOpenable()
                 : sendPatch({ isOn: !device.isOn }),
             )
@@ -293,7 +298,7 @@ export default function DeviceTile({
           hitSlop={6}
         >
           <Ionicons
-            name="power"
+            name={isGasDevice(device.kind) ? "options-outline" : "power"}
             size={powerIconSize}
             color={theme.colors.text}
           />

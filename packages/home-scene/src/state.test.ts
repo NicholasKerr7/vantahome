@@ -1,4 +1,5 @@
 import { isMonitor } from './deviceCapabilities';
+import { isGasDevice } from './gasSimulation';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEVICES, formatDeviceLevel, getDevice, isPositionDevice, type PresetId } from './data';
 import {
@@ -202,7 +203,8 @@ describe('preset transactions', () => {
     });
     expect(result.deviceStates).not.toBe(input.deviceStates);
     for (const device of DEVICES) {
-      expect(result.deviceStates[device.id]).not.toBe(input.deviceStates[device.id]);
+      if (isGasDevice(device.kind)) expect(result.deviceStates[device.id]).toBe(input.deviceStates[device.id]);
+      else expect(result.deviceStates[device.id]).not.toBe(input.deviceStates[device.id]);
     }
   });
 

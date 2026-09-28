@@ -22,6 +22,7 @@ import { type Device } from "../store/useHomeStore";
 import DeviceCapabilityControls from "./DeviceCapabilityControls";
 import { useResponsive } from "../theme/layout";
 import DeviceIcon from "./DeviceIcon";
+import { isGasDevice } from "../features/gas/gasDemoDevices";
 
 /**
  * Long-press device sheet:
@@ -248,7 +249,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     <View style={flex1Style}>
                       <Text style={titleTextStyle}>{device.name}</Text>
                       <Text style={subTextStyle}>
-                        {device.kind === "ac"
+                        {isGasDevice(device.kind) ? device.kind === "gas-leak" && device.gasLeakDetected ? "Leak demo active" : "Local gas simulation" : device.kind === "ac"
                           ? `${device.tempC ?? 22}°C • ${(device.mode ?? "cold").toUpperCase()}`
                           : device.kind === "light"
                             ? `Brightness ${device.brightness ?? 60}%`
@@ -265,13 +266,13 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     </View>
 
                     <Pressable
-                      accessibilityLabel={`${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
+                      accessibilityLabel={isGasDevice(device.kind) ? `Open controls for ${device.name}` : `${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
                       accessibilityState={{ selected: device.isOn }}
-                      onPress={onToggle}
+                      onPress={isGasDevice(device.kind) ? onOpenDetails : onToggle}
                       style={powerStyle(device.isOn)}
                     >
                       <Ionicons
-                        name="power"
+                        name={isGasDevice(device.kind) ? "options-outline" : "power"}
                         size={powerIconSize}
                         color={theme.colors.text}
                       />
@@ -294,7 +295,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     </View>
                   </SheetSection>
 
-                  <SheetSection
+                  {!isGasDevice(device.kind) && <SheetSection
                     title="Schedule"
                     sectionStyle={sectionStyle}
                     titleStyle={sectionTitleStyle}
@@ -338,7 +339,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                         Create automation for this device
                       </Text>
                     </Pressable>
-                  </SheetSection>
+                  </SheetSection>}
 
                   <View style={footerRowStyle}>
                     <Pressable

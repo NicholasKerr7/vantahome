@@ -3,6 +3,7 @@ import { Power, X } from 'lucide-react';
 import { DEVICE_ICONS } from './DeviceControlCard';
 import { PagedDeviceControls } from './PagedDeviceControls';
 import { deviceActionFeedback, deviceStatus, quickActionLabel } from './deviceCapabilities';
+import { gasStatusTone } from './gasSimulation';
 import { getDevice, getRoom, type DeviceId } from './data';
 import { useHomeStore } from './state';
 import './device-control-sheet.css';
@@ -15,6 +16,7 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
   const current = useHomeStore((state) => state.deviceStates[deviceId]);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
   const Icon = DEVICE_ICONS[device.kind];
+  const tone = gasStatusTone(device.kind, current);
 
   // Release native modality during the commit, before the parent restores focus.
   useLayoutEffect(() => {
@@ -56,7 +58,7 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
 
   return <dialog ref={dialog} id="full-device-controls" className="device-control-sheet" aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
-      <header className="device-sheet-heading">
+      <header className="device-sheet-heading" data-device-tone={tone}>
         <span className={`device-sheet-icon ${current.on ? 'is-on' : ''}`}><Icon size={24} strokeWidth={1.5} aria-hidden="true" /></span>
         <div className="device-sheet-identity">
           <p className="device-sheet-location">{getRoom(device.roomId).name}<span aria-hidden="true"> · </span>Full controls</p>

@@ -9,6 +9,7 @@ import {
   type DeviceDefinition,
 } from '../data';
 import { deviceStatus } from '../deviceCapabilities';
+import { gasStatusTone } from '../gasSimulation';
 import type { DeviceState } from '../state';
 import { Hotspot } from './Hotspot';
 import { DeviceEffects } from './DeviceEffects';
@@ -58,6 +59,8 @@ const SYMBOLS: Record<string, string> = {
   water: '◒',
   'water-heater': '♨',
   smoke: '◌',
+  'gas-meter': '◴',
+  'gas-leak': '◇',
   air: '≈',
   sprinkler: '⤨',
   coffee: '☕',
@@ -73,11 +76,13 @@ function FixturePartMesh({
   part,
   state,
   light,
+  indicatorColor,
   offset = [0, 0, 0],
 }: {
   part: FixturePart;
   state: DeviceState;
   light?: LabLightState;
+  indicatorColor?: string;
   offset?: VectorTuple;
 }) {
   const surface = FIXTURE_LIBRARY.materials[part.material];
@@ -85,7 +90,7 @@ function FixturePartMesh({
   const color = glow
     ? state.on
       ? part.role === 'display'
-        ? '#a8d5bb'
+        ? indicatorColor ?? '#a8d5bb'
         : light?.colorHex ?? '#ffe2ad'
       : '#44483f'
     : surface.color;
@@ -193,6 +198,8 @@ function MovingAssembly({
     [parts],
   );
   const light = device.kind === 'light' ? readLabLightState(device, state) : undefined;
+  const gasTone = gasStatusTone(device.kind, state);
+  const indicatorColor = gasTone === 'alarm' ? '#ff7465' : gasTone === 'warning' || gasTone === 'closed' ? '#efd391' : undefined;
   useFrame((_, delta) => {
     if (document.hidden) return;
     const dt = Math.min(delta, 0.07);
@@ -259,6 +266,7 @@ function MovingAssembly({
       part={part}
       state={state}
       light={light}
+      indicatorColor={indicatorColor}
       offset={offset}
     />
   );
@@ -403,6 +411,7 @@ export function Devices({
                 position={device.hotspot}
                 on={isPositionDevice(device) ? state.level > 0 : state.on}
                 stateLabel={deviceStatus(device, state)}
+                tone={gasStatusTone(device.kind, state)}
                 selected={selectedDevice === device.id}
                 expanded={quickDeviceId === device.id}
                 controlMode={hotspotControlMode}

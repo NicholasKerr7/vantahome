@@ -1,3 +1,4 @@
+import { applyGasCommand, isGasDevice } from './gasSimulation';
 import { getDevice, isPositionDevice, type DeviceDefinition, type DeviceId } from './data';
 import { getCapabilities, isMonitor, readDeviceSetting, validateSetting, validateStoredSetting, type DeviceActionOperation } from './deviceCapabilities';
 import type { DeviceState, SettingValue } from './simulationTypes';
@@ -33,6 +34,7 @@ function clearActionFeedback(current: DeviceState): DeviceState {
 export function setDeviceLevelState(id: DeviceId, current: DeviceState, level: number): DeviceState {
   const device = getDevice(id);
   if (!device) return current;
+  if (isGasDevice(device.kind)) return current.on ? current : { ...current, on: true };
   const manual = clearActionFeedback(current);
   const source = device.kind === 'light' ? clearLightEffect(manual) : manual;
   const next = isPositionDevice(device) ? { ...source, ...createPositionState(level) } : { ...source, level: clampLevel(level) };
@@ -49,11 +51,13 @@ export function applyDeviceSetting(id: DeviceId, current: DeviceState, field: st
   const value = validateSetting(capability, input);
   if (value === undefined) return current;
   current = clearActionFeedback(current);
+  if (device.kind === 'gas-meter' && field === 'gasValveOpen') return applyGasCommand(device.kind, current, value ? 'open-valve' : 'close-valve');
   if (field === 'openPercent') return { ...current, ...createPositionState(Number(value)) };
   if ((device.kind === 'light' && field === 'brightness') || (device.kind === 'fan' && field === 'speed')) return setDeviceLevelState(id, current, Number(value));
   if (field === 'isOn') return { ...current, on: Boolean(value) };
   const next = { ...current, settings: { ...current.settings, [field]: value } };
   if (field === 'armed') next.on = Boolean(value);
+  if (isGasDevice(device.kind)) { next.on = true; next.settings.gasLastEvent = 'ready'; }
   if (device.kind === 'ac' && field === 'tempC') next.level = clampLevel((26 - Number(value)) / 0.08);
   if (device.kind === 'light' && (field === 'color' || field === 'colorTempK')) {
     next.settings.lightColorMode = field === 'color' ? 'color' : 'temperature';
@@ -70,6 +74,8 @@ export function toggleDeviceState(id: DeviceId, current: DeviceState): DeviceSta
   const device = getDevice(id);
   if (!device) return current;
   current = clearActionFeedback(current);
+  if (device.kind === 'gas-leak') return runDeviceActionState(id, current, 'gas-leak-self-test');
+  if (device.kind === 'gas-meter') return { ...current, on: true, settings: { ...current.settings, sampleChecked: true, gasLastEvent: 'ready' } };
   if (isMonitor(device.kind)) return { ...current, on: true, settings: { ...current.settings, sampleChecked: true } };
   if (device.kind === 'camera') return applyDeviceSetting(id, current, 'armed', !readDeviceSetting(device, current, 'armed'));
   if (isPositionDevice(device)) return { ...current, ...createPositionState(current.level > 0 ? 0 : 100) };
@@ -125,6 +131,7 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
     }
   }
   const operation = action.operation;
+  if (operation?.type === 'gas' && isGasDevice(device.kind)) next = applyGasCommand(device.kind, next, operation.command);
   if (operation?.type === 'media') next = applyMediaOperation(device, next, operation.command);
   if (operation?.type === 'navigate') next = applyNavigationOperation(device, next, operation.direction);
   if (operation?.type === 'increment') {

@@ -155,5 +155,13 @@ Consider a small commercial pilot only after those gates and the dependable
 one-light slice pass, followed by customer isolation, recovery, update, support,
 privacy, and operating-cost readiness checks. No commercial readiness is claimed.
 
-The requested **LPG smart gas meter remains deferred for later**. Do not add gas
-monitoring, gas-related automations, or safety-device control to this light pilot.
+The LPG smart gas meter and gas leak detector now have **local demonstration
+models and simulated controls** in VantaHome. They do not read physical sensors,
+operate real valves, or send gas commands through the device transport. The
+original dashboard's gas scenarios require the offline, unauthenticated Owner
+demo; account and live-home contexts do not acquire these seeded devices.
+
+**Physical LPG gas integration remains deferred.** Do not add live gas monitoring,
+gas-related automations, or safety-device control to this light pilot. Passing a
+simulated leak, self-test, silence, or shutoff scenario is not evidence of hardware
+readiness and does not change the real light pilot's scope.

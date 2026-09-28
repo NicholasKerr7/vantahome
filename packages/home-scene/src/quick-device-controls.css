@@ -21,9 +21,9 @@
 .quick-device-heading h2 { font-size: 17px; line-height: 1.4; font-weight: 600; letter-spacing: -.3px; }
 .quick-device-close { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; margin: -8px -8px 0 0; border-radius: 9px; color: #c1ccb7; background: transparent; }
 .quick-device-close:hover { background: #343e2c; color: #fff; }
-.quick-device-state { display: flex; align-items: center; gap: 7px; min-height: 22px; margin-top: 4px; color: #c1c9b9; font-size: 12px; }
+.quick-device-state { display: flex; align-items: center; gap: 7px; min-height: 22px; margin-top: 4px; color: var(--device-status-accent, #c1c9b9); font-size: 12px; }
 .quick-device-state > span:first-child { width: 6px; height: 6px; background: #899382; border-radius: 50%; }
-.quick-device-state.is-on > span:first-child { background: var(--accent); }
+.quick-device-state.is-on > span:first-child { background: var(--device-status-accent, var(--accent)); }
 .quick-device-value { margin-left: auto; color: #d8e4cc; }
 .quick-device-actions { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 8px; margin-top: 12px; }
 .quick-device-toggle, .quick-device-full { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 10px 9px; border-radius: 9px; font-size: 12px; font-weight: 550; touch-action: manipulation; }

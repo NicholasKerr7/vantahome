@@ -1,5 +1,6 @@
 import { DEVICES, getDevice, isPositionDevice } from './data';
 import { validateStoredSetting } from './deviceCapabilities';
+import { GAS_DEVICE_IDS, isGasDevice, synchronizeGasSafety } from './gasSimulation';
 import type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
 
 export type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
@@ -56,6 +57,7 @@ function readDeviceState(id: string, value: unknown): DeviceState | null {
   const device = getDevice(id);
   if (!device || !isRecord(value) || !hasKeys(value, ['on', 'level'], ['settings']) || typeof value.on !== 'boolean' || typeof value.level !== 'number' || !Number.isFinite(value.level) || value.level < 0 || value.level > 100) return null;
   if (isPositionDevice(device) && value.on !== (value.level > 0)) return null;
+  if (isGasDevice(device.kind) && !value.on) return null;
   const state: DeviceState = { on: value.on, level: value.level };
   if (Object.hasOwn(value, 'settings')) {
     if (!isRecord(value.settings)) return null;
@@ -116,6 +118,22 @@ export function parseSimulationSnapshotMessage(input: unknown): SimulationSnapsh
   return { channel: SIMULATION_CHANNEL, version: 1, type: 'snapshot', state, ...(message.acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId: message.acknowledgedRequestId as number }) };
 }
 
+/** Migrate only pre-gas local caches; live bridge snapshots still require the complete catalog. */
+export function parseStoredSimulationSnapshotMessage(input: unknown): SimulationSnapshotMessage | null {
+  const current = parseSimulationSnapshotMessage(input);
+  if (current) return { ...current, state: { ...current.state, deviceStates: synchronizeGasSafety(current.state.deviceStates) } };
+  const envelope = readEnvelope(input);
+  if (!envelope || envelope.type !== 'snapshot' || !isRecord(envelope.state) || !isRecord(envelope.state.deviceStates)) return null;
+  const previous = envelope.state.deviceStates;
+  const addedIds: readonly string[] = Object.values(GAS_DEVICE_IDS);
+  const missing = DEVICES.filter((device) => !Object.hasOwn(previous, device.id));
+  if (!missing.length || missing.some((device) => !addedIds.includes(device.id))) return null;
+  const defaults = createDefaultSimulationSnapshot().deviceStates;
+  const deviceStates = { ...previous, ...Object.fromEntries(missing.map((device) => [device.id, defaults[device.id]])) };
+  const migrated = parseSimulationSnapshotMessage({ ...envelope, state: { ...envelope.state, deviceStates } });
+  return migrated ? { ...migrated, state: { ...migrated.state, deviceStates: synchronizeGasSafety(migrated.state.deviceStates) } } : null;
+}
+
 /** Produce independent defaults for persistence and the browser store without loading a renderer. */
 export function createDefaultSimulationSnapshot(): SimulationSnapshot {
   return {
@@ -126,7 +144,8 @@ export function createDefaultSimulationSnapshot(): SimulationSnapshot {
 
 /** Merge a validated transaction while retaining every device and preference it did not mention. */
 export function mergeSimulationChanges(state: SimulationSnapshot, changes: SimulationChanges): SimulationSnapshot {
-  return { ...state, ...changes, deviceStates: changes.deviceStates ? { ...state.deviceStates, ...changes.deviceStates } : state.deviceStates };
+  const deviceStates = changes.deviceStates ? { ...state.deviceStates, ...changes.deviceStates } : state.deviceStates;
+  return { ...state, ...changes, deviceStates: synchronizeGasSafety(deviceStates, state.deviceStates) };
 }
 
 /** Extract only changed simulation fields; camera, selection and notices never leave the scene. */

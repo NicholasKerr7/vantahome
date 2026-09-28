@@ -5,6 +5,8 @@ import type { ConnectionStatus } from "../services/deviceClient";
 import { applyDeviceStatePatch } from "./deviceState";
 import { roleHasPermission } from "../security/permissions";
 import { runtimePolicy } from "../config/runtimeMode";
+import { addMissingGasDemoDevices, createGasDemoDevices } from "../features/gas/gasDemoDevices";
+import type { GAS_EVENTS } from "../../packages/home-scene/src/gasSimulation";
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -31,6 +33,8 @@ export type DeviceKind =
   | "microwave"
   | "energy"
   | "water"
+  | "gas-meter"
+  | "gas-leak"
   | "water-heater"
   | "air"
   | "sprinkler"
@@ -185,6 +189,31 @@ export type Device = {
   waterPressureAlerts?: boolean; // water meter
   waterAutoShutoff?: boolean; // water meter
   waterBudgetL?: number; // water meter
+  // Explicit demo gas values; these never enter the real-device command schema.
+  gasValveOpen?: boolean;
+  gasBudgetKg?: number;
+  gasRefillAlertPercent?: number;
+  gasUsageAlerts?: boolean;
+  gasRefillAlerts?: boolean;
+  gasFlowKgH?: number;
+  gasTodayKg?: number;
+  gasMonthKg?: number;
+  gasRemainingKg?: number;
+  gasCapacityKg?: number;
+  gasRemainingPercent?: number;
+  gasRefillDue?: boolean;
+  gasBudgetExceeded?: boolean;
+  gasLeakInterlock?: boolean;
+  gasLeakAlerts?: boolean;
+  gasAutoShutoff?: boolean;
+  gasLeakDetected?: boolean;
+  gasConcentrationPercentLel?: number;
+  gasAlarmSilenced?: boolean;
+  gasBatteryPercent?: number;
+  gasTestCount?: number;
+  gasTestResult?: "not-run" | "passed";
+  gasLastSampleKg?: number;
+  gasLastEvent?: (typeof GAS_EVENTS)[number];
   speakerSource?: "AirPlay" | "Bluetooth" | "Spotify" | "AUX" | "TV";
   speakerPreset?: "Flat" | "Warm" | "Bright" | "Bass" | "Vocal";
   bass?: number;
@@ -1233,6 +1262,7 @@ const devicesSeed: Device[] = [
     trackDurationSec: 280,
     trackProgressSec: 48,
   },
+  ...createGasDemoDevices(),
 ];
 
 const integrationsSeed: Record<IntegrationProvider, IntegrationState> = {
@@ -2174,7 +2204,7 @@ export const useHomeStore = create<HomeState>()(
     }),
     {
       name: "vantahome-store",
-      version: 5,
+      version: 6,
       skipHydration: true,
       storage: createJSONStorage(() => scopedStorage),
       merge: (persisted, current) => {
@@ -2199,18 +2229,26 @@ export const useHomeStore = create<HomeState>()(
         if (!persistedState || typeof persistedState !== "object")
           return {} as HomeState;
         const state = persistedState as HomeState;
-        if (version && version >= 4) return state;
+        if (version && version >= 4) {
+          // Upgrade old local demos once; account caches never acquire gas samples.
+          return version < 6 && !state.accountUserId
+            ? { ...state, devices: addMissingGasDemoDevices(state.devices ?? []) }
+            : state;
+        }
         const base =
           version && version >= 2
             ? state
             : {
                 ...state,
                 rooms: mergeById(state.rooms, roomsSeed),
-                devices: mergeById(state.devices, devicesSeed),
+                devices: mergeById(state.devices, state.accountUserId
+                  ? devicesSeed.filter((device) => device.kind !== "gas-meter" && device.kind !== "gas-leak")
+                  : devicesSeed),
                 scenes: mergeById(state.scenes, scenesSeed),
               };
         return {
           ...base,
+          ...(!state.accountUserId ? { devices: addMissingGasDemoDevices(base.devices ?? []) } : {}),
           household: base.household ?? householdSeed,
           roomMembers: base.roomMembers ?? roomMembersSeed,
           memberPermissionOverrides: base.memberPermissionOverrides ?? [],

@@ -2,7 +2,7 @@
 
 3D Home is an optional, explicitly labeled simulation inside the existing
 VantaHome app. The original dashboard, authentication, household permissions,
-runtime mode policy, and device command services remain in place. Its 90 scene
+runtime mode policy, and device command services remain in place. Its 92 scene
 devices are simulated; toggles, presets, the gate, irrigation, and automatic
 exterior lighting do not control physical equipment.
 
@@ -13,6 +13,15 @@ landscape uses a right drawer, with no vertical scrolling. Schedules and timers
 are local preferences only. Media, remote, and camera buttons produce labeled
 simulation outcomes. Independent light brightness, color, white temperature, and
 steady effect previews update the corresponding fixture in the model.
+
+The LPG meter on the exterior service wall and kitchen gas-leak detector share
+the same local scenario in the original demo, 3D Home, and native full controls.
+The meter models a 12.5 kg demo supply with usage, remaining quantity, budget and
+refill preferences. Detector tests, leak scenarios, silencing, and linked valve
+closure are explicit simulation actions. Silencing does not clear a leak;
+clearing a scenario never reopens the valve. Home lighting presets preserve gas
+state. These devices do not monitor gas or operate physical equipment, and the
+original command boundary rejects gas-device commands.
 
 ## Build and run
 
@@ -100,7 +109,7 @@ file access. A narrow native broker fetches only the fixed public weather
 endpoint; it does not accept arbitrary URLs, coordinates, credentials, or device
 commands. The broker bounds request frequency, duration, and response size.
 
-The host persists all 90 simulated device states, supported device settings,
+The host persists all 92 simulated device states, supported device settings,
 day/night mode, and the reduced-motion preference in a separate versioned local
 cache. Leaving the screen or backgrounding the app releases its graphics;
 reopening restores these settings. Camera position, room selection, and open
@@ -109,7 +118,7 @@ as a system overlay, do not unload the scene. The standalone editing preview
 retains its separate browser simulation preferences.
 
 In demo mode, an unauthenticated local Owner with no account, active home, or
-enabled realtime/MQTT transport shares **22 explicitly paired demo devices**
+enabled realtime/MQTT transport shares **24 explicitly paired demo devices**
 with the original dashboard. Controls changed in either view update the other.
 The pairing registry is `src/features/three-d-home/demoDeviceMapping.ts`; it
 requires the expected device kind and never guesses a match from a name or room.
@@ -253,7 +262,7 @@ closed.
 
 Live hardware readiness and the private pilot remain governed separately by
 [HOME_PILOT.md](HOME_PILOT.md). This integration does not change that readiness
-status or connect any of the 90 simulated devices to hardware.
+status or connect any of the 92 simulated devices to hardware.
 
 ## Renderer comparison preview
 

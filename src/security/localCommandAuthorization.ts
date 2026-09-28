@@ -11,6 +11,11 @@ export function authorizeLocalDeviceCommand(command: DeviceCommand) {
     (candidate) => candidate.id === command.deviceId,
   );
   if (!device) return { allowed: false, reason: "device_not_found" } as const;
+  // Gas is an interactive local simulation only, including in demo mode.
+  // Reject before command confirmation, optimistic events, retries or transports.
+  if (device.kind === "gas-meter" || device.kind === "gas-leak") {
+    return { allowed: false, reason: "simulation_only_device" } as const;
+  }
 
   const member = state.household.find(
     (candidate) => candidate.id === state.activeMemberId,

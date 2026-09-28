@@ -23,6 +23,8 @@ const ICON_MAP: Record<Device["kind"], { set: "ion" | "mci"; name: string }> = {
   microwave: { set: "mci", name: "microwave" },
   energy: { set: "ion", name: "flash" },
   water: { set: "ion", name: "water" },
+  "gas-meter": { set: "mci", name: "gas-cylinder" },
+  "gas-leak": { set: "mci", name: "smoke-detector-alert" },
   "water-heater": { set: "ion", name: "thermometer" },
   air: { set: "ion", name: "leaf" },
   sprinkler: { set: "ion", name: "rainy" },

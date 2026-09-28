@@ -94,7 +94,7 @@ describe('expanded control semantics', () => {
     const device = deviceOfKind(kind);
     useHomeStore.getState().toggleDevice(device.id);
     const checked = useHomeStore.getState().deviceStates[device.id];
-    expect(checked).toMatchObject({ on: true, settings: { sampleChecked: true } });
+    expect(checked).toMatchObject({ on: true, settings: kind === 'gas-leak' ? { gasTestCount: 1, gasTestResult: 'passed' } : { sampleChecked: true } });
     const reading = getCapabilities(kind).find((item) => item.type === 'stat');
     if (reading?.type === 'stat') {
       useHomeStore.getState().setDeviceSetting(device.id, reading.field, 999);

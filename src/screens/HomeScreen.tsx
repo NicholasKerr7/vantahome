@@ -784,6 +784,8 @@ export default function HomeScreen() {
     const alerts = devicesAll.filter(
       (d) =>
         (d.kind === "smoke" && d.smokeDetected) ||
+        (d.kind === "gas-leak" && d.gasLeakDetected) ||
+        (d.kind === "gas-meter" && (d.gasLeakInterlock || d.gasRefillDue || d.gasBudgetExceeded)) ||
         (d.kind === "water" &&
           (d.waterLeakDetected ||
             ((d.waterBudgetL ?? 0) > 0 &&

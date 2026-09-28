@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { ArrowUpRight, Power, X } from 'lucide-react';
 import { formatDeviceLevel, getDevice, getRoom, isPositionDevice, type DeviceId } from './data';
 import { deviceStatus, hasLegacyLevel, isMonitor, quickActionLabel, readDeviceSetting } from './deviceCapabilities';
+import { gasStatusTone } from './gasSimulation';
 import { useHomeStore } from './state';
 import './quick-device-controls.css';
 
@@ -49,7 +50,7 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
     };
   }, [deviceId, onClose]);
 
-  return <section ref={panel} id="quick-device-controls" className="quick-device-controls" role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
+  return <section ref={panel} id="quick-device-controls" className="quick-device-controls" data-device-tone={gasStatusTone(device.kind, current)} role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
     <div className="quick-device-heading">
       <div><p className="quick-device-room">{getRoom(device.roomId).name}</p><h2 id="quick-device-title">{device.name}</h2></div>
       <button type="button" className="quick-device-close" aria-label="Close quick controls" onClick={() => onClose()}><X size={18} aria-hidden="true" /></button>

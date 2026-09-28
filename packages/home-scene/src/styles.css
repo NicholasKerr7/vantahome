@@ -13,6 +13,8 @@
   --text-soft: #afb6a8;
   --accent: #d5e7a4;
   --accent-dark: #262f19;
+  --device-alarm: #ffb7ac;
+  --device-warning: #efd391;
   --radius: 18px;
 }
 
@@ -29,6 +31,9 @@ button, a, input, summary { outline-offset: 5px; }
 :focus-visible { outline: 2px solid var(--accent); }
 /* Static headings receive focus for screen-reader announcements, not interaction. */
 :is(h1, h2, h3, h4, h5, h6)[tabindex='-1']:focus { outline: none; }
+/* Status colors are steady, with readable text alongside every simulated alarm. */
+[data-device-tone='alarm'] { --device-status-accent: var(--device-alarm); }
+[data-device-tone='warning'], [data-device-tone='closed'] { --device-status-accent: var(--device-warning); }
 button { transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 button svg, a svg { flex-shrink: 0; }
 button:disabled { opacity: .75; }

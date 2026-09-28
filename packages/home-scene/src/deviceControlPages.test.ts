@@ -25,7 +25,7 @@ const originalExtraFields: Partial<Record<DeviceKind, string[]>> = {
 describe('shared original-device control pages', () => {
   it('retains custom original controls alongside every generated capability', () => {
     for (const kind of DEVICE_KINDS) {
-      for (const capability of originalInventory.profiles[kind]) {
+      for (const capability of (originalInventory.profiles as Partial<Record<DeviceKind, readonly { id: string }[]>>)[kind] ?? []) {
         expect(getCapabilities(kind).find((item) => item.id === capability.id), `${kind}/${capability.id}`).toMatchObject(capability);
       }
     }

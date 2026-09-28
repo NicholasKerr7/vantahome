@@ -2,6 +2,7 @@ import { isEmbeddedScene } from './embeddedHost';
 import { createDefaultSimulationSnapshot } from './simulationBridgeProtocol';
 import { create } from 'zustand';
 import { synchronizeSolarLights, type LightingMode } from './lightingAutomation';
+import { isGasDevice, synchronizeGasSafety } from './gasSimulation';
 import { isMonitor, validateStoredSetting, type SettingValue } from './deviceCapabilities';
 import { applyDeviceSetting, clampLevel, createPositionState, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from './deviceControlActions';
 export { applyDeviceSetting, clampLevel, createPositionState, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from './deviceControlActions';
@@ -126,7 +127,7 @@ export function parseStoredState(raw: string | null): HomeSnapshot {
     const floor = room.outdoor ? getRoom(indoorContext.roomId).floor : room.floor;
     const view: ViewId = saved.view === 'exterior' || saved.view === 'immersive' ? saved.view : room.outdoor ? 'exterior' : room.floor;
     return {
-      deviceStates, roomId: room.id, floor, view, selectedDevice: validSelection, indoorContext,
+      deviceStates: synchronizeGasSafety(deviceStates), roomId: room.id, floor, view, selectedDevice: validSelection, indoorContext,
       night: typeof saved.night === 'boolean' ? saved.night : fallback.night,
       lightingMode: saved.lightingMode === 'day' || saved.lightingMode === 'night' ? saved.lightingMode : 'auto',
       motionDisabled: typeof saved.motionDisabled === 'boolean' ? saved.motionDisabled : false,
@@ -154,6 +155,8 @@ export function applyPreset(state: HomeSnapshot, preset: PresetId): HomeSnapshot
     if (preset === 'night') devices['master-ac'] = { on: true, level: 45 };
   }
   const night = preset === 'night' || preset === 'movie';
+  // Lighting presets must never reset a leak scenario, reopen its valve, or refill the sample supply.
+  for (const device of DEVICES) if (isGasDevice(device.kind)) devices[device.id] = state.deviceStates[device.id];
   return { ...state, deviceStates: synchronizeSolarLights(devices, night), night, lightingMode: night ? 'night' : 'day', activePreset: preset };
 }
 
@@ -224,26 +227,26 @@ export const useHomeStore = create<HomeStore>((set) => ({
   }),
   /** Perform a kind-appropriate quick action without altering the selected camera. */
   toggleDevice: (id) => set((state) => getDevice(id) ? {
-    deviceStates: { ...state.deviceStates, [id]: toggleDeviceState(id, state.deviceStates[id]) }, activePreset: null,
+    deviceStates: synchronizeGasSafety({ ...state.deviceStates, [id]: toggleDeviceState(id, state.deviceStates[id]) }, state.deviceStates), activePreset: null,
   } : {}),
   /** Preserve existing percentage-based animation inputs and cover behavior. */
   setDeviceLevel: (id, level) => set((state) => {
     if (!getDevice(id)) return {};
     const next = setDeviceLevelState(id, state.deviceStates[id], level);
-    return { deviceStates: { ...state.deviceStates, [id]: next }, activePreset: null };
+    return { deviceStates: synchronizeGasSafety({ ...state.deviceStates, [id]: next }, state.deviceStates), activePreset: null };
   }),
   /** Validate schema-backed controls before applying them to the simulation. */
   setDeviceSetting: (id, field, value) => set((state) => {
     if (!getDevice(id)) return {};
     const next = applyDeviceSetting(id, state.deviceStates[id], field, value);
-    return next === state.deviceStates[id] ? {} : { deviceStates: { ...state.deviceStates, [id]: next }, activePreset: null };
+    return next === state.deviceStates[id] ? {} : { deviceStates: synchronizeGasSafety({ ...state.deviceStates, [id]: next }, state.deviceStates), activePreset: null };
   }),
   /** Run only explicitly cataloged action patches; arbitrary input cannot add state. */
   runDeviceAction: (id, actionId) => set((state) => {
     if (!getDevice(id)) return {};
     const current = state.deviceStates[id];
     const next = runDeviceActionState(id, current, actionId);
-    return next === current ? {} : { deviceStates: { ...state.deviceStates, [id]: next }, activePreset: null };
+    return next === current ? {} : { deviceStates: synchronizeGasSafety({ ...state.deviceStates, [id]: next }, state.deviceStates), activePreset: null };
   }),
   /** A manual preview also synchronizes the simulated dusk-to-dawn solar poles. */
   setNight: (night) => set((state) => ({ night, lightingMode: night ? 'night' : 'day', deviceStates: synchronizeSolarLights(state.deviceStates, night), activePreset: null })),

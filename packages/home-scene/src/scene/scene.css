@@ -46,6 +46,12 @@
   box-shadow: 0 0 0 4px rgb(211 232 174 / 17%), 0 3px 14px rgb(12 30 22 / 25%);
 }
 
+.device-hotspot.is-on:is([data-device-tone='alarm'], [data-device-tone='warning'], [data-device-tone='closed']) {
+  background: var(--device-status-accent);
+  border-color: var(--device-status-accent);
+  box-shadow: 0 2px 12px rgb(12 30 22 / 28%);
+}
+
 .device-hotspot:hover,
 .device-hotspot.is-selected,
 .device-hotspot[aria-expanded="true"] {

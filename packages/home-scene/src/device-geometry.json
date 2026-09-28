@@ -12249,6 +12249,581 @@
           "role": "static"
         }
       ]
+    },
+    "utility-gas-meter": {
+      "parts": [
+        {
+          "name": "wall mounting plate",
+          "shape": "box",
+          "position": [
+            0,
+            0.32,
+            -0.035
+          ],
+          "size": [
+            0.44,
+            0.6,
+            0.018
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "graphite",
+          "role": "static"
+        },
+        {
+          "name": "cast meter housing",
+          "shape": "box",
+          "position": [
+            0,
+            0.3,
+            0.05
+          ],
+          "size": [
+            0.36,
+            0.4,
+            0.18
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "ivory",
+          "role": "static"
+        },
+        {
+          "name": "recessed meter fascia",
+          "shape": "box",
+          "position": [
+            0,
+            0.34,
+            0.145
+          ],
+          "size": [
+            0.28,
+            0.25,
+            0.018
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "graphite",
+          "role": "static"
+        },
+        {
+          "name": "meter glass display",
+          "shape": "box",
+          "position": [
+            0,
+            0.37,
+            0.158
+          ],
+          "size": [
+            0.216,
+            0.105,
+            0.008
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "screen",
+          "role": "static"
+        },
+        {
+          "name": "gas meter readout",
+          "shape": "box",
+          "position": [
+            0,
+            0.37,
+            0.164
+          ],
+          "size": [
+            0.18,
+            0.065,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "cyan",
+          "role": "display"
+        },
+        {
+          "name": "status indicator",
+          "shape": "box",
+          "position": [
+            0.1,
+            0.25,
+            0.165
+          ],
+          "size": [
+            0.022,
+            0.018,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "cyan",
+          "role": "display"
+        },
+        {
+          "name": "service label",
+          "shape": "box",
+          "position": [
+            0,
+            0.12,
+            0.143
+          ],
+          "size": [
+            0.16,
+            0.022,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "bronze",
+          "role": "static"
+        },
+        {
+          "name": "service pipe",
+          "shape": "cylinder",
+          "position": [
+            -0.17,
+            0.32,
+            0.035
+          ],
+          "size": [
+            0.026,
+            0.64,
+            0.026
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "chrome",
+          "role": "static"
+        },
+        {
+          "name": "upper brass union",
+          "shape": "cylinder",
+          "position": [
+            -0.17,
+            0.58,
+            0.035
+          ],
+          "size": [
+            0.052,
+            0.065,
+            0.052
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "bronze",
+          "role": "static"
+        },
+        {
+          "name": "lower brass union",
+          "shape": "cylinder",
+          "position": [
+            -0.17,
+            0.085,
+            0.035
+          ],
+          "size": [
+            0.052,
+            0.065,
+            0.052
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "bronze",
+          "role": "static"
+        },
+        {
+          "name": "service pipe",
+          "shape": "cylinder",
+          "position": [
+            0.17,
+            0.32,
+            0.035
+          ],
+          "size": [
+            0.026,
+            0.64,
+            0.026
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "chrome",
+          "role": "static"
+        },
+        {
+          "name": "upper brass union",
+          "shape": "cylinder",
+          "position": [
+            0.17,
+            0.58,
+            0.035
+          ],
+          "size": [
+            0.052,
+            0.065,
+            0.052
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "bronze",
+          "role": "static"
+        },
+        {
+          "name": "lower brass union",
+          "shape": "cylinder",
+          "position": [
+            0.17,
+            0.085,
+            0.035
+          ],
+          "size": [
+            0.052,
+            0.065,
+            0.052
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "bronze",
+          "role": "static"
+        },
+        {
+          "name": "isolating valve stem",
+          "shape": "cylinder",
+          "position": [
+            0.17,
+            0.53,
+            0.074
+          ],
+          "size": [
+            0.025,
+            0.078,
+            0.025
+          ],
+          "rotation": [
+            1.5707963267948966,
+            0,
+            0
+          ],
+          "material": "bronze",
+          "role": "static"
+        },
+        {
+          "name": "isolating valve handle",
+          "shape": "box",
+          "position": [
+            0.17,
+            0.53,
+            0.115
+          ],
+          "size": [
+            0.115,
+            0.028,
+            0.023
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "graphite",
+          "role": "static"
+        }
+      ]
+    },
+    "kitchen-gas-leak": {
+      "parts": [
+        {
+          "name": "detector mounting base",
+          "shape": "box",
+          "position": [
+            0,
+            0.09,
+            -0.021
+          ],
+          "size": [
+            0.176,
+            0.176,
+            0.016
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "graphite",
+          "role": "static"
+        },
+        {
+          "name": "rounded detector housing",
+          "shape": "box",
+          "position": [
+            0,
+            0.09,
+            0
+          ],
+          "size": [
+            0.18,
+            0.18,
+            0.044
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "ivory",
+          "role": "static"
+        },
+        {
+          "name": "sensor grille inset",
+          "shape": "box",
+          "position": [
+            0,
+            0.062,
+            0.024
+          ],
+          "size": [
+            0.126,
+            0.068,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "dark",
+          "role": "static"
+        },
+        {
+          "name": "detector display backing",
+          "shape": "box",
+          "position": [
+            0,
+            0.135,
+            0.025
+          ],
+          "size": [
+            0.077,
+            0.036,
+            0.007
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "screen",
+          "role": "static"
+        },
+        {
+          "name": "gas detector readout",
+          "shape": "box",
+          "position": [
+            0,
+            0.135,
+            0.03
+          ],
+          "size": [
+            0.059,
+            0.021,
+            0.003
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "cyan",
+          "role": "display"
+        },
+        {
+          "name": "status indicator",
+          "shape": "box",
+          "position": [
+            0.06,
+            0.137,
+            0.029
+          ],
+          "size": [
+            0.014,
+            0.014,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "cyan",
+          "role": "display"
+        },
+        {
+          "name": "test button",
+          "shape": "box",
+          "position": [
+            0,
+            0.016,
+            0.027
+          ],
+          "size": [
+            0.033,
+            0.016,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "graphite",
+          "role": "static"
+        },
+        {
+          "name": "grille rib",
+          "shape": "box",
+          "position": [
+            -0.05,
+            0.062,
+            0.029
+          ],
+          "size": [
+            0.006,
+            0.067,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "ivory",
+          "role": "static"
+        },
+        {
+          "name": "grille rib",
+          "shape": "box",
+          "position": [
+            -0.025,
+            0.062,
+            0.029
+          ],
+          "size": [
+            0.006,
+            0.067,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "ivory",
+          "role": "static"
+        },
+        {
+          "name": "grille rib",
+          "shape": "box",
+          "position": [
+            0.0,
+            0.062,
+            0.029
+          ],
+          "size": [
+            0.006,
+            0.067,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "ivory",
+          "role": "static"
+        },
+        {
+          "name": "grille rib",
+          "shape": "box",
+          "position": [
+            0.02500000000000001,
+            0.062,
+            0.029
+          ],
+          "size": [
+            0.006,
+            0.067,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "ivory",
+          "role": "static"
+        },
+        {
+          "name": "grille rib",
+          "shape": "box",
+          "position": [
+            0.05,
+            0.062,
+            0.029
+          ],
+          "size": [
+            0.006,
+            0.067,
+            0.006
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "material": "ivory",
+          "role": "static"
+        }
+      ]
     }
   }
 }

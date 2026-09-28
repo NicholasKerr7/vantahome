@@ -8,6 +8,8 @@ import {
 } from "../../../packages/home-scene/src/deviceCapabilities";
 import type { DeviceState, SimulationSnapshot } from "../../../packages/home-scene/src/simulationBridgeProtocol";
 import type { Device, DeviceKind } from "../../store/useHomeStore";
+import { synchronizeGasSafety } from '../../../packages/home-scene/src/gasSimulation';
+import { overlayGasDemoDevice, projectGasSimulationToDemo } from './gasDemoMapping';
 
 /** Curated demo correspondence; user device names and room labels never select a target. */
 export const DEMO_DEVICE_MAPPINGS = [
@@ -34,6 +36,8 @@ export const DEMO_DEVICE_MAPPINGS = [
   { demoId: "d27", sceneId: "utility-water-heater", kind: "water-heater" },
   { demoId: "d34", sceneId: "grounds-light", kind: "light" },
   { demoId: "d39", sceneId: "terrace-camera", kind: "camera" },
+  { demoId: "d40", sceneId: "utility-gas-meter", kind: "gas-meter" },
+  { demoId: "d41", sceneId: "kitchen-gas-leak", kind: "gas-leak" },
 ] as const satisfies readonly { demoId: string; sceneId: string; kind: DeviceKind }[];
 
 // Only common controls can cross the boundary. Identity, media URLs, observations,
@@ -138,11 +142,13 @@ export function overlayDemoDevices(
       if (value !== undefined) next = writeSceneControl(device.kind, next, capability.field, value);
     }
     next = synchronizeDemoLightAppearance(device, previous, next);
+    next = overlayGasDemoDevice(device, next);
     if (next !== previous) {
       if (deviceStates === snapshot.deviceStates) deviceStates = { ...deviceStates };
       deviceStates[mapping.sceneId] = next;
     }
   }
+  deviceStates = synchronizeGasSafety(deviceStates, snapshot.deviceStates);
   return deviceStates === snapshot.deviceStates ? snapshot : { ...snapshot, deviceStates };
 }
 
@@ -194,6 +200,7 @@ export function projectSimulationToDemo(
         next = { ...next, isOn: value > 0 };
       }
     }
+    next = projectGasSimulationToDemo(next, state, previous);
     if (next !== device) {
       result ??= devices.slice();
       result[index] = next;

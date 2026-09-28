@@ -67,6 +67,8 @@ import {
 import { deviceClient } from "../services/deviceClient";
 import { useResponsive } from "../theme/layout";
 import DeviceIcon from "../components/DeviceIcon";
+import GasDeviceControls from "../features/gas/GasDeviceControls";
+import { isGasDevice } from "../features/gas/gasDemoDevices";
 import { reportRoomPresence } from "../services/roomPresence";
 
 const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
@@ -9173,10 +9175,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
             <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={panelScrollContentStyle}
+              scrollEnabled={!isGasDevice(device.kind)}
+              contentContainerStyle={isGasDevice(device.kind) ? [panelScrollContentStyle, styles.gasDetailContent] : panelScrollContentStyle}
             >
               {renderLandscapeContent(
-                showCapabilities ? (
+                isGasDevice(device.kind) ? <GasDeviceControls device={device} /> : showCapabilities ? (
                   <CapabilitiesSection
                     device={device}
                     statusText={`${device.isOn ? "Running" : "Off"}${
@@ -9803,7 +9806,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             </ScrollView>
           </View>
 
-          <View style={powerDockStyle}>
+          {!isGasDevice(device.kind) && <View style={powerDockStyle}>
             <Pressable
               accessibilityLabel={`${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
               accessibilityState={{ selected: device.isOn }}
@@ -9829,7 +9832,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 </LinearGradient>
               </View>
             </Pressable>
-          </View>
+          </View>}
         </LinearGradient>
         </>
       </SafeAreaView>
@@ -9915,6 +9918,7 @@ const stylesVars = {
 };
 
 const styles = StyleSheet.create({
+  gasDetailContent: { paddingBottom: 12 },
   root: { flex: 1 },
   outer: { flex: 1, padding: 18 },
   outerTablet: { paddingTop: 24 },

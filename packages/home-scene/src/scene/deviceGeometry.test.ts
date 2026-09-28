@@ -18,9 +18,9 @@ function projectedHeight(part: FixturePart, angle: number): number {
 }
 
 describe('portable device geometry contract', () => {
-  it('contains one assembly for each of the 90 real manifest IDs, without orphan hardware', () => {
-    expect(DEVICES).toHaveLength(90);
-    expect(new Set(DEVICES.map((device) => device.id)).size).toBe(90);
+  it('contains one assembly for each of the 92 real manifest IDs, without orphan hardware', () => {
+    expect(DEVICES).toHaveLength(92);
+    expect(new Set(DEVICES.map((device) => device.id)).size).toBe(92);
     expect(Object.keys(FIXTURE_LIBRARY.devices).sort()).toEqual(DEVICES.map((device) => device.id).sort());
     expect(Object.keys(FIXTURE_LIBRARY.materials).length).toBeLessThanOrEqual(25);
   });

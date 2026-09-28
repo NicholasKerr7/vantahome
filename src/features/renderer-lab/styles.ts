@@ -10,6 +10,8 @@ export const labColors = {
   muted: "#b4c3b8",
   sage: "#d2e7bb",
   ink: "#1a2c23",
+  alarm: "#ffb7ac",
+  warning: "#efd391",
 };
 
 /** Fixed control heights preserve the scene's space without adding a vertical scroll view. */

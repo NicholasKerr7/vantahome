@@ -1,15 +1,17 @@
 import inventory from './device-capabilities.json';
+import { gasActionFeedback, gasDeviceStatus, isGasDevice, readGasSetting, type GasCommand } from './gasSimulation';
 import { supplementalCapabilities, supplementalDefaults, simulatedStatusFields, scheduleCapabilities } from './deviceControlCatalog';
 import type { DeviceDefinition } from './data';
 import type { DeviceState, SettingValue } from './simulationTypes';
 export type { SettingValue } from './simulationTypes';
 
-export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar'] as const;
+export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar', 'gas-meter', 'gas-leak'] as const;
 export type DeviceKind = typeof DEVICE_KINDS[number];
 export type ControlGroup = 'controls' | 'modes' | 'schedule' | 'status';
 export type DeviceActionOperation =
   | { type: 'increment'; field: 'channel' | 'timeRemainingSec'; delta: number }
   | { type: 'media'; command: 'play-pause' | 'rewind' | 'forward' | 'previous' | 'next' }
+  | { type: 'gas'; command: GasCommand }
   | { type: 'navigate'; direction: 'up' | 'down' | 'left' | 'right' | 'select' | 'home' };
 interface CapabilityBase { id: string; label: string; group?: ControlGroup }
 export type DeviceCapability = CapabilityBase & (
@@ -19,10 +21,10 @@ export type DeviceCapability = CapabilityBase & (
   | { type: 'stat'; field: string; unit?: string }
   | { type: 'action'; patch: Record<string, SettingValue>; operation?: DeviceActionOperation }
 );
-const originalProfiles = inventory.profiles as Record<DeviceKind, DeviceCapability[]>;
+const originalProfiles = inventory.profiles as Partial<Record<DeviceKind, DeviceCapability[]>>;
 // Custom original screens supplement the exported schema; matching IDs intentionally replace it.
 const profiles = Object.fromEntries(DEVICE_KINDS.map((kind) => {
-  const controls = new Map(originalProfiles[kind].map((capability) => [capability.id, capability]));
+  const controls = new Map((originalProfiles[kind] ?? []).map((capability) => [capability.id, capability]));
   for (const capability of supplementalCapabilities[kind] ?? []) controls.set(capability.id, capability);
   for (const capability of scheduleCapabilities(kind)) controls.set(capability.id, capability);
   return [kind, [...controls.values()]];
@@ -71,13 +73,17 @@ export function getControlPages(kindOrDevice: DeviceKind | Pick<DeviceDefinition
 }
 
 /** Monitoring hardware presents readings and a sample check instead of fake power. */
-export function isMonitor(kind: DeviceKind): boolean { return ['energy', 'water', 'air', 'smoke', 'solar'].includes(kind); }
+export function isMonitor(kind: DeviceKind): boolean { return ['energy', 'water', 'air', 'smoke', 'solar', 'gas-meter', 'gas-leak'].includes(kind); }
 
 /** Preserve the seven original animation levels while offering richer settings. */
 export function hasLegacyLevel(device: DeviceDefinition): boolean { return (LEGACY_DEVICE_IDS as readonly string[]).includes(device.id); }
 
 /** Read a validated setting, falling back to an appropriate reproducible demo value. */
 export function readDeviceSetting(device: DeviceDefinition, state: DeviceState, field: string): SettingValue {
+  if (isGasDevice(device.kind)) {
+    const gasValue = readGasSetting(device.kind, state, field);
+    if (gasValue !== undefined) return gasValue;
+  }
   if (field === 'isOn') return state.on;
   if (field === 'armed' && device.kind === 'camera') return state.on;
   if (field === 'powerW' && device.kind === 'generator') return state.on ? Math.round(state.level * 60) : 0;
@@ -110,6 +116,7 @@ export function validateStoredSetting(kind: DeviceKind, field: string, input: un
 
 /** Summarize the last local action immediately, without claiming hardware, media, or automation ran. */
 export function deviceActionFeedback(device: DeviceDefinition, state: DeviceState): string | null {
+  if (isGasDevice(device.kind)) return state.settings?.gasLastEvent && state.settings.gasLastEvent !== 'ready' ? gasActionFeedback(device.kind, state) : null;
   const action = profiles[device.kind].find((item) => item.type === 'action' && item.id === state.settings?.lastAction);
   if (action?.type !== 'action') return null;
   const operation = action.operation;
@@ -134,7 +141,9 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
 export function validateSetting(capability: DeviceCapability, value: unknown): SettingValue | undefined {
   if (capability.type === 'range' && typeof value === 'number' && Number.isFinite(value)) {
     const step = capability.step ?? 1;
-    return Math.min(capability.max, Math.max(capability.min, Math.round((value - capability.min) / step) * step + capability.min));
+    // Decimal sample units need stable rounding before exact bridge validation.
+    const rounded = Number((Math.round((value - capability.min) / step) * step + capability.min).toFixed(8));
+    return Math.min(capability.max, Math.max(capability.min, rounded));
   }
   if (capability.type === 'toggle' && typeof value === 'boolean') return value;
   if (capability.type === 'enum' && capability.options.some((option) => option.value === value)) return value as string | number;
@@ -151,7 +160,7 @@ export function formatCapabilityValue(capability: DeviceCapability, value: Setti
 
 /** Give every quick card one meaningful action without treating sensors as switches. */
 export function quickActionLabel(device: DeviceDefinition, state: DeviceState): string {
-  if (isMonitor(device.kind)) return device.kind === 'smoke' ? 'Run self-test' : 'Refresh sample';
+  if (isMonitor(device.kind)) return device.kind === 'smoke' || device.kind === 'gas-leak' ? 'Run self-test' : 'Refresh sample';
   if (device.kind === 'camera') return readDeviceSetting(device, state, 'armed') ? 'Disarm' : 'Arm';
   if (['gate', 'garage', 'blinds', 'window', 'door'].includes(device.kind)) return `${state.level > 0 ? 'Close' : 'Open'} ${device.kind === 'garage' ? 'shutter' : device.kind}`;
   if (['washer', 'dryer', 'dishwasher', 'microwave'].includes(device.kind)) return state.on ? 'Pause' : 'Start';
@@ -163,6 +172,7 @@ export function quickActionLabel(device: DeviceDefinition, state: DeviceState): 
 
 /** Describe state consistently in quick cards, room lists and the full inspector. */
 export function deviceStatus(device: DeviceDefinition, state: DeviceState): string {
+  if (isGasDevice(device.kind)) return gasDeviceStatus(device.kind, state);
   if (device.kind === 'camera') return readDeviceSetting(device, state, 'armed') ? 'Armed' : 'Disarmed';
   if (isMonitor(device.kind)) return state.settings?.sampleChecked ? 'Sample checked' : 'Monitoring sample';
   if (['gate', 'garage', 'window', 'blinds', 'door'].includes(device.kind)) return state.level === 0 ? 'Closed' : state.level === 100 ? 'Fully open' : `${state.level}% open`;
