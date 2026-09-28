@@ -1,9 +1,22 @@
 import { StyleSheet } from 'react-native';
-import { labColors as colors } from '../renderer-lab/styles';
+import { theme } from '../../theme/theme';
+
+/** Native inspectors share the home palette, including when launched from either renderer. */
+const colors = {
+  panel: theme.colors.bg0,
+  raised: theme.colors.card2,
+  stroke: theme.colors.stroke,
+  text: theme.colors.text,
+  muted: theme.colors.subtext,
+  sage: theme.colors.accent,
+  ink: theme.colors.bg0,
+  alarm: '#ffb7ac',
+  warning: '#efd391',
+};
 
 /** Fixed, touch-sized layouts shared by the native device inspector and its pickers. */
 export const controlStyles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: '#071410bb', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(5,9,5,0.84)', justifyContent: 'flex-end' },
   overlayLandscape: { alignItems: 'flex-end', justifyContent: 'center' },
   safeArea: { flex: 1, width: '100%', maxHeight: 740, maxWidth: 560, alignSelf: 'center' },
   safeAreaLandscape: { maxWidth: 440, alignSelf: 'flex-end' },
@@ -11,8 +24,8 @@ export const controlStyles = StyleSheet.create({
   compact: { padding: 12, gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   grow: { flex: 1, minWidth: 0 },
-  eyebrow: { color: colors.muted, fontSize: 10, letterSpacing: 1.6, fontWeight: '600' },
-  title: { color: colors.text, fontSize: 20, fontWeight: '600', marginTop: 3 },
+  eyebrow: { color: colors.sage, fontSize: 9, letterSpacing: 2, fontWeight: '600' },
+  title: { color: colors.text, fontSize: 24, fontWeight: '500', letterSpacing: -0.6, marginTop: 6 },
   label: { color: colors.text, fontSize: 14, fontWeight: '600', flexShrink: 1 },
   value: { color: colors.sage, fontSize: 14, fontWeight: '600' },
   detail: { color: colors.muted, fontSize: 12, lineHeight: 17 },
@@ -24,19 +37,20 @@ export const controlStyles = StyleSheet.create({
   primaryText: { color: colors.ink },
   pressed: { opacity: 0.72 },
   disabled: { opacity: 0.4 },
-  tabs: { flexDirection: 'row', gap: 4, borderBottomWidth: 1, borderBottomColor: colors.stroke, paddingBottom: 6 },
-  tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
+  tabs: { flexDirection: 'row', gap: 4, borderBottomWidth: 1, borderBottomColor: colors.stroke },
+  tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabText: { fontSize: 12, fontWeight: '600', color: colors.muted },
-  selected: { backgroundColor: colors.sage },
+  selected: { borderBottomColor: colors.sage },
+  selectedTabText: { color: colors.sage },
   content: { flex: 1, minHeight: 0, gap: 8, justifyContent: 'center' },
   field: { padding: 12, borderRadius: 14, borderWidth: 1, borderColor: colors.stroke, backgroundColor: colors.raised, minHeight: 64, justifyContent: 'center' },
   fieldCompact: { padding: 8, minHeight: 56 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignContent: 'center' },
   action: { width: '48%', minHeight: 54, borderRadius: 12, borderWidth: 1, borderColor: colors.stroke, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center', padding: 8 },
   actionText: { color: colors.text, fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  selection: { borderColor: colors.sage, backgroundColor: '#31483b' },
+  selection: { borderBottomColor: colors.sage, backgroundColor: theme.colors.card },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   page: { color: colors.muted, fontSize: 12, textAlign: 'center', flex: 1 },
-  list: { flex: 1, minHeight: 0, justifyContent: 'center', gap: 8 },
-  item: { minHeight: 56, backgroundColor: colors.raised, borderRadius: 12, padding: 12, justifyContent: 'center', borderWidth: 1, borderColor: colors.stroke },
+  list: { flex: 1, minHeight: 0, justifyContent: 'center', gap: 4 },
+  item: { minHeight: 56, padding: 12, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: colors.stroke },
 });

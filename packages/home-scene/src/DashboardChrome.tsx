@@ -10,13 +10,13 @@ export function roomIcon(id: RoomId): LucideIcon {
   return id === 'living' || id === 'family' ? Sofa : id === 'kitchen' ? Utensils : id === 'master' || id.startsWith('bedroom-') ? BedDouble : Home;
 }
 
-/** A compact identity and lighting bar stays available on every supported screen. */
-export function DashboardHeader({ onSettings, environment }: { onSettings: () => void; environment: LiveEnvironment }) {
+/** Let the native shell own identity while keeping time, weather, and lighting within reach. */
+export function DashboardHeader({ onSettings, environment, embedded = false }: { onSettings: () => void; environment: Pick<LiveEnvironment, 'localTime' | 'weather' | 'status'>; embedded?: boolean }) {
   const mode = useHomeStore((state) => state.lightingMode);
   const setMode = useHomeStore((state) => state.setLightingMode);
   const setNight = useHomeStore((state) => state.setNight);
   return <header className="app-header dashboard-header">
-    <a className="dashboard-brand" href="#house-preview" aria-label="VantaHome house preview"><span className="dashboard-brand-mark"><Home size={21} strokeWidth={1.4} /></span><span>VANTA<span className="brand-light">HOME</span><small>HOPEWELL · {environment.localTime}</small></span></a>
+    {embedded ? <div className="dashboard-context"><span>HOPEWELL{environment.weather ? <span title={environment.status === 'live' ? 'Live weather' : 'Last available weather'}> · {Math.round(environment.weather.tempC)}°C</span> : null}</span><time>{environment.localTime}</time></div> : <a className="dashboard-brand" href="#house-preview" aria-label="VantaHome house preview"><span className="dashboard-brand-mark"><Home size={21} strokeWidth={1.4} /></span><span>VANTA<span className="brand-light">HOME</span><small>HOPEWELL · {environment.localTime}</small></span></a>}
     <div className="dashboard-address"><span className="status-dot" />{environment.weather ? `${Math.round(environment.weather.tempC)}°C · ${environment.status === 'live' ? 'Live weather' : 'Last weather update'}` : 'Your home, in local time.'}</div>
     <div className="header-actions"><div className="light-mode-switch" aria-label="Preview lighting"><button type="button" aria-label="Automatic local daylight" title="Follow Hopewell’s local sunrise and sunset" aria-pressed={mode === 'auto'} className={mode === 'auto' ? 'is-selected' : ''} onClick={() => setMode('auto')}><Clock3 size={18} /></button><button type="button" aria-label="Daylight preview" aria-pressed={mode === 'day'} className={mode === 'day' ? 'is-selected' : ''} onClick={() => setNight(false)}><Sun size={18} /></button><button type="button" aria-label="Night lighting preview" aria-pressed={mode === 'night'} className={mode === 'night' ? 'is-selected' : ''} onClick={() => setNight(true)}><Moon size={18} /></button></div><button className="dashboard-icon-button" aria-label="Home settings and help" onClick={onSettings}><Settings2 size={19} /></button></div>
   </header>;
@@ -46,7 +46,7 @@ export function DashboardRoomBar({ onRooms }: { onRooms: () => void }) {
   const roomId = useHomeStore((state) => state.roomId);
   const room = getRoom(roomId);
   const Icon = roomIcon(roomId);
-  return <div className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><Icon size={18} /><span>{room.name}</span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
+  return <div className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><Icon size={18} /><span className="dashboard-room-choice"><small>EXPLORE YOUR HOME</small><span>{room.name}</span></span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
 }
 
 /** Keep all four atmosphere presets in a compact, always-reachable row. */
@@ -54,7 +54,7 @@ export function DashboardScenes() {
   const active = useHomeStore((state) => state.activePreset);
   const activate = useHomeStore((state) => state.activatePreset);
   const icons = [Sun, Sparkles, Moon, Home];
-  return <section className="dashboard-scenes" aria-label="Home scenes"><div className="dashboard-scenes-label"><Sparkles size={16} /><span>Set the mood</span></div><div className="preset-grid">{PRESETS.map((preset, index) => { const Icon = icons[index]; return <button key={preset.id} className="dashboard-preset" aria-pressed={active === preset.id} onClick={() => activate(preset.id)}><Icon size={17} strokeWidth={1.5} /><span>{preset.name}</span></button>; })}</div></section>;
+  return <section className="dashboard-scenes" aria-label="Home scenes"><div className="dashboard-scenes-label"><Sparkles size={16} /><span>Scenes</span></div><div className="preset-grid">{PRESETS.map((preset, index) => { const Icon = icons[index]; return <button key={preset.id} className="dashboard-preset" aria-pressed={active === preset.id} onClick={() => activate(preset.id)}><Icon size={17} strokeWidth={1.5} /><span>{preset.name}</span></button>; })}</div></section>;
 }
 
 /** Put room and device browsing within thumb reach without another page. */

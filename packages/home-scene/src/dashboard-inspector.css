@@ -8,12 +8,13 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  padding: 12px 0 12px 14px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
   overflow: hidden;
   color: var(--text-soft);
-  background: linear-gradient(150deg, var(--surface-raised), var(--surface));
+  background: transparent;
 }
 
 .dashboard-inspector-heading { display: flex; align-items: center; gap: 10px; min-width: 0; flex-shrink: 0; }
@@ -45,9 +46,9 @@
 .dashboard-list-heading h3 { font: inherit; letter-spacing: .8px; text-transform: uppercase; }
 .dashboard-list-heading > span { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .dashboard-device-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.dashboard-device-row { display: flex; align-items: center; gap: 8px; min-width: 0; height: 44px; flex-shrink: 0; padding: 6px 8px; border: 1px solid transparent; border-radius: 9px; color: #8d9e7e; background: #1b2418; text-align: left; }
+.dashboard-device-row { display: flex; align-items: center; gap: 8px; min-width: 0; height: 44px; flex-shrink: 0; padding: 6px 8px; border: 1px solid transparent; border-radius: 9px; color: #8d9e7e; background: transparent; text-align: left; }
 .dashboard-device-row:hover { border-color: #465739; background: #2a3623; }
-.dashboard-device-row.is-selected { border-color: #50633e; color: var(--accent); background: #303e27; }
+.dashboard-device-row.is-selected { border-color: #404c35; color: var(--accent); background: #242c20; }
 .dashboard-device-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .dashboard-device-copy > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d5dfc9; font-size: 11px; line-height: 16px; }
 .dashboard-device-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #98aa87; font-size: 10px; line-height: 13px; }
@@ -73,10 +74,17 @@
   .dashboard-device-row { height: 52px; }
 }
 @container dashboard-panel (min-height: 600px) and (min-width: 224px) {
-  .dashboard-selected-device { padding: 10px; border: 1px solid #59704733; border-radius: 13px; background: #141d1155; }
+  .dashboard-selected-device { padding-block: 10px; border-bottom: 1px solid var(--line); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-switch-mark > span { transition: none; }
 }
 .reduce-motion .dashboard-switch-mark > span { transition: none; }
+
+/* Short landscape windows retain the selected-device actions and all three room
+   rows; the complete range controls remain available in the full inspector. */
+@container dashboard-panel (max-height: 490px) {
+  .dashboard-level-control { display: none; }
+  .dashboard-room-devices { min-height: 156px; }
+}

@@ -54,7 +54,7 @@ function SceneSession({ onRetry, onDevices }: { onRetry: () => void; onDevices: 
   </View>;
 }
 
-/** Start in the house, with all original app features reachable through one menu. */
+/** Keep the property central, with a compact identity bar and a single home index. */
 export default function ThreeDHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const commandActivity = useCommandActivityLauncher();
@@ -103,13 +103,13 @@ export default function ThreeDHomeScreen() {
     <View style={styles.header}>
       <Pressable style={styles.iconButton} onPress={() => showLab ? setShowLab(false) : setPanel('menu')}
         accessibilityLabel={showLab ? 'Back to 3D Home' : 'Open home menu'}>
-        <Ionicons name={showLab ? 'arrow-back' : 'grid-outline'} size={21} color={theme.colors.accent} />
+        <Ionicons name={showLab ? 'arrow-back' : 'menu-outline'} size={23} color={theme.colors.accent} />
       </Pressable>
       <View style={styles.identity}>
-        <Text style={styles.title}>{showLab ? 'Renderer preview' : 'Home'}</Text>
+        <Text style={styles.title}>{showLab ? 'RENDERER PREVIEW' : 'VANTAHOME'}</Text>
         <Text style={styles.caption}>Simulation · no real device control</Text>
       </View>
-      <Pressable style={styles.iconButton} onPress={() => setPanel('voice')} accessibilityLabel="Open voice control"><Ionicons name="mic-outline" size={21} color={theme.colors.accent} /></Pressable>
+      <Pressable style={[styles.iconButton, styles.voiceButton]} onPress={() => setPanel('voice')} accessibilityLabel="Open voice control"><Ionicons name="mic-outline" size={19} color={theme.colors.accent} /></Pressable>
       <Pressable style={styles.iconButton} onPress={() => setPanel('devices')} accessibilityLabel="Open house device library"><Ionicons name="options-outline" size={21} color={theme.colors.text} /></Pressable>
     </View>
     {showLab ? <HomePanelBoundary onClose={() => setShowLab(false)}><Suspense fallback={<LoadingFeature />}><RendererLab active={focused && active} /></Suspense></HomePanelBoundary>
@@ -132,11 +132,12 @@ function LoadingFeature() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.bg0 },
-  header: { minHeight: 56, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 6, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
-  iconButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 12 },
+  header: { minHeight: 62, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
+  iconButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 22 },
+  voiceButton: { borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2 },
   identity: { flex: 1, minWidth: 0 },
-  title: { color: theme.colors.text, fontSize: 15, fontWeight: '600' },
-  caption: { color: theme.colors.subtext, fontSize: 9, marginTop: 3 },
+  title: { color: theme.colors.text, fontSize: 12, letterSpacing: 2.2, fontWeight: '700' },
+  caption: { color: theme.colors.subtext, fontSize: 9, marginTop: 5 },
   scene: { flex: 1, minHeight: 0, overflow: 'hidden', backgroundColor: theme.colors.bg0 },
   featureLoading: { padding: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg0 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(5,9,5,0.78)', justifyContent: 'center', alignItems: 'center', padding: 14 },

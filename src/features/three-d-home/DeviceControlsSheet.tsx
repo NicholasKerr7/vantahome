@@ -109,7 +109,7 @@ function DeviceInspector({ device, state, client, disabled, compact, onBrowse }:
           accessibilityState={{ selected: group === item, disabled: !available }} disabled={!available}
           aria-selected={group === item} aria-disabled={!available}
           onPress={() => { setGroup(item); setPage(0); }} style={[styles.tab, group === item && styles.selected, !available && styles.disabled]}>
-          <Text style={[styles.tabText, group === item && styles.primaryText]}>{GROUP_LABELS[item]}</Text>
+          <Text style={[styles.tabText, group === item && styles.selectedTabText]}>{GROUP_LABELS[item]}</Text>
         </Pressable>;
       })}</View>
       <Text accessibilityLiveRegion="polite" style={[styles.detail, tone === 'alarm' && styles.alarm, (tone === 'warning' || tone === 'closed') && styles.warning]}>{group === 'schedule' ? 'Saved preview preferences. Timers do not run devices.'

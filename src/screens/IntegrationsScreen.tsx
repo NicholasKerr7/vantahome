@@ -73,7 +73,7 @@ export default function IntegrationsScreen({ navigation }: Props) {
             <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
           </Pressable>
           <View style={styles.headerText}>
-            <Text style={styles.eyebrow}>CONNECTED HOME</Text>
+            <Text style={styles.eyebrow}>VANTAHOME / CONNECTIONS</Text>
             <Text accessibilityRole="header" style={styles.title}>Voice & integrations</Text>
           </View>
         </View>
@@ -94,7 +94,7 @@ export default function IntegrationsScreen({ navigation }: Props) {
             <Ionicons name={entry.icon} size={30} color={theme.colors.accent} />
             <Text accessibilityRole="header" style={[styles.providerTitle, compact && styles.compactTitle]}>{entry.title}</Text>
           </View>
-          <View style={styles.statusPill}><Text style={styles.status}>{integrationStatusLabel(entry.id, savedStatus, configured)}</Text></View>
+          <View style={styles.statusLine}><View style={styles.statusMark} /><Text style={styles.status}>{integrationStatusLabel(entry.id, savedStatus, configured)}</Text></View>
           <Text style={[styles.description, compact && styles.compactDescription]}>{compact && showDetails ? entry.nextStep : entry.description}</Text>
           {!compact && <Text style={styles.detail}>{entry.nextStep}</Text>}
           {!compact && voiceProvider && !authenticatedUserId && <Text style={styles.detail}>Sign in to authorize an assistant for your home.</Text>}
@@ -138,34 +138,35 @@ export default function IntegrationsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.bg0 },
-  content: { flex: 1, width: "100%", maxWidth: 760, alignSelf: "center", padding: 20, gap: 16 },
+  content: { flex: 1, width: "100%", maxWidth: 900, alignSelf: "center", padding: 24, gap: 20 },
   compactContent: { padding: 12, gap: 8 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12 },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 8 },
   headerText: { flex: 1 },
-  eyebrow: { color: theme.colors.subtext, fontSize: 10, fontWeight: "700", letterSpacing: 1.8 },
-  title: { color: theme.colors.text, fontSize: 22, fontWeight: "700" },
-  iconButton: { width: 44, minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: theme.radius.sm, backgroundColor: theme.colors.card2 },
-  tabs: { flexDirection: "row", gap: 5 },
-  tab: { flex: 1, minWidth: 44, minHeight: 54, gap: 4, alignItems: "center", justifyContent: "center", borderRadius: theme.radius.sm, borderWidth: 1, borderColor: theme.colors.stroke },
-  selectedTab: { backgroundColor: theme.colors.card, borderColor: theme.colors.accent },
+  eyebrow: { color: theme.colors.subtext, fontSize: 10, fontWeight: "500", letterSpacing: 2 },
+  title: { color: theme.colors.text, fontSize: 23, fontWeight: "400", letterSpacing: -0.5 },
+  iconButton: { width: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  tabs: { flexDirection: "row", gap: 5, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
+  tab: { flex: 1, minWidth: 44, minHeight: 58, gap: 5, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: "transparent", paddingBottom: 8 },
+  selectedTab: { borderBottomColor: theme.colors.accent },
   tabLabel: { color: theme.colors.subtext, fontSize: 11, fontWeight: "600" },
   selectedText: { color: theme.colors.accent },
-  card: { flex: 1, minHeight: 0, padding: 24, borderRadius: theme.radius.xl, borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2, gap: 16, justifyContent: "center" },
-  compactCard: { padding: 12, gap: 8 },
+  card: { flex: 1, minHeight: 0, paddingVertical: 24, paddingHorizontal: 4, gap: 20, justifyContent: "center" },
+  compactCard: { paddingVertical: 8, gap: 10 },
   cardHeading: { flexDirection: "row", alignItems: "center", gap: 12 },
-  providerTitle: { flex: 1, color: theme.colors.text, fontSize: 24, fontWeight: "700" },
-  compactTitle: { fontSize: 20 },
-  statusPill: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: theme.radius.sm, backgroundColor: theme.colors.card },
-  status: { color: theme.colors.accent, fontSize: 12, fontWeight: "600" },
-  description: { color: theme.colors.text, fontSize: 15, lineHeight: 21 },
+  providerTitle: { flex: 1, color: theme.colors.text, fontSize: 38, fontWeight: "400", letterSpacing: -1 },
+  compactTitle: { fontSize: 27, letterSpacing: -0.5 },
+  statusLine: { flexDirection: "row", alignItems: "center", gap: 8 },
+  statusMark: { width: 16, height: 1, backgroundColor: theme.colors.accent },
+  status: { color: theme.colors.accent, fontSize: 11, fontWeight: "500", letterSpacing: 0.5 },
+  description: { color: theme.colors.text, fontSize: 17, lineHeight: 25, maxWidth: 560 },
   compactDescription: { fontSize: 13, lineHeight: 18 },
-  detail: { color: theme.colors.subtext, fontSize: 13, lineHeight: 18 },
-  cardActions: { paddingTop: 4 },
-  action: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 12, borderRadius: theme.radius.sm, backgroundColor: theme.colors.accent, alignItems: "center", justifyContent: "center" },
+  detail: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20, maxWidth: 560 },
+  cardActions: { paddingTop: 8, alignItems: "flex-start" },
+  action: { minHeight: 48, minWidth: 220, maxWidth: "100%", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 4, backgroundColor: theme.colors.accent, alignItems: "center", justifyContent: "center" },
   actionText: { color: theme.colors.bg0, fontSize: 13, fontWeight: "700", textAlign: "center" },
   disabled: { opacity: 0.45 },
   planned: { color: theme.colors.muted, fontSize: 13, lineHeight: 18 },
-  feedbackArea: { minHeight: 48, justifyContent: "center" },
+  feedbackArea: { minHeight: 48, justifyContent: "center", borderTopWidth: 1, borderTopColor: theme.colors.stroke, paddingTop: 12 },
   feedback: { color: theme.colors.subtext, fontSize: 12, lineHeight: 16 },
   pager: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   pageCount: { color: theme.colors.subtext, fontSize: 13, fontWeight: "600" },

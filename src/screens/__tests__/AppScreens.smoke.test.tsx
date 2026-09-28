@@ -1,6 +1,6 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
-import { StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
 import AuthScreen from "../AuthScreen";
 import OnboardingScreen from "../OnboardingScreen";
 import SettingsScreen from "../SettingsScreen";
@@ -12,7 +12,6 @@ import NotificationsScreen from "../NotificationsScreen";
 import ProfileScreen from "../ProfileScreen";
 import RoomScreen from "../RoomScreen";
 import PasswordRecoveryScreen from "../PasswordRecoveryScreen";
-import HeaderPill from "../../components/HeaderPill";
 import ModalCard from "../../components/ModalCard";
 import Pressable from "../../components/Pressable";
 import ScreenFrame from "../../components/ScreenFrame";
@@ -303,7 +302,9 @@ describe("App screens smoke coverage", () => {
       try {
         const content = StyleSheet.flatten(tree.root.findByProps({ testID: id }).props.style);
         expect(content).toMatchObject({ flex: 1, minHeight: 0, paddingTop: 0, paddingBottom: 0 });
-        expect(tree.root.findByType(ScreenFrame).props.enabled).toBe(false);
+        expect(tree.root.findAllByType(ScreenFrame)).toHaveLength(0);
+        const collection = tree.root.findByProps({ testID: id === "scenes-screen-content" ? "embedded-scenes-collection" : "embedded-automations-collection" });
+        expect(collection.findAllByType(ScrollView)).toHaveLength(0);
         expect(tree.root.findAllByType(Text).some((node: RenderedScreenNode) => node.props.children === title)).toBe(false);
       } finally {
         act(() => { tree.unmount(); });
@@ -320,7 +321,7 @@ describe("App screens smoke coverage", () => {
       expect(content.paddingBottom).toBeGreaterThan(60);
       expect(tree.root.findByType(ScreenFrame).props.enabled).toBe(true);
       act(() => { tree.update(<ScenesScreen embedded />); });
-      const create = tree.root.findAllByType(HeaderPill).find((node: RenderedScreenNode) => node.props.label === "Create")!;
+      const create = tree.root.findAllByType(Pressable).find((node: { props: { accessibilityLabel?: string } }) => node.props.accessibilityLabel === "Create scene")!;
       expect(StyleSheet.flatten(create.props.style).minHeight).toBe(44);
       act(() => { create.props.onPress(); });
       expect(tree.root.findAllByType(ModalCard).some((node: RenderedScreenNode) => node.props.visible)).toBe(true);
@@ -340,6 +341,7 @@ describe("App screens smoke coverage", () => {
       expect(StyleSheet.flatten(newFlow.props.style).minHeight).toBe(44);
       act(() => { newFlow.props.onPress(); });
       expect(mockNavigate).toHaveBeenCalledWith("AutomationBuilder");
+      act(() => { button("Schedules").props.onPress(); });
       act(() => { button("Add schedule").props.onPress(); });
       expect(tree.root.findByType(ModalCard).props.visible).toBe(true);
       expect(tree.root.findAllByType(Text).some((node: RenderedScreenNode) => node.props.children === "New schedule")).toBe(true);

@@ -29,6 +29,7 @@ import HeaderPill from "../components/HeaderPill";
 import ModalCard from "../components/ModalCard";
 import ModalActionRow from "../components/ModalActionRow";
 import ModalField from "../components/ModalField";
+import { EmbeddedAutomations } from "./components/EmbeddedCollections";
 
 const SWITCH_TRACK_COLORS = { false: theme.colors.stroke, true: theme.colors.accent2 };
 
@@ -679,12 +680,20 @@ export default function AutomationsScreen({ embedded = false }: AutomationsScree
   );
 
   return (
-    <LinearGradient
-      colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={styles.root}
-    >
+    <View style={[styles.root, embedded && styles.embeddedRoot]}>
+      {!embedded && <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={StyleSheet.absoluteFill} />}
       {!embedded && <BackgroundLines />}
       <View style={contentStyle} testID="automations-screen-content">
+        {embedded ? <EmbeddedAutomations
+          flows={flows}
+          rules={rules}
+          onNewFlow={() => navigation.navigate("AutomationBuilder")}
+          onOpenFlow={(flowId) => navigation.navigate("AutomationBuilder", { flowId })}
+          onToggleFlow={toggleFlow}
+          onAddSchedule={openAdd}
+          onOpenSchedule={openEdit}
+          onToggleSchedule={toggleRule}
+        /> : (
         <ScreenFrame
           isPortrait={isPortrait}
           enabled={frameEnabled}
@@ -731,13 +740,14 @@ export default function AutomationsScreen({ embedded = false }: AutomationsScree
             )}
           </ScreenSectionLayout>
         </ScreenFrame>
+        )}
       </View>
 
       <ModalCard
         visible={modalMode !== null}
         onRequestClose={() => setModalMode(null)}
         onBackdropPress={() => setModalMode(null)}
-        colors={[theme.colors.card, theme.colors.card2]}
+        colors={embedded ? [theme.colors.card2, theme.colors.card2] : [theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <Text style={modalTitleStyle}>
@@ -884,12 +894,13 @@ export default function AutomationsScreen({ embedded = false }: AutomationsScree
           </Pressable>
         ) : null}
       </ModalCard>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, minHeight: 0 },
+  embeddedRoot: { backgroundColor: theme.colors.bg0 },
   content: { flex: 1, minHeight: 0, alignItems: "center" },
   embeddedContent: { paddingTop: 0, paddingBottom: 0 },
   embeddedHeader: { marginBottom: 8 },

@@ -37,6 +37,7 @@ import {
 import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { runtimePolicy } from "../config/runtimeMode";
+import { EmbeddedScenes } from "./components/EmbeddedCollections";
 
 export type ScenesScreenProps = {
   /** The root feature wrapper provides the title, safe areas and back navigation. */
@@ -584,12 +585,19 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   );
 
   return (
-    <LinearGradient
-      colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={styles.root}
-    >
+    <View style={[styles.root, embedded && styles.embeddedRoot]}>
+      {!embedded && <LinearGradient colors={[theme.colors.bg1, theme.colors.bg0]} style={StyleSheet.absoluteFill} />}
       {!embedded && <BackgroundLines />}
       <View style={contentStyle} testID="scenes-screen-content">
+        {embedded ? <EmbeddedScenes
+          scenes={sections.flatMap((section) => section.scenes)}
+          rooms={rooms}
+          activeSceneId={activeSceneId}
+          onCreate={openCreate}
+          onClear={clearActiveScene}
+          onOpen={setDetailSceneId}
+          onRun={(sceneId) => { void requestScene(sceneId); }}
+        /> : (
         <ScreenFrame
           isPortrait={isPortrait}
           enabled={frameEnabled}
@@ -661,6 +669,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
             )}
           </ScreenSectionLayout>
         </ScreenFrame>
+        )}
       </View>
 
       <ModalCard
@@ -673,7 +682,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           setShowCreate(false);
           setEditingSceneId(null);
         }}
-        colors={[theme.colors.card, theme.colors.card2]}
+        colors={embedded ? [theme.colors.card2, theme.colors.card2] : [theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <ScrollView
@@ -814,7 +823,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
         visible={Boolean(detailScene)}
         onRequestClose={() => setDetailSceneId(null)}
         onBackdropPress={() => setDetailSceneId(null)}
-        colors={[theme.colors.card, theme.colors.card2]}
+        colors={embedded ? [theme.colors.card2, theme.colors.card2] : [theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <ScrollView
@@ -922,12 +931,13 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           />
         </ScrollView>
       </ModalCard>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, minHeight: 0 },
+  embeddedRoot: { backgroundColor: theme.colors.bg0 },
   content: { flex: 1, minHeight: 0, alignItems: "center" },
   embeddedContent: { paddingTop: 0, paddingBottom: 0 },
   embeddedHeader: { marginBottom: 8 },

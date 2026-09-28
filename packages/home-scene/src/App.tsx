@@ -133,7 +133,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
   }, []);
   const room = getRoom(roomId);
   return <section id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''}`} aria-label="Interactive furnished house preview">
-    <div className="viewport-top"><div><span className="eyebrow">{view === 'exterior' ? 'THE WHOLE PICTURE' : view === 'immersive' ? 'A CLOSER LOOK' : `${floor.toUpperCase()} FLOOR`}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}<span className="title-dot">.</span></h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div><span className="view-tag"><span />LIVE PREVIEW</span></div>
+    <div className="viewport-top"><div><span className="eyebrow">{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : `${floor.toUpperCase()} FLOOR`}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div></div>
     <div className="scene-container">
       <SceneErrorBoundary key={attempt} onRetry={retryScene}>
         <HouseScene daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
@@ -147,6 +147,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
 
 /** Compose a fixed dashboard while keeping the scene and simulation state mounted. */
 export default function App(): ReactNode {
+  const embedded = isEmbeddedScene();
   const { hydrated: simulationHydrated, syncError: simulationSyncError } = useSimulationBridge();
   const prefersReduced = usePrefersReducedMotion();
   const environment = useLiveEnvironment();
@@ -193,9 +194,9 @@ export default function App(): ReactNode {
     setSheetDeviceId(null);
   }, [orientationPaused]);
 
-  return <div className={`app-shell dashboard-shell ${reducedMotion ? 'reduce-motion' : ''}`}>
+  return <div className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''}`}>
     <a className="skip-link" href="#house-preview">Skip to house controls</a>
-    <DashboardHeader environment={environment} onSettings={() => setLibrary('settings')} />
+    <DashboardHeader embedded={embedded} environment={environment} onSettings={() => setLibrary('settings')} />
     <DashboardRoomBar onRooms={() => setLibrary('rooms')} />
     <main id="home-workspace" className="workspace dashboard-workspace">
       <DashboardRooms onBrowse={() => setLibrary('rooms')} />
