@@ -40,7 +40,7 @@ const defaultLayout = { ...mockLayout };
 
 /** Describe only the rendered node fields used by the feature-screen assertions. */
 type RenderedScreenNode = {
-  props: { children?: React.ReactNode; label?: string; visible?: boolean };
+  props: { children?: React.ReactNode; label?: string; visible?: boolean; accessibilityLabel?: string };
   findAllByType: (component: unknown) => RenderedScreenNode[];
 };
 
@@ -336,7 +336,7 @@ describe("App screens smoke coverage", () => {
     act(() => { tree = renderer.create(<AutomationsScreen embedded />); });
     try {
       /** Locate real labeled controls instead of depending on their current visual order. */
-      const button = (label: string) => tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.findAllByType(Text).some((text) => text.props.children === label))!;
+      const button = (label: string) => tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.props.accessibilityLabel === label || node.findAllByType(Text).some((text) => text.props.children === label))!;
       const newFlow = button("New flow");
       expect(StyleSheet.flatten(newFlow.props.style).minHeight).toBe(44);
       act(() => { newFlow.props.onPress(); });

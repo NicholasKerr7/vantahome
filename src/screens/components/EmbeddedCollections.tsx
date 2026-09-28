@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Pressable from '../../components/Pressable';
-import ThemedSwitch from '../../components/ThemedSwitch';
 import type { AutomationFlow, AutomationRule, Room, Scene } from '../../store/useHomeStore';
 import { theme } from '../../theme/theme';
 import { collectionRows, useCollectionPagination } from './collectionPagination';
+import { RoutineCard, SceneMoodCard } from './CollectionCards';
+import { collectionTime, describeAction, describeFlow } from './collectionDescriptions';
+import { useCollectionDirectory } from './useCollectionDirectory';
 
 type Pagination = ReturnType<typeof useCollectionPagination>;
 
@@ -13,236 +15,134 @@ type Pagination = ReturnType<typeof useCollectionPagination>;
 function CollectionPager({ pagination, total, noun }: { pagination: Pagination; total: number; noun: string }) {
   const { page, pageCount, start, end, changePage } = pagination;
   return <View style={styles.pager}>
-    <Text style={styles.pageCount} accessibilityLiveRegion="polite">
-      {total ? `${start + 1}–${end} of ${total}` : `0 ${noun}`}
-    </Text>
+    <Text style={styles.pageCount} accessibilityLiveRegion="polite">{total ? `${start + 1}–${end} of ${total}` : `0 ${noun}`}</Text>
     <View style={styles.pageActions}>
-      <Pressable accessibilityLabel={`Previous ${noun} page`} accessibilityState={{ disabled: page === 0 }} disabled={page === 0} style={[styles.pageButton, page === 0 && styles.disabled]} onPress={() => changePage(page - 1)}>
-        <Ionicons name="arrow-back" size={18} color={theme.colors.text} />
-      </Pressable>
-      <Text style={styles.pageNumber}>{String(page + 1).padStart(2, '0')} / {String(pageCount).padStart(2, '0')}</Text>
-      <Pressable accessibilityLabel={`Next ${noun} page`} accessibilityState={{ disabled: page >= pageCount - 1 }} disabled={page >= pageCount - 1} style={[styles.pageButton, page >= pageCount - 1 && styles.disabled]} onPress={() => changePage(page + 1)}>
-        <Ionicons name="arrow-forward" size={18} color={theme.colors.text} />
-      </Pressable>
+      <Pressable accessibilityLabel={`Previous ${noun} page`} accessibilityState={{ disabled: page === 0 }} disabled={page === 0} style={[styles.pageButton, page === 0 && styles.disabled]} onPress={() => changePage(page - 1)}><Ionicons name="arrow-back" size={18} color={theme.colors.text} /></Pressable>
+      <Text style={styles.pageNumber}>{page + 1} / {pageCount}</Text>
+      <Pressable accessibilityLabel={`Next ${noun} page`} accessibilityState={{ disabled: page >= pageCount - 1 }} disabled={page >= pageCount - 1} style={[styles.pageButton, page >= pageCount - 1 && styles.disabled]} onPress={() => changePage(page + 1)}><Ionicons name="arrow-forward" size={18} color={theme.colors.text} /></Pressable>
     </View>
   </View>;
 }
 
 type SceneCollectionProps = {
-  scenes: readonly Scene[];
-  rooms: readonly Room[];
-  activeSceneId: string | null;
-  onCreate: () => void;
-  onClear: () => void;
-  onOpen: (sceneId: string) => void;
-  onRun: (sceneId: string) => void;
+  scenes: readonly Scene[]; rooms: readonly Room[]; activeSceneId: string | null;
+  onCreate: () => void; onClear: () => void; onOpen: (sceneId: string) => void; onRun: (sceneId: string) => void;
 };
 
-/** Present scenes as a numbered architectural collection while retaining direct run and edit access. */
+/** Arrange scenes as actionable mood cards, with measured pagination instead of a scrolling gallery. */
 export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear, onOpen, onRun }: SceneCollectionProps) {
-  const pagination = useCollectionPagination(scenes.length, 190, true);
+  const { height, fontScale } = useWindowDimensions();
+  const compact = height < 740 || fontScale > 1.15;
+  const pagination = useCollectionPagination(scenes.length, compact ? 194 : 234, true);
+  const directory = useCollectionDirectory();
   const pageScenes = scenes.slice(pagination.start, pagination.end);
   const activeScene = scenes.find((scene) => scene.id === activeSceneId);
-  return <View style={styles.collection} testID="embedded-scenes-collection">
+  return <View style={[styles.collection, compact && styles.collectionCompact]} testID="embedded-scenes-collection">
     <View style={styles.collectionHeader}>
       <View style={styles.headingCopy}>
-        <Text style={styles.eyebrow}>ATMOSPHERE, ON DEMAND</Text>
-        <Text style={styles.headline}>Your scenes<Text style={styles.headlineCount}> / {String(scenes.length).padStart(2, '0')}</Text></Text>
+        {!compact && <Text style={styles.eyebrow}>ONE TOUCH. A DIFFERENT FEELING.</Text>}
+        <Text style={[styles.headline, compact && styles.headlineCompact]} numberOfLines={1}>Set the mood<Text style={styles.headlineCount}> / {scenes.length}</Text></Text>
       </View>
-      <Pressable accessibilityLabel="Create scene" style={styles.createButton} onPress={onCreate}>
-        <Ionicons name="add" size={18} color={theme.colors.bg0} />
-        <Text style={styles.createText}>Create</Text>
-      </Pressable>
+      <Pressable accessibilityLabel="Create scene" style={styles.createButton} onPress={onCreate}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
     </View>
     <View style={styles.contextRow}>
-      <View style={[styles.statusDot, activeScene && styles.statusDotActive]} />
-      <Text style={styles.contextText} numberOfLines={1}>{activeScene ? `${activeScene.name} is active` : 'A different rhythm for every room'}</Text>
-      {activeSceneId ? <Pressable accessibilityLabel="Clear active scene" style={styles.clearButton} onPress={onClear}><Text style={styles.linkText}>Clear active</Text></Pressable> : null}
+      <Text style={styles.contextText} numberOfLines={1}>{activeScene ? `Now active · ${activeScene.name}` : 'Choose a scene for your space'}</Text>
+      {activeSceneId ? <Pressable accessibilityLabel="Clear active scene" style={styles.clearButton} onPress={onClear}><Text style={styles.linkText}>Clear</Text></Pressable> : null}
     </View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="scene-page-area">
-      {pageScenes.length ? collectionRows(pageScenes, pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`scene-row-${rowIndex}`} style={[styles.tileRow, !pagination.largeText && styles.tileRowStandard]}>
-        {row.map((scene, columnIndex) => {
-          const active = scene.id === activeSceneId;
-          const ordinal = pagination.start + rowIndex * pagination.columns + columnIndex + 1;
-          const roomName = rooms.find((room) => room.id === scene.roomId)?.name ?? 'Home';
-          return <View key={scene.id} testID={`scene-tile-${scene.id}`} style={[styles.sceneTile, active && styles.sceneTileActive]}>
-            <View pointerEvents="none" accessible={false} style={styles.sceneAtmosphere}>
-              <View style={[styles.sceneOrbit, active && styles.sceneOrbitActive]} />
-              <View style={styles.sceneOrbitInner} />
-              <View style={styles.sceneSignal} />
-            </View>
-            <View style={styles.tileTop}>
-              <Text style={styles.ordinal}>{String(ordinal).padStart(2, '0')}</Text>
-              <Text style={[styles.tileStatus, active && styles.tileStatusActive]}>{active ? 'ACTIVE' : 'READY'}</Text>
-            </View>
-            <View style={styles.tileCopy}>
-              <Text style={styles.sceneName} numberOfLines={2}>{scene.name}</Text>
-              <Text style={styles.sceneMeta} numberOfLines={1}>{roomName} · {scene.actions.length} actions</Text>
-            </View>
-            <View style={styles.tileActions}>
-              <Pressable accessibilityLabel={`Run ${scene.name}`} style={styles.runButton} onPress={() => onRun(scene.id)}>
-                <Ionicons name="play" size={13} color={theme.colors.accent} /><Text style={styles.runText}>Run scene</Text>
-              </Pressable>
-              <Pressable accessibilityLabel={`Details for ${scene.name}`} style={styles.detailsButton} onPress={() => onOpen(scene.id)}>
-                <Text style={styles.detailsText}>Details</Text><Ionicons name="arrow-forward" size={15} color={theme.colors.subtext} />
-              </Pressable>
-            </View>
-          </View>;
-        })}
-        {row.length < pagination.columns ? <View style={styles.emptyTileSpace} /> : null}
-      </View>) : <View style={styles.emptyState}>
-        <Text style={styles.emptyNumber}>01</Text>
-        <Text style={styles.emptyTitle}>Make room for a mood.</Text>
-        <Text style={styles.emptyCopy}>Create your first scene to bring several devices together in one tap.</Text>
-      </View>}
+      {pageScenes.length ? collectionRows(pageScenes, pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`scene-row-${rowIndex}`} style={[styles.cardRow, !pagination.largeText && styles.sceneRowStandard]}>
+        {row.map((scene) => <SceneMoodCard key={scene.id} scene={scene} roomName={rooms.find((room) => room.id === scene.roomId)?.name ?? 'Home'} active={scene.id === activeSceneId} compact={compact || pagination.tight} directory={directory} onRun={onRun} onOpen={onOpen} />)}
+        {row.length < pagination.columns && <View style={styles.emptyTileSpace} />}
+      </View>) : <View style={styles.emptyState}><Ionicons name="sparkles-outline" size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>Make room for a mood.</Text><Text style={styles.emptyCopy}>Create your first scene to bring several devices together in one tap.</Text></View>}
     </View>
     <CollectionPager pagination={pagination} total={scenes.length} noun="scenes" />
   </View>;
 }
 
 type AutomationCollectionProps = {
-  flows: readonly AutomationFlow[];
-  rules: readonly AutomationRule[];
-  onNewFlow: () => void;
-  onOpenFlow: (flowId: string) => void;
-  onToggleFlow: (flowId: string) => void;
-  onAddSchedule: () => void;
-  onOpenSchedule: (ruleId: string) => void;
-  onToggleSchedule: (ruleId: string) => void;
+  flows: readonly AutomationFlow[]; rules: readonly AutomationRule[];
+  onNewFlow: () => void; onOpenFlow: (flowId: string) => void; onToggleFlow: (flowId: string) => void;
+  onAddSchedule: () => void; onOpenSchedule: (ruleId: string) => void; onToggleSchedule: (ruleId: string) => void;
 };
 
-/** Keep routines in a calm, ruled list with independent editing and enable switches. */
+/** Make each routine's real trigger and outcome readable before opening its existing editor. */
 export function EmbeddedAutomations({ flows, rules, onNewFlow, onOpenFlow, onToggleFlow, onAddSchedule, onOpenSchedule, onToggleSchedule }: AutomationCollectionProps) {
   const [tab, setTab] = useState<'flows' | 'schedules'>('flows');
+  const { height, fontScale } = useWindowDimensions();
+  const compact = height < 740 || fontScale > 1.15;
   const showingFlows = tab === 'flows';
   const total = showingFlows ? flows.length : rules.length;
   const enabled = flows.filter((flow) => flow.enabled).length + rules.filter((rule) => rule.enabled).length;
-  const pagination = useCollectionPagination(total, 102);
+  const pagination = useCollectionPagination(total, compact ? 174 : 208, true);
+  const directory = useCollectionDirectory();
+  const items: readonly (AutomationFlow | AutomationRule)[] = showingFlows ? flows.slice(pagination.start, pagination.end) : rules.slice(pagination.start, pagination.end);
 
-  /** Tab changes start at the first page so each collection has a predictable entry point. */
+  /** Changing collections always starts at page one while retaining the existing editor callbacks. */
   function selectTab(next: typeof tab) {
     setTab(next);
     pagination.changePage(0);
   }
 
-  return <View style={styles.collection} testID="embedded-automations-collection">
+  return <View style={[styles.collection, compact && styles.collectionCompact]} testID="embedded-automations-collection">
     <View style={styles.collectionHeader}>
       <View style={styles.headingCopy}>
-        <Text style={styles.eyebrow}>THE EVERYDAY, CONSIDERED</Text>
-        <Text style={styles.headline}>House routines</Text>
+        {!compact && <Text style={styles.eyebrow}>{enabled} ENABLED · BUILT AROUND YOU</Text>}
+        <Text style={[styles.headline, compact && styles.headlineCompact]} numberOfLines={1}>Your routines</Text>
       </View>
-      <View style={styles.enabledSummary}><Text style={styles.enabledCount}>{String(enabled).padStart(2, '0')}</Text><Text style={styles.enabledLabel}>ENABLED</Text></View>
+      <Pressable accessibilityLabel={showingFlows ? 'New flow' : 'Add schedule'} style={styles.createButton} onPress={showingFlows ? onNewFlow : onAddSchedule}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
     </View>
     <View style={styles.tabs} accessibilityRole="tablist">
-      <Pressable accessibilityRole="tab" accessibilityLabel={`Flows, ${flows.length}`} accessibilityState={{ selected: showingFlows }} style={[styles.tab, showingFlows && styles.tabActive]} onPress={() => selectTab('flows')}>
-        <Text style={[styles.tabText, showingFlows && styles.tabTextActive]}>Flows</Text><Text style={styles.tabCount}>{flows.length}</Text>
-      </Pressable>
-      <Pressable accessibilityRole="tab" accessibilityLabel={`Schedules, ${rules.length}`} accessibilityState={{ selected: !showingFlows }} style={[styles.tab, !showingFlows && styles.tabActive]} onPress={() => selectTab('schedules')}>
-        <Text style={[styles.tabText, !showingFlows && styles.tabTextActive]}>Schedules</Text><Text style={styles.tabCount}>{rules.length}</Text>
-      </Pressable>
-    </View>
-    <View style={styles.listToolbar}>
-      <Text style={styles.listLegend}>{showingFlows ? 'WHEN · IF · THEN' : 'TIME · ACTION'}</Text>
-      <Pressable style={styles.addRoutineButton} onPress={showingFlows ? onNewFlow : onAddSchedule}>
-        <Ionicons name="add" size={17} color={theme.colors.accent} /><Text style={styles.linkText}>{showingFlows ? 'New flow' : 'Add schedule'}</Text>
-      </Pressable>
+      <Pressable accessibilityRole="tab" accessibilityLabel={`Flows, ${flows.length}`} accessibilityState={{ selected: showingFlows }} style={[styles.tab, showingFlows && styles.tabActive]} onPress={() => selectTab('flows')}><Ionicons name="git-network-outline" size={15} color={showingFlows ? theme.colors.accent : theme.colors.subtext} /><Text style={[styles.tabText, showingFlows && styles.tabTextActive]}>Flows</Text><Text style={styles.tabCount}>{flows.length}</Text></Pressable>
+      <Pressable accessibilityRole="tab" accessibilityLabel={`Schedules, ${rules.length}`} accessibilityState={{ selected: !showingFlows }} style={[styles.tab, !showingFlows && styles.tabActive]} onPress={() => selectTab('schedules')}><Ionicons name="time-outline" size={16} color={!showingFlows ? theme.colors.accent : theme.colors.subtext} /><Text style={[styles.tabText, !showingFlows && styles.tabTextActive]}>Schedules</Text><Text style={styles.tabCount}>{rules.length}</Text></Pressable>
     </View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="routine-page-area">
-      {showingFlows ? flows.slice(pagination.start, pagination.end).map((flow, index) => <View style={[styles.routineRow, flow.enabled && styles.routineRowActive]} key={flow.id} testID={`routine-row-${flow.id}`}>
-        <Pressable accessibilityLabel={`Edit ${flow.name}`} style={styles.routineMain} onPress={() => onOpenFlow(flow.id)}>
-          <Text style={styles.routineNumber}>{String(pagination.start + index + 1).padStart(2, '0')}</Text>
-          <View style={styles.routineCopy}><Text style={styles.routineName} numberOfLines={2}>{flow.name}</Text><Text style={styles.routineMeta} numberOfLines={1}>{flow.triggers.length} triggers · {flow.conditions.length} conditions · {flow.actions.length} actions</Text></View>
-          <Ionicons name="chevron-forward" size={14} color={theme.colors.muted} />
-        </Pressable>
-        <View style={styles.routineState}><ThemedSwitch style={styles.routineSwitch} accessibilityLabel={`${flow.name} enabled`} value={flow.enabled} onValueChange={() => onToggleFlow(flow.id)} /><Text style={[styles.stateLabel, flow.enabled && styles.stateLabelOn]}>{flow.enabled ? 'ON' : 'OFF'}</Text></View>
-      </View>) : rules.slice(pagination.start, pagination.end).map((rule) => <View style={[styles.routineRow, rule.enabled && styles.routineRowActive]} key={rule.id} testID={`routine-row-${rule.id}`}>
-        <Pressable accessibilityLabel={`Edit ${rule.name}`} style={styles.routineMain} onPress={() => onOpenSchedule(rule.id)}>
-          <View style={styles.routineCopy}>
-            <Text style={styles.scheduleTime}>{String(rule.trigger.hour).padStart(2, '0')}:{String(rule.trigger.minute).padStart(2, '0')}<Text style={styles.dailyLabel}>  DAILY</Text></Text>
-            <Text style={styles.routineName} numberOfLines={1}>{rule.name}</Text>
-            <Text style={styles.routineMeta} numberOfLines={1}>{rule.action.type === 'set-ac' ? `Set AC to ${rule.action.tempC}°C` : `Turn device ${rule.action.on ? 'on' : 'off'}`}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={14} color={theme.colors.muted} />
-        </Pressable>
-        <View style={styles.routineState}><ThemedSwitch style={styles.routineSwitch} accessibilityLabel={`${rule.name} enabled`} value={rule.enabled} onValueChange={() => onToggleSchedule(rule.id)} /><Text style={[styles.stateLabel, rule.enabled && styles.stateLabelOn]}>{rule.enabled ? 'ON' : 'OFF'}</Text></View>
+      {collectionRows(items, pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`routine-card-row-${rowIndex}`} style={[styles.cardRow, !pagination.largeText && styles.routineRowStandard]}>
+        {row.map((item) => {
+          const isFlow = 'triggers' in item;
+          const summary = isFlow ? describeFlow(item, directory) : { when: `Daily at ${collectionTime(item.trigger.hour, item.trigger.minute)}`, then: describeAction(item.action, directory), condition: null };
+          return <RoutineCard key={item.id} id={item.id} name={item.name} enabled={item.enabled} when={summary.when} then={summary.then} condition={summary.condition} actionCount={isFlow ? item.actions.length : 1} conditionCount={isFlow ? item.conditions.length : 0} compact={compact || pagination.tight} schedule={!isFlow} onOpen={() => isFlow ? onOpenFlow(item.id) : onOpenSchedule(item.id)} onToggle={() => isFlow ? onToggleFlow(item.id) : onToggleSchedule(item.id)} />;
+        })}
+        {row.length < pagination.columns && <View style={styles.emptyTileSpace} />}
       </View>)}
-      {!total ? <View style={styles.emptyState}><Text style={styles.emptyNumber}>—</Text><Text style={styles.emptyTitle}>{showingFlows ? 'A little less to think about.' : 'Give your home a rhythm.'}</Text><Text style={styles.emptyCopy}>{showingFlows ? 'Connect a trigger to the actions you want your home to take.' : 'Choose a time and a device action for a daily routine.'}</Text></View> : null}
+      {!total && <View style={styles.emptyState}><Ionicons name={showingFlows ? 'git-network-outline' : 'time-outline'} size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>{showingFlows ? 'A little less to think about.' : 'Give your home a rhythm.'}</Text><Text style={styles.emptyCopy}>{showingFlows ? 'Connect a trigger to the actions you want your home to take.' : 'Choose a time and a device action for a daily routine.'}</Text></View>}
     </View>
     <CollectionPager pagination={pagination} total={total} noun={tab} />
   </View>;
 }
 
 const styles = StyleSheet.create({
-  collection: { flex: 1, minHeight: 0, width: '100%', maxWidth: 1040, alignSelf: 'center', paddingTop: 18 },
-  collectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 12 },
+  collection: { flex: 1, minHeight: 0, width: '100%', maxWidth: 1040, alignSelf: 'center', paddingTop: 12 },
+  collectionCompact: { paddingTop: 4 },
+  collectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 8, minHeight: 52 },
   headingCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: theme.colors.accent, fontSize: 9, fontWeight: '600', letterSpacing: 1.7, marginBottom: 8 },
-  headline: { color: theme.colors.text, fontSize: 26, fontWeight: '600', letterSpacing: -0.9 },
-  headlineCount: { color: theme.colors.muted, fontSize: 18, fontWeight: '400' },
-  createButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 12, backgroundColor: theme.colors.accent, borderRadius: 16, shadowColor: theme.colors.accent, shadowOpacity: 0.14, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
-  createText: { color: theme.colors.bg0, fontSize: 12, fontWeight: '700' },
-  contextRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.stroke },
-  statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.muted },
-  statusDotActive: { backgroundColor: theme.colors.accent },
+  eyebrow: { color: theme.colors.muted, fontSize: 8, fontWeight: '600', letterSpacing: 1.3, marginBottom: 7 },
+  headline: { color: theme.colors.text, fontSize: 24, fontWeight: '500', letterSpacing: -0.8 },
+  headlineCompact: { fontSize: 21 },
+  headlineCount: { color: theme.colors.muted, fontSize: 14, fontWeight: '400' },
+  createButton: { minHeight: 44, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 10, backgroundColor: theme.colors.card, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 16 },
+  createText: { color: theme.colors.text, fontSize: 12, fontWeight: '600' },
+  contextRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   contextText: { flex: 1, color: theme.colors.subtext, fontSize: 11 },
-  clearButton: { minHeight: 44, justifyContent: 'center', paddingLeft: 8 },
+  clearButton: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
   linkText: { color: theme.colors.accent, fontSize: 12, fontWeight: '600' },
   collectionBody: { flex: 1, minHeight: 0, gap: 10 },
-  tileRow: { flex: 1, minHeight: 0, flexDirection: 'row', gap: 10 },
-  tileRowStandard: { maxHeight: 244 },
-  sceneTile: { flex: 1, minWidth: 0, paddingHorizontal: 16, paddingTop: 14, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 22, overflow: 'hidden' },
-  sceneTileActive: { borderColor: theme.colors.accent2, backgroundColor: theme.colors.card },
-  sceneAtmosphere: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', opacity: 0.5 },
-  sceneOrbit: { position: 'absolute', width: 180, height: 180, right: -72, top: -66, borderRadius: 90, borderWidth: 1, borderColor: theme.colors.accent2, backgroundColor: theme.colors.glow, opacity: 0.32 },
-  sceneOrbitActive: { opacity: 0.65, borderColor: theme.colors.accent },
-  sceneOrbitInner: { position: 'absolute', width: 124, height: 124, right: -44, top: -38, borderRadius: 62, borderWidth: 1, borderColor: theme.colors.accent2, opacity: 0.55 },
-  sceneSignal: { position: 'absolute', left: 0, top: 38, height: 38, width: 2, backgroundColor: theme.colors.accent, opacity: 0.6 },
-  tileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  ordinal: { color: theme.colors.accent, fontSize: 18, fontWeight: '300', fontVariant: ['tabular-nums'] },
-  tileStatus: { color: theme.colors.muted, fontSize: 9, fontWeight: '600', letterSpacing: 1.4 },
-  tileStatusActive: { color: theme.colors.accent, textShadowColor: theme.colors.glow, textShadowRadius: 8 },
-  tileCopy: { flex: 1, justifyContent: 'center', minHeight: 0, paddingVertical: 6 },
-  sceneName: { color: theme.colors.text, fontSize: 20, fontWeight: '500', letterSpacing: -0.4 },
-  sceneMeta: { color: theme.colors.subtext, fontSize: 11, marginTop: 6 },
-  tileActions: { flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.stroke },
-  runButton: { minHeight: 44, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  runText: { color: theme.colors.accent, fontSize: 12, fontWeight: '600' },
-  detailsButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  detailsText: { color: theme.colors.subtext, fontSize: 12 },
+  cardRow: { flex: 1, minHeight: 0, flexDirection: 'row', gap: 10 },
+  sceneRowStandard: { maxHeight: 280 },
+  routineRowStandard: { maxHeight: 250 },
   emptyTileSpace: { flex: 1 },
-  pager: { minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.stroke, marginTop: 12 },
+  pager: { minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   pageCount: { color: theme.colors.muted, fontSize: 11 },
-  pageActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  pageButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  pageNumber: { color: theme.colors.subtext, fontSize: 10, fontVariant: ['tabular-nums'], letterSpacing: 1 },
+  pageActions: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  pageButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: theme.colors.card2 },
+  pageNumber: { color: theme.colors.subtext, fontSize: 11, fontVariant: ['tabular-nums'], minWidth: 44, textAlign: 'center' },
   disabled: { opacity: 0.3 },
-  emptyState: { flex: 1, minHeight: 0, justifyContent: 'center', maxWidth: 380, paddingBottom: 12 },
-  emptyNumber: { color: theme.colors.stroke, fontSize: 42, fontWeight: '300', marginBottom: 12 },
+  emptyState: { flex: 1, minHeight: 0, justifyContent: 'center', maxWidth: 380, gap: 10, paddingBottom: 8 },
   emptyTitle: { color: theme.colors.text, fontSize: 21, fontWeight: '500', letterSpacing: -0.5 },
-  emptyCopy: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20, marginTop: 10 },
-  enabledSummary: { alignItems: 'center', minWidth: 62, paddingVertical: 6, borderRadius: 18, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke },
-  enabledCount: { color: theme.colors.accent, fontSize: 28, fontWeight: '300', fontVariant: ['tabular-nums'] },
-  enabledLabel: { color: theme.colors.muted, fontSize: 8, letterSpacing: 1.2, marginTop: 2 },
-  tabs: { flexDirection: 'row', backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 18, padding: 4, gap: 4 },
-  tab: { flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 13 },
-  tabActive: { backgroundColor: theme.colors.accent2 },
-  tabText: { color: theme.colors.muted, fontSize: 15, fontWeight: '500' },
+  emptyCopy: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20 },
+  tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.colors.stroke, gap: 4, marginBottom: 12 },
+  tab: { flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabActive: { borderBottomColor: theme.colors.accent },
+  tabText: { color: theme.colors.subtext, fontSize: 13, fontWeight: '500' },
   tabTextActive: { color: theme.colors.text },
-  tabCount: { color: theme.colors.muted, fontSize: 11 },
-  listToolbar: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  listLegend: { color: theme.colors.muted, fontSize: 8, letterSpacing: 1.4 },
-  addRoutineButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  routineRow: { minHeight: 92, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2, borderRadius: 20, paddingHorizontal: 12, gap: 8 },
-  routineRowActive: { borderColor: theme.colors.accent2 },
-  routineMain: { flex: 1, minWidth: 0, minHeight: 92, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  routineNumber: { color: theme.colors.accent, fontSize: 16, fontWeight: '400', minWidth: 20, fontVariant: ['tabular-nums'] },
-  routineCopy: { flex: 1, minWidth: 0 },
-  routineName: { color: theme.colors.text, fontSize: 16, fontWeight: '500', letterSpacing: -0.3 },
-  routineMeta: { color: theme.colors.subtext, fontSize: 11, marginTop: 7 },
-  routineState: { minWidth: 52, alignItems: 'center', justifyContent: 'center' },
-  routineSwitch: { minHeight: 44, minWidth: 52 },
-  stateLabel: { color: theme.colors.muted, fontSize: 8, letterSpacing: 1, marginTop: 5 },
-  stateLabelOn: { color: theme.colors.accent },
-  scheduleTime: { color: theme.colors.accent, fontSize: 20, fontWeight: '400', fontVariant: ['tabular-nums'], marginBottom: 5 },
-  dailyLabel: { color: theme.colors.muted, fontSize: 8, letterSpacing: 1.4 },
+  tabCount: { color: theme.colors.muted, fontSize: 10 },
 });

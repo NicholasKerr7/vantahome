@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { resolveViewportLayout, resolveViewportResize } from './viewportLayout';
 
 describe('supported device layouts', () => {
+  it('accounts for host navigation without treating a small tablet pane as a rotated phone', () => {
+    expect(resolveViewportLayout(874, 546, true)).toBe('tablet-landscape');
+    expect(resolveViewportLayout(846, 376, true)).toBe('mobile-landscape');
+    expect(resolveViewportLayout(844, 272, true)).toBe('mobile-landscape');
+    expect(resolveViewportLayout(390, 360, true)).toBe('mobile-portrait');
+    const previous = { width: 390, height: 720, layout: 'mobile-portrait' as const, keyboardBaselineHeight: null };
+    expect(resolveViewportResize(874, 546, previous, false, true).layout).toBe('tablet-landscape');
+  });
   it.each([
     [320, 568], [390, 844], [430, 932], [599, 900],
   ])('uses phone portrait at %sx%s', (width, height) => {

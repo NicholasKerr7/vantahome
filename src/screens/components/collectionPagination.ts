@@ -9,7 +9,7 @@ export function useCollectionPagination(total: number, rowHeight: number, allowC
   const columns = allowColumns && space.width >= 620 ? 2 : 1;
   // Text can grow independently of window size; reserve scaled row space before selecting a page.
   const textScale = Math.max(1, fontScale);
-  const rows = Math.max(1, Math.min(allowColumns ? 3 : 5, Math.floor(space.height / (rowHeight * textScale))));
+  const rows = Math.max(1, Math.min(allowColumns ? 3 : 5, Math.floor((space.height + 10) / (rowHeight * textScale + 10))));
   const capacity = columns * rows;
   const pageCount = Math.max(1, Math.ceil(total / capacity));
   const page = Math.min(requestedPage, pageCount - 1);
@@ -26,7 +26,7 @@ export function useCollectionPagination(total: number, rowHeight: number, allowC
     setRequestedPage(Math.max(0, Math.min(pageCount - 1, nextPage)));
   }
 
-  return { columns, capacity, page, pageCount, start, end: Math.min(total, start + capacity), largeText: textScale > 1, measure, changePage };
+  return { columns, capacity, page, pageCount, start, end: Math.min(total, start + capacity), largeText: textScale > 1, tight: space.height / rows < 230 * textScale, measure, changePage };
 }
 
 /** Group a bounded page into equal-width rows without modifying its source collection. */

@@ -4,7 +4,7 @@ import { openHomeFeature } from './homeNavigation';
 
 type NavigateAction = Extract<ReturnType<typeof CommonActions.navigate>, { type: 'NAVIGATE' }>;
 const rootOptions = { routeNames: ['Main', 'Room', 'Cameras', 'Onboarding'], routeParamList: {}, routeGetIdList: {} };
-const homeOptions = { routeNames: ['Home', 'Scenes', 'Automations', 'Settings'], routeParamList: {}, routeGetIdList: {} };
+const homeOptions = { routeNames: ['Home', 'Scenes', 'Automations', 'Settings', 'Renderer'], routeParamList: {}, routeGetIdList: {} };
 
 type Router = ReturnType<typeof StackRouter>;
 type RouterState = ReturnType<Router['getInitialState']>;
@@ -90,4 +90,16 @@ test('a legacy camera Home shortcut returns to the original nested Home instead 
   expect(root.routes.map((route) => route.name)).toEqual(['Main']);
   expect(home.routes.map((route) => route.name)).toEqual(['Home']);
   expect(home.routes[0].key).toBe(homeKey);
+});
+
+test('primary navigation returns from the comparison renderer without duplicating Home', () => {
+  const router = StackRouter({ initialRouteName: 'Home' });
+  let state = router.getInitialState(homeOptions);
+  const original = state.routes[0].key;
+  for (const screen of ['Scenes', 'Renderer', 'Automations', 'Home'] as const) {
+    state = transition(router, state, nestedAction(featureAction(screen)), homeOptions);
+    expect(state.routes.filter((route) => route.name === 'Home')).toHaveLength(1);
+  }
+  expect(state.routes).toHaveLength(1);
+  expect(state.routes[0].key).toBe(original);
 });

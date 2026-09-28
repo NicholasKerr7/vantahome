@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { RotateCw, Smartphone, Tablet } from 'lucide-react';
 import { resolveViewportLayout, resolveViewportResize, type ViewportLayout, type ViewportMeasurement } from './viewportLayout';
+import { isEmbeddedScene } from './embeddedHost';
 import './device-viewport.css';
 
 const OrientationPausedContext = createContext(false);
@@ -12,11 +13,12 @@ export function useOrientationPaused(): boolean {
 
 /** Observe layout changes without confusing an on-screen keyboard with rotation. */
 function useViewportLayout(): ViewportLayout {
-  const [layout, setLayout] = useState(() => resolveViewportLayout(window.innerWidth, window.innerHeight));
+  const embedded = isEmbeddedScene();
+  const [layout, setLayout] = useState(() => resolveViewportLayout(window.innerWidth, window.innerHeight, embedded));
   useEffect(() => {
     let measurement: ViewportMeasurement = {
       width: window.innerWidth, height: window.innerHeight,
-      layout: resolveViewportLayout(window.innerWidth, window.innerHeight), keyboardBaselineHeight: null,
+      layout: resolveViewportLayout(window.innerWidth, window.innerHeight, embedded), keyboardBaselineHeight: null,
     };
     let frame = 0;
     /** Group browser chrome, keyboard and resize events into one measurement. */
@@ -24,7 +26,7 @@ function useViewportLayout(): ViewportLayout {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const editing = document.activeElement?.matches('input:not([type="range"]):not([type="checkbox"]), textarea, select, [contenteditable="true"]') ?? false;
-        measurement = resolveViewportResize(window.innerWidth, window.innerHeight, measurement, editing);
+        measurement = resolveViewportResize(window.innerWidth, window.innerHeight, measurement, editing, embedded);
         setLayout(measurement.layout);
       });
     }
@@ -35,7 +37,7 @@ function useViewportLayout(): ViewportLayout {
       window.removeEventListener('resize', scheduleMeasure);
       document.removeEventListener('focusout', scheduleMeasure);
     };
-  }, []);
+  }, [embedded]);
   return layout;
 }
 

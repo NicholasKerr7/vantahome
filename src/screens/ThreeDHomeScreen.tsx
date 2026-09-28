@@ -1,26 +1,18 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { ActivityIndicator, AppState, BackHandler, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, View } from 'react-native';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, View } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import type { RootStackParamList } from '../app/AppNavigator';
-import { openHomeFeature } from '../app/homeNavigation';
 import Pressable from '../components/Pressable';
 import CinematicSurface from '../components/CinematicSurface';
-import { useDecorativeMotion } from '../components/useDecorativeMotion';
-import { useCommandActivityLauncher } from '../components/command-feedback/CommandActivityContext';
 import SceneSurface from '../features/three-d-home/SceneSurface';
 import type { SceneStatus } from '../features/three-d-home/protocol';
 import type { SimulationSaveStatus } from '../features/three-d-home/simulationPersistence';
-import HomeMenu from '../features/home-shell/HomeMenu';
+import HomeWorkspace from '../features/home-shell/HomeWorkspace';
 import HomePanelBoundary from '../features/home-shell/HomePanelBoundary';
-import type { HomeDestination } from '../features/home-shell/homeDestinations';
 import { theme } from '../theme/theme';
-import { isRendererLabEnabled } from '../config/rendererLab';
 import { isThreeDHomeEnabled } from '../config/threeDHome';
 
-const RendererLab = React.lazy(() => import('../features/renderer-lab/RendererLab'));
 const HomeVoicePanel = React.lazy(() => import('../features/home-voice/HomeVoicePanel'));
 const HomeDeviceLibrary = React.lazy(() => import('../features/home-shell/HomeDeviceLibrary'));
 
@@ -56,17 +48,13 @@ function SceneSession({ onRetry, onDevices }: { onRetry: () => void; onDevices: 
   </View>;
 }
 
-/** Keep the property central, with a compact identity bar and a single home index. */
+/** Keep the property central while primary navigation remains visible beside or below it. */
 export default function ThreeDHomeScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const commandActivity = useCommandActivityLauncher();
   const focused = useIsFocused();
   const [active, setActive] = useState(AppState.currentState !== 'background');
   const [attempt, setAttempt] = useState(0);
-  const [showLab, setShowLab] = useState(false);
-  const [panel, setPanel] = useState<'menu' | 'voice' | 'devices' | null>(null);
+  const [panel, setPanel] = useState<'voice' | 'devices' | null>(null);
   const sceneEnabled = isThreeDHomeEnabled();
-  const motionAllowed = useDecorativeMotion(focused && active);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       // Brief system overlays retain graphics; actual backgrounding releases them and the mic.
@@ -77,48 +65,19 @@ export default function ThreeDHomeScreen() {
     });
     return () => subscription.remove();
   }, []);
-  useEffect(() => {
-    if (!focused || !showLab) return;
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => { setShowLab(false); return true; });
-    return () => subscription.remove();
-  }, [focused, showLab]);
-
-  /** Preserve existing route contracts while removing the old dashboard from the journey. */
-  function openDestination(destination: HomeDestination) {
-    setPanel(null);
-    switch (destination) {
-      case 'scenes': openHomeFeature(navigation.dispatch, 'Scenes'); break;
-      case 'automations': openHomeFeature(navigation.dispatch, 'Automations'); break;
-      case 'settings': openHomeFeature(navigation.dispatch, 'Settings'); break;
-      case 'integrations': navigation.navigate('Integrations'); break;
-      case 'cameras': navigation.navigate('Cameras'); break;
-      case 'notifications': navigation.navigate('Notifications'); break;
-      case 'rooms': navigation.navigate('ManageRooms'); break;
-      case 'devices': navigation.navigate('Room', { showAll: true }); break;
-      case 'household': navigation.navigate('Profile'); break;
-      case 'audit': navigation.navigate('AuditLog'); break;
-      case 'activity': commandActivity?.open(); break;
-      case 'renderer': setShowLab(true); break;
-    }
-  }
-
   return <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
+    <HomeWorkspace section="home">
     <CinematicSurface style={styles.header}>
-      <Pressable style={styles.iconButton} onPress={() => showLab ? setShowLab(false) : setPanel('menu')}
-        accessibilityLabel={showLab ? 'Back to 3D Home' : 'Open home menu'}>
-        <Ionicons name={showLab ? 'arrow-back' : 'menu-outline'} size={23} color={theme.colors.accent} />
-      </Pressable>
+      <View style={styles.brandIcon}><Ionicons name="cube-outline" size={21} color={theme.colors.accent} /></View>
       <View style={styles.identity}>
-        <Text style={styles.title}>{showLab ? 'RENDERER PREVIEW' : 'VANTA'}{!showLab && <Text style={styles.brandTail}>HOME</Text>}</Text>
+        <Text style={styles.title}>VANTA<Text style={styles.brandTail}>HOME</Text></Text>
         <Text style={styles.caption}>Simulation · no real device control</Text>
       </View>
       <Pressable style={[styles.iconButton, styles.voiceButton]} onPress={() => setPanel('voice')} accessibilityLabel="Open voice control"><Ionicons name="mic-outline" size={19} color={theme.colors.accent} /></Pressable>
-      <Pressable style={styles.iconButton} onPress={() => setPanel('devices')} accessibilityLabel="Open house device library"><Ionicons name="options-outline" size={21} color={theme.colors.text} /></Pressable>
     </CinematicSurface>
-    {showLab ? <HomePanelBoundary onClose={() => setShowLab(false)}><Suspense fallback={<LoadingFeature />}><RendererLab active={focused && active} /></Suspense></HomePanelBoundary>
-      : focused && active && sceneEnabled ? <SceneSession key={attempt} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
+    {focused && active && sceneEnabled ? <SceneSession key={attempt} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}
-    {focused && active && panel === 'menu' && <HomeMenu motionAllowed={motionAllowed} onClose={() => setPanel(null)} onSelect={openDestination} rendererAvailable={isRendererLabEnabled()} activityAvailable={Boolean(commandActivity)} />}
+    </HomeWorkspace>
     {focused && active && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeDeviceLibrary onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
     {focused && active && panel === 'voice' && <Modal transparent visible animationType="none" onRequestClose={() => setPanel(null)}>
       <SafeAreaView style={styles.modalOverlay}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.voiceWrap}>
@@ -135,7 +94,8 @@ function LoadingFeature() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.bg0 },
-  header: { minHeight: 62, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
+  header: { minHeight: 54, paddingHorizontal: 14, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
+  brandIcon: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center' },
   iconButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 22 },
   voiceButton: { borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2 },
   identity: { flex: 1, minWidth: 0 },

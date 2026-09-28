@@ -15,6 +15,10 @@ The property is the primary interface. Supporting screens should feel like tools
 
 The primary targets are phone portrait and tablet portrait/landscape. Desktop uses a tablet-sized preview. Primary home, menu, scene collection, routine collection, and settings views use bounded pages instead of vertical page scrolling. Long forms and device pickers may use contained scrolling where it is needed to preserve access to every field.
 
+Home, Devices, Scenes, Routines, and More remain visible in a bottom dock on phone/tablet portrait and a side rail on landscape tablets. Devices opens a drawer over the current workspace. More is a utility directory grouped into House, Connections, and Activity; it opens as a phone bottom sheet or tablet sidebar. Switching primary destinations reuses the existing navigation stack. The optional renderer comparison is an isolated route with its own failure boundary.
+
+Cards have distinct jobs. Room cards open a space's device catalog. Device cards separate quick actions from full controls and show actual saved settings with units. Scene cards emphasize the mood, affected devices, Run, and Details. Routine cards expose the stored When → Then relationship, conditions, editor, and independent enable state. Card capacity follows measured space rather than shrinking touch targets. Sensor readings keep their simulation labels.
+
 Use at least 44-point action targets, keyboard focus indicators, meaningful control labels, and text alongside status colors. Keep touch momentum and contained overscroll in scrollable editors. Respect reduced motion, and avoid animation that competes with the moving property.
 
 Preserve service boundaries: visual changes do not add device transports, change permissions, or reinterpret connection states. Continue using the shared device capability catalog for quick and full controls.
@@ -25,7 +29,7 @@ The optional Cinematic view gently sweeps the existing camera within a small arc
 
 The scene stage uses one static shader plane; it adds no bloom pipeline, full-screen blur, external video, or large media download. Warm interior lighting contrasts with a cool studio rim. Rain, irrigation, vegetation, day/night, and device effects keep their existing simulation behavior.
 
-Native supporting surfaces are still by default. Only the visible Home menu uses a slow orbital light treatment; voice feedback pulses only while actively listening. Motion respects live reduced-motion settings and app backgrounding. Hidden or retained quiet screens allocate no decorative animation subscriptions. Panel entrances use short opacity/transform transitions.
+Native supporting surfaces are still by default; voice feedback pulses only while actively listening. Motion respects live reduced-motion settings and app backgrounding. Hidden or retained quiet screens allocate no decorative animation subscriptions. Utility drawers use short directional entrances and disable those entrances for reduced motion.
 
 ## Coverage
 

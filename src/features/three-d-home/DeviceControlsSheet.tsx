@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { DEVICES, ROOMS, getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
+import { getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { deviceActionFeedback, deviceStatus, getControlPages, quickActionLabel, readDeviceSetting } from '../../../packages/home-scene/src/deviceCapabilities';
 import { gasStatusTone } from '../../../packages/home-scene/src/gasSimulation';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
@@ -9,6 +9,7 @@ import type { ControlSnapshot, SimulationControlClient } from './simulationContr
 import { NativeCapabilityControl, type EnumCapability } from './NativeCapabilityControl';
 import { ControlPagination } from './ControlPagination';
 import CinematicSurface from '../../components/CinematicSurface';
+import DeviceBrowser from './DeviceBrowser';
 import { controlStyles as styles } from './deviceControlsStyles';
 
 const GROUPS = ['controls', 'modes', 'schedule', 'status'] as const;
@@ -39,7 +40,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
               <Text accessibilityRole="header" numberOfLines={2} style={styles.title}>{browsing ? 'Device library' : device?.name}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close device controls" onPress={onClose} style={styles.button}><Text style={styles.label}>Done</Text></Pressable>
           </View>
-          {browsing || !device ? <DeviceBrowser compact={compact} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
+          {browsing || !device ? <DeviceBrowser snapshot={snapshot} client={client} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               client={client} disabled={!snapshot.ready} compact={compact} onBrowse={() => setBrowsing(true)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
@@ -48,27 +49,6 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
       </SafeAreaView>
     </View>
   </Modal>;
-}
-
-/** Navigate by room, then device; even large device catalogs keep a bounded page height. */
-function DeviceBrowser({ compact, onSelect }: { compact: boolean; onSelect: (id: string) => void }) {
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const pageSize = compact ? 4 : 6;
-  const choices = roomId ? DEVICES.filter((device) => device.roomId === roomId) : ROOMS.filter((room) => DEVICES.some((device) => device.roomId === room.id));
-  const pageCount = Math.ceil(choices.length / pageSize);
-  const visiblePage = Math.min(page, Math.max(0, pageCount - 1));
-  return <>
-    <View style={styles.row}><Text style={[styles.detail, styles.grow]}>{roomId ? getRoom(roomId).name : 'Choose a room to explore its devices.'}</Text>
-      {roomId && <Pressable accessibilityRole="button" onPress={() => { setRoomId(null); setPage(0); }} style={styles.button}><Text style={styles.label}>All rooms</Text></Pressable>}</View>
-    <View style={styles.list}>{choices.slice(visiblePage * pageSize, (visiblePage + 1) * pageSize).map((choice) => <Pressable key={choice.id} accessibilityRole="button"
-      onPress={() => { if (roomId) onSelect(choice.id); else { setRoomId(choice.id); setPage(0); } }}
-      style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
-      <Text style={styles.label}>{choice.name} ›</Text>
-      {!roomId && <Text style={styles.detail}>{DEVICES.filter((device) => device.roomId === choice.id).length} devices</Text>}
-    </Pressable>)}</View>
-    <ControlPagination page={visiblePage} count={pageCount} onChange={setPage} />
-  </>;
 }
 
 /** Keep the original quick action visible while paging through the complete shared capability catalog. */

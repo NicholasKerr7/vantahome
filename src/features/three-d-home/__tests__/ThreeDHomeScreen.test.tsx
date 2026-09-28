@@ -28,7 +28,6 @@ test('keeps the simulation boundary and main feature menu available during load'
   expect(screen.getByText('Simulation · no real device control')).toBeTruthy();
   expect(screen.getByText('Preparing your home…')).toBeTruthy();
   expect(screen.queryByLabelText('Back to dashboard')).toBeNull();
-  fireEvent.press(screen.getByLabelText('Open home menu'));
   fireEvent.press(screen.getByLabelText('Scenes'));
   expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'NAVIGATE', payload: { name: 'Main', params: { screen: 'Scenes', pop: true }, pop: true } }));
   act(() => mockStatus('ready'));
@@ -42,7 +41,7 @@ test('opens integrations and household tools from the home menu', () => {
   fireEvent.press(screen.getByLabelText('Integrations'));
   expect(mockNavigate).toHaveBeenCalledWith('Integrations');
   fireEvent.press(screen.getByLabelText('Open home menu'));
-  fireEvent.press(screen.getByText('Manage'));
+  fireEvent.press(screen.getByText('House'));
   for (let page = 0; page < 3 && !screen.queryByLabelText('Household'); page += 1) {
     fireEvent.press(screen.getByLabelText('Next menu destinations'));
   }
@@ -76,5 +75,5 @@ test('unmounts graphics when the app backgrounds or navigation leaves the scene'
   screen.rerender(<ThreeDHomeScreen />);
   expect(screen.queryByTestId('scene-surface')).toBeNull();
   screen.unmount();
-  expect(remove).toHaveBeenCalledTimes(1);
+  expect(remove).toHaveBeenCalledTimes(2);
 });
