@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Pressable from '../../components/Pressable';
+import DeviceCollectionCard, { DEVICE_COLLECTION_CARD_MIN_HEIGHT } from '../../components/DeviceCollectionCard';
 import { theme } from '../../theme/theme';
 import type { SimulationDeviceControls } from './modelDeviceControls';
 import { DEVICES, ROOMS, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
@@ -20,7 +21,7 @@ export default function DeviceBrowser({ onSelect, snapshot, client, allowedDevic
   const [page, setPage] = useState(0);
   const [space, setSpace] = useState({ width: 0, height: 0 });
   const columns = space.width >= 280 && fontScale <= 1.2 ? 2 : 1;
-  const rowHeight = (roomId ? 172 : 130) * Math.max(1, fontScale);
+  const rowHeight = (roomId ? DEVICE_COLLECTION_CARD_MIN_HEIGHT : 130) * Math.max(1, fontScale);
   const rows = Math.max(1, Math.min(2, Math.floor((space.height + 10) / (rowHeight + 10))));
   const pageSize = columns * rows;
   const availableDevices = allowedDeviceIds ? DEVICES.filter((device) => allowedDeviceIds.includes(device.id)) : DEVICES;
@@ -61,25 +62,14 @@ export default function DeviceBrowser({ onSelect, snapshot, client, allowedDevic
   </>;
 }
 
-/** Separate an immediate device action from opening its complete capability controls. */
+/** Adapt the simulation snapshot to the shared collection card without coupling it to a store. */
 function DeviceCard({ device, snapshot, client, onSelect }: Props & { device: DeviceDefinition }) {
   const state = snapshot.state.deviceStates[device.id];
   const status = deviceStatus(device, state);
   const reading = deviceCardReading(device, state);
-  return <View style={[styles.deviceCard, state.on && styles.deviceCardActive]}>
-    <Pressable accessibilityLabel={`${device.name}, ${status}. Full controls`} accessibilityHint="Opens all settings for this device."
-      onPress={() => onSelect(device.id)} style={styles.deviceIdentity}>
-      <View style={styles.cardTop}><Text numberOfLines={2} style={styles.deviceName}>{device.name}</Text><Ionicons name="arrow-up-outline" size={17} color={theme.colors.subtext} style={styles.arrow} /></View>
-      <View style={styles.deviceReading}>
-        <Text numberOfLines={2} style={[styles.deviceStatus, reading.value.length > 9 && styles.longReading, state.on && styles.deviceStatusActive]}>{reading.value}</Text>
-        <Text numberOfLines={2} style={styles.readingCaption}>{reading.caption}</Text>
-      </View>
-    </Pressable>
-    <Pressable accessibilityLabel={`${quickActionLabel(device, state)}: ${device.name}`} disabled={!snapshot.ready} accessibilityState={{ disabled: !snapshot.ready }}
-      onPress={() => client.toggle(device.id)} style={[styles.quickAction, !snapshot.ready && styles.disabled]}>
-      <Text numberOfLines={2} style={styles.quickLabel}>{quickActionLabel(device, state)}</Text><Ionicons name="flash-outline" size={15} color={theme.colors.accent} />
-    </Pressable>
-  </View>;
+  return <DeviceCollectionCard name={device.name} status={status} value={reading.value} caption={reading.caption}
+    active={state.on} quickActionLabel={quickActionLabel(device, state)} disabled={!snapshot.ready}
+    onOpen={() => onSelect(device.id)} onQuickAction={() => client.toggle(device.id)} />;
 }
 
 const styles = StyleSheet.create({
@@ -95,17 +85,4 @@ const styles = StyleSheet.create({
   roomName: { color: theme.colors.text, fontSize: 18, fontWeight: '500', letterSpacing: -0.5 },
   roomDetail: { color: theme.colors.subtext, fontSize: 10, lineHeight: 15 },
   spacer: { flex: 1 },
-  deviceCard: { flex: 1, minWidth: 0, borderRadius: 22, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, overflow: 'hidden' },
-  deviceCardActive: { borderColor: theme.colors.accent2 },
-  deviceIdentity: { flex: 1, minHeight: 64, padding: 14, gap: 8, justifyContent: 'space-between' },
-  deviceName: { flex: 1, color: theme.colors.text, fontSize: 15, lineHeight: 20, fontWeight: '500' },
-  arrow: { transform: [{ rotate: '45deg' }] },
-  deviceReading: { gap: 4 },
-  deviceStatus: { color: theme.colors.subtext, fontSize: 32, fontWeight: '500', letterSpacing: -1 },
-  longReading: { fontSize: 16, letterSpacing: -0.2 },
-  readingCaption: { color: theme.colors.subtext, fontSize: 10, lineHeight: 14 },
-  deviceStatusActive: { color: theme.colors.accentText },
-  quickAction: { minHeight: 48, paddingHorizontal: 14, paddingVertical: 9, borderTopWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.glass, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
-  quickLabel: { flex: 1, color: theme.colors.accentText, fontSize: 11, fontWeight: '600' },
-  disabled: { opacity: 0.4 },
 });

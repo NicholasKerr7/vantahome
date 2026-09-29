@@ -8,6 +8,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  useWindowDimensions,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -20,7 +21,7 @@ import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { RootStackParamList } from "../app/AppNavigator";
 import { openHomeFeature } from "../app/homeNavigation";
 import RoomScenesRow from "../components/RoomScenesRow";
-import DeviceTile from "../components/DeviceTile";
+import DeviceCollectionCard, { DEVICE_COLLECTION_CARD_MIN_HEIGHT } from "../components/DeviceCollectionCard";
 import DeviceBottomSheet from "../components/DeviceBottomSheet";
 import DeviceIcon from "../components/DeviceIcon";
 import ModalCard from "../components/ModalCard";
@@ -28,7 +29,6 @@ import ModalForm, { useModalViewportStyle } from "../components/ModalForm";
 import ModalActionRow from "../components/ModalActionRow";
 import ModalField from "../components/ModalField";
 import { theme } from "../theme/theme";
-import { deviceClient } from "../services/deviceClient";
 import {
   selectVisibleDevices,
   selectVisibleRooms,
@@ -41,7 +41,8 @@ import { runtimePolicy } from "../config/runtimeMode";
 import { captureSceneScope, executeSceneCommands, type SceneScope } from "../services/sceneExecution";
 import { canManageRoutines } from "../store/routineAccess";
 import { getDevice, ROOMS } from "../../packages/home-scene/src/data";
-import { quickActionLabel } from "../../packages/home-scene/src/deviceCapabilities";
+import { roomDevicePresentation } from "../features/rooms/roomDevicePresentation";
+import { runNativeRoomQuickAction } from "../features/rooms/roomDeviceActions";
 import { isModelHome } from "../features/three-d-home/modelHomeScope";
 import { canShareDemoDevices } from "../features/three-d-home/simulationSession";
 import { useSimulationControls } from "../features/three-d-home/useSimulationControls";
@@ -319,11 +320,24 @@ export default function RoomScreen({ route, navigation }: Props) {
   const modalViewportStyle = useModalViewportStyle();
   const frameWidth = Math.max(0, width - gutter * 2);
   const listGap = isTablet ? 16 : 12;
-  const columns = isTablet ? (isLandscape ? 4 : 3) : 2;
+  const { fontScale } = useWindowDimensions();
+  const columns = fontScale > 1.25 ? (isTablet ? 2 : 1) : isTablet ? (isLandscape ? 4 : 3) : 2;
   const [page, setPage] = useState(0);
   const [gridHeight, setGridHeight] = useState(440);
-  // Measure the space left below scenes so each page fits without a vertical scroll.
-  const rows = Math.max(1, Math.floor((gridHeight + listGap) / (Math.round((isTablet ? 232 : 214) * scale) + listGap)));
+  const [gridWidth, setGridWidth] = useState(Math.max(0, width - 32));
+  // Trade page capacity for readable text while keeping every card inside the available viewport.
+  const rows = Math.max(1, Math.floor((gridHeight + listGap) / (DEVICE_COLLECTION_CARD_MIN_HEIGHT * Math.max(1, fontScale) + listGap)));
+  const cardFrameStyle = useMemo(() => StyleSheet.create({
+    frame: {
+      flexGrow: 0,
+      flexShrink: 0,
+      width: Math.max(0, (gridWidth - (columns - 1) * listGap) / columns),
+      height: Math.min(
+        260 * Math.max(1, fontScale),
+        Math.max(0, (gridHeight - (rows - 1) * listGap) / rows),
+      ),
+    },
+  }).frame, [gridHeight, gridWidth, rows, columns, listGap, fontScale]);
   const pageSize = columns * rows;
   const gridSpacingStyle = isTablet ? styles.tabletGridSpacing : styles.phoneGridSpacing;
   const columnWrapperStyle = [styles.gridRow, gridSpacingStyle];
@@ -425,7 +439,8 @@ export default function RoomScreen({ route, navigation }: Props) {
   const modelOwner = useHomeStore((state) => isModelHome(state) && canShareDemoDevices(state, runtimePolicy.mode));
   const simulation = useSimulationControls(modelOwner);
   const modelControls = useMemo(() => guardModelDeviceControls(simulation.client), [simulation.client]);
-  const modeledRoom = modelHome && ROOMS.some((candidate) => candidate.id === roomId);
+  const modelRoom = modelHome ? ROOMS.find((candidate) => candidate.id === roomId) : undefined;
+  const modeledRoom = Boolean(modelRoom);
   const visibleRooms = useHomeStore(useShallow(selectVisibleRooms));
   const room = roomId
     ? visibleRooms.find((r) => r.id === roomId)
@@ -434,18 +449,32 @@ export default function RoomScreen({ route, navigation }: Props) {
   const scenesAll = useHomeStore((s) => s.scenes);
   const runScene = useHomeStore((s) => s.runScene);
 
+  const commandScope = useHomeStore(useShallow((state) => ({
+    userId: state.authenticatedUserId,
+    homeId: state.activeHomeId,
+    sessionEpoch: state.sessionEpoch,
+  })));
   const setDevice = useHomeStore((s) => s.setDevice);
   const quickScheduleDevice = useHomeStore((s) => s.quickScheduleDevice);
   const canCreateRoutines = useHomeStore(canManageRoutines);
   const addDevice = useHomeStore((s) => s.addDevice);
   const removeDevice = useHomeStore((s) => s.removeDevice);
 
-  /** Describe the actual simulation quick action instead of labelling sensors as power switches. */
-  function modeledQuickActionLabel(device: Device): string | undefined {
-    if (!modelOwner) return undefined;
+  /** Resolve native access at press time; model mutations retain their existing live scope guard. */
+  async function handleDeviceQuickAction(device: Device) {
     const definition = getDevice(device.id);
-    const state = simulation.state.deviceStates[device.id];
-    return definition?.kind === device.kind && state ? quickActionLabel(definition, state) : undefined;
+    if (modelOwner && definition?.kind === device.kind) {
+      modelControls.toggle(device.id);
+      return;
+    }
+    try {
+      await runNativeRoomQuickAction(device.id, () => {
+        sheetRef.current?.dismiss();
+        navigation.navigate("DeviceDetail", { deviceId: device.id });
+      }, commandScope);
+    } catch (error) {
+      Alert.alert("Action not completed", error instanceof Error ? error.message : "Check home access and device status before trying again.");
+    }
   }
 
   // Derived data for this room.
@@ -628,19 +657,27 @@ export default function RoomScreen({ route, navigation }: Props) {
     <>
       <DeepScreen
         title={isWholeHome ? "Whole home" : (room?.name ?? "Room")}
-        eyebrow={isWholeHome ? "DEVICE COLLECTION" : "ROOM COLLECTION"}
+        eyebrow={isWholeHome ? "HOME CONTROLS" : modelRoom ? `${modelRoom.outdoor ? "OUTSIDE" : modelRoom.floor === "upper" ? "UPPER FLOOR" : "GROUND FLOOR"} · ${modelRoom.area}` : "ROOM CONTROLS"}
         subtitle={`${running} active · ${devices.length} devices`}
         onBack={() => navigation.goBack()}
         actions={isWholeHome || modeledRoom ? undefined : <DeepAction label="Add" icon="add" onPress={handleAddDevice} />}
       >
         <RoomScenesRow scenes={scenes} onRun={handleRunScene} horizontalInset={0} />
-        <View testID="room-device-viewport" style={styles.gridViewport} onLayout={(event) => setGridHeight(event.nativeEvent.layout.height)}>
+        <View
+          testID="room-device-viewport"
+          style={styles.gridViewport}
+          onLayout={(event) => {
+            const { height, width: measuredWidth } = event.nativeEvent.layout;
+            setGridHeight(height);
+            if (Number.isFinite(measuredWidth)) setGridWidth(measuredWidth);
+          }}
+        >
           <FlatList
             key={`room-grid-${columns}`}
             data={visibleDevices}
             keyExtractor={(d) => d.id}
             numColumns={columns}
-            columnWrapperStyle={columnWrapperStyle}
+            columnWrapperStyle={columns > 1 ? columnWrapperStyle : undefined}
             contentContainerStyle={gridContentStyle}
             style={styles.gridList}
             scrollEnabled={false}
@@ -652,25 +689,26 @@ export default function RoomScreen({ route, navigation }: Props) {
                 <Text style={styles.emptySubtitle}>{isWholeHome ? "Devices appear here when added to a room." : "Add a device to start shaping this room."}</Text>
               </View>
             }
-            renderItem={({ item }) => (
-              <DeviceTile
-                device={item}
-                onPress={() =>
-                  navigation.navigate("DeviceDetail", { deviceId: item.id })
-                }
-                toggleLabel={modeledQuickActionLabel(item)}
-                onToggle={modelOwner && getDevice(item.id)?.kind === item.kind ? () => modelControls.toggle(item.id) : undefined}
-                onLongPress={() => {
-                  if (modelHome && getDevice(item.id)?.kind === item.kind) {
-                    navigation.navigate("DeviceDetail", { deviceId: item.id });
-                    return;
-                  }
-                  setSelectedId(item.id);
-                  // Delay to the next frame so state updates before the sheet reads `selected`.
-                  requestAnimationFrame(() => sheetRef.current?.present());
-                }}
-              />
-            )}
+            renderItem={({ item }) => {
+              const definition = getDevice(item.id);
+              const modeled = modelOwner && definition?.kind === item.kind;
+              const presentation = roomDevicePresentation(item, modeled ? simulation.state.deviceStates[item.id] : undefined);
+              return <View style={cardFrameStyle}>
+                <DeviceCollectionCard {...presentation}
+                  disabled={modelHome && definition?.kind === item.kind && (!modelOwner || !simulation.ready)}
+                  onOpen={() => navigation.navigate("DeviceDetail", { deviceId: item.id })}
+                  onQuickAction={() => { void handleDeviceQuickAction(item); }}
+                  onLongPress={() => {
+                    if (modelHome && definition?.kind === item.kind) {
+                      navigation.navigate("DeviceDetail", { deviceId: item.id });
+                      return;
+                    }
+                    setSelectedId(item.id);
+                    // Wait for the selected device to reach the native sheet before presenting it.
+                    requestAnimationFrame(() => sheetRef.current?.present());
+                  }} />
+              </View>;
+            }}
           />
         </View>
         <DeepPager page={currentPage} pageCount={pageCount} onChange={setPage} label="Devices" />
@@ -707,6 +745,8 @@ export default function RoomScreen({ route, navigation }: Props) {
         canCreateRoutines={canCreateRoutines}
         ref={sheetRef}
         device={selected}
+        quickActionLabel={selected ? roomDevicePresentation(selected).quickActionLabel : undefined}
+        quickActionActive={selected ? roomDevicePresentation(selected).active : undefined}
         onClose={() => sheetRef.current?.dismiss()}
         onOpenDetails={() => {
           if (!selectedId) return;
@@ -718,14 +758,7 @@ export default function RoomScreen({ route, navigation }: Props) {
           openHomeFeature(navigation.dispatch, "Automations");
         }}
         onToggle={() => {
-          if (!selectedId) return;
-          deviceClient
-            .sendCommand({
-              op: "set-properties",
-              deviceId: selectedId,
-              changes: { isOn: !(selected?.isOn ?? false) },
-            })
-            .catch(() => {});
+          if (selected) void handleDeviceQuickAction(selected);
         }}
         onQuickSchedule={(time) => {
           if (!selectedId) return;
@@ -853,7 +886,7 @@ const styles = StyleSheet.create({
   emptySubtitle: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20, textAlign: "center" },
   phoneGridSpacing: { gap: 12 },
   tabletGridSpacing: { gap: 16 },
-  gridViewport: { flex: 1, minHeight: 0, marginTop: 14, overflow: "hidden" },
+  gridViewport: { flex: 1, minHeight: 0, marginTop: 4, overflow: "hidden" },
   gridList: { width: "100%", alignSelf: "stretch", flex: 1 },
   gridContent: { width: "100%" },
   gridRow: { width: "100%", alignItems: "stretch" },

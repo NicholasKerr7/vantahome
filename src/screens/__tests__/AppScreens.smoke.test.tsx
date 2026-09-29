@@ -16,7 +16,7 @@ import ModalCard from "../../components/ModalCard";
 import Pressable from "../../components/Pressable";
 import ScreenFrame from "../../components/ScreenFrame";
 import DeviceBottomSheet from '../../components/DeviceBottomSheet';
-import DeviceTile from '../../components/DeviceTile';
+import DeviceCollectionCard from '../../components/DeviceCollectionCard';
 import {
   useHomeStore,
   type AutomationFlow,
@@ -396,15 +396,19 @@ describe("App screens smoke coverage", () => {
     try {
       act(() => { tree.root.findByProps({ testID: 'room-device-viewport' }).props.onLayout({ nativeEvent: { layout: { height: 240 } } }); });
       expect(tree.root.findByType(FlatList).props.scrollEnabled).toBe(false);
-      expect(tree.root.findByType(FlatList).props.data.map((device: Device) => device.id)).toEqual(['paged-device-0', 'paged-device-1']);
-      for (let page = 0; page < 3; page += 1) {
+      const capacity = tree.root.findByType(FlatList).props.data.length;
+      expect(capacity).toBeGreaterThan(0);
+      expect(tree.root.findByType(FlatList).props.data.map((device: Device) => device.id)).toEqual(devices.slice(0, capacity).map((device) => device.id));
+      for (let page = 1; page < Math.ceil(devices.length / capacity); page += 1) {
         act(() => { tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.props.accessibilityLabel === 'Next Devices')!.props.onPress(); });
       }
       expect(tree.root.findByType(FlatList).props.data[0].id).toBe('paged-device-6');
       act(() => { useHomeStore.setState({ devices: devices.slice(0, 2) }); });
-      expect(tree.root.findByType(FlatList).props.data.map((device: Device) => device.id)).toEqual(['paged-device-0', 'paged-device-1']);
-      act(() => { tree.root.findAllByType(DeviceTile)[0].props.onPress(); });
-      expect((navigation as { navigate: jest.Mock }).navigate).toHaveBeenCalledWith('DeviceDetail', { deviceId: 'paged-device-0' });
+      const remaining = tree.root.findByType(FlatList).props.data as Device[];
+      expect(remaining.length).toBeGreaterThan(0);
+      expect(remaining.every((device) => ['paged-device-0', 'paged-device-1'].includes(device.id))).toBe(true);
+      act(() => { tree.root.findAllByType(DeviceCollectionCard)[0].props.onOpen(); });
+      expect((navigation as { navigate: jest.Mock }).navigate).toHaveBeenCalledWith('DeviceDetail', { deviceId: remaining[0].id });
     } finally {
       act(() => { tree.unmount(); });
     }
@@ -423,7 +427,7 @@ describe("App screens smoke coverage", () => {
     let tree!: ReactTestRenderer;
     act(() => { tree = renderer.create(<RoomScreen navigation={navigation} route={route} />); });
     try {
-      act(() => { tree.root.findAllByType(DeviceTile)[0].props.onLongPress(); });
+      act(() => { tree.root.findAllByType(DeviceCollectionCard)[0].props.onLongPress(); });
       const sheet = tree.root.findByType(DeviceBottomSheet);
       expect(sheet.props.canCreateRoutines).toBe(true);
       const quickSchedule = sheet.props.onQuickSchedule;

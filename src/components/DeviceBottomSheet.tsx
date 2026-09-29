@@ -41,6 +41,8 @@ type Props = {
   onOpenDetails: () => void;
   onGoToAutomations: () => void;
   onToggle: () => void;
+  quickActionLabel?: string;
+  quickActionActive?: boolean;
   onQuickSchedule: (time: { hour: number; minute: number }) => void;
   canCreateRoutines?: boolean;
   onDelete?: () => void;
@@ -54,6 +56,8 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
       onOpenDetails,
       onGoToAutomations,
       onToggle,
+      quickActionLabel,
+      quickActionActive,
       onQuickSchedule,
       canCreateRoutines = false,
       onDelete,
@@ -205,6 +209,11 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
     };
 
     const haptic = () => Haptics.selectionAsync().catch(() => {});
+    // Arming, cover, and reading shortcuts need their own state rather than the device's power state.
+    const hasQuickActionOverride = quickActionLabel !== undefined;
+    const actionActive = hasQuickActionOverride
+      ? (quickActionActive ?? false)
+      : Boolean(device?.isOn);
 
     return (
       <BottomSheetModal
@@ -269,13 +278,13 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     </View>
 
                     <Pressable
-                      accessibilityLabel={isGasDevice(device.kind) ? `Open controls for ${device.name}` : `${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
-                      accessibilityState={{ selected: device.isOn }}
-                      onPress={isGasDevice(device.kind) ? onOpenDetails : onToggle}
-                      style={powerStyle(device.isOn)}
+                      accessibilityLabel={hasQuickActionOverride ? `${quickActionLabel}: ${device.name}` : isGasDevice(device.kind) ? `Open controls for ${device.name}` : `${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
+                      accessibilityState={{ selected: actionActive }}
+                      onPress={!hasQuickActionOverride && isGasDevice(device.kind) ? onOpenDetails : onToggle}
+                      style={powerStyle(actionActive)}
                     >
                       <Ionicons
-                        name={isGasDevice(device.kind) ? "options-outline" : "power"}
+                        name={hasQuickActionOverride ? "flash-outline" : isGasDevice(device.kind) ? "options-outline" : "power"}
                         size={powerIconSize}
                         color={theme.colors.text}
                       />
