@@ -265,16 +265,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const safeBottom = insets.bottom;
   // Scale all measurements together so layouts stay balanced across device sizes.
   const panelPad = Math.round((isTablet ? 22 : 18) * scale);
-  const panelRadius = Math.round((isTablet ? 44 : 42) * scale);
+  const panelRadius = theme.radius.xl;
   const panelContainerWidth = Math.max(0, width - gutter * 2);
   const panelWidth = isTablet
     ? Math.min(isLandscape ? 980 : 860, panelContainerWidth)
     : panelContainerWidth;
   const panelInnerWidth = Math.max(0, panelWidth - panelPad * 2);
-  const headerHeight = Math.round((isTablet ? 62 : 56) * scale);
-  const headerBtnSize = Math.round((isTablet ? 48 : 44) * scale);
-  const headerBtnRadius = Math.round(headerBtnSize / 2);
-  const headerTitleSize = Math.round((isTablet ? 18 : 16) * scale);
+  const headerHeight = Math.max(70, Math.round(70 * scale));
+  const headerBtnSize = Math.max(44, Math.round((isTablet ? 48 : 44) * scale));
+  const headerBtnRadius = theme.radius.sm;
+  const headerTitleSize = Math.round((isTablet ? 24 : 21) * scale);
   const moodLabelSize = Math.round((isTablet ? 13 : 12) * scale);
   const moodValueSize = Math.round((isTablet ? 24 : 22) * scale);
   const powerDockHeight = Math.round((isTablet ? 120 : 104) * scale);
@@ -841,12 +841,11 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     },
     isPortrait && styles.panelPortrait,
   ];
-  const headerPillStyle: StyleProp<ViewStyle> = [
-    styles.headerPill,
+  const deviceHeaderStyle: StyleProp<ViewStyle> = [
+    styles.deviceHeader,
     {
       height: headerHeight,
-      borderRadius: Math.round(headerHeight / 2),
-      paddingHorizontal: Math.round(10 * scale),
+      paddingHorizontal: 0,
     },
   ];
   const headerBtnStyle: StyleProp<ViewStyle> = [
@@ -9024,14 +9023,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <>
-          <LinearGradient
-            colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
-            start={{ x: 0.1, y: 0.1 }}
-            end={{ x: 1, y: 1 }}
-            style={panelStyle}
-          >
+          <View style={panelStyle}>
           <View style={styles.panelBody}>
-            <View style={headerPillStyle}>
+            <View style={deviceHeaderStyle}>
               <Pressable
                 accessibilityLabel="Back"
                 onPress={() => navigation.goBack()}
@@ -9045,13 +9039,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 />
               </Pressable>
 
-              <Text
-                style={headerTitleStyle}
-                numberOfLines={1}
-                pointerEvents="none"
-              >
-                {device.name}
-              </Text>
+              <View style={styles.headerIdentity} pointerEvents="none">
+                <Text style={styles.headerEyebrow} numberOfLines={1}>{roomName ? `${roomName.toUpperCase()} · FULL CONTROLS` : "FULL CONTROLS"}</Text>
+                <Text accessibilityRole="header" style={headerTitleStyle} numberOfLines={1}>{device.name}</Text>
+              </View>
 
               <Pressable
                 accessibilityLabel={`Edit ${device.name}`}
@@ -9070,6 +9061,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
 
             <ScrollView
               showsVerticalScrollIndicator={false}
+              bounces={false}
+              overScrollMode="never"
               scrollEnabled={!isGasDevice(device.kind)}
               contentContainerStyle={isGasDevice(device.kind) ? [panelScrollContentStyle, styles.gasDetailContent] : panelScrollContentStyle}
             >
@@ -9728,7 +9721,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               </View>
             </Pressable>
           </View>}
-        </LinearGradient>
+        </View>
         </>
       </SafeAreaView>
 
@@ -9863,8 +9856,8 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingHorizontal: 18,
     paddingBottom: 22,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
+    borderWidth: 0,
+    borderColor: "transparent",
     overflow: "hidden",
   },
   panelPortrait: { borderWidth: 0, borderColor: "transparent" },
@@ -9875,60 +9868,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
   },
   landscapeColumn: { flex: 1, minWidth: 0, alignItems: "stretch" },
-  landscapeColumnPrimary: {
-    flex: 1.05,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
-  },
-  landscapeColumnSecondary: {
-    flex: 0.95,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 1,
-  },
+  landscapeColumnPrimary: { flex: 1.05 },
+  landscapeColumnSecondary: { flex: 0.95 },
   panelTablet: { maxWidth: 860, width: "100%", alignSelf: "center" },
 
-  headerPill: {
-    height: 56,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
+  deviceHeader: {
+    minHeight: 70,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.stroke,
+    paddingBottom: 12,
   },
   headerBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 14,
+    backgroundColor: theme.colors.card2,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 2,
   },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    color: stylesVars.ink,
-    fontWeight: "700",
-    zIndex: 1,
-  },
+  headerIdentity: { flex: 1, minWidth: 0, gap: 5 },
+  headerEyebrow: { color: theme.colors.accentText, fontSize: 9, letterSpacing: 1.4, fontWeight: "600" },
+  headerTitle: { color: stylesVars.ink, fontWeight: "500", letterSpacing: -0.5 },
 
   acDialWrap: { alignItems: "center" },
   acMoodStack: { alignItems: "center" },
@@ -9942,7 +9907,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: stylesVars.ink,
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "600",
     marginTop: 6,
   },
 
@@ -10003,8 +9968,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
   },
   capabilitiesWrap: { marginTop: 16 },
-  heroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 18 },
-  heroSub: { color: stylesVars.subtext, fontWeight: "700", marginTop: 4 },
+  heroTitle: { color: stylesVars.ink, fontWeight: "600", fontSize: 18 },
+  heroSub: { color: stylesVars.subtext, fontWeight: "600", marginTop: 4 },
   openPortraitMetaText: {
     marginTop: 4,
     textAlign: "center",
@@ -10037,15 +10002,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  controlCardLandscape: {
-    backgroundColor: theme.colors.card2,
-    borderColor: theme.colors.stroke,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 1,
-  },
+  controlCardLandscape: { backgroundColor: theme.colors.card2, borderColor: theme.colors.stroke },
   controlCardRow: {
     marginTop: 14,
     flexDirection: "row",
@@ -10054,26 +10011,26 @@ const styles = StyleSheet.create({
   cardLabel: { color: stylesVars.subtext, fontWeight: "600", marginBottom: 8 },
   cardHint: {
     color: stylesVars.muted,
-    fontWeight: "700",
+    fontWeight: "600",
     marginTop: -2,
     marginBottom: 6,
   },
   controlPill: {
     flex: 1,
-    height: 44,
-    borderRadius: 16,
-    backgroundColor: theme.colors.accent2,
+    minHeight: 44,
+    borderRadius: 14,
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  controlPillText: { color: stylesVars.ink, fontWeight: "700" },
+  controlPillText: { color: stylesVars.ink, fontWeight: "600" },
   controlPillActive: {
-    backgroundColor: theme.colors.accent2,
-    borderColor: theme.colors.accent2,
+    backgroundColor: theme.colors.bg1,
+    borderColor: theme.colors.accent,
   },
-  controlPillTextActive: { color: stylesVars.ink },
+  controlPillTextActive: { color: theme.colors.accentText },
   chipRow: {
     flexDirection: "row",
     gap: 10,
@@ -10094,13 +10051,13 @@ const styles = StyleSheet.create({
   },
   pressureSliderValue: {
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 12,
   },
   pressureSlider: { marginTop: 6, marginBottom: 2 },
   chip: {
     paddingHorizontal: 14,
-    height: 36,
+    minHeight: 44,
     borderRadius: 16,
     backgroundColor: theme.colors.card2,
     borderWidth: 1,
@@ -10110,11 +10067,11 @@ const styles = StyleSheet.create({
   },
   chipRowItem: { flexDirection: "row", gap: 6 },
   chipActive: {
-    backgroundColor: theme.colors.accent2,
-    borderColor: theme.colors.accent2,
+    backgroundColor: theme.colors.bg1,
+    borderColor: theme.colors.accent,
   },
-  chipText: { color: stylesVars.subtext, fontWeight: "700", fontSize: 12 },
-  chipTextActive: { color: stylesVars.ink },
+  chipText: { color: stylesVars.subtext, fontWeight: "600", fontSize: 12 },
+  chipTextActive: { color: theme.colors.accentText },
   infoOrb: {
     alignSelf: "center",
     width: 190,
@@ -10143,7 +10100,7 @@ const styles = StyleSheet.create({
   },
   energyLottie: { width: "100%", height: "100%" },
   energyOrbContent: { alignItems: "center", justifyContent: "center" },
-  infoValue: { marginTop: 8, color: "#fff", fontWeight: "700", fontSize: 24 },
+  infoValue: { marginTop: 8, color: "#fff", fontWeight: "600", fontSize: 24 },
   infoSub: {
     marginTop: 4,
     color: "rgba(255,255,255,0.85)",
@@ -10180,7 +10137,7 @@ const styles = StyleSheet.create({
   energyHeroTitleWrapPhone: { flex: 0, width: "100%" },
   energyHeroTitle: {
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 16,
     flexShrink: 1,
   },
@@ -10260,7 +10217,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.accent2,
     backgroundColor: theme.colors.accent2,
   },
-  energyHeroStatValue: { color: stylesVars.ink, fontWeight: "700" },
+  energyHeroStatValue: { color: stylesVars.ink, fontWeight: "600" },
   energyHeroStatLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
@@ -10296,7 +10253,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     flexShrink: 1,
   },
-  energyHeroHint: { marginTop: 6, color: stylesVars.subtext, fontWeight: "700" },
+  energyHeroHint: { marginTop: 6, color: stylesVars.subtext, fontWeight: "600" },
   utilityHeroCard: {
     marginTop: 14,
     borderWidth: 1,
@@ -10316,7 +10273,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   utilityHeroTitleWrap: { gap: 2, flexShrink: 1, flex: 1, minWidth: 0 },
-  utilityHeroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 16 },
+  utilityHeroTitle: { color: stylesVars.ink, fontWeight: "600", fontSize: 16 },
   utilityHeroSub: { color: stylesVars.subtext, fontWeight: "600", fontSize: 12 },
   utilityHeroPillRow: {
     flexDirection: "row",
@@ -10369,7 +10326,7 @@ const styles = StyleSheet.create({
   utilityHeroOrbValue: {
     marginTop: 8,
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 20,
     textAlign: "center",
   },
@@ -10420,7 +10377,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  waterOrbValue: { color: "#fff", fontWeight: "700", fontSize: 22 },
+  waterOrbValue: { color: "#fff", fontWeight: "600", fontSize: 22 },
   waterOrbSub: {
     marginTop: 6,
     color: "rgba(255,255,255,0.85)",
@@ -10430,7 +10387,7 @@ const styles = StyleSheet.create({
   waterOrbPercent: {
     marginTop: 6,
     color: "rgba(255,255,255,0.9)",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 12,
     letterSpacing: 0.4,
   },
@@ -10445,7 +10402,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  metricValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 16 },
+  metricValue: { color: stylesVars.ink, fontWeight: "600", fontSize: 16 },
   metricLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
@@ -10477,7 +10434,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  airHeroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 18 },
+  airHeroTitle: { color: stylesVars.ink, fontWeight: "600", fontSize: 18 },
   airHeroSub: {
     marginTop: 2,
     color: stylesVars.subtext,
@@ -10499,7 +10456,7 @@ const styles = StyleSheet.create({
   airHeroBody: { marginTop: 16, alignItems: "center" },
   airHeroScore: { flex: 1, minWidth: 0 },
   airHeroLabel: { color: stylesVars.subtext, fontWeight: "600" },
-  airHeroValue: { color: stylesVars.ink, fontWeight: "700" },
+  airHeroValue: { color: stylesVars.ink, fontWeight: "600" },
   airHeroDescriptor: {
     marginTop: 4,
     color: stylesVars.subtext,
@@ -10542,7 +10499,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  airHeroGaugeValue: { color: "#fff", fontWeight: "700" },
+  airHeroGaugeValue: { color: "#fff", fontWeight: "600" },
   airHeroGaugeLabel: {
     marginTop: 2,
     color: "rgba(255,255,255,0.85)",
@@ -10571,7 +10528,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  airHeroMetricValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 14 },
+  airHeroMetricValue: { color: stylesVars.ink, fontWeight: "600", fontSize: 14 },
   airHeroMetricLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
@@ -10598,7 +10555,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  airMetricValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 15 },
+  airMetricValue: { color: stylesVars.ink, fontWeight: "600", fontSize: 15 },
   airMetricLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
@@ -10628,7 +10585,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
   },
-  airKpiValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 16 },
+  airKpiValue: { color: stylesVars.ink, fontWeight: "600", fontSize: 16 },
   airKpiLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
@@ -10661,7 +10618,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.card2,
     borderWidth: 1,
   },
-  airTrendText: { color: stylesVars.ink, fontWeight: "700", fontSize: 12 },
+  airTrendText: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
   airTrendChartFrame: {
     marginTop: 12,
     paddingHorizontal: 8,
@@ -10720,7 +10677,7 @@ const styles = StyleSheet.create({
   airRecommendationText: {
     flex: 1,
     color: stylesVars.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 12,
   },
   airCompareRow: { flexDirection: "row", gap: 12, marginTop: 14 },
@@ -10740,13 +10697,13 @@ const styles = StyleSheet.create({
   airCompareValue: {
     marginTop: 6,
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 16,
   },
   airCompareSub: {
     marginTop: 4,
     color: stylesVars.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 11,
   },
   airSensorList: { marginTop: 10, gap: 10 },
@@ -10770,14 +10727,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent2,
   },
   airSensorDot: { width: 10, height: 10, borderRadius: 5 },
-  airSensorName: { color: stylesVars.ink, fontWeight: "700", fontSize: 13 },
+  airSensorName: { color: stylesVars.ink, fontWeight: "600", fontSize: 13 },
   airSensorSub: {
     marginTop: 2,
     color: stylesVars.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 11,
   },
-  airSensorValue: { color: stylesVars.ink, fontWeight: "700", fontSize: 12 },
+  airSensorValue: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
   airAlertCard: {
     marginTop: 10,
     flexDirection: "row",
@@ -10804,7 +10761,7 @@ const styles = StyleSheet.create({
   },
   airAlertSliderValue: {
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 12,
   },
   airAlertSliderWrap: {
@@ -10863,8 +10820,8 @@ const styles = StyleSheet.create({
     gap: 6,
     justifyContent: "center",
   },
-  alertText: { color: "#D8465B", fontWeight: "600", fontSize: 12 },
-  alertTextWarn: { color: "#B7791F", fontWeight: "600", fontSize: 12 },
+  alertText: { color: "#FFB4C1", fontWeight: "600", fontSize: 12 },
+  alertTextWarn: { color: "#F1C590", fontWeight: "600", fontSize: 12 },
   cameraFeed: {
     height: 200,
     borderRadius: 20,
@@ -10898,7 +10855,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: theme.colors.accent,
   },
-  cameraLiveText: { color: stylesVars.ink, fontWeight: "700", fontSize: 12 },
+  cameraLiveText: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
   cameraStatusText: {
     color: stylesVars.subtext,
     fontWeight: "600",
@@ -10912,7 +10869,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  gateStatusText: { color: stylesVars.ink, fontWeight: "700", fontSize: 12 },
+  gateStatusText: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
   cameraFeedBody: {
     flex: 1,
     alignItems: "center",
@@ -10925,10 +10882,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   cameraPreviewText: { color: stylesVars.subtext, fontWeight: "600" },
-  cameraPreviewSubText: { color: stylesVars.subtext, fontWeight: "700" },
+  cameraPreviewSubText: { color: stylesVars.subtext, fontWeight: "600" },
   waterUsageHint: {
     color: stylesVars.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     marginTop: 6,
   },
   waterUsageBars: {
@@ -10990,10 +10947,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.stroke,
   },
-  cameraMemberName: { color: stylesVars.ink, fontWeight: "700", fontSize: 13 },
+  cameraMemberName: { color: stylesVars.ink, fontWeight: "600", fontSize: 13 },
   cameraMemberRole: {
     color: stylesVars.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 11,
   },
   cameraPresencePill: {
@@ -11021,7 +10978,7 @@ const styles = StyleSheet.create({
   cameraEventDotUnknown: { backgroundColor: "#C4384C" },
   cameraEventText: {
     color: stylesVars.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 12,
   },
   mediaRow: {
@@ -11059,19 +11016,19 @@ const styles = StyleSheet.create({
   speakerNowMeta: { flex: 1, minWidth: 0 },
   speakerTrackTitle: {
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 16,
   },
   speakerTrackArtist: {
     marginTop: 2,
     color: "rgba(255,255,255,0.9)",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 12,
   },
   speakerTrackSub: {
     marginTop: 2,
     color: "rgba(255,255,255,0.75)",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 11,
   },
   speakerSourcePill: {
@@ -11084,7 +11041,7 @@ const styles = StyleSheet.create({
   },
   speakerSourceText: {
     color: theme.colors.text,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 11,
   },
   speakerProgressRow: {
@@ -11139,7 +11096,7 @@ const styles = StyleSheet.create({
   },
   speakerSliderValue: {
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 12,
   },
   speakerSlider: { marginTop: 6, marginBottom: 2 },
@@ -11208,7 +11165,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
-  modeText: { color: theme.colors.subtext, fontWeight: "700", fontSize: 12 },
+  modeText: { color: theme.colors.subtext, fontWeight: "600", fontSize: 12 },
   modeTextActive: { color: theme.colors.text },
   fanHeroCardFill: { flex: 1, alignSelf: "stretch", marginTop: 0 },
   fanHeroBodyFill: { flex: 1 },
@@ -11248,7 +11205,7 @@ const styles = StyleSheet.create({
   doorTitle: {
     marginTop: 12,
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 16,
   },
   doorStatus: { marginTop: 4, color: stylesVars.subtext, fontWeight: "600" },
@@ -11298,7 +11255,7 @@ const styles = StyleSheet.create({
   lightCenterInnerLight: {
     borderWidth: 1,
   },
-  lightCenterValue: { color: "#fff", fontWeight: "700" },
+  lightCenterValue: { color: "#fff", fontWeight: "600" },
   lightCenterRoom: { color: "rgba(255,255,255,0.85)", fontWeight: "600" },
 
   colorRow: {
@@ -11321,7 +11278,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  sceneText: { color: stylesVars.ink, fontWeight: "700" },
+  sceneText: { color: stylesVars.ink, fontWeight: "600" },
   sceneCardItem: {
     flex: 1,
     minWidth: 86,
@@ -11370,7 +11327,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tvHeroTitleWrap: { flex: 1, minWidth: 0 },
-  tvHeroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 18 },
+  tvHeroTitle: { color: stylesVars.ink, fontWeight: "600", fontSize: 18 },
   tvHeroRoom: {
     marginTop: 2,
     color: stylesVars.subtext,
@@ -11419,17 +11376,17 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
   },
   tvScreenBadgeText: { color: "#fff", fontWeight: "600" },
-  tvScreenMeta: { color: "rgba(255,255,255,0.72)", fontWeight: "700" },
+  tvScreenMeta: { color: "rgba(255,255,255,0.72)", fontWeight: "600" },
   tvScreenCenter: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
   },
-  tvScreenTitle: { color: "#fff", fontWeight: "700", textAlign: "center" },
+  tvScreenTitle: { color: "#fff", fontWeight: "600", textAlign: "center" },
   tvScreenSubtitle: {
     color: "rgba(255,255,255,0.82)",
-    fontWeight: "700",
+    fontWeight: "600",
     textAlign: "center",
   },
   tvScreenFooter: {
@@ -11450,7 +11407,7 @@ const styles = StyleSheet.create({
   },
   tvScreenFooterLabel: {
     color: "rgba(255,255,255,0.7)",
-    fontWeight: "700",
+    fontWeight: "600",
   },
   tvScreenFooterValue: { color: "#fff", fontWeight: "600" },
   tvVolumeCard: { alignItems: "center", gap: 8 },
@@ -11475,15 +11432,15 @@ const styles = StyleSheet.create({
   },
   tvVolumeMuteText: { color: stylesVars.subtext, fontWeight: "600" },
   tvVolumeMuteTextActive: { color: stylesVars.ink },
-  tvVolumeValue: { marginTop: 6, color: "#fff", fontWeight: "700" },
+  tvVolumeValue: { marginTop: 6, color: "#fff", fontWeight: "600" },
   tvVolumeLabel: {
     marginTop: 2,
     color: "rgba(255,255,255,0.82)",
-    fontWeight: "700",
+    fontWeight: "600",
   },
   tvVolumeHint: {
     color: stylesVars.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     textAlign: "center",
   },
   tvRemoteHeader: {
@@ -11529,7 +11486,7 @@ const styles = StyleSheet.create({
   },
   openStatusValue: {
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 22,
     textAlign: "center",
     textShadowColor: "rgba(0,0,0,0.35)",
@@ -11647,7 +11604,7 @@ const styles = StyleSheet.create({
   },
   laundryHeroPhase: {
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   laundryHeroStack: {
     alignSelf: "stretch",
@@ -11659,7 +11616,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   laundryHeroInfo: { flex: 1, minWidth: 0 },
-  laundryCycleText: { color: stylesVars.ink, fontWeight: "700" },
+  laundryCycleText: { color: stylesVars.ink, fontWeight: "600" },
   laundryCycleSubText: { color: stylesVars.subtext, fontWeight: "600" },
   laundryProgressTrack: {
     marginTop: 10,
@@ -11692,7 +11649,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
   },
-  laundryStatValue: { color: stylesVars.ink, fontWeight: "700" },
+  laundryStatValue: { color: stylesVars.ink, fontWeight: "600" },
   laundryStatLabel: {
     marginTop: 4,
     color: stylesVars.subtext,
@@ -11729,7 +11686,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   windowHeroTitleWrap: { gap: 2, flexShrink: 1 },
-  windowHeroTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 16 },
+  windowHeroTitle: { color: stylesVars.ink, fontWeight: "600", fontSize: 16 },
   windowHeroSub: { color: stylesVars.subtext, fontWeight: "600", fontSize: 12 },
   windowHeroPill: {
     flexDirection: "row",
@@ -11779,7 +11736,7 @@ const styles = StyleSheet.create({
   },
   windowHeroMeterValue: {
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 18,
   },
   windowHeroSliderWrap: {
@@ -11886,7 +11843,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
   },
-  remoteText: { color: stylesVars.ink, fontWeight: "700", fontSize: 9 },
+  remoteText: { color: stylesVars.ink, fontWeight: "600", fontSize: 9 },
   remotePadWrap: {
     alignItems: "center",
     justifyContent: "center",
@@ -11937,7 +11894,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  navCenterText: { color: stylesVars.ink, fontWeight: "700" },
+  navCenterText: { color: stylesVars.ink, fontWeight: "600" },
 
   // Coffee UI
   coffeeOrb: {
@@ -11953,7 +11910,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   coffeeOrbInner: { alignItems: "center", gap: 6 },
-  coffeeName: { color: "#fff", fontWeight: "700", marginTop: 6 },
+  coffeeName: { color: "#fff", fontWeight: "600", marginTop: 6 },
   coffeeRoom: { color: "rgba(255,255,255,0.85)", fontWeight: "600" },
   coffeeCup: {
     marginTop: 8,
@@ -11978,8 +11935,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  editTitle: { color: stylesVars.ink, fontWeight: "700", fontSize: 18 },
-  editSub: { color: stylesVars.subtext, fontWeight: "700", marginTop: 6 },
+  editTitle: { color: stylesVars.ink, fontWeight: "600", fontSize: 18 },
+  editSub: { color: stylesVars.subtext, fontWeight: "600", marginTop: 6 },
   editLabel: {
     color: stylesVars.subtext,
     fontWeight: "600",
@@ -11994,7 +11951,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
     paddingHorizontal: 12,
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   roomRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   roomPill: {
@@ -12060,7 +12017,7 @@ const styles = StyleSheet.create({
   stackTargetTextActive: { color: theme.colors.accent },
   stackHint: {
     color: stylesVars.muted,
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: 6,
   },
   editActions: { flexDirection: "row", gap: 10, marginTop: 16 },
@@ -12083,7 +12040,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   editPrimaryDisabled: { opacity: 0.6 },
-  editPrimaryText: { color: "#FFFFFF", fontWeight: "700" },
+  editPrimaryText: { color: "#FFFFFF", fontWeight: "600" },
   scheduleCard: {
     borderRadius: 22,
     padding: 16,
@@ -12102,10 +12059,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  scheduleTime: { color: stylesVars.ink, fontWeight: "700" },
+  scheduleTime: { color: stylesVars.ink, fontWeight: "600" },
   scheduleDays: {
     color: stylesVars.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     marginTop: 4,
     fontSize: 12,
   },
@@ -12129,7 +12086,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   scheduleToggleTextActive: { color: stylesVars.ink },
-  scheduleEmpty: { color: stylesVars.subtext, fontWeight: "700", marginTop: 6 },
+  scheduleEmpty: { color: stylesVars.subtext, fontWeight: "600", marginTop: 6 },
   programHint: { color: stylesVars.subtext, fontSize: 12, lineHeight: 18 },
   addSchedule: {
     marginTop: 12,
@@ -12143,7 +12100,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  addScheduleText: { color: stylesVars.ink, fontWeight: "700" },
+  addScheduleText: { color: stylesVars.ink, fontWeight: "600" },
   timeRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   timeInput: {
     width: 60,
@@ -12154,9 +12111,9 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
     textAlign: "center",
     color: stylesVars.ink,
-    fontWeight: "700",
+    fontWeight: "600",
   },
-  timeColon: { fontSize: 18, fontWeight: "700", color: stylesVars.ink },
+  timeColon: { fontSize: 18, fontWeight: "600", color: stylesVars.ink },
   dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
   dayChip: {
     paddingHorizontal: 10,
@@ -12184,5 +12141,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  editDeleteText: { color: "#FFB4C1", fontWeight: "700" },
+  editDeleteText: { color: "#FFB4C1", fontWeight: "600" },
 });

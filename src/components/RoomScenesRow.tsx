@@ -17,6 +17,7 @@ import { useResponsive } from "../theme/layout";
 import { LinearGradient } from "expo-linear-gradient";
 import { runtimePolicy } from "../config/runtimeMode";
 
+/** Keep room scenes beside the device collection, with one tap to recall a setting. */
 export default function RoomScenesRow({
   title = "Scenes",
   scenes,
@@ -32,10 +33,10 @@ export default function RoomScenesRow({
   const { gutter, isTablet, scale, contentWidth } = useResponsive();
   const inset = horizontalInset ?? gutter;
   const titleSize = Math.round((isTablet ? 18 : 16) * scale);
-  const chipHeight = Math.round((isTablet ? 36 : 32) * scale);
-  const chipRadius = Math.round(chipHeight / 2);
-  const pillHeight = Math.round((isTablet ? 46 : 40) * scale);
-  const pillRadius = Math.round(pillHeight * 0.44);
+  const chipHeight = Math.max(44, Math.round(44 * scale));
+  const chipRadius = theme.radius.sm;
+  const pillHeight = Math.max(44, Math.round((isTablet ? 48 : 44) * scale));
+  const pillRadius = theme.radius.sm;
   const pillText = Math.round((isTablet ? 13 : 12) * scale);
   const headerGap = Math.round((isTablet ? 8 : 6) * scale);
   const rowGap = Math.round((isTablet ? 12 : 10) * scale);
@@ -46,7 +47,7 @@ export default function RoomScenesRow({
   const infoButtonHeight = Math.round((isTablet ? 44 : 40) * scale);
   const infoButtonRadius = Math.round(infoButtonHeight * 0.45);
   const [showInfo, setShowInfo] = useState(false);
-  const wrapStyle: StyleProp<ViewStyle> = { marginTop: 14 };
+  const wrapStyle: StyleProp<ViewStyle> = styles.wrap;
   const headerStyle: StyleProp<ViewStyle> = [
     styles.header,
     { paddingHorizontal: inset },
@@ -136,14 +137,19 @@ export default function RoomScenesRow({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
         contentContainerStyle={rowContentStyle}
       >
         {scenes.map((s) => (
           <Pressable
             key={s.id}
+            accessibilityLabel={`Run ${s.name} scene`}
+            accessibilityState={{ selected: s.id === activeSceneId }}
             style={pillStyle(s.id === activeSceneId)}
             onPress={() => onRun(s.id)}
           >
+            <Ionicons name="sparkles-outline" size={15} color={theme.colors.accentText} />
             <Text style={pillTextStyle(s.id === activeSceneId)}>
               {s.name}
             </Text>
@@ -188,12 +194,13 @@ export default function RoomScenesRow({
 }
 
 const styles = StyleSheet.create({
+  wrap: { flexShrink: 0 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  h: { color: theme.colors.text, fontWeight: "700", fontSize: 16 },
+  h: { color: theme.colors.text, fontWeight: "600", fontSize: 16 },
   hChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -213,40 +220,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 40,
     borderRadius: 18,
-    backgroundColor: theme.colors.accent2,
+    backgroundColor: theme.colors.card2,
+    flexDirection: "row",
+    gap: 8,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
   pillActive: {
-    backgroundColor: theme.colors.accent2,
+    backgroundColor: theme.colors.bg1,
     borderColor: theme.colors.accent,
-    shadowColor: theme.colors.glow,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
   },
-  pillText: { color: theme.colors.text, fontWeight: "700" },
-  pillTextActive: { color: "#FFFFFF" },
+  pillText: { color: theme.colors.text, fontWeight: "600" },
+  pillTextActive: { color: theme.colors.accentText },
   infoOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.38)",
+    backgroundColor: theme.colors.overlayStrong,
     justifyContent: "center",
     padding: 18,
   },
   infoBackdrop: { ...StyleSheet.absoluteFillObject },
   infoCard: {
+    backgroundColor: theme.colors.glass,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     alignSelf: "center",
   },
-  infoTitle: { color: theme.colors.text, fontWeight: "700" },
+  infoTitle: { color: theme.colors.text, fontWeight: "600" },
   infoText: {
     color: theme.colors.subtext,
-    fontWeight: "700",
+    fontWeight: "400",
     marginTop: 8,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   infoButton: {
     marginTop: 16,
@@ -254,5 +260,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: theme.colors.accent,
   },
-  infoButtonText: { color: theme.colors.bg0, fontWeight: "700" },
+  infoButtonText: { color: theme.colors.bg0, fontWeight: "600" },
 });

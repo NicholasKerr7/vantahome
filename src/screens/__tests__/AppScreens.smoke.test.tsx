@@ -1,6 +1,6 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
-import { Alert, ScrollView, StyleSheet, Text } from "react-native";
+import { Alert, FlatList, ScrollView, StyleSheet, Text } from "react-native";
 import AuthScreen from "../AuthScreen";
 import OnboardingScreen from "../OnboardingScreen";
 import SettingsScreen from "../SettingsScreen";
@@ -108,6 +108,7 @@ jest.mock("@gorhom/bottom-sheet", () => {
     BottomSheetModal,
     BottomSheetBackdrop: View,
     BottomSheetView: View,
+    BottomSheetScrollView: View,
   };
 });
 
@@ -380,6 +381,33 @@ describe("App screens smoke coverage", () => {
       params: { roomId, showAll: false },
     } as any;
     renderScreen(<RoomScreen navigation={navigation} route={route} />);
+  });
+
+  it('keeps room devices reachable when the viewport shrinks and a final page becomes empty', () => {
+    const roomId = seed.rooms[0]?.id ?? 'r1';
+    const devices: Device[] = Array.from({ length: 7 }, (_, index) => ({
+      id: `paged-device-${index}`, name: `Room light ${index + 1}`, kind: 'light', roomId, isOn: false,
+    }));
+    useHomeStore.setState({ devices, scenes: [] });
+    const navigation = { goBack: jest.fn(), navigate: jest.fn(), dispatch: jest.fn() } as never;
+    const route = { key: 'Room', name: 'Room', params: { roomId, showAll: false } } as never;
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<RoomScreen navigation={navigation} route={route} />); });
+    try {
+      act(() => { tree.root.findByProps({ testID: 'room-device-viewport' }).props.onLayout({ nativeEvent: { layout: { height: 240 } } }); });
+      expect(tree.root.findByType(FlatList).props.scrollEnabled).toBe(false);
+      expect(tree.root.findByType(FlatList).props.data.map((device: Device) => device.id)).toEqual(['paged-device-0', 'paged-device-1']);
+      for (let page = 0; page < 3; page += 1) {
+        act(() => { tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.props.accessibilityLabel === 'Next Devices')!.props.onPress(); });
+      }
+      expect(tree.root.findByType(FlatList).props.data[0].id).toBe('paged-device-6');
+      act(() => { useHomeStore.setState({ devices: devices.slice(0, 2) }); });
+      expect(tree.root.findByType(FlatList).props.data.map((device: Device) => device.id)).toEqual(['paged-device-0', 'paged-device-1']);
+      act(() => { tree.root.findAllByType(DeviceTile)[0].props.onPress(); });
+      expect((navigation as { navigate: jest.Mock }).navigate).toHaveBeenCalledWith('DeviceDetail', { deviceId: 'paged-device-0' });
+    } finally {
+      act(() => { tree.unmount(); });
+    }
   });
 
   it('creates clearly labeled daily routines and rejects stale quick actions after access changes', () => {

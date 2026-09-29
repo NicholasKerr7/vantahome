@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, TextInput } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import ModalCard from "../../components/ModalCard";
+import ModalForm, { useModalViewportStyle } from "../../components/ModalForm";
 import ModalActionRow from "../../components/ModalActionRow";
 import ModalField from "../../components/ModalField";
 import Pressable from "../../components/Pressable";
@@ -54,6 +55,7 @@ type DeviceEditModalProps = {
   onDelete: () => void;
 };
 
+/** Keep room and laundry editors scrollable while their save actions remain pinned. */
 export default function DeviceEditModal({
   visible,
   onClose,
@@ -95,7 +97,34 @@ export default function DeviceEditModal({
   onSave,
   onDelete,
 }: DeviceEditModalProps) {
+  const modalViewportStyle = useModalViewportStyle();
   const partnerLabel = stackPartnerKind ?? "pair";
+
+  const footer = (
+    <>
+      <ModalActionRow
+        style={actionsStyle}
+        actions={[
+          {
+            label: "Cancel",
+            onPress: onClose,
+            style: ghostButtonStyle,
+            textStyle: ghostTextStyle,
+          },
+          {
+            label: "Save",
+            onPress: onSave,
+            style: primaryButtonStyle(!canSave),
+            textStyle: primaryTextStyle,
+            disabled: !canSave,
+          },
+        ]}
+      />
+      <Pressable style={deleteButtonStyle} onPress={onDelete}>
+        <Text style={deleteTextStyle}>Delete device</Text>
+      </Pressable>
+    </>
+  );
 
   return (
     <ModalCard
@@ -103,9 +132,9 @@ export default function DeviceEditModal({
       onRequestClose={onClose}
       onBackdropPress={onClose}
       colors={MODAL_COLORS}
-      cardStyle={cardStyle}
+      cardStyle={[cardStyle, modalViewportStyle]}
     >
-      <View testID="device-edit-card">
+      <ModalForm testID="device-edit-card" footer={footer}>
         <Text style={titleStyle}>Edit device</Text>
         <Text style={subtitleStyle}>
           Rename or move this device to another room.
@@ -199,29 +228,7 @@ export default function DeviceEditModal({
           </>
         )}
 
-        <ModalActionRow
-          style={actionsStyle}
-          actions={[
-            {
-              label: "Cancel",
-              onPress: onClose,
-              style: ghostButtonStyle,
-              textStyle: ghostTextStyle,
-            },
-            {
-              label: "Save",
-              onPress: onSave,
-              style: primaryButtonStyle(!canSave),
-              textStyle: primaryTextStyle,
-              disabled: !canSave,
-            },
-          ]}
-        />
-
-        <Pressable style={deleteButtonStyle} onPress={onDelete}>
-          <Text style={deleteTextStyle}>Delete device</Text>
-        </Pressable>
-      </View>
+      </ModalForm>
     </ModalCard>
   );
 }

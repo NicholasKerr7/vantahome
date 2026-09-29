@@ -13,7 +13,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import Pressable from "../components/Pressable";
-import CinematicSurface from "../components/CinematicSurface";
+import { DeepAction, DeepPager, DeepScreen } from "../components/deep/DeepScreen";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
@@ -24,10 +24,9 @@ import DeviceTile from "../components/DeviceTile";
 import DeviceBottomSheet from "../components/DeviceBottomSheet";
 import DeviceIcon from "../components/DeviceIcon";
 import ModalCard from "../components/ModalCard";
+import ModalForm, { useModalViewportStyle } from "../components/ModalForm";
 import ModalActionRow from "../components/ModalActionRow";
 import ModalField from "../components/ModalField";
-import LandscapeFrame from "../components/LandscapeFrame";
-import PortraitFrame from "../components/PortraitFrame";
 import { theme } from "../theme/theme";
 import { deviceClient } from "../services/deviceClient";
 import {
@@ -73,6 +72,7 @@ const DEVICE_OPTIONS: Array<{
   { kind: "smoke", label: "Smoke/CO", defaultName: "Smoke Alarm" },
 ];
 
+/** Supply the initial control values for a newly added room device. */
 const buildDeviceDefaults = (kind: Device["kind"]): Partial<Device> => {
   switch (kind) {
     case "light":
@@ -305,146 +305,33 @@ const buildDeviceDefaults = (kind: Device["kind"]): Partial<Device> => {
 
 type Props = NativeStackScreenProps<RootStackParamList, "Room">;
 
+/** Present room devices as a viewport-sized collection with direct controls. */
 export default function RoomScreen({ route, navigation }: Props) {
-  const {
-    width,
-    contentWidth,
-    gutter,
-    isTablet,
-    isLandscape,
-    topPad,
-    blockGap,
-    scale,
-  } = useResponsive(1200);
-  const isWide = isTablet && isLandscape;
-  const isPortrait = !isLandscape;
-  const isCompactPhone = !isTablet && contentWidth < 360;
-  const frameEnabled = isPortrait || isWide;
-  const FrameComponent = isPortrait ? PortraitFrame : LandscapeFrame;
-  const framePad = Math.round((isTablet ? 14 : 10) * scale);
-  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
-  const outerGutter = isWide
-    ? Math.round(gutter * 0.6)
-    : isTablet
-      ? gutter
-      : gutter;
-  const innerGutter = isWide
-    ? Math.round(gutter * 0.75)
-    : isTablet
-      ? gutter
-      : Math.round(gutter * 0.6);
-  const listGap = Math.round((isTablet ? 18 : 12) * scale);
-  const frameWidth = Math.max(0, width - outerGutter * 2);
-  const frameInnerWidth = Math.max(
-    0,
-    frameWidth - (frameEnabled ? framePad * 2 : 0),
-  );
-  const contentInset = frameEnabled
-    ? Math.max(0, innerGutter - framePad)
-    : innerGutter;
-  const gridInset = contentInset;
-  const gridWidth = Math.max(0, frameInnerWidth - gridInset * 2);
-  const minTileWidth = Math.round(
-    (isTablet ? (isLandscape ? 210 : 220) : 160) * scale,
-  );
+  const { width, contentWidth, gutter, isTablet, isLandscape, scale } = useResponsive(1200);
   const insets = useSafeAreaInsets();
-  const safeBottom = Math.max(
-    insets.bottom,
-    Math.round((isTablet ? 16 : 12) * scale),
-  );
-  const listBottomPad =
-    safeBottom + Math.round((isTablet ? 24 : 18) * scale);
-  const gridVariantStyle = isLandscape
-    ? styles.landscapeGrid
-    : styles.portraitGrid;
-  const gridRowStyle = isLandscape
-    ? styles.landscapeGridRow
-    : styles.portraitGridRow;
-  const landscapeColumns = isWide
-    ? Math.max(
-        3,
-        Math.min(
-          5,
-          Math.floor((gridWidth + listGap) / (minTileWidth + listGap)),
-        ),
-      )
-    : 0;
-  const columns = isTablet ? (isLandscape ? landscapeColumns : 2) : 2;
-  const iconBtnSize = Math.round((isTablet ? 46 : 40) * scale);
-  const iconBtnRadius = Math.round(iconBtnSize * 0.4);
-  const titleSize = Math.round((isTablet ? 20 : 16) * scale);
-  const subSize = Math.round((isTablet ? 13 : 12) * scale);
+  const safeBottom = Math.max(insets.bottom, 12);
+  const modalViewportStyle = useModalViewportStyle();
+  const frameWidth = Math.max(0, width - gutter * 2);
+  const listGap = isTablet ? 16 : 12;
+  const columns = isTablet ? (isLandscape ? 4 : 3) : 2;
+  const [page, setPage] = useState(0);
+  const [gridHeight, setGridHeight] = useState(440);
+  // Measure the space left below scenes so each page fits without a vertical scroll.
+  const rows = Math.max(1, Math.floor((gridHeight + listGap) / (Math.round((isTablet ? 232 : 214) * scale) + listGap)));
+  const pageSize = columns * rows;
+  const gridSpacingStyle = isTablet ? styles.tabletGridSpacing : styles.phoneGridSpacing;
+  const columnWrapperStyle = [styles.gridRow, gridSpacingStyle];
+  const gridContentStyle = [styles.gridContent, gridSpacingStyle];
   const undoHeight = Math.round((isTablet ? 54 : 48) * scale);
-  const undoRadius = Math.round(undoHeight * 0.33);
+  const undoRadius = 16;
   const modalPad = Math.round((isTablet ? 20 : 16) * scale);
-  const modalRadius = Math.round((isTablet ? 24 : 22) * scale);
+  const modalRadius = 22;
   const modalTitleSize = Math.round((isTablet ? 20 : 18) * scale);
   const modalSubSize = Math.round((isTablet ? 14 : 12) * scale);
   const modalLabelSize = Math.round((isTablet ? 13 : 12) * scale);
-  const modalInputHeight = Math.round((isTablet ? 48 : 44) * scale);
-  const modalPillHeight = Math.round((isTablet ? 44 : 38) * scale);
-  const modalButtonHeight = Math.round((isTablet ? 46 : 42) * scale);
-  const contentLayout: ViewStyle = {
-    width,
-    paddingTop: topPad,
-    paddingHorizontal: outerGutter,
-    paddingBottom: safeBottom,
-  };
-  const contentStyle: StyleProp<ViewStyle> = [styles.content, contentLayout];
-  const frameStyle: StyleProp<ViewStyle> = [
-    styles.frameFill,
-    isWide ? { marginTop: Math.round(6 * scale) } : null,
-    outerGutter > 0 ? { marginBottom: outerGutter } : null,
-  ];
-  const topRowLayout: ViewStyle = {
-    paddingHorizontal: contentInset,
-    width: "100%",
-    alignSelf: "center",
-  };
-  const topRowStyle: StyleProp<ViewStyle> = [styles.top, topRowLayout];
-  const iconButtonLayout: ViewStyle = {
-    width: iconBtnSize,
-    height: iconBtnSize,
-    borderRadius: iconBtnRadius,
-  };
-  const iconButtonStyle: StyleProp<ViewStyle> = [
-    styles.iconBtn,
-    iconButtonLayout,
-  ];
-  const columnWrapperLayout: ViewStyle = {
-    gap: listGap,
-    paddingHorizontal: gridInset,
-  };
-  const columnWrapperStyle: StyleProp<ViewStyle> | undefined =
-    columns > 1 ? [styles.gridRow, gridRowStyle, columnWrapperLayout] : undefined;
-  const gridContentLayout: ViewStyle = {
-    gap: listGap,
-    paddingTop: blockGap,
-    paddingHorizontal: columns > 1 ? 0 : gridInset,
-    paddingBottom: listBottomPad,
-  };
-  const gridContentStyle: StyleProp<ViewStyle> = [
-    styles.gridContent,
-    gridVariantStyle,
-    gridContentLayout,
-  ];
-  const gridListStyle: StyleProp<ViewStyle> = [styles.gridList, gridVariantStyle];
-  const headerCenterStyle: StyleProp<ViewStyle> = {
-    flex: 1,
-    alignItems: "center",
-  };
-  const headerSlotStyle: StyleProp<ViewStyle> = {
-    width: iconBtnSize,
-    height: iconBtnSize,
-  };
-  const titleTextStyle: StyleProp<TextStyle> = [
-    styles.title,
-    { fontSize: titleSize },
-  ];
-  const subTextStyle: StyleProp<TextStyle> = [
-    styles.sub,
-    { fontSize: subSize },
-  ];
+  const modalInputHeight = Math.max(44, Math.round(48 * scale));
+  const modalPillHeight = Math.max(44, Math.round(44 * scale));
+  const modalButtonHeight = Math.max(44, Math.round(46 * scale));
   const undoBarStyle: StyleProp<ViewStyle> = [
     styles.undoBar,
     {
@@ -487,7 +374,7 @@ export default function RoomScreen({ route, navigation }: Props) {
     styles.deviceTypePill,
     {
       height: modalPillHeight,
-      borderRadius: Math.round(modalPillHeight / 2),
+      borderRadius: theme.radius.sm,
     },
     active && styles.deviceTypePillActive,
   ];
@@ -558,6 +445,9 @@ export default function RoomScreen({ route, navigation }: Props) {
       : visibleScenes.filter((scene) => scene.roomId === roomId);
   }, [scenesAll, visibleRooms, roomId, isWholeHome]);
   const running = devices.filter((d) => d.isOn).length;
+  const pageCount = Math.max(1, Math.ceil(devices.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleDevices = devices.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   // Bottom sheet state: we keep only the selected ID and derive the device
   // object from the store so the sheet stays in sync with slider changes.
@@ -694,72 +584,55 @@ export default function RoomScreen({ route, navigation }: Props) {
     undoTimer.current = setTimeout(() => setUndoScene(null), 5000);
   };
 
+  const modalActions = (
+    <ModalActionRow
+      style={styles.modalRow}
+      actions={[
+        {
+          label: "Cancel",
+          onPress: () => setShowAddDevice(false),
+          style: modalGhostButtonStyle,
+          textStyle: modalGhostTextStyle,
+        },
+        {
+          label: "Add device",
+          onPress: handleCreateDevice,
+          style: modalPrimaryButtonStyle(!newName.trim()),
+          textStyle: modalPrimaryTextStyle,
+          disabled: !newName.trim(),
+        },
+      ]}
+    />
+  );
+
   return (
-    <CinematicSurface variant="quiet" style={styles.root}>
-
-      <View
-        style={contentStyle}
+    <>
+      <DeepScreen
+        title={isWholeHome ? "Whole home" : (room?.name ?? "Room")}
+        eyebrow={isWholeHome ? "DEVICE COLLECTION" : "ROOM COLLECTION"}
+        subtitle={`${running} active · ${devices.length} devices`}
+        onBack={() => navigation.goBack()}
+        actions={isWholeHome ? undefined : <DeepAction label="Add" icon="add" onPress={handleAddDevice} />}
       >
-        <FrameComponent
-          enabled={frameEnabled}
-          width="100%"
-          pad={framePad}
-          radius={frameRadius}
-          style={frameStyle}
-        >
-          <View style={topRowStyle}>
-          <Pressable
-            accessibilityLabel="Back"
-            style={iconButtonStyle}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons
-              name="chevron-back"
-              size={Math.round(20 * scale)}
-              color={theme.colors.text}
-            />
-          </Pressable>
-
-          <View style={headerCenterStyle}>
-            <Text style={titleTextStyle}>
-              {isWholeHome ? "Whole Home" : (room?.name ?? "Room")}
-            </Text>
-            <Text style={subTextStyle}>
-              {running} running • {devices.length} total
-            </Text>
-          </View>
-
-          {isWholeHome ? (
-            <View style={headerSlotStyle} />
-          ) : (
-            <Pressable
-              accessibilityLabel="Add device"
-              style={iconButtonStyle}
-              onPress={handleAddDevice}
-            >
-              <Ionicons
-                name="add"
-                size={Math.round(20 * scale)}
-                color={theme.colors.text}
-              />
-            </Pressable>
-          )}
-        </View>
-
-          <RoomScenesRow
-            scenes={scenes}
-            onRun={handleRunScene}
-            horizontalInset={contentInset}
-          />
-
+        <RoomScenesRow scenes={scenes} onRun={handleRunScene} horizontalInset={0} />
+        <View testID="room-device-viewport" style={styles.gridViewport} onLayout={(event) => setGridHeight(event.nativeEvent.layout.height)}>
           <FlatList
             key={`room-grid-${columns}`}
-            data={devices}
+            data={visibleDevices}
             keyExtractor={(d) => d.id}
             numColumns={columns}
             columnWrapperStyle={columnWrapperStyle}
             contentContainerStyle={gridContentStyle}
-            style={gridListStyle}
+            style={styles.gridList}
+            scrollEnabled={false}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyCollection}>
+                <Ionicons name="cube-outline" size={28} color={theme.colors.accentText} />
+                <Text style={styles.emptyTitle}>No devices yet</Text>
+                <Text style={styles.emptySubtitle}>{isWholeHome ? "Devices appear here when added to a room." : "Add a device to start shaping this room."}</Text>
+              </View>
+            }
             renderItem={({ item }) => (
               <DeviceTile
                 device={item}
@@ -774,8 +647,9 @@ export default function RoomScreen({ route, navigation }: Props) {
               />
             )}
           />
-        </FrameComponent>
-      </View>
+        </View>
+        <DeepPager page={currentPage} pageCount={pageCount} onChange={setPage} label="Devices" />
+      </DeepScreen>
 
       {undoScene ? (
         <View style={undoBarStyle}>
@@ -852,146 +726,112 @@ export default function RoomScreen({ route, navigation }: Props) {
         onRequestClose={() => setShowAddDevice(false)}
         onBackdropPress={() => setShowAddDevice(false)}
         colors={[theme.colors.card, theme.colors.card2]}
-        cardStyle={modalCardStyle}
+        cardStyle={[modalCardStyle, modalViewportStyle]}
       >
-        <Text style={modalTitleTextStyle}>Add device</Text>
-        <Text style={modalSubTextStyle}>
-          Choose a device type and name.
-        </Text>
+        <ModalForm footer={modalActions}>
+          <Text style={modalTitleTextStyle}>Add device</Text>
+          <Text style={modalSubTextStyle}>
+            Choose a device type and name.
+          </Text>
 
-        <ModalField label="Device type" labelStyle={modalLabelTextStyle}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.deviceTypeRow}
-          >
-            {DEVICE_OPTIONS.map((option) => {
-              const active = option.kind === newKind;
-              return (
+          <ModalField label="Device type" labelStyle={modalLabelTextStyle}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              bounces={false}
+              overScrollMode="never"
+              contentContainerStyle={styles.deviceTypeRow}
+            >
+              {DEVICE_OPTIONS.map((option) => {
+                const active = option.kind === newKind;
+                return (
+                  <Pressable
+                    key={option.kind}
+                    style={modalTypePillStyle(active)}
+                    onPress={() => {
+                      setNewKind(option.kind);
+                      if (option.kind !== "washer" && option.kind !== "dryer") {
+                        setStackLaundry(false);
+                      }
+                      if (!nameTouched) setNewName(option.defaultName);
+                    }}
+                  >
+                    <DeviceIcon
+                      kind={option.kind}
+                      size={16}
+                      color={active ? theme.colors.bg0 : theme.colors.subtext}
+                    />
+                    <Text style={modalTypeTextStyle(active)}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </ModalField>
+
+          {(newKind === "washer" || newKind === "dryer") && (
+            <ModalField
+              label="Laundry setup"
+              labelStyle={modalLabelTextStyle}
+              hint={
+                stackLaundry
+                  ? "Creates both washer + dryer and links them."
+                  : `Adds just this ${newKind}.`
+              }
+              hintStyle={styles.stackHint}
+            >
+              <View style={styles.stackRow}>
                 <Pressable
-                  key={option.kind}
-                  style={modalTypePillStyle(active)}
-                  onPress={() => {
-                    setNewKind(option.kind);
-                    if (option.kind !== "washer" && option.kind !== "dryer") {
-                      setStackLaundry(false);
-                    }
-                    if (!nameTouched) setNewName(option.defaultName);
-                  }}
+                  style={modalStackPillStyle(!stackLaundry)}
+                  onPress={() => setStackLaundry(false)}
                 >
-                  <DeviceIcon
-                    kind={option.kind}
-                    size={16}
-                    color={active ? theme.colors.bg0 : theme.colors.subtext}
-                  />
-                  <Text style={modalTypeTextStyle(active)}>
-                    {option.label}
+                  <Text style={modalStackPillTextStyle(!stackLaundry)}>
+                    Single unit
                   </Text>
                 </Pressable>
-              );
-            })}
-          </ScrollView>
-        </ModalField>
+                <Pressable
+                  style={modalStackPillStyle(stackLaundry)}
+                  onPress={() => setStackLaundry(true)}
+                >
+                  <Text style={modalStackPillTextStyle(stackLaundry)}>
+                    Stacked pair
+                  </Text>
+                </Pressable>
+              </View>
+            </ModalField>
+          )}
 
-        {(newKind === "washer" || newKind === "dryer") && (
-          <ModalField
-            label="Laundry setup"
-            labelStyle={modalLabelTextStyle}
-            hint={
-              stackLaundry
-                ? "Creates both washer + dryer and links them."
-                : `Adds just this ${newKind}.`
-            }
-            hintStyle={styles.stackHint}
-          >
-            <View style={styles.stackRow}>
-              <Pressable
-                style={modalStackPillStyle(!stackLaundry)}
-                onPress={() => setStackLaundry(false)}
-              >
-                <Text style={modalStackPillTextStyle(!stackLaundry)}>
-                  Single unit
-                </Text>
-              </Pressable>
-              <Pressable
-                style={modalStackPillStyle(stackLaundry)}
-                onPress={() => setStackLaundry(true)}
-              >
-                <Text style={modalStackPillTextStyle(stackLaundry)}>
-                  Stacked pair
-                </Text>
-              </Pressable>
-            </View>
+          <ModalField label="Name" labelStyle={modalLabelTextStyle}>
+            <TextInput
+              accessibilityLabel="Device name"
+              value={newName}
+              onChangeText={(value) => {
+                setNameTouched(true);
+                setNewName(value);
+              }}
+              placeholder="Device name"
+              placeholderTextColor={theme.colors.muted}
+              style={modalInputStyle}
+            />
           </ModalField>
-        )}
 
-        <ModalField label="Name" labelStyle={modalLabelTextStyle}>
-          <TextInput
-            accessibilityLabel="Device name"
-            value={newName}
-            onChangeText={(value) => {
-              setNameTouched(true);
-              setNewName(value);
-            }}
-            placeholder="Device name"
-            placeholderTextColor={theme.colors.muted}
-            style={modalInputStyle}
-          />
-        </ModalField>
-
-        <ModalActionRow
-          style={styles.modalRow}
-          actions={[
-            {
-              label: "Cancel",
-              onPress: () => setShowAddDevice(false),
-              style: modalGhostButtonStyle,
-              textStyle: modalGhostTextStyle,
-            },
-            {
-              label: "Add device",
-              onPress: handleCreateDevice,
-              style: modalPrimaryButtonStyle(!newName.trim()),
-              textStyle: modalPrimaryTextStyle,
-              disabled: !newName.trim(),
-            },
-          ]}
-        />
+        </ModalForm>
       </ModalCard>
-    </CinematicSurface>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.bg0 },
-  content: { flex: 1, alignSelf: "stretch" },
+  emptyCollection: { alignItems: "center", padding: 30, gap: 10 },
+  emptyTitle: { color: theme.colors.text, fontSize: 20, fontWeight: "500" },
+  emptySubtitle: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20, textAlign: "center" },
+  phoneGridSpacing: { gap: 12 },
+  tabletGridSpacing: { gap: 16 },
+  gridViewport: { flex: 1, minHeight: 0, marginTop: 14, overflow: "hidden" },
   gridList: { width: "100%", alignSelf: "stretch", flex: 1 },
-  gridContent: { width: "100%", flexGrow: 1 },
-  gridRow: { width: "100%" },
-  landscapeGrid: { width: "100%", alignSelf: "stretch" },
-  portraitGrid: { width: "100%", alignSelf: "stretch" },
-  landscapeGridRow: { justifyContent: "space-between" },
-  portraitGridRow: { justifyContent: "flex-start" },
-  frameFill: { flex: 1, alignSelf: "stretch" },
-  top: { flexDirection: "row", alignItems: "center", gap: 12 },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 16,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconBtnSpacer: { width: 40, height: 40 },
-  title: { color: theme.colors.text, fontWeight: "700" },
-  sub: {
-    color: theme.colors.subtext,
-    fontWeight: "700",
-    marginTop: 6,
-    fontSize: 12,
-  },
+  gridContent: { width: "100%" },
+  gridRow: { width: "100%", alignItems: "stretch" },
   undoBar: {
     position: "absolute",
     bottom: 22,
@@ -1006,15 +846,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   undoText: { color: theme.colors.subtext, fontWeight: "600" },
-  undoAction: { color: theme.colors.accent, fontWeight: "700" },
+  undoAction: { color: theme.colors.accentText, fontWeight: "600" },
   modalCard: {
     borderRadius: 22,
     padding: 16,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  modalTitle: { color: theme.colors.text, fontWeight: "700", fontSize: 18 },
-  modalSub: { color: theme.colors.subtext, fontWeight: "700", marginTop: 6 },
+  modalTitle: { color: theme.colors.text, fontWeight: "600", fontSize: 18 },
+  modalSub: { color: theme.colors.subtext, fontWeight: "400", marginTop: 6 },
   modalLabel: {
     color: theme.colors.subtext,
     fontWeight: "600",
@@ -1027,8 +867,8 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
     paddingHorizontal: 12,
-    height: 38,
-    borderRadius: 999,
+    height: 44,
+    borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.bg0,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
@@ -1051,8 +891,8 @@ const styles = StyleSheet.create({
   },
   stackPill: {
     flex: 1,
-    height: 38,
-    borderRadius: 999,
+    height: 44,
+    borderRadius: theme.radius.sm,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.bg0,
@@ -1067,7 +907,7 @@ const styles = StyleSheet.create({
   stackPillTextActive: { color: theme.colors.bg0 },
   stackHint: {
     color: theme.colors.subtext,
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: 6,
   },
   modalInput: {
@@ -1078,12 +918,12 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
     paddingHorizontal: 12,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   modalRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   modalGhost: {
     flex: 1,
-    height: 42,
+    height: 44,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
@@ -1093,12 +933,12 @@ const styles = StyleSheet.create({
   modalGhostText: { color: theme.colors.subtext, fontWeight: "600" },
   modalPrimary: {
     flex: 1,
-    height: 42,
+    height: 44,
     borderRadius: 12,
     backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
   },
   modalPrimaryDisabled: { opacity: 0.5 },
-  modalPrimaryText: { color: theme.colors.bg0, fontWeight: "700" },
+  modalPrimaryText: { color: theme.colors.bg0, fontWeight: "600" },
 });

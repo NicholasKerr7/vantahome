@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Pressable from "./Pressable";
 import { theme } from "../theme/theme";
+import { DeepPager } from "./deep/DeepScreen";
 import {
   ACTION_PERMISSIONS,
   roleHasPermission,
@@ -37,6 +38,7 @@ type Props = {
   onChange: (permission: ActionPermission, allowed: boolean | null) => void;
 };
 
+/** Review four permissions at a time while keeping role defaults and protected actions explicit. */
 export default function MemberPermissionEditor({
   role,
   overrides,
@@ -44,6 +46,8 @@ export default function MemberPermissionEditor({
   canChange,
   onChange,
 }: Props) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.ceil(ACTION_PERMISSIONS.length / 4);
   if (role === "Owner") {
     return (
       <Text style={styles.ownerNote}>
@@ -59,7 +63,7 @@ export default function MemberPermissionEditor({
         Inherit follows the member role. Explicit grants and denials take
         priority.
       </Text>
-      {ACTION_PERMISSIONS.map((permission) => {
+      {ACTION_PERMISSIONS.slice(page * 4, (page + 1) * 4).map((permission) => {
         const override = overrides.find(
           (item) => item.permission === permission,
         );
@@ -110,46 +114,23 @@ export default function MemberPermissionEditor({
           </View>
         );
       })}
+      <DeepPager label="permissions" page={page} pageCount={pageCount} onChange={setPage} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.14)",
-    gap: 8,
-  },
-  heading: { color: theme.colors.text, fontSize: 13, fontWeight: "700" },
-  help: { color: theme.colors.subtext, fontSize: 11, lineHeight: 16 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    paddingVertical: 4,
-  },
-  labelWrap: { flex: 1 },
-  label: { color: theme.colors.text, fontSize: 12, fontWeight: "600" },
-  defaultText: { color: theme.colors.subtext, fontSize: 10, marginTop: 2 },
-  options: { flexDirection: "row", gap: 4 },
-  option: {
-    minWidth: 45,
-    alignItems: "center",
-    paddingHorizontal: 7,
-    paddingVertical: 6,
-    borderRadius: 9,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: "rgba(255,255,255,0.05)",
-  },
-  optionSelected: {
-    borderColor: theme.colors.accent,
-    backgroundColor: "rgba(180,107,255,0.22)",
-  },
-  optionText: { color: theme.colors.subtext, fontSize: 10, fontWeight: "600" },
-  optionTextSelected: { color: theme.colors.text },
-  ownerNote: { color: theme.colors.subtext, fontSize: 11, marginTop: 10 },
+  root: { gap: 12 },
+  heading: { color: theme.colors.text, fontSize: 17, fontWeight: "500" },
+  help: { color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 64, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.stroke },
+  labelWrap: { flex: 1, minWidth: 0, gap: 4 },
+  label: { color: theme.colors.text, fontSize: 12, fontWeight: "500" },
+  defaultText: { color: theme.colors.subtext, fontSize: 10 },
+  options: { flexDirection: "row", gap: 5 },
+  option: { minWidth: 46, minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: 7, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2 },
+  optionSelected: { borderColor: theme.colors.accent, backgroundColor: theme.colors.bg1 },
+  optionText: { color: theme.colors.subtext, fontSize: 11, fontWeight: "500" },
+  optionTextSelected: { color: theme.colors.accentText },
+  ownerNote: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20 },
 });

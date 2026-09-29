@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import Pressable from "./Pressable";
+import { theme } from "../theme/theme";
 
 type ModalAction = {
   label: string;
@@ -23,6 +24,7 @@ type ModalActionRowProps = {
   style?: StyleProp<ViewStyle>;
 };
 
+/** Keep dialog actions consistently sized and clearly separated from editable content. */
 export default function ModalActionRow({
   actions,
   style,
@@ -33,11 +35,12 @@ export default function ModalActionRow({
         <Pressable
           key={`${action.label}-${index}`}
           onPress={action.onPress}
-          style={action.style}
+          style={[styles.action, action.style]}
           disabled={action.disabled}
+          accessibilityState={{ disabled: Boolean(action.disabled) }}
           testID={action.testID}
         >
-          <Text style={action.textStyle}>{action.label}</Text>
+          <Text style={[styles.label, action.textStyle]}>{action.label}</Text>
         </Pressable>
       ))}
     </View>
@@ -46,4 +49,6 @@ export default function ModalActionRow({
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
+  action: { minHeight: 44, minWidth: 44, paddingHorizontal: 12, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  label: { color: theme.colors.text, fontSize: 13, fontWeight: '600', textAlign: 'center' },
 });

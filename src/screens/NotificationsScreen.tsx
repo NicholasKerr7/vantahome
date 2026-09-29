@@ -1,26 +1,21 @@
 import React, { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  type StyleProp,
-  type TextStyle,
-  type ViewStyle,
-} from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Pressable from "../components/Pressable";
-import LandscapeFrame from "../components/LandscapeFrame";
-import PortraitFrame from "../components/PortraitFrame";
-import CinematicSurface from "../components/CinematicSurface";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "../theme/theme";
-import { useNavigation } from "@react-navigation/native";
-import type { NavigationProp } from "@react-navigation/native";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { RootStackParamList } from "../app/AppNavigator";
 import { openHomeFeature } from "../app/homeNavigation";
-import { useResponsive } from "../theme/layout";
 import { useHomeStore } from "../store/useHomeStore";
 import { Swipeable } from "react-native-gesture-handler";
+import {
+  DeepScreen,
+  DeepTabs,
+  DeepCard,
+  DeepAction,
+  DeepPager,
+} from "../components/deep/DeepScreen";
+import { useActivityPages } from "../features/activity/useActivityPages";
 
 type NotificationItem = {
   id: string;
@@ -32,54 +27,37 @@ type NotificationItem = {
 };
 
 type NotificationCategory =
-  | "alert"
-  | "device"
-  | "scene"
-  | "automation"
-  | "security"
-  | "info";
+  "alert" | "device" | "scene" | "automation" | "security" | "info";
 
 type NotificationFilter = "all" | NotificationCategory;
 
 const CATEGORY_META: Record<
   NotificationCategory,
-  { label: string; icon: keyof typeof Ionicons.glyphMap; accent: string; soft: string }
+  { label: string; icon: keyof typeof Ionicons.glyphMap }
 > = {
   alert: {
     label: "Alerts",
     icon: "warning",
-    accent: "#FFB4B4",
-    soft: "rgba(255,180,180,0.18)",
   },
   device: {
     label: "Devices",
     icon: "hardware-chip",
-    accent: theme.colors.electric,
-    soft: "rgba(163,201,255,0.14)",
   },
   scene: {
     label: "Scenes",
     icon: "sparkles",
-    accent: theme.colors.accent,
-    soft: theme.colors.glow,
   },
   automation: {
-    label: "Automations",
+    label: "Routines",
     icon: "timer",
-    accent: theme.colors.accent,
-    soft: theme.colors.glow,
   },
   security: {
     label: "Security",
     icon: "shield-checkmark",
-    accent: theme.colors.ember,
-    soft: "rgba(235,208,166,0.14)",
   },
   info: {
     label: "Info",
     icon: "information-circle",
-    accent: theme.colors.electric,
-    soft: "rgba(163,201,255,0.14)",
   },
 };
 
@@ -115,169 +93,13 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
   },
 ];
 
+/** A calm, paged inbox with visible dismissal controls and retained swipe support. */
 export default function NotificationsScreen() {
-  const { contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
-    useResponsive(900);
-  const isCompactPhone = !isTablet && contentWidth < 360;
-  const isWide = isTablet && isLandscape;
-  const isPortrait = !isLandscape;
-  const iconBtnSize = Math.round(
-    (isTablet ? 46 : isCompactPhone ? 34 : 38) * scale,
-  );
-  const iconBtnRadius = Math.round(iconBtnSize * 0.4);
-  const titleSize = Math.round(
-    (isTablet ? 26 : isCompactPhone ? 20 : 22) * scale,
-  );
-  const cardPad = Math.round((isTablet ? 18 : isCompactPhone ? 10 : 12) * scale);
-  const cardRadius = Math.round(
-    (isTablet ? 22 : isCompactPhone ? 14 : 16) * scale,
-  );
-  const framePad = Math.round((isTablet ? 14 : isCompactPhone ? 8 : 10) * scale);
-  const frameRadius = Math.round(
-    (isTablet ? 30 : isCompactPhone ? 22 : 26) * scale,
-  );
-  const frameWidth = isWide
-    ? contentWidth
-    : Math.max(0, contentWidth - gutter * 2);
-  const listWidth = isWide
-    ? Math.max(0, contentWidth - framePad * 2)
-    : frameWidth;
-  const iconWrapSize = Math.round(
-    (isTablet ? 40 : isCompactPhone ? 30 : 34) * scale,
-  );
-  const iconWrapRadius = Math.round(iconWrapSize * 0.34);
-  const iconSize = Math.round(
-    (isTablet ? 20 : isCompactPhone ? 16 : 18) * scale,
-  );
-  const textSize = Math.round(
-    (isTablet ? 14 : isCompactPhone ? 11 : 12) * scale,
-  );
-  const bodySize = Math.round(
-    (isTablet ? 13 : isCompactPhone ? 10 : 11) * scale,
-  );
-  const gap = Math.round((isTablet ? 16 : isCompactPhone ? 8 : 10) * scale);
-  const listBottomPad = Math.round(
-    (isTablet ? (isLandscape ? 120 : 140) : 24) * scale,
-  );
-  const rootStyle: StyleProp<ViewStyle> = [styles.root, { paddingTop: topPad }];
-  const topBarLayout: ViewStyle = {
-    paddingHorizontal: gutter,
-    width: contentWidth,
-    alignSelf: "center",
-  };
-  const topBarStyle: StyleProp<ViewStyle> = [styles.topBar, topBarLayout];
-  const iconButtonLayout: ViewStyle = {
-    width: iconBtnSize,
-    height: iconBtnSize,
-    borderRadius: iconBtnRadius,
-  };
-  const iconButtonStyle: StyleProp<ViewStyle> = [
-    styles.iconBtn,
-    iconButtonLayout,
-  ];
-  const frameStyle: StyleProp<ViewStyle> = isWide
-    ? { marginTop: Math.round(8 * scale) }
-    : undefined;
-  const innerGutter = isWide
-    ? 0
-    : isTablet
-      ? gutter
-      : Math.round(gutter * 0.6);
-  const filtersRowLayout: ViewStyle = {
-    paddingHorizontal: innerGutter,
-    width: "100%",
-    alignSelf: "center",
-  };
-  const filtersRowStyle: StyleProp<ViewStyle> = [
-    styles.filtersRow,
-    filtersRowLayout,
-  ];
-  const listWrapStyle: ViewStyle = {
-    width: "100%",
-    alignSelf: "center",
-    paddingHorizontal: innerGutter,
-  };
-  const listContentStyle: ViewStyle = {
-    paddingTop: isCompactPhone ? 8 : 12,
-    paddingBottom: listBottomPad,
-    gap,
-    paddingHorizontal: isWide ? 0 : innerGutter,
-  };
-  const listStyle: ViewStyle = { width: "100%" };
-  const titleTextStyle: StyleProp<TextStyle> = [
-    styles.h1,
-    { fontSize: titleSize },
-  ];
-  const filterChipStyle = (active: boolean): StyleProp<ViewStyle> => [
-    styles.filterChip,
-    active && styles.filterChipActive,
-  ];
-  const filterChipTextStyle = (active: boolean): StyleProp<TextStyle> => [
-    styles.filterChipText,
-    active && styles.filterChipTextActive,
-  ];
-  const listColumnStyle: StyleProp<ViewStyle> | undefined = isWide
-    ? { gap }
-    : undefined;
-  const swipeTextStyle: StyleProp<TextStyle> = [
-    styles.swipeText,
-    { fontSize: bodySize },
-  ];
-  const cardStyle: StyleProp<ViewStyle> = [
-    styles.card,
-    { padding: cardPad, borderRadius: cardRadius, width: "100%" },
-  ];
-  const accentBarStyleFor = (accent: string): StyleProp<ViewStyle> => [
-    styles.accentBar,
-    { backgroundColor: accent },
-  ];
-  const iconWrapStyleFor = (
-    accent: string,
-    soft: string,
-  ): StyleProp<ViewStyle> => [
-    styles.iconWrap,
-    {
-      width: iconWrapSize,
-      height: iconWrapSize,
-      borderRadius: iconWrapRadius,
-      backgroundColor: soft,
-      borderColor: accent,
-    },
-  ];
-  const cardTitleStyle: StyleProp<TextStyle> = [
-    styles.title,
-    { fontSize: textSize },
-  ];
-  const cardBodyStyle: StyleProp<TextStyle> = [
-    styles.body,
-    { fontSize: bodySize },
-  ];
-  const timeTextStyle: StyleProp<TextStyle> = [
-    styles.time,
-    { fontSize: bodySize },
-  ];
-  const newPillStyleFor = (
-    accent: string,
-    soft: string,
-  ): StyleProp<ViewStyle> => [
-    styles.newPill,
-    { borderColor: accent, backgroundColor: soft },
-  ];
-  const newPillTextStyle: StyleProp<TextStyle> = [
-    styles.newPillText,
-    { fontSize: Math.round((isTablet ? 10 : isCompactPhone ? 8 : 9) * scale) },
-  ];
-  const topBarTitleWrapStyle: StyleProp<ViewStyle> = [
-    styles.titleWrap,
-    isCompactPhone && styles.titleWrapCompact,
-  ];
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const FrameComponent = isPortrait ? PortraitFrame : LandscapeFrame;
-  const frameEnabled = isPortrait || isWide;
   const energy = useHomeStore((s) =>
     s.devices.find((device) => device.kind === "energy"),
   );
@@ -301,15 +123,6 @@ export default function NotificationsScreen() {
   const waterBudget = water?.waterBudgetL ?? 0;
   const waterToday = water?.waterTodayL ?? 0;
   const waterOverBudget = waterBudget > 0 && waterToday > waterBudget;
-  const filters: NotificationFilter[] = [
-    "all",
-    "alert",
-    "device",
-    "scene",
-    "automation",
-    "security",
-    "info",
-  ];
   const notifications = useMemo(() => {
     const dynamicItems: NotificationItem[] = [];
     if (powerOutage) {
@@ -346,9 +159,9 @@ export default function NotificationsScreen() {
       dynamicItems.push({
         id: "n-water-pressure-high",
         title: "High water pressure",
-        body: `${Math.round(waterPressure)} PSI • Above ${
-          Math.round(waterPressureHigh)
-        }`,
+        body: `${Math.round(waterPressure)} PSI • Above ${Math.round(
+          waterPressureHigh,
+        )}`,
         time: "Just now",
         category: "alert",
       });
@@ -356,9 +169,9 @@ export default function NotificationsScreen() {
       dynamicItems.push({
         id: "n-water-pressure-low",
         title: "Low water pressure",
-        body: `${Math.round(waterPressure)} PSI • Below ${
-          Math.round(waterPressureLow)
-        }`,
+        body: `${Math.round(waterPressure)} PSI • Below ${Math.round(
+          waterPressureLow,
+        )}`,
         time: "Just now",
         category: "alert",
       });
@@ -410,17 +223,7 @@ export default function NotificationsScreen() {
     () => notifications.some((item) => !dismissedIds.has(item.id)),
     [dismissedIds, notifications],
   );
-  const clearButtonStyle = [
-    styles.clearBtn,
-    isCompactPhone && styles.clearBtnCompact,
-    !canClearAll && styles.clearBtnDisabled,
-  ];
-  const clearButtonTextStyle = [
-    styles.clearBtnText,
-    { fontSize: bodySize },
-    !canClearAll && styles.clearBtnTextDisabled,
-  ];
-
+  /** Dismiss one item while leaving other categories and alerts untouched. */
   const dismissNotification = (id: string) => {
     setDismissedIds((prev) => {
       const next = new Set(prev);
@@ -429,6 +232,7 @@ export default function NotificationsScreen() {
     });
   };
 
+  /** Preserve the existing clear-all behavior across every category. */
   const handleClearAll = () => {
     setDismissedIds((prev) => {
       const next = new Set(prev);
@@ -437,297 +241,204 @@ export default function NotificationsScreen() {
     });
   };
 
+  const pages = useActivityPages(visibleNotifications.length, 142);
+  const filters = [
+    { id: "all" as const, label: "All" },
+    ...Object.entries(CATEGORY_META).map(([id, meta]) => ({
+      id: id as NotificationCategory,
+      label: meta.label,
+    })),
+  ];
+  const remainingCount = notifications.filter(
+    (item) => !dismissedIds.has(item.id),
+  ).length;
+
   return (
-    <CinematicSurface
-      variant="quiet"
-      style={rootStyle}
-    >
-      <View
-        style={topBarStyle}
-      >
-        <Pressable
-          accessibilityLabel="Back"
-          style={iconButtonStyle}
-          onPress={() => {
-            if (navigation.canGoBack()) navigation.goBack();
-            else openHomeFeature(navigation.dispatch, "Home");
-          }}
-        >
-          <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
-        </Pressable>
-        <View style={topBarTitleWrapStyle}>
-          <Text style={titleTextStyle}>Notifications</Text>
-        </View>
-        <Pressable
-          style={clearButtonStyle}
-          onPress={handleClearAll}
+    <DeepScreen
+      title="Notifications"
+      eyebrow="HOME INBOX"
+      subtitle="The moments that matter, in one place."
+      onBack={() => {
+        if (navigation.canGoBack()) navigation.goBack();
+        else openHomeFeature(navigation.dispatch, "Home");
+      }}
+      actions={
+        <DeepAction
+          label="Clear all"
+          icon="checkmark-done-outline"
           disabled={!canClearAll}
-        >
-          <Ionicons
-            name="trash-outline"
-            size={Math.round(16 * scale)}
-            color={canClearAll ? theme.colors.text : theme.colors.subtext}
-          />
-          <Text style={clearButtonTextStyle}>
-            Clear all
-          </Text>
-        </Pressable>
+          onPress={handleClearAll}
+        />
+      }
+    >
+      <View style={styles.summary}>
+        <Text style={styles.summaryTitle}>
+          {remainingCount ? `${remainingCount} updates` : "All caught up"}
+        </Text>
+        <Text style={styles.summaryCaption}>Across your home</Text>
       </View>
-      <FrameComponent
-        enabled={frameEnabled}
-        width={frameWidth}
-        pad={framePad}
-        radius={frameRadius}
-        style={frameStyle}
-      >
-        <View style={filtersRowStyle}>
-          {filters.map((option) => {
-            const active = filter === option;
-              const label =
-                option === "all" ? "All" : CATEGORY_META[option].label;
+      <DeepTabs
+        items={filters}
+        selectedId={filter}
+        onSelect={(id) => {
+          setFilter(id);
+          pages.setPage(0);
+        }}
+      />
+      <View style={styles.list} onLayout={pages.onLayout}>
+        {visibleNotifications
+          .slice(pages.start, pages.start + pages.pageSize)
+          .map((item) => {
+            const meta = CATEGORY_META[item.category];
             return (
-              <Pressable
-                key={option}
-                style={filterChipStyle(active)}
-                onPress={() => setFilter(option)}
+              <Swipeable
+                key={item.id}
+                renderRightActions={() => (
+                  <Pressable
+                    accessibilityLabel={`Dismiss ${item.title}`}
+                    style={styles.swipeAction}
+                    onPress={() => dismissNotification(item.id)}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={22}
+                      color={theme.colors.text}
+                    />
+                    <Text style={styles.dismissText}>Dismiss</Text>
+                  </Pressable>
+                )}
+                onSwipeableOpen={() => dismissNotification(item.id)}
+                rightThreshold={48}
+                overshootRight={false}
               >
-                <Text style={filterChipTextStyle(active)}>
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <View style={listWrapStyle}>
-          <FlatList
-            data={visibleNotifications}
-            keyExtractor={(item) => item.id}
-            numColumns={isWide ? 2 : 1}
-            columnWrapperStyle={listColumnStyle}
-            contentContainerStyle={listContentStyle}
-            style={listStyle}
-            renderItem={({ item }) => {
-              const meta = CATEGORY_META[item.category];
-              const cardWidth = isWide
-                ? Math.floor((listWidth - gap) / 2)
-                : "100%";
-              const cardContainerStyle: StyleProp<ViewStyle> = { width: cardWidth };
-              return (
-                <Swipeable
-                  renderRightActions={() => (
-                    <View style={styles.swipeActions}>
-                      <Pressable
-                        style={styles.swipeButton}
-                        onPress={() => dismissNotification(item.id)}
-                      >
-                        <Ionicons
-                          name="close"
-                          size={Math.round(18 * scale)}
-                          color={theme.colors.text}
-                        />
-                        <Text style={swipeTextStyle}>Dismiss</Text>
-                      </Pressable>
-                    </View>
-                  )}
-                  onSwipeableOpen={() => dismissNotification(item.id)}
-                  rightThreshold={48}
-                  overshootRight={false}
-                  containerStyle={cardContainerStyle}
-                >
-                  <View style={cardStyle}>
-                    <View style={accentBarStyleFor(meta.accent)} />
-                    <View style={iconWrapStyleFor(meta.accent, meta.soft)}>
+                <DeepCard style={styles.card}>
+                  <View style={styles.cardTop}>
+                    <View
+                      style={[
+                        styles.categoryIcon,
+                        item.category === "alert" && styles.alertIcon,
+                      ]}
+                    >
                       <Ionicons
                         name={meta.icon}
-                        size={iconSize}
-                        color={meta.accent}
+                        size={18}
+                        color={
+                          item.category === "alert"
+                            ? "#FFB4B4"
+                            : theme.colors.accentText
+                        }
                       />
                     </View>
-                    <View style={styles.cardBody}>
-                      <Text style={cardTitleStyle}>{item.title}</Text>
-                      <Text style={cardBodyStyle}>{item.body}</Text>
-                    </View>
-                    <View style={styles.cardMeta}>
-                      {item.isNew && (
-                        <View style={newPillStyleFor(meta.accent, meta.soft)}>
-                          <Text style={newPillTextStyle}>NEW</Text>
-                        </View>
-                      )}
-                      <Text style={timeTextStyle}>{item.time}</Text>
-                    </View>
+                    <Text style={styles.category}>{meta.label}</Text>
+                    {item.isNew ? (
+                      <View
+                        style={styles.newDot}
+                        accessibilityLabel="New notification"
+                      />
+                    ) : null}
+                    <Text style={styles.time}>{item.time}</Text>
+                    <Pressable
+                      accessibilityLabel={`Dismiss ${item.title}`}
+                      onPress={() => dismissNotification(item.id)}
+                      style={styles.dismiss}
+                    >
+                      <Ionicons
+                        name="close-outline"
+                        size={18}
+                        color={theme.colors.subtext}
+                      />
+                    </Pressable>
                   </View>
-                </Swipeable>
-              );
-            }}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyState}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={28}
-                  color="rgba(255,255,255,0.65)"
-                />
-                <Text style={styles.emptyTitle}>You are all caught up</Text>
-                <Text style={styles.emptySub}>
-                  No notifications match this filter.
-                </Text>
-              </View>
-            )}
-          />
-        </View>
-      </FrameComponent>
-    </CinematicSurface>
+                  <Text style={styles.title}>{item.title}</Text>
+                  <Text style={styles.body}>{item.body}</Text>
+                </DeepCard>
+              </Swipeable>
+            );
+          })}
+        {!visibleNotifications.length ? (
+          <DeepCard style={styles.empty}>
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={34}
+              color={theme.colors.accentText}
+            />
+            <Text style={styles.title}>You are all caught up</Text>
+            <Text style={styles.body}>No notifications match this filter.</Text>
+          </DeepCard>
+        ) : null}
+      </View>
+      <DeepPager
+        page={pages.page}
+        pageCount={pages.pageCount}
+        onChange={pages.setPage}
+        label="notifications"
+      />
+    </DeepScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.bg0 },
-  topBar: {
+  summary: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
-    position: "relative",
-  },
-  titleWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  titleWrapCompact: {
-    left: 44,
-    right: 92,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 16,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  h1: { color: theme.colors.text, fontSize: 24, fontWeight: "700" },
-  clearBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  clearBtnDisabled: { opacity: 0.5 },
-  clearBtnCompact: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  clearBtnText: { color: theme.colors.text, fontWeight: "600" },
-  clearBtnTextDisabled: { color: theme.colors.subtext },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
     gap: 12,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: theme.colors.glass,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
   },
-  accentBar: {
-    width: 4,
-    alignSelf: "stretch",
-    borderRadius: 999,
+  summaryTitle: { color: theme.colors.text, fontSize: 22, fontWeight: "500" },
+  summaryCaption: { color: theme.colors.muted, fontSize: 11 },
+  list: { flex: 1, minHeight: 0, gap: 12 },
+  card: { minHeight: 142, padding: 16, gap: 5 },
+  cardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
   },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+  categoryIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 11,
     backgroundColor: theme.colors.card,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
   },
-  cardBody: { flex: 1 },
-  cardMeta: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-    gap: 6,
+  alertIcon: { backgroundColor: "rgba(255,180,180,0.14)" },
+  category: {
+    color: theme.colors.accentText,
+    fontSize: 11,
+    fontWeight: "500",
+    flex: 1,
   },
-  newPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    borderWidth: 1,
+  newDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: theme.colors.accentText,
   },
-  newPillText: {
-    color: theme.colors.text,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-  },
-  title: { color: theme.colors.text, fontWeight: "700" },
-  body: { color: theme.colors.subtext, fontWeight: "700", marginTop: 4 },
-  time: { color: theme.colors.subtext, fontWeight: "700" },
-  filtersRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 4,
-  },
-  swipeActions: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,99,132,0.18)",
-    borderRadius: 18,
-    marginLeft: 10,
-    height: "100%",
-  },
-  swipeButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    alignItems: "center",
-    gap: 4,
-  },
-  swipeText: { color: theme.colors.text, fontWeight: "600" },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    backgroundColor: theme.colors.card2,
-  },
-  filterChipActive: {
-    backgroundColor: theme.colors.accent2,
-    borderColor: theme.colors.stroke,
-  },
-  filterChipText: {
-    color: theme.colors.subtext,
-    fontWeight: "700",
-  },
-  filterChipTextActive: {
-    color: theme.colors.text,
-    fontWeight: "700",
-  },
-  emptyState: {
+  time: { color: theme.colors.muted, fontSize: 10 },
+  dismiss: {
+    width: 44,
+    height: 44,
+    marginRight: -8,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
-    gap: 8,
   },
-  emptyTitle: {
+  title: {
     color: theme.colors.text,
-    fontWeight: "700",
     fontSize: 16,
+    lineHeight: 21,
+    fontWeight: "500",
   },
-  emptySub: {
-    color: theme.colors.subtext,
-    fontWeight: "700",
-    textAlign: "center",
+  body: { color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
+  swipeAction: {
+    borderRadius: 22,
+    marginLeft: 8,
+    width: 86,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,180,180,0.16)",
   },
+  dismissText: { color: theme.colors.text, fontSize: 12, fontWeight: "500" },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
 });

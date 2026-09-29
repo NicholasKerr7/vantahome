@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { View, Text, StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { theme } from "../theme/theme";
 
 type ModalFieldProps = {
   label?: string;
@@ -10,6 +11,7 @@ type ModalFieldProps = {
   children: React.ReactNode;
 };
 
+/** Group a field label, editor, and optional guidance with a consistent reading rhythm. */
 export default function ModalField({
   label,
   labelStyle,
@@ -19,10 +21,16 @@ export default function ModalField({
   children,
 }: ModalFieldProps) {
   return (
-    <View style={containerStyle}>
-      {label ? <Text style={labelStyle}>{label}</Text> : null}
+    <View style={[styles.field, containerStyle]}>
+      {label ? <Text style={[styles.label, labelStyle]}>{label}</Text> : null}
       {children}
-      {hint ? <Text style={hintStyle}>{hint}</Text> : null}
+      {hint ? <Text style={[styles.hint, hintStyle]}>{hint}</Text> : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  field: { gap: 8 },
+  label: { color: theme.colors.subtext, fontSize: 12, fontWeight: '500' },
+  hint: { color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
+});

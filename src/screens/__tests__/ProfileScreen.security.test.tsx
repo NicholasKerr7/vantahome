@@ -15,6 +15,7 @@ const mockDeleteResult = jest.fn();
 const mockEq = jest.fn();
 const mockFrom = jest.fn();
 
+jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: require("react-native").View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock("../../services/supabaseClient", () => ({
   supabase: {
     auth: { getSession: (...args: unknown[]) => mockGetSession(...args) },
@@ -136,6 +137,7 @@ describe("Profile household authorization and account isolation", () => {
     await act(async () => {
       tree = renderer.create(<ProfileScreen navigation={{ navigate: jest.fn() } as never} route={{ key: "Profile", name: "Profile" } as never} />);
     });
+    await press(button("People"));
     return screenRoot();
   }
   function screenRoot(): TestNode { return tree!.root; }
@@ -149,7 +151,32 @@ describe("Profile household authorization and account isolation", () => {
   async function press(node: TestNode) {
     await act(async () => { node.props.onPress(); });
   }
+  /** Follow the member pager rather than assuming every permission form is mounted. */
+  async function selectMember(target: HouseholdMember) {
+    if (screenRoot().findAllByType(MemberPermissionEditor).length) await press(button("Done"));
+    await press(button("Members"));
+    while (!button("Previous household member").props.disabled) await press(button("Previous household member"));
+    const index = useHomeStore.getState().household.findIndex((item) => item.id === target.id);
+    for (let page = 0; page < index; page += 1) await press(button("Next household member"));
+  }
+  /** Open one member's focused permission sheet through the public interface. */
+  async function openPermissions(target: HouseholdMember) {
+    await selectMember(target);
+    await press(button(`Permissions for ${target.name}`));
+    return screenRoot().findAllByType(MemberPermissionEditor)[0];
+  }
+  /** Locate a permission on its bounded page, preserving disabled-control assertions. */
+  async function permissionButton(label: string, editor: TestNode) {
+    while (!button("Previous permissions", editor).props.disabled) await press(button("Previous permissions", editor));
+    for (let page = 0; page < 4; page += 1) {
+      const found = button(label, editor);
+      if (found) return found;
+      if (!button("Next permissions", editor).props.disabled) await press(button("Next permissions", editor));
+    }
+    throw new Error(`Permission control missing: ${label}`);
+  }
   async function fillInvitation() {
+    await press(button("Invite"));
     await act(async () => {
       const inputs = screenRoot().findAllByType(TextInput);
       inputs.find((node) => node.props.accessibilityLabel === "New member name")!.props.onChangeText("Invited person");
@@ -169,37 +196,40 @@ describe("Profile household authorization and account isolation", () => {
 
   it("makes an administrator's own and peer permissions/removal read-only while keeping ordinary members manageable", async () => {
     await mount(administrator);
-    const editors = screenRoot().findAllByType(MemberPermissionEditor);
     for (const target of [administrator, peer]) {
+      await selectMember(target);
       const remove = button(`Remove ${target.name}`);
       expect(remove.props.disabled).toBe(true);
       await press(remove); // The handler also rejects stale/programmatic callbacks.
-      const editor = editors[[owner, administrator, peer, member].indexOf(target)];
+      const editor = await openPermissions(target);
       expect(editor.props.disabled).toBe(true);
-      const allow = button("Unlock doors: Allow", editor);
+      const allow = await permissionButton("Unlock doors: Allow", editor);
       expect(allow.props.disabled).toBe(true);
       await press(allow);
     }
     expect(mockFrom).not.toHaveBeenCalled();
     expect(mockConfirm).not.toHaveBeenCalled();
     expect(mockSetPermission).not.toHaveBeenCalled();
+    await selectMember(member);
     expect(button(`Remove ${member.name}`).props.disabled).toBe(false);
-    const ordinaryEditor = editors[3];
+    const ordinaryEditor = await openPermissions(member);
     expect(ordinaryEditor.props.disabled).toBe(false);
-    await press(button("Lights: Allow", ordinaryEditor));
+    await press(await permissionButton("Lights: Allow", ordinaryEditor));
     expect(mockSetPermission).toHaveBeenCalledWith(member.userId, "light.control", true);
+    await press(button("Done"));
+    await press(button("Invite"));
     expect(roleButtons("Admin")).toHaveLength(0);
   });
 
   it("does not let a restricted administrator delegate the denied permission", async () => {
     useHomeStore.setState({ memberPermissionOverrides: [{ memberId: administrator.id, permission: "lock.unlock", allowed: false }] });
     await mount(administrator);
-    const ordinaryEditor = screenRoot().findAllByType(MemberPermissionEditor)[3];
-    const allow = button("Unlock doors: Allow", ordinaryEditor);
+    const ordinaryEditor = await openPermissions(member);
+    const allow = await permissionButton("Unlock doors: Allow", ordinaryEditor);
     expect(allow.props.disabled).toBe(true);
     await press(allow);
     expect(mockSetPermission).not.toHaveBeenCalled();
-    expect(button("Lights: Allow", ordinaryEditor).props.disabled).toBe(false);
+    expect((await permissionButton("Lights: Allow", ordinaryEditor)).props.disabled).toBe(false);
   });
 
   it("allows the owner to send an administrator invitation without creating accepted local membership", async () => {
@@ -243,6 +273,7 @@ describe("Profile household authorization and account isolation", () => {
     const deletion = deferred<{ data: { user_id: string | undefined }; error: null }>();
     mockDeleteResult.mockReturnValueOnce(deletion.promise);
     await mount(administrator);
+    await selectMember(member);
     await press(button(`Remove ${member.name}`));
     expect(mockFrom).toHaveBeenCalledWith("home_members");
     expect(mockEq).toHaveBeenCalledWith("home_id", homeId);
@@ -258,6 +289,7 @@ describe("Profile household authorization and account isolation", () => {
   ])("preserves membership when cloud deletion returns no authorized row (%#)", async (result) => {
     mockDeleteResult.mockResolvedValueOnce(result);
     await mount();
+    await selectMember(member);
     await press(button(`Remove ${member.name}`));
     expect(useHomeStore.getState().household).toContainEqual(member);
     expect(alert).toHaveBeenCalledWith("Member not removed", expect.any(String));
@@ -267,6 +299,7 @@ describe("Profile household authorization and account isolation", () => {
     const deletion = deferred<{ data: { user_id: string | undefined }; error: null }>();
     mockDeleteResult.mockReturnValueOnce(deletion.promise);
     await mount();
+    await selectMember(member);
     await press(button(`Remove ${member.name}`));
     let nextMembers: HouseholdMember[] = [];
     await act(async () => { nextMembers = switchHousehold(); });
@@ -305,8 +338,8 @@ describe("Profile household authorization and account isolation", () => {
     const permission = deferred<void>();
     mockSetPermission.mockReturnValueOnce(permission.promise);
     await mount();
-    const ordinaryEditor = screenRoot().findAllByType(MemberPermissionEditor)[3];
-    await press(button("Lights: Allow", ordinaryEditor));
+    const ordinaryEditor = await openPermissions(member);
+    await press(await permissionButton("Lights: Allow", ordinaryEditor));
     expect(mockSetPermission).toHaveBeenCalledTimes(1);
     await act(async () => { switchHousehold(); });
     await act(async () => { permission.reject(new Error("Old request failed")); });

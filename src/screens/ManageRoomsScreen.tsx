@@ -1,607 +1,341 @@
 import React, { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  ScrollView,
-  type StyleProp,
-  type TextStyle,
-  type ViewStyle,
-} from "react-native";
-import Pressable from "../components/Pressable";
-import CinematicSurface from "../components/CinematicSurface";
+import { Text, TextInput, View, useWindowDimensions } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import LandscapeFrame from "../components/LandscapeFrame";
-import PortraitFrame from "../components/PortraitFrame";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../app/AppNavigator";
+import Pressable from "../components/Pressable";
 import ModalCard from "../components/ModalCard";
-import ModalActionRow from "../components/ModalActionRow";
-import { theme } from "../theme/theme";
+import ModalForm, { useModalViewportStyle } from "../components/ModalForm";
+import {
+  DeepAction,
+  DeepCard,
+  DeepPager,
+  DeepScreen,
+} from "../components/deep/DeepScreen";
 import {
   selectActiveMember,
   selectVisibleDevices,
   selectVisibleRooms,
   useHomeStore,
 } from "../store/useHomeStore";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../app/AppNavigator";
-import { useResponsive } from "../theme/layout";
+import { roomWorkspaceStyles as styles } from "../features/rooms/roomWorkspaceStyles";
+import { theme } from "../theme/theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ManageRooms">;
 
+/** Organize rooms as a paged space index with a focused editor for each room. */
 export default function ManageRoomsScreen({ navigation }: Props) {
-  const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
-    useResponsive(900);
-  const isWide = isTablet && isLandscape;
-  const iconSize = Math.round((isTablet ? 46 : 40) * scale);
-  const iconRadius = Math.round(iconSize * 0.4);
-  const titleSize = Math.round((isTablet ? 20 : 18) * scale);
-  const cardPad = Math.round((isTablet ? 18 : 14) * scale);
-  const cardRadius = Math.round((isTablet ? 26 : 24) * scale);
-  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
-  const outerGutter = isWide
-    ? Math.round(gutter * 0.4)
-    : Math.round(
-        gutter *
-          (isLandscape ? (isTablet ? 0.9 : 0.75) : isTablet ? 0.8 : 0.65),
-      );
-  const innerGutter = Math.round(
-    gutter * (isLandscape ? (isTablet ? 1.05 : 0.95) : isTablet ? 0.95 : 0.85),
-  );
-  const framePad = innerGutter;
-  const frameWidth = Math.max(
-    0,
-    (isWide ? width : contentWidth) - outerGutter * 2,
-  );
-  const inputHeight = Math.round((isTablet ? 48 : 44) * scale);
-  const inputRadius = Math.round(inputHeight * 0.28);
-  const labelSize = Math.round((isTablet ? 13 : 12) * scale);
-  const metaSize = Math.round((isTablet ? 13 : 12) * scale);
-  const actionBtnSize = Math.round((isTablet ? 40 : 36) * scale);
-  const actionBtnRadius = Math.round(actionBtnSize * 0.33);
-  const rowGap = Math.round((isTablet ? 14 : 12) * scale);
-  const gridGap = Math.round((isTablet ? 18 : 12) * scale);
-  const primaryHeight = Math.round((isTablet ? 46 : 42) * scale);
-  const primaryRadius = Math.round(primaryHeight * 0.28);
-  const modalPad = Math.round((isTablet ? 20 : 18) * scale);
-  const modalRadius = Math.round((isTablet ? 24 : 22) * scale);
-  const modalTitleSize = Math.round((isTablet ? 20 : 18) * scale);
-  const modalSubSize = Math.round((isTablet ? 14 : 12) * scale);
-  const modalInputHeight = Math.round((isTablet ? 48 : 44) * scale);
-  const modalButtonHeight = Math.round((isTablet ? 46 : 42) * scale);
-  const scrollTopPad = Math.round(12 * scale);
-  const scrollBottomPad = Math.round(
-    (isTablet ? (isLandscape ? 120 : 140) : 120) * scale,
-  );
-  const rootStyle: StyleProp<ViewStyle> = [styles.root, { paddingTop: topPad }];
-  const contentStyle: StyleProp<ViewStyle> = [
-    styles.content,
-    {
-      paddingHorizontal: outerGutter,
-      paddingTop: Math.round(12 * scale),
-      paddingBottom: outerGutter,
-    },
-  ];
-  const iconButtonLayout: ViewStyle = {
-    width: iconSize,
-    height: iconSize,
-    borderRadius: iconRadius,
-  };
-  const iconButtonStyle: StyleProp<ViewStyle> = [
-    styles.iconBtn,
-    iconButtonLayout,
-  ];
-  const titleTextStyle: StyleProp<TextStyle> = [
-    styles.title,
-    { fontSize: titleSize },
-  ];
-  const scrollContentStyle: ViewStyle = {
-    paddingTop: scrollTopPad,
-    paddingBottom: scrollBottomPad,
-  };
-  const landscapeColumns = isWide ? (width >= 1200 ? 4 : 3) : 1;
-  const portraitColumns = !isLandscape && width >= 700 ? 2 : 1;
-  const columns = isWide ? landscapeColumns : portraitColumns;
-  const isGridColumns = columns > 1;
-  const cardsGridLayout: ViewStyle | null = isGridColumns
-    ? { flexDirection: "row", flexWrap: "wrap" }
-    : null;
-  const cardsGridStyle: StyleProp<ViewStyle> = [
-    styles.cardsGrid,
-    { gap: gridGap },
-    cardsGridLayout,
-    isGridColumns && styles.cardsGridWide,
-  ];
-  const gridWidth = Math.max(0, frameWidth - framePad * 2);
-  const cardWidth = isGridColumns
-    ? (gridWidth - gridGap * (columns - 1)) / columns
-    : "100%";
-  const cardLayout: ViewStyle = {
-    padding: cardPad,
-    borderRadius: cardRadius,
-    ...(isGridColumns
-      ? {
-          flexBasis: cardWidth,
-          flexGrow: 1,
-          minWidth: cardWidth,
-        }
-      : { width: "100%" }),
-  };
-  const roomCardStyle: StyleProp<ViewStyle> = [
-    styles.card,
-    cardLayout,
-  ];
-  const flex1Style: StyleProp<ViewStyle> = { flex: 1 };
-  const rowTopStyle: StyleProp<ViewStyle> = [
-    styles.rowTop,
-    { gap: rowGap },
-  ];
-  const rowBottomStyle: StyleProp<ViewStyle> = [
-    styles.rowBottom,
-    { gap: rowGap },
-  ];
-  const labelTextStyle: StyleProp<TextStyle> = [
-    styles.label,
-    { fontSize: labelSize },
-  ];
-  const inputLayout: TextStyle = {
-    height: inputHeight,
-    borderRadius: inputRadius,
-  };
-  const inputStyle: StyleProp<TextStyle> = [styles.input, inputLayout];
-  const metaTextStyle: StyleProp<TextStyle> = [
-    styles.meta,
-    { fontSize: metaSize },
-  ];
-  const actionBtnLayout: ViewStyle = {
-    width: actionBtnSize,
-    height: actionBtnSize,
-    borderRadius: actionBtnRadius,
-  };
-  const actionBtnStyle: StyleProp<ViewStyle> = [
-    styles.actionBtn,
-    actionBtnLayout,
-  ];
-  const actionButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
-    actionBtnStyle,
-    disabled && styles.actionBtnDisabled,
-  ];
-  const primaryBtnLayout: ViewStyle = {
-    height: primaryHeight,
-    borderRadius: primaryRadius,
-  };
-  const primaryBtnStyle: StyleProp<ViewStyle> = [
-    styles.primaryBtn,
-    primaryBtnLayout,
-  ];
-  const primaryButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
-    primaryBtnStyle,
-    disabled && styles.primaryBtnDisabled,
-  ];
-  const primaryTextStyle: StyleProp<TextStyle> = [
-    styles.primaryText,
-    { fontSize: labelSize },
-  ];
-  const deleteBtnStyle: StyleProp<ViewStyle> = [
-    styles.deleteBtn,
-    primaryBtnLayout,
-  ];
-  const deleteButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
-    deleteBtnStyle,
-    disabled && styles.actionBtnDisabled,
-  ];
-  const deleteTextStyle: StyleProp<TextStyle> = [
-    styles.deleteText,
-    { fontSize: labelSize },
-  ];
-  const modalCardLayout: ViewStyle = {
-    padding: modalPad,
-    borderRadius: modalRadius,
-    maxWidth: isTablet ? 520 : undefined,
-    width: isTablet ? Math.min(contentWidth - gutter * 2, 520) : undefined,
-    alignSelf: isTablet ? "center" : "stretch",
-  };
-  const modalCardStyle: StyleProp<ViewStyle> = [
-    styles.modalCard,
-    modalCardLayout,
-  ];
-  const modalTitleStyle: StyleProp<TextStyle> = [
-    styles.modalTitle,
-    { fontSize: modalTitleSize },
-  ];
-  const modalSubStyle: StyleProp<TextStyle> = [
-    styles.modalSub,
-    { fontSize: modalSubSize },
-  ];
-  const modalInputLayout: TextStyle = {
-    height: modalInputHeight,
-    borderRadius: Math.round(modalInputHeight * 0.28),
-  };
-  const modalInputStyle: StyleProp<TextStyle> = [
-    styles.modalInput,
-    modalInputLayout,
-  ];
-  const modalGhostLayout: ViewStyle = {
-    height: modalButtonHeight,
-    borderRadius: Math.round(modalButtonHeight * 0.28),
-  };
-  const modalGhostStyle: StyleProp<ViewStyle> = [
-    styles.modalGhost,
-    modalGhostLayout,
-  ];
-  const modalGhostTextStyle: StyleProp<TextStyle> = [
-    styles.modalGhostText,
-    { fontSize: labelSize },
-  ];
-  const modalPrimaryStyle: StyleProp<ViewStyle> = [
-    styles.modalPrimary,
-    modalGhostLayout,
-  ];
-  const modalPrimaryButtonStyle = (disabled: boolean): StyleProp<ViewStyle> => [
-    modalPrimaryStyle,
-    disabled && styles.modalPrimaryDisabled,
-  ];
-  const modalPrimaryTextStyle: StyleProp<TextStyle> = [
-    styles.modalPrimaryText,
-    { fontSize: labelSize },
-  ];
+  const { width, height, fontScale } = useWindowDimensions();
+  const modalViewportStyle = useModalViewportStyle();
+  const wide = width >= 700;
   const rooms = useHomeStore(selectVisibleRooms);
   const devices = useHomeStore(selectVisibleDevices);
   const activeMember = useHomeStore(selectActiveMember);
-  const canManageRooms = activeMember
-    ? ["Owner", "Admin"].includes(activeMember.role)
-    : false;
-  const addRoom = useHomeStore((s) => s.addRoom);
-  const renameRoom = useHomeStore((s) => s.renameRoom);
-  const moveRoom = useHomeStore((s) => s.moveRoom);
-  const removeRoom = useHomeStore((s) => s.removeRoom);
-
+  const canManageRooms = Boolean(
+    activeMember && ["Owner", "Admin"].includes(activeMember.role),
+  );
+  const addRoom = useHomeStore((state) => state.addRoom);
+  const renameRoom = useHomeStore((state) => state.renameRoom);
+  const moveRoom = useHomeStore((state) => state.moveRoom);
+  const removeRoom = useHomeStore((state) => state.removeRoom);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
   const [showAdd, setShowAdd] = useState(false);
   const [roomName, setRoomName] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const FrameComponent = isLandscape ? LandscapeFrame : PortraitFrame;
-  const frameEnabled = true;
-
-  const deviceCountByRoom = useMemo(() => {
-    const map: Record<string, number> = {};
-    rooms.forEach((r) => {
-      map[r.id] = devices.filter((d) => d.roomId === r.id).length;
+  const countByRoom = useMemo(() => {
+    const counts: Record<string, number> = {};
+    devices.forEach((device) => {
+      counts[device.roomId] = (counts[device.roomId] ?? 0) + 1;
     });
-    return map;
-  }, [rooms, devices]);
+    return counts;
+  }, [devices]);
+  const matchingRooms = rooms.filter((room) =>
+    room.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+  const pageSize = wide
+    ? height >= 960
+      ? 6
+      : 4
+    : height < 720 || fontScale > 1.25
+      ? 2
+      : 3;
+  const pageCount = Math.max(1, Math.ceil(matchingRooms.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const selectedRoom = rooms.find((room) => room.id === selectedId);
+  const selectedIndex = rooms.findIndex((room) => room.id === selectedId);
+  const draft = selectedRoom
+    ? (drafts[selectedRoom.id] ?? selectedRoom.name)
+    : "";
+  const canSave =
+    canManageRooms &&
+    draft.trim().length > 1 &&
+    draft.trim() !== selectedRoom?.name;
 
-  const handleCreate = () => {
-    if (!canManageRooms) return;
-    const trimmed = roomName.trim();
-    if (!trimmed) return;
-    addRoom(trimmed);
+  /** Create a room only for an authorized administrator, using the existing store action. */
+  function createRoom() {
+    if (!canManageRooms || !roomName.trim()) return;
+    addRoom(roomName.trim());
     setRoomName("");
     setShowAdd(false);
-  };
+  }
+
+  /** Commit the selected room's draft without changing its devices or order. */
+  function saveRoom() {
+    if (!selectedRoom || !canSave) return;
+    renameRoom(selectedRoom.id, draft.trim());
+    setSelectedId(null);
+  }
+
+  /** Preserve the store's device reassignment behavior and the final-room guard. */
+  function deleteRoom() {
+    if (!selectedRoom || !canManageRooms || rooms.length <= 1) return;
+    removeRoom(selectedRoom.id);
+    setSelectedId(null);
+  }
 
   return (
-    <CinematicSurface
-      variant="quiet"
-      style={rootStyle}
+    <DeepScreen
+      title="Rooms"
+      eyebrow="SPACE PLANNING"
+      subtitle="A place for everything in your home."
+      onBack={() => navigation.goBack()}
+      actions={
+        <DeepAction
+          label="Add room"
+          icon="add-outline"
+          primary
+          disabled={!canManageRooms}
+          onPress={() => setShowAdd(true)}
+        />
+      }
     >
-
-      <View style={contentStyle}>
-        <View style={styles.top}>
-          <Pressable
-            accessibilityLabel="Back"
-            style={iconButtonStyle}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
-          </Pressable>
-          <Text style={titleTextStyle}>Manage Rooms</Text>
-          <Pressable
-            accessibilityLabel="Add room"
-            accessibilityState={{ disabled: !canManageRooms }}
-            style={iconButtonStyle}
-            onPress={() => setShowAdd(true)}
-            disabled={!canManageRooms}
-          >
-            <Ionicons name="add" size={20} color={theme.colors.text} />
-          </Pressable>
+      <DeepCard>
+        <View style={styles.overview}>
+          <View style={styles.overviewText}>
+            <Text style={styles.eyebrow}>YOUR SPACES</Text>
+            <Text style={styles.title}>{rooms.length} rooms, one home.</Text>
+            <Text style={styles.detail}>
+              {devices.length} connected devices ·{" "}
+              {canManageRooms
+                ? "Select a room to organize it."
+                : "Room changes require an admin account."}
+            </Text>
+          </View>
+          <Ionicons
+            name="grid-outline"
+            size={28}
+            color={theme.colors.accentText}
+          />
         </View>
-        {!canManageRooms ? (
-          <Text style={styles.readOnlyNote}>
-            Room changes require an admin account.
-          </Text>
-        ) : null}
-
-        <FrameComponent
-          enabled={frameEnabled}
-          pad={framePad}
-          radius={frameRadius}
-          width={frameWidth}
-          style={styles.frameFill}
-        >
-          <ScrollView
-            style={styles.cardsScroll}
-            contentContainerStyle={scrollContentStyle}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={cardsGridStyle}>
-              {rooms.map((room, idx) => {
-                const draft = drafts[room.id] ?? room.name;
-                const canSave =
-                  draft.trim().length > 1 && draft.trim() !== room.name;
-                const isLastRoom = rooms.length <= 1;
-                return (
-                  <View key={room.id} style={roomCardStyle}>
-                    <View style={rowTopStyle}>
-                      <View style={flex1Style}>
-                        <Text style={labelTextStyle}>Room name</Text>
-                        <TextInput
-                          accessibilityLabel={`${room.name} room name`}
-                          value={draft}
-                          onChangeText={(value) =>
-                            setDrafts((prev) => ({
-                              ...prev,
-                              [room.id]: value,
-                            }))
-                          }
-                          placeholder="Room name"
-                          placeholderTextColor={theme.colors.muted}
-                          style={inputStyle}
-                          editable={canManageRooms}
-                        />
-                        <Text style={metaTextStyle}>
-                          {deviceCountByRoom[room.id] ?? 0} devices
-                        </Text>
-                      </View>
-
-                      <View style={styles.actions}>
-                        <Pressable
-                          accessibilityLabel={`Move ${room.name} up`}
-                          accessibilityState={{
-                            disabled: !canManageRooms || idx === 0,
-                          }}
-                          style={actionButtonStyle(!canManageRooms || idx === 0)}
-                          onPress={() => moveRoom(room.id, -1)}
-                          disabled={!canManageRooms || idx === 0}
-                        >
-                          <Ionicons
-                            name="chevron-up"
-                            size={18}
-                            color={theme.colors.text}
-                          />
-                        </Pressable>
-                        <Pressable
-                          accessibilityLabel={`Move ${room.name} down`}
-                          accessibilityState={{
-                            disabled:
-                              !canManageRooms || idx === rooms.length - 1,
-                          }}
-                          style={actionButtonStyle(
-                            !canManageRooms || idx === rooms.length - 1,
-                          )}
-                          onPress={() => moveRoom(room.id, 1)}
-                          disabled={!canManageRooms || idx === rooms.length - 1}
-                        >
-                          <Ionicons
-                            name="chevron-down"
-                            size={18}
-                            color={theme.colors.text}
-                          />
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    <View style={rowBottomStyle}>
-                      <Pressable
-                        style={primaryButtonStyle(!canManageRooms || !canSave)}
-                        onPress={() => {
-                          if (!canManageRooms || !canSave) return;
-                          renameRoom(room.id, draft.trim());
-                        }}
-                        disabled={!canManageRooms || !canSave}
-                      >
-                        <Text style={primaryTextStyle}>Save</Text>
-                      </Pressable>
-                      <Pressable
-                        style={deleteButtonStyle(
-                          !canManageRooms || isLastRoom,
-                        )}
-                        onPress={() => {
-                          if (!canManageRooms || isLastRoom) return;
-                          removeRoom(room.id);
-                        }}
-                        disabled={!canManageRooms || isLastRoom}
-                      >
-                        <Text style={deleteTextStyle}>
-                          {isLastRoom ? "Keep at least 1 room" : "Delete"}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </ScrollView>
-        </FrameComponent>
+      </DeepCard>
+      <TextInput
+        accessibilityLabel="Find a room"
+        value={search}
+        onChangeText={(value) => {
+          setSearch(value);
+          setPage(0);
+        }}
+        placeholder="Find a room"
+        placeholderTextColor={theme.colors.muted}
+        style={styles.search}
+        autoCorrect={false}
+        returnKeyType="search"
+      />
+      <View style={[styles.grid, wide && styles.gridWide]}>
+        {matchingRooms
+          .slice(currentPage * pageSize, (currentPage + 1) * pageSize)
+          .map((room) => (
+            <Pressable
+              key={room.id}
+              accessibilityLabel={`Manage ${room.name}`}
+              style={[styles.card, wide && styles.cardWide]}
+              onPress={() => setSelectedId(room.id)}
+            >
+              <View style={styles.icon}>
+                <Ionicons
+                  name="cube-outline"
+                  size={23}
+                  color={theme.colors.accentText}
+                />
+              </View>
+              <View style={styles.roomText}>
+                <Text numberOfLines={2} style={styles.roomName}>
+                  {room.name}
+                </Text>
+                <Text style={styles.detail}>
+                  {countByRoom[room.id] ?? 0} devices
+                </Text>
+              </View>
+              <Text style={styles.number}>
+                {String(
+                  rooms.findIndex((item) => item.id === room.id) + 1,
+                ).padStart(2, "0")}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={theme.colors.subtext}
+              />
+            </Pressable>
+          ))}
+        {matchingRooms.length === 0 && (
+          <View style={styles.empty}>
+            <Ionicons
+              name="search-outline"
+              size={30}
+              color={theme.colors.accentText}
+            />
+            <Text style={styles.detail}>No rooms match your search.</Text>
+          </View>
+        )}
       </View>
-
-      <ModalCard
-        visible={showAdd}
-        onRequestClose={() => setShowAdd(false)}
-        onBackdropPress={() => setShowAdd(false)}
-        colors={[theme.colors.card, theme.colors.card2]}
-        cardStyle={modalCardStyle}
-      >
-        <Text style={modalTitleStyle}>Add room</Text>
-        <Text style={modalSubStyle}>Give the room a friendly name.</Text>
-
-        <TextInput
-          accessibilityLabel="New room name"
-          value={roomName}
-          onChangeText={setRoomName}
-          placeholder="Office, Patio, Studio..."
-          placeholderTextColor={theme.colors.muted}
-          style={modalInputStyle}
-          autoCapitalize="words"
-          returnKeyType="done"
-        />
-
-        <ModalActionRow
-          style={styles.modalRow}
-          actions={[
-            {
-              label: "Cancel",
-              onPress: () => setShowAdd(false),
-              style: modalGhostStyle,
-              textStyle: modalGhostTextStyle,
-            },
-            {
-              label: "Create",
-              onPress: handleCreate,
-              style: modalPrimaryButtonStyle(!roomName.trim()),
-              textStyle: modalPrimaryTextStyle,
-              disabled: !roomName.trim(),
-            },
-          ]}
-        />
-      </ModalCard>
-    </CinematicSurface>
+      <DeepPager
+        label="rooms"
+        page={currentPage}
+        pageCount={pageCount}
+        onChange={setPage}
+      />
+      {selectedRoom && (
+        <ModalCard
+          visible
+          onRequestClose={() => setSelectedId(null)}
+          onBackdropPress={() => setSelectedId(null)}
+          backdropAccessibilityLabel="Close room details"
+          colors={[theme.colors.glass, theme.colors.bg0]}
+          animationType="none"
+          cardStyle={[styles.sheet, modalViewportStyle]}
+        >
+          <ModalForm
+            footer={
+              <View style={styles.footer}>
+                <DeepAction label="Done" onPress={() => setSelectedId(null)} />
+                <DeepAction
+                  label="Save"
+                  primary
+                  disabled={!canSave}
+                  onPress={saveRoom}
+                />
+              </View>
+            }
+          >
+            <View style={styles.section}>
+              <View style={styles.section}>
+                <Text style={styles.eyebrow}>
+                  ROOM {String(selectedIndex + 1).padStart(2, "0")}
+                </Text>
+                <Text style={styles.title}>{selectedRoom.name}</Text>
+                <Text style={styles.detail}>
+                  {countByRoom[selectedRoom.id] ?? 0} connected devices
+                </Text>
+              </View>
+              <View style={styles.section}>
+                <Text style={styles.label}>Room name</Text>
+                <TextInput
+                  accessibilityLabel={`${selectedRoom.name} room name`}
+                  value={draft}
+                  onChangeText={(value) =>
+                    setDrafts((previous) => ({
+                      ...previous,
+                      [selectedRoom.id]: value,
+                    }))
+                  }
+                  placeholder="Room name"
+                  placeholderTextColor={theme.colors.muted}
+                  style={styles.search}
+                  editable={canManageRooms}
+                  onSubmitEditing={saveRoom}
+                  returnKeyType="done"
+                />
+              </View>
+              <View style={styles.section}>
+                <Text style={styles.label}>Position in your home</Text>
+                <View style={styles.actions}>
+                  <DeepAction
+                    label="Move up"
+                    accessibilityLabel={`Move ${selectedRoom.name} up`}
+                    icon="arrow-up-outline"
+                    disabled={!canManageRooms || selectedIndex === 0}
+                    onPress={() => moveRoom(selectedRoom.id, -1)}
+                  />
+                  <DeepAction
+                    label="Move down"
+                    accessibilityLabel={`Move ${selectedRoom.name} down`}
+                    icon="arrow-down-outline"
+                    disabled={
+                      !canManageRooms || selectedIndex === rooms.length - 1
+                    }
+                    onPress={() => moveRoom(selectedRoom.id, 1)}
+                  />
+                </View>
+              </View>
+              <Pressable
+                accessibilityLabel={`Delete ${selectedRoom.name}`}
+                disabled={!canManageRooms || rooms.length <= 1}
+                accessibilityState={{
+                  disabled: !canManageRooms || rooms.length <= 1,
+                }}
+                onPress={deleteRoom}
+                style={[
+                  styles.danger,
+                  (!canManageRooms || rooms.length <= 1) && styles.disabled,
+                ]}
+              >
+                <Text style={styles.dangerText}>
+                  {rooms.length <= 1 ? "Keep at least 1 room" : "Delete room"}
+                </Text>
+              </Pressable>
+            </View>
+          </ModalForm>
+        </ModalCard>
+      )}
+      {showAdd && (
+        <ModalCard
+          visible
+          onRequestClose={() => setShowAdd(false)}
+          onBackdropPress={() => setShowAdd(false)}
+          backdropAccessibilityLabel="Close new room"
+          colors={[theme.colors.glass, theme.colors.bg0]}
+          animationType="none"
+          cardStyle={[styles.sheet, modalViewportStyle]}
+        >
+          <ModalForm
+            footer={
+              <View style={styles.footer}>
+                <DeepAction label="Cancel" onPress={() => setShowAdd(false)} />
+                <DeepAction
+                  label="Create"
+                  primary
+                  disabled={!canManageRooms || !roomName.trim()}
+                  onPress={createRoom}
+                />
+              </View>
+            }
+          >
+            <View style={styles.section}>
+              <View style={styles.section}>
+                <Text style={styles.eyebrow}>MAKE SPACE</Text>
+                <Text style={styles.title}>A new room.</Text>
+                <Text style={styles.detail}>
+                  Give the room a friendly name.
+                </Text>
+              </View>
+              <TextInput
+                accessibilityLabel="New room name"
+                value={roomName}
+                onChangeText={setRoomName}
+                placeholder="Office, Patio, Studio…"
+                placeholderTextColor={theme.colors.muted}
+                style={styles.search}
+                autoCapitalize="words"
+                returnKeyType="done"
+                onSubmitEditing={createRoom}
+              />
+            </View>
+          </ModalForm>
+        </ModalCard>
+      )}
+    </DeepScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.bg0 },
-  content: { flex: 1, alignItems: "center" },
-  frameFill: { flex: 1 },
-  cardsScroll: { flex: 1 },
-  cardsGrid: { width: "100%" },
-  cardsGridWide: {
-    justifyContent: "space-between",
-    alignContent: "stretch",
-  },
-  top: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    marginBottom: 12,
-  },
-  readOnlyNote: {
-    color: theme.colors.subtext,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 16,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: { color: theme.colors.text, fontWeight: "700", fontSize: 18 },
-
-  card: {
-    borderRadius: 24,
-    padding: 14,
-    backgroundColor: theme.colors.glass,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  rowTop: { flexDirection: "row", gap: 12 },
-  rowBottom: { flexDirection: "row", gap: 10, marginTop: 12 },
-  label: { color: theme.colors.subtext, fontWeight: "600", marginBottom: 6 },
-  input: {
-    height: 44,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    color: theme.colors.text,
-    fontWeight: "600",
-  },
-  meta: {
-    color: theme.colors.subtext,
-    fontWeight: "700",
-    marginTop: 6,
-    fontSize: 12,
-  },
-
-  actions: { gap: 8, justifyContent: "center" },
-  actionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionBtnDisabled: { opacity: 0.45 },
-
-  primaryBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: theme.colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryBtnDisabled: { opacity: 0.6 },
-  primaryText: { color: theme.colors.bg0, fontWeight: "700" },
-  deleteBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 99, 132, 0.18)",
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteText: { color: "#ffdbe6", fontWeight: "700", fontSize: 12 },
-
-  modalCard: {
-    borderRadius: 24,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  modalTitle: { color: theme.colors.text, fontWeight: "700", fontSize: 18 },
-  modalSub: { color: theme.colors.subtext, fontWeight: "700", marginTop: 6 },
-  modalInput: {
-    marginTop: 14,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: theme.colors.bg0,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    paddingHorizontal: 12,
-    color: theme.colors.subtext,
-    fontWeight: "700",
-  },
-  modalRow: { flexDirection: "row", gap: 10, marginTop: 16 },
-  modalGhost: {
-    flex: 1,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalGhostText: { color: theme.colors.subtext, fontWeight: "600" },
-  modalPrimary: {
-    flex: 1,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: theme.colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalPrimaryDisabled: { opacity: 0.6 },
-  modalPrimaryText: { color: theme.colors.bg0, fontWeight: "700" },
-});

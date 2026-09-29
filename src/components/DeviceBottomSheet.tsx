@@ -12,7 +12,7 @@ import SheetSection from "./SheetSection";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
-  BottomSheetView,
+  BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
 import { BlurView } from "expo-blur";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -67,24 +67,24 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
       () =>
         isTablet
           ? isLandscape
-            ? ["40%", "72%"]
-            : ["42%", "74%"]
-          : ["38%", "68%"],
+            ? ["56%", "88%"]
+            : ["52%", "86%"]
+          : ["56%", "88%"],
       [isTablet, isLandscape],
     );
     const glassRadius = Math.round((isTablet ? 30 : 26) * scale);
     const iconWrapSize = Math.round((isTablet ? 52 : 44) * scale);
     const iconWrapRadius = Math.round(iconWrapSize * 0.36);
     const iconSize = Math.round((isTablet ? 22 : 20) * scale);
-    const powerSize = Math.round((isTablet ? 44 : 40) * scale);
+    const powerSize = Math.max(44, Math.round(44 * scale));
     const powerRadius = Math.round(powerSize * 0.4);
     const powerIconSize = Math.round((isTablet ? 20 : 18) * scale);
     const titleSize = Math.round((isTablet ? 18 : 16) * scale);
     const subSize = Math.round((isTablet ? 13 : 12) * scale);
     const sectionPad = Math.round((isTablet ? 16 : 14) * scale);
     const sectionTitleSize = Math.round((isTablet ? 14 : 13) * scale);
-    const chipHeight = Math.round((isTablet ? 44 : 40) * scale);
-    const chipRadius = Math.round(chipHeight * 0.45);
+    const chipHeight = Math.max(44, Math.round(44 * scale));
+    const chipRadius = theme.radius.sm;
     const chipText = Math.round((isTablet ? 13 : 12) * scale);
     const linkHeight = Math.round((isTablet ? 48 : 44) * scale);
     const footerHeight = Math.round((isTablet ? 50 : 46) * scale);
@@ -223,7 +223,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
         backgroundStyle={transparentBackgroundStyle}
         handleIndicatorStyle={styles.handle}
       >
-        <BottomSheetView style={sheetWrapStyle}>
+        <BottomSheetScrollView contentContainerStyle={sheetWrapStyle} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
           <View style={glassStyle}>
             {/* Real blur glass */}
             <BlurView
@@ -249,6 +249,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                     </View>
 
                     <View style={flex1Style}>
+                      <Text style={styles.eyebrow}>QUICK CONTROLS</Text>
                       <Text style={titleTextStyle}>{device.name}</Text>
                       <Text style={subTextStyle}>
                         {isGasDevice(device.kind) ? device.kind === "gas-leak" && device.gasLeakDetected ? "Leak demo active" : "Local gas simulation" : device.kind === "ac"
@@ -351,10 +352,10 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
 
                   <View style={footerRowStyle}>
                     <Pressable
-                      style={footerButtonStyle}
+                      style={[footerButtonStyle, styles.primaryButton]}
                       onPress={onOpenDetails}
                     >
-                      <Text style={footerButtonTextStyle}>Open details</Text>
+                      <Text style={[footerButtonTextStyle, styles.primaryButtonText]}>Full controls</Text>
                     </Pressable>
                     <Pressable
                       style={footerButtonStyle}
@@ -378,7 +379,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
               )}
             </View>
           </View>
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheetModal>
     );
   },
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconWrapOn: { backgroundColor: theme.colors.accent2 },
+  iconWrapOn: { backgroundColor: theme.colors.bg1, borderColor: theme.colors.accent },
 
   power: {
     width: 40,
@@ -426,37 +427,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  powerOn: { backgroundColor: theme.colors.accent2 },
+  powerOn: { backgroundColor: theme.colors.bg1, borderColor: theme.colors.accent },
 
-  title: { color: theme.colors.text, fontWeight: "700", fontSize: 16 },
+  eyebrow: { color: theme.colors.accentText, fontSize: 9, letterSpacing: 1.5, fontWeight: "600", marginBottom: 5 },
+  title: { color: theme.colors.text, fontWeight: "500", fontSize: 18 },
+  primaryButton: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  primaryButtonText: { color: theme.colors.bg0 },
   sub: {
     color: theme.colors.subtext,
-    fontWeight: "700",
+    fontWeight: "400",
     marginTop: 6,
     fontSize: 12,
   },
 
   section: {
-    marginTop: 16,
+    marginTop: 18,
     padding: 14,
     borderRadius: 22,
     backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
   },
-  sectionTitle: { color: theme.colors.text, fontWeight: "700" },
+  sectionTitle: { color: theme.colors.text, fontWeight: "600" },
 
   chip: {
     flex: 1,
     height: 40,
     borderRadius: 18,
-    backgroundColor: theme.colors.accent2,
+    backgroundColor: theme.colors.bg1,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  chipText: { color: theme.colors.text, fontWeight: "700", fontSize: 12 },
+  chipText: { color: theme.colors.text, fontWeight: "600", fontSize: 12 },
 
   linkBtn: {
     height: 44,
@@ -469,7 +471,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  linkBtnText: { color: theme.colors.text, fontWeight: "700" },
+  linkBtnText: { color: theme.colors.text, fontWeight: "600" },
 
   footerBtn: {
     flex: 1,
@@ -481,16 +483,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  footerBtnText: { color: theme.colors.text, fontWeight: "700" },
-  quickControlsWrap: {
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    backgroundColor: theme.colors.card2,
-  },
-  quickControlsWrapMobile: {
-    borderColor: theme.colors.stroke,
-    backgroundColor: theme.colors.card2,
-  },
+  footerBtnText: { color: theme.colors.text, fontWeight: "600" },
+  quickControlsWrap: { marginTop: 8 },
+  quickControlsWrapMobile: { backgroundColor: "transparent" },
   deleteBtn: {
     marginTop: 10,
     backgroundColor: "rgba(255, 99, 132, 0.18)",

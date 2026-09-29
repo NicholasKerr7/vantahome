@@ -13,6 +13,7 @@ import type { Device } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import DeviceIcon from "./DeviceIcon";
 
+/** Show named device shortcuts without losing the room context. */
 export default function DeviceQuickRow({
   devices,
   onPressDevice,
@@ -48,6 +49,7 @@ export default function DeviceQuickRow({
       {devices.map((d) => (
         <Pressable
           key={d.id}
+          accessibilityLabel={`Open ${d.name}`}
           style={styles.item}
           onPress={() => onPressDevice(d.id)}
         >
@@ -58,7 +60,7 @@ export default function DeviceQuickRow({
               color={theme.colors.text}
             />
           </View>
-          <Text style={labelStyle}>{d.kind.toUpperCase()}</Text>
+          <Text style={labelStyle} numberOfLines={1}>{d.name}</Text>
         </Pressable>
       ))}
     </View>
@@ -72,22 +74,22 @@ const styles = StyleSheet.create({
     marginTop: 14,
     justifyContent: "space-between",
   },
-  item: { alignItems: "center", flex: 1 },
+  item: { alignItems: "center", flex: 1, minWidth: 0, minHeight: 64 },
   iconWrap: {
     width: 44,
     height: 44,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.10)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
-  iconWrapOn: { backgroundColor: "rgba(180,107,255,0.28)" },
+  iconWrapOn: { backgroundColor: theme.colors.bg1, borderColor: theme.colors.accent },
   label: {
     marginTop: 8,
     color: theme.colors.subtext,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
   },
 });

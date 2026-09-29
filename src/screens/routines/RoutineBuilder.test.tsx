@@ -142,6 +142,7 @@ describe("unified routine builder", () => {
     act(() => {
       tree = renderer.create(builder({ flowId: "flow" }));
     });
+    press(tree, "Do");
     press(tree, "Move action 3 earlier");
     press(tree, "Save routine");
     expect(
@@ -201,6 +202,20 @@ describe("unified routine builder", () => {
     expect(
       tree.root.findByProps({ accessibilityLabel: "Routine name" }).props.value,
     ).toBe("My unsaved name");
+  });
+
+  it("preserves the draft while paging through focused routine chapters", () => {
+    act(() => { tree = renderer.create(builder({ routineId: "rule:legacy" })); });
+    act(() => tree.root.findByProps({ accessibilityLabel: "Routine name" }).props.onChangeText("Evening retreat"));
+    press(tree, "Next routine sections");
+    expect(tree.root.findAllByProps({ accessibilityLabel: "Routine name" })).toHaveLength(0);
+    expect(tree.root.findByProps({ accessibilityLabel: "Add trigger" })).toBeTruthy();
+    press(tree, "Do");
+    expect(tree.root.findByProps({ accessibilityLabel: "Add action" })).toBeTruthy();
+    press(tree, "Overview");
+    expect(tree.root.findByProps({ accessibilityLabel: "Routine name" }).props.value).toBe("Evening retreat");
+    press(tree, "Save routine");
+    expect(selectRoutines(useHomeStore.getState()).find((routine) => routine.id === "rule:legacy")?.name).toBe("Evening retreat");
   });
   it.each([
     { accountUserId: "other-user" },

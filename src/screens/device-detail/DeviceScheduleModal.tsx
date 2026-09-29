@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, TextInput } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import ModalCard from "../../components/ModalCard";
+import ModalForm, { useModalViewportStyle } from "../../components/ModalForm";
 import ModalActionRow from "../../components/ModalActionRow";
 import ModalField from "../../components/ModalField";
 import Pressable from "../../components/Pressable";
@@ -39,6 +40,7 @@ type DeviceScheduleModalProps = {
   onSave: () => void;
 };
 
+/** Keep program fields usable above the keyboard with save and cancel always available. */
 export default function DeviceScheduleModal({
   visible,
   onClose,
@@ -66,78 +68,84 @@ export default function DeviceScheduleModal({
   canSave,
   onSave,
 }: DeviceScheduleModalProps) {
+  const modalViewportStyle = useModalViewportStyle();
+  const footer = (
+    <ModalActionRow
+      style={actionsStyle}
+      actions={[
+        {
+          label: "Cancel",
+          onPress: onClose,
+          style: ghostButtonStyle,
+          textStyle: ghostTextStyle,
+        },
+        {
+          label: "Save",
+          onPress: onSave,
+          style: primaryButtonStyle(!canSave),
+          textStyle: primaryTextStyle,
+          disabled: !canSave,
+        },
+      ]}
+    />
+  );
+
   return (
     <ModalCard
       visible={visible}
       onRequestClose={onClose}
       onBackdropPress={onClose}
       colors={MODAL_COLORS}
-      cardStyle={cardStyle}
+      cardStyle={[cardStyle, modalViewportStyle]}
     >
-      <Text style={titleStyle}>New watering program</Text>
-      <Text style={subtitleStyle}>Choose a time and days for this device program.</Text>
+      <ModalForm footer={footer}>
+        <Text style={titleStyle}>New watering program</Text>
+        <Text style={subtitleStyle}>Choose a time and days for this device program.</Text>
 
-      <ModalField label="Time" labelStyle={labelStyle}>
-        <View style={timeRowStyle}>
-          <TextInput
-            accessibilityLabel="Program hour"
-            value={schedHour}
-            onChangeText={onChangeSchedHour}
-            placeholder="06"
-            keyboardType="number-pad"
-            style={timeInputStyle}
-            maxLength={2}
-          />
-          <Text style={timeColonStyle}>:</Text>
-          <TextInput
-            accessibilityLabel="Program minute"
-            value={schedMinute}
-            onChangeText={onChangeSchedMinute}
-            placeholder="00"
-            keyboardType="number-pad"
-            style={timeInputStyle}
-            maxLength={2}
-          />
-        </View>
-      </ModalField>
+        <ModalField label="Time" labelStyle={labelStyle}>
+          <View style={timeRowStyle}>
+            <TextInput
+              accessibilityLabel="Program hour"
+              value={schedHour}
+              onChangeText={onChangeSchedHour}
+              placeholder="06"
+              keyboardType="number-pad"
+              style={timeInputStyle}
+              maxLength={2}
+            />
+            <Text style={timeColonStyle}>:</Text>
+            <TextInput
+              accessibilityLabel="Program minute"
+              value={schedMinute}
+              onChangeText={onChangeSchedMinute}
+              placeholder="00"
+              keyboardType="number-pad"
+              style={timeInputStyle}
+              maxLength={2}
+            />
+          </View>
+        </ModalField>
 
-      <ModalField label="Days" labelStyle={labelStyle}>
-        <View style={dayRowStyle}>
-          {(
-            ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
-          ).map((day) => {
-            const active = schedDays.includes(day);
-            return (
-              <Pressable
-                key={day}
-                style={dayChipStyle(active)}
-                onPress={() => onToggleDay(day)}
-              >
-                <Text style={dayChipTextStyle(active)}>{day}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </ModalField>
+        <ModalField label="Days" labelStyle={labelStyle}>
+          <View style={dayRowStyle}>
+            {(
+              ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
+            ).map((day) => {
+              const active = schedDays.includes(day);
+              return (
+                <Pressable
+                  key={day}
+                  style={dayChipStyle(active)}
+                  onPress={() => onToggleDay(day)}
+                >
+                  <Text style={dayChipTextStyle(active)}>{day}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ModalField>
 
-      <ModalActionRow
-        style={actionsStyle}
-        actions={[
-          {
-            label: "Cancel",
-            onPress: onClose,
-            style: ghostButtonStyle,
-            textStyle: ghostTextStyle,
-          },
-          {
-            label: "Save",
-            onPress: onSave,
-            style: primaryButtonStyle(!canSave),
-            textStyle: primaryTextStyle,
-            disabled: !canSave,
-          },
-        ]}
-      />
+      </ModalForm>
     </ModalCard>
   );
 }

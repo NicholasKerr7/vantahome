@@ -1,7 +1,18 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import DeviceDetailScreen from "../DeviceDetailScreen";
+import { ScrollView, Text } from "react-native";
+import DeviceEditModal from "../device-detail/DeviceEditModal";
+import ModalActionRow from "../../components/ModalActionRow";
+import Pressable from "../../components/Pressable";
+import { deviceClient } from "../../services/deviceClient";
 import { useHomeStore } from "../../store/useHomeStore";
+
+/** The rendered node fields needed to select a room through its visible label. */
+type RenderedDeviceNode = {
+  props: { children?: React.ReactNode; onPress: () => void };
+  findAllByType: (component: unknown) => RenderedDeviceNode[];
+};
 
 const mockLayout = {
   width: 390,
@@ -113,4 +124,33 @@ describe("DeviceDetailScreen", () => {
       tree.unmount();
     });
   });
+
+  it("keeps edit actions outside long room fields and saves the selected room", async () => {
+    useHomeStore.setState({ rooms: Array.from({ length: 30 }, (_, index) => ({ id: `r${index + 1}`, name: `Room ${index + 1}` })) });
+    const navigation = { goBack: jest.fn(), navigate: jest.fn() } as never;
+    const route = { key: "DeviceDetail", name: "DeviceDetail", params: { deviceId: "d1" } } as never;
+    const send = jest.spyOn(deviceClient, "sendCommand");
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<DeviceDetailScreen navigation={navigation} route={route} />); });
+    try {
+      act(() => tree.root.findByProps({ testID: "device-options-button" }).props.onPress());
+      const editor = tree.root.findByType(DeviceEditModal);
+      const fields = editor.findByType(ScrollView);
+      expect(fields.props.keyboardShouldPersistTaps).toBe("handled");
+      expect(fields.findAllByType(ModalActionRow)).toHaveLength(0);
+      act(() => fields.findByProps({ accessibilityLabel: "Device name" }).props.onChangeText("Morning coffee"));
+      const lastRoom = fields.findAllByType(Pressable).find((node: RenderedDeviceNode) =>
+        node.findAllByType(Text).some((text: RenderedDeviceNode) => text.props.children === "Room 30"));
+      expect(lastRoom).toBeTruthy();
+      act(() => lastRoom!.props.onPress());
+      const save = editor.findByType(ModalActionRow).props.actions.find((action: { label: string }) => action.label === "Save");
+      await act(async () => { save.onPress(); });
+      expect(send).toHaveBeenCalledWith({ op: "set-properties", deviceId: "d1", changes: { name: "Morning coffee", roomId: "r30" } });
+      expect(tree.root.findByType(DeviceEditModal).props.visible).toBe(false);
+    } finally {
+      act(() => tree.unmount());
+      send.mockRestore();
+    }
+  });
+
 });

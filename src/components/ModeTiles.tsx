@@ -25,6 +25,7 @@ const MODES: Array<{
   { key: "dry", label: "Dry", icon: "water" },
 ];
 
+/** Select a climate mode using equally sized, accessible control cards. */
 export default function ModeTiles({
   value,
   onChange,
@@ -95,6 +96,9 @@ export default function ModeTiles({
         return (
           <Pressable
             key={m.key}
+            accessibilityRole="radio"
+            accessibilityLabel={`${m.label} mode`}
+            accessibilityState={{ checked: active }}
             style={modeTileStyle(active)}
             onPress={() => onChange(m.key)}
           >
@@ -146,20 +150,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   modeTileActive: {
-    backgroundColor: theme.colors.card2,
-    borderColor: theme.colors.accent2,
-    shadowColor: theme.colors.accent,
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.bg1,
   },
   iconBubble: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -174,6 +172,6 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
   },
-  modeText: { color: theme.colors.subtext, fontWeight: "700", fontSize: 12 },
-  modeTextActive: { color: theme.colors.text },
+  modeText: { color: theme.colors.subtext, fontWeight: "500", fontSize: 12 },
+  modeTextActive: { color: theme.colors.accentText, fontWeight: "600" },
 });

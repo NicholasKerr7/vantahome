@@ -22,7 +22,7 @@ export function getMenuPageSize(availableHeight: number, fontScale: number): num
   const headerBudget = 32 + Math.max(44, 34 * fontScale);
   const categoriesBudget = stackedTabs ? 3 * Math.max(44, 18 * fontScale + 16) : Math.max(48, 36 * fontScale);
   const descriptionBudget = largeText || availableHeight < 600 ? 12 : 62;
-  const rowBudget = largeText ? Math.max(76, 44 * fontScale + 24) : 78;
+  const rowBudget = largeText ? Math.max(84, 44 * fontScale + 24) : 84;
   const roomForRows = availableHeight - headerBudget - categoriesBudget - descriptionBudget - 64;
   const capacity = Math.floor(roomForRows / rowBudget);
   return capacity >= 4 ? 4 : capacity >= 2 ? 2 : 1;
@@ -53,7 +53,10 @@ export default function HomeMenu({ onClose, onSelect, rendererAvailable, activit
         style={[styles.panelWrap, tablet ? styles.tabletWrap : styles.phoneWrap]}>
         <View accessibilityViewIsModal style={[styles.panel, tablet && styles.tabletPanel]}>
           <View style={styles.header}>
-            <Text accessibilityRole="header" style={styles.title}>More</Text>
+            <View style={styles.headingCopy}>
+              {!compact && <Text style={styles.eyebrow}>VANTAHOME / EXPLORE</Text>}
+              <Text accessibilityRole="header" style={styles.title}>{compact ? 'Your home' : 'Your home, connected.'}</Text>
+            </View>
             <Pressable accessibilityLabel="Close home menu" style={styles.iconButton} onPress={onClose}>
               <Ionicons name="close" size={23} color={theme.colors.text} />
             </Pressable>
@@ -76,7 +79,7 @@ export default function HomeMenu({ onClose, onSelect, rendererAvailable, activit
                 <Text style={styles.destinationTitle}>{item.title}</Text>
                 {!largeText && <Text style={styles.destinationDetail}>{item.detail}</Text>}
               </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.subtext} />
+              <Ionicons name="arrow-forward" size={18} color={theme.colors.accentText} />
             </Pressable>)}
           </View>
           {pageCount > 1 && <View style={styles.footer}>
@@ -103,24 +106,26 @@ const styles = StyleSheet.create({
   panelWrap: { width: '100%', maxHeight: '100%' },
   phoneWrap: { maxWidth: 560 },
   tabletWrap: { maxWidth: 420, flex: 1 },
-  panel: { padding: 16, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 26, backgroundColor: theme.colors.bg0 },
+  panel: { padding: 16, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 28, backgroundColor: theme.colors.bg0 },
   tabletPanel: { flex: 1, borderRadius: 22 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingBottom: 16 },
-  title: { flex: 1, color: theme.colors.text, fontSize: 28, lineHeight: 34, fontWeight: '500', letterSpacing: -0.7 },
+  headingCopy: { flex: 1, gap: 6 },
+  eyebrow: { color: theme.colors.accentText, fontSize: 9, fontWeight: '600', letterSpacing: 1.5 },
+  title: { color: theme.colors.text, fontSize: 24, lineHeight: 30, fontWeight: '500', letterSpacing: -0.7 },
   iconButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.stroke },
-  tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
+  tabs: { flexDirection: 'row', gap: 4, backgroundColor: theme.colors.card2, padding: 4, borderRadius: 18 },
   stackedTabs: { flexDirection: 'column' },
-  tab: { flex: 1, minHeight: 48, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tab: { flex: 1, minHeight: 44, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', borderRadius: 14 },
   stackedTab: { flex: 0, alignItems: 'flex-start', paddingHorizontal: 12 },
-  selectedTab: { borderBottomColor: theme.colors.accent },
+  selectedTab: { backgroundColor: theme.colors.card },
   tabText: { fontSize: 12, lineHeight: 18, color: theme.colors.subtext },
   selectedText: { color: theme.colors.accentText, fontWeight: '600' },
   description: { fontSize: 12, lineHeight: 18, color: theme.colors.subtext, paddingTop: 18, paddingBottom: 8 },
-  directory: { minHeight: 0 },
+  directory: { minHeight: 0, gap: 8 },
   compactDirectory: { marginTop: 12 },
   tabletDirectory: { flex: 1 },
-  destination: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 76, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
-  destinationIcon: { width: 30, alignItems: 'center' },
+  destination: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 76, padding: 12, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 21, backgroundColor: theme.colors.card2 },
+  destinationIcon: { width: 42, height: 42, borderRadius: 15, backgroundColor: theme.colors.card, alignItems: 'center', justifyContent: 'center' },
   destinationCopy: { flex: 1, minWidth: 0, gap: 4 },
   destinationTitle: { color: theme.colors.text, fontSize: 17, lineHeight: 22, fontWeight: '500', letterSpacing: -0.2 },
   destinationDetail: { color: theme.colors.subtext, fontSize: 12, lineHeight: 17, fontWeight: '400' },

@@ -114,7 +114,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     (isTablet ? 26 : isCompactPhone ? 20 : 22) * scale,
   );
   const modalTitleSize = Math.round(
-    (isTablet ? 20 : isCompactPhone ? 16 : 17) * scale,
+    (isTablet ? 28 : isCompactPhone ? 23 : 26) * scale,
   );
   const modalSubSize = Math.round(
     (isTablet ? 14 : isCompactPhone ? 11 : 12) * scale,
@@ -123,16 +123,16 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     (isTablet ? 13 : isCompactPhone ? 11 : 12) * scale,
   );
   const modalInputHeight = Math.round(
-    (isTablet ? 48 : isCompactPhone ? 40 : 44) * scale,
+    (isTablet ? 52 : 48) * scale,
   );
   const modalBtnHeight = Math.round(
-    (isTablet ? 46 : isCompactPhone ? 40 : 44) * scale,
+    (isTablet ? 48 : 46) * scale,
   );
   const roomPillHeight = Math.round(
     (isTablet ? 36 : isCompactPhone ? 30 : 32) * scale,
   );
   const deviceChipHeight = Math.round(
-    (isTablet ? 40 : isCompactPhone ? 32 : 34) * scale,
+    (isTablet ? 52 : 48) * scale,
   );
   const insets = useSafeAreaInsets();
   // Explicit pixel bounds let only editor copy scroll, keeping its actions inside the safe viewport.
@@ -726,7 +726,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
         animationType="none"
         onRequestClose={closeEditor}
         onBackdropPress={closeEditor}
-        colors={embedded ? [theme.colors.card2, theme.colors.card2] : [theme.colors.card, theme.colors.card2]}
+        colors={[theme.colors.bg0, theme.colors.glass]}
         cardStyle={modalCardStyle}
       >
         <ScrollView
@@ -737,7 +737,8 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           overScrollMode="never"
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={modalTitleStyle}>
+          <Text style={styles.modalEyebrow}>YOUR HOME / SCENES</Text>
+          <Text accessibilityRole="header" style={modalTitleStyle}>
             {editingSceneId ? "Edit scene" : "Create scene"}
           </Text>
           <Text style={modalSubStyle}>
@@ -848,7 +849,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
         animationType="none"
         onRequestClose={() => setDetailSceneId(null)}
         onBackdropPress={() => setDetailSceneId(null)}
-        colors={embedded ? [theme.colors.card2, theme.colors.card2] : [theme.colors.card, theme.colors.card2]}
+        colors={[theme.colors.bg0, theme.colors.glass]}
         cardStyle={modalCardStyle}
       >
         <ScrollView
@@ -858,7 +859,8 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           bounces={false}
           overScrollMode="never"
         >
-          <Text style={modalTitleStyle}>
+          <Text style={styles.modalEyebrow}>YOUR HOME / SCENES</Text>
+          <Text accessibilityRole="header" style={modalTitleStyle}>
             {detailScene?.name ?? "Scene details"}
           </Text>
           <Text style={modalSubStyle}>
@@ -1010,8 +1012,8 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     alignSelf: "stretch",
   },
-  h1: { color: theme.colors.text, fontSize: 28, fontWeight: "900" },
-  p: { marginTop: 8, color: theme.colors.subtext, fontWeight: "700" },
+  h1: { color: theme.colors.text, fontSize: 28, fontWeight: "600" },
+  p: { marginTop: 8, color: theme.colors.subtext, fontWeight: "500" },
   countPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -1023,7 +1025,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  countText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
+  countText: { color: theme.colors.text, fontWeight: "600", fontSize: 12 },
   addPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -1035,7 +1037,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  addText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
+  addText: { color: theme.colors.text, fontWeight: "600", fontSize: 12 },
   clearPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -1047,7 +1049,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  clearText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
+  clearText: { color: theme.colors.text, fontWeight: "600", fontSize: 12 },
   section: { marginTop: 18 },
   roomPanel: {
     backgroundColor: theme.colors.card,
@@ -1059,8 +1061,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  sectionTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 16 },
-  sectionSub: { color: theme.colors.muted, fontWeight: "700", fontSize: 12 },
+  sectionTitle: { color: theme.colors.text, fontWeight: "600", fontSize: 16 },
+  sectionSub: { color: theme.colors.muted, fontWeight: "500", fontSize: 12 },
   emptyCard: {
     marginTop: 10,
     padding: 16,
@@ -1069,8 +1071,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  emptyTitle: { color: theme.colors.text, fontWeight: "900" },
-  emptySub: { marginTop: 6, color: theme.colors.subtext, fontWeight: "700" },
+  emptyTitle: { color: theme.colors.text, fontWeight: "600" },
+  emptySub: { marginTop: 6, color: theme.colors.subtext, fontWeight: "500" },
   sceneCard: {
     marginTop: 12,
     padding: 16,
@@ -1088,11 +1090,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
   },
   sceneHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  sceneTitle: { color: theme.colors.text, fontWeight: "900" },
+  sceneTitle: { color: theme.colors.text, fontWeight: "600" },
   sceneSub: {
     marginTop: 6,
     color: theme.colors.subtext,
-    fontWeight: "700",
+    fontWeight: "500",
     fontSize: 12,
   },
   runPill: {
@@ -1110,7 +1112,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg1,
     borderColor: theme.colors.stroke,
   },
-  runText: { color: theme.colors.text, fontWeight: "800", fontSize: 12 },
+  runText: { color: theme.colors.text, fontWeight: "600", fontSize: 12 },
   runTextActive: { color: theme.colors.text },
   iconRow: {
     flexDirection: "row",
@@ -1146,7 +1148,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  moreText: { color: theme.colors.subtext, fontWeight: "800", fontSize: 12 },
+  moreText: { color: theme.colors.subtext, fontWeight: "600", fontSize: 12 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   actionChip: {
     paddingHorizontal: 10,
@@ -1156,7 +1158,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  actionText: { color: theme.colors.subtext, fontWeight: "800", fontSize: 11 },
+  actionText: { color: theme.colors.subtext, fontWeight: "600", fontSize: 11 },
   modalCard: {
     borderRadius: 24,
     borderWidth: 1,
@@ -1164,12 +1166,13 @@ const styles = StyleSheet.create({
   },
   modalScroll: { flexShrink: 1, minHeight: 0 },
   modalFooter: { paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: theme.colors.stroke },
-  modalContent: { padding: 18 },
-  modalTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 18 },
-  modalSub: { color: theme.colors.subtext, fontWeight: "700", marginTop: 6 },
+  modalContent: { padding: 18, gap: 8 },
+  modalEyebrow: { color: theme.colors.accentText, fontSize: 9, fontWeight: "600", letterSpacing: 1.8 },
+  modalTitle: { color: theme.colors.text, fontWeight: "500", fontSize: 26, letterSpacing: -0.7 },
+  modalSub: { color: theme.colors.subtext, fontWeight: "400", lineHeight: 19, marginBottom: 8 },
   modalLabel: {
     color: theme.colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
     marginTop: 12,
     marginBottom: 6,
   },
@@ -1181,7 +1184,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
     paddingHorizontal: 12,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   deviceGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   deviceChip: {
@@ -1194,7 +1197,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.card2,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
-    maxWidth: "48%",
+    width: "100%",
+    minHeight: 48,
   },
   deviceChipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
   deviceIcon: {
@@ -1208,12 +1212,12 @@ const styles = StyleSheet.create({
   deviceIconActive: { backgroundColor: theme.colors.bg1 },
   deviceText: {
     color: theme.colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
     flexShrink: 1,
   },
   deviceTextActive: { color: theme.colors.bg0 },
-  modalHint: { marginTop: 8, color: theme.colors.subtext, fontWeight: "700" },
+  modalHint: { marginTop: 8, color: theme.colors.subtext, fontWeight: "500" },
   detailStatusPill: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -1229,7 +1233,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg1,
     borderColor: theme.colors.accent,
   },
-  detailStatusText: { color: theme.colors.text, fontWeight: "800" },
+  detailStatusText: { color: theme.colors.text, fontWeight: "600" },
   detailActionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1244,7 +1248,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
   },
-  detailActionText: { color: theme.colors.subtext, fontWeight: "800" },
+  detailActionText: { color: theme.colors.subtext, fontWeight: "600" },
   modalRow: { flexDirection: "row", gap: 10, marginTop: 16 },
   modalGhost: {
     flex: 1,
@@ -1255,7 +1259,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  modalGhostText: { color: theme.colors.text, fontWeight: "800" },
+  modalGhostText: { color: theme.colors.text, fontWeight: "600" },
   modalPrimary: {
     flex: 1,
     height: 44,
@@ -1265,7 +1269,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalPrimaryDisabled: { opacity: 0.6 },
-  modalPrimaryText: { color: theme.colors.bg0, fontWeight: "900" },
+  modalPrimaryText: { color: theme.colors.bg0, fontWeight: "600" },
   controlsStack: { gap: 12, marginTop: 6 },
   deviceControlCard: {
     padding: 12,
@@ -1283,11 +1287,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  deviceControlTitle: { color: theme.colors.text, fontWeight: "900" },
+  deviceControlTitle: { color: theme.colors.text, fontWeight: "500" },
   deviceControlSub: {
     marginTop: 4,
     color: theme.colors.subtext,
-    fontWeight: "700",
+    fontWeight: "500",
     fontSize: 12,
   },
   inlineToggleRow: { flexDirection: "row", gap: 6 },
@@ -1307,7 +1311,7 @@ const styles = StyleSheet.create({
   },
   inlineToggleText: {
     color: theme.colors.subtext,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 12,
   },
   inlineToggleTextActive: { color: theme.colors.bg0 },
@@ -1317,8 +1321,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
   },
-  sliderLabel: { color: theme.colors.subtext, fontWeight: "800", fontSize: 12 },
-  sliderValue: { color: theme.colors.text, fontWeight: "900", fontSize: 12 },
+  sliderLabel: { color: theme.colors.subtext, fontWeight: "600", fontSize: 12 },
+  sliderValue: { color: theme.colors.text, fontWeight: "600", fontSize: 12 },
   choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   choicePill: {
     paddingHorizontal: 12,
@@ -1331,7 +1335,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   choicePillActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  choiceText: { color: theme.colors.subtext, fontWeight: "800", fontSize: 12 },
+  choiceText: { color: theme.colors.subtext, fontWeight: "600", fontSize: 12 },
   choiceTextActive: { color: theme.colors.bg0 },
   colorRow: { flexDirection: "row", gap: 10, marginTop: 10 },
   colorDot: {
@@ -1360,12 +1364,12 @@ const styles = StyleSheet.create({
     minWidth: 72,
     textAlign: "center",
     color: theme.colors.text,
-    fontWeight: "900",
+    fontWeight: "600",
   },
   controlHint: {
     marginTop: 8,
     color: theme.colors.subtext,
-    fontWeight: "700",
+    fontWeight: "500",
     fontSize: 12,
   },
 });
@@ -1397,21 +1401,21 @@ function DeviceControlCard({
   const { isTablet, scale } = useResponsive();
   const cardPad = Math.round((isTablet ? 16 : 12) * scale);
   const cardRadius = Math.round((isTablet ? 20 : 18) * scale);
-  const iconWrap = Math.round((isTablet ? 36 : 32) * scale);
+  const iconWrap = Math.round((isTablet ? 46 : 44) * scale);
   const iconSize = Math.round((isTablet ? 18 : 16) * scale);
   const iconRadius = Math.round(iconWrap * 0.38);
   const titleSize = Math.round((isTablet ? 15 : 14) * scale);
   const subSize = Math.round((isTablet ? 12 : 11) * scale);
-  const toggleHeight = Math.round((isTablet ? 32 : 28) * scale);
+  const toggleHeight = Math.round((isTablet ? 46 : 44) * scale);
   const toggleRadius = Math.round(toggleHeight / 2);
   const toggleText = Math.round((isTablet ? 12 : 11) * scale);
   const sliderLabelSize = Math.round((isTablet ? 13 : 12) * scale);
   const sliderValueSize = Math.round((isTablet ? 13 : 12) * scale);
-  const choiceHeight = Math.round((isTablet ? 36 : 30) * scale);
+  const choiceHeight = Math.round((isTablet ? 46 : 44) * scale);
   const choiceRadius = Math.round(choiceHeight / 2);
   const choiceTextSize = Math.round((isTablet ? 12 : 11) * scale);
   const colorDotSize = Math.round((isTablet ? 20 : 18) * scale);
-  const stepBtnSize = Math.round((isTablet ? 36 : 32) * scale);
+  const stepBtnSize = Math.round((isTablet ? 46 : 44) * scale);
   const stepBtnRadius = Math.round(stepBtnSize * 0.38);
   const stepIconSize = Math.round((isTablet ? 18 : 16) * scale);
   const hintSize = Math.round((isTablet ? 12 : 11) * scale);
@@ -1913,7 +1917,7 @@ function SceneCard({
   const cardRadius = Math.round((isTablet ? 24 : 22) * scaleFactor);
   const titleSize = Math.round((isTablet ? 16 : 14) * scaleFactor);
   const subSize = Math.round((isTablet ? 13 : 12) * scaleFactor);
-  const runHeight = Math.round((isTablet ? 36 : 32) * scaleFactor);
+  const runHeight = Math.round((isTablet ? 46 : 44) * scaleFactor);
   const runRadius = Math.round(runHeight / 2);
   const runText = Math.round((isTablet ? 13 : 12) * scaleFactor);
   const iconChipSize = Math.round((isTablet ? 40 : 36) * scaleFactor);

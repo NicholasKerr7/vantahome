@@ -112,7 +112,7 @@ export default function SettingsWorkspace() {
         {category === "preferences" && <View style={styles.rows}>
           <SettingToggle label="Haptics" value={model.preferences.haptics} onChange={(haptics) => model.setPreferences({ haptics })} />
           <SettingToggle label="Notifications" value={model.preferences.notifications} onChange={(notifications) => model.setPreferences({ notifications })} />
-          <SettingValue label="Appearance" value="Midnight & mint" />
+          <SettingValue label="Appearance" value="Vanta violet" />
         </View>}
         {category === "voice" && <>
           <Text style={styles.description}>Your assistants and home connections, together in one place.</Text>

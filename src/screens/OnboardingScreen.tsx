@@ -24,6 +24,7 @@ const ONBOARDING_LOTTIE_SOURCE = require("../../assets/animations/onboarding-her
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
+/** Introduce the immersive home while keeping its entry action pinned below the content. */
 export default function OnboardingScreen({ navigation }: Props) {
   const { contentWidth, gutter, isTablet, isLandscape, scale, height, width } =
     useResponsive(900);
@@ -174,10 +175,7 @@ export default function OnboardingScreen({ navigation }: Props) {
     styles.ctaWrap,
     { maxWidth: ctaWidth },
   ];
-  const ctaStyle: StyleProp<ViewStyle> = [
-    styles.cta,
-    { height: ctaHeight },
-  ];
+  const ctaStyle: StyleProp<ViewStyle> = [styles.cta, { height: ctaHeight }];
   const ctaTextStyle: StyleProp<TextStyle> = [
     styles.ctaText,
     { fontSize: ctaTextSize },
@@ -202,15 +200,14 @@ export default function OnboardingScreen({ navigation }: Props) {
           style={styles.sectionsScroll}
           contentContainerStyle={mainContentStyle}
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
+          decelerationRate="normal"
         >
           <View style={heroRowStyle}>
             <View style={heroStackStyle}>
-              <View
-                style={heroBrandRowStyle}
-              >
-                <View
-                  style={logoWrapStyle}
-                >
+              <View style={heroBrandRowStyle}>
+                <View style={logoWrapStyle}>
                   <VantaHomeMark
                     size={Math.round((isTablet ? 64 : 58) * scale)}
                   />
@@ -223,23 +220,17 @@ export default function OnboardingScreen({ navigation }: Props) {
                   </View>
                 </View>
               </View>
-              <Text style={kickerTextStyle}>
-                Smart living, orchestrated
-              </Text>
-              <Text style={headlineTextStyle}>
-                Your home
-              </Text>
+              <Text style={kickerTextStyle}>Smart living, orchestrated</Text>
+              <Text style={headlineTextStyle}>Your home</Text>
               <Text style={headlineAccentStyle}>in sync.</Text>
               <Text style={subheadTextStyle}>
-                Scenes, automations, and live control blended into one elegant
+                Scenes, routines, and live control blended into one elegant
                 dashboard.
               </Text>
             </View>
 
             <View style={heroVisualStyle}>
-              <View
-                style={heroLottieFrameStyle}
-              >
+              <View style={heroLottieFrameStyle}>
                 <LottieView
                   source={ONBOARDING_LOTTIE_SOURCE}
                   autoPlay
@@ -260,18 +251,18 @@ export default function OnboardingScreen({ navigation }: Props) {
               onPress={() => openHomeFeature(navigation.dispatch, "Home")}
             >
               <LinearGradient
-                colors={["#B08CFF", "#6B3CFF"]}
+                colors={[theme.colors.accent, theme.colors.accentText]}
                 start={{ x: 0.1, y: 0.2 }}
                 end={{ x: 0.9, y: 0.9 }}
                 style={ctaStyle}
               >
                 <Text style={ctaTextStyle}>Enter VantaHome</Text>
-                  <Ionicons
-                    name="arrow-forward"
-                    size={ctaIconSize}
-                    color="#FFFFFF"
-                    style={styles.ctaArrow}
-                  />
+                <Ionicons
+                  name="arrow-forward"
+                  size={ctaIconSize}
+                  color={theme.colors.bg0}
+                  style={styles.ctaArrow}
+                />
               </LinearGradient>
             </Pressable>
             <Text style={ctaHintStyle}>
@@ -293,9 +284,9 @@ const styles = StyleSheet.create({
   sectionsScroll: { flex: 1, width: "100%" },
   main: { gap: 26, width: "100%" },
   heroShell: {
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
+    borderColor: theme.colors.stroke,
   },
   glowTop: {
     position: "absolute",
@@ -329,7 +320,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     color: "#FFFFFF",
-    fontWeight: "900",
+    fontWeight: "500",
     fontSize: 22,
     letterSpacing: -0.4,
   },
@@ -347,7 +338,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: "rgba(255,255,255,0.72)",
-    fontWeight: "700",
+    fontWeight: "500",
     fontSize: 12,
   },
   heroRow: { gap: 22, width: "100%" },
@@ -373,19 +364,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     fontSize: 12,
     color: "rgba(255,255,255,0.6)",
-    fontWeight: "800",
+    fontWeight: "600",
   },
   headline: {
     fontSize: 40,
-    fontWeight: "900",
+    fontWeight: "500",
     color: "#FFFFFF",
     letterSpacing: -0.8,
   },
   headlineAccent: {
     fontSize: 40,
-    fontWeight: "900",
+    fontWeight: "500",
     letterSpacing: -0.8,
-    color: "#D9CCFF",
+    color: theme.colors.accentText,
   },
   subhead: {
     marginTop: 8,
@@ -401,7 +392,7 @@ const styles = StyleSheet.create({
   ctaWrapPressed: { transform: [{ scale: 0.98 }] },
   cta: {
     height: 56,
-    borderRadius: 999,
+    borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -410,7 +401,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
   },
-  ctaText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
-  ctaHint: { color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 12 },
+  ctaText: { color: theme.colors.bg0, fontWeight: "600", fontSize: 15 },
+  ctaHint: { color: "rgba(255,255,255,0.7)", fontWeight: "500", fontSize: 12 },
   ctaArrow: { marginLeft: 8, transform: [{ rotate: "-45deg" }] },
 });

@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import type { StyleProp, TextStyle, ViewStyle } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import CinematicSurface from "../components/CinematicSurface";
-import ScreenFrame from "../components/ScreenFrame";
-import ScreenSectionLayout from "../components/ScreenSectionLayout";
-import HeaderPill from "../components/HeaderPill";
+import {
+  DeepScreen,
+  DeepTabs,
+  DeepCard,
+  DeepAction,
+  DeepPager,
+} from "../components/deep/DeepScreen";
 import Pressable from "../components/Pressable";
 import LiveVideoPlayer from "../components/LiveVideoPlayer";
 import CameraThumbnail from "../components/CameraThumbnail";
@@ -21,31 +23,24 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import { openHomeFeature } from "../app/homeNavigation";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { roleHasPermission } from "../security/permissions";
 import { useProtectedAccess } from "../security/useProtectedAccess";
+import {
+  CameraAccessState,
+  formatCameraLastSeen,
+} from "../features/cameras/CameraAccessState";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Cameras">;
+const FILTERS = [
+  { id: "all", label: "All cameras" },
+  { id: "online", label: "Online" },
+  { id: "armed", label: "Armed" },
+] as const;
 
-const formatLastSeen = (ts?: number) => {
-  if (!ts) return "";
-  const delta = Date.now() - ts;
-  if (delta < 30_000) return "Just now";
-  const mins = Math.floor(delta / 60_000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-};
-
+/** A bounded camera monitor that keeps private feeds behind role and device authentication. */
 export default function CamerasScreen({ navigation }: Props) {
-  const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
-    useResponsive(920);
-  const isWide = isTablet && isLandscape;
-  const isTabletPortrait = isTablet && !isLandscape;
-  const isPortrait = !isLandscape;
+  const { isTablet, isLandscape } = useResponsive(1100);
   const activeMember = useHomeStore(selectActiveMember);
   const allPermissionOverrides = useHomeStore(
     (state) => state.memberPermissionOverrides,
@@ -59,24 +54,24 @@ export default function CamerasScreen({ navigation }: Props) {
   );
   const rooms = useHomeStore(selectVisibleRooms);
   const visibleDevices = useHomeStore(selectVisibleDevices);
-  const allDevices = useHomeStore((s) => s.devices);
+  const allDevices = useHomeStore((state) => state.devices);
   const canViewCamera = Boolean(
     activeMember &&
-      roleHasPermission(
-        activeMember.role,
-        "device.view",
-        permissionOverrides,
-      ) &&
-      roleHasPermission(activeMember.role, "camera.live", permissionOverrides),
+    roleHasPermission(activeMember.role, "device.view", permissionOverrides) &&
+    roleHasPermission(activeMember.role, "camera.live", permissionOverrides),
   );
-  const canViewAll = activeMember
-    ? ["Owner", "Admin"].includes(activeMember.role)
-    : false;
-  const cameraDevices = useMemo(() => {
-    if (!canViewCamera) return [];
-    const source = canViewAll ? allDevices : visibleDevices;
-    return source.filter((device) => device.kind === "camera");
-  }, [allDevices, canViewAll, canViewCamera, visibleDevices]);
+  const canViewAll = Boolean(
+    activeMember && ["Owner", "Admin"].includes(activeMember.role),
+  );
+  const cameraDevices = useMemo(
+    () =>
+      canViewCamera
+        ? (canViewAll ? allDevices : visibleDevices).filter(
+            (device) => device.kind === "camera",
+          )
+        : [],
+    [allDevices, canViewAll, canViewCamera, visibleDevices],
+  );
   const protectedAccess = useProtectedAccess(
     "Confirm access to household cameras",
     canViewCamera,
@@ -85,787 +80,326 @@ export default function CamerasScreen({ navigation }: Props) {
     () => new Map(rooms.map((room) => [room.id, room.name])),
     [rooms],
   );
-  const headerTitleSize = Math.round((isTablet ? 30 : 24) * scale);
-  const headerSubSize = Math.round((isTablet ? 14 : 12) * scale);
-  const cardPad = Math.round((isTablet ? 18 : 14) * scale);
-  const cardRadius = Math.round((isTablet ? 24 : 20) * scale);
-  const pillHeight = Math.round((isTablet ? 30 : 26) * scale);
-  const pillTextSize = Math.round((isTablet ? 12 : 11) * scale);
-  const metaSize = Math.round((isTablet ? 13 : 12) * scale);
-  const titleSize = Math.round((isTablet ? 18 : 16) * scale);
-  const subSize = Math.round((isTablet ? 13 : 12) * scale);
-  const outerGutter = isWide
-    ? Math.round(gutter * 0.6)
-    : isTablet
-      ? gutter
-      : gutter;
-  const innerGutter = isWide
-    ? Math.round(gutter * 0.75)
-    : isTablet
-      ? gutter
-      : Math.round(gutter * 0.6);
-  const framePad = Math.round((isTablet ? 14 : 10) * scale);
-  const frameRadius = Math.round((isTablet ? 30 : 26) * scale);
-  const insets = useSafeAreaInsets();
-  const tabInset = isTablet ? (isLandscape ? 28 : 24) : gutter;
-  const tabBarInset = insets.bottom > 0 ? insets.bottom + 8 : tabInset;
-  const tabBarHeight = Math.round(
-    (isTablet ? (isLandscape ? 74 : 72) : 68) * scale,
-  );
-  const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
-  const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
-  const contentStyle: StyleProp<ViewStyle> = [
-    styles.content,
-    {
-      paddingHorizontal: outerGutter,
-      paddingTop: topPad,
-      paddingBottom: tabBarPad,
-    },
-  ];
-  const headerStyle: StyleProp<ViewStyle> = [
-    styles.header,
-    !isTablet && styles.headerPhone,
-    isTabletPortrait && styles.headerTabletPortrait,
-  ];
-  const headerTitleStyle: StyleProp<TextStyle> = [
-    styles.h1,
-    { fontSize: headerTitleSize },
-  ];
-  const headerSubStyle: StyleProp<TextStyle> = [
-    styles.p,
-    { fontSize: headerSubSize },
-  ];
-  const headerPillStyle: StyleProp<ViewStyle> = [
-    styles.headerPill,
-    { height: pillHeight, borderRadius: Math.round(pillHeight / 2) },
-  ];
-  const headerPillTextStyle: StyleProp<TextStyle> = [
-    styles.headerPillText,
-    { fontSize: pillTextSize },
-  ];
-  const headerWrapStyle: StyleProp<ViewStyle> = {
-    paddingHorizontal: innerGutter,
-    marginBottom: Math.round((isTablet ? 12 : 10) * scale),
-    marginTop: isWide ? Math.round(6 * scale) : 0,
-  };
-  const dividerWrapStyle: StyleProp<ViewStyle> = {
-    paddingVertical: Math.round((isTablet ? 16 : 12) * scale),
-  };
-  const gridGap = Math.round((isTablet ? 16 : 12) * scale);
-  const layoutWidth = contentWidth - innerGutter * 2;
-  const gridColumns = isWide ? 3 : isTabletPortrait ? 2 : 1;
-  const gridCardWidthLandscape = isWide
-    ? Math.floor((layoutWidth - gridGap * (gridColumns - 1)) / gridColumns)
-    : undefined;
-  const gridCardWidth = isTabletPortrait
-    ? Math.floor((contentWidth - innerGutter * 2 - gridGap) / 2)
-    : undefined;
-  const cardStyle: StyleProp<ViewStyle> = [
-    styles.card,
-    {
-      padding: cardPad,
-      borderRadius: cardRadius,
-      width: gridCardWidthLandscape ?? gridCardWidth,
-    },
-  ];
-  const cardTitleStyle: StyleProp<TextStyle> = [
-    styles.cardTitle,
-    { fontSize: titleSize },
-  ];
-  const cardSubStyle: StyleProp<TextStyle> = [
-    styles.cardSub,
-    { fontSize: subSize },
-  ];
-  const statusPillStyle = (active: boolean): StyleProp<ViewStyle> => [
-    styles.statusPill,
-    {
-      height: pillHeight,
-      borderRadius: Math.round(pillHeight / 2),
-      backgroundColor: active
-        ? theme.colors.accent2
-        : theme.colors.card2,
-      borderColor: active
-        ? theme.colors.accent2
-        : theme.colors.stroke,
-    },
-  ];
-  const statusTextStyle = (active: boolean): StyleProp<TextStyle> => [
-    styles.statusText,
-    { fontSize: pillTextSize },
-    active && styles.statusTextActive,
-  ];
-  const metaTextStyle: StyleProp<TextStyle> = [
-    styles.metaText,
-    { fontSize: metaSize },
-  ];
-  const navPillStyle: StyleProp<ViewStyle> = [
-    styles.navPill,
-    {
-      height: pillHeight,
-      borderRadius: Math.round(pillHeight / 2),
-      paddingHorizontal: isWide ? Math.round(16 * scale) : 12,
-    },
-  ];
-  const navPillTextStyle: StyleProp<TextStyle> = [
-    styles.navPillText,
-    { fontSize: pillTextSize },
-  ];
-  const navRowStyle: StyleProp<ViewStyle> = [
-    styles.headerNavRow,
-    isWide && {
-      marginBottom: Math.round(6 * scale),
-      gap: Math.round(12 * scale),
-    },
-  ];
-  const previewStyle: StyleProp<ViewStyle> = [
-    styles.preview,
-    {
-      height: Math.round((isTabletPortrait ? 160 : 120) * scale),
-      borderRadius: Math.round((isTabletPortrait ? 20 : 16) * scale),
-    },
-  ];
-  const previewButtonCompactStyle: StyleProp<ViewStyle> = [
-    styles.previewButtonCompact,
-    { paddingHorizontal: Math.round(8 * scale), paddingVertical: Math.round(4 * scale) },
-  ];
-  const previewButtonCompactTextStyle: StyleProp<TextStyle> = [
-    styles.previewButtonText,
-    { fontSize: Math.round(11 * scale) },
-  ];
-  const statPillStyle: StyleProp<ViewStyle> = [
-    styles.statPill,
-    {
-      height: pillHeight,
-      borderRadius: Math.round(pillHeight / 2),
-    },
-  ];
-  const statTextStyle: StyleProp<TextStyle> = [
-    styles.statText,
-    { fontSize: pillTextSize },
-  ];
-  const maxLiveStreams = isWide ? 6 : isTabletPortrait ? 4 : 2;
+  const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(0);
   const [liveStreams, setLiveStreams] = useState<string[]>([]);
-  const toggleLive = useCallback(
-    (deviceId: string) => {
-      setLiveStreams((current) => {
-        if (current.includes(deviceId)) {
-          return current.filter((id) => id !== deviceId);
-        }
-        if (current.length >= maxLiveStreams) return current;
-        return [...current, deviceId];
-      });
-    },
-    [maxLiveStreams],
+  const pageSize = isTablet ? (isLandscape ? 3 : 2) : 1;
+  const maxLiveStreams = isTablet ? (isLandscape ? 6 : 4) : 2;
+  const cameras = cameraDevices.filter((camera) =>
+    filter === "online"
+      ? camera.isOn
+      : filter === "armed"
+        ? camera.armed
+        : true,
   );
-
-  useFocusEffect(
-    useCallback(() => {
-      return () => setLiveStreams([]);
-    }, []),
+  const pageCount = Math.max(1, Math.ceil(cameras.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const shownCameras = cameras.slice(
+    currentPage * pageSize,
+    (currentPage + 1) * pageSize,
   );
-
-  const headerSummary = `${cameraDevices.length} Camera${cameraDevices.length === 1 ? "" : "s"}`;
-  const showLimitedNote = !canViewAll && cameraDevices.length > 0;
   const onlineCount = cameraDevices.filter((camera) => camera.isOn).length;
-  const armedCount = cameraDevices.filter((camera) => camera.armed).length;
   const recordingCount = cameraDevices.filter(
     (camera) => camera.recording,
   ).length;
-  const liveSummary = `${liveStreams.length}/${maxLiveStreams} live`;
-  const stopAllLive = useCallback(() => setLiveStreams([]), []);
-  const handleBack = useCallback(() => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-    openHomeFeature(navigation.dispatch, "Home");
-  }, [navigation]);
 
-  if (!canViewCamera || protectedAccess.state !== "granted") {
-    const checking = canViewCamera && protectedAccess.state === "checking";
-    return (
-      <CinematicSurface variant="quiet" style={styles.protectedRoot}>
-        <Ionicons
-          name={checking ? "scan-outline" : "lock-closed-outline"}
-          size={36}
-          color={theme.colors.text}
-        />
-        <Text style={styles.protectedTitle}>
-          {checking
-            ? "Confirming camera access"
-            : canViewCamera
-              ? "Camera access locked"
-              : "Camera access unavailable"}
-        </Text>
-        <Text style={styles.protectedText}>
-          {checking
-            ? "Complete the protected authentication prompt."
-            : canViewCamera
-              ? "Authenticate again to view private camera content."
-              : "Your household role does not include live camera access."}
-        </Text>
-        <View style={styles.protectedActions}>
-          <Pressable style={styles.protectedButton} onPress={handleBack}>
-            <Text style={styles.protectedButtonText}>Back</Text>
-          </Pressable>
-          {!checking && canViewCamera ? (
-            <Pressable
-              style={styles.protectedButton}
-              onPress={() => void protectedAccess.retry()}
-            >
-              <Text style={styles.protectedButtonText}>Try again</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      </CinematicSurface>
-    );
-  }
+  /** Release live players when moving between monitor pages. */
+  const changePage = (nextPage: number) => {
+    setLiveStreams([]);
+    setPage(nextPage);
+  };
+  /** A filter change starts at the first matching camera and releases hidden players. */
+  const changeFilter = (id: string) => {
+    setFilter(id);
+    changePage(0);
+  };
+  /** Bound simultaneous streams while preserving the explicit stop action. */
+  const toggleLive = useCallback(
+    (id: string) =>
+      setLiveStreams((current) =>
+        current.includes(id)
+          ? current.filter((item) => item !== id)
+          : current.length < maxLiveStreams
+            ? [...current, id]
+            : current,
+      ),
+    [maxLiveStreams],
+  );
+  useFocusEffect(useCallback(() => () => setLiveStreams([]), []));
+  /** Return to the immersive home when this route has no navigation history. */
+  const handleBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+    else openHomeFeature(navigation.dispatch, "Home");
+  }, [navigation]);
 
   return (
     <RenderProfiler id="CamerasScreen">
-      <CinematicSurface variant="quiet" style={styles.root}>
-        <View style={contentStyle}>
-          <ScreenFrame
-            isPortrait={isPortrait}
-            enabled={isPortrait || isWide}
-            isWide={isWide}
-            pad={framePad}
-            radius={frameRadius}
-          >
-            <ScreenSectionLayout
-              header={
-                <View style={styles.headerBlock}>
-                  <View style={navRowStyle}>
-                    <Pressable
-                      style={navPillStyle}
-                      onPress={handleBack}
-                    >
-                      <Ionicons
-                        name="chevron-back"
-                        size={Math.round(16 * scale)}
-                        color={theme.colors.text}
-                      />
-                      <Text style={navPillTextStyle}>Back</Text>
-                    </Pressable>
-                    <Pressable
-                      style={navPillStyle}
-                      onPress={() =>
-                        openHomeFeature(navigation.dispatch, "Home")
-                      }
-                    >
-                      <Ionicons
-                        name="home-outline"
-                        size={Math.round(16 * scale)}
-                        color={theme.colors.text}
-                      />
-                      <Text style={navPillTextStyle}>Home</Text>
-                    </Pressable>
-                  </View>
-                  <View style={headerStyle}>
-                    <View>
-                      <Text style={headerTitleStyle}>Cameras</Text>
-                      <Text style={headerSubStyle}>
-                        {canViewAll
-                          ? "Monitor every camera in the home."
-                          : "Cameras assigned to your rooms."}
-                      </Text>
-                    </View>
-                    <HeaderPill
-                      label={headerSummary}
-                      icon="videocam-outline"
-                      iconSize={Math.round(14 * scale)}
-                      style={headerPillStyle}
-                      textStyle={headerPillTextStyle}
-                    />
-                  </View>
-                  <View style={styles.statRow}>
-                      <View style={statPillStyle}>
-                        <Ionicons
-                          name="wifi"
-                          size={Math.round(14 * scale)}
-                          color="rgba(255,255,255,0.92)"
-                        />
-                        <Text style={statTextStyle}>
-                          {onlineCount} online
-                        </Text>
-                      </View>
-                      <View style={statPillStyle}>
-                        <Ionicons
-                          name="shield-checkmark-outline"
-                          size={Math.round(14 * scale)}
-                          color="rgba(255,255,255,0.92)"
-                        />
-                        <Text style={statTextStyle}>
-                          {armedCount} armed
-                        </Text>
-                      </View>
-                      <View style={statPillStyle}>
-                        <Ionicons
-                          name="ellipse"
-                          size={Math.round(12 * scale)}
-                          color="rgba(255,118,118,0.95)"
-                        />
-                        <Text style={statTextStyle}>
-                          {recordingCount} rec
-                        </Text>
-                      </View>
-                      <View style={statPillStyle}>
-                        <Ionicons
-                          name="videocam-outline"
-                          size={Math.round(14 * scale)}
-                          color="rgba(255,255,255,0.9)"
-                        />
-                        <Text style={statTextStyle}>{liveSummary}</Text>
-                      </View>
-                      {liveStreams.length > 0 ? (
-                        <Pressable style={styles.stopAllPill} onPress={stopAllLive}>
-                          <Ionicons
-                            name="stop"
-                            size={Math.round(12 * scale)}
-                            color="rgba(255,255,255,0.95)"
-                          />
-                          <Text style={styles.stopAllText}>Stop all</Text>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                </View>
-              }
-              headerWrapStyle={headerWrapStyle}
-              showDivider={isWide}
-              dividerWrapStyle={dividerWrapStyle}
-              scrollStyle={styles.sectionsScroll}
-              contentContainerStyle={{ paddingHorizontal: innerGutter }}
-              showsVerticalScrollIndicator={false}
-            >
-              {showLimitedNote ? (
-                <View style={styles.noticeCard}>
-                  <Ionicons
-                    name="shield-checkmark-outline"
-                    size={Math.round(16 * scale)}
-                    color="rgba(255,255,255,0.8)"
-                  />
-                  <Text style={styles.noticeText}>
-                    Showing cameras you can access. Ask the owner for full access.
-                  </Text>
-                </View>
-              ) : null}
-
-              {cameraDevices.length === 0 ? (
-                <View style={styles.emptyCard}>
-                  <Text style={styles.emptyTitle}>No cameras yet</Text>
-                  <Text style={styles.emptySub}>
-                    Add a camera device to view a live overview.
-                  </Text>
-                </View>
-              ) : (
-                <View
-                  style={[
-                    styles.cardGrid,
-                    { gap: gridGap },
-                    isWide && styles.cardGridLandscape,
-                    isTabletPortrait && styles.cardGridTablet,
-                  ]}
-                >
-                  {cameraDevices.map((camera) => {
-                  const roomLabel =
-                    (camera.roomId && roomMap.get(camera.roomId)) || "Home";
-                  const isOnline = camera.isOn ?? false;
-                  const armed = Boolean(camera.armed);
-                  const recording = Boolean(camera.recording);
-                  const statusLabel = isOnline ? "Online" : "Offline";
-                  const isLive = liveStreams.includes(camera.id);
-                  const hasStream = Boolean(camera.streamUrl);
-                  const lastSeenLabel = formatLastSeen(camera.lastSeenAt);
-                  const canStart =
-                    isOnline &&
-                    hasStream &&
-                    (isLive || liveStreams.length < maxLiveStreams);
-                  const previewButtonLabel = isLive
-                      ? "Stop"
+      <DeepScreen
+        title="Cameras"
+        eyebrow="HOME SECURITY"
+        subtitle={
+          canViewAll
+            ? "A clear view of your property."
+            : "Private views from your assigned rooms."
+        }
+        onBack={handleBack}
+        actions={
+          liveStreams.length ? (
+            <DeepAction
+              label="Stop all"
+              icon="stop-outline"
+              onPress={() => setLiveStreams([])}
+            />
+          ) : undefined
+        }
+      >
+        {!canViewCamera || protectedAccess.state !== "granted" ? (
+          <CameraAccessState
+            checking={canViewCamera && protectedAccess.state === "checking"}
+            allowed={canViewCamera}
+            onRetry={() => void protectedAccess.retry()}
+          />
+        ) : (
+          <>
+            <View style={styles.summary}>
+              <Text style={styles.summaryNumber}>
+                {onlineCount}
+                <Text style={styles.summaryLabel}>
+                  {" "}
+                  / {cameraDevices.length} online
+                </Text>
+              </Text>
+              <View style={styles.recording}>
+                <Ionicons
+                  name="radio-button-on"
+                  size={14}
+                  color={
+                    recordingCount
+                      ? theme.colors.accentText
+                      : theme.colors.muted
+                  }
+                />
+                <Text style={styles.summaryLabel}>
+                  {recordingCount} recording
+                </Text>
+              </View>
+            </View>
+            <DeepTabs
+              items={FILTERS}
+              selectedId={filter}
+              onSelect={changeFilter}
+            />
+            {!canViewAll && cameraDevices.length > 0 ? (
+              <Text style={styles.notice}>
+                Showing cameras you can access. Ask the owner for full access.
+              </Text>
+            ) : null}
+            <View style={[styles.grid, isTablet && styles.gridTablet]}>
+              {shownCameras.map((camera) => {
+                const isOnline = Boolean(camera.isOn);
+                const isLive = liveStreams.includes(camera.id);
+                const hasStream = Boolean(camera.streamUrl);
+                const canStart =
+                  isOnline &&
+                  hasStream &&
+                  (isLive || liveStreams.length < maxLiveStreams);
+                const lastSeen = formatCameraLastSeen(camera.lastSeenAt);
+                const playLabel = isLive
+                  ? "Stop live"
+                  : !isOnline
+                    ? "Offline"
+                    : !hasStream
+                      ? "No live feed"
                       : !canStart
                         ? "Limit reached"
                         : "Go live";
-                  const useCompactLimitPill = !isTablet && previewButtonLabel === "Limit reached";
-                    return (
-                      <View
-                        key={camera.id}
-                        style={cardStyle}
-                      >
-                        <View style={previewStyle}>
-                          {isLive && camera.streamUrl ? (
-                            <LiveVideoPlayer
-                              sourceUri={camera.streamUrl}
-                              enableFullscreen={false}
-                              onFullscreen={() =>
-                                navigation.navigate("CameraViewer", {
-                                  deviceId: camera.id,
-                                })
-                              }
-                            />
-                          ) : (
-                            <CameraThumbnail
-                              uri={camera.thumbnailUrl ?? camera.lastThumbnailUrl}
-                              title={isOnline ? "Last snapshot" : "Offline"}
-                              subtitle={
-                                isOnline
-                                  ? "Tap to view"
-                                  : lastSeenLabel
-                                    ? `Last seen ${lastSeenLabel}`
-                                    : "No signal"
-                              }
-                            />
-                          )}
-                          <View style={styles.previewOverlay}>
-                            <Pressable
-                              style={styles.previewExpand}
-                              onPress={() =>
-                                navigation.navigate("CameraViewer", {
-                                  deviceId: camera.id,
-                                })
-                              }
-                            >
-                              <Ionicons
-                                name="expand-outline"
-                                size={Math.round(14 * scale)}
-                                color="rgba(255,255,255,0.95)"
-                              />
-                            </Pressable>
-                            <Pressable
-                              style={[
-                                styles.previewButton,
-                                !canStart && styles.previewButtonDisabled,
-                                useCompactLimitPill && previewButtonCompactStyle,
-                              ]}
-                              onPress={() => toggleLive(camera.id)}
-                              disabled={!canStart && !isLive}
-                            >
-                            <Ionicons
-                              name={isLive ? "stop" : "play"}
-                              size={Math.round((useCompactLimitPill ? 12 : 14) * scale)}
-                              color={
-                                !canStart && !isLive
-                                  ? "rgba(255,255,255,0.7)"
-                                  : "rgba(255,255,255,0.95)"
-                              }
-                            />
-                              <Text
-                                style={
-                                  useCompactLimitPill
-                                    ? previewButtonCompactTextStyle
-                                    : styles.previewButtonText
-                                }
-                              >
-                                {previewButtonLabel}
-                              </Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                        <View style={styles.cardHeader}>
-                          <View style={styles.cardTitleWrap}>
-                            <Text style={cardTitleStyle}>{camera.name}</Text>
-                            <Text style={cardSubStyle}>{roomLabel}</Text>
-                          </View>
-                          <View style={statusPillStyle(isOnline)}>
-                            <Ionicons
-                              name={isOnline ? "wifi" : "wifi-outline"}
-                              size={Math.round(12 * scale)}
-                              color={
-                                isOnline
-                                  ? theme.colors.accent
-                                  : theme.colors.subtext
-                              }
-                            />
-                            <Text style={statusTextStyle(isOnline)}>
-                              {statusLabel}
-                            </Text>
-                          </View>
-                        </View>
-                      <View style={styles.cardMetaRow}>
-                        <Text style={metaTextStyle}>
-                          {armed ? "Armed" : "Disarmed"}
+                return (
+                  <DeepCard key={camera.id} style={styles.cameraCard}>
+                    <View style={styles.cardHeading}>
+                      <View style={styles.cardTitleWrap}>
+                        <Text style={styles.cameraName} numberOfLines={2}>
+                          {camera.name}
                         </Text>
-                        <View style={styles.metaDot} />
-                        <Text style={metaTextStyle}>
-                          {recording ? "Recording" : "Standby"}
+                        <Text style={styles.room}>
+                          {(camera.roomId && roomMap.get(camera.roomId)) ||
+                            "Home"}
                         </Text>
-                        {!isOnline && lastSeenLabel ? (
-                          <>
-                            <View style={styles.metaDot} />
-                            <Text style={metaTextStyle}>
-                              Last seen {lastSeenLabel}
-                            </Text>
-                          </>
-                        ) : null}
                       </View>
-                        <Pressable
-                          style={styles.cardActionRow}
-                          onPress={() =>
-                            navigation.navigate("DeviceDetail", {
+                      <Pressable
+                        accessibilityLabel={`Camera controls for ${camera.name}`}
+                        style={styles.controls}
+                        onPress={() =>
+                          navigation.navigate("DeviceDetail", {
+                            deviceId: camera.id,
+                          })
+                        }
+                      >
+                        <Ionicons
+                          name="options-outline"
+                          size={20}
+                          color={theme.colors.accentText}
+                        />
+                      </Pressable>
+                    </View>
+                    <View style={styles.preview}>
+                      {isLive && camera.streamUrl ? (
+                        <LiveVideoPlayer
+                          sourceUri={camera.streamUrl}
+                          enableFullscreen={false}
+                          onFullscreen={() =>
+                            navigation.navigate("CameraViewer", {
                               deviceId: camera.id,
                             })
                           }
-                        >
-                          <Ionicons
-                            name="open-outline"
-                            size={Math.round(16 * scale)}
-                            color="rgba(255,255,255,0.8)"
-                          />
-                          <Text style={styles.cardActionText}>View details</Text>
-                        </Pressable>
+                        />
+                      ) : (
+                        <CameraThumbnail
+                          uri={camera.thumbnailUrl ?? camera.lastThumbnailUrl}
+                          title={
+                            !isOnline
+                              ? "Camera offline"
+                              : camera.thumbnailUrl || camera.lastThumbnailUrl
+                                ? "Last snapshot"
+                                : "No snapshot yet"
+                          }
+                          subtitle={
+                            isOnline
+                              ? hasStream
+                                ? "Start a live view below"
+                                : "Live feed is not configured"
+                              : lastSeen
+                                ? `Last seen ${lastSeen}`
+                                : "No signal"
+                          }
+                          titleStyle={styles.snapshotTitle}
+                          subtitleStyle={styles.snapshotSubtitle}
+                        />
+                      )}
+                    </View>
+                    <View style={styles.metadata}>
+                      <View style={styles.status}>
+                        <View
+                          style={[
+                            styles.statusDot,
+                            isOnline && styles.statusDotOnline,
+                          ]}
+                        />
+                        <Text style={styles.statusText}>
+                          {isOnline ? "Online" : "Offline"}
+                        </Text>
                       </View>
-                    );
-                  })}
-                </View>
-              )}
-            </ScreenSectionLayout>
-          </ScreenFrame>
-        </View>
-      </CinematicSurface>
+                      <Text style={styles.metadataText}>
+                        {camera.armed ? "Armed" : "Disarmed"}
+                      </Text>
+                      <Text style={styles.metadataText}>
+                        {camera.recording ? "Recording" : "Standby"}
+                      </Text>
+                    </View>
+                    <View style={styles.actions}>
+                      <DeepAction
+                        label={playLabel}
+                        icon={isLive ? "stop-outline" : "play-outline"}
+                        onPress={() => toggleLive(camera.id)}
+                        disabled={!canStart && !isLive}
+                        primary
+                      />
+                      <DeepAction
+                        label="Expand"
+                        icon="expand-outline"
+                        accessibilityLabel={`Open ${camera.name} camera`}
+                        onPress={() =>
+                          navigation.navigate("CameraViewer", {
+                            deviceId: camera.id,
+                          })
+                        }
+                      />
+                    </View>
+                  </DeepCard>
+                );
+              })}
+              {!cameras.length ? (
+                <DeepCard style={styles.empty}>
+                  <Ionicons
+                    name="videocam-outline"
+                    size={32}
+                    color={theme.colors.accentText}
+                  />
+                  <Text style={styles.cameraName}>
+                    {cameraDevices.length
+                      ? "No matching cameras"
+                      : "No cameras yet"}
+                  </Text>
+                  <Text style={styles.room}>
+                    {cameraDevices.length
+                      ? "Choose another view to see your cameras."
+                      : "Add a camera device to view a live overview."}
+                  </Text>
+                </DeepCard>
+              ) : null}
+            </View>
+            <DeepPager
+              page={currentPage}
+              pageCount={pageCount}
+              onChange={changePage}
+              label="cameras"
+            />
+          </>
+        )}
+      </DeepScreen>
     </RenderProfiler>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.bg0 },
-  protectedRoot: {
-    flex: 1,
+  summary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  summaryNumber: { color: theme.colors.text, fontSize: 26, fontWeight: "500" },
+  summaryLabel: {
+    color: theme.colors.subtext,
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  recording: { flexDirection: "row", alignItems: "center", gap: 7 },
+  notice: { color: theme.colors.subtext, fontSize: 12, lineHeight: 17 },
+  grid: { flex: 1, minHeight: 0, gap: 14 },
+  gridTablet: { flexDirection: "row" },
+  cameraCard: { flex: 1, minHeight: 0, gap: 12, padding: 16 },
+  cardHeading: { flexDirection: "row", alignItems: "center", gap: 10 },
+  cardTitleWrap: { flex: 1, gap: 4 },
+  controls: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    backgroundColor: theme.colors.card,
     alignItems: "center",
     justifyContent: "center",
-    padding: 28,
-    gap: 12,
   },
-  protectedTitle: {
-    color: theme.colors.text,
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  protectedText: {
-    color: theme.colors.subtext,
-    fontWeight: "700",
-    textAlign: "center",
-    maxWidth: 420,
-  },
-  protectedActions: { flexDirection: "row", gap: 10, marginTop: 8 },
-  protectedButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    backgroundColor: theme.colors.card,
-  },
-  protectedButtonText: { color: theme.colors.text, fontWeight: "600" },
-  content: { flex: 1, alignItems: "center" },
-  sectionsScroll: { flex: 1 },
-  headerBlock: { gap: 12 },
-  headerNavRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  headerTabletPortrait: {
-    alignItems: "flex-start",
-  },
-  headerPhone: {
-    flexDirection: "column",
-    alignItems: "stretch",
-    gap: 10,
-  },
-  h1: { color: theme.colors.text, fontWeight: "700" },
-  p: { color: theme.colors.subtext, marginTop: 6, fontWeight: "700" },
-  headerPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  headerPillText: { color: theme.colors.text, fontWeight: "600" },
-  navPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  navPillText: { color: theme.colors.text, fontWeight: "600" },
-  noticeCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 12,
-    borderRadius: 14,
-    marginBottom: 12,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  noticeText: { color: theme.colors.text, fontWeight: "700", flexShrink: 1 },
-  emptyCard: {
-    padding: 18,
-    borderRadius: 18,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  emptyTitle: { color: theme.colors.text, fontWeight: "700", fontSize: 16 },
-  emptySub: {
-    marginTop: 6,
-    color: theme.colors.subtext,
-    fontWeight: "700",
-  },
-  cardGrid: { width: "100%" },
-  cardGridTablet: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  cardGridLandscape: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  landscapeLayout: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  preview: {
-    height: 120,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    backgroundColor: theme.colors.bg0,
-  },
-  previewContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  previewText: { color: theme.colors.text, fontWeight: "600" },
-  card: {
-    backgroundColor: theme.colors.glass,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    gap: 12,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  cardTitleWrap: { flex: 1, minWidth: 0 },
-  cardTitle: { color: theme.colors.text, fontWeight: "700" },
-  cardSub: { color: theme.colors.subtext, marginTop: 4, fontWeight: "700" },
-  cardMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 10,
-  },
-  metaDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+  cameraName: { color: theme.colors.text, fontSize: 18, fontWeight: "500" },
+  room: { color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
+  status: { flexDirection: "row", alignItems: "center", gap: 5 },
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: theme.colors.muted,
   },
-  metaText: { color: theme.colors.subtext, fontWeight: "700" },
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    borderWidth: 1,
+  statusDotOnline: { backgroundColor: theme.colors.accentText },
+  statusText: { color: theme.colors.subtext, fontSize: 11 },
+  preview: {
+    flex: 1,
+    minHeight: 64,
+    borderRadius: 18,
+    overflow: "hidden",
+    backgroundColor: theme.colors.bg0,
   },
-  statusText: { color: theme.colors.subtext, fontWeight: "600" },
-  statusTextActive: { color: theme.colors.accent },
-  cardActionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 14,
-  },
-  cardActionText: { color: theme.colors.text, fontWeight: "600" },
-  previewOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "flex-end",
-    alignItems: "flex-start",
-    padding: 12,
-  },
-  previewExpand: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(20,20,28,0.45)",
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  previewButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: theme.colors.accent2,
-  },
-  previewButtonCompact: {
-    gap: 4,
-  },
-  previewButtonDisabled: {
-    backgroundColor: theme.colors.card,
-  },
-  previewButtonText: {
-    color: "rgba(255,255,255,0.95)",
-    fontWeight: "600",
-  },
-  statRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
-  },
-  statPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  statText: { color: theme.colors.text, fontWeight: "600" },
-  stopAllPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    backgroundColor: "rgba(255,118,118,0.22)",
-    borderWidth: 1,
-    borderColor: "rgba(255,118,118,0.45)",
-    borderRadius: 999,
-  },
-  stopAllText: {
-    color: "rgba(255,255,255,0.95)",
-    fontWeight: "600",
-  },
+  snapshotTitle: { fontWeight: "500" },
+  snapshotSubtitle: { fontWeight: "400" },
+  metadata: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
+  metadataText: { color: theme.colors.muted, fontSize: 11 },
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
 });

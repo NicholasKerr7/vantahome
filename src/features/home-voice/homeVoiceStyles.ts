@@ -8,7 +8,7 @@ export const homeVoiceStyles = StyleSheet.create({
   body: { gap: 14 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   grow: { flex: 1, minWidth: 0 },
-  eyebrow: { color: theme.colors.accent, fontSize: 9, fontWeight: '600', letterSpacing: 2 },
+  eyebrow: { color: theme.colors.accentText, fontSize: 9, fontWeight: '600', letterSpacing: 2 },
   title: { color: theme.colors.text, fontSize: 30, fontWeight: '500', letterSpacing: -0.8, marginTop: 8 },
   detail: { color: theme.colors.subtext, fontSize: 13, lineHeight: 19 },
   button: { minWidth: 44, minHeight: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: 1, borderColor: theme.colors.stroke, alignItems: 'center', justifyContent: 'center' },

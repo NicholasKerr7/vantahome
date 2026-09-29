@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Pressable from "./Pressable";
+import { theme } from "../theme/theme";
 
 type ModalCardProps = PropsWithChildren<{
   visible: boolean;
@@ -28,6 +29,7 @@ type ModalCardProps = PropsWithChildren<{
   keyboardBehavior?: KeyboardAvoidingViewProps["behavior"];
 }>;
 
+/** Keep deep editors on one opaque purple surface with room for their pinned actions. */
 export default function ModalCard({
   visible,
   onRequestClose,
@@ -60,8 +62,8 @@ export default function ModalCard({
           onPress={handleBackdropPress}
           accessibilityLabel={backdropAccessibilityLabel}
         />
-        <KeyboardAvoidingView behavior={keyboardBehavior}>
-          <LinearGradient colors={colors} start={start} end={end} style={cardStyle}>
+        <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.keyboard}>
+          <LinearGradient colors={colors} start={start} end={end} style={[styles.card, cardStyle]}>
             {children}
           </LinearGradient>
         </KeyboardAvoidingView>
@@ -73,9 +75,11 @@ export default function ModalCard({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: theme.colors.overlayStrong,
     justifyContent: "center",
     padding: 18,
   },
+  keyboard: { width: '100%', maxWidth: 720, maxHeight: '100%', flexShrink: 1, alignSelf: 'center' },
+  card: { backgroundColor: theme.colors.bg0, borderRadius: 28, overflow: 'hidden', flexShrink: 1 },
   backdrop: { ...StyleSheet.absoluteFillObject },
 });

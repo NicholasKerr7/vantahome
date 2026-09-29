@@ -2,17 +2,17 @@ import React, { useState } from "react";
 import {
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import Pressable from "../components/Pressable";
+import ThemedSwitch from '../components/ThemedSwitch';
+import { DeepAction, DeepPager, DeepScreen, DeepTabs } from '../components/deep/DeepScreen';
 import { theme } from "../theme/theme";
 import { ROUTINE_EXECUTION } from "../features/routines/executionAvailability";
 import {
@@ -43,6 +43,13 @@ const SWITCH_COLORS = {
   false: theme.colors.stroke,
   true: theme.colors.accent2,
 };
+const EDITOR_SECTIONS = [
+  { id: 'overview', label: 'Overview', icon: 'sparkles-outline' },
+  { id: 'trigger', label: 'When', icon: 'time-outline' },
+  { id: 'condition', label: 'Only if', icon: 'options-outline' },
+  { id: 'action', label: 'Do', icon: 'flash-outline' },
+] as const;
+type EditorSection = typeof EDITOR_SECTIONS[number]['id'];
 
 /** One editor serves existing flows, legacy time rules and device schedule shortcuts. */
 export default function AutomationBuilderScreen({ navigation, route }: Props) {
@@ -79,12 +86,10 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
         ? [{ type: "toggle", deviceId: device.id, on: true }]
         : []),
   );
-  const [showConditions, setShowConditions] = useState(
-    Boolean(existing?.conditions.length),
-  );
   const [editor, setEditor] = useState<Editor | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useState<EditorSection>('overview');
   const canSave = Boolean(
     name.trim() &&
       triggers.length &&
@@ -92,6 +97,11 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
       !missing &&
       !guard.unavailable,
   );
+
+  /** Keep one complete routine chapter visible while preserving the unsaved draft across tabs. */
+  function selectSection(section: EditorSection) {
+    setSelectedSection(section);
+  }
 
   /** Commit only the edited section; all other steps retain their exact saved values and order. */
   function saveStep(step: RoutineStep) {
@@ -198,29 +208,11 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
             ? conditions
             : actions)[editor.index];
   return (
-    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Back"
-          style={styles.iconButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
-        </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>
-          {existing ? "Edit routine" : "New routine"}
-        </Text>
-        <Pressable
-          accessibilityLabel="Save routine"
-          accessibilityState={{ disabled: !canSave }}
-          disabled={!canSave}
-          onPress={saveRoutine}
-          style={[styles.saveButton, !canSave && styles.disabled]}
-        >
-          <Text style={styles.saveText}>Save</Text>
-        </Pressable>
-      </View>
+    <DeepScreen title={existing ? 'Edit routine' : 'New routine'} eyebrow="YOUR HOME / ROUTINES"
+      onBack={() => navigation.goBack()} actions={<DeepAction label="Save" accessibilityLabel="Save routine" primary disabled={!canSave} onPress={saveRoutine} />}>
+      <DeepTabs items={EDITOR_SECTIONS} selectedId={selectedSection} onSelect={selectSection} />
       <ScrollView
+        key={selectedSection}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -237,7 +229,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           </View>
         ) : (
           <>
-            <View style={styles.card}>
+            {selectedSection === 'overview' && <View style={styles.card}>
               <Text style={styles.eyebrow}>BUILT AROUND YOUR DAY</Text>
               <Text style={styles.label}>Routine name</Text>
               <TextInput
@@ -256,7 +248,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   </Text>
                   <Text style={styles.helper}>{ROUTINE_EXECUTION.summary}</Text>
                 </View>
-                <Switch
+                <ThemedSwitch
                   accessibilityLabel="Routine enabled"
                   value={enabled}
                   onValueChange={setEnabled}
@@ -264,8 +256,13 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   thumbColor={theme.colors.accent}
                 />
               </View>
-            </View>
-            <RoutineSectionCard
+              <View style={styles.summary}>
+                <DeepAction label={`When · ${triggers.length} ${triggers.length === 1 ? 'event' : 'events'}`} icon="time-outline" onPress={() => selectSection('trigger')} />
+                <DeepAction label={`Do · ${actions.length} ${actions.length === 1 ? 'action' : 'actions'}`} icon="flash-outline" onPress={() => selectSection('action')} />
+              </View>
+              <DeepAction label={conditions.length ? `${conditions.length} ${conditions.length === 1 ? 'condition' : 'conditions'}` : 'Add conditions'} accessibilityLabel="Add conditions" icon="options-outline" onPress={() => selectSection('condition')} />
+            </View>}
+            {selectedSection === 'trigger' && <RoutineSectionCard
               section="trigger"
               title="When"
               hint="Any of these events can start the routine."
@@ -279,8 +276,8 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   items.filter((_, position) => position !== index),
                 )
               }
-            />
-            {showConditions ? (
+            />}
+            {selectedSection === 'condition' && (
               <RoutineSectionCard
                 section="condition"
                 title="Only if"
@@ -296,29 +293,8 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                   )
                 }
               />
-            ) : (
-              <Pressable
-                accessibilityLabel="Add conditions"
-                accessibilityState={{ expanded: false }}
-                onPress={() => setShowConditions(true)}
-                style={styles.optionalButton}
-              >
-                <Ionicons
-                  name="options-outline"
-                  size={18}
-                  color={theme.colors.accent}
-                />
-                <Text style={styles.optionalText}>
-                  Only if · Add optional conditions
-                </Text>
-                <Ionicons
-                  name="chevron-down"
-                  size={16}
-                  color={theme.colors.muted}
-                />
-              </Pressable>
             )}
-            <RoutineSectionCard
+            {selectedSection === 'action' && <RoutineSectionCard
               section="action"
               title="Do"
               hint="Actions run in this order. Add a wait from More options."
@@ -333,8 +309,8 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                 )
               }
               onMoveUp={moveActionUp}
-            />
-            {!canSave && (
+            />}
+            {!canSave && selectedSection === 'overview' && (
               <Text style={styles.helper}>
                 A routine needs a name, a When step and a Do step.
               </Text>
@@ -344,7 +320,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                 {error}
               </Text>
             )}
-            {existing && (
+            {existing && selectedSection === 'overview' && (
               <View style={styles.deleteArea}>
                 {confirmDelete && (
                   <Text style={styles.helper}>
@@ -377,6 +353,8 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           </>
         )}
       </ScrollView>
+      <DeepPager page={EDITOR_SECTIONS.findIndex((entry) => entry.id === selectedSection)} pageCount={EDITOR_SECTIONS.length}
+        onChange={(page) => selectSection(EDITOR_SECTIONS[page].id)} label="routine sections" />
       {editor && !guard.unavailable && !missing && (
         <RoutineStepEditor
           key={`${editor.section}-${editor.index ?? "new"}`}
@@ -388,65 +366,28 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
           onClose={() => setEditor(null)}
         />
       )}
-    </SafeAreaView>
+    </DeepScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, minHeight: 0, backgroundColor: theme.colors.bg0 },
-  header: {
-    width: "100%",
-    maxWidth: 760,
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 12,
-  },
-  iconButton: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    backgroundColor: theme.colors.card,
-  },
-  title: {
-    flex: 1,
-    color: theme.colors.text,
-    fontSize: 22,
-    fontWeight: "500",
-    letterSpacing: -0.5,
-  },
-  saveButton: {
-    minHeight: 44,
-    minWidth: 60,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    backgroundColor: theme.colors.accent,
-  },
-  saveText: { color: theme.colors.bg0, fontSize: 13, fontWeight: "700" },
-  disabled: { opacity: 0.35 },
   scroll: { flex: 1, minHeight: 0 },
   content: {
     width: "100%",
     maxWidth: 760,
     alignSelf: "center",
-    padding: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
+    paddingBottom: 12,
     gap: 14,
   },
   card: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     borderRadius: 22,
     padding: 16,
     gap: 12,
   },
+  summary: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   eyebrow: {
     color: theme.colors.muted,
     fontSize: 9,

@@ -48,6 +48,7 @@ type OAuthProvider = "apple" | "google";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Auth">;
 
+/** Present account entry without changing email, recovery, or provider sign-in behavior. */
 export default function AuthScreen({}: Props) {
   const { contentWidth, gutter, isTablet, isLandscape, scale, height } =
     useResponsive(640);
@@ -72,7 +73,7 @@ export default function AuthScreen({}: Props) {
     : cardWidth;
   const authLottieScale = isLandscape ? (isTablet ? 1.5 : 1.4) : 1;
   const authLottieSize = Math.round(
-    (isTablet ? 190 : 150) * scale * authLottieScale,
+    (isTablet ? 150 : 96) * scale * authLottieScale,
   );
   const authLottieGap = Math.round(
     (isTablet ? 14 : 10) * scale * (isLandscape ? 2 : 1),
@@ -81,10 +82,10 @@ export default function AuthScreen({}: Props) {
   const landscapeTitleSize = Math.round(titleSize * (isTablet ? 1.6 : 1.4));
   const heroTitleGap = Math.round((isTablet ? 12 : 8) * scale);
   const subSize = Math.round((isTablet ? 14 : 12) * scale);
-  const segmentHeight = Math.round((isTablet ? 40 : 36) * scale);
+  const segmentHeight = Math.max(44, Math.round(44 * scale));
   const segmentText = Math.round((isTablet ? 13 : 12) * scale);
   const labelSize = Math.round((isTablet ? 13 : 12) * scale);
-  const inputHeight = Math.round((isTablet ? 48 : 44) * scale);
+  const inputHeight = Math.max(44, Math.round((isTablet ? 48 : 44) * scale));
   const inputRadius = Math.round(inputHeight * 0.32);
   const eyeBtnSize = inputHeight;
   const hintSize = Math.round((isTablet ? 13 : 12) * scale);
@@ -445,7 +446,7 @@ export default function AuthScreen({}: Props) {
     <>
       <View style={lottieWrapStyle}>
         <LinearGradient
-          colors={["rgba(255,255,255,0.98)", "rgba(255,255,255,0.85)"]}
+          colors={[theme.colors.bg1, theme.colors.bg0]}
           start={{ x: 0.2, y: 0.1 }}
           end={{ x: 0.9, y: 1 }}
           style={styles.authLottieBackdrop}
@@ -459,9 +460,9 @@ export default function AuthScreen({}: Props) {
         />
         <LinearGradient
           colors={[
-            "rgba(255,255,255,0.6)",
+            "rgba(75,26,174,0.32)",
             "rgba(255,255,255,0.0)",
-            "rgba(255,255,255,0.6)",
+            "rgba(75,26,174,0.32)",
           ]}
           locations={[0, 0.5, 1]}
           start={{ x: 0.5, y: 0 }}
@@ -472,7 +473,7 @@ export default function AuthScreen({}: Props) {
       </View>
       <Text style={heroTitleStyle}>VantaHome, connected.</Text>
       <Text style={heroSubStyle}>
-        Create an account or sign in to sync devices, scenes, and automations.
+        Create an account or sign in to sync devices, scenes, and routines.
       </Text>
     </>
   );
@@ -483,6 +484,8 @@ export default function AuthScreen({}: Props) {
         {(["create", "login"] as const).map((k) => (
           <Pressable
             key={k}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === k }}
             style={segmentButtonStyle(mode === k)}
             onPress={() => setMode(k)}
           >
@@ -501,7 +504,7 @@ export default function AuthScreen({}: Props) {
             value={name}
             onChangeText={setName}
             placeholder="Nick Kerr"
-            placeholderTextColor="rgba(12,12,18,0.35)"
+            placeholderTextColor={theme.colors.muted}
             style={inputStyle}
             autoCapitalize="words"
             returnKeyType="next"
@@ -516,7 +519,7 @@ export default function AuthScreen({}: Props) {
           value={email}
           onChangeText={setEmail}
           placeholder="you@example.com"
-          placeholderTextColor="rgba(12,12,18,0.35)"
+          placeholderTextColor={theme.colors.muted}
           style={inputStyle}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -532,16 +535,14 @@ export default function AuthScreen({}: Props) {
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
-            placeholderTextColor="rgba(12,12,18,0.35)"
+            placeholderTextColor={theme.colors.muted}
             style={inputInlineStyle}
             secureTextEntry={!showPassword}
             returnKeyType={mode === "create" ? "next" : "done"}
           />
           <Pressable
             accessibilityLabel={
-              showPassword
-                ? "Hide password"
-                : "Show password"
+              showPassword ? "Hide password" : "Show password"
             }
             accessibilityState={{ selected: showPassword }}
             style={eyeBtnStyle}
@@ -550,7 +551,7 @@ export default function AuthScreen({}: Props) {
             <Ionicons
               name={showPassword ? "eye-off" : "eye"}
               size={Math.round(18 * scale)}
-              color="rgba(12,12,18,0.55)"
+              color={theme.colors.subtext}
             />
           </Pressable>
         </View>
@@ -565,7 +566,7 @@ export default function AuthScreen({}: Props) {
               value={confirm}
               onChangeText={setConfirm}
               placeholder="••••••••"
-              placeholderTextColor="rgba(12,12,18,0.35)"
+              placeholderTextColor={theme.colors.muted}
               style={inputInlineStyle}
               secureTextEntry={!showConfirm}
               returnKeyType="done"
@@ -583,7 +584,7 @@ export default function AuthScreen({}: Props) {
               <Ionicons
                 name={showConfirm ? "eye-off" : "eye"}
                 size={Math.round(18 * scale)}
-                color="rgba(12,12,18,0.55)"
+                color={theme.colors.subtext}
               />
             </Pressable>
           </View>
@@ -601,6 +602,7 @@ export default function AuthScreen({}: Props) {
             accessibilityRole="button"
             accessibilityLabel="Send password reset email"
             onPress={handleResetPassword}
+            style={styles.resetAction}
             disabled={resetLoading}
           >
             <Text style={hintLinkStyle}>
@@ -616,13 +618,13 @@ export default function AuthScreen({}: Props) {
         disabled={!canContinue || emailAuthLoading}
       >
         <LinearGradient
-          colors={["#B08CFF", "#6B3CFF"]}
+          colors={[theme.colors.accent, theme.colors.accentText]}
           start={{ x: 0.1, y: 0.2 }}
           end={{ x: 0.9, y: 0.9 }}
           style={ctaInnerStyle}
         >
           {emailAuthLoading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={theme.colors.bg0} />
           ) : (
             <>
               <Text style={ctaTextStyle}>
@@ -631,7 +633,7 @@ export default function AuthScreen({}: Props) {
               <Ionicons
                 name="arrow-forward"
                 size={Math.round(16 * scale)}
-                color="#FFFFFF"
+                color={theme.colors.bg0}
                 style={styles.ctaArrow}
               />
             </>
@@ -657,12 +659,12 @@ export default function AuthScreen({}: Props) {
                 disabled={oauthLoading !== null || emailAuthLoading}
               >
                 {oauthLoading === "apple" ? (
-                  <ActivityIndicator size="small" color="#0C0C12" />
+                  <ActivityIndicator size="small" color={theme.colors.text} />
                 ) : (
                   <Ionicons
                     name="logo-apple"
                     size={Math.round(18 * scale)}
-                    color="#0C0C12"
+                    color={theme.colors.text}
                   />
                 )}
                 <Text style={socialTextStyle}>Apple</Text>
@@ -677,12 +679,12 @@ export default function AuthScreen({}: Props) {
                 disabled={oauthLoading !== null || emailAuthLoading}
               >
                 {oauthLoading === "google" ? (
-                  <ActivityIndicator size="small" color="#0C0C12" />
+                  <ActivityIndicator size="small" color={theme.colors.text} />
                 ) : (
                   <Ionicons
                     name="logo-google"
                     size={Math.round(18 * scale)}
-                    color="#0C0C12"
+                    color={theme.colors.text}
                   />
                 )}
                 <Text style={socialTextStyle}>Google</Text>
@@ -726,6 +728,11 @@ export default function AuthScreen({}: Props) {
           style={styles.scrollView}
           contentContainerStyle={scrollContentStyle}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          bounces={false}
+          overScrollMode="never"
+          decelerationRate="normal"
         >
           <LandscapeFrame
             enabled={useLandscapeFrame}
@@ -817,10 +824,10 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.94)",
+    backgroundColor: theme.colors.glass,
     padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.65)",
+    borderColor: theme.colors.stroke,
     shadowColor: "#6B3CFF",
     shadowOpacity: 0.18,
     shadowRadius: 18,
@@ -841,52 +848,52 @@ const styles = StyleSheet.create({
   heroDivider: {
     width: 1,
     alignSelf: "stretch",
-    backgroundColor: "rgba(12,12,18,0.12)",
+    backgroundColor: theme.colors.stroke,
   },
   authLottieWrap: {
     alignSelf: "center",
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.85)",
+    borderColor: theme.colors.stroke,
   },
   authLottieWrapLandscape: { alignSelf: "flex-start" },
   authLottieBackdrop: { ...StyleSheet.absoluteFillObject },
   authLottie: { width: "100%", height: "100%", opacity: 1 },
   authLottieFade: { ...StyleSheet.absoluteFillObject },
-  h1: { fontSize: 24, fontWeight: "900", color: "#0C0C12" },
+  h1: { fontSize: 24, fontWeight: "500", color: theme.colors.text },
   heroTitleLandscape: { textAlign: "left", maxWidth: 360 },
-  sub: { marginTop: 6, color: "rgba(12,12,18,0.55)", fontWeight: "700" },
+  sub: { marginTop: 6, color: theme.colors.subtext, fontWeight: "500" },
   heroSubLandscape: { textAlign: "left", maxWidth: 360, marginTop: 0 },
   segment: {
     flexDirection: "row",
-    backgroundColor: "rgba(12,12,18,0.08)",
-    borderRadius: 999,
+    backgroundColor: theme.colors.card2,
+    borderRadius: 18,
     marginTop: 16,
     padding: 4,
   },
   segmentLandscape: { marginTop: 0 },
   segmentBtn: {
     flex: 1,
-    height: 36,
-    borderRadius: 999,
+    minHeight: 44,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  segmentBtnActive: { backgroundColor: "#FFFFFF" },
-  segmentText: { fontWeight: "800", color: "rgba(12,12,18,0.55)" },
-  segmentTextActive: { color: "#0C0C12" },
+  segmentBtnActive: { backgroundColor: theme.colors.card },
+  segmentText: { fontWeight: "600", color: theme.colors.subtext },
+  segmentTextActive: { color: theme.colors.accentText },
   field: { marginTop: 12 },
-  label: { color: "rgba(12,12,18,0.75)", fontWeight: "800", marginBottom: 6 },
+  label: { color: theme.colors.subtext, fontWeight: "600", marginBottom: 6 },
   input: {
     height: 44,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     paddingHorizontal: 12,
-    color: "#0C0C12",
-    fontWeight: "700",
+    color: theme.colors.text,
+    fontWeight: "500",
   },
   inputRow: { flexDirection: "row", alignItems: "center" },
   inputInline: { flex: 1 },
@@ -895,9 +902,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "rgba(12,12,18,0.06)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -907,12 +914,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
   },
-  hintText: { color: "rgba(12,12,18,0.45)", fontWeight: "700", fontSize: 12 },
-  hintLink: { color: "#6B3CFF", fontWeight: "800", fontSize: 12 },
-  cta: { marginTop: 22, borderRadius: 999, overflow: "hidden" },
+  resetAction: {
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hintText: { color: theme.colors.muted, fontWeight: "500", fontSize: 12 },
+  hintLink: { color: theme.colors.accentText, fontWeight: "600", fontSize: 12 },
+  cta: { marginTop: 22, borderRadius: 18, overflow: "hidden" },
   ctaInner: {
     height: 54,
-    borderRadius: 999,
+    borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -921,27 +934,27 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
   },
-  ctaText: { color: "#FFFFFF", fontWeight: "800" },
+  ctaText: { color: theme.colors.bg0, fontWeight: "600" },
   ctaArrow: { marginLeft: 8, transform: [{ rotate: "-45deg" }] },
   ctaDisabled: { opacity: 0.65 },
   orRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16 },
-  orLine: { flex: 1, height: 1, backgroundColor: "rgba(12,12,18,0.12)" },
-  orText: { color: "rgba(12,12,18,0.45)", fontWeight: "800", fontSize: 12 },
+  orLine: { flex: 1, height: 1, backgroundColor: theme.colors.stroke },
+  orText: { color: theme.colors.muted, fontWeight: "600", fontSize: 12 },
   socialRow: { flexDirection: "row", gap: 10, marginTop: 14 },
   socialBtn: {
     flex: 1,
     height: 46,
     borderRadius: 14,
-    backgroundColor: "rgba(12,12,18,0.06)",
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
-    borderColor: "rgba(12,12,18,0.08)",
+    borderColor: theme.colors.stroke,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
   },
   socialBtnDisabled: { opacity: 0.6 },
-  socialText: { color: "#0C0C12", fontWeight: "800" },
+  socialText: { color: theme.colors.text, fontWeight: "600" },
   skip: { marginTop: 14, alignSelf: "center" },
-  skipText: { color: "rgba(12,12,18,0.55)", fontWeight: "800" },
+  skipText: { color: theme.colors.subtext, fontWeight: "600" },
 });

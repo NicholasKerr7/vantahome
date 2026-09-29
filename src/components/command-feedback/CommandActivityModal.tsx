@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   FlatList,
   Platform,
@@ -54,14 +55,44 @@ function ActivityRow({
   const feedback = getCommandFeedback(entry.command, simulated);
   return (
     <View style={styles.row}>
-      <Text style={styles.deviceName}>{entry.deviceName}</Text>
-      <Text style={[styles.status, feedback.tone === "warning" && styles.warning]}>
-        {feedback.title}
-      </Text>
+      <View style={styles.rowHeading}>
+        <View
+          style={[
+            styles.rowIcon,
+            feedback.tone === "warning" && styles.warningIcon,
+          ]}
+        >
+          <Ionicons
+            name={
+              feedback.tone === "warning" ? "alert-outline" : "pulse-outline"
+            }
+            size={20}
+            color={
+              feedback.tone === "warning" ? "#FFE0AD" : theme.colors.accentText
+            }
+          />
+        </View>
+        <View style={styles.rowIdentity}>
+          <Text style={styles.deviceName}>{entry.deviceName}</Text>
+          <Text
+            style={[
+              styles.status,
+              feedback.tone === "warning" && styles.warning,
+            ]}
+          >
+            {feedback.title}
+          </Text>
+        </View>
+        <Text style={styles.timestamp}>
+          {new Date(entry.command.createdAt).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+          })}
+        </Text>
+      </View>
       <Text style={styles.description}>{feedback.description}</Text>
       <Text style={styles.metadata}>
-        {new Date(entry.command.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-        {` · ${entry.command.attempts} of 4 delivery attempts`}
+        {`${entry.command.attempts} of 4 delivery attempts`}
       </Text>
     </View>
   );
@@ -94,9 +125,12 @@ export default function CommandActivityModal({
       cardStyle={[styles.card, layout.card]}
     >
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>
-          Command activity
-        </Text>
+        <View style={styles.headerIdentity}>
+          <Text style={styles.eyebrow}>DELIVERY JOURNAL</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            Command activity
+          </Text>
+        </View>
         <Pressable
           accessibilityLabel="Close command activity"
           onPress={onClose}
@@ -104,6 +138,15 @@ export default function CommandActivityModal({
         >
           <Text style={styles.closeText}>Done</Text>
         </Pressable>
+      </View>
+      <View style={styles.summary}>
+        <Text style={styles.summaryCount}>
+          {entries.length}
+          <Text style={styles.summaryLabel}> recent commands</Text>
+        </Text>
+        <Text style={styles.sessionLabel}>
+          {simulated ? "Simulation" : "This session"}
+        </Text>
       </View>
       <Text style={styles.intro}>
         Delivery progress is not physical-device confirmation.
@@ -114,13 +157,20 @@ export default function CommandActivityModal({
         contentContainerStyle={styles.listContent}
         data={newestFirst}
         keyExtractor={entryKey}
-        renderItem={({ item }) => <ActivityRow entry={item} simulated={simulated} />}
+        renderItem={({ item }) => (
+          <ActivityRow entry={item} simulated={simulated} />
+        )}
         bounces={false}
         overScrollMode="never"
         decelerationRate="normal"
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.empty}>
+            <Ionicons
+              name="pulse-outline"
+              size={32}
+              color={theme.colors.accentText}
+            />
             <Text style={styles.deviceName}>No recent commands</Text>
             <Text style={styles.description}>
               Commands started while this home is open will appear here.
@@ -138,14 +188,41 @@ export default function CommandActivityModal({
 const styles = StyleSheet.create({
   overlay: { alignItems: "center", padding: theme.spacing(2) },
   card: {
-    borderRadius: theme.radius.lg,
+    alignSelf: "center",
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     padding: theme.spacing(2.5),
     overflow: "hidden",
   },
   header: { flexDirection: "row", alignItems: "center", gap: theme.spacing(1) },
-  title: { flex: 1, color: theme.colors.text, fontSize: 21, fontWeight: "800" },
+  headerIdentity: { flex: 1, gap: 6 },
+  eyebrow: {
+    color: theme.colors.accentText,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    fontWeight: "600",
+  },
+  title: {
+    color: theme.colors.text,
+    fontSize: 22,
+    fontWeight: "500",
+    letterSpacing: -0.5,
+  },
+  summary: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 22,
+  },
+  summaryCount: { color: theme.colors.text, fontSize: 24, fontWeight: "500" },
+  summaryLabel: {
+    color: theme.colors.subtext,
+    fontSize: 12,
+    fontWeight: "400",
+  },
+  sessionLabel: { color: theme.colors.accentText, fontSize: 11 },
   close: {
     minWidth: 48,
     minHeight: 44,
@@ -154,7 +231,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.card,
   },
-  closeText: { color: theme.colors.text, fontSize: 14, fontWeight: "700" },
+  closeText: { color: theme.colors.text, fontSize: 14, fontWeight: "500" },
   intro: {
     color: theme.colors.subtext,
     fontSize: 13,
@@ -171,16 +248,35 @@ const styles = StyleSheet.create({
   listContent: { gap: theme.spacing(1.5), paddingBottom: theme.spacing(2) },
   row: {
     padding: theme.spacing(2),
-    borderRadius: theme.radius.sm,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.stroke,
     backgroundColor: theme.colors.card2,
-    gap: theme.spacing(0.75),
+    gap: 10,
   },
-  deviceName: { color: theme.colors.text, fontSize: 16, fontWeight: "700", flexShrink: 1 },
-  status: { color: theme.colors.text, fontSize: 14, fontWeight: "700" },
+  rowHeading: { flexDirection: "row", alignItems: "center", gap: 10 },
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    backgroundColor: theme.colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  warningIcon: { backgroundColor: "rgba(255,224,173,0.12)" },
+  rowIdentity: { flex: 1, gap: 4 },
+  timestamp: { color: theme.colors.muted, fontSize: 10 },
+  deviceName: {
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: "500",
+    flexShrink: 1,
+  },
+  status: { color: theme.colors.accentText, fontSize: 12, fontWeight: "500" },
   warning: { color: "#FFE0AD" },
-  description: { color: theme.colors.subtext, fontSize: 14, lineHeight: 21 },
+  description: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20 },
   metadata: { color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
-  empty: { paddingVertical: theme.spacing(3), gap: theme.spacing(1) },
+  empty: { paddingVertical: theme.spacing(3), gap: 12, alignItems: "center" },
   footer: {
     color: theme.colors.subtext,
     fontSize: 12,

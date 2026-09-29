@@ -180,6 +180,7 @@ const controlsRowStyle = (alignStart: boolean): StyleProp<ViewStyle> => [
   alignStart && styles.controlsRowStart,
 ];
 
+/** Keep a compact device adjustment separate from the card navigation action. */
 function StepBtn({
   icon,
   onPress,
@@ -202,6 +203,7 @@ function StepBtn({
   );
 }
 
+/** Render one labelled quick command with a comfortable touch target. */
 function ControlPill({
   label,
   onPress,
@@ -224,6 +226,7 @@ function ControlPill({
   );
 }
 
+/** Pair a room device identity with its immediate controls and full-control destination. */
 export default function DeviceTile({
   device,
   onPress,
@@ -245,29 +248,30 @@ export default function DeviceTile({
     const nextOpen = openNow ? 0 : 100;
     sendPatch({ openPercent: nextOpen, isOn: nextOpen > 0 });
   };
-  const cardPad = Math.round((isTablet ? (isLandscape ? 16 : 18) : 14) * scale);
-  const cardRadius = Math.round((isTablet ? 28 : 24) * scale);
+  const cardPad = Math.round((isTablet ? (isLandscape ? 16 : 18) : 12) * scale);
+  const cardRadius = Math.round((isTablet ? 26 : 22) * scale);
   const minHeight = Math.round(
     (isTablet ? (isLandscape ? 190 : 210) : 168) * scale,
   );
   const iconWrapSize = Math.round((isTablet ? 52 : 44) * scale);
   const iconWrapRadius = Math.round(iconWrapSize * 0.36);
-  const powerSize = Math.round((isTablet ? 40 : 34) * scale);
+  const powerSize = Math.max(44, Math.round(44 * scale));
   const powerRadius = Math.round(powerSize * 0.42);
   const iconSize = Math.round((isTablet ? 22 : 20) * scale);
   const powerIconSize = Math.round((isTablet ? 18 : 16) * scale);
   const nameSize = Math.round((isTablet ? 16 : 14) * scale);
   const metaSize = Math.round((isTablet ? 13 : 12) * scale);
   const dividerGap = Math.round((isTablet ? 14 : 12) * scale);
-  const stepSize = Math.round((isTablet ? 42 : 36) * scale);
+  const stepSize = Math.max(44, Math.round(44 * scale));
   const stepIconSize = Math.round((isTablet ? 18 : 16) * scale);
   const controlFont = Math.round((isTablet ? 14 : 12) * scale);
-  const pillHeight = Math.round((isTablet ? 40 : 36) * scale);
+  const pillHeight = Math.max(44, Math.round(44 * scale));
 
   const meta = `${deviceMeta(device)}${stackMeta(device)}`;
 
   return (
     <Pressable
+      accessibilityLabel={`Open full controls for ${device.name}`}
       style={cardStyle(cardPad, cardRadius, minHeight)}
       onPress={onPress}
       onLongPress={onLongPress}
@@ -547,7 +551,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 24,
     padding: 14,
-    backgroundColor: theme.colors.glass,
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     minHeight: 168,
@@ -568,7 +572,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconWrapOn: { backgroundColor: theme.colors.accent2 },
+  iconWrapOn: { backgroundColor: theme.colors.bg1, borderColor: theme.colors.accent },
 
   power: {
     width: 34,
@@ -580,13 +584,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  powerOn: { backgroundColor: theme.colors.accent2 },
+  powerOn: { backgroundColor: theme.colors.bg1, borderColor: theme.colors.accent },
 
-  name: { marginTop: 12, color: theme.colors.text, fontWeight: "700" },
+  name: { marginTop: 12, color: theme.colors.text, fontWeight: "600" },
   meta: {
     marginTop: 6,
     color: theme.colors.subtext,
-    fontWeight: "700",
+    fontWeight: "400",
     fontSize: 12,
   },
 
@@ -601,7 +605,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 10,
+    gap: 6,
   },
   controlsRowStart: { justifyContent: "flex-start" },
   stepBtn: {
@@ -618,14 +622,14 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     color: theme.colors.text,
-    fontWeight: "700",
+    fontWeight: "600",
   },
 
   controlPill: {
     flex: 1,
-    height: 36,
-    borderRadius: 16,
-    backgroundColor: theme.colors.accent2,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     alignItems: "center",
@@ -633,7 +637,7 @@ const styles = StyleSheet.create({
   },
   controlPillText: {
     color: theme.colors.text,
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 12,
   },
 });
