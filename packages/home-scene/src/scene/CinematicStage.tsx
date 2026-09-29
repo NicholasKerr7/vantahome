@@ -44,19 +44,20 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
-/** Frame the house with a quiet architectural survey grid and soft mint contour rings. */
+/** Frame the house with the v1 violet survey grid and soft lavender contour rings. */
 export function CinematicStage({ exterior }: { exterior: boolean }) {
   const uniforms = useMemo(() => ({
     radius: { value: exterior ? 35 : 14 },
-    baseColor: { value: new Color('#080D12') },
-    haloColor: { value: new Color('#19343d') },
-    detailColor: { value: new Color('#8cddcc') },
+    baseColor: { value: new Color('#110530') },
+    haloColor: { value: new Color('#2B0A73') },
+    detailColor: { value: new Color('#B46BFF') },
   }), [exterior]);
 
   return (
     <mesh position={[exterior ? 10 : 8.2, -1.04, -8]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[600, 600]} />
-      <shaderMaterial vertexShader={VERTEX_SHADER} fragmentShader={FRAGMENT_SHADER} uniforms={uniforms} />
+      {/* Preserve the brand violet instead of shifting it through the house's filmic exposure. */}
+      <shaderMaterial vertexShader={VERTEX_SHADER} fragmentShader={FRAGMENT_SHADER} uniforms={uniforms} toneMapped={false} />
     </mesh>
   );
 }

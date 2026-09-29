@@ -126,7 +126,7 @@ export function HotspotLeader({
         <bufferAttribute attach="attributes-position" args={[vertices, 3]} />
       </bufferGeometry>
       <lineBasicMaterial
-        color="#e4eacb"
+        color="#DFC4FF"
         transparent
         opacity={0.6}
         depthTest={false}

@@ -34,12 +34,13 @@ export function SceneLighting({ night, daylight, environment, view, floor, roomI
     key.current?.shadow.camera.updateProjectionMatrix();
   }, [shadowRadius]);
   const colors = useMemo(() => ({
-    day: new Color('#0d1a20'),
-    overcast: new Color('#101b23'),
-    twilight: new Color('#142128'),
+    // Decorative studio backdrop follows the v1 purple theme through daylight changes.
+    day: new Color('#1D0C45'),
+    overcast: new Color('#19132F'),
+    twilight: new Color('#291149'),
     sun: new Color('#ffe7c7'),
     duskSun: new Color('#ffc082'),
-    night: new Color('#080d12'),
+    night: new Color('#110530'),
     mixed: new Color(),
   }), []);
   const amount = useRef(1 - daylight);
