@@ -1,10 +1,13 @@
 import React from "react";
-import { AppState, type AppStateStatus } from "react-native";
+import { Alert, AppState, type AppStateStatus } from "react-native";
 import { act, cleanup, fireEvent, render } from "@testing-library/react-native";
 import RendererLab from "./RendererLab";
 import type { LabSurfaceProps } from "./protocol";
 import { SimulationControlClient } from '../three-d-home/simulationControlClient';
 import { createDefaultSimulationSnapshot, mergeSimulationChanges, parseSimulationRequest } from '../../../packages/home-scene/src/simulationBridgeProtocol';
+
+const mockDispatch = jest.fn();
+jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useNavigation: () => ({ dispatch: mockDispatch }) }));
 
 let mockWebProps: LabSurfaceProps;
 let mockNativeProps: LabSurfaceProps;
@@ -37,6 +40,7 @@ jest.mock("./NativeLabSurface", () => ({ __esModule: true, default: (props: LabS
 let onAppState: (state: AppStateStatus) => void;
 beforeEach(() => {
   jest.useFakeTimers();
+  mockDispatch.mockClear();
   AppState.currentState = "active";
   mockMotionAllowed = true;
   mockNativeThrows = false;
@@ -156,7 +160,7 @@ test("respects reduced motion while keeping device controls and model selection 
   expect(mockWebProps.settings.lights).toBe(false);
   fireEvent.press(screen.getByLabelText("Blinds full controls"));
   expect(screen.getByLabelText("Close device controls")).toBeTruthy();
-  expect(screen.getByRole('tab', { name: 'Schedule' })).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Routines' })).toBeTruthy();
 });
 
 test('full controls change one fixture and both engines receive its brightness and color', () => {
@@ -174,18 +178,19 @@ test('full controls change one fixture and both engines receive its brightness a
   expect(mockNativeProps.settings.lightStates).toEqual(mockWebProps.settings.lightStates);
 });
 
-test('native full controls expose paged schedules and preserve gate preferences through quick actions', () => {
+test('native controls keep device preferences while opening the shared routine collection', () => {
   const screen = render(<RendererLab active />);
   fireEvent.press(screen.getByLabelText('Property'));
   fireEvent.press(screen.getByLabelText('Gate full controls'));
   fireEvent.press(screen.getByRole('tab', { name: 'Modes' }));
   fireEvent(screen.getByLabelText('Auto-open preference'), 'valueChange', true);
-  fireEvent.press(screen.getByRole('tab', { name: 'Schedule' }));
-  expect(screen.getByText('Saved preview preferences. Timers do not run devices.')).toBeTruthy();
-  fireEvent(screen.getByLabelText('Save schedule preference'), 'valueChange', true);
-  fireEvent.press(screen.getByLabelText('Close device controls'));
+  fireEvent.press(screen.getByRole('tab', { name: 'Routines' }));
+  expect(screen.queryByLabelText('Save schedule preference')).toBeNull();
+  fireEvent.press(screen.getByLabelText('View device routines'));
+  expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: expect.objectContaining({ name: 'Main', params: expect.objectContaining({ screen: 'Automations', params: { deviceId: 'd26' } }) }) }));
+  expect(screen.queryByLabelText('Close device controls')).toBeNull();
   fireEvent.press(screen.getByLabelText('Gate'));
-  expect(mockControls.getSnapshot().state.deviceStates['entry-gate']).toMatchObject({ on: true, level: 100, settings: { autoOpenEnabled: true, scheduleEnabled: true } });
+  expect(mockControls.getSnapshot().state.deviceStates['entry-gate']).toMatchObject({ on: true, level: 100, settings: { autoOpenEnabled: true } });
 });
 
 test("offers only implemented property controls and bounds the gate slider", () => {
@@ -220,19 +225,18 @@ test("previews each weather mode without scrolling and preserves weather across 
   expect(mockNativeProps.settings).toMatchObject({ weather: "clear", windSpeed: 0 });
 });
 
-test('rotation keeps the last schedule-options page populated when more choices fit', () => {
+test('the shared routine entry stays available after rotation and unlinked devices explain setup', () => {
   mockDimensions = { width: 320, height: 562, scale: 1, fontScale: 1 };
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   const screen = render(<RendererLab active />);
   fireEvent.press(screen.getByLabelText('Blinds full controls'));
-  fireEvent.press(screen.getByRole('tab', { name: 'Schedule' }));
-  fireEvent.press(screen.getByLabelText('Next controls page'));
-  fireEvent.press(screen.getByLabelText(/Days: .*Choose option/));
-  fireEvent.press(screen.getByLabelText('Next controls page'));
-  fireEvent.press(screen.getByLabelText('Next controls page'));
-  expect(screen.getByText('3 / 3')).toBeTruthy();
+  fireEvent.press(screen.getByRole('tab', { name: 'Routines' }));
+  expect(screen.getByText('1 / 1')).toBeTruthy();
   mockDimensions = { width: 1194, height: 834, scale: 1, fontScale: 1 };
   screen.rerender(<RendererLab active />);
-  expect(screen.getByText('2 / 2')).toBeTruthy();
-  fireEvent.press(screen.getByRole('radio', { name: 'Sunday' }));
-  expect(mockControls.getSnapshot().state.deviceStates['master-blinds'].settings?.scheduleDays).toBe('sunday');
+  fireEvent.press(screen.getByLabelText('View device routines'));
+  expect(alert).toHaveBeenCalledWith('Device linking required', expect.stringContaining('not linked'));
+  expect(mockDispatch).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Close device controls')).toBeTruthy();
+  expect(mockControls.getSnapshot().state.deviceStates['master-blinds'].settings?.scheduleEnabled).not.toBe(true);
 });

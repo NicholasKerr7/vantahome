@@ -1,6 +1,6 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text } from "react-native";
 import AuthScreen from "../AuthScreen";
 import OnboardingScreen from "../OnboardingScreen";
 import SettingsScreen from "../SettingsScreen";
@@ -15,6 +15,8 @@ import PasswordRecoveryScreen from "../PasswordRecoveryScreen";
 import ModalCard from "../../components/ModalCard";
 import Pressable from "../../components/Pressable";
 import ScreenFrame from "../../components/ScreenFrame";
+import DeviceBottomSheet from '../../components/DeviceBottomSheet';
+import DeviceTile from '../../components/DeviceTile';
 import {
   useHomeStore,
   type AutomationFlow,
@@ -40,18 +42,21 @@ const defaultLayout = { ...mockLayout };
 
 /** Describe only the rendered node fields used by the feature-screen assertions. */
 type RenderedScreenNode = {
-  props: { children?: React.ReactNode; label?: string; visible?: boolean; accessibilityLabel?: string };
+  props: { children?: React.ReactNode; label?: string; visible?: boolean; accessibilityLabel?: string; onPress: () => void };
   findAllByType: (component: unknown) => RenderedScreenNode[];
 };
 
 let mockNavigate: jest.Mock;
 let mockGoBack: jest.Mock;
+const mockDispatch = jest.fn();
 let mockReplace: jest.Mock;
 let mockCanGoBack: jest.Mock;
 
 jest.mock("@react-navigation/native", () => ({
+  CommonActions: { navigate: (payload: unknown) => ({ type: "NAVIGATE", payload }) },
   useNavigation: () => ({
     navigate: mockNavigate,
+    dispatch: mockDispatch,
     goBack: mockGoBack,
     replace: mockReplace,
     canGoBack: mockCanGoBack,
@@ -331,20 +336,20 @@ describe("App screens smoke coverage", () => {
     }
   });
 
-  it("retains embedded automation builder navigation and schedule creation", () => {
+  it("uses one routine builder for new routines and device schedules", () => {
     let tree!: ReactTestRenderer;
     act(() => { tree = renderer.create(<AutomationsScreen embedded />); });
     try {
-      /** Locate real labeled controls instead of depending on their current visual order. */
-      const button = (label: string) => tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.props.accessibilityLabel === label || node.findAllByType(Text).some((text) => text.props.children === label))!;
-      const newFlow = button("New flow");
-      expect(StyleSheet.flatten(newFlow.props.style).minHeight).toBe(44);
-      act(() => { newFlow.props.onPress(); });
-      expect(mockNavigate).toHaveBeenCalledWith("AutomationBuilder");
-      act(() => { button("Schedules").props.onPress(); });
-      act(() => { button("Add schedule").props.onPress(); });
-      expect(tree.root.findByType(ModalCard).props.visible).toBe(true);
-      expect(tree.root.findAllByType(Text).some((node: RenderedScreenNode) => node.props.children === "New schedule")).toBe(true);
+      const button = () => tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.props.accessibilityLabel === "New routine")!;
+      expect(StyleSheet.flatten(button().props.style).minHeight).toBe(44);
+      act(() => { button().props.onPress(); });
+      expect(mockNavigate).toHaveBeenCalledWith("AutomationBuilder", {});
+      act(() => { tree.update(<AutomationsScreen embedded deviceId="lr-light" />); });
+      act(() => { button().props.onPress(); });
+      expect(mockNavigate).toHaveBeenCalledWith("AutomationBuilder", { deviceId: "lr-light", preset: "time" });
+      const allRoutines = tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.props.accessibilityLabel === "All routines")!;
+      act(() => { allRoutines.props.onPress(); });
+      expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: expect.objectContaining({ name: "Main", params: { screen: "Automations", params: {}, pop: true } }) }));
     } finally {
       act(() => { tree.unmount(); });
     }
@@ -375,5 +380,40 @@ describe("App screens smoke coverage", () => {
       params: { roomId, showAll: false },
     } as any;
     renderScreen(<RoomScreen navigation={navigation} route={route} />);
+  });
+
+  it('creates clearly labeled daily routines and rejects stale quick actions after access changes', () => {
+    const roomId = seed.rooms[0]?.id ?? 'r1';
+    useHomeStore.setState({
+      accountUserId: null, authenticatedUserId: null, activeHomeId: null, membershipReady: true,
+      household: [{ id: 'routine-owner', name: 'Administrator', role: 'Admin', status: 'home' }],
+      activeMemberId: 'routine-owner', memberPermissionOverrides: [],
+    });
+    const navigation = { goBack: jest.fn(), navigate: jest.fn(), dispatch: jest.fn() } as never;
+    const route = { key: 'Room', name: 'Room', params: { roomId, showAll: false } } as never;
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<RoomScreen navigation={navigation} route={route} />); });
+    try {
+      act(() => { tree.root.findAllByType(DeviceTile)[0].props.onLongPress(); });
+      const sheet = tree.root.findByType(DeviceBottomSheet);
+      expect(sheet.props.canCreateRoutines).toBe(true);
+      const quickSchedule = sheet.props.onQuickSchedule;
+      act(() => { quickSchedule({ hour: 21, minute: 0 }); });
+      expect(alert).toHaveBeenLastCalledWith('Daily routine saved', expect.stringContaining('every day at 21:00'));
+      const flows = useHomeStore.getState().flows;
+      expect(flows.some((flow) => flow.triggers.some((trigger) => trigger.type === 'time' && trigger.hour === 21 && trigger.minute === 0))).toBe(true);
+      act(() => { useHomeStore.setState({ memberPermissionOverrides: [{ memberId: 'routine-owner', permission: 'automation.manage', allowed: false }] }); });
+      expect(tree.root.findByType(DeviceBottomSheet).props.canCreateRoutines).toBe(false);
+      const shortcut = tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.props.accessibilityLabel === 'Create daily routine at 9:00 PM');
+      expect(shortcut?.props.disabled).toBe(true);
+      act(() => { quickSchedule({ hour: 7, minute: 0 }); });
+      expect(useHomeStore.getState().flows).toBe(flows);
+      expect(alert).toHaveBeenLastCalledWith('Routine not saved', expect.stringContaining('home access'));
+    } finally {
+      act(() => { tree.unmount(); });
+      alert.mockRestore();
+      useHomeStore.setState({ activeMemberId: seed.activeMemberId, memberPermissionOverrides: seed.memberPermissionOverrides });
+    }
   });
 });

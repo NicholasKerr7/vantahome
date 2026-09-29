@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
-import { deviceActionFeedback, deviceStatus, getControlPages, quickActionLabel, readDeviceSetting } from '../../../packages/home-scene/src/deviceCapabilities';
+import { deviceActionFeedback, deviceStatus, quickActionLabel, readDeviceSetting } from '../../../packages/home-scene/src/deviceCapabilities';
+import { getInspectorPages } from '../../../packages/home-scene/src/deviceRoutinePages';
 import { gasStatusTone } from '../../../packages/home-scene/src/gasSimulation';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
 import type { ControlSnapshot, SimulationControlClient } from './simulationControlClient';
@@ -11,9 +12,10 @@ import { ControlPagination } from './ControlPagination';
 import CinematicSurface from '../../components/CinematicSurface';
 import DeviceBrowser from './DeviceBrowser';
 import { controlStyles as styles } from './deviceControlsStyles';
+import { useDeviceRoutines } from './useDeviceRoutines';
 
 const GROUPS = ['controls', 'modes', 'schedule', 'status'] as const;
-const GROUP_LABELS = { controls: 'Controls', modes: 'Modes', schedule: 'Schedule', status: 'Status' };
+const GROUP_LABELS = { controls: 'Controls', modes: 'Modes', schedule: 'Routines', status: 'Status' };
 type Group = typeof GROUPS[number];
 interface SheetProps {
   deviceId: string | null; client: SimulationControlClient; snapshot: ControlSnapshot;
@@ -22,6 +24,7 @@ interface SheetProps {
 
 /** Present a full native inspector or paged room browser above either renderer. */
 export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed, onClose, onSelect }: SheetProps) {
+  const openDeviceRoutines = useDeviceRoutines(onClose);
   const { width, height, fontScale } = useWindowDimensions();
   const landscape = width >= 760 && width > height;
   const compact = height < 700 || fontScale > 1.15;
@@ -42,7 +45,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
           </View>
           {browsing || !device ? <DeviceBrowser snapshot={snapshot} client={client} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
-              client={client} disabled={!snapshot.ready} compact={compact} onBrowse={() => setBrowsing(true)} />}
+              client={client} disabled={!snapshot.ready} compact={compact} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
           </View>
         </CinematicSurface>
@@ -52,14 +55,14 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
 }
 
 /** Keep the original quick action visible while paging through the complete shared capability catalog. */
-function DeviceInspector({ device, state, client, disabled, compact, onBrowse }: {
-  device: DeviceDefinition; state: DeviceState; client: SimulationControlClient; disabled: boolean; compact: boolean; onBrowse: () => void;
+function DeviceInspector({ device, state, client, disabled, compact, onBrowse, onRoutines }: {
+  device: DeviceDefinition; state: DeviceState; client: SimulationControlClient; disabled: boolean; compact: boolean; onBrowse: () => void; onRoutines: () => void;
 }) {
   const [group, setGroup] = useState<Group>('controls');
   const [page, setPage] = useState(0);
   const [option, setOption] = useState<EnumCapability | null>(null);
   const [optionPage, setOptionPage] = useState(0);
-  const allPages = getControlPages(device.kind, { maxControlsPerPage: compact ? 2 : 3 });
+  const allPages = getInspectorPages(device, compact ? 2 : 3);
   const pages = allPages.filter((item) => item.group === group);
   const selectedPage = Math.min(page, Math.max(0, pages.length - 1));
   const current = pages[selectedPage];
@@ -95,10 +98,16 @@ function DeviceInspector({ device, state, client, disabled, compact, onBrowse }:
           <Text style={[styles.tabText, group === item && styles.selectedTabText]}>{GROUP_LABELS[item]}</Text>
         </Pressable>;
       })}</View>
-      <Text accessibilityLiveRegion="polite" style={[styles.detail, tone === 'alarm' && styles.alarm, (tone === 'warning' || tone === 'closed') && styles.warning]}>{group === 'schedule' ? 'Saved preview preferences. Timers do not run devices.'
+      <Text accessibilityLiveRegion="polite" style={[styles.detail, tone === 'alarm' && styles.alarm, (tone === 'warning' || tone === 'closed') && styles.warning]}>{group === 'schedule' ? current?.id === 'shared-routines' ? 'Schedules and automatic actions, together.' : 'Device timer preferences · Simulation only'
         : group === 'status' ? `${deviceStatus(device, state)} · Simulated readings`
           : deviceActionFeedback(device, state) ?? deviceStatus(device, state)}</Text>
       <View style={[styles.content, current?.compact && styles.grid]}>
+        {current?.id === 'shared-routines' && <>
+          <Text style={styles.label}>One place for every routine</Text>
+          <Text style={styles.detail}>Open routines for this device in your home catalog. Model devices need an explicit device link.</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="View device routines" disabled={disabled} onPress={onRoutines} style={[styles.button, styles.primary, disabled && styles.disabled]}><Text style={[styles.label, styles.primaryText]}>View device routines</Text></Pressable>
+          <Text style={styles.detail}>Preview routines run while the app is open. An always-on hub is not connected.</Text>
+        </>}
         {current?.capabilities.map((capability) => <NativeCapabilityControl key={capability.id} capability={capability} device={device}
           state={state} client={client} disabled={disabled} compact={compact} onOptions={(next) => { setOption(next); setOptionPage(0); }} />)}
         {!current && <Text style={styles.detail}>Use the quick action above for this device.</Text>}

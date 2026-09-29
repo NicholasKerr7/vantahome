@@ -23,7 +23,7 @@ export function SceneMoodCard({ scene, roomName, active, compact, directory, onR
   return <View testID={`scene-tile-${scene.id}`} style={[styles.sceneCard, active && styles.sceneActive, compact && styles.sceneCompact]}>
     <View style={styles.sceneHeader}>
       <View style={styles.roomLabel}><Ionicons name="location-outline" size={12} color={theme.colors.subtext} /><Text style={styles.roomText} numberOfLines={1}>{roomName}</Text></View>
-      <View style={styles.sceneState}><View style={[styles.stateDot, active && styles.stateDotOn]} /><Text style={[styles.sceneStateText, active && styles.sceneStateTextOn]}>{active ? 'Active' : 'Ready'}</Text></View>
+      <View style={styles.sceneState}><View style={[styles.stateDot, active && styles.stateDotOn]} /><Text style={[styles.sceneStateText, active && styles.sceneStateTextOn]}>{active ? 'Last used' : 'Saved'}</Text></View>
     </View>
     <View style={styles.sceneMain}>
       <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.moodMark, warm && styles.moodWarm, cool && styles.moodCool, compact && styles.moodCompact]}>
@@ -49,25 +49,25 @@ export function SceneMoodCard({ scene, roomName, active, compact, directory, onR
 
 type RoutineCardProps = {
   id: string; name: string; enabled: boolean; when: string; then: string; condition?: string | null;
-  actionCount: number; conditionCount: number; compact: boolean; schedule?: boolean;
+  actionCount: number; conditionCount: number; compact: boolean; schedule?: boolean; readOnly?: boolean;
   onOpen: () => void; onToggle: () => void;
 };
 
 type RoutineKeyEvent = { key: string; repeat?: boolean; preventDefault: () => void };
 
 /** Keep the touch target separate from the fixed-size visual switch on native and web. */
-function RoutineToggle({ name, enabled, onToggle }: { name: string; enabled: boolean; onToggle: () => void }) {
+function RoutineToggle({ name, enabled, readOnly, onToggle }: { name: string; enabled: boolean; readOnly: boolean; onToggle: () => void }) {
   const [focused, setFocused] = useState(false);
 
   /** RN Web handles Enter itself; switch-role Space needs its own single activation. */
   function handleSpace(event: RoutineKeyEvent) {
-    if (event.key !== ' ' && event.key !== 'Spacebar') return;
+    if (readOnly || (event.key !== ' ' && event.key !== 'Spacebar')) return;
     event.preventDefault();
     if (!event.repeat) onToggle();
   }
 
   const webKeyboard = Platform.OS === 'web' ? { onKeyDown: handleSpace } : {};
-  return <Pressable {...webKeyboard} accessibilityRole="switch" accessibilityLabel={`${name} enabled`} accessibilityState={{ checked: enabled }} aria-checked={enabled} onPress={onToggle} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[styles.routineSwitch, focused && styles.routineSwitchFocused]}>
+  return <Pressable {...webKeyboard} accessibilityRole="switch" accessibilityLabel={`${name} enabled`} accessibilityState={{ checked: enabled, disabled: readOnly }} disabled={readOnly} aria-checked={enabled} onPress={onToggle} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[styles.routineSwitch, focused && styles.routineSwitchFocused, readOnly && styles.routineReadOnly]}>
     <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.switchTrack, enabled && styles.switchTrackOn]}>
       <View style={[styles.switchThumb, enabled && styles.switchThumbOn]} />
     </View>
@@ -75,18 +75,18 @@ function RoutineToggle({ name, enabled, onToggle }: { name: string; enabled: boo
 }
 
 /** Expose a real when/then path and independent enable state without making the whole card a toggle. */
-export function RoutineCard({ id, name, enabled, when, then, condition, actionCount, conditionCount, compact, schedule = false, onOpen, onToggle }: RoutineCardProps) {
+export function RoutineCard({ id, name, enabled, when, then, condition, actionCount, conditionCount, compact, schedule = false, readOnly = false, onOpen, onToggle }: RoutineCardProps) {
   return <View testID={`routine-row-${id}`} style={[styles.routineCard, enabled && styles.routineActive, compact && styles.routineCompact]}>
     <View style={styles.routineHeader}>
       <View style={styles.routineIdentity}><Ionicons name={schedule ? 'time-outline' : 'git-network-outline'} size={17} color={theme.colors.accent} /></View>
       <Text accessibilityRole="header" style={styles.routineName} numberOfLines={compact ? 1 : 2}>{name}</Text>
-      <Pressable accessibilityLabel={`Edit ${name}`} onPress={onOpen} style={styles.editButton}><Ionicons name="create-outline" size={19} color={theme.colors.subtext} /></Pressable>
+      <Pressable accessibilityLabel={`Edit ${name}`} accessibilityState={{ disabled: readOnly }} disabled={readOnly} onPress={onOpen} style={[styles.editButton, readOnly && styles.routineReadOnly]}><Ionicons name="create-outline" size={19} color={theme.colors.subtext} /></Pressable>
     </View>
     <View style={styles.routinePath}>
       <View style={styles.pathRail} pointerEvents="none" accessible={false}><View style={styles.pathDot} /><View style={styles.pathLine} /><View style={styles.pathDestination} /></View>
       <View style={styles.pathCopy}>
         <View style={styles.pathStep}><Text style={styles.pathLabel}>WHEN</Text><Text style={styles.pathValue} numberOfLines={1}>{when}</Text></View>
-        <View style={styles.pathStep}><Text style={styles.pathLabel}>THEN</Text><Text style={styles.pathValue} numberOfLines={1}>{then}</Text></View>
+        <View style={styles.pathStep}><Text style={styles.pathLabel}>DO</Text><Text style={styles.pathValue} numberOfLines={1}>{then}</Text></View>
       </View>
     </View>
     {condition ? <Text style={styles.condition} numberOfLines={1}>Only if {condition}</Text> : null}
@@ -95,7 +95,7 @@ export function RoutineCard({ id, name, enabled, when, then, condition, actionCo
         <Text style={[styles.enabledText, enabled && styles.enabledTextOn]}>{enabled ? 'Enabled' : 'Paused'}</Text>
         <Text style={styles.routineCount} numberOfLines={1}>{schedule ? 'Daily schedule' : `${actionCount} ${actionCount === 1 ? 'action' : 'actions'}${conditionCount ? ` · ${conditionCount} ${conditionCount === 1 ? 'condition' : 'conditions'}` : ''}`}</Text>
       </View>
-      <RoutineToggle name={name} enabled={enabled} onToggle={onToggle} />
+      <RoutineToggle readOnly={readOnly} name={name} enabled={enabled} onToggle={onToggle} />
     </View>
   </View>;
 }
@@ -130,6 +130,7 @@ const styles = StyleSheet.create({
   runText: { color: theme.colors.bg0, fontSize: 13, fontWeight: '700' },
   detailButton: { minHeight: 46, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 16, backgroundColor: theme.colors.card2 },
   detailText: { color: theme.colors.text, fontSize: 12, fontWeight: '500' },
+  routineReadOnly: { opacity: 0.35 },
   routineCard: { flex: 1, minWidth: 0, minHeight: 0, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6, borderRadius: 24, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke },
   routineActive: { borderColor: theme.colors.accent2 },
   routineCompact: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 2 },

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   View,
   Text,
@@ -36,17 +37,22 @@ import {
 } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { runtimePolicy } from "../config/runtimeMode";
 import { EmbeddedScenes } from "./components/EmbeddedCollections";
+import { SceneScopePicker } from "../features/scenes/SceneScopePicker";
+import { sceneChoiceKeyboard } from "../features/scenes/sceneChoiceKeyboard";
+import { homeEditorScope } from "../features/home-shell/homeEditorScope";
+import { isWholeHomeScene, sceneIsVisible, sceneScopeLabel, sceneSelectableDevices, sceneSelectionInScope, type SceneEditorScope } from "../features/scenes/sceneScope";
 
 export type ScenesScreenProps = {
   /** The root feature wrapper provides the title, safe areas and back navigation. */
   embedded?: boolean;
 };
 
+type SceneEditorSession = { scope: string; invalidated: boolean };
+
 /** Keep scene controls reusable in the original tab or the 3D home's feature wrapper. */
 export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {}) {
-  const { width, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
+  const { width, height, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
   const minSize = Math.min(width, contentWidth);
   const isCompactPhone = !isTablet && minSize < 360;
@@ -129,6 +135,8 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     (isTablet ? 40 : isCompactPhone ? 32 : 34) * scale,
   );
   const insets = useSafeAreaInsets();
+  // Explicit pixel bounds let only editor copy scroll, keeping its actions inside the safe viewport.
+  const modalSizing = useMemo(() => StyleSheet.create({ card: { maxHeight: Math.max(180, height - insets.top - insets.bottom - 36) } }), [height, insets.top, insets.bottom]);
   const tabInset = isTablet ? (isLandscape ? 28 : 24) : gutter;
   const tabBarInset = insets.bottom > 0 ? insets.bottom + 8 : tabInset;
   const tabBarHeight = Math.round(
@@ -136,9 +144,10 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   );
   const tabBarGap = Math.round((isTablet ? 12 : 8) * scale);
   const tabBarPad = tabBarInset + tabBarHeight + tabBarGap;
-  const rooms = useHomeStore(selectVisibleRooms);
-  const scenes = useHomeStore((s) => s.scenes);
-  const devices = useHomeStore(selectVisibleDevices);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
+  const storedScenes = useHomeStore((s) => s.scenes);
+  const devices = useHomeStore(useShallow(selectVisibleDevices));
+  const scenes = useMemo(() => storedScenes.filter((scene) => sceneIsVisible(scene, rooms, devices)), [storedScenes, rooms, devices]);
   const runScene = useHomeStore((s) => s.runScene);
   const sceneRequestPending = useRef(false);
   const requestScene = async (sceneId: string) => {
@@ -162,6 +171,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
 
   const [showCreate, setShowCreate] = useState(false);
   const [sceneName, setSceneName] = useState("");
+  const [sceneScope, setSceneScope] = useState<SceneEditorScope>('home');
   const [roomId, setRoomId] = useState(rooms[0]?.id ?? "");
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   const [overrides, setOverrides] = useState<Record<string, Partial<Device>>>(
@@ -169,23 +179,45 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   );
   const [detailSceneId, setDetailSceneId] = useState<string | null>(null);
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
+  const [editorSession, setEditorSession] = useState<SceneEditorSession | null>(null);
+  const activeEditorSession = useRef<SceneEditorSession | null>(null);
+
+  /** Clear draft content and retire its token so a retained Save callback cannot affect a later editor. */
+  const closeEditor = useCallback(() => {
+    if (activeEditorSession.current) activeEditorSession.current.invalidated = true;
+    activeEditorSession.current = null;
+    setEditorSession(null);
+    setShowCreate(false);
+    setEditingSceneId(null);
+    setSceneName('');
+    setSelectedDeviceIds([]);
+    setOverrides({});
+  }, []);
+
+  /** Capture each modal opening independently; the surrounding screen can remain mounted across homes. */
+  const beginEditor = () => {
+    const session = { scope: homeEditorScope(useHomeStore.getState()), invalidated: false };
+    activeEditorSession.current = session;
+    setEditorSession(session);
+  };
+
+  useEffect(() => useHomeStore.subscribe((state) => {
+    const session = activeEditorSession.current;
+    if (session && homeEditorScope(state) !== session.scope) closeEditor();
+  }), [closeEditor]);
 
   const deviceMap = useMemo(
     () => new Map(devices.map((d) => [d.id, d])),
     [devices],
   );
   const roomDevices = useMemo(
-    () => devices.filter((d) => d.roomId === roomId),
-    [devices, roomId],
+    () => sceneSelectableDevices(devices, sceneScope, roomId),
+    [devices, sceneScope, roomId],
   );
   const detailScene = useMemo(
     () => scenes.find((scene) => scene.id === detailSceneId) ?? null,
     [detailSceneId, scenes],
   );
-  const detailRoom = useMemo(() => {
-    if (!detailScene) return null;
-    return rooms.find((room) => room.id === detailScene.roomId) ?? null;
-  }, [detailScene, rooms]);
   const detailActionLabels = useMemo(() => {
     if (!detailScene) return [];
     return detailScene.actions.map((action) => formatAction(action, deviceMap));
@@ -198,11 +230,13 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     return ids.map((id) => deviceMap.get(id)).filter(Boolean) as Device[];
   }, [detailScene, deviceMap]);
   const sections = useMemo(
-    () =>
-      rooms.map((room) => ({
+    () => [
+      { room: { id: 'whole-home-scenes', name: 'Whole home' }, scenes: scenes.filter(isWholeHomeScene) },
+      ...rooms.map((room) => ({
         room,
-        scenes: scenes.filter((s) => s.roomId === room.id),
+        scenes: scenes.filter((scene) => !isWholeHomeScene(scene) && scene.roomId === room.id),
       })),
+    ],
     [rooms, scenes],
   );
   const frameEnabled = !embedded && (isPortrait || isWide);
@@ -240,18 +274,29 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   }, [columnCount, sections]);
 
   useEffect(() => {
+    if (sceneScope === 'home' && !roomId) return;
     if (!rooms.length) {
       setRoomId("");
       return;
     }
     if (!roomId || !rooms.find((r) => r.id === roomId)) {
-      setRoomId(rooms[0].id);
-      setSelectedDeviceIds([]);
-      setOverrides({});
+      setRoomId(sceneScope === 'home' ? '' : rooms[0].id);
+      if (sceneScope === 'room') {
+        setSelectedDeviceIds([]);
+        setOverrides({});
+      }
     }
-  }, [rooms, roomId]);
+  }, [rooms, roomId, sceneScope]);
 
-  const canCreate = Boolean(roomId && selectedDeviceIds.length > 0);
+  // Revoke editor access as soon as membership or device visibility changes.
+  useEffect(() => {
+    if (editingSceneId && !scenes.some((scene) => scene.id === editingSceneId)) {
+      closeEditor();
+    }
+  }, [editingSceneId, scenes, closeEditor]);
+
+  const permittedSelection = sceneSelectionInScope(selectedDeviceIds, devices, sceneScope, roomId);
+  const canCreate = Boolean((sceneScope === 'home' || roomId) && permittedSelection.length > 0);
   const contentStyle: StyleProp<ViewStyle> = [
     styles.content,
     {
@@ -354,6 +399,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   ];
   const modalCardStyle: StyleProp<ViewStyle> = [
     styles.modalCard,
+    modalSizing.card,
     {
       borderRadius: modalRadius,
       maxWidth: isTablet ? 640 : undefined,
@@ -414,16 +460,6 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     styles.modalPrimaryText,
     { fontSize: modalLabelSize },
   ];
-  const roomPillStyle = (active: boolean): StyleProp<ViewStyle> => [
-    styles.roomPill,
-    { height: roomPillHeight, borderRadius: Math.round(roomPillHeight / 2) },
-    active && styles.roomPillActive,
-  ];
-  const roomPillTextStyle = (active: boolean): StyleProp<TextStyle> => [
-    styles.roomPillText,
-    { fontSize: modalLabelSize },
-    active && styles.roomPillTextActive,
-  ];
   const deviceChipStyle = (active?: boolean): StyleProp<ViewStyle> => [
     styles.deviceChip,
     {
@@ -459,18 +495,23 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   ];
 
   const openCreate = () => {
+    beginEditor();
     setShowCreate(true);
     setEditingSceneId(null);
     setSceneName("");
+    setSceneScope('home');
+    setRoomId('');
     setSelectedDeviceIds([]);
     setOverrides({});
   };
 
   const handleCreate = () => {
-    if (!roomId) return;
+    // Validate the captured opening again at the mutation boundary, including away-and-back changes.
+    if (!editorSession || editorSession.invalidated || activeEditorSession.current !== editorSession || homeEditorScope(useHomeStore.getState()) !== editorSession.scope) return;
+    if (sceneScope === 'room' && !roomId) return;
     const room = rooms.find((r) => r.id === roomId);
-    const name = sceneName.trim() || `${room?.name ?? "Room"} Scene`;
-    const actions = selectedDeviceIds
+    const name = sceneName.trim() || `${sceneScope === 'home' ? 'Whole home' : room?.name ?? 'Room'} Scene`;
+    const actions = permittedSelection
       .map((id) => deviceMap.get(id))
       .filter(Boolean)
       .map((device) =>
@@ -479,22 +520,21 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     if (!actions.length) return;
 
     if (editingSceneId) {
-      updateScene(editingSceneId, { roomId, name, actions });
+      updateScene(editingSceneId, { roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, actions });
     } else {
-      addScene({ roomId, name, actions });
+      addScene({ roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, actions });
     }
-    setShowCreate(false);
-    setSceneName("");
-    setSelectedDeviceIds([]);
-    setOverrides({});
-    setEditingSceneId(null);
+    closeEditor();
   };
 
   const openEdit = (scene: Scene) => {
+    if (!sceneIsVisible(scene, rooms, devices)) return;
+    beginEditor();
     setEditingSceneId(scene.id);
     setShowCreate(true);
     setSceneName(scene.name);
-    setRoomId(scene.roomId);
+    setSceneScope(isWholeHomeScene(scene) ? 'home' : 'room');
+    setRoomId(isWholeHomeScene(scene) ? '' : scene.roomId);
     const deviceIds = Array.from(
       new Set(scene.actions.map((action) => action.deviceId)),
     );
@@ -510,6 +550,22 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     setOverrides(nextOverrides);
   };
 
+  /** Switching scope prunes other rooms only when the user explicitly chooses One room. */
+  const changeSceneScope = (scope: SceneEditorScope) => {
+    const nextRoomId = scope === 'home' ? '' : roomId || rooms[0]?.id || '';
+    setSceneScope(scope);
+    setRoomId(nextRoomId);
+    setSelectedDeviceIds((ids) => sceneSelectionInScope(ids, devices, scope, nextRoomId));
+  };
+
+  /** Whole-home room tabs are filters and never discard selections made elsewhere. */
+  const changeSceneRoom = (nextRoomId: string) => {
+    setRoomId(nextRoomId);
+    if (sceneScope === 'room') {
+      setSelectedDeviceIds((ids) => sceneSelectionInScope(ids, devices, sceneScope, nextRoomId));
+    }
+  };
+
   const updateOverride = (deviceId: string, patch: Partial<Device>) => {
     setOverrides((prev) => ({
       ...prev,
@@ -518,20 +574,13 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   };
 
   const toggleDeviceSelection = (device: Device) => {
-    setSelectedDeviceIds((prev) => {
-      const isSelected = prev.includes(device.id);
-      setOverrides((current) => {
-        const next = { ...current };
-        if (isSelected) {
-          delete next[device.id];
-        } else if (!next[device.id]) {
-          next[device.id] = {};
-        }
-        return next;
-      });
-      return isSelected
-        ? prev.filter((id) => id !== device.id)
-        : [...prev, device.id];
+    const isSelected = selectedDeviceIds.includes(device.id);
+    setSelectedDeviceIds((previous) => isSelected ? previous.filter((id) => id !== device.id) : [...previous, device.id]);
+    setOverrides((current) => {
+      const next = { ...current };
+      if (isSelected) delete next[device.id];
+      else if (!next[device.id]) next[device.id] = {};
+      return next;
     });
   };
 
@@ -612,7 +661,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
                 {!embedded && <View>
                   <Text style={headerTitleStyle}>Scenes</Text>
                   <Text style={headerSubtitleStyle}>
-                    One-tap moods for each room.
+                    One-tap moods for a room or your whole home.
                   </Text>
                 </View>}
                 <View style={headerActionsStyle}>
@@ -633,7 +682,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
                   />
                   {activeSceneId ? (
                     <HeaderPill
-                      label="Clear active"
+                      label="Clear last used"
                       icon="close-circle"
                       iconSize={Math.round(16 * scale)}
                       style={clearPillStyle}
@@ -674,20 +723,19 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
 
       <ModalCard
         visible={showCreate}
-        onRequestClose={() => {
-          setShowCreate(false);
-          setEditingSceneId(null);
-        }}
-        onBackdropPress={() => {
-          setShowCreate(false);
-          setEditingSceneId(null);
-        }}
+        animationType="none"
+        onRequestClose={closeEditor}
+        onBackdropPress={closeEditor}
         colors={embedded ? [theme.colors.card2, theme.colors.card2] : [theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <ScrollView
+          style={styles.modalScroll}
           contentContainerStyle={modalContentStyle}
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
+          keyboardShouldPersistTaps="handled"
         >
           <Text style={modalTitleStyle}>
             {editingSceneId ? "Edit scene" : "Create scene"}
@@ -695,7 +743,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           <Text style={modalSubStyle}>
             {editingSceneId
               ? "Update your scene settings."
-              : "Capture a mood for this room."}
+              : "Bring your home together in one touch."}
           </Text>
 
           <ModalField label="Scene name" labelStyle={modalLabelStyle}>
@@ -709,32 +757,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
             />
           </ModalField>
 
-          <ModalField label="Room" labelStyle={modalLabelStyle}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.roomRow}
-            >
-              {rooms.map((room) => {
-                const active = room.id === roomId;
-                return (
-                  <Pressable
-                    key={room.id}
-                    style={roomPillStyle(active)}
-                    onPress={() => {
-                      setRoomId(room.id);
-                      setSelectedDeviceIds([]);
-                      setOverrides({});
-                    }}
-                  >
-                    <Text style={roomPillTextStyle(active)}>
-                      {room.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </ModalField>
+          <SceneScopePicker scope={sceneScope} roomId={roomId} rooms={rooms} selectedCount={permittedSelection.length} onScopeChange={changeSceneScope} onRoomChange={changeSceneRoom} />
 
           <ModalField label="Devices" labelStyle={modalLabelStyle}>
             {roomDevices.length === 0 ? (
@@ -746,6 +769,11 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
                   return (
                     <Pressable
                       key={device.id}
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={`Include ${device.name}`}
+                      accessibilityState={{ checked: active }}
+                      aria-checked={active}
+                      {...sceneChoiceKeyboard(() => toggleDeviceSelection(device))}
                       style={deviceChipStyle(active)}
                       onPress={() => toggleDeviceSelection(device)}
                     >
@@ -770,13 +798,13 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           </ModalField>
 
           <ModalField label="Controls" labelStyle={modalLabelStyle}>
-            {selectedDeviceIds.length === 0 ? (
+            {permittedSelection.length === 0 ? (
               <Text style={modalHintStyle}>
                 Select devices to configure scene controls.
               </Text>
             ) : (
               <View style={styles.controlsStack}>
-                {selectedDeviceIds.map((id) => {
+                {permittedSelection.map((id) => {
                   const device = deviceMap.get(id);
                   if (!device) return null;
                   return (
@@ -794,16 +822,13 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
                 <Text style={modalHintStyle}>
                   Scenes capture the current device settings.
                 </Text>
-
+        </ScrollView>
         <ModalActionRow
-          style={styles.modalRow}
+          style={[styles.modalRow, styles.modalFooter]}
           actions={[
             {
               label: "Cancel",
-              onPress: () => {
-                setShowCreate(false);
-                setEditingSceneId(null);
-              },
+              onPress: closeEditor,
               style: modalGhostStyle,
               textStyle: modalGhostTextStyle,
             },
@@ -816,25 +841,28 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
             },
           ]}
         />
-        </ScrollView>
       </ModalCard>
 
       <ModalCard
         visible={Boolean(detailScene)}
+        animationType="none"
         onRequestClose={() => setDetailSceneId(null)}
         onBackdropPress={() => setDetailSceneId(null)}
         colors={embedded ? [theme.colors.card2, theme.colors.card2] : [theme.colors.card, theme.colors.card2]}
         cardStyle={modalCardStyle}
       >
         <ScrollView
+          style={styles.modalScroll}
           contentContainerStyle={modalContentStyle}
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
         >
           <Text style={modalTitleStyle}>
             {detailScene?.name ?? "Scene details"}
           </Text>
           <Text style={modalSubStyle}>
-            {detailRoom?.name ?? "Room"} • {detailScene?.actions.length ?? 0}{" "}
+            {detailScene ? sceneScopeLabel(detailScene, rooms) : 'Scene'} • {detailScene?.actions.length ?? 0}{" "}
             actions • {detailDevices.length} devices
           </Text>
 
@@ -846,16 +874,17 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
                   <Ionicons
                     name={
                       detailScene?.id === activeSceneId
-                        ? "checkmark-circle"
+                        ? "time-outline"
                         : "moon"
                     }
                     size={Math.round(14 * scale)}
                     color={theme.colors.text}
                   />
                   <Text style={detailStatusTextStyle}>
-                    {detailScene?.id === activeSceneId ? "Active" : "Idle"}
+                    {detailScene?.id === activeSceneId ? "Last used" : "Saved scene"}
                   </Text>
                 </View>
+          <Text style={modalHintStyle}>A scene saves desired settings. Devices may have changed since it was last used.</Text>
 
           <ModalField label="Actions" labelStyle={modalLabelStyle}>
             {detailActionLabels.length === 0 ? (
@@ -898,9 +927,9 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
               </View>
             )}
           </ModalField>
-
+        </ScrollView>
           <ModalActionRow
-            style={styles.modalRow}
+            style={[styles.modalRow, styles.modalFooter]}
             actions={[
               {
                 label: "Close",
@@ -929,7 +958,6 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
               },
             ]}
           />
-        </ScrollView>
       </ModalCard>
     </View>
   );
@@ -1133,8 +1161,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
-    maxHeight: "85%",
   },
+  modalScroll: { flexShrink: 1, minHeight: 0 },
+  modalFooter: { paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: theme.colors.stroke },
   modalContent: { padding: 18 },
   modalTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 18 },
   modalSub: { color: theme.colors.subtext, fontWeight: "700", marginTop: 6 },
@@ -1154,27 +1183,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontWeight: "700",
   },
-  roomRow: { gap: 8, paddingVertical: 6 },
-  roomPill: {
-    paddingHorizontal: 12,
-    height: 34,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  roomPillActive: {
-    backgroundColor: theme.colors.accent2,
-    borderColor: theme.colors.accent,
-  },
-  roomPillText: {
-    color: theme.colors.subtext,
-    fontWeight: "800",
-    fontSize: 12,
-  },
-  roomPillTextActive: { color: theme.colors.text },
   deviceGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   deviceChip: {
     flexDirection: "row",
@@ -2006,7 +2014,7 @@ function SceneCard({
           <View style={headerBodyStyle}>
             <Text style={sceneTitleStyle}>{scene.name}</Text>
             <Text style={sceneSubStyle}>
-              {scene.actions.length} actions • {devices.length} devices
+              {isActive ? 'Last used • ' : ''}{scene.actions.length} actions • {devices.length} devices
             </Text>
           </View>
           <Pressable
@@ -2015,11 +2023,11 @@ function SceneCard({
             hitSlop={8}
           >
             <Ionicons
-              name={isActive ? "checkmark-circle" : "play"}
+              name="play"
               size={Math.round(14 * scaleFactor)}
               color={theme.colors.text}
             />
-            <Text style={runTextStyle}>{isActive ? runtimePolicy.requireRealTransport ? "Requested" : "Active" : "Run"}</Text>
+            <Text style={runTextStyle}>Run</Text>
           </Pressable>
         </View>
 

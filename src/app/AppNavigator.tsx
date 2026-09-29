@@ -61,7 +61,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   Profile: undefined;
   ManageRooms: undefined;
-  AutomationBuilder: { flowId?: string };
+  AutomationBuilder: { flowId?: string; routineId?: string; deviceId?: string; preset?: 'time' };
   Cameras: undefined;
   AuditLog: undefined;
   CameraViewer: { deviceId: string };

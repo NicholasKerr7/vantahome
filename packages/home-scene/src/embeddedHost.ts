@@ -23,3 +23,12 @@ export function reportSceneStatus(status: 'ready' | 'error'): void {
   if (host) host.postMessage(JSON.stringify(message));
   else if (window.parent !== window) window.parent.postMessage(message, '*');
 }
+
+/** Ask the native host to open its routine directory without exposing account or command data. */
+export function requestDeviceRoutines(deviceId: string): void {
+  if (!isEmbeddedScene()) return;
+  const message = { channel: 'vantahome-navigation', version: 1, type: 'device-routines', deviceId };
+  const host = (globalThis as SceneGlobals).ReactNativeWebView;
+  if (host) host.postMessage(JSON.stringify(message));
+  else if (window.parent !== window) window.parent.postMessage(message, '*');
+}

@@ -74,13 +74,13 @@ export default function DeviceScheduleModal({
       colors={MODAL_COLORS}
       cardStyle={cardStyle}
     >
-      <Text style={titleStyle}>New schedule</Text>
-      <Text style={subtitleStyle}>Pick a time and days to water.</Text>
+      <Text style={titleStyle}>New watering program</Text>
+      <Text style={subtitleStyle}>Choose a time and days for this device program.</Text>
 
       <ModalField label="Time" labelStyle={labelStyle}>
         <View style={timeRowStyle}>
           <TextInput
-            accessibilityLabel="Schedule hour"
+            accessibilityLabel="Program hour"
             value={schedHour}
             onChangeText={onChangeSchedHour}
             placeholder="06"
@@ -90,7 +90,7 @@ export default function DeviceScheduleModal({
           />
           <Text style={timeColonStyle}>:</Text>
           <TextInput
-            accessibilityLabel="Schedule minute"
+            accessibilityLabel="Program minute"
             value={schedMinute}
             onChangeText={onChangeSchedMinute}
             placeholder="00"

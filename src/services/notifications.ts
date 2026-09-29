@@ -44,13 +44,16 @@ export async function ensureNotificationsReady() {
   return permissionReady;
 }
 
+/** Recheck a caller's session guard after asynchronous OS permission handling. */
 export async function sendLocalNotification(
   title: string,
   body: string,
   data?: Record<string, unknown>,
+  options?: { shouldSend: () => boolean },
 ) {
+  if (options && !options.shouldSend()) return;
   const allowed = await ensureNotificationsReady();
-  if (!allowed) return;
+  if (!allowed || (options && !options.shouldSend())) return;
   await Notifications.scheduleNotificationAsync({
     content: {
       title,

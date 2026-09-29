@@ -5,6 +5,7 @@ export type SceneStatus = 'ready' | 'error';
 export type SceneSurfaceProps = {
   onStatus: (status: SceneStatus) => void;
   onSaveStatus?: (status: SimulationSaveStatus) => void;
+  onDeviceRoutines?: (deviceId: string) => void;
 };
 
 /** Reject arbitrary WebView messages, oversized payloads and future command-like messages. */

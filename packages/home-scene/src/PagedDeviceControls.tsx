@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CapabilityControls } from './CapabilityControls';
-import { getControlPages } from './deviceCapabilities';
-import { SIMULATION_SCHEDULE_NOTE } from './deviceControlCatalog';
+import { getInspectorPages } from './deviceRoutinePages';
+import { isEmbeddedScene, requestDeviceRoutines } from './embeddedHost';
 import type { DeviceDefinition } from './data';
 import type { DeviceState } from './state';
 import './paged-device-controls.css';
 
 const GROUPS = [
   { id: 'controls', label: 'Controls' }, { id: 'modes', label: 'Modes' },
-  { id: 'schedule', label: 'Schedule' }, { id: 'status', label: 'Status' },
+  { id: 'schedule', label: 'Routines' }, { id: 'status', label: 'Status' },
 ] as const;
 type GroupId = typeof GROUPS[number]['id'];
 
@@ -29,7 +29,7 @@ function useShortControlPages(): boolean {
 /** Present the shared control pages with visible navigation and accessible category tabs. */
 export function PagedDeviceControls({ device, current }: { device: DeviceDefinition; current: DeviceState }) {
   const short = useShortControlPages();
-  const pages = getControlPages(device, { maxControlsPerPage: short ? 2 : 3 });
+  const pages = getInspectorPages(device, short ? 2 : 3);
   const availableGroups = GROUPS.filter(({ id }) => pages.some((page) => page.group === id));
   const [selectedGroup, setSelectedGroup] = useState<GroupId>(pages[0]?.group ?? 'controls');
   const [pageIndex, setPageIndex] = useState(0);
@@ -75,9 +75,14 @@ export function PagedDeviceControls({ device, current }: { device: DeviceDefinit
       {GROUPS.map(({ id, label }) => <button key={id} id={`sheet-tab-${device.id}-${id}`} type="button" role="tab" data-control-group={id} aria-selected={selectedGroup === id} aria-controls={panelId} disabled={!availableGroups.some((group) => group.id === id)} tabIndex={selectedGroup === id ? 0 : -1} onClick={() => selectGroup(id)}>{label}</button>)}
     </div>
     <div ref={panel} id={panelId} className={`device-control-page ${page?.compact ? 'is-compact' : ''}`} role="tabpanel" aria-labelledby={`sheet-tab-${device.id}-${selectedGroup}`} tabIndex={-1}>
-      {selectedGroup === 'schedule' ? <p className="device-control-context">{SIMULATION_SCHEDULE_NOTE}</p> : null}
+      {selectedGroup === 'schedule' && page?.id !== 'shared-routines' ? <p className="device-control-context">Device timer preferences · Simulation only</p> : null}
       {selectedGroup === 'status' ? <p className="device-control-context">Simulation readings</p> : null}
-      {page ? <CapabilityControls device={device} current={current} capabilities={page.capabilities} prefix="sheet-" /> : <p className="device-control-empty">No additional settings for this device.</p>}
+      {page?.id === 'shared-routines' ? <div className="device-routine-entry">
+        <h3>One place for every routine</h3>
+        <p>Schedules and automatic actions are managed together in VantaHome. Device linking is required.</p>
+        <button type="button" className="device-routine-open" disabled={!isEmbeddedScene()} onClick={() => requestDeviceRoutines(device.id)}>View device routines</button>
+        <small>{isEmbeddedScene() ? 'Preview routines run while the app is open. An always-on hub is not connected.' : 'Open the VantaHome app to manage routines.'}</small>
+      </div> : page ? <CapabilityControls device={device} current={current} capabilities={page.capabilities} prefix="sheet-" /> : <p className="device-control-empty">No additional settings for this device.</p>}
     </div>
     <footer className="device-control-pagination">
       <button type="button" aria-label="Previous controls page" aria-controls={panelId} disabled={currentIndex === 0} onClick={() => changePage(currentIndex - 1)}><ChevronLeft size={16} aria-hidden="true" /><span>Previous</span></button>

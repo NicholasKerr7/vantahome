@@ -24,8 +24,8 @@ export const INTEGRATION_ENTRIES: readonly IntegrationEntry[] = [
     description: "Planned support for compatible Matter devices through your home hub.",
     nextStep: "Pairing Matter devices directly in VantaHome is not available. A compatible home hub will be required." },
   { id: "bridge", title: "Vanta Bridge", shortLabel: "Bridge", icon: "git-network-outline",
-    description: "The planned local connection to your home’s devices.",
-    nextStep: "Not connected yet. A compatible home hub and device setup will be required." },
+    description: "The planned connection to Home Assistant on a local home hub.",
+    nextStep: "Hub not connected. Routines currently run while the app is open. Secure pairing and verified device linking are still required." },
 ];
 
 /** Existing persisted “linked” flags record authorization progress, not a verified assistant connection. */

@@ -1,150 +1,111 @@
 import { deviceClient } from "./deviceClient";
 import { sendLocalNotification } from "./notifications";
-import {
-  useHomeStore,
-  type AutomationFlow,
-  type AutomationRule,
-  type FlowAction,
-  type FlowCondition,
-  type Weekday,
-} from "../store/useHomeStore";
+import { useHomeStore, type FlowCondition, type HomeState, type Weekday } from "../store/useHomeStore";
+import { runtimePolicy } from "../config/runtimeMode";
+import { roleHasPermission } from "../security/permissions";
+import { selectVisibleRoutines, type Routine } from "../store/routines";
 
 type FlowRuntimeOptions = {
   flowCooldownMs?: number;
   timeTickMs?: number;
 };
 
+type RuntimeScope = Pick<HomeState, "authenticatedUserId" | "activeHomeId" | "sessionEpoch" | "activeMemberId">;
 const WEEKDAYS: Weekday[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+/** Start the foreground preview executor; a hub remains necessary for always-on operation. */
 export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
-  const flowCooldownMs = options.flowCooldownMs ?? 10_000;
-  const timeTickMs = options.timeTickMs ?? 15_000;
-
-  const lastFlowRun = new Map<string, number>();
+  const cooldownMs = options.flowCooldownMs ?? 10_000;
+  const lastRun = new Map<string, number>();
   const lastTimeTrigger = new Map<string, string>();
-  const lastRuleRun = new Map<string, string>();
-  const running = new Set<string>();
+  const running = new Map<string, AbortController>();
   const lifetime = new AbortController();
+  const initial = useHomeStore.getState();
+  const scope: RuntimeScope = {
+    authenticatedUserId: initial.authenticatedUserId,
+    activeHomeId: initial.activeHomeId,
+    sessionEpoch: initial.sessionEpoch,
+    activeMemberId: initial.activeMemberId,
+  };
+  let deviceState = new Map(initial.devices.map((device) => [device.id, device.isOn]));
+  let presenceState = new Map(initial.household.map((member) => [member.id, member.status]));
 
-  let deviceState = snapshotDeviceState(useHomeStore.getState().devices);
-  let presenceState = snapshotPresence(useHomeStore.getState().household);
+  /** All triggers share the same canonical identity, cooldown and action dispatcher. */
+  const run = (routine: Routine) => {
+    if (!scopeIsCurrent(scope, lifetime.signal) || running.has(routine.id)) return;
+    const now = Date.now();
+    const previousRun = lastRun.get(routine.id);
+    if (previousRun !== undefined && now - previousRun < cooldownMs) return;
+    if (!conditionsPass(routine.conditions, new Date(), useHomeStore.getState())) return;
+    const execution = new AbortController();
+    const cancel = () => execution.abort();
+    lifetime.signal.addEventListener("abort", cancel, { once: true });
+    running.set(routine.id, execution);
+    lastRun.set(routine.id, now);
+    // A disabled run stays cancelled even if the routine is enabled again quickly.
+    const finish = () => {
+      lifetime.signal.removeEventListener("abort", cancel);
+      if (running.get(routine.id) === execution) running.delete(routine.id);
+    };
+    void executeActions(routine, scope, execution.signal).then(finish, finish);
+  };
 
-  const stateUnsub = useHomeStore.subscribe((state, prev) => {
-    if (state.devices !== prev.devices) {
-      const flows = useHomeStore.getState().flows;
-      state.devices.forEach((device) => {
-        const prevOn = deviceState.get(device.id);
-        if (prevOn === device.isOn) return;
-        deviceState.set(device.id, device.isOn);
-        flows.forEach((flow) => {
-          if (!flow.enabled) return;
-          flow.triggers.forEach((trigger, idx) => {
-            if (trigger.type !== "device") return;
-            if (trigger.deviceId !== device.id) return;
-            if (device.isOn !== (trigger.state === "on")) return;
-            runFlow(
-              flow,
-              flowCooldownMs,
-              running,
-              lastFlowRun,
-              `device-${idx}`,
-              lifetime.signal,
-            );
-          });
-        });
-      });
+  const stateUnsub = useHomeStore.subscribe((state, previous) => {
+    if (!scopeIsCurrent(scope, lifetime.signal)) {
+      running.forEach((execution) => execution.abort());
+      return;
     }
-
-    if (state.household !== prev.household) {
-      const flows = useHomeStore.getState().flows;
-      state.household.forEach((member) => {
-        const prevStatus = presenceState.get(member.id);
-        if (prevStatus === member.status) return;
-        presenceState.set(member.id, member.status);
-        flows.forEach((flow) => {
-          if (!flow.enabled) return;
-          flow.triggers.forEach((trigger, idx) => {
-            if (trigger.type !== "presence") return;
-            if (trigger.memberId !== member.id) return;
-            if (trigger.status !== member.status) return;
-            runFlow(
-              flow,
-              flowCooldownMs,
-              running,
-              lastFlowRun,
-              `presence-${idx}`,
-              lifetime.signal,
-            );
-          });
-        });
-      });
+    const routines = selectVisibleRoutines(state);
+    for (const [id, execution] of running) {
+      if (!routines.some((routine) => routine.id === id && routine.enabled)) {
+        execution.abort();
+        running.delete(id);
+      }
     }
-
-    if (state.lastSceneRun && state.lastSceneRun !== prev.lastSceneRun) {
-      const flows = useHomeStore.getState().flows;
-      flows.forEach((flow) => {
-        if (!flow.enabled) return;
-        flow.triggers.forEach((trigger, idx) => {
-          if (trigger.type !== "scene") return;
-          if (trigger.sceneId !== state.lastSceneRun?.sceneId) return;
-          runFlow(
-            flow,
-            flowCooldownMs,
-            running,
-            lastFlowRun,
-            `scene-${idx}`,
-            lifetime.signal,
-          );
-        });
+    const changedDevices = state.devices === previous.devices ? [] : state.devices.filter((device) =>
+      deviceState.has(device.id) && deviceState.get(device.id) !== device.isOn,
+    );
+    const changedMembers = state.household === previous.household ? [] : state.household.filter((member) =>
+      presenceState.has(member.id) && presenceState.get(member.id) !== member.status,
+    );
+    // Snapshot first: a device command may synchronously cause another store update.
+    if (state.devices !== previous.devices) deviceState = new Map(state.devices.map((device) => [device.id, device.isOn]));
+    if (state.household !== previous.household) presenceState = new Map(state.household.map((member) => [member.id, member.status]));
+    const sceneId = state.lastSceneRun !== previous.lastSceneRun ? state.lastSceneRun?.sceneId : undefined;
+    if (!changedDevices.length && !changedMembers.length && !sceneId) return;
+    for (const routine of routines) {
+      if (!routine.enabled) continue;
+      const matches = routine.triggers.some((trigger) => {
+        if (trigger.type === "device") return changedDevices.some((device) =>
+          device.id === trigger.deviceId && device.isOn === (trigger.state === "on"),
+        );
+        if (trigger.type === "presence") return changedMembers.some((member) =>
+          member.id === trigger.memberId && member.status === trigger.status,
+        );
+        return trigger.type === "scene" && trigger.sceneId === sceneId;
       });
+      if (matches) run(routine);
     }
   });
 
+  /** One minute marker covers all matching triggers, including promoted schedules. */
   const tick = () => {
+    if (!scopeIsCurrent(scope, lifetime.signal)) return;
     const now = new Date();
     const minuteKey = timeKey(now);
     const state = useHomeStore.getState();
-
-    state.flows.forEach((flow) => {
-      if (!flow.enabled) return;
-      flow.triggers.forEach((trigger, idx) => {
-        if (trigger.type !== "time") return;
-        if (
-          trigger.hour !== now.getHours() ||
-          trigger.minute !== now.getMinutes()
-        )
-          return;
-        const triggerKey = `${flow.id}:${idx}`;
-        if (lastTimeTrigger.get(triggerKey) === minuteKey) return;
-        if (!conditionsPass(flow.conditions, now, state)) return;
-        lastTimeTrigger.set(triggerKey, minuteKey);
-        runFlow(
-          flow,
-          flowCooldownMs,
-          running,
-          lastFlowRun,
-          `time-${idx}`,
-          lifetime.signal,
-        );
-      });
-    });
-
-    state.rules.forEach((rule) => {
-      if (!rule.enabled) return;
-      if (
-        rule.trigger.hour !== now.getHours() ||
-        rule.trigger.minute !== now.getMinutes()
-      )
-        return;
-      if (lastRuleRun.get(rule.id) === minuteKey) return;
-      lastRuleRun.set(rule.id, minuteKey);
-      runRule(rule);
-    });
+    for (const routine of selectVisibleRoutines(state)) {
+      if (!routine.enabled || lastTimeTrigger.get(routine.id) === minuteKey) continue;
+      const matches = routine.triggers.some((trigger) => trigger.type === "time" &&
+        trigger.hour === now.getHours() && trigger.minute === now.getMinutes(),
+      );
+      if (!matches || !conditionsPass(routine.conditions, now, state)) continue;
+      lastTimeTrigger.set(routine.id, minuteKey);
+      run(routine);
+    }
   };
-
-  const timer = setInterval(tick, timeTickMs);
+  const timer = setInterval(tick, options.timeTickMs ?? 15_000);
   tick();
-
   return () => {
     lifetime.abort();
     clearInterval(timer);
@@ -152,159 +113,86 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
   };
 }
 
-function snapshotDeviceState(devices: Array<{ id: string; isOn: boolean }>) {
-  const map = new Map<string, boolean>();
-  devices.forEach((d) => map.set(d.id, d.isOn));
-  return map;
-}
-
-function snapshotPresence(
-  members: Array<{ id: string; status: "home" | "away" }>,
-) {
-  const map = new Map<string, "home" | "away">();
-  members.forEach((m) => map.set(m.id, m.status));
-  return map;
-}
-
-function runFlow(
-  flow: AutomationFlow,
-  cooldownMs: number,
-  running: Set<string>,
-  lastFlowRun: Map<string, number>,
-  _reason: string,
-  signal: AbortSignal,
-) {
-  if (running.has(flow.id)) return;
-  const now = Date.now();
-  const last = lastFlowRun.get(flow.id) ?? 0;
-  if (now - last < cooldownMs) return;
-
+/** Fence delayed work to the account, home and actor that started this runtime. */
+function scopeIsCurrent(scope: RuntimeScope, signal: AbortSignal): boolean {
   const state = useHomeStore.getState();
-  if (!conditionsPass(flow.conditions, new Date(), state)) return;
-
-  running.add(flow.id);
-  lastFlowRun.set(flow.id, now);
-
-  void executeActions(flow.actions, signal).then(
-    () => {
-      running.delete(flow.id);
-    },
-    () => {
-      running.delete(flow.id);
-    },
-  );
+  if (signal.aborted || scope.authenticatedUserId !== state.authenticatedUserId ||
+    scope.activeHomeId !== state.activeHomeId || scope.sessionEpoch !== state.sessionEpoch ||
+    scope.activeMemberId !== state.activeMemberId) return false;
+  const localDemo = runtimePolicy.allowUnauthenticatedDemo && !state.accountUserId &&
+    !state.authenticatedUserId && !state.activeHomeId;
+  const verifiedMembership = state.membershipReady && Boolean(state.authenticatedUserId && state.activeHomeId) &&
+    (!state.accountUserId || state.accountUserId === state.authenticatedUserId);
+  if (!localDemo && !verifiedMembership) return false;
+  const member = state.household.find((candidate) => candidate.id === state.activeMemberId);
+  if (!member) return false;
+  const overrides = state.memberPermissionOverrides.filter((item) => item.memberId === member.id);
+  // Execution may serve read-only members, but cannot observe a revoked household view.
+  return roleHasPermission(member.role, "device.view", overrides);
 }
 
-function conditionsPass(
-  conditions: FlowCondition[],
-  now: Date,
-  state: ReturnType<typeof useHomeStore.getState>,
-) {
-  if (!conditions.length) return true;
-  const deviceMap = new Map(state.devices.map((d) => [d.id, d]));
+/** Conditions are ANDed; overnight ranges intentionally wrap across midnight. */
+function conditionsPass(conditions: FlowCondition[], now: Date, state: HomeState): boolean {
+  const devices = new Map(state.devices.map((device) => [device.id, device]));
   const day = WEEKDAYS[now.getDay()];
   const minutes = now.getHours() * 60 + now.getMinutes();
-
   return conditions.every((condition) => {
     switch (condition.type) {
       case "time-range": {
         const start = condition.startHour * 60 + condition.startMinute;
         const end = condition.endHour * 60 + condition.endMinute;
-        if (start <= end) return minutes >= start && minutes <= end;
-        return minutes >= start || minutes <= end;
+        return start <= end ? minutes >= start && minutes <= end : minutes >= start || minutes <= end;
       }
       case "device": {
-        const device = deviceMap.get(condition.deviceId);
-        if (!device) return false;
-        return device.isOn === (condition.state === "on");
+        const device = devices.get(condition.deviceId);
+        return Boolean(device && device.isOn === (condition.state === "on"));
       }
-      case "day":
-        return condition.days.includes(day);
-      default:
-        return true;
+      case "day": return condition.days.includes(day);
     }
   });
 }
 
-async function executeActions(actions: FlowAction[], signal: AbortSignal) {
-  for (const action of actions) {
-    if (signal.aborted) return;
-    if (action.type === "delay") {
-      const seconds = Number.isFinite(action.seconds)
-        ? Math.max(1, action.seconds)
-        : 1;
-      await sleep(seconds * 1000, signal);
-      continue;
-    }
-    if (action.type === "toggle") {
-      await deviceClient.sendCommand({
-        op: "toggle",
-        deviceId: action.deviceId,
-        on: action.on,
-      });
-      continue;
-    }
-    if (action.type === "set-ac") {
-      await deviceClient.sendCommand({
-        op: "set-temp",
-        deviceId: action.deviceId,
-        value: action.tempC,
-        mode: action.mode,
-      });
-      continue;
-    }
-    if (action.type === "set-brightness") {
-      await deviceClient.sendCommand({
-        op: "set-brightness",
-        deviceId: action.deviceId,
-        value: action.brightness,
-      });
-      continue;
-    }
-    if (action.type === "run-scene") {
-      await useHomeStore.getState().runScene(action.sceneId, { signal });
-      continue;
-    }
-    if (action.type === "notify") {
-      await sendLocalNotification("VantaHome automation", action.message, {
-        kind: "automation",
-      });
+/** Sequential actions retain the normal command authorization and scene boundaries. */
+async function executeActions(routine: Routine, scope: RuntimeScope, signal: AbortSignal) {
+  for (const action of routine.actions) {
+    if (!scopeIsCurrent(scope, signal)) return;
+    const current = selectVisibleRoutines(useHomeStore.getState()).find((item) => item.id === routine.id);
+    if (!current?.enabled) return;
+    switch (action.type) {
+      case "delay":
+        await sleep((Number.isFinite(action.seconds) ? Math.max(1, action.seconds) : 1) * 1000, signal);
+        break;
+      case "toggle":
+        await deviceClient.sendCommand({ op: "toggle", deviceId: action.deviceId, on: action.on });
+        break;
+      case "set-ac":
+        await deviceClient.sendCommand({ op: "set-temp", deviceId: action.deviceId, value: action.tempC, mode: action.mode });
+        break;
+      case "set-brightness":
+        await deviceClient.sendCommand({ op: "set-brightness", deviceId: action.deviceId, value: action.brightness });
+        break;
+      case "run-scene":
+        await useHomeStore.getState().runScene(action.sceneId, { signal });
+        break;
+      case "notify":
+        await sendLocalNotification("VantaHome routine", action.message, { kind: "automation" }, {
+          shouldSend: () => scopeIsCurrent(scope, signal) && Boolean(
+            selectVisibleRoutines(useHomeStore.getState()).find((item) => item.id === routine.id)?.enabled,
+          ),
+        });
+        break;
     }
   }
 }
 
-function runRule(rule: AutomationRule) {
-  if (rule.action.type === "set-ac") {
-    Promise.resolve(
-      deviceClient.sendCommand({
-        op: "set-temp",
-        deviceId: rule.action.deviceId,
-        value: rule.action.tempC,
-        mode: rule.action.mode,
-      }),
-    ).catch(() => {});
-    return;
-  }
-  Promise.resolve(
-    deviceClient.sendCommand({
-      op: "toggle",
-      deviceId: rule.action.deviceId,
-      on: rule.action.on,
-    }),
-  ).catch(() => {});
+/** Local date keys preserve existing wall-clock schedule semantics. */
+function timeKey(now: Date): string {
+  return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}:${now.getMinutes()}`;
 }
 
-function timeKey(now: Date) {
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${d}-${hh}:${mm}`;
-}
-
-function sleep(ms: number, signal: AbortSignal) {
-  return new Promise<void>((resolve) => {
+/** Abortable delays stop immediately when the foreground session ends. */
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
     const done = () => {
       clearTimeout(timer);
       signal.removeEventListener("abort", done);

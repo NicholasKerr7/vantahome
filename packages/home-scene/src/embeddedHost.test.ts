@@ -1,8 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getModelUrl, isEmbeddedScene, reportSceneStatus } from './embeddedHost';
+import { getModelUrl, isEmbeddedScene, reportSceneStatus, requestDeviceRoutines } from './embeddedHost';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });
 describe('embedded simulation boundary', () => {
+  it('opens device routines through a minimal navigation request only when embedded', () => {
+    const postMessage = vi.fn();
+    vi.stubGlobal('window', { parent: { postMessage } });
+    requestDeviceRoutines('living-light');
+    expect(postMessage).not.toHaveBeenCalled();
+    vi.stubGlobal('__VANTAHOME_EMBEDDED__', true);
+    const request = { channel: 'vantahome-navigation', version: 1, type: 'device-routines', deviceId: 'living-light' };
+    requestDeviceRoutines('living-light');
+    expect(postMessage).toHaveBeenCalledWith(request, '*');
+    postMessage.mockClear();
+    vi.stubGlobal('ReactNativeWebView', { postMessage });
+    requestDeviceRoutines('living-light');
+    expect(postMessage).toHaveBeenCalledWith(JSON.stringify(request));
+  });
   it('uses packaged model data only when available', () => {
     expect(getModelUrl('ground')).toContain('models/ground.glb');
     vi.stubGlobal('__VANTAHOME_MODEL_URLS', { ground: 'data:model/gltf-binary;base64,abc' });

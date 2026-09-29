@@ -6,6 +6,8 @@ import { applyDeviceStatePatch } from "./deviceState";
 import { roleHasPermission } from "../security/permissions";
 import { runtimePolicy } from "../config/runtimeMode";
 import { addMissingGasDemoDevices, createGasDemoDevices } from "../features/gas/gasDemoDevices";
+import { assertCanManageRoutines, assertRoutineReferences } from "./routineAccess";
+import { nextRoutineRecordId, removeRoutineCollections, routineDraft, routineId, selectRoutines, updateRoutineCollections, type RoutineDraft } from "./routineModel";
 import type { GAS_EVENTS } from "../../packages/home-scene/src/gasSimulation";
 
 export const AC_TEMP_MIN_C = 15;
@@ -345,6 +347,8 @@ export type SceneAction =
 
 export type Scene = {
   id: string;
+  /** Older scenes without a scope remain room scenes. */
+  scope?: "home" | "room";
   roomId: string;
   name: string;
   actions: SceneAction[];
@@ -387,6 +391,8 @@ export type FlowAction =
 
 export type AutomationFlow = {
   id: string;
+  /** Preserves a schedule identity when upgraded to multiple steps/conditions. */
+  legacyRuleId?: string;
   name: string;
   enabled: boolean;
   triggers: FlowTrigger[];
@@ -496,6 +502,11 @@ export type HomeState = {
     overrides: MemberPermissionOverride[],
   ) => void;
 
+  addRoutine: (routine: RoutineDraft) => string;
+  updateRoutine: (routineId: string, patch: Partial<RoutineDraft>) => void;
+  toggleRoutine: (routineId: string) => void;
+  removeRoutine: (routineId: string) => void;
+
   addRule: (rule: Omit<AutomationRule, "id">) => void;
   toggleRule: (ruleId: string) => void;
   updateRule: (ruleId: string, patch: Partial<AutomationRule>) => void;
@@ -590,6 +601,17 @@ export const selectVisibleDevices = (state: HomeState) => {
 };
 
 // Demo data to keep the UI populated before a real backend is wired up.
+/** Share the same visibility rules as the routine editor at the instant of a write. */
+function assertRoutineWriteAccess(state: HomeState, draft: RoutineDraft): void {
+  assertCanManageRoutines(state);
+  assertRoutineReferences(draft, {
+    devices: selectVisibleDevices(state),
+    rooms: selectVisibleRooms(state),
+    scenes: state.scenes,
+    household: state.household,
+  });
+}
+
 const profileSeed: Profile = {
   name: "Nick",
   email: "nick@example.com",
@@ -1793,7 +1815,7 @@ export const useHomeStore = create<HomeState>()(
           const devices = state.devices.map((d) =>
             d.roomId === roomId ? { ...d, roomId: fallbackRoom.id } : d,
           );
-          const scenes = state.scenes.filter((s) => s.roomId !== roomId);
+          const scenes = state.scenes.filter((s) => s.scope === "home" || s.roomId !== roomId);
           const roomMembers = state.roomMembers.map((entry) => ({
             ...entry,
             roomIds: entry.roomIds.filter((id) => id !== roomId),
@@ -2020,9 +2042,40 @@ export const useHomeStore = create<HomeState>()(
           return { roomMembers: [...others, { memberId, roomIds: next }] };
         }),
 
+      // Every new routine uses the shared model; legacy records stay readable.
+      addRoutine: (draft) => {
+        const current = get();
+        assertRoutineWriteAccess(current, draft);
+        const id = nextRoutineRecordId(current.flows, "f");
+        set((state) => ({ flows: [...state.flows, { ...routineDraft(draft), id }] }));
+        return routineId("flow", id);
+      },
+      updateRoutine: (id, patch) => set((state) => {
+        assertCanManageRoutines(state);
+        const existing = selectRoutines(state).find((candidate) => candidate.id === id);
+        if (!existing) return {};
+        assertRoutineWriteAccess(state, existing);
+        assertRoutineWriteAccess(state, { ...existing, ...patch });
+        return updateRoutineCollections(state, id, patch);
+      }),
+      toggleRoutine: (id) => set((state) => {
+        assertCanManageRoutines(state);
+        const routine = selectRoutines(state).find((candidate) => candidate.id === id);
+        if (!routine) return {};
+        assertRoutineWriteAccess(state, routine);
+        return updateRoutineCollections(state, id, { enabled: !routine.enabled });
+      }),
+      removeRoutine: (id) => set((state) => {
+        assertCanManageRoutines(state);
+        const routine = selectRoutines(state).find((candidate) => candidate.id === id);
+        if (!routine) return {};
+        assertRoutineWriteAccess(state, routine);
+        return removeRoutineCollections(state, id);
+      }),
+
       addRule: (rule) =>
         set((state) => ({
-          rules: [...state.rules, { ...rule, id: `a${Date.now()}` }],
+          rules: [...state.rules, { ...rule, id: nextRoutineRecordId(state.rules, "a") }],
         })),
 
       toggleRule: (ruleId) =>
@@ -2045,32 +2098,35 @@ export const useHomeStore = create<HomeState>()(
         })),
 
       quickScheduleDevice: (deviceId, time) => {
+        assertCanManageRoutines(get());
         const d = get().devices.find((x) => x.id === deviceId);
         if (!d) return;
 
         const hh = String(time.hour).padStart(2, "0");
         const mm = String(time.minute).padStart(2, "0");
 
-        // AC needs temperature/mode; everything else can use a simple toggle rule.
+        // Device shortcuts create ordinary time-triggered routines.
         if (d.kind === "ac") {
-          get().addRule({
+          get().addRoutine({
             name: `${d.name} → ${hh}:${mm}`,
             enabled: true,
-            trigger: { type: "time", hour: time.hour, minute: time.minute },
-            action: {
+            triggers: [{ type: "time", hour: time.hour, minute: time.minute }],
+            conditions: [],
+            actions: [{
               type: "set-ac",
               deviceId,
               tempC: d.tempC ?? AC_TEMP_MIN_C,
               mode: d.mode ?? "cold",
-            },
+            }],
           });
         } else {
-          get().addRule({
+          get().addRoutine({
             name: `${d.name} ON @ ${hh}:${mm}`,
             enabled: true,
-            trigger: { type: "time", hour: time.hour, minute: time.minute },
-            action: { type: "toggle", deviceId, on: true },
-          } as AutomationRule);
+            triggers: [{ type: "time", hour: time.hour, minute: time.minute }],
+            conditions: [],
+            actions: [{ type: "toggle", deviceId, on: true }],
+          });
         }
       },
 
@@ -2134,7 +2190,7 @@ export const useHomeStore = create<HomeState>()(
 
       addFlow: (flow) =>
         set((state) => ({
-          flows: [...state.flows, { ...flow, id: `f${Date.now()}` }],
+          flows: [...state.flows, { ...flow, id: nextRoutineRecordId(state.flows, "f") }],
         })),
 
       updateFlow: (flowId, patch) =>

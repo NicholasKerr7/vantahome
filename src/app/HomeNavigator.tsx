@@ -1,5 +1,5 @@
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createNativeStackNavigator, type NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import FeatureScreenFrame from '../features/home-shell/FeatureScreenFrame';
@@ -11,7 +11,7 @@ import { openHomeFeature } from './homeNavigation';
 /** Preserve nested links from existing room, camera, profile, and notification flows. */
 export type HomeStackParamList = {
   Home: undefined;
-  Automations: undefined;
+  Automations: { deviceId?: string } | undefined;
   Scenes: undefined;
   Settings: undefined;
   Renderer: undefined;
@@ -32,9 +32,9 @@ function ScenesFeature() {
 }
 
 /** Retain schedules and the automation builder without a second dashboard. */
-function AutomationsFeature() {
+function AutomationsFeature({ route }: NativeStackScreenProps<HomeStackParamList, 'Automations'>) {
   const Screen = require('../screens/AutomationsScreen').default as typeof import('../screens/AutomationsScreen').default;
-  return <FeatureScreenFrame title="Routines" section="automations"><Screen embedded /></FeatureScreenFrame>;
+  return <FeatureScreenFrame title="Routines" section="automations"><Screen embedded deviceId={route.params?.deviceId} /></FeatureScreenFrame>;
 }
 
 /** Keep account preferences and transport diagnostics reachable from the house. */

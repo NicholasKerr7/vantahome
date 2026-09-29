@@ -27,8 +27,8 @@ import { isGasDevice } from "../features/gas/gasDemoDevices";
 /**
  * Long-press device sheet:
  * - Presents “quick controls” (sliders / buttons) without leaving the Room screen
- * - Adds simple schedule rules (prototype only)
- * - Links into the Automations tab / Device detail screen
+ * - Adds daily routines through the shared routine model
+ * - Links into Routines / Device detail screen
  *
  * Styling:
  * - Bottom sheet background is transparent
@@ -42,6 +42,7 @@ type Props = {
   onGoToAutomations: () => void;
   onToggle: () => void;
   onQuickSchedule: (time: { hour: number; minute: number }) => void;
+  canCreateRoutines?: boolean;
   onDelete?: () => void;
 };
 
@@ -54,6 +55,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
       onGoToAutomations,
       onToggle,
       onQuickSchedule,
+      canCreateRoutines = false,
       onDelete,
     },
     ref,
@@ -296,32 +298,38 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                   </SheetSection>
 
                   {!isGasDevice(device.kind) && <SheetSection
-                    title="Schedule"
+                    title="Quick routines"
                     sectionStyle={sectionStyle}
                     titleStyle={sectionTitleStyle}
                   >
                     <View style={scheduleRowStyle}>
                       <Pressable
-                        style={chipStyle}
+                        accessibilityLabel="Create daily routine at 9:00 PM"
+                        accessibilityState={{ disabled: !canCreateRoutines }}
+                        disabled={!canCreateRoutines}
+                        style={[chipStyle, !canCreateRoutines && styles.routineDisabled]}
                         onPress={() => {
                           haptic();
                           onQuickSchedule({ hour: 21, minute: 0 });
                         }}
                       >
                         <Text style={chipTextStyle}>
-                          Tonight 9:00 PM
+                          Daily at 9:00 PM
                         </Text>
                       </Pressable>
 
                       <Pressable
-                        style={chipStyle}
+                        accessibilityLabel="Create daily routine at 7:00 AM"
+                        accessibilityState={{ disabled: !canCreateRoutines }}
+                        disabled={!canCreateRoutines}
+                        style={[chipStyle, !canCreateRoutines && styles.routineDisabled]}
                         onPress={() => {
                           haptic();
                           onQuickSchedule({ hour: 7, minute: 0 });
                         }}
                       >
                         <Text style={chipTextStyle}>
-                          Tomorrow 7:00 AM
+                          Daily at 7:00 AM
                         </Text>
                       </Pressable>
                     </View>
@@ -336,7 +344,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                         color={theme.colors.text}
                       />
                       <Text style={linkButtonTextStyle}>
-                        Create automation for this device
+                        Manage device routines
                       </Text>
                     </Pressable>
                   </SheetSection>}
@@ -379,6 +387,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
 export default DeviceBottomSheet;
 
 const styles = StyleSheet.create({
+  routineDisabled: { opacity: 0.4 },
   handle: { backgroundColor: theme.colors.card2, width: 46 },
   sheetWrap: { alignItems: "center" },
   glass: {

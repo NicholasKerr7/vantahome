@@ -7,7 +7,7 @@ import { RoutineCard } from './CollectionCards';
 
 jest.mock('@expo/vector-icons/Ionicons', () => require('react-native').View);
 
-type ToggleNode = { props: { accessibilityRole?: string; accessibilityState?: { checked: boolean }; 'aria-checked'?: boolean; children: React.ReactElement<ViewProps>; style: ViewProps['style']; onPress: () => void; onFocus: () => void; onBlur: () => void; onKeyDown?: (event: { key: string; repeat?: boolean; preventDefault: () => void }) => void } };
+type ToggleNode = { props: { accessibilityRole?: string; accessibilityState?: { checked: boolean; disabled: boolean }; disabled?: boolean; 'aria-checked'?: boolean; children: React.ReactElement<ViewProps>; style: ViewProps['style']; onPress: () => void; onFocus: () => void; onBlur: () => void; onKeyDown?: (event: { key: string; repeat?: boolean; preventDefault: () => void }) => void } };
 const base = { id: 'flow', name: 'Morning', when: 'At 07:00', then: 'Light on', actionCount: 1, conditionCount: 0, compact: true, onOpen: jest.fn() };
 
 /** Select the semantic switch independently of the card's edit control. */
@@ -22,7 +22,7 @@ describe('RoutineCard toggle', () => {
   it.each([false, true])('keeps a 44px target and centered fixed-size track with checked=%s', (enabled) => {
     act(() => { tree = renderer.create(<RoutineCard {...base} enabled={enabled} onToggle={jest.fn()} />); });
     const toggle = toggleNode(tree);
-    expect(toggle.props.accessibilityState).toEqual({ checked: enabled });
+    expect(toggle.props.accessibilityState).toEqual({ checked: enabled, disabled: false });
     expect(toggle.props['aria-checked']).toBe(enabled);
     expect(StyleSheet.flatten(toggle.props.style)).toMatchObject({ minWidth: 52, minHeight: 44, alignItems: 'center', justifyContent: 'center' });
     const track = toggle.props.children;
@@ -47,6 +47,17 @@ describe('RoutineCard toggle', () => {
     expect(preventDefault).toHaveBeenCalledTimes(2);
     act(() => { toggle.props.onPress(); });
     expect(onToggle).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a read-only switch disabled for both touch and web keyboard input', () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const onToggle = jest.fn();
+    act(() => { tree = renderer.create(<RoutineCard {...base} enabled readOnly onToggle={onToggle} />); });
+    const toggle = toggleNode(tree);
+    expect(toggle.props.accessibilityState).toEqual({ checked: true, disabled: true });
+    expect(toggle.props.disabled).toBe(true);
+    act(() => { toggle.props.onKeyDown!({ key: ' ', preventDefault: jest.fn() }); });
+    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it('preserves native press activation and an explicit visible focus state', () => {

@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import { useShallow } from 'zustand/react/shallow';
 import {
   View,
   Text,
@@ -39,6 +40,7 @@ import { useResponsive } from "../theme/layout";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { runtimePolicy } from "../config/runtimeMode";
 import { captureSceneScope, executeSceneCommands, type SceneScope } from "../services/sceneExecution";
+import { canManageRoutines } from "../store/routineAccess";
 
 const DEVICE_OPTIONS: Array<{
   kind: Device["kind"];
@@ -526,16 +528,17 @@ export default function RoomScreen({ route, navigation }: Props) {
   const { roomId, showAll } = route.params;
   const isWholeHome = Boolean(showAll);
 
-  const visibleRooms = useHomeStore(selectVisibleRooms);
+  const visibleRooms = useHomeStore(useShallow(selectVisibleRooms));
   const room = roomId
     ? visibleRooms.find((r) => r.id === roomId)
     : undefined;
-  const devicesAll = useHomeStore(selectVisibleDevices);
+  const devicesAll = useHomeStore(useShallow(selectVisibleDevices));
   const scenesAll = useHomeStore((s) => s.scenes);
   const runScene = useHomeStore((s) => s.runScene);
 
   const setDevice = useHomeStore((s) => s.setDevice);
   const quickScheduleDevice = useHomeStore((s) => s.quickScheduleDevice);
+  const canCreateRoutines = useHomeStore(canManageRoutines);
   const addDevice = useHomeStore((s) => s.addDevice);
   const removeDevice = useHomeStore((s) => s.removeDevice);
 
@@ -802,6 +805,7 @@ export default function RoomScreen({ route, navigation }: Props) {
       ) : null}
 
       <DeviceBottomSheet
+        canCreateRoutines={canCreateRoutines}
         ref={sheetRef}
         device={selected}
         onClose={() => sheetRef.current?.dismiss()}
@@ -826,7 +830,15 @@ export default function RoomScreen({ route, navigation }: Props) {
         }}
         onQuickSchedule={(time) => {
           if (!selectedId) return;
-          quickScheduleDevice(selectedId, time);
+          try {
+            const current = useHomeStore.getState();
+            if (!canManageRoutines(current) || !selectVisibleDevices(current).some((device) => device.id === selectedId)) throw new Error('Device routine unavailable');
+            quickScheduleDevice(selectedId, time);
+            const clock = `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}`;
+            Alert.alert('Daily routine saved', `Runs every day at ${clock} while VantaHome is open. Review or change it in Routines.`);
+          } catch {
+            Alert.alert('Routine not saved', 'Your home access or this device changed. Reopen the device and try again.');
+          }
         }}
         onDelete={() => {
           if (!selectedId) return;

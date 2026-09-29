@@ -34,7 +34,8 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
     if (next === 'devices') { setPanel('devices'); return; }
     setPanel(null);
     if (section === next) return;
-    openHomeFeature(navigation.dispatch, next === 'home' ? 'Home' : next === 'scenes' ? 'Scenes' : 'Automations');
+    if (next === 'automations') openHomeFeature(navigation.dispatch, 'Automations', {});
+    else openHomeFeature(navigation.dispatch, next === 'home' ? 'Home' : 'Scenes');
   }
 
   /** Keep all secondary routes, permissions, and existing feature entry points available. */

@@ -12,12 +12,14 @@ import HomeWorkspace from '../features/home-shell/HomeWorkspace';
 import HomePanelBoundary from '../features/home-shell/HomePanelBoundary';
 import { theme } from '../theme/theme';
 import { isThreeDHomeEnabled } from '../config/threeDHome';
+import { useDeviceRoutines } from '../features/three-d-home/useDeviceRoutines';
 
 const HomeVoicePanel = React.lazy(() => import('../features/home-voice/HomeVoicePanel'));
 const HomeDeviceLibrary = React.lazy(() => import('../features/home-shell/HomeDeviceLibrary'));
 
 /** Bound loading time while the surrounding home navigation always remains available. */
 function SceneSession({ onRetry, onDevices }: { onRetry: () => void; onDevices: () => void }) {
+  const openDeviceRoutines = useDeviceRoutines();
   const [status, setStatus] = useState<SceneStatus | 'loading'>('loading');
   const [saveStatus, setSaveStatus] = useState<SimulationSaveStatus>('saving');
   useEffect(() => {
@@ -26,7 +28,7 @@ function SceneSession({ onRetry, onDevices }: { onRetry: () => void; onDevices: 
     return () => clearTimeout(timeout);
   }, [status]);
   return <View style={styles.scene}>
-    {status !== 'error' && <SceneSurface onStatus={setStatus} onSaveStatus={setSaveStatus} />}
+    {status !== 'error' && <SceneSurface onStatus={setStatus} onSaveStatus={setSaveStatus} onDeviceRoutines={openDeviceRoutines} />}
     {status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected') && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
       <Text style={styles.saveNoticeText}>{saveStatus === 'error'
         ? 'Changes work for this session, but couldn’t be saved on this device.'

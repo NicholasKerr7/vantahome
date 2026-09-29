@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Pressable from '../../components/Pressable';
-import type { AutomationFlow, AutomationRule, Room, Scene } from '../../store/useHomeStore';
+import type { Room, Scene } from '../../store/useHomeStore';
+import type { Routine } from '../../store/routines';
 import { theme } from '../../theme/theme';
+import { ROUTINE_EXECUTION } from '../../features/routines/executionAvailability';
 import { collectionRows, useCollectionPagination } from './collectionPagination';
 import { RoutineCard, SceneMoodCard } from './CollectionCards';
-import { collectionTime, describeAction, describeFlow } from './collectionDescriptions';
+import { describeFlow } from './collectionDescriptions';
 import { useCollectionDirectory } from './useCollectionDirectory';
+import { sceneScopeLabel } from '../../features/scenes/sceneScope';
 
 type Pagination = ReturnType<typeof useCollectionPagination>;
 
@@ -46,12 +49,12 @@ export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear
       <Pressable accessibilityLabel="Create scene" style={styles.createButton} onPress={onCreate}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
     </View>
     <View style={styles.contextRow}>
-      <Text style={styles.contextText} numberOfLines={1}>{activeScene ? `Now active · ${activeScene.name}` : 'Choose a scene for your space'}</Text>
-      {activeSceneId ? <Pressable accessibilityLabel="Clear active scene" style={styles.clearButton} onPress={onClear}><Text style={styles.linkText}>Clear</Text></Pressable> : null}
+      <Text style={styles.contextText} numberOfLines={1}>{activeScene ? `Last used · ${activeScene.name}` : 'Choose a scene for your space'}</Text>
+      {activeSceneId ? <Pressable accessibilityLabel="Clear last-used scene" style={styles.clearButton} onPress={onClear}><Text style={styles.linkText}>Clear</Text></Pressable> : null}
     </View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="scene-page-area">
       {pageScenes.length ? collectionRows(pageScenes, pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`scene-row-${rowIndex}`} style={[styles.cardRow, !pagination.largeText && styles.sceneRowStandard]}>
-        {row.map((scene) => <SceneMoodCard key={scene.id} scene={scene} roomName={rooms.find((room) => room.id === scene.roomId)?.name ?? 'Home'} active={scene.id === activeSceneId} compact={compact || pagination.tight} directory={directory} onRun={onRun} onOpen={onOpen} />)}
+        {row.map((scene) => <SceneMoodCard key={scene.id} scene={scene} roomName={sceneScopeLabel(scene, rooms)} active={scene.id === activeSceneId} compact={compact || pagination.tight} directory={directory} onRun={onRun} onOpen={onOpen} />)}
         {row.length < pagination.columns && <View style={styles.emptyTileSpace} />}
       </View>) : <View style={styles.emptyState}><Ionicons name="sparkles-outline" size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>Make room for a mood.</Text><Text style={styles.emptyCopy}>Create your first scene to bring several devices together in one tap.</Text></View>}
     </View>
@@ -60,53 +63,39 @@ export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear
 }
 
 type AutomationCollectionProps = {
-  flows: readonly AutomationFlow[]; rules: readonly AutomationRule[];
-  onNewFlow: () => void; onOpenFlow: (flowId: string) => void; onToggleFlow: (flowId: string) => void;
-  onAddSchedule: () => void; onOpenSchedule: (ruleId: string) => void; onToggleSchedule: (ruleId: string) => void;
+  routines: readonly Routine[]; deviceName?: string; onClearFilter?: () => void; canManage?: boolean; error?: string | null;
+  onCreate: () => void; onOpen: (routineId: string) => void; onToggle: (routineId: string) => void;
 };
 
-/** Make each routine's real trigger and outcome readable before opening its existing editor. */
-export function EmbeddedAutomations({ flows, rules, onNewFlow, onOpenFlow, onToggleFlow, onAddSchedule, onOpenSchedule, onToggleSchedule }: AutomationCollectionProps) {
-  const [tab, setTab] = useState<'flows' | 'schedules'>('flows');
+/** Keep daily schedules and advanced routines together, using their shared normalized identity. */
+export function EmbeddedAutomations({ routines, deviceName, onClearFilter, canManage = true, error, onCreate, onOpen, onToggle }: AutomationCollectionProps) {
   const { height, fontScale } = useWindowDimensions();
   const compact = height < 740 || fontScale > 1.15;
-  const showingFlows = tab === 'flows';
-  const total = showingFlows ? flows.length : rules.length;
-  const enabled = flows.filter((flow) => flow.enabled).length + rules.filter((rule) => rule.enabled).length;
-  const pagination = useCollectionPagination(total, compact ? 174 : 208, true);
+  const enabled = routines.filter((routine) => routine.enabled).length;
+  const pagination = useCollectionPagination(routines.length, compact ? 174 : 208, true);
   const directory = useCollectionDirectory();
-  const items: readonly (AutomationFlow | AutomationRule)[] = showingFlows ? flows.slice(pagination.start, pagination.end) : rules.slice(pagination.start, pagination.end);
-
-  /** Changing collections always starts at page one while retaining the existing editor callbacks. */
-  function selectTab(next: typeof tab) {
-    setTab(next);
-    pagination.changePage(0);
-  }
-
+  const items = routines.slice(pagination.start, pagination.end);
   return <View style={[styles.collection, compact && styles.collectionCompact]} testID="embedded-automations-collection">
     <View style={styles.collectionHeader}>
       <View style={styles.headingCopy}>
         {!compact && <Text style={styles.eyebrow}>{enabled} ENABLED · BUILT AROUND YOU</Text>}
-        <Text style={[styles.headline, compact && styles.headlineCompact]} numberOfLines={1}>Your routines</Text>
+        <Text style={[styles.headline, compact && styles.headlineCompact]} numberOfLines={1}>{deviceName ?? 'Your routines'}<Text style={styles.headlineCount}> / {routines.length}</Text></Text>
       </View>
-      <Pressable accessibilityLabel={showingFlows ? 'New flow' : 'Add schedule'} style={styles.createButton} onPress={showingFlows ? onNewFlow : onAddSchedule}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
+      <Pressable accessibilityLabel="New routine" accessibilityState={{ disabled: !canManage }} disabled={!canManage} style={[styles.createButton, !canManage && styles.disabled]} onPress={onCreate}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
     </View>
-    <View style={styles.tabs} accessibilityRole="tablist">
-      <Pressable accessibilityRole="tab" accessibilityLabel={`Flows, ${flows.length}`} accessibilityState={{ selected: showingFlows }} style={[styles.tab, showingFlows && styles.tabActive]} onPress={() => selectTab('flows')}><Ionicons name="git-network-outline" size={15} color={showingFlows ? theme.colors.accent : theme.colors.subtext} /><Text style={[styles.tabText, showingFlows && styles.tabTextActive]}>Flows</Text><Text style={styles.tabCount}>{flows.length}</Text></Pressable>
-      <Pressable accessibilityRole="tab" accessibilityLabel={`Schedules, ${rules.length}`} accessibilityState={{ selected: !showingFlows }} style={[styles.tab, !showingFlows && styles.tabActive]} onPress={() => selectTab('schedules')}><Ionicons name="time-outline" size={16} color={!showingFlows ? theme.colors.accent : theme.colors.subtext} /><Text style={[styles.tabText, !showingFlows && styles.tabTextActive]}>Schedules</Text><Text style={styles.tabCount}>{rules.length}</Text></Pressable>
-    </View>
+    <View style={styles.runtimeStatus}><View style={styles.runtimeDot} /><Text style={styles.runtimeText} accessibilityRole={error ? "alert" : undefined}>{error ?? (canManage ? ROUTINE_EXECUTION.summary : "View only · Ask your household owner to make changes")}</Text>{onClearFilter && <Pressable accessibilityLabel="All routines" onPress={onClearFilter} style={styles.allRoutinesButton}><Text style={styles.linkText}>All routines</Text></Pressable>}</View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="routine-page-area">
       {collectionRows(items, pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`routine-card-row-${rowIndex}`} style={[styles.cardRow, !pagination.largeText && styles.routineRowStandard]}>
-        {row.map((item) => {
-          const isFlow = 'triggers' in item;
-          const summary = isFlow ? describeFlow(item, directory) : { when: `Daily at ${collectionTime(item.trigger.hour, item.trigger.minute)}`, then: describeAction(item.action, directory), condition: null };
-          return <RoutineCard key={item.id} id={item.id} name={item.name} enabled={item.enabled} when={summary.when} then={summary.then} condition={summary.condition} actionCount={isFlow ? item.actions.length : 1} conditionCount={isFlow ? item.conditions.length : 0} compact={compact || pagination.tight} schedule={!isFlow} onOpen={() => isFlow ? onOpenFlow(item.id) : onOpenSchedule(item.id)} onToggle={() => isFlow ? onToggleFlow(item.id) : onToggleSchedule(item.id)} />;
+        {row.map((routine) => {
+          const summary = describeFlow(routine, directory);
+          const daily = routine.triggers.length === 1 && routine.triggers[0].type === 'time' && routine.conditions.length === 0;
+          return <RoutineCard readOnly={!canManage} key={routine.id} id={routine.id} name={routine.name} enabled={routine.enabled} when={summary.when} then={summary.then} condition={summary.condition} actionCount={routine.actions.length} conditionCount={routine.conditions.length} compact={compact || pagination.tight} schedule={daily} onOpen={() => onOpen(routine.id)} onToggle={() => onToggle(routine.id)} />;
         })}
         {row.length < pagination.columns && <View style={styles.emptyTileSpace} />}
       </View>)}
-      {!total && <View style={styles.emptyState}><Ionicons name={showingFlows ? 'git-network-outline' : 'time-outline'} size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>{showingFlows ? 'A little less to think about.' : 'Give your home a rhythm.'}</Text><Text style={styles.emptyCopy}>{showingFlows ? 'Connect a trigger to the actions you want your home to take.' : 'Choose a time and a device action for a daily routine.'}</Text></View>}
+      {!routines.length && <View style={styles.emptyState}><Ionicons name="git-network-outline" size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>A little less to think about.</Text><Text style={styles.emptyCopy}>Choose when your home should act, any conditions, and what it should do.</Text></View>}
     </View>
-    <CollectionPager pagination={pagination} total={total} noun={tab} />
+    <CollectionPager pagination={pagination} total={routines.length} noun="routines" />
   </View>;
 }
 
@@ -139,10 +128,8 @@ const styles = StyleSheet.create({
   emptyState: { flex: 1, minHeight: 0, justifyContent: 'center', maxWidth: 380, gap: 10, paddingBottom: 8 },
   emptyTitle: { color: theme.colors.text, fontSize: 21, fontWeight: '500', letterSpacing: -0.5 },
   emptyCopy: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20 },
-  tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.colors.stroke, gap: 4, marginBottom: 12 },
-  tab: { flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: theme.colors.accent },
-  tabText: { color: theme.colors.subtext, fontSize: 13, fontWeight: '500' },
-  tabTextActive: { color: theme.colors.text },
-  tabCount: { color: theme.colors.muted, fontSize: 10 },
+  runtimeStatus: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 40, paddingBottom: 6 },
+  allRoutinesButton: { minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' },
+  runtimeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.ember },
+  runtimeText: { flex: 1, color: theme.colors.muted, fontSize: 10, lineHeight: 15 },
 });

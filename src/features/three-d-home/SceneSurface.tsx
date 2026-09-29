@@ -5,12 +5,13 @@ import { isAllowedSceneNavigation, parseSceneStatus, type SceneSurfaceProps } fr
 import { prepareNativeScene } from './prepareNativeScene';
 import { NativeWeatherBroker, nativeWeatherResponseScript } from './nativeWeather';
 import { SimulationSession, nativeSimulationSnapshotScript } from './simulationSession';
+import { parseRoutineNavigation } from '../../../packages/home-scene/src/routineNavigation';
 
 /** Keep the optional persistence notification from restarting a simulation session. */
 const ignoreSaveStatus = () => undefined;
 
 /** Load a packaged simulation without sharing cookies, tokens or real device commands. */
-export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus }: SceneSurfaceProps) {
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines }: SceneSurfaceProps) {
   const [uri, setUri] = useState<string | null>(null);
   const webView = useRef<WebView>(null);
   const weather = useRef<NativeWeatherBroker | null>(null);
@@ -49,7 +50,9 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     onShouldStartLoadWithRequest={(request) => isAllowedSceneNavigation(request.url, uri)}
     onMessage={(event) => {
       const status = parseSceneStatus(event.nativeEvent.data);
+      const navigation = parseRoutineNavigation(event.nativeEvent.data);
       if (status) onStatus(status);
+      else if (navigation) onDeviceRoutines?.(navigation.deviceId);
       else if (!simulation.current?.handleMessage(event.nativeEvent.data)) weather.current?.handleMessage(event.nativeEvent.data);
     }}
     onError={() => onStatus('error')}

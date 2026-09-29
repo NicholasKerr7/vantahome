@@ -7503,7 +7503,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <Text style={styles.metricValue}>
           {sprinklerScheduleCount ? sprinklerScheduleCount : "None"}
         </Text>
-        <Text style={styles.metricLabel}>Schedules</Text>
+        <Text style={styles.metricLabel}>Programs</Text>
       </View>
     </View>
   );
@@ -7548,10 +7548,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             />
             <Text style={utilityHeroPillTextStyle(sprinklerScheduleCount > 0)}>
               {sprinklerScheduleCount === 0
-                ? "No schedule"
+                ? "No program"
                 : sprinklerScheduleCount === 1
-                  ? "1 schedule"
-                  : `${sprinklerScheduleCount} schedules`}
+                  ? "1 program"
+                  : `${sprinklerScheduleCount} programs`}
             </Text>
           </View>
         </View>
@@ -7653,9 +7653,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const sprinklerScheduleCard = (
     <View style={portraitControlCardStyle}>
-      <Text style={styles.cardLabel}>Schedule</Text>
+      <Text style={styles.cardLabel}>Watering programs</Text>
+      <Text style={styles.programHint}>Device program settings. Controller execution is not verified.</Text>
       {(device.schedule ?? []).length === 0 ? (
-        <Text style={styles.scheduleEmpty}>No schedules yet</Text>
+        <Text style={styles.scheduleEmpty}>No watering programs</Text>
       ) : (
         (device.schedule ?? []).map((s) => (
           <View key={s.id} style={styles.scheduleRow}>
@@ -7690,7 +7691,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         onPress={() => setShowSchedule(true)}
       >
         <Ionicons name="add" size={16} color={stylesVars.ink} />
-        <Text style={styles.addScheduleText}>Add schedule</Text>
+        <Text style={styles.addScheduleText}>Add watering program</Text>
       </Pressable>
     </View>
   );
@@ -12129,6 +12130,7 @@ const styles = StyleSheet.create({
   },
   scheduleToggleTextActive: { color: stylesVars.ink },
   scheduleEmpty: { color: stylesVars.subtext, fontWeight: "700", marginTop: 6 },
+  programHint: { color: stylesVars.subtext, fontSize: 12, lineHeight: 18 },
   addSchedule: {
     marginTop: 12,
     height: 40,

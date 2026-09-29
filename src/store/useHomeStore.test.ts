@@ -276,39 +276,38 @@ describe("useHomeStore", () => {
     ).toBe(initial!.isOn);
   });
 
-  it("quickScheduleDevice creates a toggle rule for non-AC devices", () => {
-    const beforeLen = useHomeStore.getState().rules.length;
+  it("quickScheduleDevice creates a toggle routine for non-AC devices", () => {
+    const beforeLen = useHomeStore.getState().flows.length;
 
     useHomeStore.getState().quickScheduleDevice("d2", { hour: 21, minute: 0 }); // light
 
-    const rules = useHomeStore.getState().rules;
-    expect(rules).toHaveLength(beforeLen + 1);
+    const routines = useHomeStore.getState().flows;
+    expect(routines).toHaveLength(beforeLen + 1);
 
-    const last = rules[rules.length - 1];
-    expect(last.action.type).toBe("toggle");
-    if (last.action.type !== "toggle") throw new Error("Expected toggle rule");
-    expect(last.action.deviceId).toBe("d2");
-    expect(last.action.on).toBe(true);
-    expect(last.trigger.hour).toBe(21);
-    expect(last.trigger.minute).toBe(0);
+    const last = routines[routines.length - 1];
+    expect(last.actions[0].type).toBe("toggle");
+    if (last.actions[0].type !== "toggle") throw new Error("Expected toggle rule");
+    expect(last.actions[0].deviceId).toBe("d2");
+    expect(last.actions[0].on).toBe(true);
+    expect(last.triggers).toEqual([{ type: "time", hour: 21, minute: 0 }]);
     expect(last.name).toContain("ON @ 21:00");
   });
 
-  it("quickScheduleDevice creates a set-ac rule using the current AC settings", () => {
+  it("quickScheduleDevice creates a set-ac routine using the current AC settings", () => {
     useHomeStore.getState().setDevice("d1", { tempC: 23, mode: "fan" });
 
-    const beforeLen = useHomeStore.getState().rules.length;
+    const beforeLen = useHomeStore.getState().flows.length;
     useHomeStore.getState().quickScheduleDevice("d1", { hour: 7, minute: 0 });
 
-    const rules = useHomeStore.getState().rules;
-    expect(rules).toHaveLength(beforeLen + 1);
+    const routines = useHomeStore.getState().flows;
+    expect(routines).toHaveLength(beforeLen + 1);
 
-    const last = rules[rules.length - 1];
-    expect(last.action.type).toBe("set-ac");
-    if (last.action.type !== "set-ac") throw new Error("Expected set-ac rule");
-    expect(last.action.deviceId).toBe("d1");
-    expect(last.action.tempC).toBe(23);
-    expect(last.action.mode).toBe("fan");
+    const last = routines[routines.length - 1];
+    expect(last.actions[0].type).toBe("set-ac");
+    if (last.actions[0].type !== "set-ac") throw new Error("Expected set-ac rule");
+    expect(last.actions[0].deviceId).toBe("d1");
+    expect(last.actions[0].tempC).toBe(23);
+    expect(last.actions[0].mode).toBe("fan");
     expect(last.name).toContain("07:00");
   });
 

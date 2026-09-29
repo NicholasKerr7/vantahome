@@ -13,6 +13,7 @@ import { getVoiceLinkConfiguration, linkVoiceAccount } from "../features/integra
 import { isVoiceProvider, VOICE_LINK_FEEDBACK, voiceScopeIsCurrent } from "../features/integrations/voiceLinking";
 import { useHomeStore } from "../store/useHomeStore";
 import { theme } from "../theme/theme";
+import { HubPreparation } from "../features/integrations/HubPreparation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Integrations">;
 
@@ -22,6 +23,7 @@ export default function IntegrationsScreen({ navigation }: Props) {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [showDetails, setShowDetails] = useState(false);
+  const [showHubPreparation, setShowHubPreparation] = useState(false);
   const { height } = useWindowDimensions();
   const integrations = useHomeStore((state) => state.integrations);
   const authenticatedUserId = useHomeStore((state) => state.authenticatedUserId);
@@ -34,6 +36,8 @@ export default function IntegrationsScreen({ navigation }: Props) {
   const canAuthorize = Boolean(voiceProvider && configured && authorizedScope && !busy);
   const actionDisabled = saved ? !authorizedScope || busy : !canAuthorize;
   const compact = height < 700;
+  const showBridgeTools = runtimePolicy.allowDirectMqtt && (!compact || showDetails);
+  const showPrepareHub = !compact || !showBridgeTools;
 
   /** Change the visible integration without retaining feedback from a different provider. */
   function changePage(nextPage: number) {
@@ -107,10 +111,11 @@ export default function IntegrationsScreen({ navigation }: Props) {
                 style={[styles.action, actionDisabled && styles.disabled]}>
                 <Text style={styles.actionText}>{busy ? "Authorizing…" : saved ? "Remove authorization" : configured ? authenticatedUserId ? "Open authorization" : "Sign in required" : "Setup required"}</Text>
               </Pressable>
-            ) : entry.id === "bridge" && runtimePolicy.allowDirectMqtt ? (
-              <Pressable accessibilityLabel="Open development connection tools" onPress={() => openHomeFeature(navigation.dispatch, "Settings")} style={styles.action}>
-                <Text style={styles.actionText}>Development connection tools</Text>
-              </Pressable>
+            ) : entry.id === "bridge" ? (
+              <>
+                {showPrepareHub && <Pressable accessibilityLabel="Prepare home hub" onPress={() => setShowHubPreparation(true)} style={styles.action}><Text style={styles.actionText}>Prepare home hub</Text></Pressable>}
+                {showBridgeTools && <Pressable accessibilityLabel="Open development connection tools" onPress={() => openHomeFeature(navigation.dispatch, "Settings")} style={styles.detailsButton}><Text style={styles.pageCount}>Development connection tools</Text></Pressable>}
+              </>
             ) : <Text style={styles.planned}>No connection is available yet.</Text>}
           </View>
         </View>
@@ -134,6 +139,7 @@ export default function IntegrationsScreen({ navigation }: Props) {
           </Pressable>
         </View>
       </View>
+      {showHubPreparation && <HubPreparation onClose={() => setShowHubPreparation(false)} />}
     </SafeAreaView></CinematicSurface>
   );
 }
