@@ -3,13 +3,13 @@
   min-width: 0;
   height: 44px;
   margin: 0;
-  accent-color: #d2e7bb;
+  accent-color: var(--vanta-accent, #B46BFF);
   cursor: pointer;
   touch-action: pan-y;
 }
 
 .renderer-lab-slider:focus-visible {
-  outline: 2px solid #d2e7bb;
+  outline: 2px solid var(--vanta-accent-text, #DFC4FF);
   outline-offset: 2px;
   border-radius: 8px;
 }

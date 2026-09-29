@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   caption: { color: theme.colors.subtext, fontSize: 9, marginTop: 5 },
   scene: { flex: 1, minHeight: 0, overflow: 'hidden', backgroundColor: theme.colors.bg0 },
   featureLoading: { padding: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg0 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(3,8,12,0.84)', justifyContent: 'center', alignItems: 'center', padding: 14 },
+  modalOverlay: { flex: 1, backgroundColor: theme.colors.overlayStrong, justifyContent: 'center', alignItems: 'center', padding: 14 },
   voiceWrap: { width: '100%', maxWidth: 520, maxHeight: '100%' },
   saveNotice: { position: 'absolute', bottom: 8, left: 12, right: 12, padding: 10, gap: 8, borderRadius: theme.radius.sm, backgroundColor: theme.colors.bg0, borderWidth: 1, borderColor: theme.colors.stroke },
   saveNoticeText: { color: theme.colors.text, fontSize: 12, textAlign: 'center' },

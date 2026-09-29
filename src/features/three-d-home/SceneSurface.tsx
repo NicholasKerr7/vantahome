@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
+import { theme } from '../../theme/theme';
 import { WebView } from 'react-native-webview';
 import { isAllowedSceneNavigation, parseSceneStatus, type SceneSurfaceProps } from './protocol';
 import { prepareNativeScene } from './prepareNativeScene';
@@ -74,4 +75,4 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
   />;
 }
 
-const styles = StyleSheet.create({ surface: { flex: 1, backgroundColor: '#101516' } });
+const styles = StyleSheet.create({ surface: { flex: 1, backgroundColor: theme.colors.bg0 } });

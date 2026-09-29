@@ -1,25 +1,29 @@
 /**
- * Shared obsidian, jade and pearl tokens connect the cinematic home and native controls.
+ * VantaHome v1 purple palette, shared by the current home and native controls.
  *
  * Keep this file “dumb”: no React/logic, just constants. That makes it safe to
  * import anywhere (components, store, utilities) without circular deps.
  */
 export const theme = {
   colors: {
-    bg0: "#080D12",
-    bg1: "#102027",
-    card: "#13212B",
-    card2: "#0E1820",
-    stroke: "#263E49",
-    text: "#EFF7F3",
-    subtext: "#A4BAC4",
-    muted: "#819AA6",
-    accent: "#BDFFE1",
-    accent2: "#315A50",
-    electric: "#A3C9FF",
+    bg0: "#2B0A73",
+    bg1: "#4B1AAE",
+    card: "rgba(255,255,255,0.14)",
+    card2: "rgba(255,255,255,0.10)",
+    stroke: "rgba(255,255,255,0.18)",
+    text: "#FFFFFF",
+    subtext: "rgba(255,255,255,0.80)",
+    muted: "rgba(255,255,255,0.72)",
+    accent: "#B46BFF",
+    accent2: "#7A5CFF",
+    /** Lighter violet keeps small accent labels legible on translucent cards. */
+    accentText: "#DFC4FF",
+    electric: "#DFC4FF",
     ember: "#EBD0A6",
-    glass: "rgba(18,35,44,0.86)",
-    glow: "rgba(127,235,196,0.25)",
+    glass: "rgba(53,19,127,0.96)",
+    overlay: "rgba(17,5,48,0.72)",
+    overlayStrong: "rgba(17,5,48,0.84)",
+    glow: "rgba(180,107,255,0.55)",
   },
   radius: { xl: 28, lg: 22, md: 18, sm: 14 },
   /** 8pt spacing scale helper: `spacing(2) === 16` */

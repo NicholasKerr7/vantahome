@@ -14,7 +14,7 @@
 .device-focus-eyebrow { display: block; color: var(--muted); font-size: 8px; line-height: 10px; font-weight: 600; letter-spacing: 1.3px; }
 .inspector-device-count { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 10px; color: var(--ice); font-size: 12px; font-variant-numeric: tabular-nums; }
 .card-inspector .device-focus-card { display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 22px; background: linear-gradient(145deg, var(--surface-raised), var(--surface)); }
-.card-inspector .device-focus-card[data-device-active='true'] { border-color: #bdffe155; }
+.card-inspector .device-focus-card[data-device-active='true'] { border-color: rgb(var(--accent-rgb) / 33.3%); }
 .card-inspector .dashboard-selected-copy h3 { margin-top: 3px; font-size: 13px; }
 .card-inspector .dashboard-device-icon { width: 35px; height: 35px; border-radius: 12px; }
 .device-focus-actions { display: flex; flex-direction: column; gap: 8px; }
@@ -29,7 +29,7 @@
 .card-inspector .dashboard-room-devices { gap: 8px; min-height: 130px; flex: 1; }
 .card-inspector .device-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .card-inspector .dashboard-device-card { display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 7px; min-height: 108px; height: auto; padding: 10px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); text-align: left; }
-.card-inspector .dashboard-device-card.is-selected { border-color: #bdffe177; background: #152c2b; }
+.card-inspector .dashboard-device-card.is-selected { border-color: rgb(var(--accent-rgb) / 46.7%); background: var(--accent-dark); }
 .device-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .card-inspector .dashboard-device-copy { flex: 0; gap: 3px; }
 .card-inspector .dashboard-device-copy > span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 10px; line-height: 13px; }
@@ -48,16 +48,16 @@
 .card-library .library-item { display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 10px; padding: 16px; border-radius: 21px; min-height: 44px; overflow: hidden; }
 .card-library .library-item > span { width: 100%; }
 .library-card-top, .library-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
-.library-card-symbol { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid var(--line); border-radius: 12px; color: var(--ice); background: #080d1240; }
+.library-card-symbol { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid var(--line); border-radius: 12px; color: var(--ice); background: rgb(var(--background-rgb) / 25.1%); }
 .library-card-location { color: var(--text-soft); font-size: 10px; line-height: 1.4; text-align: right; }
 .card-library .library-card-identity strong { color: var(--text); font-size: 16px; font-weight: 500; letter-spacing: -.25px; line-height: 1.25; overflow-wrap: anywhere; }
 .card-library .library-card-identity small { margin: 0 0 4px; color: var(--muted); font-size: 10px; }
 .library-card-footer { padding-top: 10px; border-top: 1px solid var(--line-soft); color: var(--text-soft); font-size: 10px; line-height: 1.4; }
 .library-card-destination { display: inline-flex; align-items: center; gap: 3px; color: var(--ice); font-size: 10px; line-height: 1.4; }
 .library-card-state { justify-content: flex-start; color: var(--device-status-accent, var(--text-soft)); }
-.library-card-state.library-active { color: var(--device-status-accent, var(--accent)); }
+.library-card-state.library-active { color: var(--device-status-accent, var(--accent-text)); }
 .library-card-state-dot { width: 4px; height: 4px; flex: 0 0 4px; border-radius: 50%; background: currentColor; }
-.library-device-card[data-device-active='true'] .library-card-symbol { color: var(--device-status-accent, var(--accent)); background: #bdffe10a; border-color: #bdffe133; }
+.library-device-card[data-device-active='true'] .library-card-symbol { color: var(--device-status-accent, var(--accent-text)); background: rgb(var(--accent-rgb) / 3.9%); border-color: rgb(var(--accent-rgb) / 20%); }
 .card-library .library-pagination { border-top: 0; padding-top: 0; }
 
 /* Compact cards retain full actions when native navigation takes extra space. */

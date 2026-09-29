@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   railDestination: { flex: 0, minHeight: 68 },
   active: { backgroundColor: theme.colors.card },
   label: { fontSize: 10, fontWeight: '500', color: theme.colors.subtext },
-  activeLabel: { color: theme.colors.accent },
+  activeLabel: { color: theme.colors.accentText },
   selection: { width: 12, height: 2, borderRadius: 1, backgroundColor: 'transparent' },
   selectionActive: { backgroundColor: theme.colors.accent },
 });

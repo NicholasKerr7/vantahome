@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppNavigator from "./src/app/AppNavigator";
+import { theme } from "./src/theme/theme";
 import { startAmbientData } from "./src/services/ambient";
 import { startDeviceRealtime } from "./src/services/realtime";
 import {
@@ -171,5 +172,5 @@ function App() {
 export default sentryEnabled ? Sentry.wrap(App) : App;
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#080C08', justifyContent: 'center' },
+  root: { flex: 1, backgroundColor: theme.colors.bg0, justifyContent: 'center' },
 });

@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   contextRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   contextText: { flex: 1, color: theme.colors.subtext, fontSize: 11 },
   clearButton: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
-  linkText: { color: theme.colors.accent, fontSize: 12, fontWeight: '600' },
+  linkText: { color: theme.colors.accentText, fontSize: 12, fontWeight: '600' },
   collectionBody: { flex: 1, minHeight: 0, gap: 10 },
   cardRow: { flex: 1, minHeight: 0, flexDirection: 'row', gap: 10 },
   sceneRowStandard: { maxHeight: 280 },

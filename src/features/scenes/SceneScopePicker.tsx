@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   hint: { color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
   scopeChoices: { flexDirection: 'row', gap: 8 },
   scopeButton: { flex: 1, minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10 },
-  scopeButtonSelected: { borderColor: theme.colors.accent, backgroundColor: theme.colors.accent2 },
+  scopeButtonSelected: { borderColor: theme.colors.accent, backgroundColor: theme.colors.bg1 },
   choiceText: { color: theme.colors.subtext, fontSize: 12, fontWeight: '600' },
   choiceTextSelected: { color: theme.colors.text },
   roomChoices: { gap: 8, paddingVertical: 2 },

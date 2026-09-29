@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
+import { theme } from '../../theme/theme';
 import { isAllowedSceneNavigation } from '../three-d-home/protocol';
 import { labSettingsScript, parseLabEvent, type LabSurfaceProps, type LabView } from './protocol';
 
@@ -54,4 +55,4 @@ export default function WebLabSurface({ settings, onEvent }: LabSurfaceProps) {
     accessibilityLabel="Three.js renderer comparison. Drag to orbit and pinch to zoom." />;
 }
 
-const styles = StyleSheet.create({ surface: { flex: 1, backgroundColor: '#101b22' } });
+const styles = StyleSheet.create({ surface: { flex: 1, backgroundColor: theme.colors.bg0 } });

@@ -12,7 +12,7 @@ html.device-sheet-open { overflow: hidden; }
   padding: 0;
   color: var(--text-soft);
   background: var(--surface);
-  border: 1px solid #526044;
+  border: 1px solid var(--line);
   border-bottom: 0;
   border-radius: 24px 24px 0 0;
   overflow: hidden;
@@ -21,7 +21,7 @@ html.device-sheet-open { overflow: hidden; }
   box-shadow: 0 -18px 70px #0005;
 }
 .device-control-sheet[open] { animation: reveal-device-sheet 220ms ease-out; }
-.device-control-sheet::backdrop { background: #0d160b88; }
+.device-control-sheet::backdrop { background: rgb(var(--surface-rgb) / 53.3%); }
 .device-sheet-content {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -32,26 +32,26 @@ html.device-sheet-open { overflow: hidden; }
 }
 .device-sheet-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .device-sheet-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; color: var(--muted); border: 1px solid var(--line); border-radius: 13px; background: var(--surface-raised); }
-.device-sheet-icon.is-on { color: var(--device-status-accent, var(--accent)); background: var(--accent-dark); }
+.device-sheet-icon.is-on { color: var(--device-status-accent, var(--accent-text)); background: var(--accent-dark); }
 .device-sheet-identity { flex: 1; min-width: 0; }
 .device-sheet-location { color: var(--text-soft); font-size: 10px; line-height: 1.4; }
-.device-sheet-identity h2 { color: #edf2e5; font-size: 21px; line-height: 1.25; font-weight: 600; letter-spacing: -.4px; margin-block: 4px; overflow-wrap: anywhere; }
+.device-sheet-identity h2 { color: var(--text); font-size: 21px; line-height: 1.25; font-weight: 600; letter-spacing: -.4px; margin-block: 4px; overflow-wrap: anywhere; }
 .device-sheet-state { display: flex; align-items: center; gap: 6px; color: var(--device-status-accent, var(--text-soft)); font-size: 12px; line-height: 1.5; }
 .device-sheet-state > span { width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: var(--muted); }
 .device-sheet-state > span.is-on { background: var(--device-status-accent, var(--accent)); }
 .device-sheet-heading .quick-device-close { flex: 0 0 44px; width: 44px; height: 44px; }
-.device-sheet-primary { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; width: 100%; border: 1px solid var(--accent); border-radius: 12px; color: #253219; background: var(--accent); font-size: 14px; font-weight: 600; touch-action: manipulation; }
-.device-sheet-primary:hover { background: #e0edbc; }
-.device-sheet-primary:active { background: #c4d791; }
+.device-sheet-primary { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; width: 100%; border: 1px solid var(--accent); border-radius: 12px; color: var(--accent-ink); background: var(--accent); font-size: 14px; font-weight: 600; touch-action: manipulation; }
+.device-sheet-primary:hover { background: var(--accent-hover); }
+.device-sheet-primary:active { background: var(--accent-pressed); }
 
 /* The original dashboard card keeps its existing paired cover actions. */
-.cover-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 20px; margin-top: 25px; border-top: 1px solid #3b462f; }
-.cover-actions button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; background: #303a27; border: 1px solid #59664a; border-radius: 8px; color: #e4edda; font-size: 12px; }
-.cover-actions button[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: #26341d; }
+.cover-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 20px; margin-top: 25px; border-top: 1px solid var(--line); }
+.cover-actions button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; background: var(--surface-raised); border: 1px solid var(--line); border-radius: 8px; color: var(--text); font-size: 12px; }
+.cover-actions button[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .cover-actions button:hover { filter: brightness(1.08); }
 
 @media (min-width: 600px) and (orientation: landscape) {
-  .device-control-sheet { inset: 12px max(12px, calc((100vw - 1366px) / 2 + 12px)) 12px auto; margin: 0; width: 420px; height: auto; max-height: calc(100dvh - 24px); border-bottom: 1px solid #526044; border-radius: 22px; }
+  .device-control-sheet { inset: 12px max(12px, calc((100vw - 1366px) / 2 + 12px)) 12px auto; margin: 0; width: 420px; height: auto; max-height: calc(100dvh - 24px); border-bottom: 1px solid var(--line); border-radius: 22px; }
   .device-control-sheet[open] { animation-name: reveal-device-drawer; }
   .device-sheet-content { padding-top: max(22px, env(safe-area-inset-top)); }
 }

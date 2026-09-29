@@ -97,7 +97,7 @@ export default function HomeMenu({ onClose, onSelect, rendererAvailable, activit
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, padding: 12, backgroundColor: 'rgba(3,8,12,0.72)' },
+  overlay: { flex: 1, padding: 12, backgroundColor: theme.colors.overlay },
   phoneOverlay: { justifyContent: 'flex-end', alignItems: 'center' },
   tabletOverlay: { alignItems: 'flex-end' },
   panelWrap: { width: '100%', maxHeight: '100%' },
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   stackedTab: { flex: 0, alignItems: 'flex-start', paddingHorizontal: 12 },
   selectedTab: { borderBottomColor: theme.colors.accent },
   tabText: { fontSize: 12, lineHeight: 18, color: theme.colors.subtext },
-  selectedText: { color: theme.colors.accent, fontWeight: '600' },
+  selectedText: { color: theme.colors.accentText, fontWeight: '600' },
   description: { fontSize: 12, lineHeight: 18, color: theme.colors.subtext, paddingTop: 18, paddingBottom: 8 },
   directory: { minHeight: 0 },
   compactDirectory: { marginTop: 12 },

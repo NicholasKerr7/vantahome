@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   },
   choiceSelected: {
     borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accent2,
+    backgroundColor: theme.colors.bg1,
   },
   choiceText: { color: theme.colors.subtext, fontSize: 13 },
   choiceTextSelected: { color: theme.colors.text },
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  accentText: { color: theme.colors.accent, fontSize: 12 },
+  accentText: { color: theme.colors.accentText, fontSize: 12 },
   helper: { color: theme.colors.muted, fontSize: 12, lineHeight: 18 },
   input: {
     color: theme.colors.text,

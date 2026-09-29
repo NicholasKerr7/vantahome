@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   },
   optionalText: {
     flexShrink: 1,
-    color: theme.colors.accent,
+    color: theme.colors.accentText,
     fontSize: 12,
     lineHeight: 18,
   },

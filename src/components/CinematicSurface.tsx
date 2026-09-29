@@ -39,11 +39,11 @@ export default function CinematicSurface({ children, variant = 'quiet', active =
       <Light>
         <Svg width="100%" height="100%" viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice">
           <Defs>
-            <RadialGradient id="ambient-jade"><Stop offset="0" stopColor="#377C6B" stopOpacity="0.48" /><Stop offset="1" stopColor="#377C6B" stopOpacity="0" /></RadialGradient>
-            <RadialGradient id="ambient-ice"><Stop offset="0" stopColor="#40638C" stopOpacity="0.38" /><Stop offset="1" stopColor="#40638C" stopOpacity="0" /></RadialGradient>
+            <RadialGradient id="ambient-violet"><Stop offset="0" stopColor={theme.colors.accent} stopOpacity="0.48" /><Stop offset="1" stopColor={theme.colors.accent} stopOpacity="0" /></RadialGradient>
+            <RadialGradient id="ambient-purple"><Stop offset="0" stopColor={theme.colors.bg1} stopOpacity="0.38" /><Stop offset="1" stopColor={theme.colors.bg1} stopOpacity="0" /></RadialGradient>
           </Defs>
-          <Ellipse cx="530" cy="160" rx="350" ry="360" fill="url(#ambient-jade)" />
-          <Ellipse cx="50" cy="660" rx="350" ry="320" fill="url(#ambient-ice)" />
+          <Ellipse cx="530" cy="160" rx="350" ry="360" fill="url(#ambient-violet)" />
+          <Ellipse cx="50" cy="660" rx="350" ry="320" fill="url(#ambient-purple)" />
           <G fill="none" stroke={theme.colors.accent} strokeOpacity="0.09">
             <Circle cx="510" cy="135" r="140" /><Circle cx="510" cy="135" r="194" /><Circle cx="510" cy="135" r="260" />
             <Path d="M0 560 Q250 430 600 540 M0 576 Q250 446 600 556" />

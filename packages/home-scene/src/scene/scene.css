@@ -10,7 +10,7 @@
 }
 
 .house-canvas canvas:focus-visible {
-  outline: 2px solid #c7e0a8;
+  outline: 2px solid var(--accent);
   outline-offset: -4px;
 }
 
@@ -19,7 +19,7 @@
 }
 
 .device-hotspot {
-  --hotspot-accent: #bdc5b7;
+  --hotspot-accent: var(--muted);
   position: relative;
   display: grid;
   place-items: center;
@@ -28,28 +28,28 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0;
-  color: #e8eee4;
-  background: rgb(32 45 37 / 90%);
-  border: 1px solid rgb(219 230 204 / 42%);
+  color: var(--text);
+  background: var(--hud);
+  border: 1px solid var(--accent-border);
   border-radius: 50%;
-  box-shadow: 0 2px 12px rgb(12 30 22 / 28%);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 28%);
   pointer-events: auto;
   cursor: pointer;
   transition: border-color 180ms, background-color 180ms, transform 180ms;
 }
 
 .device-hotspot.is-on {
-  --hotspot-accent: #d4edb2;
-  color: #233626;
-  background: #d3e8ae;
-  border-color: #edffd8;
-  box-shadow: 0 0 0 4px rgb(211 232 174 / 17%), 0 3px 14px rgb(12 30 22 / 25%);
+  --hotspot-accent: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 4px rgb(var(--accent-rgb) / 17%), 0 3px 14px rgb(0 0 0 / 25%);
 }
 
 .device-hotspot.is-on:is([data-device-tone='alarm'], [data-device-tone='warning'], [data-device-tone='closed']) {
   background: var(--device-status-accent);
   border-color: var(--device-status-accent);
-  box-shadow: 0 2px 12px rgb(12 30 22 / 28%);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 28%);
 }
 
 .device-hotspot:hover,
@@ -60,11 +60,11 @@
 }
 
 .device-hotspot[aria-expanded="true"] {
-  box-shadow: 0 0 0 3px #294c3b, 0 0 0 5px #e5f3c8, 0 3px 14px rgb(12 30 22 / 30%);
+  box-shadow: 0 0 0 3px rgb(var(--background-rgb) / 100%), 0 0 0 5px rgb(var(--accent-rgb) / 100%), 0 3px 14px rgb(0 0 0 / 30%);
 }
 
 .device-hotspot:focus-visible {
-  outline: 3px solid #fff5c6;
+  outline: 3px solid var(--accent);
   outline-offset: 4px;
 }
 
@@ -79,9 +79,9 @@
   left: 50%;
   bottom: calc(100% + 10px);
   padding: 6px 9px;
-  color: #edf2e6;
-  background: rgb(23 35 27 / 94%);
-  border: 1px solid rgb(220 234 209 / 20%);
+  color: var(--text);
+  background: var(--hud);
+  border: 1px solid var(--line);
   border-radius: 6px;
   font: 500 13px/1.2 sans-serif;
   letter-spacing: 0.03em;
@@ -109,8 +109,8 @@
   height: 100%;
   min-height: 320px;
   padding: 32px;
-  color: #edf1e8;
-  background: #24332a;
+  color: var(--text);
+  background: var(--surface);
   text-align: center;
 }
 
@@ -121,14 +121,14 @@
 
 .scene-error span {
   max-width: 340px;
-  color: #bdc8ba;
+  color: var(--text-soft);
   font-size: 14px;
 }
 
 .scene-error button {
   padding: 10px 16px;
-  color: #233426;
-  background: #d3e8ae;
+  color: var(--accent-ink);
+  background: var(--accent);
   border: 0;
   border-radius: 8px;
   cursor: pointer;

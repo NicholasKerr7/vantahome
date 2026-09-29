@@ -26,5 +26,5 @@ const styles = StyleSheet.create({
   title: { color: theme.colors.text, fontSize: 18, fontWeight: '600' },
   detail: { color: theme.colors.subtext, fontSize: 14, lineHeight: 20 },
   button: { minHeight: 44, padding: 12, backgroundColor: theme.colors.card, borderRadius: theme.radius.sm, alignItems: 'center', justifyContent: 'center' },
-  label: { color: theme.colors.accent, fontSize: 14, fontWeight: '600' },
+  label: { color: theme.colors.accentText, fontSize: 14, fontWeight: '600' },
 });

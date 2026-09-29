@@ -11,6 +11,7 @@ import { FilamentWeather } from './FilamentWeather';
 import { useLabCamera } from './useLabCamera';
 import { useLabMetrics } from './useLabMetrics';
 import type { LabSurfaceProps, LabDevice } from './protocol';
+import { theme } from '../../theme/theme';
 
 const ASSETS = {
   upper: require('../../../packages/home-scene/public/models/upper.glb'),
@@ -102,4 +103,4 @@ function NativeScene({ settings, onEvent }: LabSurfaceProps) {
   </View>;
 }
 
-const styles = StyleSheet.create({ surface: { flex: 1, backgroundColor: '#101b22' } });
+const styles = StyleSheet.create({ surface: { flex: 1, backgroundColor: theme.colors.bg0 } });

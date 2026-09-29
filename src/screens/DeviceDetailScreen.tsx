@@ -1072,7 +1072,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   ];
   const bulbTextColor = bulbIsLight ? theme.colors.bg0 : "#fff";
   const bulbSubColor = bulbIsLight
-    ? "#315A50"
+    ? theme.colors.bg0
     : "rgba(255,255,255,0.85)";
   const bulbIconColor = bulbIsLight ? theme.colors.bg0 : "#fff";
   const bulbInnerBorder = bulbIsLight
