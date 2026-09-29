@@ -72,10 +72,17 @@ export class SimulationSession {
         return;
       }
       if (!this.sharedDemo || this.projecting || !this.state || state.devices === previous.devices) return;
-      const next = overlayDemoDevices(this.state, state.devices);
+      const previousSnapshot = this.state;
+      const next = overlayDemoDevices(this.state, state.devices, previous.devices);
       if (next === this.state) return;
       this.state = next;
       this.persistence.save(this.scope, next);
+      // Reflect normalized positions back into the catalog so a later native edit
+      // cannot restore the stale opening value that preceded a toggle routine.
+      const devices = projectSimulationToDemo(next, previousSnapshot, this.store.getState().devices);
+      this.projecting = true;
+      try { if (devices !== this.store.getState().devices) this.store.setState({ devices }); }
+      finally { this.projecting = false; }
       if (this.requested) this.sendSnapshot();
     });
     this.ready = this.persistence.load(this.scope).then((saved) => {

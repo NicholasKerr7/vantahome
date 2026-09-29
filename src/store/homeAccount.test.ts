@@ -10,6 +10,7 @@ import {
   type MembershipSyncResult,
 } from "../services/membership";
 import { authorizeLocalDeviceCommand } from "../security/localCommandAuthorization";
+import { DEVICES, ROOMS } from '../../packages/home-scene/src/data';
 
 const snapshot = (
   userId: string,
@@ -167,9 +168,30 @@ test("membership refresh retains air-quality history while adding newer observat
 
 test("the explicitly selected demo remains available without an account", async () => {
   await hydrateHomeAccount(null, true);
-  expect(selectVisibleDevices(useHomeStore.getState()).length).toBeGreaterThan(
-    0,
-  );
+  const state = useHomeStore.getState();
+  expect(state.modelCatalogVersion).toBe(1);
+  expect(state.rooms).toEqual(ROOMS.map(({ id, name }) => ({ id, name })));
+  expect(selectVisibleDevices(state).map(({ id, name, roomId, kind }) => ({ id, name, roomId, kind })))
+    .toEqual(DEVICES.map(({ id, name, roomId, kind }) => ({ id, name, roomId, kind })));
+  expect(state.devices.filter((device) => device.kind === 'camera').map((device) => device.id))
+    .toEqual(['entry-camera', 'drive-camera', 'terrace-camera']);
+  const cache = JSON.parse((await AsyncStorage.getItem('vantahome-store'))!);
+  expect(cache.state.modelCatalogVersion).toBe(1);
+  expect(cache.state.devices).toHaveLength(92);
+});
+
+test('a model demo survives reopening without leaking its catalog into an account', async () => {
+  await hydrateHomeAccount(null, true);
+  const first = useHomeStore.getState();
+  await hydrateHomeAccount(null, true);
+  expect(useHomeStore.getState().sessionEpoch).toBeGreaterThan(first.sessionEpoch);
+  expect(useHomeStore.getState().devices.map((device) => device.id)).toEqual(first.devices.map((device) => device.id));
+  await hydrateHomeAccount('real-owner');
+  expect(useHomeStore.getState().modelCatalogVersion).toBeUndefined();
+  expect(useHomeStore.getState().modelCatalogArchive).toBeUndefined();
+  expect(useHomeStore.getState().devices).toEqual([]);
+  applyMembershipSnapshot(snapshot('real-owner'));
+  expect(useHomeStore.getState().devices.map((device) => device.id)).toEqual(['real-owner-camera']);
 });
 
 test("legacy cache migration removes camera URLs without losing unowned automations", async () => {

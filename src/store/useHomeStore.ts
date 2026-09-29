@@ -9,6 +9,9 @@ import { addMissingGasDemoDevices, createGasDemoDevices } from "../features/gas/
 import { assertCanManageRoutines, assertRoutineReferences } from "./routineAccess";
 import { nextRoutineRecordId, removeRoutineCollections, routineDraft, routineId, selectRoutines, updateRoutineCollections, type RoutineDraft } from "./routineModel";
 import type { GAS_EVENTS } from "../../packages/home-scene/src/gasSimulation";
+import { upgradeModelHomeCatalog, type ModelCatalogArchive } from '../features/three-d-home/modelHomeCatalog';
+import { simulationPersistence } from '../features/three-d-home/simulationPersistence';
+import { overlayDemoDevices } from '../features/three-d-home/demoDeviceMapping';
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -41,7 +44,11 @@ export type DeviceKind =
   | "air"
   | "sprinkler"
   | "speaker"
-  | "smoke";
+  | "smoke"
+  | "blinds"
+  | "solar"
+  | "battery"
+  | "generator";
 
 export type AirQualitySample = {
   ts: number;
@@ -436,6 +443,10 @@ type Profile = {
 };
 
 export type HomeState = {
+  /** Version of the local house-plan catalog; never set for authenticated homes. */
+  modelCatalogVersion?: number;
+  /** Unmatched legacy demonstration records retained for local recovery, never executed. */
+  modelCatalogArchive?: ModelCatalogArchive;
   accountUserId: string | null;
   accountHomeId: string | null;
   authenticatedUserId: string | null;
@@ -2277,7 +2288,7 @@ export const useHomeStore = create<HomeState>()(
           membershipReady: false,
           sessionEpoch: current.sessionEpoch,
           ...(current.accountUserId
-            ? { household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "" }
+            ? { household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "", modelCatalogVersion: undefined, modelCatalogArchive: undefined }
             : {}),
         };
       },
@@ -2316,6 +2327,8 @@ export const useHomeStore = create<HomeState>()(
       },
       // Only persist user-facing state to keep storage light and migration-safe.
       partialize: (state) => ({
+        modelCatalogVersion: state.accountUserId ? undefined : state.modelCatalogVersion,
+        modelCatalogArchive: state.accountUserId ? undefined : state.modelCatalogArchive,
         accountUserId: state.accountUserId,
         accountHomeId: state.accountHomeId,
         userName: state.userName,
@@ -2345,6 +2358,8 @@ const demoState = useHomeStore.getState();
 
 export function clearHomeAccountState(userId: string | null) {
   useHomeStore.setState({
+    modelCatalogVersion: undefined,
+    modelCatalogArchive: undefined,
     accountUserId: userId,
     accountHomeId: null,
     authenticatedUserId: userId,
@@ -2372,11 +2387,25 @@ export async function hydrateHomeAccount(userId: string | null, demo = false) {
   });
   clearHomeAccountState(userId);
   useHomeStore.setState({ sessionEpoch: generation });
-  if (demo) useHomeStore.setState(demoState);
+  if (demo) useHomeStore.setState({ ...demoState, sessionEpoch: generation });
   try {
     await sanitizeLegacyCache();
     if (generation !== accountGeneration) return false;
     if (userId || demo) await useHomeStore.persist.rehydrate();
+    if (generation === accountGeneration && demo && !userId && runtimePolicy.allowUnauthenticatedDemo) {
+      const saved = await simulationPersistence.load('demo');
+      if (generation !== accountGeneration) return false;
+      const current = useHomeStore.getState();
+      // Existing paired controls may have changed while a renderer was closed.
+      // Resolve their explicit identities before replacing the old display catalog.
+      const snapshot = overlayDemoDevices(saved, current.devices);
+      const catalog = upgradeModelHomeCatalog(current, snapshot);
+      if (catalog.modelCatalogVersion) {
+        storageWritesEnabled = true;
+        useHomeStore.setState(catalog);
+        if (snapshot !== saved) simulationPersistence.save('demo', snapshot);
+      }
+    }
   } finally {
     if (generation === accountGeneration) storageWritesEnabled = Boolean(userId || demo);
   }

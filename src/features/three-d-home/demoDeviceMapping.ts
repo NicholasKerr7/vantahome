@@ -10,60 +10,21 @@ import type { DeviceState, SimulationSnapshot } from "../../../packages/home-sce
 import type { Device, DeviceKind } from "../../store/useHomeStore";
 import { synchronizeGasSafety } from '../../../packages/home-scene/src/gasSimulation';
 import { overlayGasDemoDevice, projectGasSimulationToDemo } from './gasDemoMapping';
+import { HOST_CONTROL_FIELDS, LEGACY_MODEL_DEVICE_ALIASES } from './modelHomeCatalog';
 
-/** Curated demo correspondence; user device names and room labels never select a target. */
-export const DEMO_DEVICE_MAPPINGS = [
-  { demoId: "d2", sceneId: "living-light", kind: "light" },
-  // The original demo's drawing-room TV represents the furnished family-room TV.
-  { demoId: "d3", sceneId: "family-tv", kind: "tv" },
-  { demoId: "d5", sceneId: "master-bedside-left", kind: "light" },
-  { demoId: "d6", sceneId: "master-ac", kind: "ac" },
-  { demoId: "d8", sceneId: "kitchen-light", kind: "light" },
-  { demoId: "d9", sceneId: "kitchen-coffee", kind: "coffee" },
-  { demoId: "d11", sceneId: "kitchen-fridge", kind: "fridge" },
-  { demoId: "d13", sceneId: "entry-door", kind: "door" },
-  { demoId: "d15", sceneId: "entry-camera", kind: "camera" },
-  { demoId: "d17", sceneId: "kitchen-stove", kind: "stove" },
-  { demoId: "d18", sceneId: "laundry-washer", kind: "washer" },
-  { demoId: "d18b", sceneId: "kitchen-dishwasher", kind: "dishwasher" },
-  { demoId: "d19", sceneId: "kitchen-microwave", kind: "microwave" },
-  { demoId: "d20", sceneId: "utility-energy", kind: "energy" },
-  { demoId: "d21", sceneId: "utility-water", kind: "water" },
-  { demoId: "d23", sceneId: "grounds-sprinkler", kind: "sprinkler" },
-  { demoId: "d24", sceneId: "living-speaker", kind: "speaker" },
-  { demoId: "d25", sceneId: "master-smoke", kind: "smoke" },
-  { demoId: "d26", sceneId: "entry-gate", kind: "gate" },
-  { demoId: "d27", sceneId: "utility-water-heater", kind: "water-heater" },
-  { demoId: "d34", sceneId: "grounds-light", kind: "light" },
-  { demoId: "d39", sceneId: "terrace-camera", kind: "camera" },
-  { demoId: "d40", sceneId: "utility-gas-meter", kind: "gas-meter" },
-  { demoId: "d41", sceneId: "kitchen-gas-leak", kind: "gas-leak" },
-] as const satisfies readonly { demoId: string; sceneId: string; kind: DeviceKind }[];
+/** Explicit aliases retained only for migration of older local demonstrations. */
+export const DEMO_DEVICE_MAPPINGS = LEGACY_MODEL_DEVICE_ALIASES;
+
+/** Resolve canonical model IDs first, retaining explicit aliases only for older demo caches. */
+export function resolveDemoDeviceMapping(device: Pick<Device, 'id' | 'kind'>): { demoId: string; sceneId: string; kind: DeviceKind } | undefined {
+  const definition = getDevice(device.id);
+  if (definition?.kind === device.kind) return { demoId: device.id, sceneId: definition.id, kind: device.kind };
+  return DEMO_DEVICE_MAPPINGS.find((entry) => entry.demoId === device.id && entry.kind === device.kind);
+}
 
 // Only common controls can cross the boundary. Identity, media URLs, observations,
 // schedules, telemetry and account data are deliberately absent from this list.
-const SHARED_CONTROL_FIELDS = [
-  "tempC", "mode", "brightness", "speed", "volume", "muted", "openPercent",
-  "armed", "recording", "nightVision", "motionAlerts", "motionSensitivity",
-  "micMuted", "twoWayAudio", "burnerLevel", "stoveMode", "stoveTimerMin",
-  "stoveLock", "cycle", "washTemp", "spinSpeedRpm", "soilLevel", "loadSize",
-  "rinseCount", "prewash", "steamWash", "sanitizeWash", "smartDispense",
-  "extraSpin", "ecoWash", "timeRemainingSec", "microwavePower", "microwaveMode",
-  "energyBudgetKwh", "gridOutageAlerts", "waterLeakAlerts", "waterAutoShutoff",
-  "waterBudgetL", "waterPressureLowPsi", "waterPressureHighPsi", "waterPressureAlerts",
-  "durationMin", "zone", "speakerSource", "speakerPreset", "bass", "treble",
-  "spatialAudio", "partyMode", "nightMode", "voiceAssistantEnabled", "micEnabled",
-  "shuffle", "repeat", "heaterMode", "recirculation", "antiLegionella",
-  "heaterScheduleEnabled", "vacationDays", "coffeeStrength", "coffeeSizeOz",
-  "color", "colorTempK", "lightEffect", "adaptiveLighting", "motionBoost", "nightShift", "autoOffMin",
-  "autoOpenEnabled", "channel", "source", "fanOscillation", "fanDirection", "fanTimerMin", "fanAutoMode", "fanLightOn", "fanSleepMode",
-  "vacuumSuction", "vacuumMode", "vacuumMop", "vacuumQuietMode", "heatLevel", "drynessLevel", "sensorDry", "wrinkleGuard",
-  "steamRefresh", "ecoDry", "airFluff", "coolDown", "antiStatic", "freezerTempC", "fridgeMode", "fridgeDoorAlarm", "fridgeIceMaker",
-  "fridgeQuickCool", "fridgeQuickFreeze", "fridgeEnergySaver", "fridgeHumidity",
-  "acFanSpeed", "acSwingMode", "acEcoMode", "acTurboMode", "acQuietMode", "acTargetHumidity",
-  "coffeeCupCount", "coffeeTempC", "coffeeKeepWarmMin", "coffeeGrinder", "coffeeMilkFrother", "coffeeAutoBrewTime",
-  "waterHeaterType", "airAlertAqi", "airAlertCo2", "airAlertPm25", "airAlertPm10", "airAlertVoc", "airAlertPollen",
-] as const satisfies readonly (keyof Device)[];
+const SHARED_CONTROL_FIELDS = HOST_CONTROL_FIELDS;
 type SharedControlField = (typeof SHARED_CONTROL_FIELDS)[number];
 
 /** Narrow catalog field strings to an audited, typed dashboard control field. */
@@ -100,6 +61,8 @@ function writeSceneControl(
 /** Infer white/color intent from original demo edits and mirror its absent cleared effect. */
 function synchronizeDemoLightAppearance(device: Device, previous: DeviceState, state: DeviceState): DeviceState {
   if (device.kind !== 'light') return state;
+  const definition = getDevice(resolveDemoDeviceMapping(device)?.sceneId ?? null);
+  if (!definition) return state;
   let next = state;
   if (device.lightEffect === undefined && next.settings?.lightEffect && next.settings.lightEffect !== 'none') {
     next = { ...next, settings: { ...next.settings, lightEffect: 'none' } };
@@ -108,8 +71,10 @@ function synchronizeDemoLightAppearance(device: Device, previous: DeviceState, s
   const temperature = getCapabilities('light').find((capability) => 'field' in capability && capability.field === 'colorTempK');
   const validColor = color && validateSetting(color, device.color);
   const validTemperature = temperature && validateSetting(temperature, device.colorTempK);
-  const colorChanged = validColor !== undefined && previous.settings?.color !== validColor;
-  const temperatureChanged = validTemperature !== undefined && previous.settings?.colorTempK !== validTemperature;
+  // Materialized host defaults are not edits: keep a saved white-light mode when
+  // its optional color field was never written by the scene.
+  const colorChanged = validColor !== undefined && readDeviceSetting(definition, previous, 'color') !== validColor;
+  const temperatureChanged = validTemperature !== undefined && readDeviceSetting(definition, previous, 'colorTempK') !== validTemperature;
   const mode = colorChanged ? 'color' : validTemperature !== undefined && (temperatureChanged || validColor === undefined) ? 'temperature' : undefined;
   if (mode && next.settings?.lightColorMode !== mode) next = { ...next, settings: { ...next.settings, lightColorMode: mode } };
   return next;
@@ -123,14 +88,22 @@ function synchronizeDemoLightAppearance(device: Device, previous: DeviceState, s
 export function overlayDemoDevices(
   snapshot: SimulationSnapshot,
   devices: readonly Device[],
+  previousDevices?: readonly Device[],
 ): SimulationSnapshot {
   let deviceStates = snapshot.deviceStates;
-  for (const mapping of DEMO_DEVICE_MAPPINGS) {
-    const device = devices.find((candidate) => candidate.id === mapping.demoId);
+  for (const device of devices) {
+    const mapping = resolveDemoDeviceMapping(device);
+    if (!mapping) continue;
     const definition = getDevice(mapping.sceneId);
     const previous = deviceStates[mapping.sceneId];
     if (!device || device.kind !== mapping.kind || definition?.kind !== mapping.kind || !previous) continue;
     let next = previous;
+    const before = previousDevices?.find((candidate) => candidate.id === device.id && candidate.kind === device.kind);
+    // A routine's plain power command must move positional equipment. An explicit
+    // position command takes precedence, and hydration never invents a power edit.
+    const positionPowerChanged = isPositionDevice(definition) && before
+      && device.isOn !== before.isOn && device.openPercent === before.openPercent;
+    if (positionPowerChanged) next = writeSceneControl(device.kind, next, 'openPercent', device.isOn ? 100 : 0);
     // Camera `on` means armed in the scene; its dashboard power remains independent.
     if (!isMonitor(device.kind) && device.kind !== "camera" && !isPositionDevice(definition)
       && typeof device.isOn === "boolean" && previous.on !== device.isOn) {
@@ -138,6 +111,7 @@ export function overlayDemoDevices(
     }
     for (const capability of getCapabilities(definition.kind)) {
       if (!("field" in capability) || !isSharedControl(capability.field)) continue;
+      if (positionPowerChanged && capability.field === 'openPercent') continue;
       const value = validateSetting(capability, device[capability.field]);
       if (value !== undefined) next = writeSceneControl(device.kind, next, capability.field, value);
     }
@@ -179,7 +153,7 @@ export function projectSimulationToDemo(
 ): readonly Device[] {
   let result: Device[] | undefined;
   devices.forEach((device, index) => {
-    const mapping = DEMO_DEVICE_MAPPINGS.find((candidate) => candidate.demoId === device.id);
+    const mapping = resolveDemoDeviceMapping(device);
     if (!mapping || mapping.kind !== device.kind) return;
     const definition = getDevice(mapping.sceneId);
     const state = snapshot.deviceStates[mapping.sceneId];

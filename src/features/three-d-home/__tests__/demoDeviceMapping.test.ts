@@ -2,7 +2,7 @@ import { DEVICES, getDevice } from "../../../../packages/home-scene/src/data";
 import { readDeviceSetting } from "../../../../packages/home-scene/src/deviceCapabilities";
 import type { SimulationSnapshot } from "../../../../packages/home-scene/src/simulationBridgeProtocol";
 import type { Device } from "../../../store/useHomeStore";
-import { DEMO_DEVICE_MAPPINGS, overlayDemoDevices, projectSimulationToDemo } from "../demoDeviceMapping";
+import { DEMO_DEVICE_MAPPINGS, overlayDemoDevices, projectSimulationToDemo, resolveDemoDeviceMapping } from "../demoDeviceMapping";
 import { applyGasCommand, GAS_DEFAULTS, readGasSetting, synchronizeGasSafety } from '../../../../packages/home-scene/src/gasSimulation';
 
 /** Build independent scene samples without loading either application's store. */
@@ -32,6 +32,25 @@ function change(
 }
 
 describe("explicit demo device correspondence", () => {
+  test('binds every modeled device by its canonical identity and kind', () => {
+    for (const definition of DEVICES) {
+      expect(resolveDemoDeviceMapping(definition)).toEqual({ demoId: definition.id, sceneId: definition.id, kind: definition.kind });
+    }
+    expect(resolveDemoDeviceMapping({ id: 'master-blinds', kind: 'camera' })).toBeUndefined();
+  });
+
+  test('shares newly modeled blinds and driveway camera controls in both directions', () => {
+    const previous = snapshot();
+    const devices = [demo('master-blinds', 'blinds', { openPercent: 28 }), demo('drive-camera', 'camera', { armed: false, isOn: true })];
+    const overlaid = overlayDemoDevices(previous, devices);
+    expect(overlaid.deviceStates['master-blinds']).toMatchObject({ on: true, level: 28 });
+    expect(overlaid.deviceStates['drive-camera'].on).toBe(false);
+    const next = change(change(overlaid, 'master-blinds', { on: false, level: 0 }), 'drive-camera', { on: true });
+    const projected = projectSimulationToDemo(next, overlaid, devices);
+    expect(projected[0]).toMatchObject({ openPercent: 0, isOn: false });
+    expect(projected[1]).toMatchObject({ armed: true, isOn: true });
+  });
+
   test("has unique paired IDs and every target's expected kind", () => {
     expect(new Set(DEMO_DEVICE_MAPPINGS.map((mapping) => mapping.demoId)).size).toBe(DEMO_DEVICE_MAPPINGS.length);
     expect(new Set(DEMO_DEVICE_MAPPINGS.map((mapping) => mapping.sceneId)).size).toBe(DEMO_DEVICE_MAPPINGS.length);
@@ -110,6 +129,15 @@ describe('paired gas simulation outcomes', () => {
 });
 
 describe("dashboard controls to scene", () => {
+  test('materialized catalog defaults do not change saved white lighting into amber', () => {
+    const previous = change(snapshot(), 'living-light', { settings: { colorTempK: 3400, lightColorMode: 'temperature' } });
+    const definition = getDevice('living-light')!;
+    const defaultColor = String(readDeviceSetting(definition, previous.deviceStates['living-light'], 'color'));
+    const overlaid = overlayDemoDevices(previous, [demo('living-light', 'light', { brightness: previous.deviceStates['living-light'].level, color: defaultColor, colorTempK: 3400 })]);
+    expect(overlaid.deviceStates['living-light'].settings?.lightColorMode).toBe('temperature');
+    expect(overlayDemoDevices(overlaid, [demo('living-light', 'light', { brightness: previous.deviceStates['living-light'].level, color: defaultColor, colorTempK: 3400 })])).toBe(overlaid);
+  });
+
   test('reflects original white-temperature edits and cleared effects without overriding unchanged color intent', () => {
     const previous = change(snapshot(), 'master-bedside-left', { settings: { color: '#FF9AA2', colorTempK: 3200, lightColorMode: 'color', lightEffect: 'party' } });
     const white = overlayDemoDevices(previous, [demo('d5', 'light', { color: '#FF9AA2', colorTempK: 5200 })]);

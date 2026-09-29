@@ -64,6 +64,22 @@ test('dashboard updates reach an open scene and survive leaving and reopening', 
   reopened.dispose();
 });
 
+test.each(['master-blinds', 'entry-gate', 'entry-door'])('native power routines move %s and retain the normalized position', async (id) => {
+  const kind = id === 'master-blinds' ? 'blinds' : id === 'entry-gate' ? 'gate' : 'door';
+  const { session, deliver, store } = setup({ devices: [{ id, kind, name: 'Positioned device', roomId: 'master', isOn: false, openPercent: 0 }] });
+  session.handleMessage(request);
+  await settle();
+  store.setState({ devices: [{ ...store.getState().devices[0], isOn: true }] });
+  expect(deliver.mock.lastCall?.[0].state.deviceStates[id]).toMatchObject({ on: true, level: 100 });
+  expect(store.getState().devices[0]).toMatchObject({ isOn: true, openPercent: 100 });
+  store.setState({ devices: [{ ...store.getState().devices[0], isOn: false }] });
+  expect(deliver.mock.lastCall?.[0].state.deviceStates[id]).toMatchObject({ on: false, level: 0 });
+  expect(store.getState().devices[0]).toMatchObject({ isOn: false, openPercent: 0 });
+  store.setState({ devices: [{ ...store.getState().devices[0], isOn: true, openPercent: 40 }] });
+  expect(deliver.mock.lastCall?.[0].state.deviceStates[id]).toMatchObject({ on: true, level: 40 });
+  session.dispose();
+});
+
 test.each([
   { accountUserId: 'account' }, { authenticatedUserId: 'account' },
   { accountHomeId: 'house' }, { activeHomeId: 'house' },

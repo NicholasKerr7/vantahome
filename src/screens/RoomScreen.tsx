@@ -40,6 +40,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { runtimePolicy } from "../config/runtimeMode";
 import { captureSceneScope, executeSceneCommands, type SceneScope } from "../services/sceneExecution";
 import { canManageRoutines } from "../store/routineAccess";
+import { getDevice, ROOMS } from "../../packages/home-scene/src/data";
+import { quickActionLabel } from "../../packages/home-scene/src/deviceCapabilities";
+import { isModelHome } from "../features/three-d-home/modelHomeScope";
+import { canShareDemoDevices } from "../features/three-d-home/simulationSession";
+import { useSimulationControls } from "../features/three-d-home/useSimulationControls";
+import { guardModelDeviceControls } from "../features/three-d-home/modelDeviceControls";
 
 const DEVICE_OPTIONS: Array<{
   kind: Device["kind"];
@@ -415,6 +421,11 @@ export default function RoomScreen({ route, navigation }: Props) {
   const { roomId, showAll } = route.params;
   const isWholeHome = Boolean(showAll);
 
+  const modelHome = useHomeStore(isModelHome);
+  const modelOwner = useHomeStore((state) => isModelHome(state) && canShareDemoDevices(state, runtimePolicy.mode));
+  const simulation = useSimulationControls(modelOwner);
+  const modelControls = useMemo(() => guardModelDeviceControls(simulation.client), [simulation.client]);
+  const modeledRoom = modelHome && ROOMS.some((candidate) => candidate.id === roomId);
   const visibleRooms = useHomeStore(useShallow(selectVisibleRooms));
   const room = roomId
     ? visibleRooms.find((r) => r.id === roomId)
@@ -428,6 +439,14 @@ export default function RoomScreen({ route, navigation }: Props) {
   const canCreateRoutines = useHomeStore(canManageRoutines);
   const addDevice = useHomeStore((s) => s.addDevice);
   const removeDevice = useHomeStore((s) => s.removeDevice);
+
+  /** Describe the actual simulation quick action instead of labelling sensors as power switches. */
+  function modeledQuickActionLabel(device: Device): string | undefined {
+    if (!modelOwner) return undefined;
+    const definition = getDevice(device.id);
+    const state = simulation.state.deviceStates[device.id];
+    return definition?.kind === device.kind && state ? quickActionLabel(definition, state) : undefined;
+  }
 
   // Derived data for this room.
   const devices = useMemo(
@@ -487,7 +506,7 @@ export default function RoomScreen({ route, navigation }: Props) {
   };
 
   const handleCreateDevice = () => {
-    if (!roomId || isWholeHome) return;
+    if (!roomId || isWholeHome || modeledRoom) return;
     const option = DEVICE_OPTIONS.find((o) => o.kind === newKind);
     const name = newName.trim() || option?.defaultName || "New Device";
     const defaults = buildDeviceDefaults(newKind);
@@ -612,7 +631,7 @@ export default function RoomScreen({ route, navigation }: Props) {
         eyebrow={isWholeHome ? "DEVICE COLLECTION" : "ROOM COLLECTION"}
         subtitle={`${running} active · ${devices.length} devices`}
         onBack={() => navigation.goBack()}
-        actions={isWholeHome ? undefined : <DeepAction label="Add" icon="add" onPress={handleAddDevice} />}
+        actions={isWholeHome || modeledRoom ? undefined : <DeepAction label="Add" icon="add" onPress={handleAddDevice} />}
       >
         <RoomScenesRow scenes={scenes} onRun={handleRunScene} horizontalInset={0} />
         <View testID="room-device-viewport" style={styles.gridViewport} onLayout={(event) => setGridHeight(event.nativeEvent.layout.height)}>
@@ -639,7 +658,13 @@ export default function RoomScreen({ route, navigation }: Props) {
                 onPress={() =>
                   navigation.navigate("DeviceDetail", { deviceId: item.id })
                 }
+                toggleLabel={modeledQuickActionLabel(item)}
+                onToggle={modelOwner && getDevice(item.id)?.kind === item.kind ? () => modelControls.toggle(item.id) : undefined}
                 onLongPress={() => {
+                  if (modelHome && getDevice(item.id)?.kind === item.kind) {
+                    navigation.navigate("DeviceDetail", { deviceId: item.id });
+                    return;
+                  }
                   setSelectedId(item.id);
                   // Delay to the next frame so state updates before the sheet reads `selected`.
                   requestAnimationFrame(() => sheetRef.current?.present());

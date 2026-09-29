@@ -9,13 +9,14 @@ jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: require("reac
 jest.mock("@expo/vector-icons/Ionicons", () => require("react-native").View);
 
 const seed = useHomeStore.getState();
+const navigation = { goBack: jest.fn(), navigate: jest.fn() };
 const rooms = ["Living room", "Kitchen", "Bedroom", "Studio"].map((name, index) => ({ id: `room-${index}`, name }));
 
 describe("Rooms workspace", () => {
   let tree: ReactTestRenderer;
   beforeEach(() => {
     useHomeStore.setState({ ...seed, rooms, devices: [], household: [{ id: "owner", name: "Owner", role: "Owner", status: "home" }], activeMemberId: "owner", memberPermissionOverrides: [] });
-    act(() => { tree = renderer.create(<ManageRoomsScreen navigation={{ goBack: jest.fn() } as never} route={{ key: "rooms", name: "ManageRooms" } as never} />); });
+    act(() => { tree = renderer.create(<ManageRoomsScreen navigation={navigation as never} route={{ key: "rooms", name: "ManageRooms" } as never} />); });
   });
   afterEach(() => { act(() => tree.unmount()); useHomeStore.setState(seed); });
 
@@ -69,4 +70,15 @@ describe("Rooms workspace", () => {
     expect(action("Save").props.disabled).toBe(true);
     expect(action("Delete Living room").props.disabled).toBe(true);
   });
+  it("shows authored room metadata and opens the room without structural edits", () => {
+    act(() => { useHomeStore.setState({ modelCatalogVersion: 1, accountUserId: null, authenticatedUserId: null, accountHomeId: null, activeHomeId: null,
+      realtime: { ...seed.realtime, enabled: false, useMqtt: false }, rooms: [{ id: "living", name: "Living room" }] }); });
+    expect(tree.root.findAllByType(Pressable).some((node: { props: { accessibilityLabel?: string } }) => node.props.accessibilityLabel === "Add room")).toBe(false);
+    press("Manage Living room");
+    expect(tree.root.findAllByType(TextInput).some((node: { props: { accessibilityLabel?: string } }) => node.props.accessibilityLabel === "Living room room name")).toBe(false);
+    expect(tree.root.findAllByType(Pressable).some((node: { props: { accessibilityLabel?: string } }) => node.props.accessibilityLabel === "Delete Living room")).toBe(false);
+    press("Open room");
+    expect(navigation.navigate).toHaveBeenCalledWith("Room", { roomId: "living" });
+  });
+
 });

@@ -44,6 +44,8 @@ import CoffeeDetailSection from "./device-detail/devices/CoffeeDetailSection";
 import LaundryDetailSection from "./device-detail/devices/LaundryDetailSection";
 import VacuumDetailSection from "./device-detail/devices/VacuumDetailSection";
 import CameraDetailSection from "./device-detail/devices/CameraDetailSection";
+import { isModelHome } from "../features/three-d-home/modelHomeScope";
+import { getDevice as getModelDevice } from "../../packages/home-scene/src/data";
 import AirDetailSection from "./device-detail/devices/AirDetailSection";
 import SpeakerDetailSection from "./device-detail/devices/SpeakerDetailSection";
 import AcDetailSection from "./device-detail/devices/AcDetailSection";
@@ -56,9 +58,6 @@ import CapabilitiesSection from "./device-detail/CapabilitiesSection";
 import OptionChips from "../components/OptionChips";
 import CinematicSurface from "../components/CinematicSurface";
 import ModeTiles from "../components/ModeTiles";
-import AvatarChip from "../components/AvatarChip";
-import LiveVideoPlayer from "../components/LiveVideoPlayer";
-import CameraThumbnail from "../components/CameraThumbnail";
 import RenderProfiler from "../components/RenderProfiler";
 import {
   SafeAreaView,
@@ -76,7 +75,6 @@ const AnimatedLottieView = Animated.createAnimatedComponent(LottieView);
 const TV_LOTTIE_SOURCE = require("../../assets/animations/tv-screen.json");
 const AC_LOTTIE_SOURCE = require("../../assets/animations/ac-screen.json");
 const GARAGE_LOTTIE_SOURCE = require("../../assets/animations/garage-screen.json");
-const CAMERA_LOTTIE_SOURCE = require("../../assets/animations/camera-screen.json");
 const DRYER_LOTTIE_SOURCE = require("../../assets/animations/dryer-screen.json");
 const DOOR_LOTTIE_SOURCE = require("../../assets/animations/door-screen.json");
 const GATE_LOTTIE_SOURCE = require("../../assets/animations/front-gate-screen.json");
@@ -239,18 +237,6 @@ const buildAirSeries = (
   return downsampled.length
     ? downsampled
     : [{ ts: now, aqi: fallbackAqi }];
-};
-
-const formatLastSeen = (ts?: number) => {
-  if (!ts) return "";
-  const delta = Date.now() - ts;
-  if (delta < 30_000) return "Just now";
-  const mins = Math.floor(delta / 60_000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 };
 
 export default function DeviceDetailScreen({ route, navigation }: Props) {
@@ -471,13 +457,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const fanModeIconSize = Math.round((isTablet ? 22 : 20) * scale);
   const presetTileIconSize = Math.round((isTablet ? 22 : 20) * scale);
   const fanModeTextSize = Math.round((isTablet ? 13 : 12) * scale);
-  const cameraFeedHeight = Math.round(
-    Math.min(
-      compactDialSize,
-      Math.round(utilityHeroSize * (isLandscape ? 1.35 : 1.1)),
-    ),
-  );
-  const cameraPreviewIconSize = Math.round((isTablet ? 44 : 38) * scale);
   const coffeeHeroCupSize = Math.round(energyHeroSize * 0.34);
   const coffeeHeroCupRadius = Math.round(coffeeHeroCupSize * 0.26);
   const speakerBarBase = Math.round((isTablet ? 12 : 10) * scale);
@@ -975,6 +954,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     (s) =>
       selectVisibleRooms(s).find((r) => r.id === device?.roomId)?.name ?? "",
   );
+  const hasModelCatalog = useHomeStore(isModelHome);
+  const isModelCamera = hasModelCatalog && device?.kind === "camera" && getModelDevice(device.id)?.kind === "camera";
   const removeDevice = useHomeStore((s) => s.removeDevice);
   const household = useHomeStore((s) => s.household);
   const activeHouseholdMember =
@@ -1623,11 +1604,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     waterPressureAlerts &&
     waterPressureHigh > 0 &&
     waterPressure > waterPressureHigh;
-  const nightVision = device.nightVision ?? false;
-  const motionAlerts = device.motionAlerts ?? true;
-  const motionSensitivity = clamp(device.motionSensitivity ?? 6, 1, 10);
-  const micMuted = device.micMuted ?? false;
-  const twoWayAudio = device.twoWayAudio ?? true;
   const smokeDetected = device.smokeDetected ?? false;
   const coDetected = device.coDetected ?? false;
   const coPpm = clamp(device.coPpm ?? 0, 0, 400);
@@ -1918,12 +1894,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const [cameraEvents, setCameraEvents] = useState<
     Array<{ id: string; label: string; kind: "known" | "unknown"; ts: number }>
   >([]);
-  const cameraKnownCount = cameraEvents.filter(
-    (event) => event.kind === "known",
-  ).length;
-  const cameraUnknownCount = cameraEvents.filter(
-    (event) => event.kind === "unknown",
-  ).length;
   const [schedHour, setSchedHour] = useState("06");
   const [schedMinute, setSchedMinute] = useState("00");
   const [schedDays, setSchedDays] = useState<
@@ -2327,90 +2297,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     !isTablet && styles.energyHeroHeaderPhone,
   ];
   // Give phone titles a full line above status pills instead of shrinking
-  // them into a narrow column. Tablet and camera title layouts stay unchanged.
+  // them into a narrow column. Tablet layouts stay unchanged.
   const energyHeroTitleWrapStyle: StyleProp<ViewStyle> = [
     styles.energyHeroTitleWrap,
     !isTablet && styles.energyHeroTitleWrapPhone,
   ];
-  const cameraHeroCardStyle: StyleProp<ViewStyle> = [
-    styles.energyHeroCard,
-    { padding: utilityHeroPad, borderRadius: controlCardRadius + 6 },
-    isLandscape && { flex: 1 },
-  ];
-  const cameraHeroBodyStyle: StyleProp<ViewStyle> = [
-    styles.energyHeroBody,
-    {
-      flexDirection: isLandscape ? "column" : isTablet ? "row" : "column",
-      alignItems: "center",
-      gap: utilityHeroGap,
-    },
-  ];
-  const cameraFeedCardStyle: StyleProp<ViewStyle> = [
-    styles.cameraFeed,
-    { height: cameraFeedHeight, borderRadius: controlCardRadius + 8 },
-    isLandscape && { flex: 1, alignSelf: "stretch" },
-    !isLandscape && isTablet && { flex: 1, alignSelf: "stretch" },
-  ];
-  const cameraFeedLottieStyle: StyleProp<ViewStyle> = [
-    styles.deviceLottie,
-    { width: "72%", height: "72%" },
-  ];
-  const cameraHeroInfoStyle: StyleProp<ViewStyle> = [
-    styles.energyHeroInfo,
-    isLandscape
-      ? {
-          alignItems: "stretch",
-          alignSelf: "stretch",
-          justifyContent: "flex-end",
-          paddingTop: Math.max(12, Math.round(utilityHeroGap * 0.7)),
-          paddingBottom: Math.max(10, Math.round(utilityHeroGap * 0.5)),
-        }
-      : {
-          alignItems: isTablet ? "flex-start" : "center",
-          alignSelf: "stretch",
-          justifyContent: "flex-end",
-          paddingTop: Math.max(6, Math.round(utilityHeroGap * 0.35)),
-          paddingBottom: Math.max(12, Math.round(utilityHeroGap * 0.7)),
-        },
-  ];
-  const cameraHeroStatsRowStyle: StyleProp<ViewStyle> = [
-    styles.energyHeroStatsRow,
-    isLandscape && styles.energyHeroStatsRowCentered,
-  ];
-  const cameraHeroActionRowStyle: StyleProp<ViewStyle> = [
-    styles.actionRow,
-    styles.utilityHeroActionRow,
-    {
-      marginTop: Math.max(12, Math.round(utilityHeroGap * 0.7)),
-      paddingHorizontal: 0,
-      justifyContent: isLandscape ? "center" : "flex-start",
-    },
-  ];
-  const cameraPortraitGridEnabled = isTablet;
-  const cameraPortraitGridStyle: StyleProp<ViewStyle> = cameraPortraitGridEnabled
-    ? {
-        marginTop: 14,
-        width: "100%",
-        gap: controlCardRowGap,
-      }
-    : undefined;
-  const cameraPortraitRowStyle: StyleProp<ViewStyle> = cameraPortraitGridEnabled
-    ? {
-        flexDirection: "row",
-        gap: controlCardRowGap,
-        alignItems: "stretch",
-      }
-    : undefined;
-  const cameraPortraitCellStyle: StyleProp<ViewStyle> = cameraPortraitGridEnabled
-    ? { flex: 1, minWidth: 0, alignItems: "stretch" }
-    : undefined;
-  const cameraPortraitCardStyle: StyleProp<ViewStyle> = cameraPortraitGridEnabled
-    ? { marginTop: 0, alignSelf: "stretch", width: "100%", flex: 1 }
-    : undefined;
-  const cameraControlCardStyle: StyleProp<ViewStyle> =
-    cameraPortraitGridEnabled
-      ? [controlCardStyle, cameraPortraitCardStyle]
-      : controlCardStyle;
+  const compactControlCardStyle: StyleProp<ViewStyle> = isTablet
+    ? [controlCardStyle, styles.compactControlCardTablet]
+    : controlCardStyle;
   const waterPortraitGridEnabled = isTablet && isPortrait;
   const waterPortraitGridGap = Math.max(10, Math.round(controlCardRowGap * 0.7));
   const waterPortraitGridStyle: StyleProp<ViewStyle> = waterPortraitGridEnabled
@@ -3230,6 +3124,16 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     setGateTarget(0);
   };
 
+  /** Retain gate commands in the shared transport, authorization, and delivery-feedback pipeline. */
+  const handleCameraGateAutoToggle = () => {
+    if (!gateDevice) return;
+    deviceClient.sendCommand({
+      op: "set-properties",
+      deviceId: gateDevice.id,
+      changes: { autoOpenEnabled: !gateAutoOpen },
+    }).catch(() => {});
+  };
+
   const handleKnownFace = (memberId: string, name: string) => {
     setHouseholdPresence(memberId, "home");
     logCameraEvent(`${name} recognized`, "known");
@@ -3242,7 +3146,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     // Auto-open only when a known face is detected and the gate toggle is enabled.
     if (gateDevice?.autoOpenEnabled) {
       openGate();
-      logCameraEvent("Front gate auto-opened", "known");
+      logCameraEvent(`${gateDevice.name} auto-opened`, "known");
     }
   };
 
@@ -4371,26 +4275,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.dayChipText,
     { fontSize: editLabelSize },
     active && styles.dayChipTextActive,
-  ];
-  const cameraDetectAlertTextStyle: StyleProp<TextStyle> = [
-    styles.cameraDetectText,
-    { color: "#C4384C" },
-  ];
-  const cameraLiveDotStyle: StyleProp<ViewStyle> = [
-    styles.cameraLiveDot,
-    {
-      backgroundColor: device.isOn
-        ? theme.colors.accent
-        : theme.colors.muted,
-    },
-  ];
-  const cameraPresencePillStyle = (isHome: boolean): StyleProp<ViewStyle> => [
-    styles.cameraPresencePill,
-    isHome ? styles.cameraPresenceHome : styles.cameraPresenceAway,
-  ];
-  const cameraEventDotStyle = (isKnown: boolean): StyleProp<ViewStyle> => [
-    styles.cameraEventDot,
-    isKnown ? styles.cameraEventDotKnown : styles.cameraEventDotUnknown,
   ];
   const acModeLabel = mode[0].toUpperCase() + mode.slice(1);
   const acModeIcon =
@@ -6023,7 +5907,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     <View style={utilityHeroActionRowStyle}>{garageActionButtons}</View>
   );
   const garageActionCard = (
-    <View style={cameraControlCardStyle}>
+    <View style={compactControlCardStyle}>
       <Text style={styles.cardLabel}>Controls</Text>
       <View style={garageActionRowStyle}>{garageActionButtons}</View>
     </View>
@@ -6182,7 +6066,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     <View style={utilityHeroActionRowStyle}>{doorActionButtons}</View>
   );
   const doorActionCard = (
-    <View style={cameraControlCardStyle}>
+    <View style={compactControlCardStyle}>
       <Text style={styles.cardLabel}>Controls</Text>
       <View style={doorActionRowStyle}>{doorActionButtons}</View>
     </View>
@@ -6407,7 +6291,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     </LinearGradient>
   );
   const gateActionCard = (
-    <View style={cameraControlCardStyle}>
+    <View style={compactControlCardStyle}>
       <Text style={styles.cardLabel}>Controls</Text>
       <View style={doorActionRowStyle}>{gateActionButtons}</View>
     </View>
@@ -7894,273 +7778,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       </Text>
     </View>
   );
-  const cameraStreamUrl =
-    device.kind === "camera" ? device.streamUrl : undefined;
-  const cameraThumbnailUrl =
-    device.kind === "camera" ? device.thumbnailUrl : undefined;
-  const cameraCachedThumbnail =
-    device.kind === "camera" ? device.lastThumbnailUrl : undefined;
-  const cameraLastSeenAt =
-    device.kind === "camera" ? device.lastSeenAt : undefined;
-  const cameraLastSeenLabel = formatLastSeen(cameraLastSeenAt);
-  const showCameraStream = Boolean(device.isOn && cameraStreamUrl);
-  const cameraArmed = Boolean(device.armed);
-  const cameraRecording = Boolean(device.recording);
-  const cameraStats = useMemo(
-    () => [
-      { label: "Known", value: `${cameraKnownCount}` },
-      {
-        label: "Unknown",
-        value: `${cameraUnknownCount}`,
-        active: cameraUnknownCount > 0,
-      },
-      { label: "Sensitivity", value: `${motionSensitivity}` },
-    ],
-    [cameraKnownCount, cameraUnknownCount, motionSensitivity],
-  );
-  const cameraActionButtons = useMemo(
-    () => [
-      {
-        label: cameraArmed ? "Armed" : "Arm",
-        icon: "eye" as const,
-        active: cameraArmed,
-        onPress: () => sendPatch({ armed: !cameraArmed }),
-      },
-      {
-        label: cameraRecording ? "Recording" : "Record",
-        icon: "radio-button-on" as const,
-        active: cameraRecording,
-        onPress: () => sendPatch({ recording: !cameraRecording }),
-      },
-    ],
-    [cameraArmed, cameraRecording, sendPatch],
-  );
-  const cameraHeroHeaderStyle: StyleProp<ViewStyle> = isTablet
-    ? energyHeroHeaderStyle
-    : [
-        energyHeroHeaderStyle,
-        {
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 10,
-        },
-      ];
-  const cameraHeroTitleWrapStyle: StyleProp<ViewStyle> = isTablet
-    ? styles.energyHeroTitleWrap
-    : [styles.energyHeroTitleWrap, { alignItems: "center" }];
-  const cameraHeroPillRowStyle: StyleProp<ViewStyle> = isTablet
-    ? styles.energyHeroPillRow
-    : [styles.energyHeroPillRow, { justifyContent: "center", flexWrap: "wrap" }];
-  const cameraHeroCard = (
-    <LinearGradient
-      colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
-      start={{ x: 0.1, y: 0.05 }}
-      end={{ x: 1, y: 1 }}
-      style={cameraHeroCardStyle}
-    >
-      <View testID="camera-hero-header" style={cameraHeroHeaderStyle}>
-        <View testID="camera-hero-title" style={cameraHeroTitleWrapStyle}>
-          <Text style={styles.energyHeroTitle}>{device.name}</Text>
-          <Text style={styles.energyHeroSub}>
-            {roomName || "Camera"} • {device.isOn ? "Live view" : "Standby"}
-          </Text>
-        </View>
-        <View style={cameraHeroPillRowStyle}>
-          <View style={energyHeroPillStyle(device.isOn)}>
-            <Ionicons
-              name={device.isOn ? "videocam" : "videocam-off"}
-              size={14}
-              color={device.isOn ? theme.colors.accent : stylesVars.subtext}
-            />
-            <Text style={energyHeroPillTextStyle(device.isOn)}>
-              {device.isOn ? "Live" : "Offline"}
-            </Text>
-          </View>
-          <View style={energyHeroPillStyle(cameraArmed)}>
-            <Ionicons
-              name={cameraArmed ? "eye" : "eye-off"}
-              size={14}
-              color={cameraArmed ? theme.colors.accent : stylesVars.subtext}
-            />
-            <Text style={energyHeroPillTextStyle(cameraArmed)}>
-              {cameraArmed ? "Armed" : "Disarmed"}
-            </Text>
-          </View>
-          <View style={energyHeroPillStyle(cameraRecording)}>
-            <Ionicons
-              name={
-                cameraRecording ? "radio-button-on" : "radio-button-off"
-              }
-              size={14}
-              color={
-                cameraRecording ? theme.colors.accent : stylesVars.subtext
-              }
-            />
-            <Text style={energyHeroPillTextStyle(cameraRecording)}>
-              {cameraRecording ? "Recording" : "Standby"}
-            </Text>
-          </View>
-        </View>
-      </View>
-      <View style={cameraHeroBodyStyle}>
-        <LinearGradient
-          colors={[theme.colors.card, theme.colors.card2, theme.colors.bg1]}
-          start={{ x: 0.1, y: 0.1 }}
-          end={{ x: 1, y: 1 }}
-          style={cameraFeedCardStyle}
-        >
-          <View style={styles.cameraFeedHeader}>
-            <View style={styles.cameraLivePill}>
-              <View style={cameraLiveDotStyle} />
-              <Text style={styles.cameraLiveText}>
-                {device.isOn ? "Live" : "Offline"}
-              </Text>
-            </View>
-            <Text style={styles.cameraStatusText}>
-              {device.isOn
-                ? "Connected"
-                : cameraLastSeenLabel
-                  ? `Last seen ${cameraLastSeenLabel}`
-                  : "Offline"}
-            </Text>
-            {gateDevice ? (
-              <View style={styles.gateStatusPill}>
-                <Text style={styles.gateStatusText}>
-                  Gate{" "}
-                  {gateDevice.openPercent && gateDevice.openPercent > 20
-                    ? "Open"
-                    : "Closed"}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <View style={styles.cameraFeedBody}>
-            {showCameraStream ? (
-              <LiveVideoPlayer
-                sourceUri={cameraStreamUrl as string}
-                style={styles.cameraLivePlayer}
-                enableFullscreen={false}
-                onFullscreen={() =>
-                  navigation.navigate("CameraViewer", {
-                    deviceId: device.id,
-                  })
-                }
-              />
-            ) : cameraThumbnailUrl || cameraCachedThumbnail ? (
-              <CameraThumbnail
-                uri={cameraThumbnailUrl ?? cameraCachedThumbnail}
-                title={device.isOn ? "Live unavailable" : "Camera offline"}
-                subtitle={
-                  device.isOn
-                    ? "Tap to view"
-                    : cameraLastSeenLabel
-                      ? `Last seen ${cameraLastSeenLabel}`
-                      : "No signal detected"
-                }
-                titleStyle={styles.cameraPreviewText}
-                subtitleStyle={styles.cameraPreviewSubText}
-              />
-            ) : device.isOn ? (
-              <>
-                <Ionicons
-                  name="videocam"
-                  size={cameraPreviewIconSize}
-                  color={theme.colors.subtext}
-                />
-                <Text style={styles.cameraPreviewText}>
-                  Live feed (simulated)
-                </Text>
-              </>
-            ) : (
-              <>
-                <LottieView
-                  source={CAMERA_LOTTIE_SOURCE}
-                  autoPlay
-                  loop
-                  resizeMode="contain"
-                  style={cameraFeedLottieStyle}
-                />
-                <Text style={styles.cameraPreviewText}>Camera offline</Text>
-              </>
-            )}
-          </View>
-        </LinearGradient>
-        <View style={cameraHeroInfoStyle}>
-          <View style={cameraHeroStatsRowStyle}>
-            {cameraStats.map((stat) => (
-              <View
-                key={stat.label}
-                style={[
-                  styles.energyHeroStat,
-                  stat.active && styles.energyHeroStatActive,
-                ]}
-              >
-                <Text style={energyHeroStatValueStyle}>{stat.value}</Text>
-                <Text style={energyHeroStatLabelStyle}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-          <View style={cameraHeroActionRowStyle}>
-            {cameraActionButtons.map((action) => (
-              <Pressable
-                key={action.label}
-                style={modeTileStyle(action.active)}
-                onPress={action.onPress}
-              >
-                {action.active ? (
-                  <LinearGradient
-                    colors={[theme.colors.accent2, theme.colors.bg1]}
-                    start={{ x: 0.1, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.modeIconBubbleActive}
-                  >
-                    <Ionicons name={action.icon} size={18} color="#FFFFFF" />
-                  </LinearGradient>
-                ) : (
-                  <View style={styles.modeIconBubble}>
-                    <Ionicons
-                      name={action.icon}
-                      size={18}
-                      color={theme.colors.subtext}
-                    />
-                  </View>
-                )}
-                <Text style={modeTextStyle(action.active)}>
-                  {action.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      </View>
-    </LinearGradient>
-  );
-  const cameraRecognizeCard = (
-    <View style={cameraControlCardStyle}>
-      <Text style={styles.cardLabel}>Recognize faces</Text>
-      <View style={styles.cameraDetectRow}>
-        {household.map((member) => (
-          <Pressable
-            key={member.id}
-            style={styles.cameraDetectPill}
-            onPress={() => handleKnownFace(member.id, member.name)}
-          >
-            <Ionicons name="person" size={16} color={stylesVars.ink} />
-            <Text style={styles.cameraDetectText}>
-              {member.name.split(" ")[0]}
-            </Text>
-          </Pressable>
-        ))}
-        <Pressable
-          style={styles.cameraDetectPillAlert}
-          onPress={handleUnknownFace}
-        >
-          <Ionicons name="alert" size={16} color="#C4384C" />
-          <Text style={cameraDetectAlertTextStyle}>Unknown</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
   const waterUsageCard = (
     <View style={waterControlCardStyle}>
       <Text style={styles.cardLabel}>Usage history</Text>
@@ -8176,211 +7793,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         ))}
       </View>
     </View>
-  );
-  const cameraPresenceCard = (
-    <View style={cameraControlCardStyle}>
-      <Text style={styles.cardLabel}>Household presence</Text>
-      <View style={styles.cameraPresenceRow}>
-        {household.map((member) => (
-          <Pressable
-            key={member.id}
-            style={styles.cameraPresenceItem}
-            onPress={() =>
-              setHouseholdPresence(
-                member.id,
-                member.status === "home" ? "away" : "home",
-              )
-            }
-          >
-            <AvatarChip
-              name={member.name}
-              size={28}
-              color={member.avatarColor}
-              uri={member.avatarUri}
-            />
-            <Text style={styles.cameraMemberName}>
-              {member.name.split(" ")[0]}
-            </Text>
-            <View style={cameraPresencePillStyle(member.status === "home")}>
-              <Text style={styles.cameraPresenceText}>
-                {member.status === "home" ? "Home" : "Away"}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-  const cameraRecentCard =
-    cameraEvents.length > 0 ? (
-      <View style={cameraControlCardStyle}>
-        <Text style={styles.cardLabel}>Recent detections</Text>
-        {cameraEvents.map((evt) => (
-          <View key={evt.id} style={styles.cameraEventRow}>
-            <View style={cameraEventDotStyle(evt.kind === "known")} />
-            <Text style={styles.cameraEventText}>{evt.label}</Text>
-          </View>
-        ))}
-      </View>
-    ) : null;
-  const cameraSecurityCard = (
-    <View style={cameraControlCardStyle}>
-      <Text style={styles.cardLabel}>Security</Text>
-      <View style={controlCardRowTopStyle}>
-        <Pressable
-          style={controlPillStyle(nightVision)}
-          onPress={() => sendPatch({ nightVision: !nightVision })}
-        >
-          <Text style={controlPillTextStyle(nightVision)}>
-            {nightVision ? "Night On" : "Night Off"}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={controlPillStyle(motionAlerts)}
-          onPress={() => sendPatch({ motionAlerts: !motionAlerts })}
-        >
-          <Text style={controlPillTextStyle(motionAlerts)}>
-            {motionAlerts ? "Alerts On" : "Alerts Off"}
-          </Text>
-        </Pressable>
-      </View>
-      <View style={controlCardRowStyle}>
-        <Pressable
-          style={controlPillStyle(micMuted)}
-          onPress={() => sendPatch({ micMuted: !micMuted })}
-        >
-          <Text style={controlPillTextStyle(micMuted)}>
-            {micMuted ? "Mic Muted" : "Mic Live"}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={controlPillStyle(twoWayAudio)}
-          onPress={() => sendPatch({ twoWayAudio: !twoWayAudio })}
-        >
-          <Text style={controlPillTextStyle(twoWayAudio)}>
-            {twoWayAudio ? "Talk On" : "Talk Off"}
-          </Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-  const cameraMotionCard = (
-    <View style={cameraControlCardStyle}>
-      <Text style={styles.cardLabel}>Motion sensitivity</Text>
-      <OptionChips
-        options={[
-          { label: "Low", value: 3 },
-          { label: "Med", value: 6 },
-          { label: "High", value: 9 },
-        ]}
-        value={motionSensitivity}
-        onSelect={(value) => sendPatch({ motionSensitivity: value })}
-        rowStyle={styles.chipRow}
-        chipStyle={chipStyle}
-        chipTextStyle={chipTextStyle}
-      />
-    </View>
-  );
-  const cameraGateCard = gateDevice ? (
-    <View style={cameraControlCardStyle}>
-      <Text style={styles.cardLabel}>Front gate access</Text>
-      <View style={controlCardRowStyle}>
-        <Pressable style={styles.controlPill} onPress={openGate}>
-          <Text style={styles.controlPillText}>Open gate</Text>
-        </Pressable>
-        <Pressable style={styles.controlPill} onPress={closeGate}>
-          <Text style={styles.controlPillText}>Close gate</Text>
-        </Pressable>
-      </View>
-      <OptionChips
-        options={[
-          {
-            label: `Auto-open ${gateAutoOpen ? "On" : "Off"}`,
-            value: "toggle",
-          },
-        ]}
-        value="toggle"
-        isActive={() => gateAutoOpen}
-        onSelect={() =>
-          deviceClient
-            .sendCommand({
-              op: "set-properties",
-              deviceId: gateDevice.id,
-              changes: { autoOpenEnabled: !gateAutoOpen },
-            })
-            .catch(() => {})
-        }
-        rowStyle={styles.chipRow}
-        chipStyle={chipStyle}
-        chipTextStyle={chipTextStyle}
-      />
-    </View>
-  ) : null;
-  const cameraControlCards = (
-    <>
-      {cameraRecognizeCard}
-      {cameraPresenceCard}
-      {cameraRecentCard}
-      {cameraSecurityCard}
-      {cameraMotionCard}
-      {cameraGateCard}
-    </>
-  );
-  const cameraControlCardsLandscapeRight = (
-    <>
-      {cameraPresenceCard}
-      {cameraRecentCard}
-      {cameraSecurityCard}
-      {cameraMotionCard}
-      {cameraGateCard}
-    </>
-  );
-  const cameraPortraitCardItems = [
-    { key: "recognize", node: cameraRecognizeCard },
-    { key: "presence", node: cameraPresenceCard },
-    { key: "recent", node: cameraRecentCard },
-    { key: "security", node: cameraSecurityCard },
-    { key: "motion", node: cameraMotionCard },
-    { key: "gate", node: cameraGateCard },
-  ].filter(
-    (item): item is { key: string; node: React.ReactElement } =>
-      Boolean(item.node),
-  );
-  if (cameraPortraitGridEnabled && cameraPortraitCardItems.length % 2 === 1) {
-    const presenceIndex = cameraPortraitCardItems.findIndex(
-      (item) => item.key === "presence",
-    );
-    if (
-      presenceIndex > -1 &&
-      presenceIndex < cameraPortraitCardItems.length - 1
-    ) {
-      const [presenceItem] = cameraPortraitCardItems.splice(presenceIndex, 1);
-      cameraPortraitCardItems.push(presenceItem);
-    }
-  }
-  const cameraPortraitCards = cameraPortraitCardItems.map((item) => item.node);
-  const cameraPortraitRows: Array<
-    [React.ReactElement, React.ReactElement | null]
-  > = [];
-  for (let index = 0; index < cameraPortraitCards.length; index += 2) {
-    cameraPortraitRows.push([
-      cameraPortraitCards[index],
-      cameraPortraitCards[index + 1] ?? null,
-    ]);
-  }
-  const cameraControlCardsPortrait = cameraPortraitGridEnabled ? (
-    <View style={cameraPortraitGridStyle}>
-      {cameraPortraitRows.map((row, index) => (
-        <View key={`camera-row-${index}`} style={cameraPortraitRowStyle}>
-          <View style={cameraPortraitCellStyle}>{row[0]}</View>
-          {row[1] ? (
-            <View style={cameraPortraitCellStyle}>{row[1]}</View>
-          ) : null}
-        </View>
-      ))}
-    </View>
-  ) : (
-    cameraControlCards
   );
   const speakerNowCard = (
     <View style={speakerNowHeroCardStyle}>
@@ -9044,7 +8456,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 <Text accessibilityRole="header" style={headerTitleStyle} numberOfLines={1}>{device.name}</Text>
               </View>
 
-              <Pressable
+              {!isModelCamera && <Pressable
                 accessibilityLabel={`Edit ${device.name}`}
                 style={headerBtnStyle}
                 hitSlop={10}
@@ -9056,10 +8468,25 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                   size={Math.round(20 * scale)}
                   color={stylesVars.ink}
                 />
-              </Pressable>
+              </Pressable>}
             </View>
 
-            <ScrollView
+            {device.kind === "camera" ? (
+              <CameraDetailSection
+                device={device}
+                household={household}
+                gate={gateDevice}
+                events={cameraEvents}
+                onPatch={sendPatch}
+                onKnownFace={handleKnownFace}
+                onUnknownFace={handleUnknownFace}
+                onPresence={setHouseholdPresence}
+                onOpenGate={openGate}
+                onCloseGate={closeGate}
+                onToggleGateAutoOpen={handleCameraGateAutoToggle}
+                onExpand={() => navigation.navigate("CameraViewer", { deviceId: device.id })}
+              />
+            ) : <ScrollView
               showsVerticalScrollIndicator={false}
               bounces={false}
               overScrollMode="never"
@@ -9324,20 +8751,6 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
                         vacuumHeroCard={vacuumHeroCard}
                         vacuumControlCards={vacuumControlCards}
-                      />
-                    )}
-
-                  {device.kind === "camera" &&
-                    (
-                      <CameraDetailSection
-                        isLandscapeSplit={isLandscapeSplit}
-                        landscapeGridStyle={landscapeGridStyle}
-                        landscapeColumnPrimaryStyle={landscapeColumnPrimaryStyle}
-                        landscapeColumnSecondaryStyle={landscapeColumnSecondaryStyle}
-                        cameraHeroCard={cameraHeroCard}
-                        cameraRecognizeCard={cameraRecognizeCard}
-                        cameraControlCardsLandscapeRight={cameraControlCardsLandscapeRight}
-                        cameraControlCardsPortrait={cameraControlCardsPortrait}
                       />
                     )}
 
@@ -9691,10 +9104,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                     )}
                 </View>
               ))}
-            </ScrollView>
+            </ScrollView>}
           </View>
 
-          {!isGasDevice(device.kind) && <View style={powerDockStyle}>
+          {device.kind !== "camera" && !isGasDevice(device.kind) && <View style={powerDockStyle}>
             <Pressable
               accessibilityLabel={`${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
               accessibilityState={{ selected: device.isOn }}
@@ -9726,7 +9139,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       </SafeAreaView>
 
       <DeviceEditModal
-        visible={showEdit}
+        visible={showEdit && !isModelCamera}
         onClose={() => setShowEdit(false)}
         cardStyle={editCardStyle}
         titleStyle={editTitleTextStyle}
@@ -9806,6 +9219,7 @@ const stylesVars = {
 };
 
 const styles = StyleSheet.create({
+  compactControlCardTablet: { marginTop: 0, alignSelf: "stretch", width: "100%", flex: 1 },
   gasDetailContent: { paddingBottom: 12 },
   root: { flex: 1 },
   outer: { flex: 1, padding: 18 },
@@ -10822,67 +10236,6 @@ const styles = StyleSheet.create({
   },
   alertText: { color: "#FFB4C1", fontWeight: "600", fontSize: 12 },
   alertTextWarn: { color: "#F1C590", fontWeight: "600", fontSize: 12 },
-  cameraFeed: {
-    height: 200,
-    borderRadius: 20,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-    shadowColor: theme.colors.accent,
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  cameraFeedHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  cameraLivePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  cameraLiveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.accent,
-  },
-  cameraLiveText: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
-  cameraStatusText: {
-    color: stylesVars.subtext,
-    fontWeight: "600",
-    fontSize: 12,
-  },
-  gateStatusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  gateStatusText: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
-  cameraFeedBody: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  cameraLivePlayer: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 14,
-  },
-  cameraPreviewText: { color: stylesVars.subtext, fontWeight: "600" },
-  cameraPreviewSubText: { color: stylesVars.subtext, fontWeight: "600" },
   waterUsageHint: {
     color: stylesVars.subtext,
     fontWeight: "600",
@@ -10898,88 +10251,6 @@ const styles = StyleSheet.create({
     width: 10,
     borderRadius: 8,
     backgroundColor: theme.colors.accent2,
-  },
-  cameraDetectRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  cameraDetectPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  cameraDetectPillAlert: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#30212A",
-    borderWidth: 1,
-    borderColor: "#A35C6C",
-  },
-  cameraDetectText: { color: stylesVars.ink, fontWeight: "600", fontSize: 12 },
-  cameraPresenceRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  cameraPresenceItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  cameraMemberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.stroke,
-  },
-  cameraMemberName: { color: stylesVars.ink, fontWeight: "600", fontSize: 13 },
-  cameraMemberRole: {
-    color: stylesVars.subtext,
-    fontWeight: "600",
-    fontSize: 11,
-  },
-  cameraPresencePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  cameraPresenceHome: { backgroundColor: theme.colors.accent2 },
-  cameraPresenceAway: { backgroundColor: theme.colors.card2 },
-  cameraPresenceText: {
-    color: stylesVars.ink,
-    fontWeight: "600",
-    fontSize: 11,
-  },
-  cameraEventRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
-  },
-  cameraEventDot: { width: 8, height: 8, borderRadius: 4 },
-  cameraEventDotKnown: { backgroundColor: theme.colors.accent },
-  cameraEventDotUnknown: { backgroundColor: "#C4384C" },
-  cameraEventText: {
-    color: stylesVars.subtext,
-    fontWeight: "600",
-    fontSize: 12,
   },
   mediaRow: {
     flexDirection: "row",

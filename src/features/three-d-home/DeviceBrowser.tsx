@@ -3,16 +3,18 @@ import { StyleSheet, Text, View, useWindowDimensions, type LayoutChangeEvent } f
 import { Ionicons } from '@expo/vector-icons';
 import Pressable from '../../components/Pressable';
 import { theme } from '../../theme/theme';
+import type { SimulationDeviceControls } from './modelDeviceControls';
 import { DEVICES, ROOMS, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { deviceStatus, quickActionLabel } from '../../../packages/home-scene/src/deviceCapabilities';
 import { deviceCardReading } from '../../../packages/home-scene/src/dashboardCardPresentation';
-import type { ControlSnapshot, SimulationControlClient } from './simulationControlClient';
+import type { ControlSnapshot } from './simulationControlClient';
 import { ControlPagination } from './ControlPagination';
 
-type Props = { onSelect: (id: string) => void; snapshot: ControlSnapshot; client: SimulationControlClient };
+type Props = {
+  allowedDeviceIds?: readonly string[]; onSelect: (id: string) => void; snapshot: ControlSnapshot; client: SimulationDeviceControls };
 
 /** Present rooms as destinations and devices as actionable cards within a measured, paged space. */
-export default function DeviceBrowser({ onSelect, snapshot, client }: Props) {
+export default function DeviceBrowser({ onSelect, snapshot, client, allowedDeviceIds }: Props) {
   const { fontScale } = useWindowDimensions();
   const [roomId, setRoomId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -21,8 +23,9 @@ export default function DeviceBrowser({ onSelect, snapshot, client }: Props) {
   const rowHeight = (roomId ? 172 : 130) * Math.max(1, fontScale);
   const rows = Math.max(1, Math.min(2, Math.floor((space.height + 10) / (rowHeight + 10))));
   const pageSize = columns * rows;
-  const devices = roomId ? DEVICES.filter((device) => device.roomId === roomId) : [];
-  const choices = roomId ? devices : ROOMS.filter((room) => DEVICES.some((device) => device.roomId === room.id));
+  const availableDevices = allowedDeviceIds ? DEVICES.filter((device) => allowedDeviceIds.includes(device.id)) : DEVICES;
+  const devices = roomId ? availableDevices.filter((device) => device.roomId === roomId) : [];
+  const choices = roomId ? devices : ROOMS.filter((room) => availableDevices.some((device) => device.roomId === room.id));
   const pageCount = Math.max(1, Math.ceil(choices.length / pageSize));
   const visiblePage = Math.min(page, pageCount - 1);
   const visible = choices.slice(visiblePage * pageSize, (visiblePage + 1) * pageSize);
@@ -44,12 +47,12 @@ export default function DeviceBrowser({ onSelect, snapshot, client }: Props) {
     <View testID="device-browser-card-area" style={styles.cards} onLayout={measure}>
       {cardRows.map((row) => <View key={row[0].id} style={styles.cardRow}>
         {row.map((choice) => roomId ? <DeviceCard key={choice.id} device={choice as DeviceDefinition} snapshot={snapshot} client={client} onSelect={onSelect} />
-          : <Pressable key={choice.id} accessibilityLabel={`${choice.name}, ${DEVICES.filter((device) => device.roomId === choice.id).length} devices`}
+          : <Pressable key={choice.id} accessibilityLabel={`${choice.name}, ${availableDevices.filter((device) => device.roomId === choice.id).length} devices`}
             onPress={() => { setRoomId(choice.id); setPage(0); }} style={styles.roomCard}>
             <View style={styles.cardTop}><Ionicons name={getRoom(choice.id).outdoor ? 'leaf-outline' : 'layers-outline'} size={24} color={theme.colors.accent} />
               <Ionicons name="arrow-forward" size={17} color={theme.colors.subtext} /></View>
             <Text numberOfLines={2} style={styles.roomName}>{choice.name}</Text>
-            <Text style={styles.roomDetail}>{DEVICES.filter((device) => device.roomId === choice.id).length} devices · {getRoom(choice.id).outdoor ? 'Outside' : getRoom(choice.id).floor === 'ground' ? 'Ground' : 'Upper'}</Text>
+            <Text style={styles.roomDetail}>{availableDevices.filter((device) => device.roomId === choice.id).length} devices · {getRoom(choice.id).outdoor ? 'Outside' : getRoom(choice.id).floor === 'ground' ? 'Ground' : 'Upper'}</Text>
           </Pressable>)}
         {row.length < columns && <View style={styles.spacer} />}
       </View>)}

@@ -61,6 +61,11 @@ export type DeviceCapability =
 const DEFAULT_CONTEXTS: CapabilityContext[] = ["quick", "detail"];
 
 const CAPABILITIES: Record<DeviceKind, DeviceCapability[]> = {
+  // Modeled energy equipment uses the shared simulation inspector for full controls.
+  solar: [],
+  battery: [],
+  generator: [],
+  blinds: [{ id: "blinds-position", label: "Open", type: "range", field: "openPercent", min: 0, max: 100, unit: "%" }],
   ac: [
     {
       id: "ac-temp",

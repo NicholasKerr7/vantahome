@@ -1,13 +1,16 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { SimulationControlClient } from './simulationControlClient';
 
-/** Give either native renderer the persisted simulation controls without a live command transport. */
-export function useSimulationControls() {
-  const [client, setClient] = useState(() => new SimulationControlClient());
+/** Connect controls only while enabled, replacing disposed clients when the owning scope returns. */
+export function useSimulationControls(enabled = true) {
+  const [revision, setRevision] = useState(0);
+  const client = useMemo(() => new SimulationControlClient(), [enabled, revision]);
   const snapshot = useSyncExternalStore(client.subscribe, client.getSnapshot, client.getSnapshot);
   useEffect(() => {
+    if (!enabled) return;
     client.connect();
     return () => client.dispose();
-  }, [client]);
-  return { ...snapshot, client, reconnect: () => setClient(new SimulationControlClient()) };
+  }, [client, enabled]);
+  const reconnect = useCallback(() => setRevision((value) => value + 1), []);
+  return { ...snapshot, client, reconnect };
 }

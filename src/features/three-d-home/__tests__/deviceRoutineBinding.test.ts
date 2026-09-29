@@ -1,5 +1,6 @@
 import { useHomeStore, type HomeState, type HouseholdMember } from '../../../store/useHomeStore';
 import { resolveRoutineDeviceId } from '../deviceRoutineBinding';
+import { DEVICES } from '../../../../packages/home-scene/src/data';
 
 /** Construct an isolated offline owner scope without changing the application store. */
 function demoState(overrides: Partial<HomeState> = {}): HomeState {
@@ -25,6 +26,12 @@ test('resolves only exact curated preview identities and kinds', () => {
   expect(resolveRoutineDeviceId(state, 'master-blinds', 'demo')).toBeNull();
   expect(resolveRoutineDeviceId(state, 'd2', 'demo')).toBeNull();
   expect(resolveRoutineDeviceId(state, 'Living-light', 'demo')).toBeNull();
+});
+
+test('all canonical model devices can open their own routine selector', () => {
+  const state = demoState({ devices: DEVICES.map((device) => ({ ...device, isOn: device.defaultOn })) });
+  for (const device of DEVICES) expect(resolveRoutineDeviceId(state, device.id, 'demo')).toBe(device.id);
+  expect(resolveRoutineDeviceId(state, 'master-blinds', 'production')).toBeNull();
 });
 
 test('does not guess a mapping from names or accept a reused ID with a different kind', () => {

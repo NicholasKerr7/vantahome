@@ -1,7 +1,8 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
-import { StyleSheet, type StyleProp, type ViewStyle } from "react-native";
+import { ScrollView, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import DeviceDetailScreen from "../DeviceDetailScreen";
+import CameraDetailSection from "../device-detail/devices/CameraDetailSection";
 import LightDetailSection from "../device-detail/devices/LightDetailSection";
 import CinematicSurface from "../../components/CinematicSurface";
 import { theme } from "../../theme/theme";
@@ -24,6 +25,9 @@ const mockLayout = {
   scale: 1,
 };
 const defaultLayout = { ...mockLayout };
+let mockModelHome = false;
+jest.mock("../../features/three-d-home/modelHomeScope", () => ({ isModelHome: () => mockModelHome }));
+jest.mock("../../security/useProtectedAccess", () => ({ useProtectedAccess: () => ({ state: "granted", retry: jest.fn() }) }));
 
 jest.mock("lottie-react-native", () => {
   const React = require("react");
@@ -341,7 +345,7 @@ const createDevice = (kind: DeviceKind): Device => {
 
 describe("DeviceDetailScreen device coverage", () => {
   const navigation = { goBack: jest.fn(), navigate: jest.fn() } as any;
-  afterEach(() => { Object.assign(mockLayout, defaultLayout); });
+  afterEach(() => { Object.assign(mockLayout, defaultLayout); mockModelHome = false; });
 
   /** Mount the actual utility hero with synthetic data and no command dispatch. */
   function renderUtilityHero(kind: DeviceKind, overrides: Partial<Device> = {}) {
@@ -355,6 +359,7 @@ describe("DeviceDetailScreen device coverage", () => {
       indoor: seed.indoor ?? { tempC: 22, label: "Indoor" },
       outdoor: seed.outdoor ?? { tempC: 24, label: "Outdoor" },
       household: baseHousehold,
+      activeMemberId: baseHousehold[0].id,
     });
     const route: React.ComponentProps<typeof DeviceDetailScreen>["route"] = {
       key: "DeviceDetail",
@@ -431,27 +436,35 @@ describe("DeviceDetailScreen device coverage", () => {
     },
   );
 
-  it("preserves the camera's centered phone header", () => {
+  it.each([
+    ["phone", 390, 844, false, false],
+    ["tablet portrait", 834, 1194, true, false],
+    ["tablet landscape", 1194, 834, true, true],
+  ] as const)("uses the bounded camera workspace on %s", (_label, width, height, isTablet, isLandscape) => {
+    Object.assign(mockLayout, { width, height, isTablet, isLandscape });
     const tree = renderUtilityHero("camera");
     try {
-      const header = tree.root.findByProps({ testID: "camera-hero-header" });
-      const title = tree.root.findByProps({ testID: "camera-hero-title" });
-      expect(StyleSheet.flatten(header.props.style)).toMatchObject({
-        flexDirection: "column", alignItems: "center", gap: 10,
-      });
-      expect(StyleSheet.flatten(title.props.style)).toMatchObject({
-        flex: 1, alignItems: "center",
-      });
-      expect(StyleSheet.flatten(title.props.style).width).toBeUndefined();
-    } finally {
-      act(() => { tree.unmount(); });
-    }
+      expect(tree.root.findByType(CameraDetailSection)).toBeTruthy();
+      const workspace = tree.root.findByProps({ testID: "camera-control-workspace" });
+      expect(StyleSheet.flatten(workspace.props.style)).toMatchObject({ flex: 1, minHeight: 0 });
+      expect(workspace.findAllByType(ScrollView).every((node: { props: { horizontal?: boolean } }) => node.props.horizontal)).toBe(true);
+      expect(tree.root.findAllByProps({ testID: "camera-hero-header" })).toHaveLength(0);
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it("locks model camera identity while retaining custom camera editing", () => {
+    mockModelHome = true;
+    const model = renderUtilityHero("camera", { id: "entry-camera" });
+    try { expect(model.root.findAllByProps({ testID: "device-options-button" })).toHaveLength(0); }
+    finally { act(() => { model.unmount(); }); }
+    const custom = renderUtilityHero("camera", { id: "custom-camera" });
+    try { expect(custom.root.findAllByProps({ testID: "device-options-button" }).length).toBeGreaterThan(0); }
+    finally { act(() => { custom.unmount(); }); }
   });
 
   it.each([
     ["energy", false], ["energy", true],
     ["coffee", false], ["coffee", true],
-    ["camera", false], ["camera", true],
   ] as const)("preserves the %s tablet header with landscape=%s", (kind, isLandscape) => {
     Object.assign(mockLayout, {
       width: isLandscape ? 1194 : 834,
@@ -487,6 +500,7 @@ describe("DeviceDetailScreen device coverage", () => {
         indoor: seed.indoor ?? { tempC: 22, label: "Indoor" },
         outdoor: seed.outdoor ?? { tempC: 24, label: "Outdoor" },
         household: baseHousehold,
+      activeMemberId: baseHousehold[0].id,
       });
     });
 

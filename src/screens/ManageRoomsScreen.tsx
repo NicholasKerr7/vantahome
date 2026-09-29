@@ -20,6 +20,8 @@ import {
 } from "../store/useHomeStore";
 import { roomWorkspaceStyles as styles } from "../features/rooms/roomWorkspaceStyles";
 import { theme } from "../theme/theme";
+import { ROOMS } from "../../packages/home-scene/src/data";
+import { isModelHome } from "../features/three-d-home/modelHomeScope";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ManageRooms">;
 
@@ -29,11 +31,13 @@ export default function ManageRoomsScreen({ navigation }: Props) {
   const modalViewportStyle = useModalViewportStyle();
   const wide = width >= 700;
   const rooms = useHomeStore(selectVisibleRooms);
+  const modelHome = useHomeStore(isModelHome);
   const devices = useHomeStore(selectVisibleDevices);
   const activeMember = useHomeStore(selectActiveMember);
   const canManageRooms = Boolean(
     activeMember && ["Owner", "Admin"].includes(activeMember.role),
   );
+  const canAddRooms = canManageRooms && !modelHome;
   const addRoom = useHomeStore((state) => state.addRoom);
   const renameRoom = useHomeStore((state) => state.renameRoom);
   const moveRoom = useHomeStore((state) => state.moveRoom);
@@ -64,18 +68,20 @@ export default function ManageRoomsScreen({ navigation }: Props) {
   const pageCount = Math.max(1, Math.ceil(matchingRooms.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
   const selectedRoom = rooms.find((room) => room.id === selectedId);
+  const modeledRoom = modelHome ? ROOMS.find((room) => room.id === selectedId) : undefined;
   const selectedIndex = rooms.findIndex((room) => room.id === selectedId);
   const draft = selectedRoom
     ? (drafts[selectedRoom.id] ?? selectedRoom.name)
     : "";
   const canSave =
     canManageRooms &&
+    !modeledRoom &&
     draft.trim().length > 1 &&
     draft.trim() !== selectedRoom?.name;
 
   /** Create a room only for an authorized administrator, using the existing store action. */
   function createRoom() {
-    if (!canManageRooms || !roomName.trim()) return;
+    if (!canAddRooms || !roomName.trim()) return;
     addRoom(roomName.trim());
     setRoomName("");
     setShowAdd(false);
@@ -90,7 +96,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
 
   /** Preserve the store's device reassignment behavior and the final-room guard. */
   function deleteRoom() {
-    if (!selectedRoom || !canManageRooms || rooms.length <= 1) return;
+    if (!selectedRoom || !canManageRooms || modeledRoom || rooms.length <= 1) return;
     removeRoom(selectedRoom.id);
     setSelectedId(null);
   }
@@ -101,13 +107,13 @@ export default function ManageRoomsScreen({ navigation }: Props) {
       eyebrow="SPACE PLANNING"
       subtitle="A place for everything in your home."
       onBack={() => navigation.goBack()}
-      actions={
+      actions={modelHome ? undefined :
         <DeepAction
           label="Add room"
           icon="add-outline"
           primary
-          disabled={!canManageRooms}
-          onPress={() => setShowAdd(true)}
+          disabled={!canAddRooms}
+          onPress={() => { if (canAddRooms) setShowAdd(true); }}
         />
       }
     >
@@ -117,8 +123,8 @@ export default function ManageRoomsScreen({ navigation }: Props) {
             <Text style={styles.eyebrow}>YOUR SPACES</Text>
             <Text style={styles.title}>{rooms.length} rooms, one home.</Text>
             <Text style={styles.detail}>
-              {devices.length} connected devices ·{" "}
-              {canManageRooms
+              {devices.length} {modelHome ? "devices" : "connected devices"} ·{" "}
+              {modelHome ? "Rooms follow your 3D house plan." : canManageRooms
                 ? "Select a room to organize it."
                 : "Room changes require an admin account."}
             </Text>
@@ -166,6 +172,8 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                 </Text>
                 <Text style={styles.detail}>
                   {countByRoom[room.id] ?? 0} devices
+                  {modelHome && ROOMS.some((space) => space.id === room.id)
+                    ? ` · ${ROOMS.find((space) => space.id === room.id)?.outdoor ? "Outside" : ROOMS.find((space) => space.id === room.id)?.floor === "upper" ? "Upper floor" : "Ground floor"}` : ""}
                 </Text>
               </View>
               <Text style={styles.number}>
@@ -211,12 +219,17 @@ export default function ManageRoomsScreen({ navigation }: Props) {
             footer={
               <View style={styles.footer}>
                 <DeepAction label="Done" onPress={() => setSelectedId(null)} />
-                <DeepAction
+                <DeepAction label="Open room" icon="arrow-forward-outline" onPress={() => {
+                  const roomId = selectedRoom.id;
+                  setSelectedId(null);
+                  navigation.navigate("Room", { roomId });
+                }} />
+                {!modeledRoom && <DeepAction
                   label="Save"
                   primary
                   disabled={!canSave}
                   onPress={saveRoom}
-                />
+                />}
               </View>
             }
           >
@@ -227,10 +240,14 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                 </Text>
                 <Text style={styles.title}>{selectedRoom.name}</Text>
                 <Text style={styles.detail}>
-                  {countByRoom[selectedRoom.id] ?? 0} connected devices
+                  {countByRoom[selectedRoom.id] ?? 0} {modelHome ? "devices" : "connected devices"}
                 </Text>
               </View>
-              <View style={styles.section}>
+              {modeledRoom ? <View style={styles.section}>
+                <Text style={styles.detail}>{modeledRoom.outdoor ? "Outside" : modeledRoom.floor === "upper" ? "Upper floor" : "Ground floor"} · {modeledRoom.area}</Text>
+                <Text style={styles.detail}>{modeledRoom.detail}</Text>
+                <Text style={styles.detail}>Rooms follow your 3D house plan.</Text>
+              </View> : <View style={styles.section}>
                 <Text style={styles.label}>Room name</Text>
                 <TextInput
                   accessibilityLabel={`${selectedRoom.name} room name`}
@@ -248,7 +265,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                   onSubmitEditing={saveRoom}
                   returnKeyType="done"
                 />
-              </View>
+              </View>}
               <View style={styles.section}>
                 <Text style={styles.label}>Position in your home</Text>
                 <View style={styles.actions}>
@@ -270,7 +287,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                   />
                 </View>
               </View>
-              <Pressable
+              {!modeledRoom && <Pressable
                 accessibilityLabel={`Delete ${selectedRoom.name}`}
                 disabled={!canManageRooms || rooms.length <= 1}
                 accessibilityState={{
@@ -285,7 +302,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                 <Text style={styles.dangerText}>
                   {rooms.length <= 1 ? "Keep at least 1 room" : "Delete room"}
                 </Text>
-              </Pressable>
+              </Pressable>}
             </View>
           </ModalForm>
         </ModalCard>
@@ -307,7 +324,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                 <DeepAction
                   label="Create"
                   primary
-                  disabled={!canManageRooms || !roomName.trim()}
+                  disabled={!canAddRooms || !roomName.trim()}
                   onPress={createRoom}
                 />
               </View>

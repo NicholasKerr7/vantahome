@@ -5,13 +5,13 @@ import { formatCapabilityValue, readDeviceSetting, type DeviceCapability } from 
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
 import LabSlider from '../renderer-lab/LabSlider';
 import { labColors } from '../renderer-lab/styles';
-import type { SimulationControlClient } from './simulationControlClient';
+import type { SimulationDeviceControls } from './modelDeviceControls';
 import { controlStyles as styles } from './deviceControlsStyles';
 
 export type EnumCapability = Extract<DeviceCapability, { type: 'enum' }>;
 interface Props {
   capability: DeviceCapability; device: DeviceDefinition; state: DeviceState;
-  client: SimulationControlClient; disabled: boolean; compact: boolean;
+  client: SimulationDeviceControls; disabled: boolean; compact: boolean;
   onOptions: (capability: EnumCapability) => void;
 }
 

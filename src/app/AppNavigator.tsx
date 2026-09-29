@@ -12,7 +12,7 @@ import AuthScreen from "../screens/AuthScreen";
 import AuthRequiredScreen from "../screens/AuthRequiredScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import HomeNavigator, { loadThreeDHomeScreen, type HomeStackParamList } from "./HomeNavigator";
-import DeviceDetailScreen from "../screens/DeviceDetailScreen";
+import DeviceDetailRoute from "../screens/DeviceDetailRoute";
 import RoomScreen from "../screens/RoomScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
@@ -39,6 +39,7 @@ import { deviceClient } from "../services/deviceClient";
 import Pressable from "../components/Pressable";
 import PasswordRecoveryScreen from "../screens/PasswordRecoveryScreen";
 import CommandFeedbackProvider from "../components/command-feedback/CommandFeedbackProvider";
+import ModelHomeSync from '../features/three-d-home/ModelHomeSync';
 
 /**
  * Root stack for the app.
@@ -241,6 +242,7 @@ export default function AppNavigator() {
           }
         >
           <BottomSheetModalProvider>
+            {authExperience === 'demo' && <ModelHomeSync key={navigationScope} />}
             <NavigationContainer
               key={navigationScope}
               theme={{
@@ -273,7 +275,7 @@ export default function AppNavigator() {
                     <Stack.Screen name="Room" component={RoomScreen} />
                     <Stack.Screen
                       name="DeviceDetail"
-                      component={DeviceDetailScreen}
+                      component={DeviceDetailRoute}
                     />
                     <Stack.Screen
                       name="Notifications"

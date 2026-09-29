@@ -231,10 +231,16 @@ export default function DeviceTile({
   device,
   onPress,
   onLongPress,
+  onToggle,
+  toggleLabel,
 }: {
   device: Device;
   onPress: () => void;
   onLongPress?: () => void;
+  /** Override the main quick action when a model device uses the shared simulation. */
+  onToggle?: () => void;
+  /** Match the shared inspector when the quick action refreshes a sensor or controls a cover. */
+  toggleLabel?: string;
 }) {
   const { isTablet, isLandscape, scale } = useResponsive();
   const sendPatch = (patch: Partial<Device>) => {
@@ -289,11 +295,11 @@ export default function DeviceTile({
         </View>
 
         <Pressable
-          accessibilityLabel={isGasDevice(device.kind) ? `Open controls for ${device.name}` : `${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
+          accessibilityLabel={toggleLabel ? `${toggleLabel}: ${device.name}` : isGasDevice(device.kind) ? `Open controls for ${device.name}` : `${device.isOn ? "Turn off" : "Turn on"} ${device.name}`}
           accessibilityState={{ selected: device.isOn }}
           onPress={(e) =>
             stop(e, () =>
-              isGasDevice(device.kind) ? onPress() : isOpenableKind(device.kind)
+              onToggle ? onToggle() : isGasDevice(device.kind) ? onPress() : isOpenableKind(device.kind)
                 ? toggleOpenable()
                 : sendPatch({ isOn: !device.isOn }),
             )

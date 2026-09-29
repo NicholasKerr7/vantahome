@@ -38,3 +38,15 @@ test('prevents quick commands while saved controls are loading', () => {
   fireEvent.press(button);
   expect(toggle).not.toHaveBeenCalled();
 });
+
+test('limits room counts and device choices to the route visibility scope', () => {
+  const client = new SimulationControlClient();
+  const snapshot = { ...client.getSnapshot(), ready: true };
+  const screen = render(<DeviceBrowser snapshot={snapshot} client={client} onSelect={jest.fn()} allowedDeviceIds={['living-light']} />);
+  expect(screen.getByLabelText('Living room, 1 devices')).toBeTruthy();
+  expect(screen.queryByLabelText(/Primary suite,/)).toBeNull();
+  fireEvent.press(screen.getByLabelText('Living room, 1 devices'));
+  const device = DEVICES.find((item) => item.id === 'living-light')!;
+  expect(screen.getByLabelText(`${device.name}, ${deviceStatus(device, snapshot.state.deviceStates[device.id])}. Full controls`)).toBeTruthy();
+  expect(screen.queryByLabelText(/Living room speaker.*Full controls/)).toBeNull();
+});

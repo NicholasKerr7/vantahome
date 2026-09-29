@@ -6,30 +6,32 @@ import { deviceActionFeedback, deviceStatus, quickActionLabel, readDeviceSetting
 import { getInspectorPages } from '../../../packages/home-scene/src/deviceRoutinePages';
 import { gasStatusTone } from '../../../packages/home-scene/src/gasSimulation';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
-import type { ControlSnapshot, SimulationControlClient } from './simulationControlClient';
+import type { ControlSnapshot } from './simulationControlClient';
 import { NativeCapabilityControl, type EnumCapability } from './NativeCapabilityControl';
 import { ControlPagination } from './ControlPagination';
 import CinematicSurface from '../../components/CinematicSurface';
 import DeviceBrowser from './DeviceBrowser';
 import { controlStyles as styles } from './deviceControlsStyles';
 import { useDeviceRoutines } from './useDeviceRoutines';
+import type { SimulationDeviceControls } from './modelDeviceControls';
 
 const GROUPS = ['controls', 'modes', 'schedule', 'status'] as const;
 const GROUP_LABELS = { controls: 'Controls', modes: 'Modes', schedule: 'Routines', status: 'Status' };
 type Group = typeof GROUPS[number];
 interface SheetProps {
-  deviceId: string | null; client: SimulationControlClient; snapshot: ControlSnapshot;
+  deviceId: string | null; client: SimulationDeviceControls; snapshot: ControlSnapshot;
+  allowedDeviceIds?: readonly string[];
   motionAllowed: boolean; onClose: () => void; onSelect: (id: string) => void;
 }
 
 /** Present a full native inspector or paged room browser above either renderer. */
-export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed, onClose, onSelect }: SheetProps) {
+export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed, onClose, onSelect, allowedDeviceIds }: SheetProps) {
   const openDeviceRoutines = useDeviceRoutines(onClose);
   const { width, height, fontScale } = useWindowDimensions();
   const landscape = width >= 760 && width > height;
   const compact = height < 700 || fontScale > 1.15;
   const [browsing, setBrowsing] = useState(deviceId === null);
-  const device = getDevice(deviceId);
+  const device = allowedDeviceIds && deviceId && !allowedDeviceIds.includes(deviceId) ? undefined : getDevice(deviceId);
   const status = snapshot.status === 'disconnected' ? 'Session changed. Close and reopen controls.'
     : snapshot.status === 'error' ? 'Could not save locally. Your changes are still in this session.'
       : !snapshot.ready ? 'Loading saved controls…' : snapshot.status === 'saving' ? 'Saving simulation…' : 'Simulation · Saved on this device';
@@ -43,7 +45,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
               <Text accessibilityRole="header" numberOfLines={2} style={styles.title}>{browsing ? 'Device library' : device?.name}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close device controls" onPress={onClose} style={styles.button}><Text style={styles.label}>Done</Text></Pressable>
           </View>
-          {browsing || !device ? <DeviceBrowser snapshot={snapshot} client={client} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
+          {browsing || !device ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={allowedDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               client={client} disabled={!snapshot.ready} compact={compact} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
@@ -56,7 +58,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
 
 /** Keep the original quick action visible while paging through the complete shared capability catalog. */
 function DeviceInspector({ device, state, client, disabled, compact, onBrowse, onRoutines }: {
-  device: DeviceDefinition; state: DeviceState; client: SimulationControlClient; disabled: boolean; compact: boolean; onBrowse: () => void; onRoutines: () => void;
+  device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; compact: boolean; onBrowse: () => void; onRoutines: () => void;
 }) {
   const [group, setGroup] = useState<Group>('controls');
   const [page, setPage] = useState(0);

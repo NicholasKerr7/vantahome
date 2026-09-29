@@ -30,6 +30,10 @@ const ICON_MAP: Record<Device["kind"], { set: "ion" | "mci"; name: string }> = {
   sprinkler: { set: "ion", name: "rainy" },
   speaker: { set: "ion", name: "volume-high" },
   smoke: { set: "ion", name: "alert-circle" },
+  blinds: { set: "mci", name: "blinds-horizontal" },
+  solar: { set: "mci", name: "solar-power" },
+  battery: { set: "ion", name: "battery-charging" },
+  generator: { set: "mci", name: "engine" },
 };
 
 export default function DeviceIcon({
