@@ -15,9 +15,10 @@ Last reviewed: 2026-09-29
 - Metro's upstream 0.83.8 patch removes the vulnerable transitive `image-size`
   package and its unused `queue` dependency. The Expo SDK and React Native
   versions are unchanged; see the scoped compatibility override below.
-- The locked `ip-address` and `undici` copies are now 10.5.1 and 6.28.1,
-  respectively, closing five additional advisories found by the September 29 audit.
-  Their existing parent dependency ranges accept these patch releases.
+- The locked `ip-address` and `undici` copies are now 10.7.1 and 6.28.1,
+  respectively. All `brace-expansion` copies use patched releases on their
+  existing major/minor lines: 1.1.21, 2.1.7, and 5.0.12. Existing parent
+  dependency ranges accept these releases.
 - Do not use `npm audit fix --force`; it proposes SDK-breaking package changes.
 
 ## Applied mitigations
@@ -38,24 +39,36 @@ Last reviewed: 2026-09-29
 - CI also builds the production web export so optional web-runtime dependency
   drift cannot pass on type checks and native-focused tests alone.
 
-## IP classification and HTTP client patch releases
+## IP classification, brace expansion, and HTTP client remediation
 
-- `mqtt` → `socks` → `ip-address` now resolves to **10.5.1**, fixing
+- `mqtt` → `socks` → `ip-address` now resolves to **10.7.1**, retaining fixes for
   [link-local IPv6 classification](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-rpw4-54j3-4h4q)
-  and [local-use NAT64 classification](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-2vr4-cq9g-pvrc).
+  and [local-use NAT64 classification](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-2vr4-cq9g-pvrc),
+  and fixing [cross-family subnet comparisons](https://github.com/advisories/GHSA-j6r3-76f7-8jcv)
+  and [unbounded IPv6 parse diagnostics](https://github.com/advisories/GHSA-h3mg-xc3c-68pw).
+  The two newly reported advisories require 10.7.1; this is a compatible minor
+  update from 10.5.1 within `socks`' existing `^10.0.1` range.
+- `brace-expansion` now resolves to **1.1.21**, **2.1.7**, and **5.0.12** on its
+  existing dependency branches, fixing
+  [quadratic rewrite processing](https://github.com/advisories/GHSA-q2hr-2g5m-vwhr),
+  [nested-brace stack exhaustion](https://github.com/advisories/GHSA-qhr7-859c-m2p7),
+  and [comma-parser stack exhaustion](https://github.com/advisories/GHSA-6j4f-fj2g-mc7p).
+  Both copies of the 1.x package are updated, including the test dependency.
 - Expo CLI's external `undici` now resolves to **6.28.1**, fixing
   [WebSocket decompression error handling](https://github.com/nodejs/undici/security/advisories/GHSA-3wwx-pv8p-q78v),
   [retry response framing](https://github.com/nodejs/undici/security/advisories/GHSA-r53p-7pc4-xj5r),
   and [unrequested WebSocket subprotocol handling](https://github.com/nodejs/undici/security/advisories/GHSA-rfgv-xxqx-mfg5).
-- This remediation changes only those two lockfile entries and their verified
-  package integrity hashes. No new override, dependency, major/minor upgrade,
-  lifecycle patch, or advisory exception is required. Installing the updated
-  lockfile changed exactly two packages; existing Expo and URI-decoder patches
-  remain intact. Updating this external `undici` package does not update any
-  copy bundled inside the Node.js runtime.
-- Verified on Node 22.22.3: the production dependency security gate passes with
-  no vulnerabilities, Expo's SDK dependency check passes, application TypeScript
-  passes, and all 33 dependency-gate/compatibility-patch regression tests pass.
+- The latest remediation changes only five lockfile entries and their verified
+  package integrity hashes: four `brace-expansion` copies and `ip-address`.
+  No new override, dependency, major upgrade, lifecycle patch, or advisory
+  exception is required. Installing the updated lockfile changed exactly five
+  packages; existing Expo and URI-decoder patches remain intact. The earlier
+  external `undici` update does not update any copy bundled inside Node.js.
+- Verified on Node 22.22.3: the production dependency security gate and both
+  compatibility-patch checks pass, and Expo's SDK dependency check passes.
+  Bounded smoke checks cover ordinary brace expansion and all three reported
+  denial-of-service patterns across the four installed copies, plus same-family
+  subnet matches, rejection of cross-family matches, and oversized IPv6 input.
 
 ## URI decoder compatibility patch
 
