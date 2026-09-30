@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { getFireIncident } from '../../../packages/home-scene/src/fireSafetySimulation';
+import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
@@ -32,10 +33,15 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   const landscape = width >= 760 && width > height;
   const compact = height < 700 || fontScale > 1.15;
   const [browsing, setBrowsing] = useState(deviceId === null);
+  const incident = getFireIncident(snapshot.state.deviceStates);
+  const emergencyVisible = incident.active && !incident.acknowledged;
+  // Release the native modal so the global incident and its persistent banner stay reachable.
+  useEffect(() => { if (emergencyVisible) onClose(); }, [emergencyVisible, onClose]);
   const device = allowedDeviceIds && deviceId && !allowedDeviceIds.includes(deviceId) ? undefined : getDevice(deviceId);
   const status = snapshot.status === 'disconnected' ? 'Session changed. Close and reopen controls.'
     : snapshot.status === 'error' ? 'Could not save locally. Your changes are still in this session.'
       : !snapshot.ready ? 'Loading saved controls…' : snapshot.status === 'saving' ? 'Saving simulation…' : 'Simulation · Saved on this device';
+  if (emergencyVisible) return null;
   return <Modal transparent visible animationType={motionAllowed ? 'fade' : 'none'} onRequestClose={onClose}>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.overlay, landscape && styles.overlayLandscape]}>
       <SafeAreaView style={[styles.safeArea, landscape && styles.safeAreaLandscape]}>

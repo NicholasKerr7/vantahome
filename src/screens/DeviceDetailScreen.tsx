@@ -3146,7 +3146,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     // Auto-open only when a known face is detected and the gate toggle is enabled.
     if (gateDevice?.autoOpenEnabled) {
       openGate();
-      logCameraEvent(`${gateDevice.name} auto-opened`, "known");
+      logCameraEvent(`${gateDevice.name} opening requested`, "known");
     }
   };
 
@@ -6300,7 +6300,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     <View style={gateAutoCardStyle}>
       <Text style={gateAutoLabelStyle}>Auto-open</Text>
       <Text style={gateAutoHintStyle}>
-        Use recognition + proximity to unlock for known faces.
+        Allow a known-visitor event to request opening. Gate sensors must control safe movement.
       </Text>
       <View style={gateAutoChipRowStyle}>
         <Pressable

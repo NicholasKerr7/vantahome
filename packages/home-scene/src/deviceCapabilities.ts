@@ -1,3 +1,5 @@
+import { gateSafetySummary, readGateSetting } from './gateSafetySimulation';
+import type { FireCommand } from './fireSafetySimulation';
 import inventory from './device-capabilities.json';
 import { gasActionFeedback, gasDeviceStatus, isGasDevice, readGasSetting, type GasCommand } from './gasSimulation';
 import { supplementalCapabilities, supplementalDefaults, simulatedStatusFields, scheduleCapabilities } from './deviceControlCatalog';
@@ -12,6 +14,7 @@ export type DeviceActionOperation =
   | { type: 'increment'; field: 'channel' | 'timeRemainingSec'; delta: number }
   | { type: 'media'; command: 'play-pause' | 'rewind' | 'forward' | 'previous' | 'next' }
   | { type: 'gas'; command: GasCommand }
+  | { type: 'fire'; command: FireCommand }
   | { type: 'navigate'; direction: 'up' | 'down' | 'left' | 'right' | 'select' | 'home' };
 interface CapabilityBase { id: string; label: string; group?: ControlGroup }
 export type DeviceCapability = CapabilityBase & (
@@ -80,6 +83,10 @@ export function hasLegacyLevel(device: DeviceDefinition): boolean { return (LEGA
 
 /** Read a validated setting, falling back to an appropriate reproducible demo value. */
 export function readDeviceSetting(device: DeviceDefinition, state: DeviceState, field: string): SettingValue {
+  if (device.kind === 'gate') {
+    const gateValue = readGateSetting(state, field);
+    if (gateValue !== undefined) return gateValue;
+  }
   if (isGasDevice(device.kind)) {
     const gasValue = readGasSetting(device.kind, state, field);
     if (gasValue !== undefined) return gasValue;
@@ -116,6 +123,8 @@ export function validateStoredSetting(kind: DeviceKind, field: string, input: un
 
 /** Summarize the last local action immediately, without claiming hardware, media, or automation ran. */
 export function deviceActionFeedback(device: DeviceDefinition, state: DeviceState): string | null {
+  if (device.kind === 'gate') return gateSafetySummary(state);
+  if (device.kind === 'smoke' && state.settings?.fireIncidentActive) return state.settings.fireIncidentAcknowledged ? 'Emergency simulation · acknowledged' : 'Emergency simulation · review incident';
   if (isGasDevice(device.kind)) return state.settings?.gasLastEvent && state.settings.gasLastEvent !== 'ready' ? gasActionFeedback(device.kind, state) : null;
   const action = profiles[device.kind].find((item) => item.type === 'action' && item.id === state.settings?.lastAction);
   if (action?.type !== 'action') return null;
@@ -172,6 +181,8 @@ export function quickActionLabel(device: DeviceDefinition, state: DeviceState): 
 
 /** Describe state consistently in quick cards, room lists and the full inspector. */
 export function deviceStatus(device: DeviceDefinition, state: DeviceState): string {
+  if (device.kind === 'gate') return gateSafetySummary(state);
+  if (device.kind === 'smoke' && (state.settings?.fireIncidentActive || state.settings?.smokeDetected || state.settings?.coDetected)) return state.settings?.smokeDetected || state.settings?.coDetected ? 'Alarm simulation active' : 'Simulation clear · reset pending';
   if (isGasDevice(device.kind)) return gasDeviceStatus(device.kind, state);
   if (device.kind === 'camera') return readDeviceSetting(device, state, 'armed') ? 'Armed' : 'Disarmed';
   if (isMonitor(device.kind)) return state.settings?.sampleChecked ? 'Sample checked' : 'Monitoring sample';

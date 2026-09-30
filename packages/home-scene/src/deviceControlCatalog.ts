@@ -1,3 +1,5 @@
+import { gateSafetyCapabilities, gateSafetyDefaults, gateSafetyStoredFields } from './gateSafetyCatalog';
+import { fireCapabilities, fireDefaults, fireStoredFields } from './fireSafetyCatalog';
 import { gasCapabilities, gasDefaults, gasStoredFields } from './gasDeviceCatalog';
 import type { ControlGroup, DeviceActionOperation, DeviceCapability, DeviceKind } from './deviceCapabilities';
 import type { SettingValue } from './simulationTypes';
@@ -100,7 +102,7 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     stat('vacuum', 'vacuumBinFull', 'Bin full'), stat('vacuum', 'vacuumBrushDirty', 'Brush needs cleaning'), stat('vacuum', 'vacuumFilterLife', 'Filter life', '%'),
     stat('vacuum', 'vacuumAreaM2', 'Sample cleaned area', 'm²'), stat('vacuum', 'vacuumRuntimeMin', 'Sample runtime', 'min'),
   ],
-  gate: [...coverControls('gate'), toggle('gate', 'autoOpenEnabled', 'Auto-open preference')],
+  gate: [...coverControls('gate'), ...gateSafetyCapabilities, toggle('gate', 'autoOpenEnabled', 'Auto-open preference')],
   garage: coverControls('garage'), door: coverControls('door'), blinds: coverControls('blinds'),
   window: [...coverControls('window'), action('window', 'vent', 'Vent', { openPercent: 25 })],
   microwave: [
@@ -122,9 +124,7 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     range('air', 'airAlertVoc', 'VOC alert threshold', 80, 800, 'ppb'), range('air', 'airAlertPollen', 'Pollen alert threshold', 1, 5),
   ],
   speaker: mediaControls('speaker'),
-  smoke: [
-    action('smoke', 'test-alarm', 'Simulate alarm test', { smokeDetected: true, coDetected: false, smokeSilenced: false }),
-    action('smoke', 'silence', 'Silence preview', { smokeDetected: false, coDetected: false, smokeSilenced: true }),
+  smoke: [...fireCapabilities.smoke,
     choice('smoke', 'smokeSensorStatus', 'Sample sensor status', [['OK', 'ok'], ['Warning', 'warning'], ['Error', 'error']]),
     stat('smoke', 'smokeSilenced', 'Preview silenced'), stat('smoke', 'coDetected', 'Sample CO alarm'),
   ],
@@ -155,10 +155,10 @@ const customDefaults: Partial<Record<DeviceKind, Record<string, SettingValue>>> 
   fridge: { freezerTempC: -18, fridgeMode: 'normal', fridgeQuickCool: false, fridgeQuickFreeze: false, fridgeIceMaker: true, fridgeDoorAlarm: true, fridgeEnergySaver: true, fridgeHumidity: 50, fridgeDoorOpen: false, fridgeFilterLife: 100 },
   coffee: { coffeeCupCount: 2, coffeeTempC: 92, coffeeKeepWarmMin: 20, coffeeGrinder: true, coffeeMilkFrother: false, coffeeAutoBrewTime: '07:00', coffeeBeanLevel: 55, coffeeDescaleNeeded: false },
   vacuum: { vacuumMode: 'auto', vacuumSuction: 70, vacuumMop: false, vacuumQuietMode: false, vacuumBinFull: false, vacuumBrushDirty: false, vacuumFilterLife: 100, vacuumAreaM2: 0, vacuumRuntimeMin: 0 },
-  gate: { autoOpenEnabled: false }, camera: { cameraPreviewEvent: 'No preview events' },
+  gate: { autoOpenEnabled: false, ...gateSafetyDefaults }, camera: { cameraPreviewEvent: 'No preview events' },
   'water-heater': { waterHeaterType: 'electric-tank' },
   air: { airAlertAqi: 100, airAlertCo2: 1200, airAlertPm25: 35, airAlertPm10: 50, airAlertVoc: 300, airAlertPollen: 3 },
-  speaker: playbackDefaults, smoke: { smokeSilenced: false, coDetected: false, smokeSensorStatus: 'ok' },
+  speaker: playbackDefaults, smoke: { ...fireDefaults.smoke, smokeSensorStatus: 'ok' },
 };
 export const supplementalDefaults = Object.fromEntries([...new Set([...Object.keys(scheduleDefaults), ...Object.keys(customDefaults)])].map((key) => {
   const kind = key as DeviceKind;
@@ -170,7 +170,7 @@ function playbackStatus(kind: 'tv' | 'speaker'): DeviceCapability[] {
   return [choice(kind, 'playbackState', '', ['stopped', 'playing', 'paused']), range(kind, 'playbackPositionSec', '', 0, 3600), range(kind, 'trackIndex', '', 1, 99)];
 }
 export const simulatedStatusFields: Partial<Record<DeviceKind, DeviceCapability[]>> = {
-  ...gasStoredFields,
+  ...gasStoredFields, ...fireStoredFields, gate: gateSafetyStoredFields,
   tv: [...playbackStatus('tv'), range('tv', 'remoteFocus', '', 1, 9), range('tv', 'remoteSelection', '', 0, 9), choice('tv', 'remoteAction', '', ['none', 'up', 'down', 'left', 'right', 'select', 'home'])],
   speaker: playbackStatus('speaker'),
 };

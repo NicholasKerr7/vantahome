@@ -1,6 +1,7 @@
+import { restoreSafetySimulation, synchronizeSafetySimulation } from './safetySimulation';
 import { DEVICES, getDevice, isPositionDevice } from './data';
 import { validateStoredSetting } from './deviceCapabilities';
-import { GAS_DEVICE_IDS, isGasDevice, synchronizeGasSafety } from './gasSimulation';
+import { GAS_DEVICE_IDS, isGasDevice } from './gasSimulation';
 import type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
 
 export type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
@@ -121,7 +122,7 @@ export function parseSimulationSnapshotMessage(input: unknown): SimulationSnapsh
 /** Migrate only pre-gas local caches; live bridge snapshots still require the complete catalog. */
 export function parseStoredSimulationSnapshotMessage(input: unknown): SimulationSnapshotMessage | null {
   const current = parseSimulationSnapshotMessage(input);
-  if (current) return { ...current, state: { ...current.state, deviceStates: synchronizeGasSafety(current.state.deviceStates) } };
+  if (current) return { ...current, state: { ...current.state, deviceStates: restoreSafetySimulation(current.state.deviceStates) } };
   const envelope = readEnvelope(input);
   if (!envelope || envelope.type !== 'snapshot' || !isRecord(envelope.state) || !isRecord(envelope.state.deviceStates)) return null;
   const previous = envelope.state.deviceStates;
@@ -131,7 +132,7 @@ export function parseStoredSimulationSnapshotMessage(input: unknown): Simulation
   const defaults = createDefaultSimulationSnapshot().deviceStates;
   const deviceStates = { ...previous, ...Object.fromEntries(missing.map((device) => [device.id, defaults[device.id]])) };
   const migrated = parseSimulationSnapshotMessage({ ...envelope, state: { ...envelope.state, deviceStates } });
-  return migrated ? { ...migrated, state: { ...migrated.state, deviceStates: synchronizeGasSafety(migrated.state.deviceStates) } } : null;
+  return migrated ? { ...migrated, state: { ...migrated.state, deviceStates: restoreSafetySimulation(migrated.state.deviceStates) } } : null;
 }
 
 /** Produce independent defaults for persistence and the browser store without loading a renderer. */
@@ -145,7 +146,7 @@ export function createDefaultSimulationSnapshot(): SimulationSnapshot {
 /** Merge a validated transaction while retaining every device and preference it did not mention. */
 export function mergeSimulationChanges(state: SimulationSnapshot, changes: SimulationChanges): SimulationSnapshot {
   const deviceStates = changes.deviceStates ? { ...state.deviceStates, ...changes.deviceStates } : state.deviceStates;
-  return { ...state, ...changes, deviceStates: synchronizeGasSafety(deviceStates, state.deviceStates) };
+  return { ...state, ...changes, deviceStates: synchronizeSafetySimulation(deviceStates, state.deviceStates) };
 }
 
 /** Extract only changed simulation fields; camera, selection and notices never leave the scene. */

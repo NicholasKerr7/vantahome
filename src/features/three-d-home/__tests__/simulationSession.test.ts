@@ -1,3 +1,4 @@
+import { advanceSafetySimulation } from '../../../../packages/home-scene/src/safetySimulation';
 import { createStore } from 'zustand/vanilla';
 import { useHomeStore, type HomeState } from '../../../store/useHomeStore';
 import { createDefaultSimulationSnapshot } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
@@ -73,6 +74,15 @@ test.each(['master-blinds', 'entry-gate', 'entry-door'])('native power routines 
   expect(deliver.mock.lastCall?.[0].state.deviceStates[id]).toMatchObject({ on: true, level: 100 });
   expect(store.getState().devices[0]).toMatchObject({ isOn: true, openPercent: 100 });
   store.setState({ devices: [{ ...store.getState().devices[0], isOn: false }] });
+  if (kind === 'gate') {
+    expect(deliver.mock.lastCall?.[0].state.deviceStates[id]).toMatchObject({ level: 100, settings: { gatePhase: 'closing' } });
+    expect(store.getState().devices[0]).toMatchObject({ isOn: true, openPercent: 100 });
+    for (let second = 0; second < 4; second += 1) {
+      const states = deliver.mock.lastCall![0].state.deviceStates;
+      session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: second + 1, changes: { deviceStates: advanceSafetySimulation(states, 1) } });
+      await settle();
+    }
+  }
   expect(deliver.mock.lastCall?.[0].state.deviceStates[id]).toMatchObject({ on: false, level: 0 });
   expect(store.getState().devices[0]).toMatchObject({ isOn: false, openPercent: 0 });
   store.setState({ devices: [{ ...store.getState().devices[0], isOn: true, openPercent: 40 }] });

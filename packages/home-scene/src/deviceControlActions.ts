@@ -1,3 +1,5 @@
+import { applyGateCommand, applyGateSetting } from './gateSafetySimulation';
+import { applyFireCommand } from './fireSafetySimulation';
 import { applyGasCommand, isGasDevice } from './gasSimulation';
 import { getDevice, isPositionDevice, type DeviceDefinition, type DeviceId } from './data';
 import { getCapabilities, isMonitor, readDeviceSetting, validateSetting, validateStoredSetting, type DeviceActionOperation } from './deviceCapabilities';
@@ -34,6 +36,7 @@ function clearActionFeedback(current: DeviceState): DeviceState {
 export function setDeviceLevelState(id: DeviceId, current: DeviceState, level: number): DeviceState {
   const device = getDevice(id);
   if (!device) return current;
+  if (device.kind === 'gate') return applyGateSetting(clearActionFeedback(current), 'openPercent', clampLevel(level));
   if (isGasDevice(device.kind)) return current.on ? current : { ...current, on: true };
   const manual = clearActionFeedback(current);
   const source = device.kind === 'light' ? clearLightEffect(manual) : manual;
@@ -46,6 +49,10 @@ export function setDeviceLevelState(id: DeviceId, current: DeviceState, level: n
 export function applyDeviceSetting(id: DeviceId, current: DeviceState, field: string, input: SettingValue): DeviceState {
   const device = getDevice(id);
   if (!device) return current;
+  if (device.kind === 'gate') {
+    const next = applyGateSetting(current, field, input);
+    if (next !== current || field === 'openPercent' || field === 'isOn' || field.startsWith('gate') || field.startsWith('autoClose')) return next;
+  }
   const capability = getCapabilities(device.kind).find((item) => 'field' in item && item.field === field);
   if (!capability) return current;
   const value = validateSetting(capability, input);
@@ -78,6 +85,7 @@ export function toggleDeviceState(id: DeviceId, current: DeviceState): DeviceSta
   if (device.kind === 'gas-meter') return { ...current, on: true, settings: { ...current.settings, sampleChecked: true, gasLastEvent: 'ready' } };
   if (isMonitor(device.kind)) return { ...current, on: true, settings: { ...current.settings, sampleChecked: true } };
   if (device.kind === 'camera') return applyDeviceSetting(id, current, 'armed', !readDeviceSetting(device, current, 'armed'));
+  if (device.kind === 'gate') return applyGateCommand(current, current.level > 0 ? 'close' : 'open');
   if (isPositionDevice(device)) return { ...current, ...createPositionState(current.level > 0 ? 0 : 100) };
   const next = { ...current, on: !current.on };
   if (!next.on && (device.kind === 'tv' || device.kind === 'speaker') && current.settings?.playbackState === 'playing') next.settings = { ...current.settings, playbackState: 'paused' };
@@ -123,6 +131,7 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
   if (action?.type !== 'action') return current;
   let next = current;
   for (const [field, value] of Object.entries(action.patch)) {
+    if (device.kind === 'gate') { next = applyDeviceSetting(id, next, field, value); continue; }
     if (field === 'isOn') next = { ...next, on: Boolean(value) };
     else {
       const controlled = applyDeviceSetting(id, next, field, value);
@@ -131,6 +140,7 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
     }
   }
   const operation = action.operation;
+  if (operation?.type === 'fire' && device.kind === 'smoke') next = applyFireCommand(next, operation.command);
   if (operation?.type === 'gas' && isGasDevice(device.kind)) next = applyGasCommand(device.kind, next, operation.command);
   if (operation?.type === 'media') next = applyMediaOperation(device, next, operation.command);
   if (operation?.type === 'navigate') next = applyNavigationOperation(device, next, operation.direction);

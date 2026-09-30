@@ -1,3 +1,4 @@
+import { synchronizeSafetySimulation } from './safetySimulation';
 import { DEVICES, PRESETS, isPositionDevice, type PresetId } from "./data";
 import { isMonitor } from "./deviceCapabilities";
 import { createPositionState } from "./deviceControlActions";
@@ -44,11 +45,12 @@ export function applyModelPreset<T extends SimulationSnapshot>(
   const night = preset === "night" || preset === "movie";
   // Presets never clear a leak, reopen its linked valve, or reset consumption.
   for (const device of DEVICES)
-    if (isGasDevice(device.kind))
+    if (isGasDevice(device.kind) || device.kind === "smoke")
       devices[device.id] = state.deviceStates[device.id];
+  devices["entry-gate"] = { ...devices["entry-gate"], settings: state.deviceStates["entry-gate"].settings };
   return {
     ...state,
-    deviceStates: synchronizeSolarLights(devices, night),
+    deviceStates: synchronizeSafetySimulation(synchronizeSolarLights(devices, night), state.deviceStates),
     night,
     lightingMode: night ? "night" : "day",
   };

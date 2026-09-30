@@ -73,6 +73,7 @@ test("native execution preserves original preset atmosphere and gas safety, incl
     level: 95,
     settings: { lightEffect: "party", color: "#FF9AA2" },
   };
+  before.deviceStates["entry-gate"].settings = { autoOpenEnabled: false };
   simulationPersistence.save("demo", before);
   useHomeStore.setState({
     devices: projectModelSnapshot(useHomeStore.getState().devices, before),

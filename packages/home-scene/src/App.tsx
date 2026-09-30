@@ -1,3 +1,5 @@
+import { getFireIncident } from './fireSafetySimulation';
+import { SafetyPreview, useSafetyPreviewClock } from './SafetyPreview';
 import { getModelUrl, isEmbeddedScene, reportSceneStatus, type ModelName } from './embeddedHost';
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
@@ -162,6 +164,7 @@ export default function App(): ReactNode {
   const embedded = isEmbeddedScene();
   const hostSuspended = useHostPresentation();
   const { hydrated: simulationHydrated, syncError: simulationSyncError } = useSimulationBridge();
+  useSafetyPreviewClock(!embedded && simulationHydrated);
   const prefersReduced = usePrefersReducedMotion();
   const environment = useLiveEnvironment();
   const lightingMode = useHomeStore((state) => state.lightingMode);
@@ -174,6 +177,10 @@ export default function App(): ReactNode {
   }, [environment.isNight, lightingMode, simulationHydrated, syncAutomaticLighting]);
   const motionDisabled = useHomeStore((state) => state.motionDisabled);
   const persistenceError = useHomeStore((state) => state.persistenceError);
+  const emergencyVisible = useHomeStore((state) => {
+    const incident = getFireIncident(state.deviceStates);
+    return incident.active && !incident.acknowledged;
+  });
   const selectDevice = useHomeStore((state) => state.selectDevice);
   const reducedMotion = prefersReduced || motionDisabled;
   const orientationPaused = useOrientationPaused();
@@ -226,7 +233,12 @@ export default function App(): ReactNode {
     return () => document.removeEventListener('visibilitychange', updateVisibility);
   }, [setShowcase]);
 
-  const graphicsCovered = hostSuspended || library !== null || sheetDeviceId !== null;
+  // Dismiss lower dialogs once when a new incident needs attention, keeping its banner reachable.
+  useEffect(() => {
+    if (emergencyVisible) { setLibrary(null); setSheetDeviceId(null); setShowcase(false); }
+  }, [emergencyVisible, setShowcase]);
+
+  const graphicsCovered = hostSuspended || library !== null || sheetDeviceId !== null || emergencyVisible;
   return <div data-rendering={graphicsCovered || orientationPaused || documentHidden ? 'paused' : 'active'} className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''}`}>
     <a className="skip-link" href="#house-preview">Skip to house controls</a>
     <DashboardHeader embedded={embedded} environment={environment} onSettings={() => setLibrary('settings')} onEnvironment={() => setLibrary('environment')} />
@@ -239,6 +251,7 @@ export default function App(): ReactNode {
     <DashboardDock onRooms={() => setLibrary('rooms')} onDevices={() => setLibrary('devices')} />
     {!orientationPaused && library ? <DashboardLibrary environment={environment} onEnvironment={() => setLibrary('environment')} key={library} view={library} reducedMotion={reducedMotion} systemReducedMotion={prefersReduced} onClose={() => setLibrary(null)} onDevice={(id) => { selectDevice(id); openFullControls(id); }} /> : null}
     {!orientationPaused && sheetDeviceId ? <DeviceControlSheet deviceId={sheetDeviceId} onClose={closeFullControls} /> : null}
+    {!embedded ? <SafetyPreview /> : null}
     {simulationSyncError || persistenceError ? <p className="storage-notice" role="status">{simulationSyncError ? "Your saved simulation couldn’t sync. Changes in this view may not be saved." : "Your browser couldn’t save these settings. The preview still works for this session."}</p> : null}
   </div>;
 }

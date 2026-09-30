@@ -197,6 +197,7 @@ test('native controls keep device preferences while opening the shared routine c
   fireEvent.press(screen.getByLabelText('Property'));
   fireEvent.press(screen.getByLabelText('Gate full controls'));
   fireEvent.press(screen.getByRole('tab', { name: 'Modes' }));
+  for (let page = 0; page < 8 && !screen.queryByLabelText('Auto-open preference'); page++) fireEvent.press(screen.getByLabelText('Next controls page'));
   fireEvent(screen.getByLabelText('Auto-open preference'), 'valueChange', true);
   fireEvent.press(screen.getByRole('tab', { name: 'Routines' }));
   expect(screen.queryByLabelText('Save schedule preference')).toBeNull();
@@ -215,6 +216,8 @@ test("offers only implemented property controls and bounds the gate slider", () 
   fireEvent(screen.getByLabelText("Gate opening"), "valueChange", 135);
   expect(mockWebProps.settings.gate).toBe(100);
   fireEvent(screen.getByLabelText("Gate opening"), "valueChange", -20);
+  expect(mockControls.getSnapshot().state.deviceStates['entry-gate'].settings).toMatchObject({ gatePhase: 'closing', gateCloseTargetPercent: 0 });
+  act(() => { for (let second = 0; second < 4; second++) mockControls.advanceSafety(1); });
   expect(mockWebProps.settings.gate).toBe(0);
 });
 

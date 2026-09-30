@@ -1,3 +1,5 @@
+import { advanceGateSafety } from './gateSafetySimulation';
+import { restoreSafetySimulation } from './safetySimulation';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEVICES, type DeviceDefinition } from './data';
 import { applyDeviceSetting, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from './deviceControlActions';
@@ -14,14 +16,14 @@ function initial(device: DeviceDefinition): DeviceState { return createDefaultSi
 function roundTrip(device: DeviceDefinition, current: DeviceState): void {
   const state = createDefaultState();
   state.deviceStates[device.id] = current;
-  expect(parseStoredState(JSON.stringify({ version: STORAGE_VERSION, state })).deviceStates[device.id]).toEqual(current);
+  expect(parseStoredState(JSON.stringify({ version: STORAGE_VERSION, state })).deviceStates[device.id]).toEqual(restoreSafetySimulation(state.deviceStates)[device.id]);
   expect(parseSimulationSnapshotMessage({ channel: SIMULATION_CHANNEL, version: 1, type: 'snapshot', state: {
     deviceStates: state.deviceStates, night: state.night, lightingMode: state.lightingMode, motionDisabled: state.motionDisabled,
   } })?.state.deviceStates[device.id]).toEqual(current);
 }
 
 describe('shared simulation controls', () => {
-  beforeEach(() => useHomeStore.getState().reset());
+  beforeEach(() => useHomeStore.setState(createDefaultState()));
 
   it('uses canonical levels for scenes, clears effects for manual light controls, and preserves off state', () => {
     const device = deviceOfKind('light');
@@ -73,6 +75,7 @@ describe('shared simulation controls', () => {
       state = runDeviceActionState(device.id, state, `${kind}-command-open`);
       expect(state).toMatchObject({ on: true, level: 100 });
       state = toggleDeviceState(device.id, state);
+      if (kind === 'gate') state = advanceGateSafety(state, 4);
       expect(state).toMatchObject({ on: false, level: 0, settings: { scheduleEnabled: true, scheduleHour: 23, scheduleMinute: 59, scheduleDays: 'weekends' } });
       if (kind === 'gate') expect(state.settings?.autoOpenEnabled).toBe(true);
       roundTrip(device, state);

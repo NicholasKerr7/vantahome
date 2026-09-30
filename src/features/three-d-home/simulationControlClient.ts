@@ -1,6 +1,9 @@
 import { getDevice } from '../../../packages/home-scene/src/data';
 import { applyDeviceSetting, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from '../../../packages/home-scene/src/deviceControlActions';
-import { createDefaultSimulationSnapshot, mergeSimulationChanges, type SimulationChanges, type SimulationSnapshot, type SimulationSnapshotMessage } from '../../../packages/home-scene/src/simulationBridgeProtocol';
+import { createDefaultSimulationSnapshot, diffSimulationSnapshots, mergeSimulationChanges, type SimulationChanges, type SimulationSnapshot, type SimulationSnapshotMessage } from '../../../packages/home-scene/src/simulationBridgeProtocol';
+import { advanceSafetySimulation, pauseSafetySimulation } from '../../../packages/home-scene/src/safetySimulation';
+import { acknowledgeFireIncident, clearSimulatedFireSources, resetFireIncident } from '../../../packages/home-scene/src/fireSafetySimulation';
+import type { DeviceStates } from '../../../packages/home-scene/src/simulationTypes';
 import type { DeviceState, SettingValue } from '../../../packages/home-scene/src/simulationTypes';
 import { SimulationSession } from './simulationSession';
 import type { SimulationSaveStatus } from './simulationPersistence';
@@ -63,6 +66,30 @@ export class SimulationControlClient {
     this.update(ids, (state, id) => state.on === on ? state : toggleDeviceState(id, state));
   };
 
+  /** Advance only active foreground seconds; idle ticks do not write storage. */
+  advanceSafety = (seconds: number): void => { this.updateSafety((states) => advanceSafetySimulation(states, seconds)); };
+
+  /** Interrupt motion/countdowns on background without using wall-clock catch-up. */
+  pauseSafety = (): void => { this.updateSafety(pauseSafetySimulation); };
+
+  /** Acknowledge a preview while preserving its alarm and emergency hold. */
+  acknowledgeFire = (): void => { this.updateSafety(acknowledgeFireIncident); };
+
+  /** Clear sample detector inputs, leaving the incident latched for explicit reset. */
+  clearFireSources = (): void => { this.updateSafety(clearSimulatedFireSources); };
+
+  /** Reset only a globally clear incident; no real-device transport is reachable. */
+  resetFire = (): void => { this.updateSafety(resetFireIncident); };
+
+  /** Diff cross-device operations so concurrent surfaces retain unrelated edits. */
+  private updateSafety(reduce: (states: DeviceStates) => DeviceStates): void {
+    const state = this.value.state;
+    const next = reduce(state.deviceStates);
+    if (next === state.deviceStates) return;
+    const changes = diffSimulationSnapshots(state, { ...state, deviceStates: next });
+    this.commit(changes);
+  }
+
   /** Finish acknowledged local edits when the panel closes, without retaining UI listeners. */
   dispose(): void {
     this.closed = true;
@@ -92,9 +119,13 @@ export class SimulationControlClient {
       const next = reduce(current, id);
       if (next !== current) deviceStates[id] = next;
     }
-    if (!Object.keys(deviceStates).length) return;
+    this.commit({ deviceStates });
+  }
+
+  /** Submit bounded local changes through the same bridge as the rendered model. */
+  private commit(changes: SimulationChanges): void {
+    if (this.closed || !this.value.ready || !this.session || !changes.deviceStates || !Object.keys(changes.deviceStates).length) return;
     const requestId = ++this.nextRequest;
-    const changes: SimulationChanges = { deviceStates };
     this.pending.set(requestId, changes);
     this.publish({ ...this.value, state: mergeSimulationChanges(this.value.state, changes) });
     if (!this.session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId, changes })) {

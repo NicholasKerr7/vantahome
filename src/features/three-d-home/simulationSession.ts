@@ -1,3 +1,5 @@
+import { projectFireSimulationToDemo } from './fireDemoMapping';
+import { resolveDemoDeviceMapping } from './demoDeviceMapping';
 import type { StoreApi } from 'zustand';
 import { runtimePolicy, type RuntimeMode } from '../../config/runtimeMode';
 import { useHomeStore, type HomeState } from '../../store/useHomeStore';
@@ -101,6 +103,18 @@ export class SimulationSession {
     this.ready = this.persistence.load(this.scope).then((saved) => {
       if (this.disposed) return;
       this.state = this.sharedDemo ? overlayDemoDevices(saved, this.store.getState().devices) : saved;
+      if (this.sharedDemo) {
+        // Persisted simulation alarms are authoritative; default host flags must not erase them.
+        const current = this.store.getState().devices;
+        const devices = current.map((device) => {
+          const mapping = resolveDemoDeviceMapping(device);
+          const simulated = mapping && this.state?.deviceStates[mapping.sceneId];
+          return simulated ? projectFireSimulationToDemo(device, simulated) : device;
+        });
+        this.projecting = true;
+        try { if (devices.some((device, index) => device !== current[index])) this.store.setState({ devices }); }
+        finally { this.projecting = false; }
+      }
     });
   }
 

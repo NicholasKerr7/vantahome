@@ -1,3 +1,4 @@
+import { overlayFireDemoDevice, projectFireSimulationToDemo } from './fireDemoMapping';
 import { getDevice, isPositionDevice } from "../../../packages/home-scene/src/data";
 import {
   getCapabilities,
@@ -8,7 +9,7 @@ import {
 } from "../../../packages/home-scene/src/deviceCapabilities";
 import type { DeviceState, SimulationSnapshot } from "../../../packages/home-scene/src/simulationBridgeProtocol";
 import type { Device, DeviceKind } from "../../store/useHomeStore";
-import { synchronizeGasSafety } from '../../../packages/home-scene/src/gasSimulation';
+import { synchronizeSafetySimulation } from '../../../packages/home-scene/src/safetySimulation';
 import { overlayGasDemoDevice, projectGasSimulationToDemo } from './gasDemoMapping';
 import { HOST_CONTROL_FIELDS, LEGACY_MODEL_DEVICE_ALIASES } from './modelHomeCatalog';
 
@@ -112,17 +113,20 @@ export function overlayDemoDevices(
     for (const capability of getCapabilities(definition.kind)) {
       if (!("field" in capability) || !isSharedControl(capability.field)) continue;
       if (positionPowerChanged && capability.field === 'openPercent') continue;
+      // A restored safety-aware gate owns its position; stale dashboard cache cannot restart it.
+      if (device.kind === 'gate' && !before && previous.settings?.gatePhase !== undefined && capability.field === 'openPercent') continue;
       const value = validateSetting(capability, device[capability.field]);
       if (value !== undefined) next = writeSceneControl(device.kind, next, capability.field, value);
     }
     next = synchronizeDemoLightAppearance(device, previous, next);
     next = overlayGasDemoDevice(device, next);
+    next = overlayFireDemoDevice(device, next, before);
     if (next !== previous) {
       if (deviceStates === snapshot.deviceStates) deviceStates = { ...deviceStates };
       deviceStates[mapping.sceneId] = next;
     }
   }
-  deviceStates = synchronizeGasSafety(deviceStates, snapshot.deviceStates);
+  deviceStates = synchronizeSafetySimulation(deviceStates, snapshot.deviceStates);
   return deviceStates === snapshot.deviceStates ? snapshot : { ...snapshot, deviceStates };
 }
 
@@ -160,6 +164,9 @@ export function projectSimulationToDemo(
     const previous = previousSnapshot.deviceStates[mapping.sceneId];
     if (definition?.kind !== mapping.kind || !state || !previous || state === previous) return;
     let next = device;
+    if (isPositionDevice(definition) && (next.openPercent !== state.level || next.isOn !== state.on)) {
+      next = { ...next, openPercent: state.level, isOn: state.on };
+    }
     if (!isMonitor(device.kind) && device.kind !== "camera" && !isPositionDevice(definition)
       && typeof state.on === "boolean" && state.on !== previous.on && state.on !== device.isOn) {
       next = { ...next, isOn: state.on };
@@ -175,6 +182,7 @@ export function projectSimulationToDemo(
       }
     }
     next = projectGasSimulationToDemo(next, state, previous);
+    next = projectFireSimulationToDemo(next, state, previous);
     if (next !== device) {
       result ??= devices.slice();
       result[index] = next;

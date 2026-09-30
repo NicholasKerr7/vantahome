@@ -110,3 +110,41 @@ test('can reconnect after the setup/cleanup cycle used by React StrictMode', asy
   expect(client.getSnapshot().ready).toBe(true);
   client.dispose();
 });
+
+test('synchronizes fire acknowledgment/reset and foreground gate timing across two clients without hardware', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const storage = { getItem: jest.fn().mockResolvedValue(null), setItem: jest.fn().mockResolvedValue(undefined) };
+  const persistence = new SimulationPersistence(storage);
+  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'production' });
+  const clock = new SimulationControlClient(factory);
+  const controls = new SimulationControlClient(factory);
+  clock.connect(); controls.connect();
+  await settle();
+  const idleWrites = storage.setItem.mock.calls.length;
+  clock.advanceSafety(1);
+  await settle();
+  expect(storage.setItem).toHaveBeenCalledTimes(idleWrites);
+  controls.setSetting('entry-gate', 'autoCloseDelaySec', 5);
+  controls.setSetting('entry-gate', 'autoCloseEnabled', true);
+  controls.runAction('entry-gate', 'gate-command-open');
+  await settle();
+  for (let second = 0; second < 6; second++) { clock.advanceSafety(1); await settle(); }
+  expect(controls.getSnapshot().state.deviceStates['entry-gate']).toMatchObject({ level: 75, settings: { gatePhase: 'closing' } });
+  controls.setSetting('entry-gate', 'gateBeamBlocked', true);
+  await settle();
+  expect(clock.getSnapshot().state.deviceStates['entry-gate'].level).toBe(100);
+  controls.runAction('family-smoke', 'smoke-test-alarm');
+  await settle();
+  expect(clock.getSnapshot().state.deviceStates['family-smoke'].settings?.fireIncidentActive).toBe(true);
+  clock.acknowledgeFire(); clock.resetFire();
+  await settle();
+  expect(controls.getSnapshot().state.deviceStates['family-smoke'].settings).toMatchObject({ smokeDetected: true, fireIncidentActive: true, fireIncidentAcknowledged: true });
+  clock.clearFireSources();
+  await settle();
+  clock.resetFire();
+  await settle();
+  expect(controls.getSnapshot().state.deviceStates['family-smoke'].settings?.fireIncidentActive).toBe(false);
+  expect(controls.getSnapshot().state.deviceStates['entry-gate'].settings?.gateEmergencyHold).toBe(true);
+  expect(store.getState().devices).toEqual([]);
+  controls.dispose(); clock.dispose();
+});

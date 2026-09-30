@@ -298,7 +298,7 @@ export default function CameraDetailSection({
             </View>
             <Text style={styles.gateTitle}>{gate.name}</Text>
             <Text style={styles.gateState}>
-              {(gate.openPercent ?? 0) > 20 ? "Open" : "Closed"}
+              {(gate.openPercent ?? 0) > 0 ? "Open" : "Closed"}
             </Text>
             <View style={styles.gateActions}>
               <DeepAction

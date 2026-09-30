@@ -7,7 +7,7 @@ import { createDefaultState, parseStoredState, STORAGE_VERSION, useHomeStore } f
 /** Locate a real manifest instance to exercise each schema against actual catalog data. */
 function deviceOfKind(kind: typeof DEVICE_KINDS[number]) { return DEVICES.find((device) => device.kind === kind)!; }
 
-beforeEach(() => useHomeStore.getState().reset());
+beforeEach(() => useHomeStore.setState(createDefaultState()));
 
 describe('complete house catalog', () => {
   it('covers all repository kinds, proposed service extensions and the seven original IDs', () => {
@@ -56,6 +56,7 @@ describe('expanded control semantics', () => {
     useHomeStore.getState().setDeviceLevel(device.id, 37);
     expect(useHomeStore.getState().deviceStates[device.id]).toMatchObject({ on: true, level: 37 });
     useHomeStore.getState().toggleDevice(device.id);
+    if (kind === 'gate') for (let second = 0; second < 4; second += 1) useHomeStore.getState().advanceSafety(1);
     expect(useHomeStore.getState().deviceStates[device.id]).toMatchObject({ on: false, level: 0 });
     expect(isPositionDevice(device)).toBe(true);
   });

@@ -1,3 +1,4 @@
+import { advanceSafetySimulation } from '../../../../packages/home-scene/src/safetySimulation';
 import { DEVICES, getDevice } from "../../../../packages/home-scene/src/data";
 import { readDeviceSetting } from "../../../../packages/home-scene/src/deviceCapabilities";
 import type { SimulationSnapshot } from "../../../../packages/home-scene/src/simulationBridgeProtocol";
@@ -181,7 +182,9 @@ describe("dashboard controls to scene", () => {
     const open = overlayDemoDevices(previous, [demo("d26", "gate", { isOn: false, openPercent: 42 })]);
     expect(open.deviceStates["entry-gate"]).toEqual({ on: true, level: 42 });
     const closed = overlayDemoDevices(open, [demo("d26", "gate", { isOn: true, openPercent: 0 })]);
-    expect(closed.deviceStates["entry-gate"]).toEqual({ on: false, level: 0 });
+    expect(closed.deviceStates["entry-gate"]).toMatchObject({ on: true, level: 42, settings: { gatePhase: "closing" } });
+    const finished = advanceSafetySimulation(advanceSafetySimulation(closed.deviceStates, 1), 1);
+    expect(finished["entry-gate"]).toMatchObject({ on: false, level: 0 });
   });
 
   test("represents camera arming independently from power and never exports media URLs", () => {

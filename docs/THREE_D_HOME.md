@@ -344,3 +344,40 @@ The iOS Release preview uses build 16. Native spoken recognition still requires
 an owner check on the phone; browser commands do not establish microphone accuracy,
 provider linking, or physical hardware operation. Physical iPad testing remains
 deferred and no Android device result is claimed.
+
+## Gate and fire safety simulation
+
+The gate now has optional foreground auto-close (off by default), a 30-second
+clear-zone delay adjustable from 5–120 seconds, manual hold/release, and explicit
+vehicle, blocked-beam, and sensor-fault scenarios in full controls. Closing takes
+four active preview seconds so obstruction can interrupt it. Occupancy resets the
+countdown; an obstruction while closing reopens the simulated gate, and a sensor
+fault stops movement. Sliders, quick actions, presets and native demo edits share
+these rules. A background transition or restored pending movement pauses the gate
+until a deliberate new command; there is no elapsed-background-time catch-up.
+
+Smoke/CO full controls can start a clearly labeled emergency simulation. Its
+incident remains latched across navigation and storage. Acknowledgment reduces
+it to a review banner; silence does not clear readings. Source clearing and
+incident reset are separate actions, and reset requires every simulated source
+to be clear. Room/approach lights stay steady and bright during the incident.
+The gate receives an emergency hold and opens only with healthy, clear simulated
+movement inputs. Its hold remains after reset until manually released. No physical
+siren, push escalation, emergency-service call, HVAC control, or real gate command
+is added. Cameras are not treated as proof of gate clearance. These scenarios do
+not establish hardware safety or replace commissioned local safety equipment.
+
+Verification: `npm run verify` passed (1,954 app tests, 595 scene tests, 127 bridge
+tests and 36 script tests). Scene builds passed. Public-browser checks covered
+alarm → acknowledge → review → clear → reset in both the standalone scene and
+the Expo host. The acknowledged host incident survived a full page reload.
+The sweep also passed 71 full-control pages at
+320×562, 390×844, 834×1194, 1024×768 and 960×600. The panels preserve touch targets,
+keyboard access and reduced-motion behavior.
+
+Release preview **build 29** was signed, installed and launched on the iPhone
+16 Pro Max. All three bundled scene assets matched the generated assets, and
+production app identity files were restored after building. The saved 92-device
+simulation was byte-identical before and after installation/launch. New physical
+touch flows and long-run performance are not claimed as tested; physical iPad
+and Android checks remain outstanding.

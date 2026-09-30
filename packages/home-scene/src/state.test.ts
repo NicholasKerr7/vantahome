@@ -1,3 +1,4 @@
+import { advanceSafetySimulation } from './safetySimulation';
 import { isMonitor } from './deviceCapabilities';
 import { isGasDevice } from './gasSimulation';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -203,7 +204,7 @@ describe('preset transactions', () => {
     });
     expect(result.deviceStates).not.toBe(input.deviceStates);
     for (const device of DEVICES) {
-      if (isGasDevice(device.kind)) expect(result.deviceStates[device.id]).toBe(input.deviceStates[device.id]);
+      if (isGasDevice(device.kind) || device.kind === 'smoke') expect(result.deviceStates[device.id]).toBe(input.deviceStates[device.id]);
       else expect(result.deviceStates[device.id]).not.toBe(input.deviceStates[device.id]);
     }
   });
@@ -234,14 +235,16 @@ describe('preset transactions', () => {
     expect(blinds.on).toBe(blinds.level > 0);
   });
 
-  it.each<PresetId>(['morning', 'movie', 'night', 'away'])('closes the entry gate in %s while preserving grounds navigation', (preset) => {
+  it.each<PresetId>(['morning', 'movie', 'night', 'away'])('requests a guarded gate close in %s while preserving grounds navigation', (preset) => {
     const initial = createDefaultState();
     const input = freezeSnapshot({
       ...initial, roomId: 'grounds', floor: 'ground', view: 'immersive', selectedDevice: 'entry-gate',
       deviceStates: { ...initial.deviceStates, 'entry-gate': { on: true, level: 50 } },
     });
     const result = applyPreset(input, preset);
-    expect(result.deviceStates['entry-gate']).toEqual({ on: false, level: 0 });
+    expect(result.deviceStates['entry-gate']).toMatchObject({ on: true, level: 50, settings: { gatePhase: 'closing' } });
+    const tick = advanceSafetySimulation(advanceSafetySimulation(result.deviceStates, 1), 1);
+    expect(tick['entry-gate']).toMatchObject({ on: false, level: 0 });
     expect(input.deviceStates['entry-gate']).toEqual({ on: true, level: 50 });
     expect(result).toMatchObject({ roomId: 'grounds', view: 'immersive', selectedDevice: 'entry-gate' });
   });
@@ -249,7 +252,7 @@ describe('preset transactions', () => {
 
 describe('interactive store actions', () => {
   beforeEach(() => {
-    useHomeStore.getState().reset();
+    useHomeStore.setState(createDefaultState());
   });
 
   it('moves a device pick to its correct room and floor while retaining immersion', () => {
@@ -447,34 +450,37 @@ describe('interactive store actions', () => {
     useHomeStore.getState().selectDevice('entry-gate');
     for (const position of [0, 50, 100]) {
       useHomeStore.getState().setDeviceLevel('entry-gate', position);
-      expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: position > 0, level: position });
+      expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: position > 0, level: position });
       expect(useHomeStore.getState()).toMatchObject({ view: 'exterior', roomId: 'grounds', selectedDevice: 'entry-gate', activePreset: null });
     }
   });
 
   it('toggles a closed gate fully open and closes a partially open gate', () => {
-    expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: false, level: 0 });
+    expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: false, level: 0 });
     const closedSnapshot = useHomeStore.getState();
     useHomeStore.getState().toggleDevice('entry-gate');
-    expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: true, level: 100 });
+    expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: true, level: 100 });
     expect(closedSnapshot.deviceStates['entry-gate']).toEqual({ on: false, level: 0 });
     useHomeStore.getState().setDeviceLevel('entry-gate', 50);
     useHomeStore.getState().toggleDevice('entry-gate');
-    expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: false, level: 0 });
+    expect(useHomeStore.getState().deviceStates['entry-gate'].settings?.gatePhase).toBe('closing');
+    for (let second = 0; second < 4; second += 1) useHomeStore.getState().advanceSafety(1);
+    expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: false, level: 0 });
     useHomeStore.getState().toggleDevice('entry-gate');
-    expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: true, level: 100 });
+    expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: true, level: 100 });
   });
 
-  it('bounds gate values and resets the gate to closed without affecting appliance semantics', () => {
+  it('bounds gate values and preserves its safe position during a presentation reset', () => {
     useHomeStore.getState().setDeviceLevel('entry-gate', 400);
-    expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: true, level: 100 });
+    expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: true, level: 100 });
     useHomeStore.getState().setDeviceLevel('entry-gate', -40);
-    expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: false, level: 0 });
+    for (let second = 0; second < 4; second += 1) useHomeStore.getState().advanceSafety(1);
+    expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: false, level: 0 });
     useHomeStore.getState().setDeviceLevel('entry-gate', Number.NaN);
-    expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: false, level: 0 });
+    expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: false, level: 0 });
     useHomeStore.getState().setDeviceLevel('entry-gate', 100);
     useHomeStore.getState().reset();
-    expect(useHomeStore.getState().deviceStates['entry-gate']).toEqual({ on: false, level: 0 });
+    expect(useHomeStore.getState().deviceStates['entry-gate']).toMatchObject({ on: true, level: 100 });
   });
 
   it('publishes one complete preset update with no intermediate device states', () => {
