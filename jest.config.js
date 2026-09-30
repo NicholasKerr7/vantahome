@@ -10,6 +10,15 @@ module.exports = {
   ),
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   testMatch: ["**/?(*.)+(spec|test).[tj]s?(x)"],
-  modulePathIgnorePatterns: ["<rootDir>/packages/home-scene/","<rootDir>/vantahome/", "<rootDir>/dist/", "<rootDir>/voice-linking-dist/", "<rootDir>/voice-linking-cloudflare/"],
+  // The standalone bridge suite runs under Node rather than the Expo runtime.
+  modulePathIgnorePatterns: [
+    "<rootDir>/packages/home-scene/",
+    "<rootDir>/vantahome/",
+    "<rootDir>/dist/",
+    "<rootDir>/voice-linking-dist/",
+    "<rootDir>/voice-linking-cloudflare/",
+    "<rootDir>/bridge/runtime-tests/",
+    "<rootDir>/bridge-dist/",
+  ],
   watchPathIgnorePatterns: ["<rootDir>/vantahome/"],
 };

@@ -1,6 +1,6 @@
 # Dependency Security Notes
 
-Last reviewed: 2026-09-26
+Last reviewed: 2026-09-29
 
 ## Current baseline
 
@@ -15,6 +15,9 @@ Last reviewed: 2026-09-26
 - Metro's upstream 0.83.8 patch removes the vulnerable transitive `image-size`
   package and its unused `queue` dependency. The Expo SDK and React Native
   versions are unchanged; see the scoped compatibility override below.
+- The locked `ip-address` and `undici` copies are now 10.5.1 and 6.28.1,
+  respectively, closing five additional advisories found by the September 29 audit.
+  Their existing parent dependency ranges accept these patch releases.
 - Do not use `npm audit fix --force`; it proposes SDK-breaking package changes.
 
 ## Applied mitigations
@@ -34,6 +37,25 @@ Last reviewed: 2026-09-26
   npm entries are not printed as duplicate concrete advisories.
 - CI also builds the production web export so optional web-runtime dependency
   drift cannot pass on type checks and native-focused tests alone.
+
+## IP classification and HTTP client patch releases
+
+- `mqtt` → `socks` → `ip-address` now resolves to **10.5.1**, fixing
+  [link-local IPv6 classification](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-rpw4-54j3-4h4q)
+  and [local-use NAT64 classification](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-2vr4-cq9g-pvrc).
+- Expo CLI's external `undici` now resolves to **6.28.1**, fixing
+  [WebSocket decompression error handling](https://github.com/nodejs/undici/security/advisories/GHSA-3wwx-pv8p-q78v),
+  [retry response framing](https://github.com/nodejs/undici/security/advisories/GHSA-r53p-7pc4-xj5r),
+  and [unrequested WebSocket subprotocol handling](https://github.com/nodejs/undici/security/advisories/GHSA-rfgv-xxqx-mfg5).
+- This remediation changes only those two lockfile entries and their verified
+  package integrity hashes. No new override, dependency, major/minor upgrade,
+  lifecycle patch, or advisory exception is required. Installing the updated
+  lockfile changed exactly two packages; existing Expo and URI-decoder patches
+  remain intact. Updating this external `undici` package does not update any
+  copy bundled inside the Node.js runtime.
+- Verified on Node 22.22.3: the production dependency security gate passes with
+  no vulnerabilities, Expo's SDK dependency check passes, application TypeScript
+  passes, and all 33 dependency-gate/compatibility-patch regression tests pass.
 
 ## URI decoder compatibility patch
 

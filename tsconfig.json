@@ -8,6 +8,9 @@
     "dist/**",
     "voice-linking-dist/**",
     "voice-linking-cloudflare/**",
+    "bridge/runtime/**",
+    "bridge/runtime-tests/**",
+    "bridge-dist/**",
     "packages/home-scene/**"
   ]
 }

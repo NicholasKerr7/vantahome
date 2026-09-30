@@ -10,6 +10,10 @@ web-build/
 voice-linking-dist/
 voice-linking-cloudflare/
 
+# Reproducible bridge output and local persistent state.
+bridge-dist/
+.vanta-bridge/
+
 # dependencies
 node_modules/
 

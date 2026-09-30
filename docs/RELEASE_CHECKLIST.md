@@ -45,7 +45,11 @@ public/customer use, including free alpha/beta testing.
   breadcrumb, and message data from Sentry events before transmission.
 
 ## QA
-- [x] Run TypeScript, Edge Function, and Jest verification in GitHub Actions.
+- [x] Configure TypeScript, Edge Function, bridge, Jest, scene, and build-script
+  verification in GitHub Actions for pull requests and pushes to `main`,
+  `sprint-*`, and `3d-home-integration`.
+- [ ] Confirm a successful workflow run for the exact release commit; local
+  verification and workflow configuration do not establish a passing hosted run.
 - [x] Run unit tests: `npm test`.
 - [x] Add smoke tests for key flows (Auth, Rooms, DeviceDetail, Automations, Cameras).
 - [x] Validate tablet/phone layouts in portrait/landscape using the lightweight
@@ -55,6 +59,9 @@ public/customer use, including free alpha/beta testing.
 - [x] Configure and automatically verify app version plus iOS/Android build
   numbers using [Release Versioning](./RELEASE_VERSIONING.md).
 - [ ] Build release artifacts for iOS/Android.
+- [ ] Configure and verify native build jobs after finalizing production app
+  identifiers and signing profiles; the current workflow verifies web exports
+  and does not compile the iOS or Android applications.
 - [x] Replace Expo placeholders and automatically validate app icons, splash,
   favicon, display name, and native iOS copies using
   [Release Assets](./RELEASE_ASSETS.md).

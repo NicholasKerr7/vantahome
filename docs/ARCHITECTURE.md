@@ -123,15 +123,21 @@ confirmation implementation. Pre-admission failures remain caller errors, not
 activity entries. Authoritative bridge completion and native/physical testing
 remain required before real-home execution is claimed.
 
-## Offline bridge protocol preparation
+## Isolated one-light runtime foundation
 
-The isolated `bridge/` modules now define and simulate explicit one-light power
-admission, registry identity, HA data normalization, and conservative lifecycle
-transitions. They are not connected to the app or a network and do not implement
-authentication, pairing, durable storage, or physical confirmation. Read the
-[one-light contract](./BRIDGE_LIGHT_CONTRACT.md) before extending these pure
-planning functions into a worker. In particular, `state_observed` is weaker
-than physical confirmation, and a fake journal test is not crash-safety evidence.
+The pure `bridge/*.ts` modules define explicit power admission, registry identity,
+HA normalization and conservative lifecycle transitions. `bridge/runtime/` now
+implements SQLite persistence, exclusive worker ownership, process-crash recovery,
+commit-before-send dispatch and an explicit authenticated HA WebSocket adapter.
+The runtime is compiled/tested independently of Expo and has no app entry point,
+public listener, cloud consumer or automatic physical connection.
+
+Authenticated mobile pairing, credential provisioning, live household policy,
+3D bindings and the deployed hub service remain unfinished. The
+[one-light contract](./BRIDGE_LIGHT_CONTRACT.md) records the implemented boundaries,
+32-command retained capacity and synthetic integration/crash tests.
+`state_observed` remains weaker than physical confirmation; process-kill tests
+do not establish future hub power-loss or physical-device behavior.
 
 ## Private-pilot sequencing decision
 

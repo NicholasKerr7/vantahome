@@ -1,14 +1,64 @@
 # One-light bridge contract
 
-Status: **offline reference model and synthetic tests only**. The modules in
-`bridge/` have no network, filesystem, credential, timer, or device-control side
-effects. They are not imported by the application and do not enable a production
-bridge. The only service calls produced are inert descriptions inspected by
-tests. Existing screens and controls are unchanged.
+Status: **durable runtime foundation, verified with synthetic integration data;
+not connected to the application or physical devices**. The pure planning modules
+in `bridge/*.ts` remain free of I/O. `bridge/runtime/` adds an actual SQLite journal,
+worker and explicit Home Assistant WebSocket adapter. Importing these modules
+does not open a socket; constructing the journal explicitly opens local storage.
+Mobile pairing, credential provisioning and a deployable hub service remain
+unfinished. Existing screens, runtime modes and controls are unchanged.
+
+## Runtime foundation — 2026-09-29
+
+- `SqliteLightJournal` uses a private directory, validated immutable records,
+  unique replay keys, schema/scope checks, FULL-synchronous WAL transactions and
+  an OS-released SQLite ownership lock. A second process cannot recover another
+  live worker's commands. Unknown schemas, corrupt rows, unsafe file permissions
+  and failed commits stop the instance rather than reset the journal.
+- `LightWorker` commits admission and dispatch before calling the adapter. It
+  persists results and observations, periodically checks expiry/revocation, and
+  returns actor-scoped receipts. Restart cancels reservations and marks any
+  potentially dispatched work `outcome_unknown`; it never automatically resends.
+- `HomeAssistantLightAdapter` implements the authenticated HA WebSocket protocol
+  with verified TLS, bounded frames/requests/deadlines, one request-ID sequence,
+  stable registry binding, acknowledged subscriptions and fresh snapshots.
+  Rename/removal invalidates the session; reconnect must be explicit. It keeps
+  raw error bodies and integration tokens out of the journal and receipts.
+- Actual process-kill tests exercise committed and uncommitted SQLite recovery.
+  Composition tests use the real journal, worker and adapter with a scripted
+  in-process socket; they inspect committed dispatch through a second SQLite
+  connection before allowing the synthetic socket write. No tests use HA, Hue,
+  Supabase, Docker or household credentials.
+
+Run on Node **22.22.3**, the verified development runtime:
+
+```bash
+npm run test:bridge
+```
+
+This compiles the isolated Node runtime and runs its Node test suites. It is also
+part of `npm run verify`. The app/Jest build excludes this runtime and its emitted
+`bridge-dist/` directory; mobile code never imports Node SQLite or HA credentials.
+The shared explicit-power envelope lives in `src/domain/commandEnvelope.ts`.
+Node 22's built-in SQLite API is still experimental; pin the tested runtime and
+reverify it before selecting the deployed hub image. The
+[Node SQLite documentation](https://nodejs.org/docs/latest-v22.x/api/sqlite.html)
+and [HA WebSocket protocol](https://developers.home-assistant.io/docs/api/websocket/)
+describe those external boundaries.
+
+This is a bounded one-light foundation: **32 retained commands, no automatic
+eviction**, explicit on/off only, and no fleet or everyday-use claim. A reviewed
+retention/archive policy is required before expanding it. Do not delete the
+journal to recover from a failure or capacity limit. Database files are private
+to the host account, not encrypted credential storage; they contain no tokens.
+The adapter requires a configured `wss://…/api/websocket` endpoint with a valid
+certificate and an explicit token-provider callback. It does not configure HA
+TLS, read environment credentials, launch a listener, consume cloud commands,
+pair a phone or enable the app's physical control path.
 
 ## Trust boundary
 
-The future bridge must authenticate the phone, pair the home/bridge, load the
+The host boundary must still authenticate the phone, pair the home/bridge, load the
 trusted registry, and supply current action-level authorization. A supplied
 `LightPrincipal`, callback, binding, or session ID is **not authentication**.
 None of these may be copied from an untrusted command body. The callback in
@@ -16,9 +66,9 @@ tests is a synthetic policy seam, not a security implementation.
 
 Home Assistant credentials belong in bridge secure storage, not the app. Only
 an authenticated adapter session may supply discovery, service results, and
-observations. The future adapter must bound incoming frame sizes, validate the
-WebSocket message/subscription envelope, and assign receipt times and increasing
-revisions itself. The normalization functions do not authenticate raw objects.
+observations. The implemented adapter bounds incoming frame sizes, validates the
+WebSocket message/subscription envelope, and assigns receipt times and increasing
+revisions itself. The normalization functions alone do not authenticate raw objects.
 
 ## Explicit power contract
 
@@ -106,7 +156,7 @@ hardware evidence.
 [Assumed-state definition](https://developers.home-assistant.io/docs/core/entity/#generic-properties),
 [HA context implementation](https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/entity.py).
 
-## Required journal/worker ordering — not implemented persistence
+## Implemented journal/worker ordering
 
 1. Serialize admission and atomically reserve identity/replay records in durable
    bridge storage. A failed reservation must not send anything.
@@ -119,11 +169,14 @@ hardware evidence.
    never automatically sent again. Reconnect starts a fresh authenticated
    session and fresh discovery/state subscription.
 
-The tests' fake journal demonstrates this ordering and refusal behavior. It is
-in-memory, not crash-safe storage; a real process restart is **not** validated.
-Pure planning functions cannot enforce a caller's storage/transaction discipline.
-Do not connect them to a device until the durable worker, authenticated adapter,
-secure pairing/storage, and applicable readiness prerequisites are implemented
+The original reference tests retain their in-memory journal. The separate
+runtime suites now exercise real SQLite transactions and actual subprocess
+termination/reopen, including the ambiguous post-dispatch-commit window. These
+tests demonstrate process-crash recovery on the tested filesystem; they do not
+prove power-loss behavior on future hub hardware or physical device completion.
+Pure planning functions alone cannot enforce transaction discipline.
+Do not connect the worker to a device until secure pairing/credential storage,
+host provisioning and the applicable readiness prerequisites are implemented
 and verified. The [private-pilot decision](./PRIVATE_PILOT_DECISION.md) defers
 independent review only for its supervised one-bulb scope; technical readiness
 and separate session approval are still required.
@@ -136,9 +189,12 @@ replay conflicts, capacity, commit failures, both response orderings, invalid
 timestamps, stale/wrong-session evidence, assumed/unknown state, and modeled
 disconnect/restart without replay. No test contacts HA, Alexa, Hue, or Supabase.
 
-The next implementation boundary is a transactional journal/dispatcher with
-failure injection, followed by the authenticated HA session adapter. An actual
-host/hardware choice and controlled-device approval remain required. Independent
+The next implementation boundary is authenticated local phone-to-hub pairing,
+host-side credential provisioning and current action-level policy, followed by
+the explicit 3D-node/device binding and mobile receipt path. Package the worker
+as a supervised hub service with health, restart and storage recovery handling;
+define journal retention before expanding beyond the bounded pilot.
+An actual host/hardware choice and controlled-device approval remain required. Independent
 review is deferred only under the private-pilot exception and remains mandatory
 before public/customer use. Native follow-up must verify portrait-only phones,
 both tablet orientations, sign-in/session isolation, background/reconnect

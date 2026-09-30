@@ -20,6 +20,30 @@ describe("secret scanner", () => {
     ]);
   });
 
+  test("does not confuse a password visibility label with a credential assignment", () => {
+    const label = 'showPassword ? "Hide password" : "Show password"';
+    expect(scanText(label, "AuthScreen.tsx")).toEqual([]);
+    expect(scanText(`+  ${label}`, "Git history")).toEqual([]);
+  });
+
+  test("retains object-member detection including multiple keys and names with spaces", () => {
+    const values = ["invented", "fixture"].join("-");
+    const source = `const config = { "PASSWORD": "${values}", "AUTH_TOKEN": "${values}" };`;
+    expect(scanText(source, "fixture.ts")).toHaveLength(2);
+    expect(scanText(`  "Database Password": "${values}",`, "fixture.json")).toHaveLength(1);
+  });
+
+  test("detects literal credentials in added and removed historical source lines", () => {
+    const value = ["invented", "fixture"].join("-");
+    for (const prefix of ["+", "-", " "]) {
+      const lines = `${prefix}AUTH_TOKEN=${value}\n${prefix}  "PASSWORD": "${value}"`;
+      const findings = scanText(lines, "Git history");
+      expect(findings).toHaveLength(2);
+      expect(findings.map((finding: { line: number }) => finding.line)).toEqual([1, 2]);
+      expect(JSON.stringify(findings)).not.toContain(value);
+    }
+  });
+
   test("allows documented placeholders and empty values", () => {
     expect(isPlaceholder("your-token")).toBe(true);
     expect(isPlaceholder("postgresql://...")).toBe(true);

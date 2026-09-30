@@ -1,4 +1,5 @@
 import type { Device } from "../store/useHomeStore";
+import type { CommandSecurity } from "../domain/commandEnvelope";
 import { logDeviceAuditEvent } from "./cloudRegistry";
 import {
   parseDeviceStatePatch,
@@ -18,6 +19,8 @@ import {
   CommandDeliveryError,
   type CommandAttemptResult,
 } from "./commandTransport";
+
+export type { CommandSecurity } from "../domain/commandEnvelope";
 
 type DeviceCommandOperation =
   | { op: "toggle"; deviceId: string; on?: boolean }
@@ -45,14 +48,6 @@ type DeviceCommandOperation =
       deviceId: string;
       action: "up" | "down" | "left" | "right" | "select" | "home";
     };
-
-export type CommandSecurity = {
-  commandId: string;
-  nonce: string;
-  createdAt: number;
-  expiresAt: number;
-  idempotencyKey: string;
-};
 
 export type DeviceCommand = DeviceCommandOperation & Partial<CommandSecurity>;
 export type SecuredDeviceCommand = DeviceCommandOperation & CommandSecurity;

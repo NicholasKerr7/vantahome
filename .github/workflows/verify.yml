@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - "sprint-*"
+      - 3d-home-integration
   workflow_dispatch:
 
 # Verification never needs repository write access or deployment secrets.

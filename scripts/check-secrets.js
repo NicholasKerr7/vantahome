@@ -20,7 +20,12 @@ const SENSITIVE_NAME =
 const ENV_ASSIGNMENT =
   /^\s*(?:export\s+)?([A-Z][A-Z0-9_]*)\s*=\s*["']?([^\s"'#]+)["']?/;
 const JSON_ASSIGNMENT =
-  /["']([^"']+)["']\s*:\s*["']([^"']+)["']/g;
+  /(?:^|[,{])\s*["']([^"']+)["']\s*:\s*["']([^"']+)["']/g;
+
+/** Read added, removed and context lines as source while keeping original line numbers. */
+function assignmentSourceLine(line, location) {
+  return location === "Git history" && /^[ +\-]/.test(line) ? line.slice(1) : line;
+}
 
 function isPlaceholder(value) {
   const normalized = value.trim().toLowerCase();
@@ -52,7 +57,8 @@ function scanText(text, location) {
       }
     }
 
-    const envMatch = line.match(ENV_ASSIGNMENT);
+    const sourceLine = assignmentSourceLine(line, location);
+    const envMatch = sourceLine.match(ENV_ASSIGNMENT);
     if (
       envMatch &&
       SENSITIVE_NAME.test(envMatch[1]) &&
@@ -66,7 +72,9 @@ function scanText(text, location) {
     }
 
     JSON_ASSIGNMENT.lastIndex = 0;
-    for (const match of line.matchAll(JSON_ASSIGNMENT)) {
+    // An object member begins after a brace/comma or at the start of a source
+    // line. A UI ternary such as "Hide password" : "Show password" is no key.
+    for (const match of sourceLine.matchAll(JSON_ASSIGNMENT)) {
       if (SENSITIVE_NAME.test(match[1]) && !isPlaceholder(match[2])) {
         findings.push({
           location,

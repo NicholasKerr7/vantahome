@@ -1,13 +1,11 @@
 /**
- * Offline one-light bridge contract. Nothing here connects to a home, authenticates
+ * Pure one-light bridge contract. Nothing here connects to a home, authenticates
  * a caller, persists a journal, or enables a mobile/production transport.
  */
-import type { SecuredDeviceCommand } from "../src/services/deviceClient";
+import type { ExplicitPowerCommand } from "../src/domain/commandEnvelope";
 
 /** Replay-safe subset of the existing mobile envelope: implicit toggle is excluded. */
-export type LightPowerCommand = Readonly<
-  Extract<SecuredDeviceCommand, { op: "toggle" }> & { on: boolean }
->;
+export type LightPowerCommand = ExplicitPowerCommand;
 
 /** Trusted registry binding, not identity supplied by a mobile command. */
 export type LightBinding = Readonly<{
@@ -54,7 +52,7 @@ export type LightCommandStatus =
   | "reserved" | "dispatching" | "service_completed" | "state_observed"
   | "expired" | "refused" | "unavailable" | "outcome_unknown";
 
-/** In-memory model record, not a durable storage or public response format. */
+/** Canonical lifecycle record; storage must validate it and keep credentials out. */
 export type LightCommandRecord = Readonly<{
   command: LightPowerCommand;
   principal: LightPrincipal;

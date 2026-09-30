@@ -80,6 +80,12 @@ Use the Docker-free regression suite for routine verification:
 npm run verify
 ```
 
+Verification includes the isolated one-light bridge runtime and every packaging
+regression suite. `npm run test:bridge` runs just the SQLite crash/recovery,
+command-worker and synthetic HA-adapter checks on Node 22.22.3. It creates only
+temporary local test storage and does not connect to a household. See the
+[bridge implementation and remaining gates](docs/BRIDGE_LIGHT_CONTRACT.md).
+
 Then run the app normally so Expo starts Metro and attaches the JavaScript
 bundle to the simulator:
 
