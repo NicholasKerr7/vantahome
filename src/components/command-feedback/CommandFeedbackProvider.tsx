@@ -136,9 +136,10 @@ export default function CommandFeedbackProvider({
   const open = useCallback(() => {
     if (enabled) setOpenSession(viewSession);
   }, [enabled, viewSession]);
+  const visible = enabled && openSession === viewSession;
   const launcher = useMemo(
-    () => enabled ? { open, count: entries.length } : null,
-    [enabled, open, entries.length],
+    () => (enabled ? { open, count: entries.length, visible } : null),
+    [enabled, open, entries.length, visible],
   );
 
   return (
@@ -196,7 +197,7 @@ export default function CommandFeedbackProvider({
       ) : null}
       {enabled ? (
         <CommandActivityModal
-          visible={openSession === viewSession}
+          visible={visible}
           entries={entries}
           simulated={simulated}
           onClose={() => setOpenSession(null)}

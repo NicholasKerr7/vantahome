@@ -4,6 +4,7 @@ import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import ProfileScreen from "../ProfileScreen";
 import Pressable from "../../components/Pressable";
 import MemberPermissionEditor from "../../components/MemberPermissionEditor";
+import { ProfileAvailabilityRow, ProfileToggle } from "../../features/household/ProfileControls";
 import { useHomeStore, type HouseholdMember } from "../../store/useHomeStore";
 
 const mockInvite = jest.fn();
@@ -132,12 +133,13 @@ describe("Profile household authorization and account isolation", () => {
     alert.mockRestore();
   });
 
-  async function mount(actor = owner) {
+  /** Mount an authenticated profile and optionally use the menu's direct section target. */
+  async function mount(actor = owner, section?: "household" | "preferences") {
     useHomeStore.setState({ authenticatedUserId: actor.userId, activeMemberId: actor.id });
     await act(async () => {
-      tree = renderer.create(<ProfileScreen navigation={{ navigate: jest.fn() } as never} route={{ key: "Profile", name: "Profile" } as never} />);
+      tree = renderer.create(<ProfileScreen navigation={{ navigate: jest.fn(), goBack: jest.fn() } as never} route={{ key: "Profile", name: "Profile", params: section ? { section } : undefined }} />);
     });
-    await press(button("People"));
+    if (!section) await press(button("People"));
     return screenRoot();
   }
   function screenRoot(): TestNode { return tree!.root; }
@@ -193,6 +195,44 @@ describe("Profile household authorization and account isolation", () => {
     });
     return nextMembers;
   }
+
+  it("opens the Household shortcut on People and honors a changed section target", async () => {
+    await mount(owner, "household");
+    expect(button("Members")).toBeDefined();
+    expect(button("Save profile")).toBeUndefined();
+    await act(async () => {
+      tree!.update(<ProfileScreen navigation={{ navigate: jest.fn(), goBack: jest.fn() } as never} route={{ key: "Profile", name: "Profile", params: { section: "preferences" } }} />);
+    });
+    expect(button("Comfort")).toBeDefined();
+    expect(tree!.root.findAllByType(ProfileToggle)).toHaveLength(2);
+  });
+
+  it("shows unsupported privacy and report features as read-only explanations without save or switches", async () => {
+    await mount(owner, "preferences");
+    const before = useHomeStore.getState();
+    await press(button("Privacy"));
+    expect(tree!.root.findAllByType(ProfileToggle)).toHaveLength(0);
+    expect(tree!.root.findAllByType(ProfileAvailabilityRow)).toHaveLength(3);
+    expect(button("Save profile")).toBeUndefined();
+    expect(screenRoot().findAllByType(Text).some((node) => String(node.props.children).includes("Sensitive actions use separate confirmation"))).toBe(true);
+    await press(button("Reports"));
+    expect(tree!.root.findAllByType(ProfileToggle)).toHaveLength(0);
+    expect(tree!.root.findAllByType(ProfileAvailabilityRow)).toHaveLength(2);
+    expect(button("Save profile")).toBeUndefined();
+    expect(useHomeStore.getState()).toBe(before);
+    expect(mockConfirm).not.toHaveBeenCalled();
+  });
+
+  it("retains real saved haptics and notification controls in Comfort", async () => {
+    await mount(owner, "preferences");
+    const before = useHomeStore.getState().preferences;
+    await act(async () => {
+      tree!.root.findAllByType(ProfileToggle).find((node: { props: { label: string } }) => node.props.label === "Haptics")!.props.onChange(!before.haptics);
+      tree!.root.findAllByType(ProfileToggle).find((node: { props: { label: string } }) => node.props.label === "Notifications")!.props.onChange(!before.notifications);
+    });
+    expect(useHomeStore.getState().preferences).toEqual({ ...before, haptics: !before.haptics, notifications: !before.notifications });
+    expect(button("Save profile")).toBeDefined();
+  });
 
   it("makes an administrator's own and peer permissions/removal read-only while keeping ordinary members manageable", async () => {
     await mount(administrator);

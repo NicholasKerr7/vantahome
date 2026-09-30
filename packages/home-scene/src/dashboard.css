@@ -60,6 +60,13 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
 .dashboard-preset { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 5px; border-radius: 0; background: transparent; color: var(--text-soft); font-size: 10px; white-space: nowrap; }
 .dashboard-preset:hover { background: var(--surface); }
 .dashboard-preset[aria-pressed='true'] { background: transparent; color: var(--accent-text); box-shadow: inset 0 -2px var(--accent); }
+.dashboard-scenes .preset-grid.has-scene-pages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dashboard-preset span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dashboard-preset svg { flex-shrink: 0; }
+.dashboard-scene-page { width: 44px; min-width: 44px; height: 44px; display: grid; place-items: center; padding: 0; color: var(--text-soft); background: transparent; border: 1px solid var(--line); border-radius: 12px; }
+.dashboard-scene-page:disabled { opacity: .3; }
+.dashboard-scenes-empty { flex: 1; color: var(--text-soft); font-size: 11px; text-align: center; }
+.dashboard-scenes-empty button { min-height: 44px; padding: 8px 12px; color: var(--text); }
 .dashboard-room-bar, .dashboard-dock { display: none; }
 .dashboard-library { position: fixed; inset: 0; margin: auto; width: min(720px, calc(100% - 32px)); height: min(640px, calc(100dvh - 40px)); max-width: none; max-height: none; padding: 24px; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 26px; box-shadow: 0 24px 90px #0008; overflow: hidden; }
 .dashboard-library[open] { display: flex; flex-direction: column; gap: 16px; }

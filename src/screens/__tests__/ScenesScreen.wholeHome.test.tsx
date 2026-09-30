@@ -77,6 +77,31 @@ test('preserves the original room and values when editing an existing room scene
   expect(useHomeStore.getState().scenes.find((scene) => scene.id === 'evening')).toMatchObject({ roomId: 'living', scope: 'room', name: 'Evening lights', actions: legacyScene.actions });
 });
 
+test.each(['unchanged', 'renamed'])('retains default scene atmosphere after an %s editor save', (edit) => {
+  const preset: Scene = { ...wholeScene, id: 'model-scene:night', modelPreset: 'night' };
+  useHomeStore.setState({ scenes: [preset], devices: useHomeStore.getState().devices.map((device) => ({ ...device, color: '#AABBCC' })) });
+  const screen = render(<ScenesScreen embedded />);
+  fireEvent.press(screen.getByLabelText('Details for Good night'));
+  fireEvent.press(screen.getByText('Edit'));
+  if (edit === 'renamed') fireEvent.changeText(screen.getByLabelText('Scene name'), 'Rest');
+  fireEvent.press(screen.getByText('Save'));
+  const saved = useHomeStore.getState().scenes[0];
+  expect(saved.modelPreset).toBe('night');
+  expect(saved.actions).toBe(preset.actions);
+  expect(saved.name).toBe(edit === 'renamed' ? 'Rest' : 'Good night');
+});
+
+test('detaches default scene atmosphere when its device selection changes in the editor', () => {
+  useHomeStore.setState({ scenes: [{ ...wholeScene, id: 'model-scene:night', modelPreset: 'night' }] });
+  const screen = render(<ScenesScreen embedded />);
+  fireEvent.press(screen.getByLabelText('Details for Good night'));
+  fireEvent.press(screen.getByText('Edit'));
+  fireEvent.press(screen.getByLabelText('Include Lamp'));
+  fireEvent.press(screen.getByText('Save'));
+  expect(useHomeStore.getState().scenes[0].modelPreset).toBeUndefined();
+  expect(useHomeStore.getState().scenes[0].actions.map((action) => action.deviceId)).toEqual(['bedside']);
+});
+
 test('restricted members cannot inspect or select hidden-room scene devices', () => {
   useHomeStore.setState({ household: [{ id: 'guest', name: 'Guest', role: 'Guest', status: 'home' }], activeMemberId: 'guest', roomMembers: [{ memberId: 'guest', roomIds: ['living'] }] });
   const screen = render(<ScenesScreen embedded />);

@@ -17,6 +17,7 @@ import { readDevice, type HouseSceneProps } from './types';
 import { usePageMotion } from './usePageMotion';
 import { AdaptiveQuality } from './AdaptiveQuality';
 import { RENDER_QUALITY, type RenderQualityTier } from './renderQuality';
+import { bindSceneVisibilityScheduling } from './visibilityScheduling';
 import './scene.css';
 
 type ModelProps = Pick<HouseSceneProps, 'view' | 'deviceStates' | 'reducedMotion' | 'onReady'>;
@@ -67,21 +68,14 @@ function HouseModel({ view, deviceStates, reducedMotion, onReady }: ModelProps) 
   </>;
 }
 
-/** Stop rendering while the tab is hidden or a phone must return to portrait. */
+/** Keep covered scenes fresh on demand and stop rendering only when the document is hidden. */
 function VisibilityScheduling({ suspended }: { suspended: boolean }) {
   const setFrameloop = useThree((state) => state.setFrameloop);
   const invalidate = useThree((state) => state.invalidate);
-  useEffect(() => {
-    /** Resume with one fresh frame when a visitor returns to the house. */
-    function syncVisibility() {
-      const paused = document.hidden || suspended;
-      setFrameloop(paused ? 'never' : 'always');
-      if (!paused) invalidate();
-    }
-    syncVisibility();
-    document.addEventListener('visibilitychange', syncVisibility);
-    return () => document.removeEventListener('visibilitychange', syncVisibility);
-  }, [invalidate, setFrameloop, suspended]);
+  useEffect(
+    () => bindSceneVisibilityScheduling(document, suspended, setFrameloop, invalidate),
+    [invalidate, setFrameloop, suspended],
+  );
   return null;
 }
 

@@ -9,9 +9,13 @@ import { addMissingGasDemoDevices, createGasDemoDevices } from "../features/gas/
 import { assertCanManageRoutines, assertRoutineReferences } from "./routineAccess";
 import { nextRoutineRecordId, removeRoutineCollections, routineDraft, routineId, selectRoutines, updateRoutineCollections, type RoutineDraft } from "./routineModel";
 import type { GAS_EVENTS } from "../../packages/home-scene/src/gasSimulation";
-import { upgradeModelHomeCatalog, type ModelCatalogArchive } from '../features/three-d-home/modelHomeCatalog';
+import { projectModelSnapshot, upgradeModelHomeCatalog, type ModelCatalogArchive } from '../features/three-d-home/modelHomeCatalog';
+import { canShareModelScenes, modelPresetForScene, upgradeModelSceneCatalog } from '../features/three-d-home/modelSceneCatalog';
+import { isModelHome } from '../features/three-d-home/modelHomeScope';
+import { applyModelPreset } from '../../packages/home-scene/src/modelScenePresets';
 import { simulationPersistence } from '../features/three-d-home/simulationPersistence';
 import { overlayDemoDevices } from '../features/three-d-home/demoDeviceMapping';
+import { sceneEditChangesBehavior } from '../features/scenes/sceneEdits';
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -359,6 +363,8 @@ export type Scene = {
   roomId: string;
   name: string;
   actions: SceneAction[];
+  /** Untouched local defaults retain their authored atmosphere; editing actions removes this metadata. */
+  modelPreset?: import('../../packages/home-scene/src/data').PresetId;
 };
 
 export type AutomationRule = {
@@ -445,6 +451,8 @@ type Profile = {
 export type HomeState = {
   /** Version of the local house-plan catalog; never set for authenticated homes. */
   modelCatalogVersion?: number;
+  /** One-time local scene seeding marker so removed defaults stay removed. */
+  modelSceneCatalogVersion?: number;
   /** Unmatched legacy demonstration records retained for local recovery, never executed. */
   modelCatalogArchive?: ModelCatalogArchive;
   accountUserId: string | null;
@@ -2145,6 +2153,23 @@ export const useHomeStore = create<HomeState>()(
         const initial = get();
         const scene = initial.scenes.find((candidate) => candidate.id === sceneId);
         if (!scene || options?.signal?.aborted) return;
+        if (isModelHome(initial) && !canShareModelScenes(initial)) {
+          throw new Error('Model scene controls require the local home owner.');
+        }
+        const modelPreset = modelPresetForScene(initial, scene);
+        if (modelPreset) {
+          const saved = await simulationPersistence.load('demo');
+          const current = get();
+          // Awaiting disk state must never carry a preset across account, role, or scene edits.
+          if (options?.signal?.aborted || current.sessionEpoch !== initial.sessionEpoch || current.activeMemberId !== initial.activeMemberId
+            || current.scenes.find((candidate) => candidate.id === sceneId) !== scene
+            || modelPresetForScene(current, scene) !== modelPreset) return;
+          // A native edit may precede the background sync session's hydration; gas safety uses the latest controls.
+          const snapshot = applyModelPreset(overlayDemoDevices(saved, current.devices), modelPreset);
+          simulationPersistence.save('demo', snapshot);
+          set({ devices: projectModelSnapshot(current.devices, snapshot), activeSceneId: sceneId, lastSceneRun: { sceneId, ts: Date.now() } });
+          return;
+        }
         if (runtimePolicy.requireRealTransport) {
           const scope = {
             userId: initial.authenticatedUserId,
@@ -2195,7 +2220,7 @@ export const useHomeStore = create<HomeState>()(
       updateScene: (sceneId, patch) =>
         set((state) => ({
           scenes: state.scenes.map((scene) =>
-            scene.id === sceneId ? { ...scene, ...patch } : scene,
+            scene.id === sceneId ? { ...scene, ...patch, ...(sceneEditChangesBehavior(scene, patch) ? { modelPreset: undefined } : {}) } : scene,
           ),
         })),
 
@@ -2288,7 +2313,7 @@ export const useHomeStore = create<HomeState>()(
           membershipReady: false,
           sessionEpoch: current.sessionEpoch,
           ...(current.accountUserId
-            ? { household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "", modelCatalogVersion: undefined, modelCatalogArchive: undefined }
+            ? { household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "", modelCatalogVersion: undefined, modelSceneCatalogVersion: undefined, modelCatalogArchive: undefined }
             : {}),
         };
       },
@@ -2328,6 +2353,7 @@ export const useHomeStore = create<HomeState>()(
       // Only persist user-facing state to keep storage light and migration-safe.
       partialize: (state) => ({
         modelCatalogVersion: state.accountUserId ? undefined : state.modelCatalogVersion,
+        modelSceneCatalogVersion: state.accountUserId ? undefined : state.modelSceneCatalogVersion,
         modelCatalogArchive: state.accountUserId ? undefined : state.modelCatalogArchive,
         accountUserId: state.accountUserId,
         accountHomeId: state.accountHomeId,
@@ -2337,7 +2363,7 @@ export const useHomeStore = create<HomeState>()(
         indoor: state.indoor,
         rooms: state.rooms,
         devices: state.devices.map(withoutCameraUrls),
-        scenes: state.scenes.map((scene) => ({ ...scene, actions: scene.actions.map((action) =>
+        scenes: state.scenes.map((scene) => ({ ...scene, ...(state.accountUserId ? { modelPreset: undefined } : {}), actions: scene.actions.map((action) =>
           action.type === "patch" ? { ...action, patch: withoutCameraUrls(action.patch) } : action) })),
         activeSceneId: state.activeSceneId,
         rules: state.rules,
@@ -2359,6 +2385,7 @@ const demoState = useHomeStore.getState();
 export function clearHomeAccountState(userId: string | null) {
   useHomeStore.setState({
     modelCatalogVersion: undefined,
+    modelSceneCatalogVersion: undefined,
     modelCatalogArchive: undefined,
     accountUserId: userId,
     accountHomeId: null,
@@ -2402,7 +2429,7 @@ export async function hydrateHomeAccount(userId: string | null, demo = false) {
       const catalog = upgradeModelHomeCatalog(current, snapshot);
       if (catalog.modelCatalogVersion) {
         storageWritesEnabled = true;
-        useHomeStore.setState(catalog);
+        useHomeStore.setState({ ...catalog, ...upgradeModelSceneCatalog({ ...current, ...catalog }) });
         if (snapshot !== saved) simulationPersistence.save('demo', snapshot);
       }
     }

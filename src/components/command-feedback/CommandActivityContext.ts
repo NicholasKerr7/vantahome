@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 export const CommandActivityContext = createContext<{
   open: () => void;
   count: number;
+  visible: boolean;
 } | null>(null);
 
 /** Unavailable on authentication screens and outside the private app shell. */

@@ -10,6 +10,7 @@ import Pressable from "../../components/Pressable";
 import ThemedSwitch from "../../components/ThemedSwitch";
 import { theme } from "../../theme/theme";
 import { householdStyles as styles } from "./householdStyles";
+import type { ProfileAvailability } from "./profileAvailability";
 
 /** Keep longer edit forms inside the card, with native momentum and restrained overscroll. */
 export function ProfileForm({ children }: { children: React.ReactNode }) {
@@ -77,7 +78,7 @@ export function ProfileChoice({
   );
 }
 
-/** Display a saved or session-level preference without changing its existing persistence. */
+/** Display a working preference using the existing saved-state action. */
 export function ProfileToggle({
   label,
   detail,
@@ -102,6 +103,23 @@ export function ProfileToggle({
         activeThumbColor={theme.colors.accent}
         thumbColor={theme.colors.text}
       />
+    </View>
+  );
+}
+
+/** Explain an unavailable or platform-managed capability without presenting a false switch. */
+export function ProfileAvailabilityRow({
+  item,
+}: {
+  item: ProfileAvailability;
+}) {
+  return (
+    <View style={[styles.section, styles.rowDivider]}>
+      <View style={styles.availabilityHeading}>
+        <Text style={styles.rowText}>{item.label}</Text>
+        <Text style={styles.availabilityStatus}>{item.status}</Text>
+      </View>
+      <Text style={styles.detail}>{item.detail}</Text>
     </View>
   );
 }

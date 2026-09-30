@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { deviceActionFeedback, deviceStatus, quickActionLabel, readDeviceSetting } from '../../../packages/home-scene/src/deviceCapabilities';
@@ -36,7 +36,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
     : snapshot.status === 'error' ? 'Could not save locally. Your changes are still in this session.'
       : !snapshot.ready ? 'Loading saved controls…' : snapshot.status === 'saving' ? 'Saving simulation…' : 'Simulation · Saved on this device';
   return <Modal transparent visible animationType={motionAllowed ? 'fade' : 'none'} onRequestClose={onClose}>
-    <View style={[styles.overlay, landscape && styles.overlayLandscape]}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.overlay, landscape && styles.overlayLandscape]}>
       <SafeAreaView style={[styles.safeArea, landscape && styles.safeAreaLandscape]}>
         <CinematicSurface style={[styles.card, compact && styles.compact]}>
           <View accessibilityViewIsModal style={[styles.cardContent, compact && styles.compactContent]}>
@@ -52,7 +52,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
           </View>
         </CinematicSurface>
       </SafeAreaView>
-    </View>
+    </KeyboardAvoidingView>
   </Modal>;
 }
 

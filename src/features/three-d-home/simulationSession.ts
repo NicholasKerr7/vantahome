@@ -7,9 +7,11 @@ import {
 } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { overlayDemoDevices, projectSimulationToDemo } from './demoDeviceMapping';
 import { simulationPersistence, type SimulationPersistence, type SimulationSaveStatus } from './simulationPersistence';
+import { parseSceneCatalogRequest, SCENE_CATALOG_CHANNEL, type SceneCatalogMessage, type SceneCatalogRequest } from '../../../packages/home-scene/src/sceneCatalogProtocol';
+import { canShareModelScenes, modelSceneCatalog } from './modelSceneCatalog';
 
 type HomeStore = Pick<StoreApi<HomeState>, 'getState' | 'setState' | 'subscribe'>;
-type SessionOptions = { store?: HomeStore; persistence?: SimulationPersistence; mode?: RuntimeMode };
+type SessionOptions = { store?: HomeStore; persistence?: SimulationPersistence; mode?: RuntimeMode; onSceneCatalog?: (message: SceneCatalogMessage) => void };
 
 /** Share only an offline, unauthenticated owner demonstration, never household observations. */
 export function canShareDemoDevices(state: HomeState, mode: RuntimeMode): boolean {
@@ -35,6 +37,10 @@ export class SimulationSession {
   private readonly identity: string;
   private readonly scope: string;
   private readonly sharedDemo: boolean;
+  private readonly mode: RuntimeMode;
+  private readonly deliverCatalog?: (message: SceneCatalogMessage) => void;
+  private catalogRequested = false;
+  private lastSceneRequestId = 0;
   private state: SimulationSnapshot | null = null;
   private ready: Promise<void>;
   private disposed = false;
@@ -54,9 +60,11 @@ export class SimulationSession {
   ) {
     this.store = options.store ?? useHomeStore;
     this.persistence = options.persistence ?? simulationPersistence;
+    this.mode = options.mode ?? runtimePolicy.mode;
+    this.deliverCatalog = options.onSceneCatalog;
     const home = this.store.getState();
     this.identity = sessionIdentity(home);
-    this.sharedDemo = canShareDemoDevices(home, options.mode ?? runtimePolicy.mode);
+    this.sharedDemo = canShareDemoDevices(home, this.mode);
     // Account identifiers stay in the host's local storage key and never cross the frame boundary.
     this.scope = this.sharedDemo ? 'demo' : `preview:${home.accountUserId ?? home.authenticatedUserId ?? 'local'}`;
     this.unsubscribePersistence = this.persistence.subscribe(this.scope, onSaveStatus);
@@ -71,6 +79,11 @@ export class SimulationSession {
         onSaveStatus('disconnected');
         return;
       }
+      // Slider changes do not alter scene metadata; only registry changes can affect visibility.
+      const registryChanged = state.devices !== previous.devices && (state.devices.length !== previous.devices.length
+        || state.devices.some((device, index) => device.id !== previous.devices[index]?.id));
+      if (this.catalogRequested && (state.scenes !== previous.scenes || state.activeSceneId !== previous.activeSceneId
+        || state.rooms !== previous.rooms || registryChanged)) this.sendSceneCatalog();
       if (!this.sharedDemo || this.projecting || !this.state || state.devices === previous.devices) return;
       const previousSnapshot = this.state;
       const next = overlayDemoDevices(this.state, state.devices, previous.devices);
@@ -93,6 +106,8 @@ export class SimulationSession {
 
   /** Process ordered patches only after hydration and an explicit handshake. */
   handleMessage(input: unknown): boolean {
+    const catalogRequest = parseSceneCatalogRequest(input);
+    if (catalogRequest) return this.handleSceneRequest(catalogRequest);
     const message = parseSimulationRequest(input);
     if (!message) return false;
     if (this.disposed) return true;
@@ -135,6 +150,38 @@ export class SimulationSession {
       }
     });
     return true;
+  }
+
+  /** Execute only a currently visible, known local scene; never accept actions or physical commands from a frame. */
+  private handleSceneRequest(message: SceneCatalogRequest): boolean {
+    if (this.disposed || !this.deliverCatalog) return true;
+    this.ready = this.ready.then(async () => {
+      if (this.disposed) return;
+      if (message.type === 'request') {
+        this.catalogRequested = true;
+        this.sendSceneCatalog();
+        return;
+      }
+      if (!this.catalogRequested || message.requestId <= this.lastSceneRequestId) return;
+      this.lastSceneRequestId = message.requestId;
+      const current = this.store.getState();
+      const catalog = modelSceneCatalog(current, this.mode);
+      if (!canShareModelScenes(current, this.mode) || !catalog.scenes.some((scene) => scene.id === message.sceneId)) {
+        this.sendSceneCatalog();
+        return;
+      }
+      await current.runScene(message.sceneId);
+      if (!this.disposed) { this.sendSceneCatalog(); if (this.requested) this.sendSnapshot(); }
+    }).catch(() => { if (!this.disposed) this.onSaveStatus('error'); });
+    return true;
+  }
+
+  /** Scene summaries always come from the same native collection and active identity as the Scenes screen. */
+  private sendSceneCatalog(): void {
+    if (this.disposed || !this.deliverCatalog) return;
+    try {
+      this.deliverCatalog({ channel: SCENE_CATALOG_CHANNEL, version: 1, type: 'catalog', catalog: modelSceneCatalog(this.store.getState(), this.mode) });
+    } catch { this.dispose(); this.onSaveStatus('disconnected'); }
   }
 
   /** Stop all cross-view updates when the frame closes, while accepted disk writes finish. */

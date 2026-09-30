@@ -39,6 +39,12 @@ export default function IntegrationsScreen({ navigation }: Props) {
   const showBridgeTools = runtimePolicy.allowDirectMqtt && (!compact || showDetails);
   const showPrepareHub = !compact || !showBridgeTools;
 
+  /** Return to the caller, using Home only when there is no previous navigation entry. */
+  function goBack() {
+    if (navigation.canGoBack()) navigation.goBack();
+    else openHomeFeature(navigation.dispatch, "Home");
+  }
+
   /** Change the visible integration without retaining feedback from a different provider. */
   function changePage(nextPage: number) {
     setFeedback("");
@@ -74,7 +80,7 @@ export default function IntegrationsScreen({ navigation }: Props) {
     <CinematicSurface variant="quiet" style={styles.screen}><SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
       <View style={[styles.content, compact && styles.compactContent]}>
         <View style={styles.header}>
-          <Pressable accessibilityLabel="Back to home" onPress={() => openHomeFeature(navigation.dispatch, "Home")} style={styles.iconButton}>
+          <Pressable accessibilityLabel="Back" onPress={goBack} style={styles.iconButton}>
             <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
           </Pressable>
           <View style={styles.headerText}>

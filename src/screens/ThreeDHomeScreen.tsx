@@ -13,12 +13,14 @@ import HomePanelBoundary from '../features/home-shell/HomePanelBoundary';
 import { theme } from '../theme/theme';
 import { isThreeDHomeEnabled } from '../config/threeDHome';
 import { useDeviceRoutines } from '../features/three-d-home/useDeviceRoutines';
+import { useScenePresentationPaused } from '../features/home-shell/ScenePresentationContext';
 
 const HomeVoicePanel = React.lazy(() => import('../features/home-voice/HomeVoicePanel'));
 const HomeDeviceLibrary = React.lazy(() => import('../features/home-shell/HomeDeviceLibrary'));
 
 /** Bound loading time while the surrounding home navigation always remains available. */
-function SceneSession({ onRetry, onDevices }: { onRetry: () => void; onDevices: () => void }) {
+function SceneSession({ onRetry, onDevices, covered }: { onRetry: () => void; onDevices: () => void; covered: boolean }) {
+  const workspaceCovered = useScenePresentationPaused();
   const openDeviceRoutines = useDeviceRoutines();
   const [status, setStatus] = useState<SceneStatus | 'loading'>('loading');
   const [saveStatus, setSaveStatus] = useState<SimulationSaveStatus>('saving');
@@ -28,7 +30,7 @@ function SceneSession({ onRetry, onDevices }: { onRetry: () => void; onDevices: 
     return () => clearTimeout(timeout);
   }, [status]);
   return <View style={styles.scene}>
-    {status !== 'error' && <SceneSurface onStatus={setStatus} onSaveStatus={setSaveStatus} onDeviceRoutines={openDeviceRoutines} />}
+    {status !== 'error' && <SceneSurface suspended={covered || workspaceCovered} onStatus={setStatus} onSaveStatus={setSaveStatus} onDeviceRoutines={openDeviceRoutines} />}
     {status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected') && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
       <Text style={styles.saveNoticeText}>{saveStatus === 'error'
         ? 'Changes work for this session, but couldn’t be saved on this device.'
@@ -77,7 +79,7 @@ export default function ThreeDHomeScreen() {
       </View>
       <Pressable style={[styles.iconButton, styles.voiceButton]} onPress={() => setPanel('voice')} accessibilityLabel="Open voice control"><Ionicons name="mic-outline" size={19} color={theme.colors.accent} /></Pressable>
     </CinematicSurface>
-    {focused && active && sceneEnabled ? <SceneSession key={attempt} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
+    {focused && active && sceneEnabled ? <SceneSession key={attempt} covered={panel !== null} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}
     </HomeWorkspace>
     {focused && active && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeDeviceLibrary onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}

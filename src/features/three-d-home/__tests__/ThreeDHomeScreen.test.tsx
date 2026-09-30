@@ -3,12 +3,14 @@ import { AppState } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import ThreeDHomeScreen from '../../../screens/ThreeDHomeScreen';
 import type { SceneSurfaceProps } from '../protocol';
+import { CommandActivityContext } from '../../../components/command-feedback/CommandActivityContext';
 
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
 const mockDispatch = jest.fn();
 let mockFocused = true;
 let mockStatus: SceneSurfaceProps['onStatus'];
+let mockSceneProps: SceneSurfaceProps;
 jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, dispatch: mockDispatch }), useIsFocused: () => mockFocused }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
@@ -17,6 +19,7 @@ jest.mock('../../../components/useDecorativeMotion', () => ({ useDecorativeMotio
 jest.mock('../SceneSurface', () => ({ __esModule: true, default: (props: SceneSurfaceProps) => {
   const Text = require('react-native').Text;
   mockStatus = props.onStatus;
+  mockSceneProps = props;
   return <Text testID="scene-surface">Packaged scene</Text>;
 } }));
 
@@ -46,7 +49,32 @@ test('opens integrations and household tools from the home menu', () => {
     fireEvent.press(screen.getByLabelText('Next menu destinations'));
   }
   fireEvent.press(screen.getByLabelText('Household'));
-  expect(mockNavigate).toHaveBeenCalledWith('Profile');
+  expect(mockNavigate).toHaveBeenCalledWith('Profile', { section: 'household' });
+});
+test('pauses covered graphics without replacing the loaded scene and resumes on dismissal', () => {
+  const screen = render(<ThreeDHomeScreen />);
+  act(() => mockStatus('ready'));
+  const loadedSurface = screen.getByTestId('scene-surface');
+  expect(mockSceneProps.suspended).toBe(false);
+  fireEvent.press(screen.getByLabelText('Open home menu'));
+  expect(mockSceneProps.suspended).toBe(true);
+  expect(screen.getByTestId('scene-surface')).toBe(loadedSurface);
+  fireEvent.press(screen.getByLabelText('Close home menu'));
+  expect(mockSceneProps.suspended).toBe(false);
+  expect(screen.queryByText('Preparing your home…')).toBeNull();
+});
+test('keeps the loaded scene paused until the global command activity dialog closes', () => {
+  const launcher = { open: jest.fn(), count: 0, visible: false };
+  const screen = render(<CommandActivityContext.Provider value={launcher}><ThreeDHomeScreen /></CommandActivityContext.Provider>);
+  act(() => mockStatus('ready'));
+  const loadedSurface = screen.getByTestId('scene-surface');
+  screen.rerender(<CommandActivityContext.Provider value={{ ...launcher, visible: true }}><ThreeDHomeScreen /></CommandActivityContext.Provider>);
+  expect(mockSceneProps.suspended).toBe(true);
+  expect(screen.getByTestId('scene-surface')).toBe(loadedSurface);
+  screen.rerender(<CommandActivityContext.Provider value={launcher}><ThreeDHomeScreen /></CommandActivityContext.Provider>);
+  expect(mockSceneProps.suspended).toBe(false);
+  expect(screen.getByTestId('scene-surface')).toBe(loadedSurface);
+  expect(screen.queryByText('Preparing your home…')).toBeNull();
 });
 test('recovers from renderer errors and slow loads with a fresh scene', () => {
   const screen = render(<ThreeDHomeScreen />);

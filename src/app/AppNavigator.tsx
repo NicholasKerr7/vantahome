@@ -60,7 +60,7 @@ export type RootStackParamList = {
   Room: { roomId?: string; showAll?: boolean };
   DeviceDetail: { deviceId: string };
   Notifications: undefined;
-  Profile: undefined;
+  Profile: { section?: 'identity' | 'household' | 'preferences' | 'access' } | undefined;
   ManageRooms: undefined;
   AutomationBuilder: { flowId?: string; routineId?: string; deviceId?: string; preset?: 'time' };
   Cameras: undefined;

@@ -122,9 +122,18 @@ function modeledDevice(definition: DeviceDefinition, state: DeviceState, previou
     device = { ...device, [capability.field]: value };
   }
   if (isPositionDevice(definition)) device = { ...device, openPercent: state.level, isOn: state.level > 0 };
-  if (definition.kind === 'light') device = { ...device, brightness: state.level, lightEffect: state.settings?.lightEffect === 'none' ? undefined : device.lightEffect };
+  if (definition.kind === 'light') device = { ...device, brightness: state.level, lightEffect: readDeviceSetting(definition, state, 'lightEffect') === 'none' ? undefined : device.lightEffect };
   if (definition.kind === 'camera') device = { ...device, armed: state.on };
   return projectGasDevice(device, state);
+}
+
+/** Refresh modeled controls after an authored scene, leaving unmodeled records and camera power intact. */
+export function projectModelSnapshot(devices: readonly Device[], snapshot: SimulationSnapshot): Device[] {
+  return devices.map((device) => {
+    const definition = getDevice(device.id);
+    const state = snapshot.deviceStates[device.id];
+    return definition?.kind === device.kind && state ? modeledDevice(definition, state, device) : device;
+  });
 }
 
 /** A first migration needs the complete pre-model catalog available for recovery, without duplicates. */

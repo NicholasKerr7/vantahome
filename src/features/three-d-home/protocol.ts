@@ -3,6 +3,7 @@ import type { SimulationSaveStatus } from './simulationPersistence';
 /** Renderer health is separate from the validated, simulation-only state bridge. */
 export type SceneStatus = 'ready' | 'error';
 export type SceneSurfaceProps = {
+  suspended?: boolean;
   onStatus: (status: SceneStatus) => void;
   onSaveStatus?: (status: SimulationSaveStatus) => void;
   onDeviceRoutines?: (deviceId: string) => void;

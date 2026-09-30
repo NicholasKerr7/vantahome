@@ -1,9 +1,10 @@
 import { isEmbeddedScene } from './embeddedHost';
 import { createDefaultSimulationSnapshot } from './simulationBridgeProtocol';
+import { applyModelPreset } from './modelScenePresets';
 import { create } from 'zustand';
 import { synchronizeSolarLights, type LightingMode } from './lightingAutomation';
-import { isGasDevice, synchronizeGasSafety } from './gasSimulation';
-import { isMonitor, validateStoredSetting, type SettingValue } from './deviceCapabilities';
+import { synchronizeGasSafety } from './gasSimulation';
+import { validateStoredSetting, type SettingValue } from './deviceCapabilities';
 import { applyDeviceSetting, clampLevel, createPositionState, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from './deviceControlActions';
 export { applyDeviceSetting, clampLevel, createPositionState, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from './deviceControlActions';
 import { DEVICES, getDevice, getRoom, isPositionDevice, ROOMS, type DeviceId, type FloorId, type PresetId, type RoomId, type ViewId } from './data';
@@ -138,26 +139,7 @@ export function parseStoredState(raw: string | null): HomeSnapshot {
 
 /** Apply the whole preset in one pure transaction, preserving the current camera. */
 export function applyPreset(state: HomeSnapshot, preset: PresetId): HomeSnapshot {
-  const devices = createDefaultState().deviceStates;
-  if (preset === 'movie') {
-    devices['living-light'] = { on: true, level: 18 };
-    devices['living-fan'] = { on: true, level: 25 };
-    devices['family-tv'] = { on: true, level: 45 };
-    devices['master-blinds'] = createPositionState(0);
-  } else if (preset === 'night' || preset === 'away') {
-    for (const device of DEVICES) {
-      // Monitoring, refrigeration and backup storage remain available in every scene.
-      const staysAvailable = isMonitor(device.kind) || ['fridge', 'battery', 'camera'].includes(device.kind);
-      devices[device.id].on = staysAvailable;
-      if (device.kind === 'camera') devices[device.id].settings = { armed: true };
-      if (isPositionDevice(device)) devices[device.id] = createPositionState(0);
-    }
-    if (preset === 'night') devices['master-ac'] = { on: true, level: 45 };
-  }
-  const night = preset === 'night' || preset === 'movie';
-  // Lighting presets must never reset a leak scenario, reopen its valve, or refill the sample supply.
-  for (const device of DEVICES) if (isGasDevice(device.kind)) devices[device.id] = state.deviceStates[device.id];
-  return { ...state, deviceStates: synchronizeSolarLights(devices, night), night, lightingMode: night ? 'night' : 'day', activePreset: preset };
+  return { ...applyModelPreset(state, preset), activePreset: preset };
 }
 
 /** Read local simulation preferences while allowing blocked browser storage. */

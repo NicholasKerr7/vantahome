@@ -23,6 +23,9 @@ export type DeviceCollectionCardProps = {
   onOpen: () => void;
   onQuickAction: () => void;
   disabled?: boolean;
+  favorite?: boolean;
+  favoriteDisabled?: boolean;
+  onToggleFavorite?: () => void;
   onLongPress?: () => void;
   style?: StyleProp<ViewStyle>;
 };
@@ -38,6 +41,9 @@ export default function DeviceCollectionCard({
   onOpen,
   onQuickAction,
   disabled = false,
+  favorite = false,
+  favoriteDisabled = false,
+  onToggleFavorite,
   onLongPress,
   style,
 }: DeviceCollectionCardProps) {
@@ -95,18 +101,43 @@ export default function DeviceCollectionCard({
           </Text>
         </View>
       </Pressable>
-      <Pressable
-        accessibilityLabel={`${quickActionLabel}: ${name}`}
-        accessibilityState={{ disabled }}
-        disabled={disabled}
-        onPress={onQuickAction}
-        style={[styles.quickAction, disabled && styles.disabled]}
-      >
-        <Text numberOfLines={2} style={styles.quickLabel}>
-          {quickActionLabel}
-        </Text>
-        <Ionicons name="flash-outline" size={15} color={theme.colors.accent} />
-      </Pressable>
+      <View style={styles.actions}>
+        <Pressable
+          accessibilityLabel={`${quickActionLabel}: ${name}`}
+          accessibilityState={{ disabled }}
+          disabled={disabled}
+          onPress={onQuickAction}
+          style={[styles.quickAction, disabled && styles.disabled]}
+        >
+          <Text numberOfLines={2} style={styles.quickLabel}>
+            {quickActionLabel}
+          </Text>
+          <Ionicons
+            name="flash-outline"
+            size={15}
+            color={theme.colors.accent}
+          />
+        </Pressable>
+        {onToggleFavorite && (
+          <Pressable
+            accessibilityLabel={`${favorite ? "Remove" : "Add"} ${name} ${favorite ? "from" : "to"} favorites`}
+            accessibilityState={{
+              selected: favorite,
+              disabled: favoriteDisabled,
+            }}
+            aria-pressed={favorite}
+            disabled={favoriteDisabled}
+            onPress={onToggleFavorite}
+            style={[styles.favorite, favoriteDisabled && styles.disabled]}
+          >
+            <Ionicons
+              name={favorite ? "star" : "star-outline"}
+              size={18}
+              color={theme.colors.accentText}
+            />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -156,16 +187,28 @@ const styles = StyleSheet.create({
   activeValue: { color: theme.colors.accentText },
   caption: { color: theme.colors.subtext, fontSize: 10, lineHeight: 14 },
   quickAction: {
+    flex: 1,
     minHeight: 48,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderTopWidth: 1,
-    borderColor: theme.colors.stroke,
-    backgroundColor: theme.colors.glass,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 6,
+  },
+  actions: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderColor: theme.colors.stroke,
+    backgroundColor: theme.colors.glass,
+  },
+  favorite: {
+    width: 44,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderLeftWidth: 1,
+    borderColor: theme.colors.stroke,
   },
   quickLabel: {
     flex: 1,

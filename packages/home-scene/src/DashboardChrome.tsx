@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { BedDouble, Clock3, ChevronDown, ChevronLeft, ChevronRight, Cloud, CloudLightning, CloudOff, CloudRain, CloudSun, Grid2X2, Home, Layers3, Moon, Settings2, Snowflake, Sofa, Sparkles, Sun, Utensils, type LucideIcon } from 'lucide-react';
-import { DEVICES, PRESETS, ROOMS, getRoom, type RoomId } from './data';
+import { DEVICES, ROOMS, getRoom, type RoomId } from './data';
+import { useSceneCatalog } from './useSceneCatalog';
+import { MODEL_SCENE_PRESETS } from './modelScenePresets';
 import { useHomeStore } from './state';
 import { paginateItems } from './dashboardPagination';
 import type { LiveEnvironment } from './environment/useLiveEnvironment';
@@ -64,12 +66,26 @@ export function DashboardRoomBar({ onRooms }: { onRooms: () => void }) {
   return <div className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><Icon size={18} /><span className="dashboard-room-choice"><small>EXPLORE YOUR HOME</small><span>{room.name}</span></span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
 }
 
-/** Keep all four atmosphere presets in a compact, always-reachable row. */
+/** Page through the same saved scenes as the native collection without enlarging the home layout. */
 export function DashboardScenes() {
-  const active = useHomeStore((state) => state.activePreset);
-  const activate = useHomeStore((state) => state.activatePreset);
+  const { catalog, status, runScene, retry } = useSceneCatalog();
+  const [requestedPage, setRequestedPage] = useState(0);
+  const paged = catalog.scenes.length > 4;
+  const page = paginateItems(catalog.scenes, requestedPage, paged ? 3 : 4);
   const icons = [Sun, Sparkles, Moon, Home];
-  return <section className="dashboard-scenes" aria-label="Home scenes"><div className="dashboard-scenes-label"><Sparkles size={16} /><span>Scenes</span></div><div className="preset-grid">{PRESETS.map((preset, index) => { const Icon = icons[index]; return <button key={preset.id} className="dashboard-preset" aria-pressed={active === preset.id} onClick={() => activate(preset.id)}><Icon size={17} strokeWidth={1.5} /><span>{preset.name}</span></button>; })}</div></section>;
+  return <section className="dashboard-scenes" aria-label="Home scenes">
+    <div className="dashboard-scenes-label"><Sparkles size={16} /><span>Scenes</span></div>
+    {paged && <button className="dashboard-scene-page" aria-label="Previous scenes" disabled={page.page === 0} onClick={() => setRequestedPage(page.page - 1)}><ChevronLeft size={17} /></button>}
+    <div className={`preset-grid${paged ? ' has-scene-pages' : ''}`}>
+      {page.items.map((scene) => {
+        const Icon = icons[MODEL_SCENE_PRESETS.findIndex((preset) => preset.sceneId === scene.id)] ?? Sparkles;
+        return <button key={scene.id} className="dashboard-preset" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id}
+          onClick={() => runScene(scene.id)}><Icon size={17} strokeWidth={1.5} /><span>{scene.name}</span></button>;
+      })}
+    </div>
+    {paged && <button className="dashboard-scene-page" aria-label="Next scenes" disabled={page.page === page.pages - 1} onClick={() => setRequestedPage(page.page + 1)}><ChevronRight size={17} /></button>}
+    {!catalog.scenes.length && <div className="dashboard-scenes-empty" role="status">{status === 'loading' ? 'Loading scenes…' : status === 'error' ? <button onClick={retry}>Retry scenes</button> : 'No saved scenes'}</div>}
+  </section>;
 }
 
 /** Put room and device browsing within thumb reach without another page. */

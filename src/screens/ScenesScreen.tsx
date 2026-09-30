@@ -41,6 +41,7 @@ import { EmbeddedScenes } from "./components/EmbeddedCollections";
 import { SceneScopePicker } from "../features/scenes/SceneScopePicker";
 import { sceneChoiceKeyboard } from "../features/scenes/sceneChoiceKeyboard";
 import { homeEditorScope } from "../features/home-shell/homeEditorScope";
+import { sceneValuesEqual } from "../features/scenes/sceneEdits";
 import { isWholeHomeScene, sceneIsVisible, sceneScopeLabel, sceneSelectableDevices, sceneSelectionInScope, type SceneEditorScope } from "../features/scenes/sceneScope";
 
 export type ScenesScreenProps = {
@@ -48,7 +49,8 @@ export type ScenesScreenProps = {
   embedded?: boolean;
 };
 
-type SceneEditorSession = { scope: string; invalidated: boolean };
+type SceneEditorActions = { selectedDeviceIds: string[]; overrides: Record<string, Partial<Device>> };
+type SceneEditorSession = { scope: string; invalidated: boolean; actions?: SceneEditorActions };
 
 /** Keep scene controls reusable in the original tab or the 3D home's feature wrapper. */
 export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {}) {
@@ -195,8 +197,8 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   }, []);
 
   /** Capture each modal opening independently; the surrounding screen can remain mounted across homes. */
-  const beginEditor = () => {
-    const session = { scope: homeEditorScope(useHomeStore.getState()), invalidated: false };
+  const beginEditor = (actions?: SceneEditorActions) => {
+    const session = { scope: homeEditorScope(useHomeStore.getState()), invalidated: false, actions };
     activeEditorSession.current = session;
     setEditorSession(session);
   };
@@ -520,7 +522,9 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     if (!actions.length) return;
 
     if (editingSceneId) {
-      updateScene(editingSceneId, { roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, actions });
+      // The editor can rebuild richer patches from live devices; an unchanged draft must retain its saved commands.
+      const actionsChanged = !sceneValuesEqual(editorSession.actions, { selectedDeviceIds: permittedSelection, overrides });
+      updateScene(editingSceneId, { roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, ...(actionsChanged ? { actions } : {}) });
     } else {
       addScene({ roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, actions });
     }
@@ -529,7 +533,6 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
 
   const openEdit = (scene: Scene) => {
     if (!sceneIsVisible(scene, rooms, devices)) return;
-    beginEditor();
     setEditingSceneId(scene.id);
     setShowCreate(true);
     setSceneName(scene.name);
@@ -548,6 +551,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
       nextOverrides[action.deviceId] = { ...action.patch };
     });
     setOverrides(nextOverrides);
+    beginEditor({ selectedDeviceIds: deviceIds, overrides: nextOverrides });
   };
 
   /** Switching scope prunes other rooms only when the user explicitly chooses One room. */

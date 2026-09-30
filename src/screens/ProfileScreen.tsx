@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
@@ -26,9 +26,14 @@ const SECTIONS = [
 ] as const;
 
 /** A focused profile workspace that keeps household administration out of a scrolling settings wall. */
-export default function ProfileScreen({ navigation }: Props) {
+export default function ProfileScreen({ navigation, route }: Props) {
   const model = useProfileWorkspace(navigation);
-  const [section, setSection] = useState<ProfileSection>("identity");
+  const requestedSection = route.params?.section ?? "identity";
+  const [section, setSection] = useState<ProfileSection>(requestedSection);
+  // A menu shortcut may target this screen while its previous route remains mounted.
+  useEffect(() => {
+    setSection(requestedSection);
+  }, [requestedSection]);
   return (
     <DeepScreen
       title="Profile"
@@ -50,7 +55,7 @@ export default function ProfileScreen({ navigation }: Props) {
             onIntegrations={() => navigation.navigate("Integrations")}
           />
         )}
-        {(section === "identity" || section === "preferences") && (
+        {section === "identity" && (
           <View style={styles.footer}>
             <DeepAction
               label="Save profile"

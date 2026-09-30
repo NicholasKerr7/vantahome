@@ -17,8 +17,13 @@ import {
   ProfileField,
   ProfileForm,
   ProfileToggle,
+  ProfileAvailabilityRow,
 } from "./ProfileControls";
 import type { ProfileWorkspaceModel } from "./useProfileWorkspace";
+import {
+  PRIVACY_AVAILABILITY,
+  REPORT_AVAILABILITY,
+} from "./profileAvailability";
 
 const IDENTITY_TABS = [
   { id: "details", label: "Details" },
@@ -228,21 +233,25 @@ export function PreferencesPage({ model }: { model: ProfileWorkspaceModel }) {
                   : "Stay in the know."}
               </Text>
               {(page === "privacy"
-                ? model.securityItems
-                : model.reportItems
+                ? PRIVACY_AVAILABILITY
+                : REPORT_AVAILABILITY
               ).map((item) => (
-                <ProfileToggle
-                  key={item.id}
-                  label={item.label}
-                  detail={item.sub}
-                  value={item.value}
-                  onChange={item.onChange}
-                />
+                <ProfileAvailabilityRow key={item.id} item={item} />
               ))}
             </>
           )}
         </ProfileForm>
       </DeepCard>
+      {page === "comfort" && (
+        <View style={styles.footer}>
+          <DeepAction
+            label="Save profile"
+            primary
+            disabled={!model.name.trim()}
+            onPress={model.onSave}
+          />
+        </View>
+      )}
     </View>
   );
 }

@@ -16,6 +16,8 @@ import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
 import { CinematicViewControl } from './CinematicViewControl';
 import { useCinematicStore } from './cinematicStore';
+import { useHostPresentation } from './useHostPresentation';
+import { useViewportManipulation } from './useViewportManipulation';
 import './styles.css';
 import './device-catalog.css';
 import './dashboard.css';
@@ -57,7 +59,8 @@ class SceneErrorBoundary extends Component<{ children: ReactNode; onRetry: () =>
 }
 
 /** Show the home with persistent, accessible scene controls and loading feedback. */
-function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceId, onCloseFullControls }: { environment: LiveEnvironment; reducedMotion: boolean; onFullControls: (id: DeviceId) => void; sheetDeviceId: DeviceId | null; onCloseFullControls: () => void }): ReactNode {
+function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceId, onCloseFullControls, covered }: { environment: LiveEnvironment; reducedMotion: boolean; onFullControls: (id: DeviceId) => void; sheetDeviceId: DeviceId | null; onCloseFullControls: () => void; covered: boolean }): ReactNode {
+  const viewportRef = useViewportManipulation();
   const showcase = useCinematicStore((state) => state.showcase);
   const setShowcase = useCinematicStore((state) => state.setShowcase);
   const orientationPaused = useOrientationPaused();
@@ -140,11 +143,11 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
     setAttempt((value) => value + 1);
   }, []);
   const room = getRoom(roomId);
-  return <section id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''} ${showcase ? 'is-cinematic' : ''}`} aria-label="Interactive furnished house preview">
+  return <section ref={viewportRef} id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''} ${showcase ? 'is-cinematic' : ''}`} aria-label="Interactive furnished house preview">
     <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : `${floor.toUpperCase()} FLOOR`}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div><CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} /></div>
     <div className="scene-container">
       <SceneErrorBoundary key={attempt} onRetry={retryScene}>
-        <HouseScene daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
+        <HouseScene daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
         {!ready ? <div className="scene-loading" role="status"><span className="loading-orbit"><Home size={24} strokeWidth={1.4} aria-hidden="true" /></span><span>Preparing your home<span className="loading-dots">…</span></span></div> : null}
       </SceneErrorBoundary>
     </div>
@@ -156,6 +159,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
 /** Compose a fixed dashboard while keeping the scene and simulation state mounted. */
 export default function App(): ReactNode {
   const embedded = isEmbeddedScene();
+  const hostSuspended = useHostPresentation();
   const { hydrated: simulationHydrated, syncError: simulationSyncError } = useSimulationBridge();
   const prefersReduced = usePrefersReducedMotion();
   const environment = useLiveEnvironment();
@@ -221,13 +225,14 @@ export default function App(): ReactNode {
     return () => document.removeEventListener('visibilitychange', updateVisibility);
   }, [setShowcase]);
 
-  return <div className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''}`}>
+  const graphicsCovered = hostSuspended || library !== null || sheetDeviceId !== null;
+  return <div data-rendering={graphicsCovered || orientationPaused || documentHidden ? 'paused' : 'active'} className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''}`}>
     <a className="skip-link" href="#house-preview">Skip to house controls</a>
     <DashboardHeader embedded={embedded} environment={environment} onSettings={() => setLibrary('settings')} onEnvironment={() => setLibrary('environment')} />
     <DashboardRoomBar onRooms={() => setLibrary('rooms')} />
     <main id="home-workspace" className="workspace dashboard-workspace">
       <DashboardRooms onBrowse={() => setLibrary('rooms')} />
-      <div className="center-column"><HomeViewport environment={environment} reducedMotion={reducedMotion} onFullControls={openFullControls} sheetDeviceId={sheetDeviceId} onCloseFullControls={closeFullControls} /><DashboardScenes /></div>
+      <div className="center-column"><HomeViewport environment={environment} reducedMotion={reducedMotion} onFullControls={openFullControls} sheetDeviceId={sheetDeviceId} onCloseFullControls={closeFullControls} covered={graphicsCovered} /><DashboardScenes /></div>
       <div id="room-controls" tabIndex={-1}><DashboardInspector onFullControls={openFullControls} onBrowseDevices={() => setLibrary('devices')} /></div>
     </main>
     <DashboardDock onRooms={() => setLibrary('rooms')} onDevices={() => setLibrary('devices')} />

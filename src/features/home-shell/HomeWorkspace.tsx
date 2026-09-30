@@ -12,6 +12,7 @@ import HomeNavigation, { type HomeSection } from './HomeNavigation';
 import HomeMenu from './HomeMenu';
 import HomePanelBoundary from './HomePanelBoundary';
 import type { HomeDestination } from './homeDestinations';
+import { ScenePresentationContext } from './ScenePresentationContext';
 
 const HomeDeviceLibrary = React.lazy(() => import('./HomeDeviceLibrary'));
 
@@ -51,14 +52,16 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
       case 'cameras': navigation.navigate('Cameras'); break;
       case 'notifications': navigation.navigate('Notifications'); break;
       case 'rooms': navigation.navigate('ManageRooms'); break;
-      case 'household': navigation.navigate('Profile'); break;
+      case 'household': navigation.navigate('Profile', { section: 'household' }); break;
       case 'audit': navigation.navigate('AuditLog'); break;
       case 'activity': commandActivity?.open(); break;
     }
   }
 
   return <>
-    <HomeNavigation selected={panel === 'menu' ? 'more' : panel === 'devices' ? 'devices' : section} onSelect={selectSection}>{children}</HomeNavigation>
+    <ScenePresentationContext.Provider value={panel !== null || Boolean(commandActivity?.visible)}>
+      <HomeNavigation selected={panel === 'menu' ? 'more' : panel === 'devices' ? 'devices' : section} onSelect={selectSection}>{children}</HomeNavigation>
+    </ScenePresentationContext.Provider>
     {focused && panel === 'menu' && <HomeMenu motionAllowed={motionAllowed} onClose={() => setPanel(null)} onSelect={selectDestination}
       rendererAvailable={isRendererLabEnabled()} activityAvailable={Boolean(commandActivity)} />}
     {focused && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<View style={styles.loading}><ActivityIndicator color={theme.colors.accent} /></View>}>

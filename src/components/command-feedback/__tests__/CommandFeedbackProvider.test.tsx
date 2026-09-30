@@ -39,6 +39,7 @@ function ActivityLauncher() {
   return activity ? (
     <Pressable accessibilityLabel="Open activity" onPress={activity.open}>
       <Text>{activity.count} recent</Text>
+      <Text testID="activity-presentation">{activity.visible ? "covered" : "uncovered"}</Text>
     </Pressable>
   ) : (
     <Text>Unavailable</Text>
@@ -108,10 +109,13 @@ describe("private command feedback", () => {
   test("empty activity does not cover the screen and can be opened deliberately", () => {
     const screen = render(<AppShell />);
     expect(screen.queryByTestId("command-delivery-notice")).toBeNull();
+    expect(screen.getByTestId("activity-presentation")).toHaveTextContent("uncovered");
     fireEvent.press(screen.getByLabelText("Open activity"));
     expect(screen.getByText("No recent commands")).toBeTruthy();
+    expect(screen.getByTestId("activity-presentation")).toHaveTextContent("covered");
     fireEvent.press(screen.getByLabelText("Close command activity"));
     expect(screen.queryByText("No recent commands")).toBeNull();
+    expect(screen.getByTestId("activity-presentation")).toHaveTextContent("uncovered");
   });
 
   test("submitted feedback stays unconfirmed, and dismissal does not discard history", () => {

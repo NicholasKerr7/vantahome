@@ -234,11 +234,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   useEffect(() => {
     refreshInvites();
   }, [refreshInvites]);
-  const [biometricLock, setBiometricLock] = useState(true);
-  const [locationSharing, setLocationSharing] = useState(true);
-  const [activitySharing, setActivitySharing] = useState(false);
-  const [autoUpdates, setAutoUpdates] = useState(true);
-  const [weeklyDigest, setWeeklyDigest] = useState(false);
   const serviceItems: Array<{
     provider: IntegrationProvider;
     label: string;
@@ -263,45 +258,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
       provider: "matter",
       label: "Matter Bridge",
       icon: "link-outline",
-    },
-  ];
-  const securityItems = [
-    {
-      id: "biometric",
-      label: "Biometric lock",
-      sub: "Face ID / Touch ID",
-      value: biometricLock,
-      onChange: setBiometricLock,
-    },
-    {
-      id: "location",
-      label: "Location sharing",
-      sub: "Used for presence automations",
-      value: locationSharing,
-      onChange: setLocationSharing,
-    },
-    {
-      id: "activity",
-      label: "Activity sharing",
-      sub: "Share usage with household",
-      value: activitySharing,
-      onChange: setActivitySharing,
-    },
-  ];
-  const reportItems = [
-    {
-      id: "updates",
-      label: "Auto updates",
-      sub: "Install overnight",
-      value: autoUpdates,
-      onChange: setAutoUpdates,
-    },
-    {
-      id: "digest",
-      label: "Weekly digest",
-      sub: "Energy and safety summary",
-      value: weeklyDigest,
-      onChange: setWeeklyDigest,
     },
   ];
 
@@ -603,8 +559,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     updateRoomAccess,
     updatePermissionOverride,
     serviceItems,
-    securityItems,
-    reportItems,
     onSave,
     pickAvatar,
     pickHouseholdAvatar,

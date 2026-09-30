@@ -57,6 +57,12 @@ export const householdStyles = StyleSheet.create({
   },
   rowText: { color: theme.colors.text, fontSize: 14, fontWeight: "500" },
   detail: { color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
+  availabilityHeading: { gap: 5 },
+  availabilityStatus: {
+    color: theme.colors.accentText,
+    fontSize: 12,
+    fontWeight: "500",
+  },
   actions: {
     flexDirection: "row",
     flexWrap: "wrap",

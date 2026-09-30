@@ -15,6 +15,44 @@ const presentation = {
   quickActionLabel: "Turn off",
 };
 
+test("keeps the favorite action independent from device controls and reports selection", () => {
+  const onOpen = jest.fn();
+  const onQuickAction = jest.fn();
+  const onToggleFavorite = jest.fn();
+  const screen = render(
+    <DeviceCollectionCard
+      {...presentation}
+      favorite
+      onOpen={onOpen}
+      onQuickAction={onQuickAction}
+      onToggleFavorite={onToggleFavorite}
+    />,
+  );
+  const favorite = screen.getByRole("button", {
+    name: `Remove ${presentation.name} from favorites`,
+  });
+  expect(favorite.props.accessibilityState.selected).toBe(true);
+  fireEvent.press(favorite);
+  expect(onToggleFavorite).toHaveBeenCalledTimes(1);
+  expect(onQuickAction).not.toHaveBeenCalled();
+  expect(onOpen).not.toHaveBeenCalled();
+  screen.rerender(
+    <DeviceCollectionCard
+      {...presentation}
+      favoriteDisabled
+      onOpen={onOpen}
+      onQuickAction={onQuickAction}
+      onToggleFavorite={onToggleFavorite}
+    />,
+  );
+  fireEvent.press(
+    screen.getByRole("button", {
+      name: `Add ${presentation.name} to favorites`,
+    }),
+  );
+  expect(onToggleFavorite).toHaveBeenCalledTimes(1);
+});
+
 test("provides separate named buttons for immediate action and full controls", () => {
   const onOpen = jest.fn();
   const onQuickAction = jest.fn();

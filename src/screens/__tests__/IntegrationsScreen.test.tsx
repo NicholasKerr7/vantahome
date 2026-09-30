@@ -11,6 +11,8 @@ const mockConfiguration = jest.fn(() => null as object | null);
 const mockLink = jest.fn(async () => "authorization-saved");
 const mockNavigate = jest.fn();
 const mockDispatch = jest.fn();
+const mockGoBack = jest.fn();
+const mockCanGoBack = jest.fn(() => true);
 let mockAllowTools = true;
 let mockDimensions = { width: 834, height: 1194, scale: 1, fontScale: 1 };
 
@@ -30,7 +32,7 @@ type AccessibleNode = { props: { accessibilityLabel?: string; children?: unknown
 /** Render only public controls; no browser or external provider is contacted. */
 function renderScreen() {
   let tree!: ReactTestRenderer;
-  act(() => { tree = renderer.create(<IntegrationsScreen navigation={{ navigate: mockNavigate, dispatch: mockDispatch, goBack: jest.fn() } as never} route={{ key: "integrations", name: "Integrations" }} />); });
+  act(() => { tree = renderer.create(<IntegrationsScreen navigation={{ navigate: mockNavigate, dispatch: mockDispatch, goBack: mockGoBack, canGoBack: mockCanGoBack } as never} route={{ key: "integrations", name: "Integrations" }} />); });
   return tree;
 }
 
@@ -43,6 +45,7 @@ describe("Integrations screen", () => {
   let tree: ReactTestRenderer | undefined;
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCanGoBack.mockReturnValue(true);
     mockAllowTools = true;
     mockDimensions = { width: 834, height: 1194, scale: 1, fontScale: 1 };
     mockConfiguration.mockReturnValue(null);
@@ -57,10 +60,20 @@ describe("Integrations screen", () => {
     expect(mockLink).not.toHaveBeenCalled();
   });
 
-  it("returns directly to the existing 3D home from any integration entry point", () => {
+  it("returns to the screen that opened integrations instead of resetting navigation", () => {
     tree = renderScreen();
-    act(() => control(tree!, "Back to home").props.onPress());
+    act(() => control(tree!, "Back").props.onPress());
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockDispatch).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the existing 3D home when no caller is available", () => {
+    mockCanGoBack.mockReturnValue(false);
+    tree = renderScreen();
+    act(() => control(tree!, "Back").props.onPress());
     expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: expect.objectContaining({ name: "Main", params: expect.objectContaining({ screen: "Home" }), pop: true }) }));
+    expect(mockGoBack).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 

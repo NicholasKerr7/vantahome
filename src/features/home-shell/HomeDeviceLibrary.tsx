@@ -1,13 +1,100 @@
-import React, { useState } from 'react';
-import { DeviceControlsSheet } from '../three-d-home/DeviceControlsSheet';
-import { useDecorativeMotion } from '../../components/useDecorativeMotion';
-import { useSimulationControls } from '../three-d-home/useSimulationControls';
+import React, { useMemo, useState } from "react";
+import { Modal, StyleSheet, Text, View } from "react-native";
+import { useShallow } from "zustand/react/shallow";
+import { DeviceControlsSheet } from "../three-d-home/DeviceControlsSheet";
+import { useDecorativeMotion } from "../../components/useDecorativeMotion";
+import { useSimulationControls } from "../three-d-home/useSimulationControls";
+import { canUseModelFavorites } from "../three-d-home/useDeviceBrowserFavorites";
+import {
+  guardModelDeviceControls,
+  canControlModelDevice,
+} from "../three-d-home/modelDeviceControls";
+import { selectVisibleDevices, useHomeStore } from "../../store/useHomeStore";
+import { getDevice } from "../../../packages/home-scene/src/data";
+import Pressable from "../../components/Pressable";
+import { theme } from "../../theme/theme";
 
 /** Keep all modeled devices controllable even if graphics fail to initialize. */
-export default function HomeDeviceLibrary({ onClose }: { onClose: () => void }) {
-  const snapshot = useSimulationControls();
+export default function HomeDeviceLibrary({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+  const allowed = useHomeStore(canUseModelFavorites);
+  const devices = useHomeStore(useShallow(selectVisibleDevices));
+  const snapshot = useSimulationControls(allowed);
+  const client = useMemo(
+    () => guardModelDeviceControls(snapshot.client),
+    [snapshot.client],
+  );
+  const allowedDeviceIds = allowed
+    ? devices
+        .filter((device) => getDevice(device.id)?.kind === device.kind)
+        .map((device) => device.id)
+    : [];
   const motionAllowed = useDecorativeMotion(true);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-  return <DeviceControlsSheet deviceId={deviceId} client={snapshot.client} snapshot={snapshot}
-    motionAllowed={motionAllowed} onClose={onClose} onSelect={setDeviceId} />;
+  if (!allowed)
+    return (
+      <Modal transparent visible animationType="none" onRequestClose={onClose}>
+        <View style={styles.overlay}>
+          <View accessibilityViewIsModal style={styles.unavailable}>
+            <Text accessibilityRole="header" style={styles.title}>
+              Device library unavailable
+            </Text>
+            <Text style={styles.detail}>
+              This library belongs to the offline house preview. Return to your
+              home to use the devices available to your account.
+            </Text>
+            <Pressable onPress={onClose} style={styles.button}>
+              <Text style={styles.label}>Back to home</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    );
+  return (
+    <DeviceControlsSheet
+      deviceId={deviceId}
+      client={client}
+      snapshot={snapshot}
+      allowedDeviceIds={allowedDeviceIds}
+      motionAllowed={motionAllowed}
+      onClose={onClose}
+      onSelect={(id) => {
+        if (canControlModelDevice(id)) setDeviceId(id);
+      }}
+    />
+  );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 22,
+    backgroundColor: theme.colors.overlayStrong,
+  },
+  unavailable: {
+    width: "100%",
+    maxWidth: 440,
+    alignSelf: "center",
+    padding: 22,
+    gap: 16,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.bg0,
+    borderWidth: 1,
+    borderColor: theme.colors.stroke,
+  },
+  title: { color: theme.colors.text, fontSize: 22, fontWeight: "500" },
+  detail: { color: theme.colors.subtext, fontSize: 14, lineHeight: 21 },
+  button: {
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.card2,
+  },
+  label: { color: theme.colors.accentText, fontSize: 14, fontWeight: "600" },
+});
