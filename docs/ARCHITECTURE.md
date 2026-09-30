@@ -108,6 +108,12 @@ command, and opening activity cannot retry or replay one. Active-command
 dismissals survive intervening commands; a terminal outcome can show a new
 notice, including a late failure from an older command.
 
+Demo mode keeps normal preparing, sending, and submitted phases in the activity
+journal without showing an overlay. Queued retries and warning outcomes remain
+eligible for notices, and a newer quiet command cannot hide an existing warning.
+This is a presentation preference, not evidence about which transport ran.
+Development, alpha, and production keep their existing delivery notices.
+
 The single subscription admits only new commands observed while the current
 account/session/home/member scope is enabled. It deliberately does not rehydrate
 pre-existing service history, whose metadata cannot establish ownership across

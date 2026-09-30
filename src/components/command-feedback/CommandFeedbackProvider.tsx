@@ -103,7 +103,13 @@ export default function CommandFeedbackProvider({
     [commands, names],
   );
   const simulated = runtimePolicy.allowMockTelemetry;
-  const latest = latestUpdate(entries, simulated);
+  // Demo is a presentation preference, not proof that a transport was simulated.
+  // Filter before choosing the latest update so a quiet acknowledgement cannot
+  // conceal an earlier retry or warning. The complete journal stays unchanged.
+  const noticeEntries = runtimePolicy.mode === "demo"
+    ? entries.filter(({ command }) => getCommandFeedback(command, simulated).tone === "warning")
+    : entries;
+  const latest = latestUpdate(noticeEntries, simulated);
   const feedback = latest ? getCommandFeedback(latest.command, simulated) : null;
   // Dismissing an active command also hides its automatic retry notices, but a
   // later terminal outcome is a new notice. Dismissal never cancels delivery.

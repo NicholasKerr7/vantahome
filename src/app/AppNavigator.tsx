@@ -242,7 +242,7 @@ export default function AppNavigator() {
           }
         >
           <BottomSheetModalProvider>
-            {authExperience === 'demo' && <ModelHomeSync key={navigationScope} />}
+            {authExperience === 'demo' && <ModelHomeSync key={`model-home:${navigationScope}`} />}
             <NavigationContainer
               key={navigationScope}
               theme={{

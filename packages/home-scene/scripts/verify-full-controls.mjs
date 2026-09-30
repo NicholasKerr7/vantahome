@@ -1,10 +1,15 @@
 /** Verify full device controls through public DOM interactions, including short phone screens. */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const url = process.argv[2] ?? 'http://127.0.0.1:5177';
-const session = process.env.VANTA_QA_SESSION ?? 'vanta-full-controls-qa';
+const sessionPrefix = process.env.VANTA_QA_SESSION ?? 'vanta-full-controls-qa';
+const outputDirectory = process.env.VANTA_QA_OUTPUT_DIR ?? join(tmpdir(), `vantahome-full-controls-${process.pid}`);
+mkdirSync(outputDirectory, { recursive: true });
+let session;
 const { devices } = JSON.parse(readFileSync(new URL('../src/house-manifest.json', import.meta.url), 'utf8'));
 // Cover ranges, enums, actions, readings and schedules without repeatedly loading every room model.
 const representatives = ['living-light', 'laundry-washer', 'entry-gate', 'family-tv'].map((id) => {
@@ -13,6 +18,7 @@ const representatives = ['living-light', 'laundry-washer', 'entry-gate', 'family
   return device;
 });
 let inspectedPages = 0;
+const results = [];
 
 /** Keep verification isolated from the user's browser and fail on any CLI error. */
 function browser(...args) {
@@ -33,7 +39,7 @@ function waitFor(expression) {
     const start = performance.now();
     function poll() {
       if (${expression}) return resolve(true);
-      if (performance.now() - start > 12000) return reject(new Error('UI state did not settle'));
+      if (performance.now() - start > 45000) return reject(new Error('UI state did not settle: ' + ${JSON.stringify(expression)}));
       setTimeout(poll, 30);
     }
     poll();
@@ -123,8 +129,10 @@ function inspectDevice(device, size) {
   })()`);
   for (const page of pages) verifyPage(`${size}/${device.kind}/${page.group}/${page.index + 1}`, page);
   if (device.kind === 'tv') verifyKeyboardNavigation();
+  browser('screenshot', join(outputDirectory, `${size}-${device.id}.png`));
   browser('press', 'Escape');
   waitFor('!document.querySelector("#full-device-controls") && !document.documentElement.classList.contains("device-sheet-open")');
+  return pages;
 }
 
 /** Exercise real keyboard events on a dense device at each supported viewport. */
@@ -153,42 +161,66 @@ function verifySavedBrightness() {
   browser('press', 'Escape');
 }
 
-try {
-  browser('open', 'about:blank');
-  browser('set', 'viewport', '320', '562');
-  browser('set', 'media', 'light', 'reduced-motion');
-  browser('open', url);
-  const tabId = browser('tab', 'list').tabs.find((tab) => tab.active)?.tabId;
-  assert.ok(tabId, 'The isolated QA tab exists');
-  browser('tab', tabId);
-  waitFor('!!document.querySelector(".dashboard-dock") && !document.querySelector("vite-error-overlay")');
-  for (const device of representatives) {
-    inspectDevice(device, '320x562');
-    console.log(`PASS 320x562 ${device.kind}`);
-  }
-  for (const [width, height] of [[390, 844], [834, 1194], [1024, 768], [960, 600]]) {
-    browser('set', 'viewport', String(width), String(height));
-    waitFor(`document.querySelector('.device-viewport').dataset.layout === '${width > height ? 'tablet-landscape' : width < 600 ? 'mobile-portrait' : 'tablet-portrait'}'`);
-    inspectDevice(representatives.find((device) => device.kind === 'tv'), `${width}x${height}`);
-    console.log(`PASS ${width}x${height} tv`);
-  }
-  verifySavedBrightness();
-  assert.deepEqual(browser('errors').errors, [], 'No uncaught browser errors');
-  assert.equal(browser('console').messages.filter((entry) => entry.type === 'error' || entry.level === 'error').length, 0, 'No console errors');
-  console.log(`PASS ${inspectedPages} full-control pages across ${representatives.length} device kinds and five viewports.`);
-} catch (error) {
-  // Preserve public UI evidence before cleanup so an automation failure can be diagnosed.
+/** Start each case with a fresh WebGL/browser lifetime while preserving all public-UI assertions. */
+function runCase({ width, height, device, persistence = false }) {
+  const size = `${width}x${height}`;
+  const label = `${size}-${persistence ? 'saved-brightness' : device.id}`;
+  session = `${sessionPrefix}-${process.pid}-${label}`;
+  const started = Date.now();
+  let failure;
   try {
-    console.error(JSON.stringify({ ui: evaluate(`({ url: location.href, hidden: document.hidden,
-      focused: document.activeElement?.id, layout: document.querySelector('.device-viewport')?.dataset.layout,
-      dialogs: [...document.querySelectorAll('dialog[open]')].map((dialog) => ({ id: dialog.id, title: dialog.querySelector('h2')?.textContent })),
-      search: !!document.querySelector('#device-search'), loading: !!document.querySelector('.scene-loading'),
-      fallback: document.querySelector('.scene-fallback')?.textContent })`), errors: browser('errors') }));
-    browser('screenshot', '/tmp/vantahome-full-controls-failure.png');
-  } catch (diagnosticError) {
-    console.error('Browser diagnostics unavailable:', diagnosticError.message);
+    browser('open', 'about:blank');
+    browser('set', 'viewport', String(width), String(height));
+    browser('set', 'media', 'light', 'reduced-motion');
+    browser('open', url);
+    const tabId = browser('tab', 'list').tabs.find((tab) => tab.active)?.tabId;
+    assert.ok(tabId, 'The isolated QA tab exists');
+    browser('tab', tabId);
+    waitFor(`!document.hidden && document.querySelector('.reset-view-control')?.disabled === false
+      && !document.querySelector('.scene-loading') && !document.querySelector('vite-error-overlay')
+      && document.querySelector('.device-viewport').dataset.layout === '${width > height ? 'tablet-landscape' : width < 600 ? 'mobile-portrait' : 'tablet-portrait'}'`);
+    let pages = [];
+    if (persistence) verifySavedBrightness();
+    else pages = inspectDevice(device, size);
+    assert.deepEqual(browser('errors').errors, [], 'No uncaught browser errors');
+    assert.equal(browser('console').messages.filter((entry) => entry.type === 'error' || entry.level === 'error').length, 0, 'No console errors');
+    results.push({ label, session, passed: true, elapsedMs: Date.now() - started, pages });
+    console.log(`PASS ${label}: ${persistence ? 'keyboard edit, dismiss and reopen preserve brightness' : `${pages.length} pages, all available categories and reachable controls${device.kind === 'tv' ? ', keyboard navigation and focus boundaries' : ''}`}`);
+  } catch (error) {
+    failure = error;
+    results.push({ label, session, passed: false, elapsedMs: Date.now() - started, error: error.message });
+    // Preserve public UI evidence before cleanup so an automation failure can be diagnosed.
+    try {
+      console.error(JSON.stringify({ ui: evaluate(`({ url: location.href, hidden: document.hidden,
+        focused: document.activeElement?.id, layout: document.querySelector('.device-viewport')?.dataset.layout,
+        dialogs: [...document.querySelectorAll('dialog[open]')].map((dialog) => ({ id: dialog.id, title: dialog.querySelector('h2')?.textContent })),
+        search: !!document.querySelector('#device-search'), loading: !!document.querySelector('.scene-loading'),
+        fallback: document.querySelector('.scene-fallback')?.textContent })`), errors: browser('errors') }));
+      browser('screenshot', join(outputDirectory, `${label}-failure.png`));
+    } catch (diagnosticError) {
+      console.error('Browser diagnostics unavailable:', diagnosticError.message);
+    }
+    throw error;
+  } finally {
+    try {
+      browser('close');
+    } catch (cleanupError) {
+      // Preserve the original assertion/tool failure when the same browser also fails to close.
+      results.at(-1).cleanupError = cleanupError.message;
+      if (!failure) {
+        results.at(-1).passed = false;
+        throw cleanupError;
+      }
+      console.error('Browser cleanup failed:', cleanupError.message);
+    } finally {
+      writeFileSync(join(outputDirectory, 'results.json'), JSON.stringify({ url, inspectedPages, results }, null, 2));
+    }
   }
-  throw error;
-} finally {
-  browser('close');
 }
+
+for (const device of representatives) runCase({ width: 320, height: 562, device });
+for (const [width, height] of [[390, 844], [834, 1194], [1024, 768], [960, 600]]) {
+  runCase({ width, height, device: representatives.find((device) => device.kind === 'tv') });
+}
+runCase({ width: 960, height: 600, persistence: true });
+console.log(`PASS ${inspectedPages} full-control pages across ${representatives.length} device kinds and five viewports. Evidence: ${outputDirectory}`);

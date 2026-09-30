@@ -82,6 +82,11 @@ The public-DOM regression scripts `verify-control-polish.mjs` and
 scene URL. They cover quick/full parity, remembered off-state brightness,
 repeated fixtures, responsive touch targets, modal paging and keyboard focus.
 These browser checks do not substitute for physical-device verification.
+The full-controls sweep isolates each device/viewport case in its own browser
+session and waits for the visible scene to finish loading. It writes page
+measurements and screenshots to a temporary evidence directory; set
+`VANTA_QA_OUTPUT_DIR` to choose that directory explicitly. Keyboard editing and
+saved brightness are checked by closing and reopening controls in one session.
 
 For a local demonstration without loading a developer's `.env` configuration:
 

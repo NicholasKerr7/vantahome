@@ -10,8 +10,10 @@ import { useHomeStore } from "../../../store/useHomeStore";
 import CommandFeedbackProvider from "../CommandFeedbackProvider";
 import { useCommandActivityLauncher } from "../CommandActivityContext";
 import Pressable from "../../Pressable";
+import type { RuntimeMode } from "../../../config/runtimeMode";
 
 let mockProgress: CommandProgressStore;
+let mockRuntimeMode: RuntimeMode = "production";
 jest.mock("../../../services/deviceClient", () => ({
   deviceClient: {
     getCommandHistory: () => mockProgress.getAll(),
@@ -20,7 +22,12 @@ jest.mock("../../../services/deviceClient", () => ({
   },
 }));
 jest.mock("../../../config/runtimeMode", () => ({
-  runtimePolicy: { allowMockTelemetry: false },
+  runtimePolicy: {
+    /** Change presentation mode without reloading the provider or its context. */
+    get mode() { return mockRuntimeMode; },
+    /** Preserve the real distinction between demo, development and release copy. */
+    get allowMockTelemetry() { return mockRuntimeMode === "demo" || mockRuntimeMode === "development"; },
+  },
 }));
 jest.mock("react-native-safe-area-context", () => {
   const { View } = require("react-native");
@@ -74,6 +81,7 @@ function submit(handle: CommandProgressHandle) {
 describe("private command feedback", () => {
   afterEach(() => jest.restoreAllMocks());
   beforeEach(() => {
+    mockRuntimeMode = "production";
     mockProgress = new CommandProgressStore();
     useHomeStore.setState({
       authenticatedUserId: "alice",
@@ -139,6 +147,113 @@ describe("private command feedback", () => {
     expect(screen.queryByText("command-a")).toBeNull();
     expect(screen.queryByText("Retry")).toBeNull();
     expect(screen.getByTestId("command-activity-list")).toHaveProp("bounces", false);
+  });
+
+  test("demo preparation, sending and submitted phases stay quiet without losing activity", () => {
+    mockRuntimeMode = "demo";
+    const screen = render(<AppShell />);
+    let handle!: CommandProgressHandle;
+    act(() => { handle = admit(); });
+    expect(screen.queryByTestId("command-delivery-notice")).toBeNull();
+    act(() => { mockProgress.transition(handle, "sending", 1); });
+    expect(screen.queryByTestId("command-delivery-notice")).toBeNull();
+    act(() => { mockProgress.transition(handle, "submitted"); });
+    expect(screen.queryByTestId("command-delivery-notice")).toBeNull();
+    expect(screen.getByText("1 recent")).toBeTruthy();
+    fireEvent.press(screen.getByLabelText("Open activity"));
+    expect(screen.getByText("Demo: Submitted")).toBeTruthy();
+    expect(screen.getByText("Transport accepted the request. Device state is not confirmed. Simulation is not real-device confirmation.")).toBeTruthy();
+    expect(mockProgress.get("command-a")?.status).toBe("submitted");
+  });
+
+  test.each([
+    ["queued", "Queued for retry"],
+    ["retrying", "Retrying command"],
+    ["failed", "Delivery not verified"],
+    ["rejected", "Delivery stopped"],
+    ["expired", "Command expired"],
+    ["timed_out", "Response timed out"],
+    ["cancelled", "Local tracking stopped"],
+  ] as const)("demo keeps %s feedback visible", (status, title) => {
+    mockRuntimeMode = "demo";
+    const screen = render(<AppShell />);
+    act(() => {
+      const handle = admit();
+      mockProgress.transition(handle, "sending", 1);
+      if (status === "retrying") mockProgress.transition(handle, "queued");
+      expect(mockProgress.transition(handle, status, status === "retrying" ? 2 : undefined)).toBe(true);
+    });
+    expect(screen.getByTestId("command-delivery-notice")).toBeTruthy();
+    expect(screen.getByText(`Demo: ${title}`)).toBeTruthy();
+    expect(screen.getByLabelText(/Open command activity/)).toHaveProp("accessibilityLiveRegion", "polite");
+  });
+
+  test.each(["queued", "timed_out"] as const)("a newer neutral demo command cannot conceal earlier %s feedback", (status) => {
+    mockRuntimeMode = "demo";
+    const clock = jest.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    const screen = render(<AppShell />);
+    act(() => {
+      const handle = admit("warning");
+      mockProgress.transition(handle, "sending", 1);
+      mockProgress.transition(handle, status);
+    });
+    clock.mockReturnValue(1_800_000_001_000);
+    act(() => { submit(admit("newer")); });
+    expect(screen.getByText(status === "queued" ? "Demo: Queued for retry" : "Demo: Response timed out")).toBeTruthy();
+    expect(screen.getByText("2 recent")).toBeTruthy();
+    expect(screen.queryByText("Demo: Submitted")).toBeNull();
+    if (status === "timed_out") expect(screen.getByText("1 needs review · View activity")).toBeTruthy();
+  });
+
+  test("demo retry feedback disappears after submission while activity retains its attempt count", () => {
+    mockRuntimeMode = "demo";
+    const screen = render(<AppShell />);
+    let handle!: CommandProgressHandle;
+    act(() => {
+      handle = admit();
+      mockProgress.transition(handle, "sending", 1);
+      mockProgress.transition(handle, "queued");
+    });
+    expect(screen.getByText("Demo: Queued for retry")).toBeTruthy();
+    act(() => { mockProgress.transition(handle, "retrying", 2); });
+    expect(screen.getByText("Demo: Retrying command")).toBeTruthy();
+    act(() => { mockProgress.transition(handle, "submitted"); });
+    expect(screen.queryByTestId("command-delivery-notice")).toBeNull();
+    fireEvent.press(screen.getByLabelText("Open activity"));
+    expect(screen.getByText("Demo: Submitted")).toBeTruthy();
+    expect(screen.getByText("2 of 4 delivery attempts")).toBeTruthy();
+    expect(mockProgress.getAll()).toHaveLength(1);
+  });
+
+  test("a dismissed demo retry still reveals a later terminal failure", () => {
+    mockRuntimeMode = "demo";
+    const screen = render(<AppShell />);
+    let handle!: CommandProgressHandle;
+    act(() => {
+      handle = admit();
+      mockProgress.transition(handle, "sending", 1);
+      mockProgress.transition(handle, "queued");
+    });
+    fireEvent.press(screen.getByLabelText("Dismiss delivery notice"));
+    act(() => { mockProgress.transition(handle, "retrying", 2); });
+    expect(screen.queryByTestId("command-delivery-notice")).toBeNull();
+    act(() => { mockProgress.transition(handle, "failed", undefined, "retry_exhausted"); });
+    expect(screen.getByText("Demo: Delivery not verified")).toBeTruthy();
+    expect(screen.getByText("1 needs review · View activity")).toBeTruthy();
+  });
+
+  test.each(["development", "alpha", "production"] as const)("%s keeps ordinary delivery notices", (mode) => {
+    mockRuntimeMode = mode;
+    const prefix = mode === "development" ? "Demo: " : "";
+    const screen = render(<AppShell />);
+    let handle!: CommandProgressHandle;
+    act(() => { handle = admit(); });
+    expect(screen.getByText(`${prefix}Preparing command`)).toBeTruthy();
+    act(() => { mockProgress.transition(handle, "sending", 1); });
+    expect(screen.getByText(`${prefix}Sending command`)).toBeTruthy();
+    act(() => { mockProgress.transition(handle, "submitted"); });
+    expect(screen.getByText(`${prefix}Submitted`)).toBeTruthy();
+    expect(screen.getByText("Device state unconfirmed · View activity")).toBeTruthy();
   });
 
   test("a dismissed retry does not spam notices, but terminal uncertainty is shown", () => {

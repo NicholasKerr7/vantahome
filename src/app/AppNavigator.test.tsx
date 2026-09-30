@@ -9,11 +9,13 @@ const mockSetSession = jest.fn();
 const mockExchangeCode = jest.fn();
 const mockMembership = jest.fn();
 const mockNavigationMount = jest.fn();
+const mockModelHomeSyncMount = jest.fn();
 const mockFeedbackEnabled = jest.fn();
+let mockSupabaseAvailable = true;
 let mockAuthChanged: (event: string, session: Session | null) => void;
 
-jest.mock("../services/supabaseClient", () => ({
-  supabase: {
+jest.mock("../services/supabaseClient", () => {
+  const client = {
     auth: {
       getSession: () => mockGetSession(),
       setSession: (tokens: unknown) => mockSetSession(tokens),
@@ -24,8 +26,12 @@ jest.mock("../services/supabaseClient", () => ({
         return { data: { subscription: { unsubscribe: jest.fn() } } };
       },
     },
-  },
-}));
+  };
+  return {
+    /** Exercise offline demo without changing the authenticated client behavior. */
+    get supabase() { return mockSupabaseAvailable ? client : null; },
+  };
+});
 jest.mock("../services/membership", () => ({
   ...jest.requireActual("../services/membership"),
   syncMembershipFromSupabase: (...args: unknown[]) => mockMembership(...args),
@@ -70,6 +76,14 @@ jest.mock("../components/command-feedback/CommandFeedbackProvider", () => ({
   default: ({ children, enabled }: { children: React.ReactNode; enabled: boolean }) => {
     mockFeedbackEnabled(enabled);
     return children;
+  },
+}));
+jest.mock("../features/three-d-home/ModelHomeSync", () => ({
+  __esModule: true,
+  /** Observe session remounts without starting model transport subscriptions. */
+  default: () => {
+    require("react").useEffect(() => { mockModelHomeSyncMount(); }, []);
+    return null;
   },
 }));
 jest.mock("../screens/AuthScreen", () => () => null);
@@ -125,6 +139,7 @@ describe("navigation session boundaries", () => {
   const previousThreeDFlag = process.env.EXPO_PUBLIC_ENABLE_3D_HOME;
   let deliverLink: (event: { url: string }) => void;
   beforeEach(async () => {
+    mockSupabaseAvailable = true;
     process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "true";
     jest.clearAllMocks();
     await AsyncStorage.clear();
@@ -144,12 +159,36 @@ describe("navigation session boundaries", () => {
       });
   });
   afterEach(() => {
+    mockSupabaseAvailable = true;
     if (previousThreeDFlag === undefined) {
       delete process.env.EXPO_PUBLIC_ENABLE_3D_HOME;
     } else {
       process.env.EXPO_PUBLIC_ENABLE_3D_HOME = previousThreeDFlag;
     }
     jest.restoreAllMocks();
+  });
+
+  test("offline demo keeps sibling keys distinct and resets both components only for a new session scope", async () => {
+    mockSupabaseAvailable = false;
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId("registered-route-Main")).toBeTruthy());
+    expect(mockNavigationMount).toHaveBeenCalledTimes(1);
+    expect(mockModelHomeSyncMount).toHaveBeenCalledTimes(1);
+    expect(mockGetSession).not.toHaveBeenCalled();
+
+    act(() => { useHomeStore.setState({ activeHomeId: "demo-home" }); });
+    expect(mockNavigationMount).toHaveBeenCalledTimes(1);
+    expect(mockModelHomeSyncMount).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      useHomeStore.setState({ sessionEpoch: useHomeStore.getState().sessionEpoch + 1 });
+    });
+    expect(mockNavigationMount).toHaveBeenCalledTimes(2);
+    expect(mockModelHomeSyncMount).toHaveBeenCalledTimes(2);
+    expect(consoleError.mock.calls.filter(([message]) =>
+      String(message).includes("Encountered two children with the same key"),
+    )).toEqual([]);
   });
 
   test("3D Home is available within the authenticated stack only", async () => {
