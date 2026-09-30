@@ -297,6 +297,19 @@ measure the performance benefit.
 The full-restart/offline and three-minute interaction checks for build 2 are
 awaiting user results; iPad testing is deferred at the user's request.
 
+On **2026-09-30**, Release preview **build 28** was rebuilt from `80a45bc`,
+installed over build 27, and launched on the iPhone 16 Pro Max. It includes the
+quick adjustments, Reset view, adaptive control pages, quiet routine demo
+delivery notices, and distinct demo navigation keys. The scene assets were
+regenerated before the native build. All 16 packaging tests passed, the signed
+app passed strict verification, and its three bundled scene documents matched
+the generated assets; the house scene and five model hashes matched the manifest.
+The saved simulation snapshot containing 92 devices was byte-for-byte identical
+before the update and after installation and launch. The original VantaHome app
+remained installed, production identity files were restored, and the launched
+preview process was still running at the follow-up check. Physical touch flows,
+sustained performance, and iPad behavior were not retested in this build pass.
+
 A future real-device adapter must use authorized household/device selectors,
 explicit scene-to-device mappings, and the existing `deviceClient` command path.
 Render pending, failed, stale, and confirmed states from the command lifecycle
