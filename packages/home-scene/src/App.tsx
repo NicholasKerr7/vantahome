@@ -15,6 +15,7 @@ import { useHomeStore } from './state';
 import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
 import { CinematicViewControl } from './CinematicViewControl';
+import { ResetViewControl } from './ResetViewControl';
 import { useCinematicStore } from './cinematicStore';
 import { useHostPresentation } from './useHostPresentation';
 import { useViewportManipulation } from './useViewportManipulation';
@@ -144,7 +145,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
   }, []);
   const room = getRoom(roomId);
   return <section ref={viewportRef} id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''} ${showcase ? 'is-cinematic' : ''}`} aria-label="Interactive furnished house preview">
-    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : `${floor.toUpperCase()} FLOOR`}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div><CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} /></div>
+    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : `${floor.toUpperCase()} FLOOR`}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div><div className="viewport-camera-controls" role="group" aria-label="Camera controls"><ResetViewControl unavailable={orientationPaused || !ready} /><CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} /></div></div>
     <div className="scene-container">
       <SceneErrorBoundary key={attempt} onRetry={retryScene}>
         <HouseScene daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />

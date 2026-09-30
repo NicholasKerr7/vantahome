@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { OrbitControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { MathUtils, PerspectiveCamera, Vector3 } from 'three';
@@ -28,6 +28,17 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended }: Cam
   const lookAngles = useRef({ yaw: 0, pitch: 0 });
   const cinematicElapsed = useRef(0);
   const showcase = useCinematicStore((state) => state.showcase);
+  const resetViewVersion = useCinematicStore((state) => state.resetViewVersion);
+
+  /** Finish on the exact preset so repeated resets cannot accumulate framing drift. */
+  const finishCameraMove = useCallback(() => {
+    camera.position.copy(destination.current);
+    currentLook.current.copy(target.current);
+    camera.lookAt(target.current);
+    controls.current?.target.copy(target.current);
+    controls.current?.update();
+    moving.current = false;
+  }, [camera]);
 
   useEffect(() => {
     const unbind = bindCinematicInterruptions(document, stopShowcase);
@@ -135,22 +146,16 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended }: Cam
     }
     moving.current = true;
     // Interior room changes use a clean cut, avoiding a flight through solid walls.
-    if (reducedMotion || view === 'immersive') {
-      camera.position.copy(destination.current);
-      currentLook.current.copy(target.current);
-      camera.lookAt(target.current);
-      controls.current?.target.copy(target.current);
-      controls.current?.update();
-      moving.current = false;
-    }
+    if (reducedMotion || view === 'immersive') finishCameraMove();
   }, [
-    camera,
+    finishCameraMove,
     cameraFloor,
     reducedMotion,
     cameraRoomId,
     size.width,
     size.height,
     view,
+    resetViewVersion,
   ]);
 
   useEffect(() => {
@@ -236,8 +241,8 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended }: Cam
         controls.current.target.copy(currentLook.current);
         controls.current.update();
       }
-      if (camera.position.distanceToSquared(destination.current) < 0.002)
-        moving.current = false;
+      if (camera.position.distanceToSquared(destination.current) < 0.002 && currentLook.current.distanceToSquared(target.current) < 0.002)
+        finishCameraMove();
     } else if (view === 'immersive') {
       const { yaw, pitch } = lookAngles.current;
       direction.current.set(
@@ -277,6 +282,8 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended }: Cam
   if (view === 'immersive') return null;
   return (
     <OrbitControls
+      // A fresh controller clears residual drag/pan momentum before restoring the preset.
+      key={resetViewVersion}
       ref={controls}
       makeDefault
       enableDamping={!reducedMotion}

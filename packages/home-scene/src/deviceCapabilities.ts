@@ -53,7 +53,7 @@ function controlGroup(capability: DeviceCapability): ControlGroup {
 }
 
 /** Paginate every control once, keeping compact actions separate from touch-sized fields. */
-export function getControlPages(kindOrDevice: DeviceKind | Pick<DeviceDefinition, 'kind'>, options: { maxControlsPerPage?: 2 | 3 } = {}): readonly DeviceControlPage[] {
+export function getControlPages(kindOrDevice: DeviceKind | Pick<DeviceDefinition, 'kind'>, options: { maxControlsPerPage?: 1 | 2 | 3; maxActionsPerPage?: 1 | 2 | 3 | 4 | 6 } = {}): readonly DeviceControlPage[] {
   const kind = typeof kindOrDevice === 'string' ? kindOrDevice : kindOrDevice.kind;
   const pages: DeviceControlPage[] = [];
   const labels: Record<ControlGroup, string> = { controls: 'Controls', modes: 'Modes', schedule: 'Schedule', status: 'Status' };
@@ -63,7 +63,7 @@ export function getControlPages(kindOrDevice: DeviceKind | Pick<DeviceDefinition
     for (const capability of fields) {
       const last = batches[batches.length - 1];
       const compact = capability.type === 'action';
-      const limit = compact ? 6 : options.maxControlsPerPage ?? 3;
+      const limit = compact ? options.maxActionsPerPage ?? 6 : options.maxControlsPerPage ?? 3;
       if (!last || (last[0].type === 'action') !== compact || last.length >= limit) batches.push([capability]);
       else last.push(capability);
     }

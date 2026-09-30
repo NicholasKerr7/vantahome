@@ -11,27 +11,29 @@ import { controlStyles as styles } from './deviceControlsStyles';
 export type EnumCapability = Extract<DeviceCapability, { type: 'enum' }>;
 interface Props {
   capability: DeviceCapability; device: DeviceDefinition; state: DeviceState;
-  client: SimulationDeviceControls; disabled: boolean; compact: boolean;
+  client: SimulationDeviceControls; disabled: boolean; compact: boolean; singleColumn?: boolean;
   onOptions: (capability: EnumCapability) => void;
 }
 
 /** Render one shared catalog capability with native semantics and a bounded touch target. */
-export function NativeCapabilityControl({ capability, device, state, client, disabled, compact, onOptions }: Props) {
+export function NativeCapabilityControl({ capability, device, state, client, disabled, compact, singleColumn = false, onOptions }: Props) {
   if (capability.type === 'action') return <Pressable accessibilityRole="button" disabled={disabled}
     accessibilityState={{ disabled }} onPress={() => client.runAction(device.id, capability.id)}
-    style={({ pressed }) => [styles.action, disabled && styles.disabled, pressed && styles.pressed]}>
+    style={({ pressed }) => [styles.action, singleColumn && styles.actionWide, disabled && styles.disabled, pressed && styles.pressed]}>
     <Text style={styles.actionText}>{capability.label}</Text>
   </Pressable>;
   const value = readDeviceSetting(device, state, capability.field);
   const formatted = formatCapabilityValue(capability, value);
+  // Larger text gets separate label/value lines; switches keep their familiar side-by-side target.
+  const stacked = singleColumn && capability.type !== 'toggle';
   if (capability.type === 'enum') return <Pressable accessibilityRole="button" disabled={disabled}
     accessibilityLabel={`${capability.label}: ${formatted}. Choose option`} onPress={() => onOptions(capability)}
     style={({ pressed }) => [styles.field, compact && styles.fieldCompact, disabled && styles.disabled, pressed && styles.pressed]}>
-    <View style={styles.row}><Text style={[styles.label, styles.grow]}>{capability.label}</Text><Text style={styles.value}>{formatted} ›</Text></View>
+    <View style={[styles.row, stacked && styles.stackedField]}><Text style={[styles.label, !stacked && styles.grow]}>{capability.label}</Text><Text style={styles.value}>{formatted} ›</Text></View>
   </Pressable>;
   return <View style={[styles.field, compact && styles.fieldCompact]}>
-    <View style={styles.row}>
-      <Text style={[styles.label, styles.grow]}>{capability.label}</Text>
+    <View style={[styles.row, stacked && styles.stackedField]}>
+      <Text style={[styles.label, !stacked && styles.grow]}>{capability.label}</Text>
       {capability.type === 'toggle' ? <Switch accessibilityLabel={capability.label} disabled={disabled} value={Boolean(value)}
         trackColor={{ false: labColors.stroke, true: labColors.sage }} thumbColor={labColors.text}
         onValueChange={(next) => client.setSetting(device.id, capability.field, next)} />

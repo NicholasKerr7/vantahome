@@ -35,7 +35,7 @@ describe('shared original-device control pages', () => {
     }
   });
 
-  it.each([2, 3] as const)('paginates every device exactly once with %i large rows or six actions', (maxControlsPerPage) => {
+  it.each([1, 2, 3] as const)('paginates every device exactly once with %i large rows or six actions', (maxControlsPerPage) => {
     for (const kind of DEVICE_KINDS) {
       const capabilities = getCapabilities(kind);
       const pages = getControlPages({ kind }, { maxControlsPerPage });
@@ -49,6 +49,14 @@ describe('shared original-device control pages', () => {
         expect(page.label).toMatch(/^(Controls|Modes|Schedule|Status)( \d+)?$/);
         if (page.group === 'status') expect(page.capabilities.every((item) => item.type === 'stat')).toBe(true);
       }
+    }
+  });
+
+  it.each([1, 2, 3, 4, 6] as const)('retains every action when only %i fit on a page', (maxActionsPerPage) => {
+    for (const kind of DEVICE_KINDS) {
+      const pages = getControlPages(kind, { maxControlsPerPage: 1, maxActionsPerPage });
+      expect(pages.flatMap((page) => page.capabilities.map((item) => item.id)).sort()).toEqual(getCapabilities(kind).map((item) => item.id).sort());
+      expect(pages.every((page) => page.capabilities.length <= (page.compact ? maxActionsPerPage : 1))).toBe(true);
     }
   });
 

@@ -163,6 +163,17 @@ test("respects reduced motion while keeping device controls and model selection 
   expect(screen.getByRole('tab', { name: 'Routines' })).toBeTruthy();
 });
 
+/** Follow visible pagination so integration checks work before or after native layout measurement. */
+function advanceControlPagesUntil(screen: ReturnType<typeof render>, isVisible: () => boolean): void {
+  for (let page = 0; page < 30; page++) {
+    if (isVisible()) return;
+    const next = screen.getByLabelText('Next controls page');
+    expect(next.props.accessibilityState.disabled).toBe(false);
+    fireEvent.press(next);
+  }
+  expect(isVisible()).toBe(true);
+}
+
 test('full controls change one fixture and both engines receive its brightness and color', () => {
   const screen = render(<RendererLab active />);
   const left = mockWebProps.settings.lightStates?.left;
@@ -170,9 +181,12 @@ test('full controls change one fixture and both engines receive its brightness a
   fireEvent(screen.getByLabelText('Brightness'), 'valueChange', 25);
   expect(mockWebProps.settings.lightStates?.ceiling?.brightness).toBe(24);
   expect(mockWebProps.settings.lightStates?.left).toEqual(left);
+  advanceControlPagesUntil(screen, () => Boolean(screen.queryByLabelText(/Color: .*Choose option/)));
   fireEvent.press(screen.getByLabelText(/Color: .*Choose option/));
+  advanceControlPagesUntil(screen, () => Boolean(screen.queryByRole('radio', { name: /Ice/ })));
   fireEvent.press(screen.getByRole('radio', { name: /Ice/ }));
   expect(mockWebProps.settings.lightStates?.ceiling?.colorHex).toBe('#A0E9FF');
+  expect(mockWebProps.settings.lightStates?.left).toEqual(left);
   fireEvent.press(screen.getByLabelText('Close device controls'));
   fireEvent.press(screen.getByLabelText('Use Filament renderer'));
   expect(mockNativeProps.settings.lightStates).toEqual(mockWebProps.settings.lightStates);

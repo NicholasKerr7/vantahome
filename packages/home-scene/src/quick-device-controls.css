@@ -17,14 +17,23 @@
 .return-to-house { display: none; }
 
 .quick-device-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.quick-device-icon { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border: 1px solid var(--line); border-radius: 12px; color: var(--text-soft); background: var(--surface-raised); }
+[data-device-active='true'] .quick-device-icon { color: var(--device-status-accent, var(--accent-text)); border-color: var(--accent-border); }
+.quick-device-identity { flex: 1; min-width: 0; }
 .quick-device-room { color: var(--text-soft); font-size: 11px; line-height: 1.5; }
-.quick-device-heading h2 { font-size: 17px; line-height: 1.4; font-weight: 600; letter-spacing: -.3px; }
+.quick-device-heading h2 { font-size: 17px; line-height: 1.4; font-weight: 600; letter-spacing: -.3px; overflow-wrap: anywhere; }
 .quick-device-close { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; margin: -8px -8px 0 0; border-radius: 9px; color: var(--text-soft); background: transparent; }
 .quick-device-close:hover { background: var(--surface-raised); color: #fff; }
 .quick-device-state { display: flex; align-items: center; gap: 7px; min-height: 22px; margin-top: 4px; color: var(--device-status-accent, var(--text-soft)); font-size: 12px; }
 .quick-device-state > span:first-child { width: 6px; height: 6px; background: var(--line-strong); border-radius: 50%; }
 .quick-device-state.is-on > span:first-child { background: var(--device-status-accent, var(--accent)); }
 .quick-device-value { margin-left: auto; color: var(--text); }
+.has-primary-range .quick-device-value { display: none; }
+.quick-level-control { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.quick-level-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-soft); }
+.quick-level-heading output { color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.quick-level-control input[type='range'] { display: block; width: 100%; height: 44px; margin: 0; padding: 0; background: transparent; accent-color: var(--accent); touch-action: pan-x; }
+.quick-level-hint { color: var(--text-soft); font-size: 10px; line-height: 14px; }
 .quick-device-actions { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 8px; margin-top: 12px; }
 .quick-device-toggle, .quick-device-full { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 10px 9px; border-radius: 9px; font-size: 12px; font-weight: 550; touch-action: manipulation; }
 .quick-device-toggle { border: 1px solid var(--line); color: var(--text); background: var(--surface-raised); }
@@ -54,4 +63,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .quick-device-switch > span { transition: none; }
+}
+.reduce-motion .quick-device-switch > span { transition: none; }
+
+/* A short phone keeps its quick action reachable; the same slider is in Full controls. */
+@media (max-height: 640px) {
+  .quick-level-control { display: none; }
+  .quick-device-icon { display: none; }
+  .has-primary-range .quick-device-value { display: inline; }
 }

@@ -176,6 +176,19 @@ try {
   assert.deepEqual(browser('errors').errors, [], 'No uncaught browser errors');
   assert.equal(browser('console').messages.filter((entry) => entry.type === 'error' || entry.level === 'error').length, 0, 'No console errors');
   console.log(`PASS ${inspectedPages} full-control pages across ${representatives.length} device kinds and five viewports.`);
+} catch (error) {
+  // Preserve public UI evidence before cleanup so an automation failure can be diagnosed.
+  try {
+    console.error(JSON.stringify({ ui: evaluate(`({ url: location.href, hidden: document.hidden,
+      focused: document.activeElement?.id, layout: document.querySelector('.device-viewport')?.dataset.layout,
+      dialogs: [...document.querySelectorAll('dialog[open]')].map((dialog) => ({ id: dialog.id, title: dialog.querySelector('h2')?.textContent })),
+      search: !!document.querySelector('#device-search'), loading: !!document.querySelector('.scene-loading'),
+      fallback: document.querySelector('.scene-fallback')?.textContent })`), errors: browser('errors') }));
+    browser('screenshot', '/tmp/vantahome-full-controls-failure.png');
+  } catch (diagnosticError) {
+    console.error('Browser diagnostics unavailable:', diagnosticError.message);
+  }
+  throw error;
 } finally {
   browser('close');
 }

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Grid2X2, SlidersHorizontal, type LucideIcon } from 'lucide-react';
-import { DEVICES, formatDeviceLevel, getDevice, getRoom, isPositionDevice, type DeviceDefinition, type DeviceId } from './data';
+import { DEVICES, getDevice, getRoom, type DeviceDefinition, type DeviceId } from './data';
 import { DEVICE_ICONS } from './DeviceControlCard';
-import { deviceStatus, hasLegacyLevel, isMonitor, quickActionLabel, readDeviceSetting } from './deviceCapabilities';
+import { deviceStatus, isMonitor } from './deviceCapabilities';
+import { PrimaryDeviceRange } from './PrimaryDeviceRange';
+import { primaryDeviceAction } from './quickDevicePresentation';
 import { gasStatusTone } from './gasSimulation';
 import { useHomeStore } from './state';
 import { deviceCardReading } from './dashboardCardPresentation';
@@ -15,28 +17,15 @@ interface DashboardInspectorProps {
 }
 
 const DEVICES_PER_PAGE = 2;
-const ACTION_DEVICE_KINDS = new Set(['door', 'camera', 'coffee', 'vacuum', 'washer', 'dryer', 'dishwasher', 'microwave', 'generator']);
 
 /** Give the selected device the same kind-aware action used by hotspot controls. */
 function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefinition; onFullControls: (id: DeviceId) => void }) {
   const storedState = useHomeStore((state) => state.deviceStates[device.id]);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
-  const setDeviceLevel = useHomeStore((state) => state.setDeviceLevel);
-  const setDeviceSetting = useHomeStore((state) => state.setDeviceSetting);
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
   const Icon: LucideIcon = DEVICE_ICONS[device.kind];
-  const isCover = isPositionDevice(device);
-  const isSwitch = !isCover && !isMonitor(device.kind) && !ACTION_DEVICE_KINDS.has(device.kind);
-  const actionLabel = quickActionLabel(device, current);
-  const hasPrimaryLevel = hasLegacyLevel(device) || isCover;
-  const isTemperature = hasLegacyLevel(device) && device.kind === 'ac';
-  const levelValue = isTemperature ? Number(readDeviceSetting(device, current, 'tempC')) : current.level;
-  const levelText = isTemperature ? `${levelValue}°C` : formatDeviceLevel(device, current.level);
-  const rangeId = `dashboard-level-${device.id}`;
+  const action = primaryDeviceAction(device, current);
   const reading = deviceCardReading(device, current);
-  const actionAriaLabel = isCover
-    ? `${current.level > 0 ? 'Close' : 'Open'} smart ${device.kind === 'garage' ? 'shutter' : device.kind}`
-    : isSwitch ? `${device.name} quick power` : `${actionLabel} ${device.name}`;
 
   return <section className="dashboard-selected-device device-focus-card" data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-labelledby="device-control-title">
     <div className="dashboard-selected-heading">
@@ -49,15 +38,12 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
     <div className="device-focus-actions" data-inline-device-actions="">
       <div className="device-focus-face">
         <div className="device-focus-reading" data-long-reading={reading.value.length > 12} aria-live="polite"><strong>{reading.value}</strong><span>{reading.caption}</span></div>
-        <button type="button" className="dashboard-primary-action" role={isSwitch ? 'switch' : undefined} aria-checked={isSwitch ? current.on : undefined} aria-label={actionAriaLabel} onClick={() => toggleDevice(device.id)}>
-          <span>{actionLabel}</span>
-          {isSwitch ? <span className="dashboard-switch-mark" aria-hidden="true"><span /></span> : null}
+        <button type="button" className="dashboard-primary-action" role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(device.id)}>
+          <span>{action.label}</span>
+          {action.isSwitch ? <span className="dashboard-switch-mark" aria-hidden="true"><span /></span> : null}
         </button>
       </div>
-      {hasPrimaryLevel ? <div className="dashboard-level-control">
-        <div className="dashboard-level-heading"><label htmlFor={rangeId}>{isTemperature ? 'Target temperature' : device.levelLabel}</label><output htmlFor={rangeId}>{levelText}</output></div>
-        <input id={rangeId} type="range" min={isTemperature ? 15 : 0} max={isTemperature ? 28 : 100} step="1" value={levelValue} aria-valuetext={levelText} onChange={(event) => isTemperature ? setDeviceSetting(device.id, 'tempC', Number(event.currentTarget.value)) : setDeviceLevel(device.id, Number(event.currentTarget.value))} />
-      </div> : null}
+      <PrimaryDeviceRange device={device} current={current} location="dashboard" />
       <button type="button" className="dashboard-full-controls device-focus-details" onClick={() => onFullControls(device.id)}><SlidersHorizontal size={14} aria-hidden="true" /><span>Full controls</span><ArrowUpRight size={14} aria-hidden="true" /></button>
     </div>
   </section>;

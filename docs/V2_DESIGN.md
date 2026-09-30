@@ -4,7 +4,7 @@ The property is the primary interface. Supporting screens should feel like tools
 
 ## Visual language
 
-- Use shared obsidian, jade, pearl, ice, and warm gold tokens. Reserve strong color for selection, primary actions, and meaningful device status.
+- Use shared VantaHome purple, lavender, white, and warm gold tokens. Reserve strong color for selection, primary actions, and meaningful device status.
 - Use one VantaHome masthead. The embedded scene provides the environment controls; it does not repeat the brand.
 - Keep the model on a continuous dark studio stage. Floating rounded controls, fine edge lighting, and restrained atmospheric gradients give supporting panels depth while preserving readable contrast.
 - Use numbered destinations or collections where they help orientation. Numbers describe the collection order, never invented telemetry.

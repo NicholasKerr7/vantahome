@@ -34,6 +34,21 @@ are local preferences only. Media, remote, and camera buttons produce labeled
 simulation outcomes. Independent light brightness, color, white temperature, and
 steady effect previews update the corresponding fixture in the model.
 
+Hotspot quick controls include the device's primary supported adjustment:
+brightness, fan speed, Celsius target temperature, media volume, or opening
+position. Every matching fixture uses the shared capability catalog, including
+bedside lamps and repeated room AC units. Off-device adjustments retain power
+state and explain that the value is kept while off. Short phones keep their
+toggle and Full controls action; the slider remains in the full inspector.
+Landscape tablets use their existing right inspector without a duplicate popup.
+Full-control page capacity follows the available body space, including native
+font scale; resized web pages retain the focused field and native enum pages
+retain the selected option's position in the list.
+
+Reset view restores the current room/property framing without resetting the
+room, floor, device state or saved preferences. It ends cinematic playback and
+clears orbit momentum. Reduced motion and immersive views use an immediate cut.
+
 The LPG meter on the exterior service wall and kitchen gas-leak detector share
 the same local scenario in the original demo, 3D Home, and native full controls.
 The meter models a 12.5 kg demo supply with usage, remaining quantity, budget and
@@ -61,6 +76,12 @@ After editing scene code or models, rebuild explicitly with:
 ```bash
 npm run build:home-scene
 ```
+
+The public-DOM regression scripts `verify-control-polish.mjs` and
+`verify-full-controls.mjs` in `packages/home-scene/scripts/` accept a standalone
+scene URL. They cover quick/full parity, remembered off-state brightness,
+repeated fixtures, responsive touch targets, modal paging and keyboard focus.
+These browser checks do not substitute for physical-device verification.
 
 For a local demonstration without loading a developer's `.env` configuration:
 
