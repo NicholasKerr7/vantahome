@@ -12,6 +12,8 @@ describe('home workspace chrome', () => {
   it('removes duplicate embedded identity while retaining time, lighting and environment access', () => {
     const markup = renderToStaticMarkup(<DashboardHeader embedded environment={environment} onSettings={() => undefined} />);
     expect(markup).not.toContain('dashboard-brand');
+    expect(markup).not.toContain('dashboard-address');
+    expect(markup.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
     expect(markup).toContain('HOPEWELL');
     expect(markup).toContain('10:42 AM');
     expect(markup).toContain('Property time and weather: Weather unavailable');
@@ -24,13 +26,18 @@ describe('home workspace chrome', () => {
     expect(live).toContain('29°');
     expect(live).toContain('Thunderstorm');
     expect(live).toContain('Live weather');
+    expect(live.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
     const stale = renderToStaticMarkup(<DashboardHeader embedded environment={{ ...environment, weather, status: 'stale' }} onSettings={() => undefined} />);
     expect(stale).toContain('Last available weather');
     expect(stale).not.toContain('Live weather');
+    expect(stale.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
   });
 
   it('retains standalone identity and accessible room/floor navigation', () => {
-    expect(renderToStaticMarkup(<DashboardHeader environment={environment} onSettings={() => undefined} />)).toContain('VantaHome house preview');
+    const header = renderToStaticMarkup(<DashboardHeader environment={environment} onSettings={() => undefined} />);
+    expect(header).toContain('VantaHome house preview');
+    expect(header).toContain('dashboard-address');
+    expect(header.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
     const markup = renderToStaticMarkup(<DashboardRoomBar onRooms={() => undefined} />);
     for (const control of ['Choose a room', 'Choose floor', 'Ground', 'Upper']) expect(markup).toContain(control);
   });
