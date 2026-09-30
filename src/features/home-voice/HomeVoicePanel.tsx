@@ -5,11 +5,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../../theme/theme';
 import { useSimulationControls } from '../three-d-home/useSimulationControls';
 import { parseHomeVoiceCommand } from './voiceCommandParser';
-import { executeVoiceCommand } from './executeVoiceCommand';
+import { executeVoiceCommand, type VoiceCommandOutcome } from './executeVoiceCommand';
 import { useVoiceRecognition } from './useVoiceRecognition';
 import CinematicSurface from '../../components/CinematicSurface';
 import VoiceSignal from './VoiceSignal';
 import { homeVoiceStyles as styles } from './homeVoiceStyles';
+
+/** Explain a verified local result without claiming that a safety-held command completed. */
+function commandFeedback(outcome: VoiceCommandOutcome, description: string): string {
+  if (outcome.status === 'reconnecting') return 'Controls are reconnecting. Close and reopen voice control.';
+  if (outcome.status === 'completed') return `${description}. Simulation updated.`;
+  if (outcome.status === 'pending') return 'Command started. Check device controls for movement progress.';
+  const summary = `${outcome.completedCount} of ${outcome.requestedCount} devices match your command.`;
+  if (!outcome.fireHeldLightCount) return `${summary} Review the device controls and try again.`;
+  const lights = outcome.fireHeldLightCount === 1 ? '1 light remains' : `${outcome.fireHeldLightCount} lights remain`;
+  return `${summary} ${lights} on at full brightness until the fire preview is cleared and reset.`;
+}
 
 /** A tap-to-speak simulation surface shared by the 3D home and its full device controls. */
 export default function HomeVoicePanel({ onClose }: { onClose: () => void }) {
@@ -26,9 +37,9 @@ export default function HomeVoicePanel({ onClose }: { onClose: () => void }) {
   const runCommand = useCallback((phrase: string) => {
     const result = parseHomeVoiceCommand(phrase);
     if ('error' in result) { setFeedback(result.error); return; }
-    const applied = executeVoiceCommand(client, result.command);
-    setFeedback(applied ? `${result.description}. Simulation updated.` : 'Controls are reconnecting. Close and reopen voice control.');
-    if (applied) setInput('');
+    const outcome = executeVoiceCommand(client, result.command);
+    setFeedback(commandFeedback(outcome, result.description));
+    if (outcome.status !== 'reconnecting') setInput('');
     Keyboard.dismiss();
   }, [client]);
   const { listening, error, start, stop, cancel } = useVoiceRecognition(runCommand);

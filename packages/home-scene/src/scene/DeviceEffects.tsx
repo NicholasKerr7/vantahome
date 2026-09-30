@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { BufferAttribute, BufferGeometry, Color, Group, InstancedMesh, MathUtils, Object3D, ShaderMaterial } from 'three';
+import { BufferAttribute, BufferGeometry, Group, InstancedMesh, MathUtils, Object3D, type ShaderMaterial } from 'three';
 import type { DeviceDefinition } from '../data';
 import type { DeviceState } from '../state';
 import { readDeviceSetting } from '../deviceCapabilities';
 import { irrigationJetPoint } from './weatherGeometry';
+import { advanceTelevisionDisplay, createTelevisionUniforms } from './televisionDisplay';
 
 interface EffectProps {
   device: DeviceDefinition;
@@ -19,29 +20,11 @@ export function TelevisionDisplay({
   reducedMotion,
   canAnimate,
 }: Omit<EffectProps, 'device'>) {
-  const material = useRef<ShaderMaterial>(null);
-  const uniforms = useMemo(
-    () => ({
-      time: { value: 0 },
-      power: { value: 0 },
-      warm: { value: new Color('#e2b889') },
-      cool: { value: new Color('#446d61') },
-    }),
-    [],
-  );
+  const material = useRef<ShaderMaterial & { uniforms: ReturnType<typeof createTelevisionUniforms> }>(null);
+  // React Three Fiber may copy uniform props; animate the mounted material's actual uniforms.
+  const [uniforms] = useState(() => createTelevisionUniforms(state.on));
   useFrame((_, delta) => {
-    if (!material.current) return;
-    if (canAnimate.current && state.on)
-      material.current.uniforms.time.value += Math.min(delta, 0.08) * 0.23;
-    const target = state.on ? state.level / 100 : 0;
-    material.current.uniforms.power.value = reducedMotion
-      ? target
-      : MathUtils.damp(
-          material.current.uniforms.power.value,
-          target,
-          6,
-          Math.min(delta, 0.08),
-        );
+    if (material.current) advanceTelevisionDisplay(material.current.uniforms, state, delta, reducedMotion, canAnimate.current);
   });
   return (
     <mesh position={[0, 0.3475, 0.024]}>
@@ -56,7 +39,9 @@ export function TelevisionDisplay({
       void main(){float ridge=sin(vUv.x*6.+time)*.13+.39;float mountain=smoothstep(ridge-.014,ridge+.014,vUv.y);
       float sun=1.-smoothstep(.12,.125,distance(vUv,vec2(.72+sin(time)*.06,.7)));
       vec3 sky=mix(cool,warm,vUv.y*.76);vec3 terrain=mix(vec3(.065,.18,.16),vec3(.16,.32,.24),vUv.y);
-      gl_FragColor=vec4(mix(vec3(.018,.027,.025),mix(terrain,sky,mountain)+sun*vec3(.32,.20,.06),power),1.);}`}
+      gl_FragColor=vec4(mix(vec3(.003,.004,.005),mix(terrain,sky,mountain)+sun*vec3(.32,.20,.06),power),1.);
+      #include <colorspace_fragment>
+      }`}
       />
     </mesh>
   );

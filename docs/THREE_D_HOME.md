@@ -381,3 +381,37 @@ production app identity files were restored after building. The saved 92-device
 simulation was byte-identical before and after installation/launch. New physical
 touch flows and long-run performance are not claimed as tested; physical iPad
 and Android checks remain outstanding.
+
+## Device power and rendered appearance
+
+Interior room fill now follows its owning light's power, dimming, color and effect
+settings. The existing six-fill budget and environmental illumination remain;
+turning a light off removes its artificial room fill as well as its fixture glow.
+Mobile hotspot selection uses an outline; its bright fill requires actual power,
+so an inspected Off device no longer looks switched on.
+The family television uses power independently from its legacy level and audio
+volume. Its procedural picture applies output color conversion, restores the
+saved On/Off appearance on the first frame, and updates the mounted material
+during transitions. Reduced motion freezes the picture and applies power directly.
+
+Voice feedback checks the local reducer result. It reports partial completion
+when a fire preview holds lights bright, and reports accepted gate closing as
+started instead of already complete. An acknowledged or cleared-but-unreset fire
+preview retains its intentional lighting hold. This remains simulation feedback,
+not confirmation from physical devices.
+
+Verification passed: 1,962 app tests, 604 scene tests, 127 bridge tests and 36 script
+tests; TypeScript, edge, dependency and release checks; scene packaging; and
+browser checks for the exact phrase “turn all lights off,” living-light On/Off,
+TV On/Off transitions and zero-volume picture visibility. The voice integration
+tests cover all 37 modeled lights across the demo host, voice client, scene,
+persistence and reopening, including all fire-latch stages. Mobile portrait and
+tablet landscape/portrait browser layouts were checked. Physical spoken recognition still
+requires a phone retest.
+
+Release preview **build 30** was signed, installed and launched on the iPhone
+16 Pro Max. All three bundled scene documents matched the generated assets;
+the 92-device saved simulation was byte-identical before and after the update.
+Production app identity files were restored. Physical spoken-command and touch
+retesting, sustained device performance, and iPad/Android hardware verification
+remain outstanding.

@@ -5,6 +5,7 @@ test('targets the room lights, including fixtures absent from the original demo 
   expect(parseHomeVoiceCommand('Please turn on the kitchen lights.')).toMatchObject({ command: { type: 'power', on: true, deviceIds: ['kitchen-light', 'dining-light'] } });
   expect(parseHomeVoiceCommand('Switch southeast suite lights off')).toMatchObject({ command: { type: 'power', on: false, deviceIds: ['bedroom-4-light', 'bedroom-4-bedside-left', 'bedroom-4-bedside-right'] } });
   expect(parseHomeVoiceCommand('turn off all lights')).toMatchObject({ command: { deviceIds: DEVICES.filter((device) => device.kind === 'light').map((device) => device.id) } });
+  expect(parseHomeVoiceCommand('turn all lights off')).toMatchObject({ command: { type: 'power', on: false, deviceIds: DEVICES.filter((device) => device.kind === 'light').map((device) => device.id) } });
 });
 
 test('uses exact device names or ids without silently selecting another room', () => {

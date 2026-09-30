@@ -189,8 +189,10 @@
   .dashboard-shell .viewport .device-hotspot-symbol { position: relative; z-index: 1; font-size: 17px; }
   .dashboard-shell .viewport .device-hotspot.is-on::before { border-color: rgb(var(--accent-text-rgb) / 65%); }
   .dashboard-shell .viewport .device-hotspot.is-on::after { content: ''; position: absolute; z-index: 2; width: 4px; height: 4px; right: 7px; bottom: 7px; border-radius: 50%; background: var(--accent-text); box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
-  .dashboard-shell .viewport .device-hotspot:is(.is-selected, [aria-expanded='true']) { color: var(--accent-ink); }
-  .dashboard-shell .viewport .device-hotspot:is(.is-selected, [aria-expanded='true'])::before { inset: 0; background: var(--accent); border-color: var(--accent-text); box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / 14%); }
+  /* Selection outlines the target; only powered devices receive the bright fill. */
+  .dashboard-shell .viewport .device-hotspot:is(.is-selected, [aria-expanded='true'])::before { inset: 0; border-color: var(--accent-text); box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / 14%); }
+  .dashboard-shell .viewport .device-hotspot.is-on:is(.is-selected, [aria-expanded='true']) { color: var(--accent-ink); }
+  .dashboard-shell .viewport .device-hotspot.is-on:is(.is-selected, [aria-expanded='true'])::before { background: var(--accent); }
   .dashboard-shell .viewport .device-hotspot:is([data-device-tone='warning'], [data-device-tone='closed'])::before { border-color: var(--device-status-accent); }
   .dashboard-shell .viewport .device-hotspot:is([data-device-tone='warning'], [data-device-tone='closed'])::after { background: var(--device-status-accent); }
   .dashboard-shell .viewport .device-hotspot[data-device-tone='alarm'] { color: var(--accent-ink); }

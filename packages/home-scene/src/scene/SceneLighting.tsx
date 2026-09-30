@@ -3,9 +3,10 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Color, MathUtils, Object3D } from 'three';
 import { ROOM_POSITIONS, UPPER_ELEVATION, type HouseSceneProps } from './types';
 import { resizeShadowMap } from './shadowQuality';
+import { roomFillLights } from './roomLighting';
 
 /** Sculpt warm rooms against a cool studio setting without extra shadow maps or postprocessing. */
-export function SceneLighting({ night, daylight, environment, view, floor, roomId, reducedMotion, shadowMapSize }: Pick<HouseSceneProps, 'night' | 'daylight' | 'environment' | 'view' | 'floor' | 'roomId' | 'reducedMotion'> & { shadowMapSize: number }) {
+export function SceneLighting({ night, daylight, environment, view, floor, roomId, deviceStates, reducedMotion, shadowMapSize }: Pick<HouseSceneProps, 'night' | 'daylight' | 'environment' | 'view' | 'floor' | 'roomId' | 'deviceStates' | 'reducedMotion'> & { shadowMapSize: number }) {
   const { scene } = useThree();
   const shadowTarget = useMemo(() => new Object3D(), []);
   const room = ROOM_POSITIONS[roomId] ?? ROOM_POSITIONS.living;
@@ -46,7 +47,6 @@ export function SceneLighting({ night, daylight, environment, view, floor, roomI
   const amount = useRef(1 - daylight);
   const cloudAmount = useRef((environment.weather?.cloudCover ?? 0) / 100);
   const full = view === 'exterior' || view === 'immersive';
-  const upperY = full ? UPPER_ELEVATION : 0;
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.08);
     const cloudTarget = (environment.weather?.cloudCover ?? 0) / 100;
@@ -70,15 +70,6 @@ export function SceneLighting({ night, daylight, environment, view, floor, roomI
     <directionalLight ref={key} position={[focus[0] - 12, focus[1] + 26, focus[2] + 16]} target={shadowTarget} color="#fff0d4" intensity={3.8} castShadow shadow-camera-left={-shadowRadius} shadow-camera-right={shadowRadius} shadow-camera-top={shadowRadius} shadow-camera-bottom={-shadowRadius} shadow-camera-near={0.1} shadow-camera-far={110} shadow-bias={-0.0006} shadow-normalBias={0.04} />
     <directionalLight ref={fill} position={[20, 10, -18]} intensity={0.85} color="#9bcbd9" />
     <directionalLight ref={rim} position={[-18, 15, -24]} intensity={1.15} color="#bdffe1" />
-    {(full || floor === 'ground') && <>
-      <pointLight position={[7.6, 2.1, -9]} intensity={night ? 4 : 7} distance={9} color="#ffe6c2" />
-      <pointLight position={[14.7, 2.1, -12.5]} intensity={night ? 4 : 8} distance={6} color="#fff2d7" />
-      <pointLight position={[14.5, 2.1, -15.2]} intensity={5} distance={5} color="#edf6ed" />
-    </>}
-    {(full || floor === 'upper') && <group position={[0, upperY, 0]}>
-      <pointLight position={[8.3, 2.1, -9.1]} intensity={night ? 5 : 9} distance={10} color="#ffe5be" />
-      <pointLight position={[10, 2.2, -14]} intensity={night ? 5 : 8} distance={8} color="#ffdfb3" />
-      <pointLight position={[12.5, 2.1, -4.2]} intensity={7} distance={7} color="#e9f4ed" />
-    </group>}
+    {roomFillLights({ deviceStates, view, floor, night }).map(({ id, ...light }) => <pointLight key={id} {...light} />)}
   </>;
 }

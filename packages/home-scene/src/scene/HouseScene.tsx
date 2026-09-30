@@ -92,7 +92,7 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       <AdaptiveQuality onChange={setQualityTier} />
       <VisibilityScheduling suspended={suspended} />
       <MaterialEnvironment />
-      <SceneLighting daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
+      <SceneLighting daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
       <CameraRig view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} />
       {props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
       <Suspense fallback={null}>
