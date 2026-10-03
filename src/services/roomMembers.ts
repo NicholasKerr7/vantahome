@@ -1,47 +1,23 @@
 import { supabase } from "./supabaseClient";
 
-export type RoomMemberRole = "member" | "guest" | "tenant";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function assertSupabaseReady() {
-  if (!supabase) {
-    throw new Error("Supabase is not configured.");
-  }
-}
-
+/** Replace grants in one explicit home; the server derives the role and commits atomically. */
 export async function setRoomMembershipRemote(
+  homeId: string,
   userId: string,
   roomIds: string[],
-  role: RoomMemberRole,
-) {
-  assertSupabaseReady();
-
-  if (!roomIds.length) {
-    const { error } = await supabase!
-      .from("room_members")
-      .delete()
-      .eq("user_id", userId);
-    if (error) throw new Error(error.message);
-    return;
+): Promise<void> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  if (!UUID_PATTERN.test(homeId) || !UUID_PATTERN.test(userId)
+    || roomIds.length > 500 || roomIds.some((id) => !UUID_PATTERN.test(id))
+    || new Set(roomIds).size !== roomIds.length) {
+    throw new Error("Choose valid rooms in the current home.");
   }
-
-  const payload = roomIds.map((roomId) => ({
-    room_id: roomId,
-    user_id: userId,
-    role,
-  }));
-  const { error: upsertError } = await supabase!
-    .from("room_members")
-    .upsert(payload, { onConflict: "room_id,user_id" });
-  if (upsertError) throw new Error(upsertError.message);
-
-  const { error: deleteError } = await supabase!
-    .from("room_members")
-    .delete()
-    .eq("user_id", userId)
-    .not(
-      "room_id",
-      "in",
-      `(${roomIds.map((id) => `"${id}"`).join(",")})`,
-    );
-  if (deleteError) throw new Error(deleteError.message);
+  const { error } = await supabase.rpc("set_home_room_memberships", {
+    target_home_id: homeId,
+    target_user_id: userId,
+    target_room_ids: roomIds,
+  });
+  if (error) throw new Error(error.message);
 }

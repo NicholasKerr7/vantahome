@@ -95,3 +95,50 @@ test('hides devices excluded by household room access', () => {
   fireEvent.press(screen.getByLabelText('Go back'));
   expect(screen.navigation.goBack).toHaveBeenCalled();
 });
+
+/** Use cloud UUIDs for navigation while keeping simulated controls in the authorized authored room. */
+function useAuthenticatedModel(role: 'Owner' | 'Guest' | 'Tenant' = 'Owner') {
+  useHomeStore.setState({
+    authenticatedUserId: 'account', accountUserId: 'account', activeHomeId: 'home', accountHomeId: 'home', membershipReady: true,
+    household: [{ id: 'account', name: 'Test account', role, status: 'home' }], activeMemberId: 'account',
+    rooms: [{ id: 'cloud-living', name: 'Living room', modelRoomId: 'living' }, { id: 'cloud-master', name: 'Main bedroom', modelRoomId: 'master' }],
+    roomMembers: [{ memberId: 'account', roomIds: ['cloud-living', 'cloud-master'] }],
+    devices: [
+      { ...catalogDevice('living-light'), id: 'cloud-light', roomId: 'cloud-living', modelDeviceId: 'living-light', simulationOnly: true },
+      { ...catalogDevice('master-blinds'), id: 'cloud-blinds', roomId: 'cloud-master', modelDeviceId: 'master-blinds', simulationOnly: true },
+    ],
+  });
+}
+
+test('opens authenticated virtual full controls with model IDs and browses using cloud IDs', () => {
+  useAuthenticatedModel('Tenant');
+  const screen = renderRoute('cloud-blinds');
+  expect(screen.getByText('House inspector')).toBeTruthy();
+  expect(sheetProps().deviceId).toBe('master-blinds');
+  expect(sheetProps().allowedDeviceIds).toEqual(['living-light', 'master-blinds']);
+  act(() => sheetProps().onSelect('living-light'));
+  expect(screen.navigation.setParams).toHaveBeenCalledWith({ deviceId: 'cloud-light' });
+});
+
+test('removes authenticated full controls when its room grant is revoked', () => {
+  useAuthenticatedModel('Guest');
+  const screen = renderRoute('cloud-light');
+  expect(screen.getByText('House inspector')).toBeTruthy();
+  act(() => { useHomeStore.setState({ roomMembers: [] }); });
+  expect(screen.getByText('Device unavailable')).toBeTruthy();
+});
+
+test('never guesses virtual controls for an invalid model binding', () => {
+  useAuthenticatedModel();
+  useHomeStore.setState((state) => ({ devices: state.devices.map((device) => ({ ...device, modelDeviceId: 'master-ac' })) }));
+  const screen = renderRoute('cloud-light');
+  expect(screen.getByText('Device unavailable')).toBeTruthy();
+  expect(DeviceControlsSheet).not.toHaveBeenCalled();
+});
+
+test('keeps a physical mapped light on native controls', () => {
+  useAuthenticatedModel();
+  useHomeStore.setState((state) => ({ devices: state.devices.map((device) => ({ ...device, simulationOnly: false })) }));
+  expect(renderRoute('cloud-light').getByText('Native device controls')).toBeTruthy();
+  expect(DeviceControlsSheet).not.toHaveBeenCalled();
+});

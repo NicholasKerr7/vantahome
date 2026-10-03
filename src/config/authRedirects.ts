@@ -1,14 +1,19 @@
 import { Platform } from "react-native";
 import * as AuthSession from "expo-auth-session";
+import { resolveAppVariant } from "./appVariant";
 
-export const APP_SCHEME = "vantahome";
+// Expo substitutes direct EXPO_PUBLIC property reads while bundling. Preview
+// links must never be consumed by a separately installed production app.
+const APP_IDENTITY = resolveAppVariant(process.env.EXPO_PUBLIC_APP_VARIANT);
+export const APP_SCHEME = APP_IDENTITY.scheme;
 export const AUTH_CALLBACK_PATH = "auth-callback";
 export const VOICE_LINK_PATH = "voice-link";
 export const HOME_INVITATION_PATH = "join-home";
-export const NATIVE_AUTH_CALLBACK_URI = "vantahome://auth-callback";
-export const NATIVE_VOICE_LINK_URI = "vantahome://voice-link";
-export const NATIVE_HOME_INVITATION_URI = "vantahome://join-home";
+export const NATIVE_AUTH_CALLBACK_URI = `${APP_SCHEME}://${AUTH_CALLBACK_PATH}`;
+export const NATIVE_VOICE_LINK_URI = `${APP_SCHEME}://${VOICE_LINK_PATH}`;
+export const NATIVE_HOME_INVITATION_URI = `${APP_SCHEME}://${HOME_INVITATION_PATH}`;
 
+/** Use exact native callbacks and retain origin-bound redirects on the web. */
 function makeAppRedirectUri(path: string, native: string) {
   if (Platform.OS !== "web") return native;
   return AuthSession.makeRedirectUri({
@@ -17,10 +22,12 @@ function makeAppRedirectUri(path: string, native: string) {
   });
 }
 
+/** Return the current build's authentication and password recovery callback. */
 export function makeAuthCallbackUri() {
   return makeAppRedirectUri(AUTH_CALLBACK_PATH, NATIVE_AUTH_CALLBACK_URI);
 }
 
+/** Keep voice account linking separate from authentication callbacks. */
 export function makeVoiceLinkUri() {
   return makeAppRedirectUri(VOICE_LINK_PATH, NATIVE_VOICE_LINK_URI);
 }
@@ -50,6 +57,7 @@ export function isHomeInvitationUrl(url: string) {
   }
 }
 
+/** Reject ambiguous callback parameters before any credential exchange. */
 export function getAuthRedirectParams(url: string) {
   try {
     if (!isAuthCallbackUrl(url)) return null;
@@ -70,6 +78,7 @@ export function getAuthRedirectParams(url: string) {
   }
 }
 
+/** Accept only this build's exact callback authority and path. */
 export function isAuthCallbackUrl(url: string) {
   try {
     const parsed = new URL(url);

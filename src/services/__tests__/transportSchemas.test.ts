@@ -19,7 +19,7 @@ describe("transport schemas", () => {
     });
   });
 
-  test.each(["id", "name", "kind", "roomId"])(
+  test.each(["id", "name", "kind", "roomId", "modelDeviceId", "simulationOnly"])(
     "rejects state events that attempt to mutate immutable %s",
     (key) => {
       expect(parseDeviceStatePatch({ isOn: true, [key]: "spoofed" })).toBeNull();

@@ -420,9 +420,9 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
                           key={room.id}
                           label={room.name}
                           selected={roomIds.includes(room.id)}
-                          disabled={!model.canManageRooms}
+                          disabled={!model.canEditMember(member) || model.roomAccessBusy}
                           onPress={() => {
-                            if (!model.canManageRooms) return;
+                            if (!model.canEditMember(member) || model.roomAccessBusy) return;
                             const next = roomIds.includes(room.id)
                               ? roomIds.filter((id) => id !== room.id)
                               : [...roomIds, room.id];
@@ -430,7 +430,6 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
                               member.id,
                               member.userId,
                               member.role,
-                              roomIds,
                               next,
                             );
                           }}

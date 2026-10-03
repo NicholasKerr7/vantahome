@@ -48,6 +48,16 @@ test('ordinary membership synchronization retains the authorized active househol
   expect(mockHomeReads.mock.calls.every(([, homeId]) => homeId === 'active-home')).toBe(true);
 });
 
+test('uses the full name saved during owner enrollment for the current household member', async () => {
+  mockGetUser.mockResolvedValue({ data: { user: { id: 'alice', email: 'alice@example.test', user_metadata: { full_name: 'Alice Kerr', name: 'Legacy name' } } }, error: null });
+  expect((await syncMembershipFromSupabase('alice'))?.household[0].name).toBe('Alice Kerr');
+});
+
+test('ignores invalid or empty display-name metadata', async () => {
+  mockGetUser.mockResolvedValue({ data: { user: { id: 'alice', email: 'alice@example.test', user_metadata: { full_name: {}, name: ' ' } } }, error: null });
+  expect((await syncMembershipFromSupabase('alice'))?.household[0].name).toBe('alice@example.test');
+});
+
 test('an accepted invitation explicitly selects its home over an existing membership', async () => {
   useHomeStore.setState({ accountHomeId: 'oldest-home' });
   const result = await syncMembershipFromSupabase('alice', 'active-home');
@@ -100,15 +110,15 @@ test('maps authoritative guest expiry and UUID model bindings without inferring 
   mockMemberRows = [{ user_id: 'alice', role: 'guest', access_expires_at: accessExpiresAt }];
   mockRegistryRows = {
     rooms: [{ id: 'room-uuid', name: 'Private guest suite', model_room_id: 'bedroom-1' }],
-    devices: [{ id: 'device-uuid', room_id: 'room-uuid', name: 'Bedside lamp', kind: 'light', model_device_id: 'bedroom-1-light', device_state: { state: { isOn: true }, updated_at: '2026-10-03T12:00:00Z' } }],
+    devices: [{ id: 'device-uuid', room_id: 'room-uuid', name: 'Bedside lamp', kind: 'light', model_device_id: 'bedroom-1-light', simulation_only: true, device_state: { state: { isOn: true, simulationOnly: false }, updated_at: '2026-10-03T12:00:00Z' } }],
     room_members: [{ room_id: 'room-uuid', user_id: 'alice' }],
   };
   const result = await syncMembershipFromSupabase('alice') as MembershipSyncResult;
   expect(result.household[0]).toEqual(expect.objectContaining({ role: 'Guest', accessExpiresAt }));
   expect(result.rooms).toEqual([{ id: 'room-uuid', name: 'Private guest suite', modelRoomId: 'bedroom-1' }]);
-  expect(result.devices[0]).toEqual(expect.objectContaining({ id: 'device-uuid', roomId: 'room-uuid', modelDeviceId: 'bedroom-1-light' }));
+  expect(result.devices[0]).toEqual(expect.objectContaining({ id: 'device-uuid', roomId: 'room-uuid', modelDeviceId: 'bedroom-1-light', simulationOnly: true }));
   expect(applyMembershipSnapshot(result)).toBe(true);
-  useHomeStore.setState({ devices: [{ ...result.devices[0], observedAt: Date.parse('2099-01-01T00:00:00Z'), modelDeviceId: 'old-binding', isOn: false }] });
+  useHomeStore.setState({ devices: [{ ...result.devices[0], observedAt: Date.parse('2099-01-01T00:00:00Z'), modelDeviceId: 'old-binding', simulationOnly: false, isOn: false }] });
   expect(applyMembershipSnapshot(result)).toBe(true);
-  expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ modelDeviceId: 'bedroom-1-light', isOn: false }));
+  expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ modelDeviceId: 'bedroom-1-light', simulationOnly: true, isOn: false }));
 });

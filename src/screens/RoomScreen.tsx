@@ -44,9 +44,8 @@ import { getDevice, ROOMS } from "../../packages/home-scene/src/data";
 import { roomDevicePresentation } from "../features/rooms/roomDevicePresentation";
 import { runNativeRoomQuickAction } from "../features/rooms/roomDeviceActions";
 import { isModelHome } from "../features/three-d-home/modelHomeScope";
-import { canShareDemoDevices } from "../features/three-d-home/simulationSession";
 import { useSimulationControls } from "../features/three-d-home/useSimulationControls";
-import { guardModelDeviceControls } from "../features/three-d-home/modelDeviceControls";
+import { selectSimulationDeviceBindings } from "../features/three-d-home/simulationDeviceBindings";
 import { sceneIsVisible } from "../features/scenes/sceneScope";
 import { selectHomeNavigationAccess } from "../features/home-shell/homeNavigationAccess";
 
@@ -438,9 +437,8 @@ export default function RoomScreen({ route, navigation }: Props) {
   const isWholeHome = Boolean(showAll);
 
   const modelHome = useHomeStore(isModelHome);
-  const modelOwner = useHomeStore((state) => isModelHome(state) && canShareDemoDevices(state, runtimePolicy.mode));
-  const simulation = useSimulationControls(modelOwner);
-  const modelControls = useMemo(() => guardModelDeviceControls(simulation.client), [simulation.client]);
+  const simulationBindings = useHomeStore(useShallow(selectSimulationDeviceBindings));
+  const simulation = useSimulationControls(Object.keys(simulationBindings).length > 0);
   const modelRoom = modelHome ? ROOMS.find((candidate) => candidate.id === roomId) : undefined;
   const modeledRoom = Boolean(modelRoom);
   const visibleRooms = useHomeStore(useShallow(selectVisibleRooms));
@@ -464,19 +462,22 @@ export default function RoomScreen({ route, navigation }: Props) {
 
   /** Resolve native access at press time; model mutations retain their existing live scope guard. */
   async function handleDeviceQuickAction(device: Device) {
-    const definition = getDevice(device.id);
-    if (modelOwner && definition?.kind === device.kind) {
-      modelControls.toggle(device.id);
-      return;
-    }
     try {
       await runNativeRoomQuickAction(device.id, () => {
         sheetRef.current?.dismiss();
         navigation.navigate("DeviceDetail", { deviceId: device.id });
-      }, commandScope);
+      }, commandScope, simulation.client);
     } catch (error) {
       Alert.alert("Action not completed", error instanceof Error ? error.message : "Check home access and device status before trying again.");
     }
+  }
+
+  /** Read virtual devices from the same account-local snapshot as voice and 3D controls. */
+  function devicePresentation(device: Device) {
+    const modelId = simulationBindings[device.id];
+    const modelState = simulation.ready && modelId && simulation.access?.deviceIds.includes(modelId)
+      ? simulation.state.deviceStates[modelId] : undefined;
+    return roomDevicePresentation(device, modelState, modelId);
   }
 
   // Derived data for this room.
@@ -492,7 +493,7 @@ export default function RoomScreen({ route, navigation }: Props) {
       ? visibleScenes
       : visibleScenes.filter((scene) => scene.roomId === roomId);
   }, [scenesAll, visibleRooms, devicesAll, roomId, isWholeHome, canCreateRoutines]);
-  const running = devices.filter((d) => d.isOn).length;
+  const running = devices.filter((device) => devicePresentation(device).active).length;
   const pageCount = Math.max(1, Math.ceil(devices.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
   const visibleDevices = devices.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
@@ -693,15 +694,16 @@ export default function RoomScreen({ route, navigation }: Props) {
             }
             renderItem={({ item }) => {
               const definition = getDevice(item.id);
-              const modeled = modelOwner && definition?.kind === item.kind;
-              const presentation = roomDevicePresentation(item, modeled ? simulation.state.deviceStates[item.id] : undefined);
+              const modelId = simulationBindings[item.id];
+              const presentation = devicePresentation(item);
               return <View style={cardFrameStyle}>
                 <DeviceCollectionCard {...presentation}
-                  disabled={modelHome && definition?.kind === item.kind && (!modelOwner || !simulation.ready)}
+                  disabled={Boolean(modelId) ? !simulation.ready || !simulation.access?.controllableDeviceIds.includes(modelId)
+                    : Boolean(item.simulationOnly || (modelHome && definition?.kind === item.kind))}
                   onOpen={() => navigation.navigate("DeviceDetail", { deviceId: item.id })}
                   onQuickAction={() => { void handleDeviceQuickAction(item); }}
                   onLongPress={() => {
-                    if (modelHome && definition?.kind === item.kind) {
+                    if (modelId || item.simulationOnly || (modelHome && definition?.kind === item.kind)) {
                       navigation.navigate("DeviceDetail", { deviceId: item.id });
                       return;
                     }
@@ -747,8 +749,8 @@ export default function RoomScreen({ route, navigation }: Props) {
         canCreateRoutines={canCreateRoutines}
         ref={sheetRef}
         device={selected}
-        quickActionLabel={selected ? roomDevicePresentation(selected).quickActionLabel : undefined}
-        quickActionActive={selected ? roomDevicePresentation(selected).active : undefined}
+        quickActionLabel={selected ? devicePresentation(selected).quickActionLabel : undefined}
+        quickActionActive={selected ? devicePresentation(selected).active : undefined}
         onClose={() => sheetRef.current?.dismiss()}
         onOpenDetails={() => {
           if (!selectedId) return;

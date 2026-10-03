@@ -206,17 +206,28 @@ function nativeReading(device: Device): { value: string; caption: string } {
 export function roomDevicePresentation(
   device: Device,
   modelState?: DeviceState,
+  modelDeviceId: string = device.id,
 ): RoomDevicePresentation {
-  const definition = modelState ? getDevice(device.id) : undefined;
+  const definition = modelState ? getDevice(modelDeviceId) : undefined;
   if (definition?.kind === device.kind && modelState) {
     return {
-      name: definition.name,
+      name: device.simulationOnly ? device.name : definition.name,
       status: deviceStatus(definition, modelState),
       ...deviceCardReading(definition, modelState),
       active: modelState.on,
       quickActionLabel: quickActionLabel(definition, modelState),
     };
   }
+  // Virtual entries have no hardware observations. Never present their registry
+  // placeholder as an actual off state while the scoped simulation is loading.
+  if (device.simulationOnly) return {
+    name: device.name,
+    status: 'Simulation unavailable',
+    value: '—',
+    caption: 'Open controls to reconnect',
+    active: false,
+    quickActionLabel: 'View controls',
+  };
   const native = nativeReading(device);
   return {
     name: device.name,

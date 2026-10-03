@@ -37,6 +37,7 @@ type DeviceRow = {
   kind: Device["kind"];
   room_id: string | null;
   model_device_id?: string | null;
+  simulation_only?: boolean;
   device_state:
     | { state: unknown; updated_at: string }
     | Array<{ state: unknown; updated_at: string }>
@@ -117,7 +118,7 @@ export async function syncMembershipFromSupabase(
 
   const { data: devicesData, error: devicesError } = await supabase
     .from("devices")
-    .select("id, name, kind, room_id, model_device_id, device_state(state, updated_at)")
+    .select("id, name, kind, room_id, model_device_id, simulation_only, device_state(state, updated_at)")
     .eq("home_id", membership.home_id);
   if (devicesError) throw devicesError;
   const devices = ((devicesData ?? []) as unknown as DeviceRow[]).map((row) => {
@@ -127,6 +128,7 @@ export async function syncMembershipFromSupabase(
       kind: row.kind,
       roomId: row.room_id ?? "",
       modelDeviceId: row.model_device_id,
+      simulationOnly: row.simulation_only === true,
       isOn: false,
     };
     const observation = Array.isArray(row.device_state)
@@ -137,6 +139,8 @@ export async function syncMembershipFromSupabase(
     return {
       ...device,
       ...patch,
+      // Transport observations cannot change this authoritative registry boundary.
+      simulationOnly: device.simulationOnly,
       observedAt: Number.isFinite(timestamp) ? timestamp : 0,
     };
   });
@@ -160,13 +164,16 @@ export async function syncMembershipFromSupabase(
     }));
   }
 
+  // Account metadata is external input; only a nonempty string can label a member.
+  const ownNames: unknown[] = [userData.user.user_metadata?.full_name, userData.user.user_metadata?.name, userData.user.email];
+  const ownName = ownNames.find((name): name is string => typeof name === "string" && name.trim().length > 0)?.trim() ?? "You";
   const household: HouseholdMember[] =
     (membersData as HomeMemberRow[] | null)?.map((row) => ({
       id: row.user_id,
       userId: row.user_id,
       name:
         row.user_id === userId
-          ? (userData.user.user_metadata?.name ?? userData.user.email ?? "You")
+          ? ownName
           : "Member",
       role: mapRole(row.role),
       accessExpiresAt: row.access_expires_at,
@@ -225,6 +232,7 @@ export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSe
         kind: device.kind,
         roomId: device.roomId,
         modelDeviceId: device.modelDeviceId,
+        simulationOnly: device.simulationOnly,
       };
     }
     return applyDeviceStatePatch(

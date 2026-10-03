@@ -187,3 +187,69 @@ test('an interrupted sign-out has a visible error and permits another attempt', 
   await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(2));
   expect(mockSignOut).toHaveBeenLastCalledWith({ scope: 'local' });
 });
+
+test('owner creation replaces the inbox and returns without losing invitations or the entered name', async () => {
+  const screen = render(<HomeAccessScreen userId="alice" email="alice@example.test" onComplete={jest.fn()} />);
+  await waitFor(() => expect(screen.getByText('Accept invitation')).toBeTruthy());
+  fireEvent.press(screen.getByText('Set up my home'));
+  expect(screen.queryByText('Your invitations')).toBeNull();
+  expect(screen.queryByText('Accept invitation')).toBeNull();
+  expect(screen.getByText('alice@example.test')).toBeTruthy();
+  fireEvent.changeText(screen.getByLabelText('Home name'), 'Hopewell');
+  fireEvent.press(screen.getByLabelText('Back to invitations'));
+  expect(screen.getByText('Your invitations')).toBeTruthy();
+  expect(screen.getByText('Accept invitation')).toBeTruthy();
+  fireEvent.press(screen.getByText('Set up my home'));
+  expect(screen.getByLabelText('Home name').props.value).toBe('Hopewell');
+  expect(mockBootstrap).not.toHaveBeenCalled();
+  expect(mockRespond).not.toHaveBeenCalled();
+});
+
+test('an interrupted owner registry read stays on the create page and retries without creating another home', async () => {
+  mockList.mockResolvedValueOnce([]);
+  mockSync.mockRejectedValueOnce(new Error('Home connection interrupted.'));
+  const complete = jest.fn();
+  const screen = render(<HomeAccessScreen userId="alice" onComplete={complete} />);
+  await waitFor(() => expect(screen.queryByText('Checking your invitations…')).toBeNull());
+  fireEvent.press(screen.getByText('Set up my home'));
+  fireEvent.changeText(screen.getByLabelText('Home name'), 'Hopewell');
+  fireEvent.press(screen.getByText('Create my home'));
+  await waitFor(() => expect(screen.getByText('Home connection interrupted.')).toBeTruthy());
+  expect(screen.queryByText('Your invitations')).toBeNull();
+  expect(screen.getByLabelText('Back to invitations')).toBeDisabled();
+  expect(screen.getByText('Create my home')).toBeDisabled();
+  fireEvent.press(screen.getByText('Retry'));
+  await waitFor(() => expect(complete).toHaveBeenCalledTimes(1));
+  expect(mockBootstrap).toHaveBeenCalledTimes(1);
+  expect(mockSync).toHaveBeenCalledTimes(2);
+});
+
+test('owner creation errors remain visible alongside the form and allow an explicit resubmission', async () => {
+  mockBootstrap.mockRejectedValueOnce(new Error('Unable to reach your home service.'));
+  const screen = render(<HomeAccessScreen userId="alice" onComplete={jest.fn()} />);
+  await waitFor(() => expect(screen.getByText('Accept invitation')).toBeTruthy());
+  fireEvent.press(screen.getByText('Set up my home'));
+  fireEvent.changeText(screen.getByLabelText('Home name'), 'Hopewell');
+  fireEvent.press(screen.getByText('Create my home'));
+  await waitFor(() => expect(screen.getByText('Unable to reach your home service.')).toBeTruthy());
+  expect(screen.getByText('Retry')).toBeTruthy();
+  expect(screen.queryByText('Your invitations')).toBeNull();
+  expect(screen.getByLabelText('Back to invitations')).not.toBeDisabled();
+  fireEvent.press(screen.getByText('Create my home'));
+  await waitFor(() => expect(mockBootstrap).toHaveBeenCalledTimes(2));
+});
+
+test('small-phone creation uses compact typography while retaining touch targets and readable text', async () => {
+  const dimensions = jest.spyOn(require('react-native') as typeof import('react-native'), 'useWindowDimensions')
+    .mockReturnValue({ width: 375, height: 667, scale: 2, fontScale: 1 });
+  try {
+    const screen = render(<HomeAccessScreen userId="alice" onComplete={jest.fn()} />);
+    await waitFor(() => expect(screen.getByText('Accept invitation')).toBeTruthy());
+    expect(screen.getByText('A home that knows you.')).toHaveStyle({ fontSize: 24, lineHeight: 30 });
+    fireEvent.press(screen.getByText('Set up my home'));
+    expect(screen.getByText('Make it your home')).toHaveStyle({ fontSize: 24, lineHeight: 30 });
+    expect(screen.getByLabelText('Home name')).toHaveStyle({ minHeight: 50 });
+    expect(screen.getByLabelText('Back to invitations')).toHaveStyle({ minHeight: 44 });
+    expect(screen.getByText('Make it your home').props.numberOfLines).toBeUndefined();
+  } finally { dimensions.mockRestore(); }
+});

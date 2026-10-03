@@ -3,6 +3,7 @@ import { useHomeStore } from "../store/useHomeStore";
 import { authorizeDeviceCommand } from "./permissions";
 import { hasCurrentMembershipAccess } from "./guestAccess";
 
+/** Authorize physical command dispatch independently of the isolated 3D simulation. */
 export function authorizeLocalDeviceCommand(command: DeviceCommand) {
   const state = useHomeStore.getState();
   if (state.accountUserId && !state.membershipReady) {
@@ -12,9 +13,9 @@ export function authorizeLocalDeviceCommand(command: DeviceCommand) {
     (candidate) => candidate.id === command.deviceId,
   );
   if (!device) return { allowed: false, reason: "device_not_found" } as const;
-  // Gas is an interactive local simulation only, including in demo mode.
+  // Virtual catalog entries and gas controls stay in the isolated simulation.
   // Reject before command confirmation, optimistic events, retries or transports.
-  if (device.kind === "gas-meter" || device.kind === "gas-leak") {
+  if (device.simulationOnly || device.kind === "gas-meter" || device.kind === "gas-leak") {
     return { allowed: false, reason: "simulation_only_device" } as const;
   }
 

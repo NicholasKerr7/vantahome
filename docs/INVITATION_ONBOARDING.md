@@ -5,6 +5,16 @@ does not grant membership. New owners explicitly create their home; invitees rev
 and accept a pending database invitation after authenticating. Existing accounts
 sign in normally and review their invitation inbox.
 
+**Current staging checkpoint — 2026-10-03:** migrations 001–018 are deployed;
+preview callbacks and the invitation function use `vantahome-preview`. Public
+sign-up remains disabled and invitation OTP length remains eight digits. The
+hosted API permission sweep passed 32 checks with disposable accounts. Preview
+36 built successfully with its scheme/signature verified and production metadata
+restored. It supersedes build 35 with an authenticated simulation timer fix. The
+earlier install attempt could not reach the iPhone (CoreDevice 4016); installation,
+real email delivery/code entry, and the physical iPhone account flow remain
+pending. Production is unchanged.
+
 ## New invitee flow
 
 1. An Owner or Admin with effective `member.invite` permission calls
@@ -17,8 +27,9 @@ sign in normally and review their invitation inbox.
    template. The message contains `{{ .Token }}`, a one-time code whose length
    follows the project's hosted email OTP setting.
 3. The recipient opens VantaHome's **Accept invitation** entry and enters their
-   invited email address and code. The email's bare `vantahome://join-home` link
-   can open this screen, but contains no authentication credentials or home role.
+   invited email address and code. The email's bare
+   `vantahome-preview://join-home` link opens Preview (`vantahome://join-home` for
+   production), but contains no authentication credentials or home role.
 4. While signed out, an explicit submit calls `verifyInvitationCode`, which uses
    `verifyOtp({ email, token, type: 'invite' })`. It shares the authentication
    exchange lock, checks the resulting email, and removes a cancelled or
@@ -57,11 +68,17 @@ does **not** update the hosted Supabase email template or SMTP settings.
   The template intentionally uses `{{ .Token }}` and the bare `{{ .RedirectTo }}`;
   do not replace it with `{{ .ConfirmationURL }}`. The latter uses an implicit
   invitation flow that is incompatible with this app's local PKCE safeguards.
-- Add the exact `vantahome://join-home` URL to the project's redirect allowlist.
-  Keep the existing `vantahome://auth-callback` entry for locally initiated PKCE
-  flows. Preview and production builds must register their intended app scheme.
-- Native invitation entry is the server default. For a deployed web app, set the
-  Edge Function secret `VANTAHOME_INVITE_REDIRECT_URL` to its operator-controlled
+- Add the exact invitation and auth callback URLs for the intended build to the
+  project's redirect allowlist. Staging uses `vantahome-preview://join-home` and
+  `vantahome-preview://auth-callback`, while retaining its prior production-scheme
+  entries. Preview registers `vantahome-preview`; production registers
+  `vantahome`. The bundled `EXPO_PUBLIC_APP_VARIANT` and native metadata must
+  agree. See [Authentication redirects](AUTH_REDIRECTS.md) for the external
+  environment file and repeatable iPhone packaging recipe.
+- Production native invitation entry remains the server default. Staging
+  explicitly sets the Edge Function secret `VANTAHOME_INVITE_REDIRECT_URL` to
+  `vantahome-preview://join-home`; only the exact supported native URIs are
+  accepted. For a deployed web app, set that secret to its operator-controlled
   `https://YOUR-APP-HOST/join-home` URL and add that exact URL to Supabase's redirect
   allowlist. This is deployment configuration, never request-body input. Only
   HTTPS `/join-home` pages without credentials, query strings, fragments, or
@@ -83,8 +100,12 @@ does **not** update the hosted Supabase email template or SMTP settings.
   Migration 015 adds deadline columns and updates the invitation projection,
   acceptance transaction, and authorization helpers. Migration 016 adds explicit
   room/device model identifiers and the protected `set_model_room_binding` RPC.
-  Apply both migrations before this client queries their columns; preserve
-  invitation/auth settings during the separate deployment.
+  Apply them before this client queries their columns. Migration
+  `017_model_simulation_setup.sql` adds the owner-only catalog setup and immutable
+  `devices.simulation_only` boundary. Migration
+  `018_scoped_room_memberships.sql` replaces grants atomically inside the selected
+  household. The current client requires all migrations through 018; it does not
+  fall back to unscoped direct room-access writes.
 
 The existing-account case (`email_exists` or `user_already_exists`) resolves the
 exact Auth account server-side and records a household invitation. It sends no
@@ -149,24 +170,30 @@ The hosted invitation template now exactly matches `supabase/templates/invite.ht
 with subject **Your VantaHome invitation**. Eight-digit OTP, required email
 confirmation, and disabled public sign-up were preserved. No test, invitation,
 or recovery emails were sent; actual delivery and the complete account flow
-remain unverified. Deliberately enable owner enrollment for staging when ready
-to test the full flow with authorized test recipients.
+remained unverified at that initial checkpoint. Public sign-up stays disabled
+for the current preview; an authorized operator can invite the intended owner
+account instead of opening public enrollment. Auth account invitation alone does
+not create a household role: after verification and password setup, that person
+explicitly creates their own home or accepts an existing household invitation.
 
-Keep the installed offline Preview separate until native auth integration is
-ready. Preview 34 registers `vantahome-preview`, while current client callbacks
-use `vantahome`; adding staging credentials alone would route links incorrectly.
-Authenticated accounts do not inherit the local demo device catalog. The source
-now includes account-scoped simulation state and explicit model connections,
-with assigned-room rendering and action gating. These source changes have not
-been installed on the iPhone; matching preview callback configuration and
-end-to-end authenticated testing are still required before replacing Preview 34.
+Preview 34 used `vantahome-preview` while the former client had hard-coded
+production callbacks. The current source resolves an explicit app variant, and
+the Preview 36 build uses matching native/JavaScript preview identity plus staging
+account configuration. Production metadata is restored after packaging. The
+installed offline Preview has not yet been replaced at this checkpoint; do not
+infer native success from the completed source or hosted API tests.
+
+Authenticated accounts do not inherit the offline device catalog. An empty
+owner-created home now offers **Prepare my 3D home** to create the authored
+20-space/92-device virtual registry. These UUID rows have explicit model bindings
+and support room-limited invitations. Real hardware remains separate.
 
 Production remains unchanged, without custom SMTP. No release was promoted:
 its recorded migration history remains through `011`, so it also needs review
 of migrations `012` and `013` before the new invitation migration.
 
 
-## Room access staging checkpoint — 2026-10-03
+## Earlier room access staging checkpoint — 2026-10-03
 
 The invitation form now separates identity from a paged access review. The
 administrator chooses every room for a Guest or Tenant, including any shared
@@ -193,9 +220,9 @@ simulation; a mapping does not connect physical equipment.
 Migrations **015** and **016** were subsequently applied to staging only, using
 an explicit `dcevusczjtmdpzrxpdou` target and `--skip-vault`. The reviewed dry-run
 listed only these two migrations, with no seeds or roles. The updated
-**home-invite** function is now **ACTIVE, version 17, JWT verification enabled**.
-`home-invite-respond` and `home-bootstrap` remain version 16 with JWT verification
-enabled; their existing RPC calls use the updated database functions.
+**home-invite** function was **ACTIVE, version 17, JWT verification enabled**
+at that checkpoint. `home-invite-respond` and `home-bootstrap` were version 16
+with JWT verification enabled; their existing RPC calls use the updated database functions.
 
 Read-only post-deployment checks confirmed staging migration history **001–016**,
 the four nullable expiry/model columns, both Guest-only expiry constraints, both
@@ -207,10 +234,83 @@ emails, or model bindings were created by the rollout. Existing SMTP and Auth
 configuration were not modified. Production was not accessed or deployed in
 this rollout and remains at its previously recorded 011 checkpoint.
 
-**The iPhone has not been rebuilt, and the two-account authenticated invitation
-flow remains unverified.** The current preview remains a simulation. A fresh
-local PostgreSQL 17 database applied migrations 001–016; six SQL suites passed
-323 pgTAP assertions. Full app and scene tests, browser role/layout checks, builds,
-and type checks also passed; see [Room access](ROOM_ACCESS.md) for counts and the
-subsequent dependency source remediation. These checks and deployed metadata do not
-prove hosted email delivery, mobile sign-in, or physical-device control.
+At that earlier checkpoint, the iPhone and two-account invitation flow had not
+been tested. The then-current local database run applied 001–016 and passed 323
+pgTAP assertions. The subsequent authenticated milestone below supersedes that
+schema/test checkpoint without claiming native or email completion.
+
+## Authenticated staging milestone — 2026-10-03
+
+Migrations **017** and **018** were deployed only to the explicit staging project,
+with `--skip-vault` and no seed/role deployment. Staging migration history is now
+**001–018**. The updated `home-invite` function and its deployment-controlled
+redirect use the exact preview invitation scheme. Staging's Site URL is
+`vantahome-preview://auth-callback`; its allowlist adds both preview auth and join
+URLs while preserving the existing production-scheme entries. SMTP/template
+configuration, required email confirmation, disabled public sign-up, and
+eight-digit OTP are retained. No production configuration was promoted.
+
+The app reads hosted sign-up availability and hides new-account enrollment when
+closed or unavailable. Owner creation remains a separate explicit action after
+an authenticated account is established. The HomeAccess screen separates its
+invitation review from the named-home form, with touch momentum, restrained
+overscroll, and accessible overflow for enlarged text and errors.
+
+For an empty owner home, `create_model_simulation` transactionally adds 20 authored
+spaces and 92 virtual devices with explicit UUID-to-model connections. Setup is
+owner-only and idempotent, and refuses a registry containing existing rooms or
+devices. Virtual entries retain `simulation_only=true`; neither a client update
+nor a device observation can turn them into physical control destinations. The
+physical command queue independently rejects virtual targets. No device-state
+observations or real camera streams are created by setup.
+
+Native room cards, full controls, and model hotspots use current permitted model
+bindings. Their simulated state remains separate per account/home/member and on
+the device. Room changes use a home-scoped atomic RPC; action overrides also take
+the explicit active home and expected signed-in actor. Editing one household's
+access does not remove another household's grants.
+
+Verification evidence:
+
+- A full `npm run verify` checkpoint passed before the final authenticated
+  timer-host mount fix: 172 app suites / 2,400 tests, 61 scene files / 725 tests,
+  127 bridge tests, and 45 script tests, plus app/edge TypeScript,
+  dependency/source regressions, and release checks. `npm run build` also
+  completed and exported the web application to `dist`. The full-suite counts
+  describe that checkpoint, not a rerun after the final mount change. After that
+  change, 26 focused AppNavigator/ModelHomeSync tests, app TypeScript, and diff
+  checks passed; Preview 36 includes the verified fix.
+- In the browser, a synthetic account completed normal password sign-in,
+  named-home creation, and preparation of the 20-space/92-device model. Forms
+  were visually reviewed at 375 × 667 without vertical scrolling. Saved light
+  state survived reload, model full controls opened from the native device
+  library, and sign-out succeeded. Final review caught and fixed a missing
+  authenticated simulation timer host. Afterward, gate manual close moved from
+  100% to 0%, and automatic close progressed from 29 seconds to 7 seconds to
+  **Closed**. The browser's synthetic account and home were cleaned up.
+- Preview 36's native Release build succeeded and supersedes build 35 with that
+  timer-host fix. The signed bundle registers only the preview scheme and
+  preview bundle identifier; strict code-signature verification passed.
+  Production Expo/plist/Xcode metadata was restored to its exact original bytes.
+  The earlier build 35 installation attempt returned CoreDevice 4016 while the
+  iPhone was unavailable. Build 36 installation remains pending; no physical
+  installed-build success is claimed yet.
+- A fresh isolated PostgreSQL 17 instance applied migrations 001–018; eight SQL
+  suites passed 369 pgTAP assertions. That instance was stopped and removed.
+- The hosted staging API sweep passed **32 checks** using four synthetic accounts
+  at non-deliverable addresses and two temporary homes. It exercised normal
+  password sign-in and `home-bootstrap`, model setup/idempotency, Guest/Tenant
+  defaults, assigned-room reads, action/view overrides, multi-home isolation,
+  administrator restrictions, revocation, expiry, and simulation-command
+  rejection. An initial request timed out; both its resources and the successful
+  retry's resources were cleaned up. No physical commands/observations were
+  created, and no real recipient was contacted by this sweep.
+
+**Pending:** Preview 36 installation after the iPhone reconnects, warm/cold native
+callbacks, authorized owner/invitee email delivery and code entry, password setup
+and recovery, account switching, foreground/background behavior, and network-loss
+handling on the physical iPhone. No real account invitation or recovery email has
+been sent at this checkpoint. Hosted API authentication does not prove invitation
+email delivery or the OTP UI. Keep iPad verification deferred and physical hub
+control out of the simulation milestone. See [Room access](ROOM_ACCESS.md) and
+[Preview packaging](AUTH_REDIRECTS.md).

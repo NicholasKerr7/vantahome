@@ -46,7 +46,9 @@ export default function AuthScreen(props: AuthEntryProps) {
           <Ionicons name={provider === 'apple' ? 'logo-apple' : 'logo-google'} size={18} color={theme.colors.text} /><Text style={styles.link}>{provider === 'apple' ? 'Apple' : 'Google'}</Text>
         </Pressable>)}
       </View>}
-      <Pressable style={styles.textAction} disabled={model.busy} onPress={() => model.chooseMode('owner')}><Text style={styles.link}>Set up a new home</Text></Pressable>
+      {model.providers.signupAllowed
+        ? <Pressable style={styles.textAction} disabled={model.busy} onPress={() => model.chooseMode('owner')}><Text style={styles.link}>Set up a new home</Text></Pressable>
+        : <Text style={styles.accessHint}>Access is by invitation. Use the email and code sent to you to get started.</Text>}
     </>}
     {mode === 'invite' && <Pressable style={styles.textAction} disabled={model.busy} onPress={() => model.chooseMode('login')}><Text style={styles.link}>Already have an account? Sign in</Text></Pressable>}
     {(mode === 'owner' || mode === 'recovery') && <Pressable style={styles.textAction} disabled={model.busy} onPress={() => mode === 'owner' && model.ownerPasswordStep ? model.setOwnerPasswordStep(false) : model.chooseMode('login')}><Text style={styles.link}>{mode === 'owner' && model.ownerPasswordStep ? 'Back to your details' : 'Back to sign in'}</Text></Pressable>}
@@ -62,6 +64,7 @@ const styles = StyleSheet.create({
   textAction: { minHeight: 36, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   link: { color: theme.colors.accentText, fontSize: 12, textAlign: 'center' },
   hint: { color: theme.colors.subtext, fontSize: 11 },
+  accessHint: { color: theme.colors.subtext, fontSize: 11, lineHeight: 17, textAlign: 'center' },
   providers: { flexDirection: 'row', gap: 10 },
   provider: { flex: 1, minHeight: 44, borderRadius: theme.radius.sm, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
 });

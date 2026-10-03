@@ -10,11 +10,24 @@ test("accepts an operator-configured HTTPS invitation entry page", () => {
     .toBe("https://home.example.test/join-home");
 });
 
+test("uses preview identity only when explicitly configured by the operator", () => {
+  expect(getHomeInvitationRedirect("vantahome-preview://join-home"))
+    .toBe("vantahome-preview://join-home");
+  expect(getHomeInvitationRedirect("")).toBe("vantahome://join-home");
+});
+
 test.each([
   "http://home.example.test/join-home",
   "javascript:alert(1)",
   "vantahome://auth-callback",
   "vantahome://join-home?email=person@example.test",
+  "vantahome-preview://auth-callback",
+  "vantahome-preview:///join-home",
+  "vantahome-preview://join-home/",
+  "vantahome-preview://join-home?email=person@example.test",
+  "vantahome-preview://join-home#access_token=secret",
+  "vantahome-preview://user:password@join-home",
+  "vantahome-preview://join-home:123",
   "https://home.example.test/auth-callback",
   "https://home.example.test:8443/join-home",
   "https://user:password@home.example.test/join-home",

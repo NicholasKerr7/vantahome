@@ -80,7 +80,7 @@ export class SimulationSession {
         || state.devices.some((device, index) => {
           const before = previous.devices[index];
           return device.id !== before?.id || device.kind !== before?.kind || device.roomId !== before?.roomId
-            || device.modelDeviceId !== before?.modelDeviceId;
+            || device.modelDeviceId !== before?.modelDeviceId || device.simulationOnly !== before?.simulationOnly;
         }));
       if (state.roomMembers !== previous.roomMembers || state.memberPermissionOverrides !== previous.memberPermissionOverrides
         || state.household !== previous.household || state.rooms !== previous.rooms || state.membershipReady !== previous.membershipReady

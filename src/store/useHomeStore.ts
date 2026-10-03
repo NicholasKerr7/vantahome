@@ -82,6 +82,8 @@ export type Device = {
   id: string;
   /** Explicit server-owned binding to the authored simulation, never inferred from a name. */
   modelDeviceId?: string | null;
+  /** Virtual registry entry: controls stay in the account's local 3D simulation. */
+  simulationOnly?: boolean;
   name: string;
   kind: DeviceKind;
   roomId: string;

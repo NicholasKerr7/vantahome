@@ -11,10 +11,7 @@ import {
   type IntegrationProvider,
   useHomeStore,
 } from "../../store/useHomeStore";
-import {
-  setRoomMembershipRemote,
-  type RoomMemberRole,
-} from "../../services/roomMembers";
+import { setRoomMembershipRemote } from "../../services/roomMembers";
 import {
   inviteHomeMember,
   listPendingInvites,
@@ -106,6 +103,8 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   const [invitesRefreshing, setInvitesRefreshing] = useState(false);
   const [inviteInboxError, setInviteInboxError] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [roomAccessBusy, setRoomAccessBusy] = useState(false);
+  const roomAccessPending = useRef(false);
   const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
   const [acceptedInviteId, setAcceptedInviteId] = useState<string | null>(null);
   const inviteResponsePending = useRef(false);
@@ -163,44 +162,45 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
       return false;
     }
   };
-  /** Translate household roles to the room membership service contract. */
-  const resolveRoomRole = (
-    role: (typeof household)[number]["role"],
-  ): RoomMemberRole | null => {
-    if (role === "Member") return "member";
-    if (role === "Guest") return "guest";
-    if (role === "Tenant") return "tenant";
-    return null;
-  };
   /** Avoid sending local demo identifiers to cloud membership endpoints. */
   const isUuid = (value: string) =>
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       value,
     );
-  /** Save room access with protected confirmation and scoped rollback. */
+  /** Save room access only after an atomic, home-scoped server confirmation. */
   const updateRoomAccess = async (
     memberId: string,
     userId: string | undefined,
     role: (typeof household)[number]["role"],
-    prevRoomIds: string[],
     nextRoomIds: string[],
   ) => {
     const scope = useHomeStore.getState();
-    if (!(await confirmHouseholdAdminChange())) return;
-    if (!scopeIsCurrent(scope)) return;
-    setRoomMembership(memberId, nextRoomIds);
-    const roomRole = resolveRoomRole(role);
-    if (!userId || !roomRole || !isUuid(userId) || !nextRoomIds.every(isUuid))
-      return;
+    const target = scope.household.find((member) => member.id === memberId);
+    if (roomAccessPending.current || !target || !canEditMember(target) || !["Member", "Guest", "Tenant"].includes(role)) return;
+    roomAccessPending.current = true;
+    setRoomAccessBusy(true);
     try {
-      await setRoomMembershipRemote(userId, nextRoomIds, roomRole);
+      if (!(await confirmHouseholdAdminChange())) return;
+      if (!scopeIsCurrent(scope) || !canEditMember(target)) return;
+      if (!supabase) {
+        if (runtimePolicy.allowUnauthenticatedDemo) setRoomMembership(memberId, nextRoomIds);
+        return;
+      }
+      if (!scope.activeHomeId || !userId || !isUuid(userId)
+        || !nextRoomIds.every((id) => isUuid(id) && scope.rooms.some((room) => room.id === id))) {
+        throw new Error("Refresh your home before changing room access.");
+      }
+      await setRoomMembershipRemote(scope.activeHomeId, userId, nextRoomIds);
+      if (scopeIsCurrent(scope)) setRoomMembership(memberId, nextRoomIds);
     } catch (err) {
       if (!scopeIsCurrent(scope)) return;
-      setRoomMembership(memberId, prevRoomIds);
       Alert.alert(
         "Room access update failed",
         (err as Error).message ?? "Unable to update room access.",
       );
+    } finally {
+      roomAccessPending.current = false;
+      if (scopeIsCurrent(scope)) setRoomAccessBusy(false);
     }
   };
   /** Save a permission override without allowing stale-account mutations. */
@@ -220,10 +220,13 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     setMemberPermissionOverride(member.id, permission, allowed);
     if (!member.userId || !isUuid(member.userId)) return;
     try {
+      if (!scope.activeHomeId || !scope.authenticatedUserId) throw new Error("Refresh your home before changing permissions.");
       await setMemberPermissionOverrideRemote(
+        scope.activeHomeId,
         member.userId,
         permission,
         allowed,
+        scope.authenticatedUserId,
       );
     } catch (err) {
       if (!scopeIsCurrent(scope)) return;
@@ -624,7 +627,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     canInviteMembers,
     canEditMember,
     canEditPermission,
-    updateRoomAccess,
+    updateRoomAccess, roomAccessBusy,
     updatePermissionOverride,
     serviceItems,
     onSave,

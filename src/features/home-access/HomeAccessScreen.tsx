@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import CinematicSurface from '../../components/CinematicSurface';
@@ -58,11 +58,27 @@ function InvitationCard({ invite, disabled, busy, onRespond }: InvitationCardPro
   </View>;
 }
 
+/** Keep recovery messages on the active page, including a home awaiting membership confirmation. */
+function AccessFeedback({ access, disabled }: { access: Pick<ReturnType<typeof useHomeAccess>, 'error' | 'notice' | 'reload'>; disabled: boolean }) {
+  return <>
+    {access.error && <View accessibilityRole="alert" style={styles.message}>
+      <Text style={styles.messageText}>{access.error}</Text>
+      <Pressable disabled={disabled} onPress={() => { void access.reload(); }} style={styles.retry}>
+        <Text style={styles.secondaryText}>Retry</Text>
+      </Pressable>
+    </View>}
+    {access.notice && <Text accessibilityLiveRegion="polite" style={styles.body}>{access.notice}</Text>}
+  </>;
+}
+
 /** Offer verified invitations and deliberate owner setup before any household controls mount. */
 export default function HomeAccessScreen({ userId, email, onComplete, onContinue }: Props) {
   const access = useHomeAccess({ userId, onComplete });
+  const { height } = useWindowDimensions();
+  const compact = height < 800;
   const [creating, setCreating] = useState(false);
   const [homeName, setHomeName] = useState('');
+  const showCreate = creating && !onContinue;
   const disabled = access.loading || Boolean(access.busy);
   const mutationDisabled = disabled || access.finishingHome;
   return (
@@ -70,7 +86,7 @@ export default function HomeAccessScreen({ userId, email, onComplete, onContinue
       <SafeAreaView style={styles.root}>
         <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, compact && styles.compactContent]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             showsVerticalScrollIndicator={false}
@@ -78,15 +94,17 @@ export default function HomeAccessScreen({ userId, email, onComplete, onContinue
             overScrollMode="never"
             decelerationRate="normal"
           >
-            <View style={styles.shell}>
+            <View style={[styles.shell, compact && styles.compactShell]}>
               <View style={styles.brand}>
-                <VantaHomeMark size={48} decorative />
+                <VantaHomeMark size={compact ? 36 : 48} decorative />
                 <Text style={styles.wordmark}>VANTAHOME</Text>
               </View>
-              <View style={styles.heading}>
+              <View style={[styles.heading, compact && styles.compactHeading]}>
                 <Text style={styles.eyebrow}>YOUR PRIVATE SPACE</Text>
-                <Text accessibilityRole="header" style={styles.title}>A home that knows you.</Text>
-                <Text style={styles.subtitle}>Accept a household invitation or set up a home of your own.</Text>
+                <Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>{showCreate ? 'Make it your home' : 'A home that knows you.'}</Text>
+                <Text style={[styles.subtitle, compact && styles.compactSubtitle]}>{showCreate
+                  ? 'Name your household. Invite family and guests once it is ready.'
+                  : 'Accept an invitation or set up a home of your own.'}</Text>
               </View>
               <View style={styles.identity}>
                 <Ionicons name="person-circle-outline" size={23} color={theme.colors.accentText} />
@@ -95,7 +113,7 @@ export default function HomeAccessScreen({ userId, email, onComplete, onContinue
                   <Text style={styles.email}>{email || 'Your verified account'}</Text>
                 </View>
               </View>
-              <View style={styles.card}>
+              {!showCreate && <View style={[styles.card, compact && styles.compactCard]}>
                 <View style={styles.row}>
                   <View style={styles.sectionHeading}>
                     <Ionicons name="mail-open-outline" size={22} color={theme.colors.accentText} />
@@ -121,41 +139,39 @@ export default function HomeAccessScreen({ userId, email, onComplete, onContinue
                     onRespond={access.respond}
                   />
                 ))}
-                {access.error && <View accessibilityRole="alert" style={styles.message}>
-                  <Text style={styles.messageText}>{access.error}</Text>
-                  <Pressable disabled={disabled} onPress={() => { void access.reload(); }} style={styles.retry}>
-                    <Text style={styles.secondaryText}>Retry</Text>
-                  </Pressable>
-                </View>}
-                {access.notice && <Text accessibilityLiveRegion="polite" style={styles.body}>{access.notice}</Text>}
-              </View>
-              {!onContinue && creating && <View style={styles.card}>
-                <View style={styles.sectionHeading}>
-                  <Ionicons name="home-outline" size={22} color={theme.colors.accentText} />
-                  <Text accessibilityRole="header" style={styles.sectionTitle}>Make it your home</Text>
-                </View>
-                <Text style={styles.body}>Name your household. You can invite family and guests once it is ready.</Text>
-                  <Text style={styles.fieldLabel}>Home name</Text>
-                  <TextInput
-                    accessibilityLabel="Home name"
-                    placeholder="e.g. Hopewell"
-                    placeholderTextColor={theme.colors.muted}
-                    value={homeName}
-                    onChangeText={setHomeName}
-                    maxLength={80}
-                    editable={!mutationDisabled}
-                    returnKeyType="done"
-                    onSubmitEditing={() => { if (!mutationDisabled) void access.createHome(homeName); }}
-                    style={styles.input}
-                  />
-                  <Pressable
-                    style={[styles.primary, (!homeName.trim() || mutationDisabled) && styles.disabled]}
-                    disabled={!homeName.trim() || mutationDisabled}
-                    onPress={() => { void access.createHome(homeName); }}
-                  >
-                    {access.busy === 'create' ? <ActivityIndicator color={theme.colors.bg0} /> : <Text style={styles.primaryText}>Create my home</Text>}
-                  </Pressable>
+                <AccessFeedback access={access} disabled={disabled} />
               </View>}
+              {showCreate && <View style={[styles.card, compact && styles.compactCard]}>
+                <Text style={styles.fieldLabel}>Home name</Text>
+                <TextInput
+                  accessibilityLabel="Home name"
+                  placeholder="e.g. Hopewell"
+                  placeholderTextColor={theme.colors.muted}
+                  value={homeName}
+                  onChangeText={setHomeName}
+                  maxLength={80}
+                  editable={!mutationDisabled}
+                  returnKeyType="done"
+                  onSubmitEditing={() => { if (!mutationDisabled) void access.createHome(homeName); }}
+                  style={styles.input}
+                />
+                <Pressable
+                  style={[styles.primary, (!homeName.trim() || mutationDisabled) && styles.disabled]}
+                  disabled={!homeName.trim() || mutationDisabled}
+                  onPress={() => { void access.createHome(homeName); }}
+                >
+                  {access.busy === 'create' ? <ActivityIndicator color={theme.colors.bg0} /> : <Text style={styles.primaryText}>Create my home</Text>}
+                </Pressable>
+                {access.loading && <View style={styles.loading} accessibilityLiveRegion="polite">
+                  <ActivityIndicator color={theme.colors.accent} />
+                  <Text style={styles.body}>{access.finishingHome ? 'Confirming your home access…' : 'Checking your connection…'}</Text>
+                </View>}
+                <AccessFeedback access={access} disabled={disabled} />
+              </View>}
+              {showCreate && <Pressable style={styles.back} disabled={mutationDisabled} onPress={() => setCreating(false)} accessibilityLabel="Back to invitations">
+                <Ionicons name="arrow-back" size={18} color={theme.colors.accentText} />
+                <Text style={styles.secondaryText}>Back to invitations</Text>
+              </Pressable>}
               {!onContinue && !creating && <Pressable disabled={mutationDisabled} style={styles.setup} onPress={() => setCreating(true)}>
                 <View style={styles.identityText}>
                   <Text style={styles.secondaryText}>Set up my home</Text>
@@ -216,4 +232,12 @@ const styles = StyleSheet.create({
   setup: { minHeight: 68, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   signOut: { minHeight: 44, alignSelf: 'center', paddingHorizontal: 24, justifyContent: 'center' },
   footerText: { color: theme.colors.subtext, fontSize: 13 },
+  back: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  // Keep ordinary small-phone onboarding within the safe viewport; the ScrollView remains an accessibility and keyboard fallback.
+  compactContent: { padding: 16 },
+  compactShell: { gap: 10 },
+  compactHeading: { gap: 6 },
+  compactTitle: { fontSize: 24, lineHeight: 30 },
+  compactSubtitle: { fontSize: 13, lineHeight: 19 },
+  compactCard: { padding: 16, gap: 12 },
 });

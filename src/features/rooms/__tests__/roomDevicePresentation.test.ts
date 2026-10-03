@@ -98,3 +98,17 @@ test("does not invent an observation when a native sensor has no reading", () =>
     caption: "Power reading",
   });
 });
+
+test("reads a UUID-backed virtual device from its explicit model snapshot without replacing its name", () => {
+  const cloud = device("light", { id: "cloud-light", name: "Alex’s bedside light", simulationOnly: true, modelDeviceId: "master-light", brightness: 0 });
+  expect(roomDevicePresentation(cloud, { on: true, level: 72 }, "master-light")).toMatchObject({
+    name: "Alex’s bedside light", value: "72%", active: true, quickActionLabel: "Turn off",
+  });
+  expect(cloud.brightness).toBe(0);
+});
+
+test("never represents a virtual registry placeholder as an observed off state", () => {
+  expect(roomDevicePresentation(device("light", { simulationOnly: true }))).toMatchObject({
+    value: "—", active: false, status: "Simulation unavailable", quickActionLabel: "View controls",
+  });
+});

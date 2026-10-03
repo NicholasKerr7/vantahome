@@ -77,3 +77,50 @@ describe("household invitation entry", () => {
     expect(isHomeInvitationUrl(url)).toBe(false);
   });
 });
+
+describe("preview callback isolation", () => {
+  const originalVariant = process.env.EXPO_PUBLIC_APP_VARIANT;
+
+  afterEach(() => {
+    if (originalVariant === undefined) delete process.env.EXPO_PUBLIC_APP_VARIANT;
+    else process.env.EXPO_PUBLIC_APP_VARIANT = originalVariant;
+  });
+
+  test("generates preview-only authentication, invitation, and voice callbacks", () => {
+    process.env.EXPO_PUBLIC_APP_VARIANT = "preview";
+    jest.isolateModules(() => {
+      const redirects: typeof import("./authRedirects") = require("./authRedirects");
+      expect(redirects.makeAuthCallbackUri()).toBe("vantahome-preview://auth-callback");
+      expect(redirects.makeHomeInvitationUri()).toBe("vantahome-preview://join-home");
+      expect(redirects.makeVoiceLinkUri()).toBe("vantahome-preview://voice-link");
+      expect(redirects.isAuthCallbackUrl("vantahome-preview://auth-callback?code=abc")).toBe(true);
+      expect(redirects.getAuthRedirectParams("vantahome-preview://auth-callback?code=abc")?.get("code")).toBe("abc");
+      expect(redirects.isHomeInvitationUrl("vantahome-preview://join-home")).toBe(true);
+      expect(redirects.isAuthCallbackUrl("vantahome://auth-callback?code=abc")).toBe(false);
+      expect(redirects.isHomeInvitationUrl("vantahome://join-home")).toBe(false);
+    });
+  });
+
+  test.each([
+    "vantahome-preview:///auth-callback?code=abc",
+    "vantahome-preview://auth-callback/other?code=abc",
+    "vantahome-preview://auth-callback:123?code=abc",
+    "vantahome-preview://user:password@auth-callback?code=abc",
+    "vantahome-preview://auth-callback?code=one#code=two",
+  ])("keeps canonical callback and duplicate-parameter checks in preview: %s", (url) => {
+    process.env.EXPO_PUBLIC_APP_VARIANT = "preview";
+    jest.isolateModules(() => {
+      const redirects: typeof import("./authRedirects") = require("./authRedirects");
+      expect(redirects.getAuthRedirectParams(url)).toBeNull();
+    });
+  });
+
+  test("production does not consume preview callbacks", () => {
+    process.env.EXPO_PUBLIC_APP_VARIANT = "production";
+    jest.isolateModules(() => {
+      const redirects: typeof import("./authRedirects") = require("./authRedirects");
+      expect(redirects.isAuthCallbackUrl("vantahome-preview://auth-callback?code=abc")).toBe(false);
+      expect(redirects.isHomeInvitationUrl("vantahome-preview://join-home")).toBe(false);
+    });
+  });
+});

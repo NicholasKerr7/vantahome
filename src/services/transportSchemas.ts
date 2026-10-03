@@ -1,7 +1,7 @@
 import type { Device } from "../store/useHomeStore";
 
 export type DeviceStatePatch = Partial<
-  Omit<Device, "id" | "name" | "kind" | "roomId">
+  Omit<Device, "id" | "name" | "kind" | "roomId" | "modelDeviceId" | "simulationOnly">
 >;
 
 export type ParsedDeviceStateEvent = {
@@ -23,7 +23,8 @@ type ParsedTransportMessage =
     };
 
 const BLOCKED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-const IMMUTABLE_DEVICE_KEYS = new Set(["id", "name", "kind", "roomId"]);
+// Routing and simulation policy belong to the authorized registry, never device observations.
+const IMMUTABLE_DEVICE_KEYS = new Set(["id", "name", "kind", "roomId", "modelDeviceId", "simulationOnly"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);

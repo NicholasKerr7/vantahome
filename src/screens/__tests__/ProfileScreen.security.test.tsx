@@ -18,6 +18,7 @@ const mockFrom = jest.fn();
 const mockRespondInvite = jest.fn();
 const mockSyncMembership = jest.fn();
 const mockApplyMembership = jest.fn();
+const mockSetRooms = jest.fn();
 
 jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: require("react-native").View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock("../../services/supabaseClient", () => ({
@@ -35,7 +36,7 @@ jest.mock("../../services/membership", () => ({
   applyMembershipSnapshot: (...args: unknown[]) => mockApplyMembership(...args),
   syncMembershipFromSupabase: (...args: unknown[]) => mockSyncMembership(...args),
 }));
-jest.mock("../../services/roomMembers", () => ({ setRoomMembershipRemote: jest.fn() }));
+jest.mock("../../services/roomMembers", () => ({ setRoomMembershipRemote: (...args: unknown[]) => mockSetRooms(...args) }));
 jest.mock("../../services/memberPermissions", () => ({
   setMemberPermissionOverrideRemote: (...args: unknown[]) => mockSetPermission(...args),
 }));
@@ -111,6 +112,7 @@ describe("Profile household authorization and account isolation", () => {
     mockSyncMembership.mockReset().mockResolvedValue({ homeId: "invited-home" });
     mockApplyMembership.mockReset().mockReturnValue(true);
     mockConfirm.mockReset().mockResolvedValue(undefined);
+    mockSetRooms.mockReset().mockResolvedValue(undefined);
     mockSetPermission.mockReset().mockResolvedValue(undefined);
     mockGetSession.mockReset().mockResolvedValue({ data: { session: { access_token: "fixture-session" } } });
     mockDeleteResult.mockReset().mockResolvedValue({ data: { user_id: member.userId }, error: null });
@@ -268,7 +270,7 @@ describe("Profile household authorization and account isolation", () => {
     const ordinaryEditor = await openPermissions(member);
     expect(ordinaryEditor.props.disabled).toBe(false);
     await press(await permissionButton("Lights: Allow", ordinaryEditor));
-    expect(mockSetPermission).toHaveBeenCalledWith(member.userId, "light.control", true);
+    expect(mockSetPermission).toHaveBeenCalledWith(homeId, member.userId, "light.control", true, administrator.userId);
     await press(button("Done"));
     await press(button("Invite"));
     expect(roleButtons("Admin")).toHaveLength(0);
@@ -283,6 +285,45 @@ describe("Profile household authorization and account isolation", () => {
     await press(allow);
     expect(mockSetPermission).not.toHaveBeenCalled();
     expect((await permissionButton("Lights: Allow", ordinaryEditor)).props.disabled).toBe(false);
+  });
+
+  it("updates room grants only in the active home and after the server confirms", async () => {
+    const pending = deferred<void>();
+    mockSetRooms.mockReturnValue(pending.promise);
+    useHomeStore.setState({ household: useHomeStore.getState().household.map((item) => item.id === member.id ? { ...item, role: 'Guest' } : item) });
+    await mount();
+    await selectMember(member);
+    await press(button(`Room access for ${member.name}`));
+    await press(button('Living room'));
+    expect(mockSetRooms).toHaveBeenCalledWith(homeId, member.userId, [useHomeStore.getState().rooms[0].id]);
+    expect(useHomeStore.getState().roomMembers).toEqual([]);
+    expect(button('Living room').props.disabled).toBe(true);
+    await act(async () => { pending.resolve(); });
+    expect(useHomeStore.getState().roomMembers).toEqual([{ memberId: member.id, roomIds: [useHomeStore.getState().rooms[0].id] }]);
+  });
+
+  it("retains room grants if the server denies the replacement", async () => {
+    mockSetRooms.mockRejectedValue(new Error('Household administration required'));
+    useHomeStore.setState({ household: useHomeStore.getState().household.map((item) => item.id === member.id ? { ...item, role: 'Guest' } : item) });
+    await mount();
+    await selectMember(member);
+    await press(button(`Room access for ${member.name}`));
+    await press(button('Living room'));
+    expect(useHomeStore.getState().roomMembers).toEqual([]);
+    expect(alert).toHaveBeenCalledWith('Room access update failed', 'Household administration required');
+  });
+
+  it("does not apply a completed room grant to another account's household", async () => {
+    const pending = deferred<void>();
+    mockSetRooms.mockReturnValue(pending.promise);
+    useHomeStore.setState({ household: useHomeStore.getState().household.map((item) => item.id === member.id ? { ...item, role: 'Guest' } : item) });
+    await mount();
+    await selectMember(member);
+    await press(button(`Room access for ${member.name}`));
+    await press(button('Living room'));
+    act(() => { switchHousehold(); });
+    await act(async () => { pending.resolve(); });
+    expect(useHomeStore.getState().roomMembers).toEqual([]);
   });
 
   it("allows the owner to send an administrator invitation without creating accepted local membership", async () => {

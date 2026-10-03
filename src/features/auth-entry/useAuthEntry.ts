@@ -26,14 +26,14 @@ export function useAuthEntry({ initialMode = 'login', preview = false, onInvitat
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
-  const [providers, setProviders] = useState<AuthProviderAvailability>({ apple: false, google: false });
+  const [providers, setProviders] = useState<AuthProviderAvailability>({ apple: false, google: false, signupAllowed: false });
   const operation = useRef(false);
   const mounted = useRef(true);
   const configured = Boolean(supabase) && !preview;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && email.trim().length <= 320;
   const detailsValid = name.trim().length >= 2 && name.trim().length <= 120 && emailValid;
   const canSubmit = configured && !busy && emailValid && (
-    mode === 'recovery' || (mode === 'invite' ? isValidInvitationCode(code) : mode === 'owner' ? detailsValid && password.length >= 8 && password === confirm : password.length > 0)
+    mode === 'recovery' || (mode === 'invite' ? isValidInvitationCode(code) : mode === 'owner' ? providers.signupAllowed && detailsValid && password.length >= 8 && password === confirm : password.length > 0)
   );
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function useAuthEntry({ initialMode = 'login', preview = false, onInvitat
 
   /** Move between intentional entry paths without retaining passwords or invitation codes. */
   function chooseMode(next: EntryMode) {
-    if (operation.current) return;
+    if (operation.current || (next === 'owner' && !providers.signupAllowed)) return;
     setMode(next);
     setOwnerPasswordStep(false);
     setPassword(''); setConfirm(''); setCode(''); setNotice(null);
@@ -54,7 +54,7 @@ export function useAuthEntry({ initialMode = 'login', preview = false, onInvitat
 
   /** Validate local owner details before showing the password step; no account exists yet. */
   function continueOwnerSetup() {
-    if (detailsValid && !operation.current) setOwnerPasswordStep(true);
+    if (providers.signupAllowed && detailsValid && !operation.current) setOwnerPasswordStep(true);
   }
 
   /** Authenticate only the selected path; membership remains a separate server-verified decision. */

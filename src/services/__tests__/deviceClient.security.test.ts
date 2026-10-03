@@ -7,6 +7,22 @@ import {
 import { useHomeStore } from "../../store/useHomeStore";
 
 describe("device command security", () => {
+  test("virtual cloud devices cannot reach a transport or retry queue", async () => {
+    const devices = useHomeStore.getState().devices;
+    const transport = jest.fn();
+    const clear = deviceClient.setCommandTransport(transport);
+    useHomeStore.setState({ devices: devices.map((device) => device.id === 'd2' ? { ...device, simulationOnly: true } : device) });
+    try {
+      await expect(deviceClient.sendCommand({ op: 'toggle', deviceId: 'd2', on: true }))
+        .rejects.toMatchObject({ reason: 'simulation_only_device' });
+      expect(transport).not.toHaveBeenCalled();
+      expect(deviceClient.getRetryStatus().pending).toBe(0);
+    } finally {
+      clear();
+      useHomeStore.setState({ devices });
+    }
+  });
+
   afterEach(() => {
     deviceClient.resetSession();
     useHomeStore.getState().setActiveMember("m1");

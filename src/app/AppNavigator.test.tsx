@@ -10,6 +10,7 @@ const mockExchangeCode = jest.fn();
 const mockMembership = jest.fn();
 const mockNavigationMount = jest.fn();
 const mockModelHomeSyncMount = jest.fn();
+const mockModelHomeSyncUnmount = jest.fn();
 const mockFeedbackEnabled = jest.fn();
 const mockNeedsInvitationPasswordSetup = jest.fn();
 let mockSupabaseAvailable = true;
@@ -87,7 +88,10 @@ jest.mock("../features/three-d-home/ModelHomeSync", () => ({
   __esModule: true,
   /** Observe session remounts without starting model transport subscriptions. */
   default: () => {
-    require("react").useEffect(() => { mockModelHomeSyncMount(); }, []);
+    require("react").useEffect(() => {
+      mockModelHomeSyncMount();
+      return () => mockModelHomeSyncUnmount();
+    }, []);
     return null;
   },
 }));
@@ -294,6 +298,7 @@ describe("navigation session boundaries", () => {
     expect(mockFeedbackEnabled).not.toHaveBeenCalledWith(true);
     expect(mockMembership).not.toHaveBeenCalled();
     expect(mockNavigationMount).toHaveBeenCalled();
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
   });
 
   test('accounts with no membership enter the invitation gate without creating a household', async () => {
@@ -304,6 +309,7 @@ describe("navigation session boundaries", () => {
     expect(screen.queryByTestId('registered-route-Main')).toBeNull();
     expect(bootstrapHome).not.toHaveBeenCalled();
     expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
   });
 
   test('private routes are not mounted before membership verification finishes', async () => {
@@ -312,6 +318,25 @@ describe("navigation session boundaries", () => {
     await waitFor(() => expect(screen.getByText('Verifying your home…')).toBeTruthy());
     expect(screen.queryByTestId('registered-route-Main')).toBeNull();
     expect(screen.queryByTestId('registered-route-ThreeDHome')).toBeNull();
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+  });
+
+  test('authenticated virtual homes mount the model clock only after verification and remove it when access is revoked', async () => {
+    let finishMembership: (value: MembershipSyncResult) => void = () => {};
+    mockMembership.mockImplementationOnce(() => new Promise((resolve) => { finishMembership = resolve; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Verifying your home…')).toBeTruthy());
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+    const result = membershipFor('alice');
+    result.rooms = [{ id: 'alice-room', name: 'Grounds', modelRoomId: 'grounds' }];
+    result.devices = [{ id: 'alice-gate', name: 'Gate', kind: 'gate', roomId: 'alice-room', modelDeviceId: 'entry-gate', simulationOnly: true, isOn: false }];
+    await act(async () => { finishMembership(result); });
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(mockModelHomeSyncMount).toHaveBeenCalledTimes(1);
+    expect(useHomeStore.getState().devices[0].simulationOnly).toBe(true);
+    act(() => { useHomeStore.setState({ membershipReady: false, activeHomeId: null }); });
+    expect(mockModelHomeSyncUnmount).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
   });
 
   test('a canonical invitation link opens the inbox for an existing member without exchanging credentials', async () => {
@@ -343,6 +368,7 @@ describe("navigation session boundaries", () => {
     expect(useHomeStore.getState().membershipReady).toBe(true);
     expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
     expect(mockNavigationMount).toHaveBeenCalledTimes(mounts);
+    expect(mockModelHomeSyncUnmount).toHaveBeenCalledTimes(1);
   });
 
   test('unfinished invitation password setup resumes on launch before household access', async () => {
@@ -353,6 +379,7 @@ describe("navigation session boundaries", () => {
     expect(mockMembership).not.toHaveBeenCalled();
     expect(screen.queryByTestId('registered-route-Main')).toBeNull();
     expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
   });
 
   test('an unreadable invitation marker exposes credential setup rather than leaving startup blank', async () => {

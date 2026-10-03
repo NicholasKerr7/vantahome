@@ -4,9 +4,10 @@ import AuthScreen from '../AuthScreen';
 import { supabase } from '../../services/supabaseClient';
 import { beginAuthFlow, verifyInvitationCode } from '../../services/authFlow';
 import type { Session, User } from '@supabase/supabase-js';
+import { fetchAuthProviderAvailability } from '../../services/authProviderAvailability';
 
 jest.mock('../../components/CinematicSurface', () => ({ children }: { children: React.ReactNode }) => children);
-jest.mock('../../services/authProviderAvailability', () => ({ fetchAuthProviderAvailability: jest.fn(async () => ({ apple: false, google: false })) }));
+jest.mock('../../services/authProviderAvailability', () => ({ fetchAuthProviderAvailability: jest.fn() }));
 jest.mock('../../services/supabaseClient', () => ({ supabase: { auth: {
   signInWithPassword: jest.fn(), signUp: jest.fn(), resetPasswordForEmail: jest.fn(),
 } } }));
@@ -17,6 +18,7 @@ jest.mock('../../services/authFlow', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(fetchAuthProviderAvailability).mockResolvedValue({ apple: false, google: false, signupAllowed: false });
   const user: User = { id: 'test-account', aud: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '2026-10-03T00:00:00Z', email: 'person@example.com' };
   const session: Session = { access_token: 'test-access', refresh_token: 'test-refresh', token_type: 'bearer', expires_in: 3600, user };
   jest.mocked(supabase!.auth.signInWithPassword).mockResolvedValue({ data: { user, session }, error: null });
@@ -93,6 +95,7 @@ test('preview never performs authentication, email delivery or account creation'
 });
 
 test('owner enrollment validates details before a locally initiated signup', async () => {
+  jest.mocked(fetchAuthProviderAvailability).mockResolvedValue({ apple: false, google: false, signupAllowed: true });
   const screen = render(<AuthScreen />); await settle();
   fireEvent.press(screen.getByText('Set up a new home'));
   fireEvent.changeText(screen.getByLabelText('Your name'), 'Alex');
@@ -105,6 +108,23 @@ test('owner enrollment validates details before a locally initiated signup', asy
   expect(beginAuthFlow).toHaveBeenCalledWith('signup');
   expect(supabase!.auth.signUp).toHaveBeenCalledWith(expect.objectContaining({ email: 'owner@example.com', password: 'a-new-password' }));
   expect(screen.getByText(/Check your email to confirm your account/)).toBeTruthy();
+});
+
+test('invitation-only projects keep sign-in, invitation and recovery without advertising account creation', async () => {
+  const screen = render(<AuthScreen />); await settle();
+  expect(screen.queryByText('Set up a new home')).toBeNull();
+  expect(screen.queryByText('Create account')).toBeNull();
+  expect(screen.getByText(/Access is by invitation/)).toBeTruthy();
+  expect(screen.getByRole('tab', { name: 'Accept invitation' })).toBeTruthy();
+  expect(screen.getByText('Forgot password?')).toBeTruthy();
+  expect(supabase!.auth.signUp).not.toHaveBeenCalled();
+});
+
+test('account enrollment stays hidden while public settings are loading', async () => {
+  jest.mocked(fetchAuthProviderAvailability).mockReturnValue(new Promise(() => {}));
+  const screen = render(<AuthScreen />); await settle();
+  expect(screen.queryByText('Set up a new home')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy();
 });
 
 test('recovery sends a scoped callback and avoids claiming an email account exists', async () => {

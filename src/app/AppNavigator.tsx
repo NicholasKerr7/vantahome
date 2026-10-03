@@ -316,6 +316,10 @@ export default function AppNavigator() {
     hasSupabase: Boolean(supabase),
     hasSession: Boolean(session),
   });
+  // Shared background controls must obey the same credential and household gates
+  // as private navigation, including when a verified session is later revoked.
+  const homeReady = !passwordRecovery && !checkingMembership && !needsHomeAccess
+    && (authExperience === "authenticated" || authExperience === "demo");
   return (
     <View style={[styles.viewport, desktopPreview && styles.desktopViewport]}>
       <View
@@ -326,14 +330,9 @@ export default function AppNavigator() {
           checkingMembership ? "no-hide-descendants" : "auto"
         }
       >
-        <CommandFeedbackProvider
-          enabled={
-            !passwordRecovery && !checkingMembership && !needsHomeAccess &&
-            (authExperience === "authenticated" || authExperience === "demo")
-          }
-        >
+        <CommandFeedbackProvider enabled={homeReady}>
           <BottomSheetModalProvider>
-            {authExperience === 'demo' && <ModelHomeSync key={`model-home:${navigationScope}`} />}
+            {homeReady && <ModelHomeSync key={`model-home:${navigationScope}`} />}
             <NavigationContainer
               key={navigationScope}
               theme={{
