@@ -1,3 +1,4 @@
+import { FULL_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { DEVICES } from '../../../../packages/home-scene/src/data';
@@ -10,7 +11,7 @@ jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View 
 test('keeps quick actions separate from full controls and returns to the room directory', () => {
   const client = new SimulationControlClient();
   const toggle = jest.spyOn(client, 'toggle').mockImplementation(() => undefined);
-  const snapshot = { ...client.getSnapshot(), ready: true };
+  const snapshot = { ...client.getSnapshot(), ready: true, access: FULL_SCENE_ACCESS };
   const onSelect = jest.fn();
   const screen = render(<DeviceBrowser snapshot={snapshot} client={client} onSelect={onSelect} />);
   fireEvent(screen.getByTestId('device-browser-card-area'), 'layout', { nativeEvent: { layout: { width: 360, height: 440 } } });
@@ -41,7 +42,7 @@ test('prevents quick commands while saved controls are loading', () => {
 
 test('limits room counts and device choices to the route visibility scope', () => {
   const client = new SimulationControlClient();
-  const snapshot = { ...client.getSnapshot(), ready: true };
+  const snapshot = { ...client.getSnapshot(), ready: true, access: FULL_SCENE_ACCESS };
   const screen = render(<DeviceBrowser snapshot={snapshot} client={client} onSelect={jest.fn()} allowedDeviceIds={['living-light']} />);
   expect(screen.getByLabelText('Living room, 1 devices')).toBeTruthy();
   expect(screen.queryByLabelText(/Primary suite,/)).toBeNull();

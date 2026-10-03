@@ -4,6 +4,7 @@ import { createDefaultSimulationSnapshot, mergeSimulationChanges, parseSimulatio
 import { SimulationControlClient } from '../simulationControlClient';
 import { SimulationPersistence } from '../simulationPersistence';
 import { SimulationSession } from '../simulationSession';
+import { FULL_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
 import { readGasSetting } from '../../../../packages/home-scene/src/gasSimulation';
 
 /** Drain the hydration, ordered transport and coalesced disk-save queues. */
@@ -17,7 +18,7 @@ test('rebases rapid edits over older acknowledgements and rejects pre-hydration 
   client.setLevel('master-blinds', 33);
   expect(transport.handleMessage).toHaveBeenCalledTimes(1);
   const state = createDefaultSimulationSnapshot();
-  const envelope = { channel: 'vantahome-simulation', version: 1, type: 'snapshot' } as const;
+  const envelope = { channel: 'vantahome-simulation', version: 1, type: 'snapshot', access: FULL_SCENE_ACCESS } as const;
   deliver({ ...envelope, state });
   client.setLevel('master-blinds', 33);
   client.setLevel('master-blinds', 81);
@@ -37,7 +38,7 @@ test('keeps extra controls and a last-moment edit when the native inspector clos
   const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
   const storage = { getItem: jest.fn().mockResolvedValue(null), setItem: jest.fn().mockResolvedValue(undefined) };
   const persistence = new SimulationPersistence(storage);
-  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'production' });
+  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' });
   const client = new SimulationControlClient(factory);
   client.connect();
   await settle();
@@ -61,7 +62,7 @@ test('keeps extra controls and a last-moment edit when the native inspector clos
 test('disables controls immediately when account identity changes', async () => {
   const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
   const persistence = new SimulationPersistence({ getItem: async () => null, setItem: async () => undefined });
-  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'production' }));
+  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' }));
   client.connect();
   await settle();
   store.setState({ accountUserId: 'another-account' });
@@ -74,7 +75,7 @@ test('disables controls immediately when account identity changes', async () => 
 test('keeps linked gas actions coherent across optimistic updates, acknowledgement, and reopening', async () => {
   const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
   const persistence = new SimulationPersistence({ getItem: async () => null, setItem: async () => undefined });
-  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'production' });
+  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' });
   const client = new SimulationControlClient(factory);
   client.connect();
   await settle();
@@ -115,7 +116,7 @@ test('synchronizes fire acknowledgment/reset and foreground gate timing across t
   const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
   const storage = { getItem: jest.fn().mockResolvedValue(null), setItem: jest.fn().mockResolvedValue(undefined) };
   const persistence = new SimulationPersistence(storage);
-  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'production' });
+  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' });
   const clock = new SimulationControlClient(factory);
   const controls = new SimulationControlClient(factory);
   clock.connect(); controls.connect();
@@ -147,4 +148,29 @@ test('synchronizes fire acknowledgment/reset and foreground gate timing across t
   expect(controls.getSnapshot().state.deviceStates['entry-gate'].settings?.gateEmergencyHold).toBe(true);
   expect(store.getState().devices).toEqual([]);
   controls.dispose(); clock.dispose();
+});
+
+test.each([
+  { deviceId: 'family-smoke', roomIds: ['family'], actionId: 'smoke-test-alarm' },
+  { deviceId: 'kitchen-gas-leak', roomIds: ['kitchen'], actionId: 'gas-leak-simulate-leak' },
+])('rejects $deviceId collateral safety effects before publishing or sending a partial grant', ({ deviceId, roomIds, actionId }) => {
+  let deliver!: (message: SimulationSnapshotMessage) => void;
+  const transport = { handleMessage: jest.fn((_input: unknown) => true), dispose: jest.fn() };
+  const client = new SimulationControlClient((receive) => { deliver = receive; return transport; });
+  client.connect();
+  deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: createDefaultSimulationSnapshot(),
+    access: { fullHome: false, roomIds, deviceIds: [deviceId], controllableDeviceIds: [deviceId] } });
+  const before = client.getSnapshot();
+  const listener = jest.fn();
+  const unsubscribe = client.subscribe(listener);
+
+  client.runAction(deviceId, actionId);
+
+  expect(client.getSnapshot()).toBe(before);
+  expect(listener).not.toHaveBeenCalled();
+  expect(transport.handleMessage).toHaveBeenCalledTimes(1);
+  expect(transport.handleMessage).toHaveBeenCalledWith({ channel: 'vantahome-simulation', version: 1, type: 'request' });
+  unsubscribe();
+  client.dispose();
+  expect(transport.dispose).toHaveBeenCalledTimes(1);
 });

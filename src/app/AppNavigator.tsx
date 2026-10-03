@@ -5,7 +5,7 @@ import {
   DefaultTheme,
   type NavigatorScreenParams,
 } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import type { Session } from "@supabase/supabase-js";
 import AuthScreen from "../screens/AuthScreen";
@@ -43,6 +43,7 @@ import ModelHomeSync from '../features/three-d-home/ModelHomeSync';
 import HomeAccessScreen from '../features/home-access/HomeAccessScreen';
 import { isHomeInvitationUrl } from '../config/authRedirects';
 import { signOutAccount } from '../features/account/accountSession';
+import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
 
 /**
  * Root stack for the app.
@@ -76,8 +77,9 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 /** Defer provider setup and browser-auth code until integrations are opened. */
-function loadIntegrationsScreen() {
-  return require('../screens/IntegrationsScreen').default as typeof import('../screens/IntegrationsScreen').default;
+function IntegrationsRoute(props: NativeStackScreenProps<RootStackParamList, 'Integrations'>) {
+  const Screen = require('../screens/IntegrationsScreen').default as typeof import('../screens/IntegrationsScreen').default;
+  return <HomeDestinationGuard destination="integrations"><Screen {...props} /></HomeDestinationGuard>;
 }
 
 export default function AppNavigator() {
@@ -379,31 +381,27 @@ export default function AppNavigator() {
                       component={OnboardingScreen}
                     />
                     <Stack.Screen name="ThreeDHome" getComponent={loadThreeDHomeScreen} />
-                    <Stack.Screen name="Integrations" getComponent={loadIntegrationsScreen} />
-                    <Stack.Screen name="Room" component={RoomScreen} />
+                    <Stack.Screen name="Integrations" component={IntegrationsRoute} />
+                    <Stack.Screen name="Room">{(props) => <HomeDestinationGuard destination="rooms"><RoomScreen {...props} /></HomeDestinationGuard>}</Stack.Screen>
                     <Stack.Screen
                       name="DeviceDetail"
                       component={DeviceDetailRoute}
                     />
                     <Stack.Screen
                       name="Notifications"
-                      component={NotificationsScreen}
-                    />
+                    >{() => <HomeDestinationGuard destination="notifications"><NotificationsScreen /></HomeDestinationGuard>}</Stack.Screen>
                     <Stack.Screen name="Profile" component={ProfileScreen} />
                     <Stack.Screen
                       name="ManageRooms"
-                      component={ManageRoomsScreen}
-                    />
-                    <Stack.Screen name="Cameras" component={CamerasScreen} />
+                    >{(props) => <HomeDestinationGuard destination="rooms"><ManageRoomsScreen {...props} /></HomeDestinationGuard>}</Stack.Screen>
+                    <Stack.Screen name="Cameras">{(props) => <HomeDestinationGuard destination="cameras"><CamerasScreen {...props} /></HomeDestinationGuard>}</Stack.Screen>
                     <Stack.Screen
                       name="CameraViewer"
-                      component={CameraViewerScreen}
-                    />
-                    <Stack.Screen name="AuditLog" component={AuditLogScreen} />
+                    >{(props) => <HomeDestinationGuard destination="cameras"><CameraViewerScreen {...props} /></HomeDestinationGuard>}</Stack.Screen>
+                    <Stack.Screen name="AuditLog">{(props) => <HomeDestinationGuard destination="audit"><AuditLogScreen {...props} /></HomeDestinationGuard>}</Stack.Screen>
                     <Stack.Screen
                       name="AutomationBuilder"
-                      component={AutomationBuilderScreen}
-                    />
+                    >{(props) => <HomeDestinationGuard destination="automations"><AutomationBuilderScreen {...props} /></HomeDestinationGuard>}</Stack.Screen>
                   </>
                 ) : (
                   <Stack.Screen name="Auth">

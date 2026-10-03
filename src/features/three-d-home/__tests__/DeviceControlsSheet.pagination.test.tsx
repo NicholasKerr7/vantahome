@@ -1,3 +1,4 @@
+import { FULL_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
 import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
@@ -26,7 +27,7 @@ function renderControls(deviceId: string) {
   const runAction = jest.spyOn(client, 'runAction').mockImplementation(() => undefined);
   const setSetting = jest.spyOn(client, 'setSetting').mockImplementation(() => undefined);
   const onClose = jest.fn();
-  const props = { deviceId, client, snapshot: { ...client.getSnapshot(), ready: true }, motionAllowed: false, onClose, onSelect: jest.fn() };
+  const props = { deviceId, client, snapshot: { ...client.getSnapshot(), ready: true, access: FULL_SCENE_ACCESS }, motionAllowed: false, onClose, onSelect: jest.fn() };
   const screen = render(<DeviceControlsSheet {...props} />);
   return { screen, props, runAction, setSetting, onClose };
 }

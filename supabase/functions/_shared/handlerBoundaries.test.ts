@@ -241,6 +241,32 @@ describe("invitation recipient binding", () => {
     expect((await handlers["home-invite"](inviteRequest("member"))).status).toBe(200);
   });
 
+  test.each(["guest", "tenant", "member"])("a %s cannot invite even with an explicit invitation grant", async (role) => {
+    mockCaller.from.mockImplementation(() => queryResult({ home_id: homeId, role }));
+    mockCaller.rpc.mockResolvedValue({ data: true, error: null });
+    expect((await handlers["home-invite"](inviteRequest())).status).toBe(403);
+    expect(mockAdmin.auth.admin.inviteUserByEmail).not.toHaveBeenCalled();
+    expect(mockInviteUpsert).not.toHaveBeenCalled();
+  });
+
+  test("checks the complete room scope before sending a guest invitation", async () => {
+    const request = () => new Request("https://edge.example.test/home-invite", {
+      method: "POST", body: JSON.stringify({ email: "intended@example.test", role: "guest", roomIds: [deviceId] }),
+    });
+    expect((await handlers["home-invite"](request())).status).toBe(400);
+    expect(mockAdmin.auth.admin.inviteUserByEmail).not.toHaveBeenCalled();
+    mockAdmin.from.mockImplementation((table: string) => {
+      if (table === "home_invites") return { upsert: mockInviteUpsert };
+      return queryResult(table === "rooms" ? [{ id: deviceId }] : null);
+    });
+    const accessExpiresAt = new Date(Date.now() + 3600000).toISOString();
+    const response = await handlers["home-invite"](new Request("https://edge.example.test/home-invite", {
+      method: "POST", body: JSON.stringify({ email: "intended@example.test", role: "guest", roomIds: [deviceId], accessExpiresAt }),
+    }));
+    expect(response.status).toBe(200);
+    expect(mockInviteUpsert).toHaveBeenCalledWith(expect.objectContaining({ room_ids: [deviceId], access_expires_at: accessExpiresAt }));
+  });
+
   test("allows the canonical owner to invite administrators", async () => {
     expect((await handlers["home-invite"](inviteRequest("admin"))).status).toBe(200);
     expect(mockInviteUpsert).toHaveBeenCalledWith(expect.objectContaining({ role: "admin" }));

@@ -50,18 +50,20 @@ export function ProfileField({
 /** Use the same touch-sized choice treatment for roles, units, and room access. */
 export function ProfileChoice({
   label,
+  accessibilityLabel,
   selected,
   disabled,
   onPress,
 }: {
   label: string;
+  accessibilityLabel?: string;
   selected: boolean;
   disabled?: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
       onPress={onPress}

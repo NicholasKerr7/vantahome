@@ -1,6 +1,7 @@
 import type { DeviceCommand } from "../services/deviceClient";
 import { useHomeStore } from "../store/useHomeStore";
 import { authorizeDeviceCommand } from "./permissions";
+import { hasCurrentMembershipAccess } from "./guestAccess";
 
 export function authorizeLocalDeviceCommand(command: DeviceCommand) {
   const state = useHomeStore.getState();
@@ -20,7 +21,7 @@ export function authorizeLocalDeviceCommand(command: DeviceCommand) {
   const member = state.household.find(
     (candidate) => candidate.id === state.activeMemberId,
   );
-  if (!member) return { allowed: false, reason: "member_not_found" } as const;
+  if (!member || !hasCurrentMembershipAccess(member)) return { allowed: false, reason: "member_not_found" } as const;
 
   const fullHomeAccess = ["Owner", "Admin", "Member"].includes(member.role);
   const roomMembership = state.roomMembers.find(

@@ -5,16 +5,17 @@ import { advanceSafetySimulation, pauseSafetySimulation } from '../../../package
 import { acknowledgeFireIncident, clearSimulatedFireSources, resetFireIncident } from '../../../packages/home-scene/src/fireSafetySimulation';
 import type { DeviceStates } from '../../../packages/home-scene/src/simulationTypes';
 import type { DeviceState, SettingValue } from '../../../packages/home-scene/src/simulationTypes';
+import { EMPTY_SCENE_ACCESS, type SceneAccess } from '../../../packages/home-scene/src/sceneAccess';
 import { SimulationSession } from './simulationSession';
 import type { SimulationSaveStatus } from './simulationPersistence';
 
 type Session = Pick<SimulationSession, 'handleMessage' | 'dispose'>;
 type SessionFactory = (deliver: (message: SimulationSnapshotMessage) => void, status: (status: SimulationSaveStatus) => void) => Session;
-export type ControlSnapshot = { state: SimulationSnapshot; ready: boolean; status: SimulationSaveStatus };
+export type ControlSnapshot = { state: SimulationSnapshot; ready: boolean; status: SimulationSaveStatus; access?: SceneAccess };
 
 /** A renderer-independent, optimistic client for the existing local simulation bridge. */
 export class SimulationControlClient {
-  private value: ControlSnapshot = { state: createDefaultSimulationSnapshot(), ready: false, status: 'saving' };
+  private value: ControlSnapshot = { state: createDefaultSimulationSnapshot(), ready: false, status: 'saving', access: EMPTY_SCENE_ACCESS };
   private canonical = this.value.state;
   private session: Session | null = null;
   private nextRequest = 0;
@@ -100,12 +101,14 @@ export class SimulationControlClient {
   /** Rebase later slider edits over older acknowledgements instead of visibly rolling them back. */
   private receive = (message: SimulationSnapshotMessage): void => {
     this.canonical = message.state;
+    const access = message.access ?? EMPTY_SCENE_ACCESS;
+    if (JSON.stringify(access) !== JSON.stringify(this.value.access)) this.pending.clear();
     if (message.acknowledgedRequestId !== undefined) {
       for (const id of this.pending.keys()) if (id <= message.acknowledgedRequestId) this.pending.delete(id);
     }
     let state = this.canonical;
     for (const changes of this.pending.values()) state = mergeSimulationChanges(state, changes);
-    this.publish({ ...this.value, state, ready: true });
+    this.publish({ ...this.value, state, access, ready: true });
     if (this.closed && !this.pending.size) { this.session?.dispose(); this.session = null; }
   };
 
@@ -125,9 +128,14 @@ export class SimulationControlClient {
   /** Submit bounded local changes through the same bridge as the rendered model. */
   private commit(changes: SimulationChanges): void {
     if (this.closed || !this.value.ready || !this.session || !changes.deviceStates || !Object.keys(changes.deviceStates).length) return;
+    if (Object.keys(changes.deviceStates).some((id) => !this.value.access?.controllableDeviceIds.includes(id))) return;
+    const next = mergeSimulationChanges(this.value.state, changes);
+    // Cross-device safety effects must stay inside the grant before any optimistic state appears.
+    if (Object.keys(diffSimulationSnapshots(this.value.state, next).deviceStates ?? {})
+      .some((id) => !this.value.access?.controllableDeviceIds.includes(id))) return;
     const requestId = ++this.nextRequest;
     this.pending.set(requestId, changes);
-    this.publish({ ...this.value, state: mergeSimulationChanges(this.value.state, changes) });
+    this.publish({ ...this.value, state: next });
     if (!this.session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId, changes })) {
       this.pending.delete(requestId);
       let state = this.canonical;

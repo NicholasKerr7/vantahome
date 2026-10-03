@@ -1,3 +1,4 @@
+import { validateInvitationAccess } from "../_shared/invitationAccess.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseClient } from "../_shared/supabaseClient.ts";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
@@ -63,15 +64,10 @@ Deno.serve(async (req) => {
       throw new RequestValidationError("role is invalid.");
     }
     const role = roleInput as InviteRole;
-    const roomIds = Array.isArray(body?.roomIds)
-      ? [...new Set(body.roomIds.filter(isUuid))]
-      : [];
+    const { roomIds, accessExpiresAt } = validateInvitationAccess(role, body.roomIds, body.accessExpiresAt);
 
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       throw new RequestValidationError("email is invalid.");
-    }
-    if (Array.isArray(body.roomIds) && roomIds.length !== body.roomIds.length) {
-      throw new RequestValidationError("roomIds contains an invalid identifier.");
     }
 
     let membershipQuery = supabase
@@ -89,6 +85,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Home not found." }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Invitation grants cannot let a room-limited member create broader household access.
+    if (!["owner", "admin"].includes(membership.role)) {
+      return new Response(JSON.stringify({ error: "Household administration is required to invite members." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -124,21 +127,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (["guest", "tenant"].includes(role) && roomIds.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Guests and tenants need room access." }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    // Validate every selected room before sending an email or recording an invitation.
+    const admin = getSupabaseAdmin();
+    if (roomIds.length) {
+      const { data: selectedRooms, error: roomError } = await admin.from("rooms")
+        .select("id").eq("home_id", membership.home_id).in("id", roomIds);
+      if (roomError || selectedRooms?.length !== roomIds.length) {
+        throw new RequestValidationError("One or more selected rooms are unavailable in this home.");
+      }
     }
 
     // Only trusted deployment configuration controls the nonsecret email link.
     const invitationRedirect = getHomeInvitationRedirect(
       Deno.env.get("VANTAHOME_INVITE_REDIRECT_URL"),
     );
-    const admin = getSupabaseAdmin();
     const { data: inviteData, error: inviteError } =
       await admin.auth.admin.inviteUserByEmail(email, {
         data: name ? { name } : undefined,
@@ -170,18 +172,14 @@ Deno.serve(async (req) => {
     }
     const { data: existingMember } = await admin
       .from("home_members")
-      .select("user_id, role")
+      .select("user_id, role, access_expires_at")
       .eq("home_id", membership.home_id)
       .eq("user_id", invitedUserId)
       .limit(1)
       .maybeSingle();
-    if (!existingMember) {
-      const { data: rooms } = await admin
-        .from("rooms")
-        .select("id")
-        .eq("home_id", membership.home_id)
-        .in("id", roomIds);
-      const validRoomIds = rooms?.map((r) => r.id) ?? [];
+    const hasExistingAccess = existingMember && (existingMember.role !== "guest" ||
+      !existingMember.access_expires_at || Date.parse(existingMember.access_expires_at) > Date.now());
+    if (!hasExistingAccess) {
       const { error: inviteRecordError } = await admin
         .from("home_invites")
         .upsert({
@@ -189,7 +187,8 @@ Deno.serve(async (req) => {
           email,
           invited_user_id: invitedUserId || null,
           role,
-          room_ids: validRoomIds,
+          room_ids: roomIds,
+          access_expires_at: accessExpiresAt,
           status: "pending",
         });
       if (inviteRecordError) {
@@ -212,13 +211,13 @@ Deno.serve(async (req) => {
           name: name || inviteData?.user?.user_metadata?.name || email,
           role,
         },
-        status: existingMember ? "already_member" : "invited",
-        delivery: existingMember ? "none" : inviteError ? "in_app" : "email_code",
+        status: hasExistingAccess ? "already_member" : "invited",
+        delivery: hasExistingAccess ? "none" : inviteError ? "in_app" : "email_code",
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }),
-      existingMember ? "already_member" : "invited",
+      hasExistingAccess ? "already_member" : "invited",
       rateLimit,
     );
   } catch (err) {

@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -43,7 +44,7 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
       ),
     [activeMember?.id, allPermissionOverrides],
   );
-  const rooms = useHomeStore(selectVisibleRooms);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
   const canViewCamera = Boolean(
     activeMember &&
     roleHasPermission(activeMember.role, "device.view", permissionOverrides) &&

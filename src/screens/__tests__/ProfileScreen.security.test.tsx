@@ -191,6 +191,13 @@ describe("Profile household authorization and account isolation", () => {
       inputs.find((node) => node.props.accessibilityLabel === "New member email")!.props.onChangeText("invitee@example.test");
     });
   }
+  /** Existing invite scenarios deliberately choose the test room before submitting. */
+  async function reviewInvitation() {
+    if (button("Review invitation access")) await press(button("Review invitation access"));
+    const roomChoice = button("Invite access to Living room");
+    if (roomChoice) await press(roomChoice);
+    if (button("Review invitation")) await press(button("Review invitation"));
+  }
   function switchHousehold() {
     const nextOwner = { ...owner, id: "next-owner", userId: "10000000-0000-4000-8000-000000000005" };
     const nextMembers = [nextOwner, { ...member, name: "Different home member" }];
@@ -284,6 +291,7 @@ describe("Profile household authorization and account isolation", () => {
     await fillInvitation();
     expect(roleButtons("Admin")).toHaveLength(1);
     await press(roleButtons("Admin")[0]);
+    await reviewInvitation();
     await press(button("Invite member"));
     expect(mockInvite).toHaveBeenCalledWith(
       expect.objectContaining({ email: "invitee@example.test", role: "admin" }),
@@ -293,11 +301,50 @@ describe("Profile household authorization and account isolation", () => {
     expect(alert).toHaveBeenCalledWith("Invitation ready", expect.stringContaining("sign in and open People"));
   });
 
+  it("requires deliberately selected rooms and sends the reviewed guest deadline", async () => {
+    useHomeStore.setState({ rooms: [
+      { id: "30000000-0000-4000-8000-000000000001", name: "Living room" },
+      { id: "30000000-0000-4000-8000-000000000002", name: "Guest bedroom" },
+    ] });
+    await mount();
+    await fillInvitation();
+    await press(button("Review invitation access"));
+    expect(button("Review invitation").props.disabled).toBe(true);
+    expect(button("Invite member")).toBeUndefined();
+    await press(button("Review invitation"));
+    expect(mockInvite).not.toHaveBeenCalled();
+    await press(button("Invite access to Guest bedroom"));
+    expect(screenRoot().findAllByType(Text).some((node) => node.props.children === "1 room selected")).toBe(true);
+    await press(button("Review invitation"));
+    expect(button("Invite access to Guest bedroom")).toBeUndefined();
+    await press(button("Guest access: 24 hours"));
+    expect(button("Invite member").props.disabled).toBe(false);
+    const before = Date.now();
+    await press(button("Invite member"));
+    const payload = mockInvite.mock.calls[0][0];
+    expect(payload.roomIds).toEqual(["30000000-0000-4000-8000-000000000002"]);
+    expect(Date.parse(payload.accessExpiresAt)).toBeGreaterThanOrEqual(before + 86400000);
+    expect(Date.parse(payload.accessExpiresAt)).toBeLessThanOrEqual(Date.now() + 86400000);
+  });
+
+  it("rechecks invitation privileges after protected confirmation", async () => {
+    const confirmation = deferred<void>();
+    mockConfirm.mockReturnValueOnce(confirmation.promise);
+    await mount();
+    await fillInvitation();
+    await reviewInvitation();
+    await press(button("Invite member"));
+    act(() => { useHomeStore.setState({ household: [{ ...owner, role: "Guest" }] }); });
+    await act(async () => { confirmation.resolve(); });
+    expect(mockInvite).not.toHaveBeenCalled();
+  });
+
   it("keeps rejected cloud invitations out of local household membership", async () => {
     mockInvite.mockRejectedValueOnce(new Error("Invitation refused"));
     await mount();
     const initial = useHomeStore.getState().household;
     await fillInvitation();
+    await reviewInvitation();
     await press(button("Invite member"));
     expect(mockInvite).toHaveBeenCalledTimes(1);
     expect(useHomeStore.getState().household).toEqual(initial);
@@ -309,6 +356,7 @@ describe("Profile household authorization and account isolation", () => {
     await mount();
     const initial = useHomeStore.getState().household;
     await fillInvitation();
+    await reviewInvitation();
     await press(button("Invite member"));
     expect(mockInvite).not.toHaveBeenCalled();
     expect(useHomeStore.getState().household).toEqual(initial);
@@ -359,6 +407,7 @@ describe("Profile household authorization and account isolation", () => {
     mockInvite.mockReturnValueOnce(invitation.promise);
     await mount();
     await fillInvitation();
+    await reviewInvitation();
     await press(button("Invite member"));
     expect(mockInvite).toHaveBeenCalledTimes(1);
     let nextMembers: HouseholdMember[] = [];

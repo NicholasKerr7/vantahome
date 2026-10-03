@@ -1,5 +1,5 @@
 import { createStore } from 'zustand/vanilla';
-import { useHomeStore, type HomeState } from '../../store/useHomeStore';
+import { useHomeStore, type HomeState, type HouseholdMember } from '../../store/useHomeStore';
 import { SimulationPersistence } from '../three-d-home/simulationPersistence';
 import { SimulationSession } from '../three-d-home/simulationSession';
 import { SimulationControlClient } from '../three-d-home/simulationControlClient';
@@ -8,6 +8,8 @@ import { parseHomeVoiceCommand } from './voiceCommandParser';
 import { DEVICES } from '../../../packages/home-scene/src/data';
 import { FIRE_PREVIEW_LIGHT_IDS } from '../../../packages/home-scene/src/safetySimulation';
 import { getFireIncident } from '../../../packages/home-scene/src/fireSafetySimulation';
+import { createDefaultSimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
+import { modelSimulationScope } from '../three-d-home/modelSceneAccess';
 
 const lightIds = DEVICES.filter((device) => device.kind === 'light').map((device) => device.id);
 
@@ -44,7 +46,7 @@ async function settle(): Promise<void> { for (let index = 0; index < 24; index +
 test('voice uses shared simulation reducers and the active scene receives the same saved result', async () => {
   const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
   const persistence = new SimulationPersistence({ getItem: async () => null, setItem: async () => undefined });
-  const factory = (deliver: ConstructorParameters<typeof SimulationSession>[0], status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'production' });
+  const factory = (deliver: ConstructorParameters<typeof SimulationSession>[0], status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' });
   const voice = new SimulationControlClient(factory); const scene = new SimulationControlClient(factory);
   expect(executeVoiceCommand(voice, { type: 'power', deviceIds: ['master-light'], on: false })).toEqual({ status: 'reconnecting' });
   voice.connect(); scene.connect(); await settle();
@@ -129,6 +131,88 @@ test('scope changes retain reconnect feedback and do not execute an all-lights c
   const before = voice.getSnapshot().state;
   store.setState({ accountUserId: 'another-account' });
   expect(allLightsOff(voice)).toEqual({ status: 'reconnecting' });
-  expect(voice.getSnapshot().state).toBe(before);
+  expect(voice.getSnapshot().access?.roomIds).toEqual([]);
+  expect(voice.getSnapshot().state).not.toBe(before);
+  expect(voice.getSnapshot().state.deviceStates['living-light']).toEqual({ on: false, level: 0 });
   voice.dispose(); scene.dispose();
+});
+
+/** Bind cloud identifiers explicitly and seed simulation lights independently of physical device readings. */
+async function assignedBedroom(role: HouseholdMember['role']) {
+  const bedroomLights = DEVICES.filter((device) => device.roomId === 'master' && device.kind === 'light');
+  const initial = createDefaultSimulationSnapshot();
+  for (const id of lightIds) initial.deviceStates[id] = { ...initial.deviceStates[id], on: true, level: 70 };
+  const store = createStore<HomeState>(() => ({
+    ...useHomeStore.getState(), accountUserId: 'room-assignee', authenticatedUserId: 'room-assignee',
+    accountHomeId: 'cloud-home', activeHomeId: 'cloud-home', sessionEpoch: 1, membershipReady: true,
+    household: [{ id: 'room-assignee', name: 'Room assignee', role, status: 'home' }], activeMemberId: 'room-assignee',
+    rooms: [{ id: 'cloud-bedroom', name: 'Assigned bedroom', modelRoomId: 'master' }, { id: 'cloud-family', name: 'Private family room', modelRoomId: 'family' }],
+    roomMembers: [{ memberId: 'room-assignee', roomIds: ['cloud-bedroom'] }], memberPermissionOverrides: [],
+    devices: [
+      ...bedroomLights.map((device, index) => ({ id: `cloud-light-${index}`, name: device.name, roomId: 'cloud-bedroom', modelDeviceId: device.id, kind: 'light' as const, isOn: false })),
+      { id: 'cloud-blinds', name: 'Bedroom blinds', roomId: 'cloud-bedroom', modelDeviceId: 'master-blinds', kind: 'blinds', isOn: false },
+      { id: 'cloud-private-light', name: 'Family light', roomId: 'cloud-family', modelDeviceId: 'family-light', kind: 'light', isOn: false },
+    ],
+  }));
+  const storage = { getItem: async () => JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: initial }), setItem: jest.fn(async () => undefined) };
+  const persistence = new SimulationPersistence(storage);
+  const voice = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'production' }));
+  voice.connect(); await settle();
+  return { store, storage, persistence, voice, scope: modelSimulationScope(store.getState(), false), bedroomLightIds: bedroomLights.map((device) => device.id) };
+}
+
+test.each(['Guest', 'Tenant'] as const)('all-lights voice requests for a bound %s report scope and change only assigned lights', async (role) => {
+  const { store, voice, persistence, scope, bedroomLightIds } = await assignedBedroom(role);
+  try {
+    const realDevices = store.getState().devices;
+    expect(voice.getSnapshot().access?.roomIds).toEqual(['master']);
+    expect(voice.getSnapshot().state.deviceStates['family-light']).toEqual({ on: false, level: 0 });
+    expect(allLightsOff(voice)).toEqual({ status: 'scoped' });
+    await settle();
+    const saved = await persistence.load(scope);
+    expect(bedroomLightIds.every((id) => saved.deviceStates[id].on === false)).toBe(true);
+    // Hidden placeholders already appear off to the client; they must never count as completed commands.
+    expect(lightIds.filter((id) => !bedroomLightIds.includes(id)).every((id) => saved.deviceStates[id].on === true)).toBe(true);
+    expect(store.getState().devices).toBe(realDevices);
+  } finally { voice.dispose(); }
+});
+
+test('a voice request targeting only a hidden light is denied even though its masked reading looks off', async () => {
+  const { voice, storage, persistence, scope } = await assignedBedroom('Guest');
+  try {
+    const setPower = jest.spyOn(voice, 'setPower');
+    expect(voice.getSnapshot().state.deviceStates['family-light'].on).toBe(false);
+    expect(executeVoiceCommand(voice, { type: 'power', deviceIds: ['family-light'], on: false })).toEqual({ status: 'denied' });
+    await settle();
+    expect(setPower).not.toHaveBeenCalled();
+    expect(storage.setItem).not.toHaveBeenCalled();
+    expect((await persistence.load(scope)).deviceStates['family-light'].on).toBe(true);
+  } finally { voice.dispose(); }
+});
+
+test('visible bedroom devices still require their action permission for voice control', async () => {
+  const { voice, storage } = await assignedBedroom('Guest');
+  try {
+    expect(voice.getSnapshot().access?.deviceIds).toContain('master-blinds');
+    expect(voice.getSnapshot().access?.controllableDeviceIds).not.toContain('master-blinds');
+    expect(executeVoiceCommand(voice, { type: 'position', deviceIds: ['master-blinds'], value: 100 })).toEqual({ status: 'denied' });
+    await settle();
+    expect(storage.setItem).not.toHaveBeenCalled();
+  } finally { voice.dispose(); }
+});
+
+test.each(['light grant', 'assigned room'] as const)('a revoked %s invalidates already-parsed voice targets before execution', async (revoked) => {
+  const { store, voice, storage, persistence, scope, bedroomLightIds } = await assignedBedroom('Tenant');
+  try {
+    const parsed = parseHomeVoiceCommand('turn all lights off');
+    if ('error' in parsed) throw new Error(parsed.error);
+    if (revoked === 'light grant') store.setState({ memberPermissionOverrides: [{ memberId: 'room-assignee', permission: 'light.control', allowed: false }] });
+    else store.setState({ roomMembers: [] });
+    expect(executeVoiceCommand(voice, parsed.command)).toEqual({ status: 'denied' });
+    await settle();
+    expect(storage.setItem).not.toHaveBeenCalled();
+    expect(bedroomLightIds.every((id) => !voice.getSnapshot().access?.controllableDeviceIds.includes(id))).toBe(true);
+    const saved = await persistence.load(scope);
+    expect(lightIds.every((id) => saved.deviceStates[id].on === true)).toBe(true);
+  } finally { voice.dispose(); }
 });

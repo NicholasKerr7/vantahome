@@ -1,3 +1,4 @@
+import { canViewSceneDevice } from './sceneAccess';
 import { getFireIncident } from './fireSafetySimulation';
 import { SafetyPreview, useSafetyPreviewClock } from './SafetyPreview';
 import { getModelUrl, isEmbeddedScene, reportSceneStatus, type ModelName } from './embeddedHost';
@@ -65,6 +66,7 @@ class SceneErrorBoundary extends Component<{ children: ReactNode; onRetry: () =>
 /** Show the home with persistent, accessible scene controls and loading feedback. */
 function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceId, onCloseFullControls, covered }: { environment: LiveEnvironment; reducedMotion: boolean; onFullControls: (id: DeviceId) => void; sheetDeviceId: DeviceId | null; onCloseFullControls: () => void; covered: boolean }): ReactNode {
   const viewportRef = useViewportManipulation();
+  const access = useHomeStore((state) => state.access);
   const showcase = useCinematicStore((state) => state.showcase);
   const setShowcase = useCinematicStore((state) => state.setShowcase);
   const orientationPaused = useOrientationPaused();
@@ -92,7 +94,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
   /** Select the dashboard device, or open quick controls when it is out of reach. */
   const openDeviceControls = useCallback((id: string) => {
     const device = getDevice(id);
-    if (!device) return;
+    if (!device || !canViewSceneDevice(useHomeStore.getState().access, id)) return;
     setShowcase(false);
     quickTrigger.current = device.id;
     selectHotspotDevice(device.id);
@@ -148,24 +150,28 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
   }, []);
   const room = getRoom(roomId);
   return <section ref={viewportRef} id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''} ${showcase ? 'is-cinematic' : ''}`} aria-label="Interactive furnished house preview">
-    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : `${floor.toUpperCase()} FLOOR`}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div><div className="viewport-camera-controls" role="group" aria-label="Camera controls"><ResetViewControl unavailable={orientationPaused || !ready} /><CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} /></div></div>
+    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : access.fullHome ? `${floor.toUpperCase()} FLOOR` : 'YOUR ROOM'}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div><div className="viewport-camera-controls" role="group" aria-label="Camera controls"><ResetViewControl unavailable={orientationPaused || !ready} />{access.fullHome && <CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} />}</div></div>
     <div className="scene-container">
       <SceneErrorBoundary key={attempt} onRetry={retryScene}>
-        <HouseScene daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
+        <HouseScene access={access} daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
         {!ready ? <SceneLoading /> : null}
       </SceneErrorBoundary>
     </div>
     {!orientationPaused && quickDeviceId ? <QuickDeviceControls deviceId={quickDeviceId} onClose={closeQuickControls} onFullControls={openFullControls} /> : null}
-    <div className="viewport-bottom"><span className="scene-instruction"><span className="mouse-indicator" />{view === 'immersive' ? 'Drag to look around · fixed viewpoint' : 'Drag to rotate · pinch to zoom · select a device'}</span><div className="view-controls" aria-label="House view"><button aria-pressed={view === 'exterior'} onClick={() => setView(view === 'exterior' ? floor : 'exterior')}><Home size={15} aria-hidden="true" /><span>Landscape</span></button><button aria-pressed={view === 'ground' || view === 'upper'} onClick={() => setView(floor)}><Layers3 size={15} aria-hidden="true" /><span>Floor plan</span></button><button aria-pressed={view === 'immersive'} onClick={() => setView(view === 'immersive' ? floor : 'immersive')}><MoveUpRight size={15} aria-hidden="true" /><span>{roomId === 'grounds' ? 'Gate view' : 'Immersive'}</span></button></div></div>
+    <div className="viewport-bottom"><span className="scene-instruction"><span className="mouse-indicator" />{view === 'immersive' ? 'Drag to look around · fixed viewpoint' : 'Drag to rotate · pinch to zoom · select a device'}</span>{access.fullHome && <div className="view-controls" aria-label="House view"><button aria-pressed={view === 'exterior'} onClick={() => setView(view === 'exterior' ? floor : 'exterior')}><Home size={15} aria-hidden="true" /><span>Landscape</span></button><button aria-pressed={view === 'ground' || view === 'upper'} onClick={() => setView(floor)}><Layers3 size={15} aria-hidden="true" /><span>Floor plan</span></button><button aria-pressed={view === 'immersive'} onClick={() => setView(view === 'immersive' ? floor : 'immersive')}><MoveUpRight size={15} aria-hidden="true" /><span>{roomId === 'grounds' ? 'Gate view' : 'Immersive'}</span></button></div>}</div>
   </section>;
 }
 
 /** Compose a fixed dashboard while keeping the scene and simulation state mounted. */
 export default function App(): ReactNode {
   const embedded = isEmbeddedScene();
+  const access = useHomeStore((state) => state.access);
   const hostSuspended = useHostPresentation();
   const { hydrated: simulationHydrated, syncError: simulationSyncError } = useSimulationBridge();
   useSafetyPreviewClock(!embedded && simulationHydrated);
+  useEffect(() => {
+    if (simulationHydrated && !access.roomIds.length) reportSceneStatus('ready');
+  }, [simulationHydrated, access.roomIds.length]);
   const prefersReduced = usePrefersReducedMotion();
   const environment = useLiveEnvironment();
   const lightingMode = useHomeStore((state) => state.lightingMode);
@@ -194,6 +200,7 @@ export default function App(): ReactNode {
 
   /** Remember the actual opening control so every device sheet can return focus. */
   const openFullControls = useCallback((id: DeviceId) => {
+    if (!canViewSceneDevice(useHomeStore.getState().access, id)) return;
     setShowcase(false);
     sheetTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     sheetHotspot.current = sheetTrigger.current?.closest('#quick-device-controls') ? id : null;
@@ -239,7 +246,15 @@ export default function App(): ReactNode {
     if (emergencyVisible) { setLibrary(null); setSheetDeviceId(null); setShowcase(false); }
   }, [emergencyVisible, setShowcase]);
 
+  useEffect(() => {
+    if (sheetDeviceId && !canViewSceneDevice(access, sheetDeviceId)) setSheetDeviceId(null);
+  }, [access, sheetDeviceId]);
+
   const graphicsCovered = hostSuspended || library !== null || sheetDeviceId !== null || emergencyVisible;
+  if (!access.roomIds.length) return <div className="scene-access-empty" role="status">
+    <h1>{simulationHydrated ? 'No rooms assigned' : 'Preparing your rooms'}</h1>
+    <p>{simulationHydrated ? 'Ask your household administrator to share a room with you.' : 'Checking your home access before showing the property.'}</p>
+  </div>;
   return <div data-rendering={graphicsCovered || orientationPaused || documentHidden ? 'paused' : 'active'} className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''}`}>
     <a className="skip-link" href="#house-preview">Skip to house controls</a>
     <DashboardHeader embedded={embedded} environment={environment} onSettings={() => setLibrary('settings')} onEnvironment={() => setLibrary('environment')} />

@@ -1,3 +1,4 @@
+import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useState } from 'react';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Grid2X2, SlidersHorizontal, type LucideIcon } from 'lucide-react';
 import { DEVICES, getDevice, getRoom, type DeviceDefinition, type DeviceId } from './data';
@@ -25,6 +26,7 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
   const Icon: LucideIcon = DEVICE_ICONS[device.kind];
   const action = primaryDeviceAction(device, current);
+  const controllable = useHomeStore((state) => canControlSceneDevice(state.access, device.id));
   const reading = deviceCardReading(device, current);
 
   return <section className="dashboard-selected-device device-focus-card" data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-labelledby="device-control-title">
@@ -38,12 +40,12 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
     <div className="device-focus-actions" data-inline-device-actions="">
       <div className="device-focus-face">
         <div className="device-focus-reading" data-long-reading={reading.value.length > 12} aria-live="polite"><strong>{reading.value}</strong><span>{reading.caption}</span></div>
-        <button type="button" className="dashboard-primary-action" role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(device.id)}>
+        <button type="button" className="dashboard-primary-action" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(device.id)}>
           <span>{action.label}</span>
           {action.isSwitch ? <span className="dashboard-switch-mark" aria-hidden="true"><span /></span> : null}
         </button>
       </div>
-      <PrimaryDeviceRange device={device} current={current} location="dashboard" />
+      {controllable ? <PrimaryDeviceRange device={device} current={current} location="dashboard" /> : <p className="device-hint">View only</p>}
       <button type="button" className="dashboard-full-controls device-focus-details" onClick={() => onFullControls(device.id)}><SlidersHorizontal size={14} aria-hidden="true" /><span>Full controls</span><ArrowUpRight size={14} aria-hidden="true" /></button>
     </div>
   </section>;
@@ -66,9 +68,10 @@ export function DashboardInspector({ onFullControls, onBrowseDevices }: Dashboar
   const roomId = useHomeStore((state) => state.roomId);
   const selectedId = useHomeStore((state) => state.selectedDevice);
   const room = getRoom(roomId);
-  const roomDevices = DEVICES.filter((device) => device.roomId === room.id);
+  const access = useHomeStore((state) => state.access);
+  const roomDevices = DEVICES.filter((device) => device.roomId === room.id && canViewSceneDevice(access, device.id));
   const selected = getDevice(selectedId);
-  const selectedDevice = selected?.roomId === room.id ? selected : undefined;
+  const selectedDevice = selected?.roomId === room.id && canViewSceneDevice(access, selected.id) ? selected : undefined;
   const selectionKey = `${room.id}:${selectedDevice?.id ?? ''}`;
   const selectedIndex = roomDevices.findIndex((device) => device.id === selectedDevice?.id);
   const selectedPage = Math.floor(Math.max(0, selectedIndex) / DEVICES_PER_PAGE);

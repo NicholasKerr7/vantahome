@@ -1,3 +1,4 @@
+import { FULL_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
 import React from "react";
 import { StyleSheet } from "react-native";
 import { act, fireEvent, render } from "@testing-library/react-native";
@@ -31,7 +32,7 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 const client = new SimulationControlClient();
-const snapshot = { ...client.getSnapshot(), ready: true };
+const snapshot = { ...client.getSnapshot(), ready: true, access: FULL_SCENE_ACCESS };
 
 /** Reflect an accepted quick action so the blur regression covers the visible state change. */
 function InteractiveSearch({ onSelect }: { onSelect: (id: string) => void }) {

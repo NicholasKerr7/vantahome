@@ -14,10 +14,10 @@ import { advanceCinematicOrbit, bindCinematicInterruptions, canPlayCinematic } f
 type CameraProps = Pick<
   HouseSceneProps,
   'view' | 'floor' | 'roomId' | 'reducedMotion'
-> & { suspended: boolean };
+> & { suspended: boolean; roomOnly?: boolean };
 
 /** Animate camera presets, then hand complete control back to the visitor. */
-export function CameraRig({ view, floor, roomId, reducedMotion, suspended }: CameraProps) {
+export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomOnly = false }: CameraProps) {
   const controls = useRef<OrbitControlsImpl>(null);
   const { camera, gl, size } = useThree();
   const destination = useRef(new Vector3(27, 23, 14));
@@ -113,7 +113,7 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended }: Cam
     } else {
       const bounds = getRoom(cameraRoomId).bounds;
       const distance = getOverviewDistanceScale(size.width, size.height);
-      const isOverview = cameraRoomId === 'living' || cameraRoomId === 'family';
+      const isOverview = !roomOnly && (cameraRoomId === 'living' || cameraRoomId === 'family');
       if (!isOverview && bounds) {
         // A fitted room plan keeps individual bedside/ceiling controls apart on phones.
         const centerX = (bounds[0] + bounds[1]) / 2,
@@ -152,6 +152,7 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended }: Cam
     cameraFloor,
     reducedMotion,
     cameraRoomId,
+    roomOnly,
     size.width,
     size.height,
     view,

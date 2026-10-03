@@ -27,7 +27,7 @@ const mockEnabled = jest.fn();
 jest.mock("../three-d-home/useSimulationControls", () => ({
   useSimulationControls: (enabled: boolean) => {
     mockEnabled(enabled);
-    return { ...mockClient.getSnapshot(), client: mockClient };
+    return { ...mockClient.getSnapshot(), ready: true, access: require('../../../packages/home-scene/src/sceneAccess').FULL_SCENE_ACCESS, client: mockClient };
   },
 }));
 const seed = useHomeStore.getState();

@@ -17,6 +17,7 @@ import {
 type HomeMemberRow = {
   user_id: string;
   role: string;
+  access_expires_at?: string | null;
 };
 
 type RoomMemberRow = {
@@ -26,6 +27,8 @@ type RoomMemberRow = {
 
 type RoomRow = {
   id: string;
+  name: string;
+  model_room_id?: string | null;
 };
 
 type DeviceRow = {
@@ -33,6 +36,7 @@ type DeviceRow = {
   name: string;
   kind: Device["kind"];
   room_id: string | null;
+  model_device_id?: string | null;
   device_state:
     | { state: unknown; updated_at: string }
     | Array<{ state: unknown; updated_at: string }>
@@ -87,7 +91,7 @@ export async function syncMembershipFromSupabase(
   if (expectedUserId && expectedUserId !== userId) return null;
   const { data: memberships, error: membershipError } = await supabase
     .from("home_members")
-    .select("home_id, role")
+    .select("home_id, role, access_expires_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
   if (membershipError) throw membershipError;
@@ -102,18 +106,18 @@ export async function syncMembershipFromSupabase(
 
   const { data: membersData, error: membersError } = await supabase
     .from("home_members")
-    .select("user_id, role")
+    .select("user_id, role, access_expires_at")
     .eq("home_id", membership.home_id);
 
   const { data: roomsData, error: roomsError } = await supabase
     .from("rooms")
-    .select("id, name")
+    .select("id, name, model_room_id")
     .eq("home_id", membership.home_id);
   if (membersError || roomsError) throw membersError ?? roomsError;
 
   const { data: devicesData, error: devicesError } = await supabase
     .from("devices")
-    .select("id, name, kind, room_id, device_state(state, updated_at)")
+    .select("id, name, kind, room_id, model_device_id, device_state(state, updated_at)")
     .eq("home_id", membership.home_id);
   if (devicesError) throw devicesError;
   const devices = ((devicesData ?? []) as unknown as DeviceRow[]).map((row) => {
@@ -122,6 +126,7 @@ export async function syncMembershipFromSupabase(
       name: row.name,
       kind: row.kind,
       roomId: row.room_id ?? "",
+      modelDeviceId: row.model_device_id,
       isOn: false,
     };
     const observation = Array.isArray(row.device_state)
@@ -164,6 +169,7 @@ export async function syncMembershipFromSupabase(
           ? (userData.user.user_metadata?.name ?? userData.user.email ?? "You")
           : "Member",
       role: mapRole(row.role),
+      accessExpiresAt: row.access_expires_at,
       status: "away",
     })) ?? [];
 
@@ -186,7 +192,7 @@ export async function syncMembershipFromSupabase(
 
   return {
     homeId: membership.home_id,
-    rooms: (roomsData ?? []) as Room[],
+    rooms: ((roomsData ?? []) as RoomRow[]).map((room) => ({ id: room.id, name: room.name, modelRoomId: room.model_room_id })),
     devices,
     household,
     roomMembers,
@@ -218,6 +224,7 @@ export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSe
         name: device.name,
         kind: device.kind,
         roomId: device.roomId,
+        modelDeviceId: device.modelDeviceId,
       };
     }
     return applyDeviceStatePatch(

@@ -390,6 +390,7 @@ function DeviceCard({
   compact: boolean;
 }) {
   const state = snapshot.state.deviceStates[device.id];
+  const controlDisabled = !snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id));
   const status = deviceStatus(device, state);
   const reading = deviceCardReading(device, state);
   if (compact)
@@ -410,10 +411,10 @@ function DeviceCard({
         <View style={styles.compactActions}>
           <Pressable
             accessibilityLabel={`${quickActionLabel(device, state)}: ${device.name}`}
-            disabled={!snapshot.ready}
-            accessibilityState={{ disabled: !snapshot.ready }}
+            disabled={controlDisabled}
+            accessibilityState={{ disabled: controlDisabled }}
             onPress={() => client.toggle(device.id)}
-            style={[styles.compactAction, !snapshot.ready && styles.disabled]}
+            style={[styles.compactAction, controlDisabled && styles.disabled]}
           >
             <Ionicons
               name="flash-outline"
@@ -457,7 +458,7 @@ function DeviceCard({
       onToggleFavorite={onToggleFavorite}
       active={state.on}
       quickActionLabel={quickActionLabel(device, state)}
-      disabled={!snapshot.ready}
+      disabled={controlDisabled}
       onOpen={() => onSelect(device.id)}
       onQuickAction={() => client.toggle(device.id)}
     />

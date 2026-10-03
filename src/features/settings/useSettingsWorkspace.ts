@@ -6,6 +6,8 @@ import { useCommandActivityLauncher } from "../../components/command-feedback/Co
 import { bootstrapHome } from "../../services/cloudRegistry";
 import { deviceClient, type ConnectionStatus } from "../../services/deviceClient";
 import { selectVisibleDevices, selectVisibleRooms, useHomeStore } from "../../store/useHomeStore";
+import type { HomeState } from "../../store/useHomeStore";
+import { selectHomeNavigationAccess } from "../home-shell/homeNavigationAccess";
 
 /** Subscribe to existing settings and delivery state without introducing another transport. */
 export function useSettingsWorkspace() {
@@ -16,7 +18,6 @@ export function useSettingsWorkspace() {
   const preferences = useHomeStore((state) => state.preferences);
   const setPreferences = useHomeStore((state) => state.setPreferences);
   const realtime = useHomeStore((state) => state.realtime);
-  const setRealtime = useHomeStore((state) => state.setRealtime);
   const commandActivity = useCommandActivityLauncher();
   const [connection, setConnection] = useState<ConnectionStatus>("disconnected");
   const [retry, setRetry] = useState<{ pending: number; nextAttemptAt?: number }>({ pending: 0 });
@@ -41,7 +42,7 @@ export function useSettingsWorkspace() {
 
   /** Keep completion feedback inside the account that requested setup. */
   async function initializeCloudHome() {
-    if (cloudRequest.current) return;
+    if (cloudRequest.current || !selectHomeNavigationAccess(useHomeStore.getState()).admin) return;
     cloudRequest.current = true;
     setCloudBusy(true);
     const scope = useHomeStore.getState();
@@ -58,6 +59,12 @@ export function useSettingsWorkspace() {
       cloudRequest.current = false;
       setCloudBusy(false);
     }
+  }
+
+  /** Recheck administrator access when a retained connection form callback is used. */
+  function setRealtime(patch: Partial<HomeState['realtime']>): void {
+    const current = useHomeStore.getState();
+    if (selectHomeNavigationAccess(current).admin) current.setRealtime(patch);
   }
 
   /** Open the configured support address only after an explicit feedback action. */

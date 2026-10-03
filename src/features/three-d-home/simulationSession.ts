@@ -4,13 +4,15 @@ import type { StoreApi } from 'zustand';
 import { runtimePolicy, type RuntimeMode } from '../../config/runtimeMode';
 import { useHomeStore, type HomeState } from '../../store/useHomeStore';
 import {
-  mergeSimulationChanges, parseSimulationRequest,
+  diffSimulationSnapshots, mergeSimulationChanges, parseSimulationRequest,
   type SimulationChanges, type SimulationSnapshot, type SimulationSnapshotMessage,
 } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { overlayDemoDevices, projectSimulationToDemo } from './demoDeviceMapping';
 import { simulationPersistence, type SimulationPersistence, type SimulationSaveStatus } from './simulationPersistence';
 import { parseSceneCatalogRequest, SCENE_CATALOG_CHANNEL, type SceneCatalogMessage, type SceneCatalogRequest } from '../../../packages/home-scene/src/sceneCatalogProtocol';
 import { canShareModelScenes, modelSceneCatalog } from './modelSceneCatalog';
+import { modelSimulationIdentity, modelSimulationScope, resolveModelSceneAccess, scopeSimulationSnapshot } from './modelSceneAccess';
+import { EMPTY_SCENE_ACCESS } from '../../../packages/home-scene/src/sceneAccess';
 
 type HomeStore = Pick<StoreApi<HomeState>, 'getState' | 'setState' | 'subscribe'>;
 type SessionOptions = { store?: HomeStore; persistence?: SimulationPersistence; mode?: RuntimeMode; onSceneCatalog?: (message: SceneCatalogMessage) => void };
@@ -21,15 +23,6 @@ export function canShareDemoDevices(state: HomeState, mode: RuntimeMode): boolea
   return mode === 'demo' && !state.accountUserId && !state.authenticatedUserId
     && !state.accountHomeId && !state.activeHomeId && !state.realtime.enabled
     && !state.realtime.useMqtt && member?.role === 'Owner';
-}
-
-/** Invalidate an open bridge synchronously when identity, home or transport scope changes. */
-function sessionIdentity(state: HomeState): string {
-  return JSON.stringify([
-    state.accountUserId, state.authenticatedUserId, state.accountHomeId, state.activeHomeId,
-    state.sessionEpoch, state.realtime.enabled, state.realtime.useMqtt, state.activeMemberId,
-    state.household.find((member) => member.id === state.activeMemberId)?.role,
-  ]);
 }
 
 /** Exchange only validated simulation snapshots; this class has no device-command transport. */
@@ -49,6 +42,7 @@ export class SimulationSession {
   private requested = false;
   private projecting = false;
   private lastRequestId = 0;
+  private expiryTimer: ReturnType<typeof setTimeout> | undefined;
   private unsubscribeStore: () => void;
   private unsubscribePersistence: () => void;
   private unsubscribeState: () => void;
@@ -65,10 +59,10 @@ export class SimulationSession {
     this.mode = options.mode ?? runtimePolicy.mode;
     this.deliverCatalog = options.onSceneCatalog;
     const home = this.store.getState();
-    this.identity = sessionIdentity(home);
+    this.identity = modelSimulationIdentity(home);
     this.sharedDemo = canShareDemoDevices(home, this.mode);
     // Account identifiers stay in the host's local storage key and never cross the frame boundary.
-    this.scope = this.sharedDemo ? 'demo' : `preview:${home.accountUserId ?? home.authenticatedUserId ?? 'local'}`;
+    this.scope = modelSimulationScope(home, this.sharedDemo);
     this.unsubscribePersistence = this.persistence.subscribe(this.scope, onSaveStatus);
     this.unsubscribeState = this.persistence.subscribeState(this.scope, (next) => {
       if (this.disposed || !this.state || next === this.state) return;
@@ -76,14 +70,25 @@ export class SimulationSession {
       if (this.requested) this.sendSnapshot();
     });
     this.unsubscribeStore = this.store.subscribe((state, previous) => {
-      if (sessionIdentity(state) !== this.identity) {
+      if (modelSimulationIdentity(state) !== this.identity) {
+        this.revokeAccess();
         this.dispose();
         onSaveStatus('disconnected');
         return;
       }
-      // Slider changes do not alter scene metadata; only registry changes can affect visibility.
       const registryChanged = state.devices !== previous.devices && (state.devices.length !== previous.devices.length
-        || state.devices.some((device, index) => device.id !== previous.devices[index]?.id));
+        || state.devices.some((device, index) => {
+          const before = previous.devices[index];
+          return device.id !== before?.id || device.kind !== before?.kind || device.roomId !== before?.roomId
+            || device.modelDeviceId !== before?.modelDeviceId;
+        }));
+      if (state.roomMembers !== previous.roomMembers || state.memberPermissionOverrides !== previous.memberPermissionOverrides
+        || state.household !== previous.household || state.rooms !== previous.rooms || state.membershipReady !== previous.membershipReady
+        || registryChanged) {
+        this.scheduleExpiry();
+        if (this.requested) this.sendSnapshot();
+      }
+      // Slider changes do not alter scene metadata; only registry changes can affect visibility.
       if (this.catalogRequested && (state.scenes !== previous.scenes || state.activeSceneId !== previous.activeSceneId
         || state.rooms !== previous.rooms || registryChanged)) this.sendSceneCatalog();
       if (!this.sharedDemo || this.projecting || !this.state || state.devices === previous.devices) return;
@@ -100,6 +105,7 @@ export class SimulationSession {
       finally { this.projecting = false; }
       if (this.requested) this.sendSnapshot();
     });
+    this.scheduleExpiry();
     this.ready = this.persistence.load(this.scope).then((saved) => {
       if (this.disposed) return;
       this.state = this.sharedDemo ? overlayDemoDevices(saved, this.store.getState().devices) : saved;
@@ -144,7 +150,21 @@ export class SimulationSession {
       const previous = this.state;
       const pending = this.pendingPatches.get(message.requestId);
       this.pendingPatches.delete(message.requestId);
-      this.state = pending ? rebaseChanges(previous, pending.base, pending.changes) : mergeSimulationChanges(previous, message.changes);
+      const access = resolveModelSceneAccess(this.store.getState(), this.mode);
+      // Reject an entire mixed transaction, so a permitted light cannot smuggle a gate or camera edit.
+      const allowed = new Set(access.controllableDeviceIds);
+      const changedIds = Object.keys(message.changes.deviceStates ?? {});
+      if (!access.roomIds.length || changedIds.some((id) => !allowed.has(id))) {
+        this.sendSnapshot(message.requestId);
+        return;
+      }
+      const next = pending ? rebaseChanges(previous, pending.base, pending.changes) : mergeSimulationChanges(previous, message.changes);
+      // Safety simulations may span several devices. Do not let their derived effects widen a partial grant.
+      if (Object.keys(diffSimulationSnapshots(previous, next).deviceStates ?? {}).some((id) => !allowed.has(id))) {
+        this.sendSnapshot(message.requestId);
+        return;
+      }
+      this.state = next;
       // Publish first so another session cannot project a stale dashboard snapshot over
       // unrelated scene devices while the shared host store notifies its subscribers.
       this.persistence.save(this.scope, this.state);
@@ -206,19 +226,43 @@ export class SimulationSession {
     this.unsubscribePersistence();
     this.unsubscribeState();
     this.pendingPatches.clear();
+    if (this.expiryTimer) clearTimeout(this.expiryTimer);
   }
 
   /** Send the complete canonical snapshot so either renderer can recover after reopening. */
   private sendSnapshot(acknowledgedRequestId?: number): void {
     if (!this.state || this.disposed) return;
     try {
-      this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: this.state,
+      const access = resolveModelSceneAccess(this.store.getState(), this.mode);
+      this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: scopeSimulationSnapshot(this.state, access), access,
         ...(acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId }) });
     } catch {
       // A terminated WebView must not throw through a dashboard store update.
       this.dispose();
       this.onSaveStatus('disconnected');
     }
+  }
+
+  /** Expire an open scene at the deadline even when no store update or user action occurs. */
+  private scheduleExpiry(): void {
+    if (this.expiryTimer) clearTimeout(this.expiryTimer);
+    const home = this.store.getState();
+    const member = home.household.find((entry) => entry.id === home.activeMemberId);
+    const deadline = member?.role === 'Guest' && member.accessExpiresAt ? Date.parse(member.accessExpiresAt) : NaN;
+    if (!Number.isFinite(deadline) || deadline <= Date.now()) return;
+    this.expiryTimer = setTimeout(() => {
+      if (this.disposed) return;
+      this.sendSnapshot();
+      this.scheduleExpiry();
+    }, Math.min(deadline - Date.now() + 1, 2_147_000_000));
+  }
+
+  /** Remove the previous identity's presentation before disconnecting an existing frame or inspector. */
+  private revokeAccess(): void {
+    if (!this.state || !this.requested) return;
+    try { this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot',
+      state: scopeSimulationSnapshot(this.state, EMPTY_SCENE_ACCESS), access: EMPTY_SCENE_ACCESS }); }
+    catch { /* Teardown can already have detached its renderer. */ }
   }
 }
 

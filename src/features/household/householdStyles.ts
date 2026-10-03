@@ -13,6 +13,8 @@ export const householdStyles = StyleSheet.create({
     alignSelf: "center",
   },
   stack: { gap: 14 },
+  invitationStep: { flex: 1, minHeight: 0, gap: 16 },
+  invitationContent: { flex: 1, minHeight: 0, gap: 12 },
   formContent: { gap: 16, paddingBottom: 8 },
   section: { gap: 12 },
   header: { flexDirection: "row", alignItems: "center", gap: 12 },

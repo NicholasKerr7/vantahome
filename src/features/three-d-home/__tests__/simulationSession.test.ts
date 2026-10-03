@@ -101,7 +101,8 @@ test.each([
   expect(canShareDemoDevices(store.getState(), 'demo')).toBe(false);
   session.handleMessage(request);
   await settle();
-  expect(deliver.mock.lastCall?.[0].state.deviceStates['living-light']).toEqual(createDefaultSimulationSnapshot().deviceStates['living-light']);
+  expect(deliver.mock.lastCall?.[0].access.deviceIds).toEqual([]);
+  expect(deliver.mock.lastCall?.[0].state.deviceStates['living-light']).toEqual({ on: false, level: 0 });
   session.handleMessage(patch(1, false));
   await settle();
   expect(store.getState().devices[0].isOn).toBe(true);
@@ -126,7 +127,8 @@ test('invalidates synchronously on account change and discards late messages', a
   session.handleMessage(patch(1, false));
   await settle();
   expect(status).toHaveBeenLastCalledWith('disconnected');
-  expect(deliver).toHaveBeenCalledTimes(count);
+  expect(deliver).toHaveBeenCalledTimes(count + 1);
+  expect(deliver.mock.lastCall?.[0].access.roomIds).toEqual([]);
   expect(store.getState().devices[0].isOn).toBe(true);
 });
 
@@ -201,6 +203,7 @@ test('scope changes disconnect every subscribed surface before a different accou
   persistence.save('demo', { ...createDefaultSimulationSnapshot(), motionDisabled: true });
   await settle();
   expect(voiceStatus).toHaveBeenLastCalledWith('disconnected');
-  expect(voiceDeliver).toHaveBeenCalledTimes(count);
+  expect(voiceDeliver).toHaveBeenCalledTimes(count + 1);
+  expect(voiceDeliver.mock.lastCall?.[0].access.roomIds).toEqual([]);
   voice.dispose();
 });

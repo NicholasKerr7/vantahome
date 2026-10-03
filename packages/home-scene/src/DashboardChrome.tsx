@@ -1,3 +1,4 @@
+import { canViewSceneRoom, canViewSceneDevice } from './sceneAccess';
 import { useState } from 'react';
 import { BedDouble, Clock3, ChevronDown, ChevronLeft, ChevronRight, Cloud, CloudLightning, CloudOff, CloudRain, CloudSun, Grid2X2, Home, Layers3, Moon, Settings2, Snowflake, Sofa, Sparkles, Sun, Utensils, type LucideIcon } from 'lucide-react';
 import { DEVICES, ROOMS, getRoom, type RoomId } from './data';
@@ -67,6 +68,8 @@ export function DashboardHeader({ onSettings, onEnvironment = onSettings, enviro
 export function DashboardFloorSwitch() {
   const floor = useHomeStore((state) => state.floor);
   const setFloor = useHomeStore((state) => state.setFloor);
+  const fullHome = useHomeStore((state) => state.access.fullHome);
+  if (!fullHome) return null;
   return <div className="floor-switch dashboard-floor-switch" aria-label="Choose floor"><button type="button" aria-pressed={floor === 'ground'} onClick={() => setFloor('ground')}>Ground</button><button type="button" aria-pressed={floor === 'upper'} onClick={() => setFloor('upper')}>Upper</button></div>;
 }
 
@@ -75,7 +78,8 @@ export function DashboardRooms({ onBrowse }: { onBrowse: () => void }) {
   const floor = useHomeStore((state) => state.floor);
   const roomId = useHomeStore((state) => state.roomId);
   const setRoom = useHomeStore((state) => state.setRoom);
-  const rooms = ROOMS.filter((room) => room.floor === floor || room.outdoor);
+  const access = useHomeStore((state) => state.access);
+  const rooms = ROOMS.filter((room) => canViewSceneRoom(access, room.id) && (!access.fullHome || room.floor === floor || room.outdoor));
   const [requested, setRequested] = useState({ roomId, floor, page: 0 });
   const selectedPage = Math.floor(Math.max(0, rooms.findIndex((room) => room.id === roomId)) / 6);
   const page = paginateItems(rooms, requested.roomId === roomId && requested.floor === floor ? requested.page : selectedPage, 6);
@@ -115,6 +119,7 @@ export function DashboardScenes() {
 /** Put room and device browsing within thumb reach without another page. */
 export function DashboardDock({ onRooms, onDevices }: { onRooms: () => void; onDevices: () => void }) {
   const states = useHomeStore((state) => state.deviceStates);
-  const active = DEVICES.filter((device) => states[device.id]?.on).length;
+  const access = useHomeStore((state) => state.access);
+  const active = DEVICES.filter((device) => canViewSceneDevice(access, device.id) && states[device.id]?.on).length;
   return <nav className="dashboard-dock" aria-label="Home navigation"><button onClick={onRooms}><Layers3 size={18} /><span>Rooms</span></button><div><span className="status-dot" /><span>{active} devices active</span></div><button onClick={onDevices}><Grid2X2 size={18} /><span>Devices</span></button></nav>;
 }

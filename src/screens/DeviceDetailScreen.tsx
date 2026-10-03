@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   View,
   Text,
@@ -966,8 +967,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const roomTemp = useHomeStore((s) => s.indoor.tempC);
   const outdoor = useHomeStore((s) => s.outdoor);
-  const rooms = useHomeStore(selectVisibleRooms);
-  const devicesAll = useHomeStore(selectVisibleDevices);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
+  const devicesAll = useHomeStore(useShallow(selectVisibleDevices));
   const coffeeFill = useRef(
     new Animated.Value(device?.kind === "coffee" && device.isOn ? 1 : 0),
   ).current;

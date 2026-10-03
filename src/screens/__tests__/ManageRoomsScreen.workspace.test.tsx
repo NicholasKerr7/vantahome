@@ -104,14 +104,31 @@ describe("Rooms workspace", () => {
     expect(useHomeStore.getState().rooms).toHaveLength(1);
   });
 
-  it("keeps room creation, rename, and delete disabled for ordinary members", () => {
+  it("keeps room details available and removes administration actions for ordinary members", () => {
     act(() => { useHomeStore.setState({ household: [{ id: "member", name: "Member", role: "Member", status: "home" }], activeMemberId: "member" }); });
-    expect(action("Add room").props.disabled).toBe(true);
-    press("Manage Living room");
-    expect(action("Save").props.disabled).toBe(true);
-    expect(action("Delete Living room").props.disabled).toBe(true);
+    expect(() => action("Add room")).toThrow('Missing action');
+    press("Details for Living room");
+    expect(() => action("Save")).toThrow('Missing action');
+    expect(() => action("Delete Living room")).toThrow('Missing action');
+    expect(() => action("Move Living room up")).toThrow('Missing action');
     press("Open room");
     expect(navigation.navigate).toHaveBeenCalledWith("Room", { roomId: "room-0" });
+  });
+
+  it("renders one assigned room for a guest without unstable selector snapshots", () => {
+    act(() => { useHomeStore.setState({
+      household: [{ id: 'guest', name: 'Guest', role: 'Guest', status: 'home' }], activeMemberId: 'guest',
+      roomMembers: [{ memberId: 'guest', roomIds: ['room-2'] }],
+      devices: [{ id: 'bedroom-lamp', roomId: 'room-2', name: 'Bedside lamp', kind: 'light', isOn: false }],
+    }); });
+    expect(action('Open Bedroom')).toBeDefined();
+    expect(() => action('Open Living room')).toThrow('Missing action');
+    expect(() => action('Add room')).toThrow('Missing action');
+    press('Details for Bedroom');
+    expect(action('Open room')).toBeDefined();
+    expect(() => action('Save')).toThrow('Missing action');
+    act(() => { useHomeStore.setState({ devices: [{ ...useHomeStore.getState().devices[0], isOn: true }] }); });
+    expect(action('Open room')).toBeDefined();
   });
   it("shows authored room metadata and opens the room without structural edits", () => {
     act(() => { useHomeStore.setState({ modelCatalogVersion: 1, accountUserId: null, authenticatedUserId: null, accountHomeId: null, activeHomeId: null,

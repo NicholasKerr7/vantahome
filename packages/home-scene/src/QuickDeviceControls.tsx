@@ -1,3 +1,4 @@
+import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useEffect, useRef } from 'react';
 import { ArrowUpRight, Power, X } from 'lucide-react';
 import { getDevice, getRoom, type DeviceId } from './data';
@@ -22,6 +23,8 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
   const current = useHomeStore((state) => state.deviceStates[deviceId]);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
   const device = getDevice(deviceId)!;
+  const controllable = useHomeStore((state) => canControlSceneDevice(state.access, deviceId));
+  const visible = useHomeStore((state) => canViewSceneDevice(state.access, deviceId));
   const action = primaryDeviceAction(device, current);
   const range = primaryDeviceRange(device, current);
   const Icon = DEVICE_ICONS[device.kind];
@@ -53,6 +56,7 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
     };
   }, [deviceId, onClose]);
 
+  if (!visible) return null;
   return <section ref={panel} id="quick-device-controls" className={`quick-device-controls ${range ? 'has-primary-range' : ''}`} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
     <div className="quick-device-heading">
       <span className="quick-device-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.5} /></span>
@@ -60,9 +64,9 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
       <button type="button" className="quick-device-close" aria-label="Close quick controls" onClick={() => onClose()}><X size={18} aria-hidden="true" /></button>
     </div>
     <p id="quick-device-state" className={`quick-device-state ${current.on ? 'is-on' : ''}`} aria-live="polite"><span aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}<span className="quick-device-value">{range?.text ?? (isMonitor(device.kind) ? 'Demo readings' : '')}</span></p>
-    <PrimaryDeviceRange device={device} current={current} location="quick" />
+    {controllable ? <PrimaryDeviceRange device={device} current={current} location="quick" /> : <p className="device-hint">View only</p>}
     <div className="quick-device-actions">
-      <button ref={power} type="button" className="quick-device-toggle" role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span>{action.isSwitch ? <span className="quick-device-switch" aria-hidden="true"><span /></span> : null}</button>
+      <button ref={power} type="button" className="quick-device-toggle" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span>{action.isSwitch ? <span className="quick-device-switch" aria-hidden="true"><span /></span> : null}</button>
       <button type="button" className="quick-device-full" onClick={() => onFullControls(deviceId)}>Full controls<ArrowUpRight size={16} aria-hidden="true" /></button>
     </div>
   </section>;

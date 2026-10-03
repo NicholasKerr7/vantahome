@@ -239,3 +239,7 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
   .dashboard-shell.is-embedded .dashboard-floor-switch { width: 132px; }
   .dashboard-shell.is-embedded .dashboard-preset { flex-direction: row; gap: 5px; font-size: 9px; }
 }
+
+/* Keep access transitions private without allowing the empty state to scroll. */
+.scene-access-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 100dvh; padding: 24px; text-align: center; background: var(--surface); color: var(--text); }
+.scene-access-empty p { max-width: 360px; }

@@ -7,6 +7,7 @@ import HomePanelBoundary from '../features/home-shell/HomePanelBoundary';
 import { isRendererLabEnabled } from '../config/rendererLab';
 import { theme } from '../theme/theme';
 import { openHomeFeature } from './homeNavigation';
+import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
 
 /** Preserve nested links from existing room, camera, profile, and notification flows. */
 export type HomeStackParamList = {
@@ -47,11 +48,11 @@ function SettingsFeature() {
 function RendererFeature() {
   const focused = useIsFocused();
   const navigation = useNavigation();
-  return <FeatureScreenFrame title="Renderer preview" section="more">
+  return <FeatureScreenFrame title="Renderer preview" section="more"><HomeDestinationGuard destination="renderer">
     {isRendererLabEnabled() ? <HomePanelBoundary onClose={() => openHomeFeature(navigation.dispatch, 'Home')}>
       <React.Suspense fallback={<View style={styles.loading}><ActivityIndicator color={theme.colors.accent} /></View>}><RendererLab active={focused} /></React.Suspense>
     </HomePanelBoundary> : <View style={styles.loading}><Text style={styles.notice}>Renderer preview is unavailable in this build.</Text></View>}
-  </FeatureScreenFrame>;
+  </HomeDestinationGuard></FeatureScreenFrame>;
 }
 
 const styles = StyleSheet.create({ loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 }, notice: { color: theme.colors.text, textAlign: 'center' } });

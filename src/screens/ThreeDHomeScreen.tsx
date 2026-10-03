@@ -17,6 +17,8 @@ import { isThreeDHomeEnabled } from '../config/threeDHome';
 import { useDeviceRoutines } from '../features/three-d-home/useDeviceRoutines';
 import { useScenePresentationPaused } from '../features/home-shell/ScenePresentationContext';
 import DashboardAccountButton from '../features/account/DashboardAccountButton';
+import { useHomeStore } from '../store/useHomeStore';
+import { modelSimulationIdentity } from '../features/three-d-home/modelSceneAccess';
 
 const HomeVoicePanel = React.lazy(() => import('../features/home-voice/HomeVoicePanel'));
 const HomeDeviceLibrary = React.lazy(() => import('../features/home-shell/HomeDeviceLibrary'));
@@ -54,6 +56,7 @@ function SceneSession({ onRetry, onDevices, covered }: { onRetry: () => void; on
 
 /** Keep the property central while primary navigation remains visible beside or below it. */
 export default function ThreeDHomeScreen() {
+  const identity = useHomeStore(modelSimulationIdentity);
   const focused = useIsFocused();
   const [active, setActive] = useState(AppState.currentState !== 'background');
   const [attempt, setAttempt] = useState(0);
@@ -80,7 +83,7 @@ export default function ThreeDHomeScreen() {
       <Pressable style={[styles.iconButton, styles.voiceButton]} onPress={() => setPanel('voice')} accessibilityLabel="Open voice control"><Ionicons name="mic-outline" size={19} color={theme.colors.accent} /></Pressable>
       <DashboardAccountButton onPress={() => setPanel('account')} />
     </CinematicSurface>
-    {focused && active && sceneEnabled ? <SceneSession key={attempt} covered={panel !== null} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
+    {focused && active && sceneEnabled ? <SceneSession key={`${identity}:${attempt}`} covered={panel !== null} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}
     </HomeWorkspace>
     {focused && active && panel === 'account' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><AccountSheet onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}

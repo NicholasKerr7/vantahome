@@ -13,6 +13,10 @@ import HomeMenu from './HomeMenu';
 import HomePanelBoundary from './HomePanelBoundary';
 import type { HomeDestination } from './homeDestinations';
 import { ScenePresentationContext } from './ScenePresentationContext';
+import { useShallow } from 'zustand/react/shallow';
+import { useHomeStore } from '../../store/useHomeStore';
+import { selectHomeNavigationAccess } from './homeNavigationAccess';
+import HomeDestinationGuard from './HomeDestinationGuard';
 
 const HomeDeviceLibrary = React.lazy(() => import('./HomeDeviceLibrary'));
 
@@ -20,6 +24,7 @@ const HomeDeviceLibrary = React.lazy(() => import('./HomeDeviceLibrary'));
 export default function HomeWorkspace({ section, children }: PropsWithChildren<{ section: HomeSection }>) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const commandActivity = useCommandActivityLauncher();
+  const access = useHomeStore(useShallow(selectHomeNavigationAccess));
   const focused = useIsFocused();
   const [panel, setPanel] = useState<'menu' | 'devices' | null>(null);
   const motionAllowed = useDecorativeMotion(focused && panel !== null);
@@ -28,9 +33,11 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
     return () => subscription.remove();
   }, []);
   useEffect(() => { if (!focused) setPanel(null); }, [focused]);
+  useEffect(() => { if (panel === 'devices' && !access.devices) setPanel(null); }, [access.devices, panel]);
 
   /** Route primary destinations directly; drawers retain the current property or collection. */
   function selectSection(next: HomeSection) {
+    if (!selectHomeNavigationAccess(useHomeStore.getState())[next]) { setPanel(null); return; }
     if (next === 'more') { setPanel('menu'); return; }
     if (next === 'devices') { setPanel('devices'); return; }
     setPanel(null);
@@ -42,6 +49,7 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
   /** Keep all secondary routes, permissions, and existing feature entry points available. */
   function selectDestination(destination: HomeDestination) {
     setPanel(null);
+    if (!selectHomeNavigationAccess(useHomeStore.getState())[destination]) return;
     switch (destination) {
       case 'scenes': selectSection('scenes'); break;
       case 'automations': selectSection('automations'); break;
@@ -59,12 +67,14 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
   }
 
   return <>
-    <ScenePresentationContext.Provider value={panel !== null || Boolean(commandActivity?.visible)}>
-      <HomeNavigation selected={panel === 'menu' ? 'more' : panel === 'devices' ? 'devices' : section} onSelect={selectSection}>{children}</HomeNavigation>
+    <ScenePresentationContext.Provider value={panel === 'menu' || (panel === 'devices' && access.devices) || Boolean(commandActivity?.visible)}>
+      <HomeNavigation selected={panel === 'menu' ? 'more' : panel === 'devices' && access.devices ? 'devices' : section} onSelect={selectSection} availableSections={access}>
+        {section === 'scenes' || section === 'automations' ? <HomeDestinationGuard destination={section}>{children}</HomeDestinationGuard> : children}
+      </HomeNavigation>
     </ScenePresentationContext.Provider>
     {focused && panel === 'menu' && <HomeMenu motionAllowed={motionAllowed} onClose={() => setPanel(null)} onSelect={selectDestination}
-      rendererAvailable={isRendererLabEnabled()} activityAvailable={Boolean(commandActivity)} />}
-    {focused && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<View style={styles.loading}><ActivityIndicator color={theme.colors.accent} /></View>}>
+      rendererAvailable={isRendererLabEnabled()} activityAvailable={Boolean(commandActivity)} availableDestinations={access} />}
+    {focused && panel === 'devices' && access.devices && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<View style={styles.loading}><ActivityIndicator color={theme.colors.accent} /></View>}>
       <HomeDeviceLibrary onClose={() => setPanel(null)} />
     </Suspense></HomePanelBoundary>}
   </>;

@@ -12,6 +12,7 @@ type Props = {
   onSelect: (destination: HomeDestination) => void;
   rendererAvailable: boolean;
   activityAvailable: boolean;
+  availableDestinations?: Readonly<Partial<Record<HomeDestination, boolean>>>;
   motionAllowed?: boolean;
 };
 
@@ -29,8 +30,8 @@ export function getMenuPageSize(availableHeight: number, fontScale: number): num
 }
 
 /** A utility directory complements the primary dock without introducing a scrolling menu. */
-export default function HomeMenu({ onClose, onSelect, rendererAvailable, activityAvailable, motionAllowed = false }: Props) {
-  const [sectionIndex, setSectionIndex] = useState(0);
+export default function HomeMenu({ onClose, onSelect, rendererAvailable, activityAvailable, availableDestinations, motionAllowed = false }: Props) {
+  const [sectionTitle, setSectionTitle] = useState<string>(HOME_MENU_PAGES[0].title);
   const [itemPage, setItemPage] = useState(0);
   const { width, height, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -39,9 +40,11 @@ export default function HomeMenu({ onClose, onSelect, rendererAvailable, activit
   const largeText = fontScale > 1.2;
   const stackedTabs = fontScale > 1.5;
   const compact = availableHeight < 600 || largeText;
-  const section = HOME_MENU_PAGES[sectionIndex];
-  const items = section.items.filter((item) => (item.id !== 'renderer' || rendererAvailable)
-    && (item.id !== 'activity' || activityAvailable));
+  const pages = HOME_MENU_PAGES.map((page) => ({ ...page, items: page.items.filter((item) =>
+    (!availableDestinations || availableDestinations[item.id]) && (item.id !== 'renderer' || rendererAvailable)
+    && (item.id !== 'activity' || activityAvailable)) })).filter((page) => page.items.length > 0);
+  const section = pages.find((page) => page.title === sectionTitle) ?? pages[0];
+  const items = section?.items ?? [];
   const pageSize = getMenuPageSize(availableHeight, fontScale);
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
   const visiblePage = Math.min(itemPage, pageCount - 1);
@@ -62,14 +65,14 @@ export default function HomeMenu({ onClose, onSelect, rendererAvailable, activit
             </Pressable>
           </View>
           <View accessibilityRole="tablist" style={[styles.tabs, stackedTabs && styles.stackedTabs]}>
-            {HOME_MENU_PAGES.map((category, index) => <Pressable key={category.title}
-              accessibilityRole="tab" accessibilityState={{ selected: sectionIndex === index }} aria-selected={sectionIndex === index}
-              onPress={() => { setSectionIndex(index); setItemPage(0); }}
-              style={[styles.tab, stackedTabs && styles.stackedTab, sectionIndex === index && styles.selectedTab]}>
-              <Text style={[styles.tabText, sectionIndex === index && styles.selectedText]}>{category.title}</Text>
+            {pages.map((category) => <Pressable key={category.title}
+              accessibilityRole="tab" accessibilityState={{ selected: section?.title === category.title }} aria-selected={section?.title === category.title}
+              onPress={() => { setSectionTitle(category.title); setItemPage(0); }}
+              style={[styles.tab, stackedTabs && styles.stackedTab, section?.title === category.title && styles.selectedTab]}>
+              <Text style={[styles.tabText, section?.title === category.title && styles.selectedText]}>{category.title}</Text>
             </Pressable>)}
           </View>
-          {!compact && <Text style={styles.description}>{section.description}</Text>}
+          {!compact && section && <Text style={styles.description}>{section.description}</Text>}
           <View style={[styles.directory, compact && styles.compactDirectory, tablet && styles.tabletDirectory]}>
             {items.slice(visiblePage * pageSize, (visiblePage + 1) * pageSize).map((item) => <Pressable key={item.id}
               accessibilityLabel={item.title} accessibilityHint={item.detail}

@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { ConnectionStatus } from "../services/deviceClient";
 import { applyDeviceStatePatch } from "./deviceState";
 import { roleHasPermission } from "../security/permissions";
+import { hasCurrentMembershipAccess } from "../security/guestAccess";
 import { runtimePolicy } from "../config/runtimeMode";
 import { addMissingGasDemoDevices, createGasDemoDevices } from "../features/gas/gasDemoDevices";
 import { assertCanManageRoutines, assertRoutineReferences } from "./routineAccess";
@@ -79,6 +80,8 @@ export type SprinklerSchedule = {
 
 export type Device = {
   id: string;
+  /** Explicit server-owned binding to the authored simulation, never inferred from a name. */
+  modelDeviceId?: string | null;
   name: string;
   kind: DeviceKind;
   roomId: string;
@@ -312,7 +315,7 @@ export type Device = {
   schedule?: SprinklerSchedule[]; // sprinkler
 };
 
-export type Room = { id: string; name: string };
+export type Room = { id: string; name: string; modelRoomId?: string | null };
 
 export type AmbientReading = {
   tempC: number;
@@ -330,6 +333,8 @@ export type HouseholdMember = {
   avatarUri?: string;
   status: "home" | "away";
   lastSeenAt?: number;
+  /** Absolute server-enforced expiry for an optional temporary guest invitation. */
+  accessExpiresAt?: string | null;
 };
 
 export type RoomMembership = {
@@ -570,6 +575,7 @@ const getAccessScope = (state: Pick<
   | "activeMemberId"
 >): AccessScope => {
   const member = state.household.find((m) => m.id === state.activeMemberId);
+  if (!hasCurrentMembershipAccess(member)) return { member: undefined, fullAccess: false, roomIds: new Set() };
   const fullAccess = roleHasFullAccess(member?.role);
   if (fullAccess) {
     return {

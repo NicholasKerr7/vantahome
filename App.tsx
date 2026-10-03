@@ -24,6 +24,8 @@ import { runtimePolicy } from "./src/config/runtimeMode";
 import * as Sentry from "@sentry/react-native";
 import { scrubSentryEvent } from "./src/observability/sentryPrivacy";
 import { applyDeviceOrientationPolicy } from "./src/services/orientation";
+import { useGuestAccessExpiry } from "./src/security/useGuestAccessExpiry";
+import { hasCurrentMembershipAccess } from "./src/security/guestAccess";
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
 const sentryEnabled = Boolean(sentryDsn);
@@ -39,6 +41,7 @@ if (sentryEnabled) {
 }
 
 function App() {
+  useGuestAccessExpiry();
   const notificationsEnabled = useHomeStore((s) => s.preferences.notifications);
   const homeAvailable =
     useHomeStore((s) => s.membershipReady) ||
@@ -53,7 +56,8 @@ function App() {
       const state = useHomeStore.getState();
       const demo = !supabase && runtimePolicy.allowUnauthenticatedDemo;
       const allowed =
-        currentAppState === "active" && (demo || state.membershipReady);
+        currentAppState === "active" && (demo || state.membershipReady)
+        && hasCurrentMembershipAccess(state.household.find((member) => member.id === state.activeMemberId));
       const nextScope = allowed
         ? JSON.stringify([
             state.authenticatedUserId,
@@ -63,10 +67,11 @@ function App() {
             state.realtime.enabled,
             state.realtime.wsUrl,
             state.realtime.useMqtt,
-            state.household.map(({ id, userId, role }) => ({
+            state.household.map(({ id, userId, role, accessExpiresAt }) => ({
               id,
               userId,
               role,
+              accessExpiresAt,
             })),
             state.roomMembers,
             state.memberPermissionOverrides,

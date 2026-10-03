@@ -1,3 +1,4 @@
+import { FULL_SCENE_ACCESS, canViewSceneDevice } from '../sceneAccess';
 import {
   createContext,
   useContext,
@@ -22,14 +23,15 @@ const LayoutContext = createContext<RefObject<ScreenPositions> | null>(null);
 export function HotspotLayout({
   roomId,
   view,
+  access = FULL_SCENE_ACCESS,
   children,
-}: Pick<HouseSceneProps, 'roomId' | 'view'> & { children: ReactNode }) {
+}: Pick<HouseSceneProps, 'roomId' | 'view' | 'access'> & { children: ReactNode }) {
   const positions = useRef<ScreenPositions>({});
   const previousProjection = useRef('');
   const { camera, size } = useThree();
   const anchors = useMemo(
     () =>
-      DEVICES.filter((device) => device.roomId === roomId).map((device) => {
+      DEVICES.filter((device) => device.roomId === roomId && canViewSceneDevice(access, device.id)).map((device) => {
         const elevation =
           (view === 'immersive' || view === 'exterior') &&
           getRoom(roomId).floor === 'upper'
@@ -44,7 +46,7 @@ export function HotspotLayout({
           ),
         };
       }),
-    [roomId, view],
+    [roomId, view, access],
   );
   useFrame(() => {
     if (document.hidden) return;

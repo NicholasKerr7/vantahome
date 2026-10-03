@@ -1,3 +1,4 @@
+import type { SceneAccess } from '../sceneAccess';
 import type { LiveEnvironment } from '../environment/useLiveEnvironment';
 import siteLayout from '../site-layout.json';
 import { ROOMS } from '../data';
@@ -8,6 +9,7 @@ export type HouseView = 'exterior' | 'ground' | 'upper' | 'immersive';
 export type HouseFloor = 'ground' | 'upper';
 
 export interface HouseSceneProps {
+  access?: SceneAccess;
   environment: LiveEnvironment;
   daylight: number;
   view: HouseView;

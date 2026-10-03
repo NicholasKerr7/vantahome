@@ -1,10 +1,11 @@
+import { EMPTY_SCENE_ACCESS, canControlSceneDevice, type SceneAccess } from './sceneAccess';
 import {
   diffSimulationSnapshots, mergeSimulationChanges, parseSimulationSnapshotMessage, SIMULATION_CHANNEL,
   type SimulationChanges, type SimulationRequest, type SimulationSnapshot,
 } from './simulationBridgeProtocol';
 
 interface SimulationBridgeStore {
-  applySnapshot: (snapshot: SimulationSnapshot) => void;
+  applySnapshot: (snapshot: SimulationSnapshot, access?: SceneAccess) => void;
   subscribe: (listener: (next: SimulationSnapshot, previous: SimulationSnapshot) => void) => () => void;
 }
 interface SimulationBridgeOptions {
@@ -31,6 +32,7 @@ function combineChanges(previous: SimulationChanges, next: SimulationChanges): S
 export function createSimulationBridgeClient({ store, send, onHydrated, onSyncError }: SimulationBridgeOptions): { receive: (input: unknown) => void; dispose: () => void } {
   let applyingHost = false;
   let hydrated = false;
+  let access = EMPTY_SCENE_ACCESS;
   let disposed = false;
   let lastAcknowledgedId = 0;
   let lastSentId = 0;
@@ -55,6 +57,14 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
     if (!disposed && !hydrated) sendSafely({ channel: SIMULATION_CHANNEL, version: 1, type: 'request' });
   }
 
+  /** Drop queued edits when a host revokes control; stale optimistic values must not override its snapshot. */
+  function restrictChanges(changes: SimulationChanges): SimulationChanges {
+    if (!changes.deviceStates) return changes;
+    const { deviceStates, ...preferences } = changes;
+    const allowed = Object.fromEntries(Object.entries(deviceStates).filter(([id]) => canControlSceneDevice(access, id)));
+    return Object.keys(allowed).length ? { ...preferences, deviceStates: allowed } : preferences;
+  }
+
   /** Send complete per-device replacements immediately, including the final edit before navigation. */
   function publish(changes: SimulationChanges): void {
     const requestId = ++nextRequestId;
@@ -65,7 +75,8 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
 
   const unsubscribe = store.subscribe((next, previous) => {
     if (disposed || applyingHost) return;
-    const changes = diffSimulationSnapshots(previous, next);
+    const differences = diffSimulationSnapshots(previous, next);
+    const changes = hydrated ? restrictChanges(differences) : differences;
     if (!Object.keys(changes).length) return;
     if (hydrated) publish(changes);
     else beforeHydration = combineChanges(beforeHydration, changes);
@@ -82,13 +93,16 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
       lastAcknowledgedId = acknowledgedId;
       for (const id of pending.keys()) if (id <= acknowledgedId) pending.delete(id);
     }
+    access = message.access ?? EMPTY_SCENE_ACCESS;
+    for (const [id, changes] of pending) pending.set(id, restrictChanges(changes));
+    beforeHydration = restrictChanges(beforeHydration);
     let state = message.state;
     for (const changes of pending.values()) state = mergeSimulationChanges(state, changes);
     const firstSnapshot = !hydrated;
     if (firstSnapshot) state = mergeSimulationChanges(state, beforeHydration);
     hydrated = true;
     applyingHost = true;
-    try { store.applySnapshot(state); }
+    try { store.applySnapshot(state, access); }
     finally { applyingHost = false; }
     if (firstSnapshot) {
       clearHydrationTimers();

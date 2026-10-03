@@ -1,3 +1,4 @@
+import { FULL_SCENE_ACCESS, type SceneAccess } from './sceneAccess';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSimulationBridgeClient, SIMULATION_HYDRATION_TIMEOUT_MS } from './simulationBridgeClient';
 import {
@@ -24,8 +25,8 @@ function createHarness() {
   return {
     client, send, hydrated, syncError, state: () => state,
     edit(changes: SimulationChanges): void { applySnapshot(mergeSimulationChanges(state, changes)); },
-    snapshot(next: SimulationSnapshot, acknowledgedRequestId?: number): void {
-      client.receive({ channel: SIMULATION_CHANNEL, version: 1, type: 'snapshot', state: next, ...(acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId }) });
+    snapshot(next: SimulationSnapshot, acknowledgedRequestId?: number, access: SceneAccess = FULL_SCENE_ACCESS): void {
+      client.receive({ channel: SIMULATION_CHANNEL, version: 1, type: 'snapshot', access, state: next, ...(acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId }) });
     },
     patches(): Extract<SimulationRequest, { type: 'patch' }>[] {
       return send.mock.calls.map(([message]) => message).filter((message) => message.type === 'patch');
@@ -152,4 +153,18 @@ describe('scene simulation synchronization', () => {
     harness.client.dispose();
   });
 
+});
+
+
+it('discards optimistic writes immediately when a new host scope revokes device control', () => {
+  const harness = createHarness();
+  const initial = createDefaultSimulationSnapshot();
+  harness.snapshot(initial);
+  harness.edit({ deviceStates: { 'living-light': { on: false, level: 17 } } });
+  harness.snapshot(initial, undefined, { fullHome: false, roomIds: ['living'], deviceIds: ['living-light'], controllableDeviceIds: [] });
+  expect(harness.state().deviceStates['living-light']).toEqual(initial.deviceStates['living-light']);
+  const count = harness.patches().length;
+  harness.edit({ deviceStates: { 'living-light': { on: false, level: 34 } } });
+  expect(harness.patches()).toHaveLength(count);
+  harness.client.dispose();
 });

@@ -3,6 +3,7 @@ import { DEVICES, getDevice, isPositionDevice } from './data';
 import { validateStoredSetting } from './deviceCapabilities';
 import { GAS_DEVICE_IDS, isGasDevice } from './gasSimulation';
 import type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
+import { parseSceneAccess, type SceneAccess } from './sceneAccess';
 
 export type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
 export const SIMULATION_CHANNEL = 'vantahome-simulation';
@@ -25,6 +26,8 @@ export interface SimulationSnapshotMessage extends SimulationEnvelope {
   type: 'snapshot';
   acknowledgedRequestId?: number;
   state: SimulationSnapshot;
+  /** Host-resolved visibility; persisted simulation state never grants access. */
+  access?: SceneAccess;
 }
 
 /** Reject non-records, including arrays, before accessing nested bridge data. */
@@ -112,11 +115,15 @@ export function parseSimulationRequest(input: unknown): SimulationRequest | null
 /** Parse only complete host snapshots, preventing partial hydration or an arbitrary host payload. */
 export function parseSimulationSnapshotMessage(input: unknown): SimulationSnapshotMessage | null {
   const message = readEnvelope(input);
-  if (!message || message.type !== 'snapshot' || !hasKeys(message, ['channel', 'version', 'type', 'state'], ['acknowledgedRequestId'])) return null;
+  if (!message || message.type !== 'snapshot' || !hasKeys(message, ['channel', 'version', 'type', 'state'], ['acknowledgedRequestId', 'access'])) return null;
   if (Object.hasOwn(message, 'acknowledgedRequestId') && !isRequestId(message.acknowledgedRequestId)) return null;
   const state = readChanges(message.state, true) as SimulationSnapshot | null;
   if (!state) return null;
-  return { channel: SIMULATION_CHANNEL, version: 1, type: 'snapshot', state, ...(message.acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId: message.acknowledgedRequestId as number }) };
+  const access = Object.hasOwn(message, 'access') ? parseSceneAccess(message.access) : undefined;
+  if (access === null) return null;
+  return { channel: SIMULATION_CHANNEL, version: 1, type: 'snapshot', state,
+    ...(access === undefined ? {} : { access }),
+    ...(message.acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId: message.acknowledgedRequestId as number }) };
 }
 
 /** Migrate only pre-gas local caches; live bridge snapshots still require the complete catalog. */

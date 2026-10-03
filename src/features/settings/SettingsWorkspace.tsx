@@ -10,6 +10,9 @@ import CinematicSurface from "../../components/CinematicSurface";
 import { theme } from "../../theme/theme";
 import { settingsStyles as styles } from "./settingsWorkspaceStyles";
 import { useSettingsWorkspace, type SettingsWorkspaceModel } from "./useSettingsWorkspace";
+import { useShallow } from "zustand/react/shallow";
+import { useHomeStore } from "../../store/useHomeStore";
+import { selectHomeNavigationAccess } from "../home-shell/homeNavigationAccess";
 
 type Category = "home" | "preferences" | "voice" | "activity" | "about" | "development";
 type SettingsCategory = { id: Category; label: string; icon: keyof typeof Ionicons.glyphMap };
@@ -75,13 +78,21 @@ function DevelopmentPage({ page, model, editing, setEditing }: { page: number; m
 export default function SettingsWorkspace() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const model = useSettingsWorkspace();
+  const access = useHomeStore(useShallow(selectHomeNavigationAccess));
   const { width, height } = useWindowDimensions();
   const wide = width >= 800 && width > height;
   const compact = height < 720;
-  const [category, setCategory] = useState<Category>("home");
+  const [requestedCategory, setCategory] = useState<Category>("home");
   const [toolPage, setToolPage] = useState(0);
   const [editing, setEditing] = useState(false);
-  const categories = CATEGORIES.filter((item) => item.id !== "development" || model.developmentTools);
+  const categories = CATEGORIES.filter((item) => {
+    if (item.id === 'voice') return access.integrations;
+    if (item.id === 'development') return access.admin && model.developmentTools;
+    if (item.id === 'activity') return access.audit || (access.activity && Boolean(model.commandActivity));
+    return true;
+  });
+  // Resolve immediately during render so a revoked category cannot display one stale frame.
+  const category = categories.some((item) => item.id === requestedCategory) ? requestedCategory : 'home';
   const titles: Record<Category, string> = { home: "A place of your own.", preferences: "Make it feel right.", voice: "A home that listens.", activity: "Know what happened.", about: "VantaHome.", development: TOOL_PAGES[toolPage] };
   const chapter = categories.findIndex((item) => item.id === category) + 1;
 
@@ -106,8 +117,8 @@ export default function SettingsWorkspace() {
 
         {category === "home" && <>
           <Text numberOfLines={2} style={styles.homeName}>{model.homeTitle}</Text>
-          <View style={styles.rows}><SettingValue label="Rooms" value={model.roomCount} /><SettingValue label="Devices" value={model.deviceCount} /></View>
-          <View style={styles.actions}><SettingAction label="Edit profile" onPress={() => navigation.navigate("Profile")} /><SettingAction label={model.cloudBusy ? "Preparing…" : "Cloud setup"} accessibilityLabel="Initialize cloud home" primary disabled={model.cloudBusy} onPress={() => { void model.initializeCloudHome(); }} /></View>
+          <View style={styles.rows}><SettingValue label="Rooms" value={access.ready ? model.roomCount : 0} /><SettingValue label="Devices" value={access.ready ? model.deviceCount : 0} /></View>
+          <View style={styles.actions}><SettingAction label="Edit profile" onPress={() => navigation.navigate("Profile")} />{access.admin && <SettingAction label={model.cloudBusy ? "Preparing…" : "Cloud setup"} accessibilityLabel="Initialize cloud home" primary disabled={model.cloudBusy} onPress={() => { void model.initializeCloudHome(); }} />}</View>
         </>}
         {category === "preferences" && <View style={styles.rows}>
           <SettingToggle label="Haptics" value={model.preferences.haptics} onChange={(haptics) => model.setPreferences({ haptics })} />
@@ -117,12 +128,18 @@ export default function SettingsWorkspace() {
         {category === "voice" && <>
           <Text style={styles.description}>Your assistants and home connections, together in one place.</Text>
           <View style={styles.notice}><Text style={styles.detail}>Review account authorization, planned integrations and local hub setup.</Text></View>
-          <View style={styles.actions}><SettingAction label="Voice & integrations" accessibilityLabel="Open voice and integrations" primary onPress={() => navigation.navigate("Integrations")} /></View>
+          <View style={styles.actions}><SettingAction label="Voice & integrations" accessibilityLabel="Open voice and integrations" primary onPress={() => {
+            if (selectHomeNavigationAccess(useHomeStore.getState()).integrations) navigation.navigate("Integrations");
+          }} /></View>
         </>}
         {category === "activity" && <>
-          <Text style={styles.description}>Review recent requests and the home activity log.</Text>
-          <View style={styles.actions}>{model.commandActivity && <SettingAction label="Command activity" accessibilityLabel="Open command activity" onPress={model.commandActivity.open} />}
-            <SettingAction label="Activity log" accessibilityLabel="View activity log" onPress={() => navigation.navigate("AuditLog")} /></View>
+          <Text style={styles.description}>{access.audit ? 'Review recent requests and the home activity log.' : 'Review your recent requests.'}</Text>
+          <View style={styles.actions}>{access.activity && model.commandActivity && <SettingAction label="Command activity" accessibilityLabel="Open command activity" onPress={() => {
+            if (selectHomeNavigationAccess(useHomeStore.getState()).activity) model.commandActivity?.open();
+          }} />}
+            {access.audit && <SettingAction label="Activity log" accessibilityLabel="View activity log" onPress={() => {
+              if (selectHomeNavigationAccess(useHomeStore.getState()).audit) navigation.navigate("AuditLog");
+            }} />}</View>
           <Text style={styles.detail}>A delivered command is a request. A confirmed device state shows what happened.</Text>
         </>}
         {category === "about" && <>

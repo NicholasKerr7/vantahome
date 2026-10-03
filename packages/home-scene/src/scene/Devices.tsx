@@ -1,3 +1,4 @@
+import { FULL_SCENE_ACCESS, canViewSceneDevice } from '../sceneAccess';
 import { memo, useMemo, useRef, type RefObject } from 'react';
 import { RoundedBox } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
@@ -34,6 +35,7 @@ type DeviceProps = Pick<
   | 'selectedDevice'
   | 'quickDeviceId'
   | 'hotspotControlMode'
+  | 'access'
   | 'reducedMotion'
   | 'onSelectDevice'
 >;
@@ -369,6 +371,7 @@ export function Devices({
   selectedDevice,
   quickDeviceId,
   hotspotControlMode = 'quick',
+  access = FULL_SCENE_ACCESS,
   reducedMotion,
   onSelectDevice,
 }: DeviceProps) {
@@ -376,11 +379,12 @@ export function Devices({
   const full = view === 'exterior' || view === 'immersive';
   const visible = DEVICES.filter((device) => {
     const room = getRoom(device.roomId);
-    return full || (!room.outdoor && room.floor === floor);
+    if (!canViewSceneDevice(access, device.id) || (!access.fullHome && device.roomId !== roomId)) return false;
+    return !access.fullHome || full || (!room.outdoor && room.floor === floor);
   });
   const practical = DEVICES.filter(
     (device) =>
-      device.roomId === roomId &&
+      canViewSceneDevice(access, device.id) && device.roomId === roomId &&
       device.kind === 'light' &&
       device.model !== 'solar-streetlight' &&
       deviceStates[device.id]?.on,

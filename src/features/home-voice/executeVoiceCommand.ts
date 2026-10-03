@@ -8,6 +8,8 @@ export type VoiceCommandOutcome =
   | { status: 'reconnecting' }
   | { status: 'completed' }
   | { status: 'pending' }
+  | { status: 'denied' }
+  | { status: 'scoped' }
   | { status: 'limited'; completedCount: number; requestedCount: number; fireHeldLightCount: number };
 
 const firePreviewLightIds = new Set<string>(FIRE_PREVIEW_LIGHT_IDS);
@@ -28,7 +30,12 @@ function isCommandPending(id: string, state: DeviceState | undefined, command: H
 
 /** Apply local intent and report its actual optimistic result without treating readiness as success. */
 export function executeVoiceCommand(client: SimulationControlClient, command: HomeVoiceCommand): VoiceCommandOutcome {
-  if (!client.getSnapshot().ready) return { status: 'reconnecting' };
+  const snapshot = client.getSnapshot();
+  if (!snapshot.ready) return { status: 'reconnecting' };
+  const permittedIds = command.deviceIds.filter((id) => snapshot.access?.controllableDeviceIds.includes(id));
+  if (!permittedIds.length) return { status: 'denied' };
+  const limitedAccess = permittedIds.length !== command.deviceIds.length;
+  command = { ...command, deviceIds: permittedIds };
   if (command.type === 'power') client.setPower(command.deviceIds, command.on);
   else for (const id of command.deviceIds) {
     if (command.type === 'position') client.setLevel(id, command.value);
@@ -37,7 +44,7 @@ export function executeVoiceCommand(client: SimulationControlClient, command: Ho
   const { ready, state } = client.getSnapshot();
   if (!ready) return { status: 'reconnecting' };
   const unmatchedIds = command.deviceIds.filter((id) => !matchesCommand(state.deviceStates[id], command));
-  if (!unmatchedIds.length) return { status: 'completed' };
+  if (!unmatchedIds.length) return { status: limitedAccess ? 'scoped' : 'completed' };
   if (unmatchedIds.every((id) => isCommandPending(id, state.deviceStates[id], command))) return { status: 'pending' };
   const fireHeldLightCount = getFireIncident(state.deviceStates).active
     ? unmatchedIds.filter((id) => firePreviewLightIds.has(id)).length : 0;

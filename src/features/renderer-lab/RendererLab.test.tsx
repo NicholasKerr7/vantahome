@@ -1,3 +1,4 @@
+import { FULL_SCENE_ACCESS } from '../../../packages/home-scene/src/sceneAccess';
 import React from "react";
 import { Alert, AppState, type AppStateStatus } from "react-native";
 import { act, cleanup, fireEvent, render } from "@testing-library/react-native";
@@ -54,7 +55,7 @@ beforeEach(() => {
       const message = parseSimulationRequest(input);
       if (!message) return false;
       if (message.type === 'patch') state = mergeSimulationChanges(state, message.changes);
-      deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state,
+      deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state, access: FULL_SCENE_ACCESS,
         ...(message.type === 'patch' ? { acknowledgedRequestId: message.requestId } : {}) });
       return true;
     } };

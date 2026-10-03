@@ -67,6 +67,7 @@ export type InviteMemberPayload = {
   name?: string;
   role?: "admin" | "member" | "guest" | "tenant";
   roomIds?: string[];
+  accessExpiresAt?: string | null;
 };
 
 export async function inviteHomeMember(
@@ -91,6 +92,7 @@ export type HomeInvite = {
   status: "pending" | "accepted" | "declined" | "cancelled";
   created_at: string;
   expires_at?: string;
+  access_expires_at?: string | null;
 };
 
 /** Read only invitations addressed to the verified account, never an editable profile email. */
@@ -119,7 +121,8 @@ export async function listPendingInvites(expectedUserId?: string) {
       && invite.status === "pending" && typeof invite.role === "string" && ["admin", "member", "guest", "tenant"].includes(invite.role)
       && Array.isArray(invite.room_ids) && invite.room_ids.every((roomId) => typeof roomId === "string" && roomId.trim().length > 0)
       && typeof invite.created_at === "string" && Number.isFinite(Date.parse(invite.created_at))
-      && (invite.expires_at === undefined || (typeof invite.expires_at === "string" && Number.isFinite(Date.parse(invite.expires_at))));
+      && (invite.expires_at === undefined || (typeof invite.expires_at === "string" && Number.isFinite(Date.parse(invite.expires_at))))
+      && (invite.access_expires_at == null || (invite.role === "guest" && typeof invite.access_expires_at === "string" && Number.isFinite(Date.parse(invite.access_expires_at))));
   });
 }
 

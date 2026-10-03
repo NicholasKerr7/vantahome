@@ -13,14 +13,14 @@ const DESTINATIONS = [
   { id: 'more', label: 'More', accessibilityLabel: 'Open home menu', icon: 'grid-outline' },
 ] as const;
 
-type Props = PropsWithChildren<{ selected: HomeSection; onSelect: (section: HomeSection) => void }>;
+type Props = PropsWithChildren<{ selected: HomeSection; onSelect: (section: HomeSection) => void; availableSections?: Readonly<Partial<Record<HomeSection, boolean>>> }>;
 
 /** Keep primary destinations visible, placing navigation beside the landscape tablet canvas. */
-export default function HomeNavigation({ selected, onSelect, children }: Props) {
+export default function HomeNavigation({ selected, onSelect, children, availableSections }: Props) {
   const { width, height } = useWindowDimensions();
   const rail = width >= 900 && width > height;
   const navigation = <View accessibilityLabel="Home navigation" style={[styles.dock, rail && styles.rail]}>
-    {DESTINATIONS.map((destination) => {
+    {DESTINATIONS.filter((destination) => !availableSections || availableSections[destination.id]).map((destination) => {
       const active = destination.id === selected;
       return <Pressable key={destination.id} accessibilityLabel={destination.accessibilityLabel}
         accessibilityState={{ selected: active }} onPress={() => onSelect(destination.id)}

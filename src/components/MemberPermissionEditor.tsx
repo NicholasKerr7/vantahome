@@ -68,13 +68,14 @@ export default function MemberPermissionEditor({
           (item) => item.permission === permission,
         );
         const roleAllows = roleHasPermission(role, permission);
-        const readOnly = disabled || canChange?.(permission) === false;
+        const requiresAdministrator = permission === "member.invite" && role !== "Admin";
+        const readOnly = disabled || requiresAdministrator || canChange?.(permission) === false;
         return (
           <View key={permission} style={styles.row}>
             <View style={styles.labelWrap}>
               <Text style={styles.label}>{PERMISSION_LABELS[permission]}</Text>
               <Text style={styles.defaultText}>
-                Role default: {roleAllows ? "allow" : "deny"}
+                {requiresAdministrator ? "Requires an Owner or Admin role" : `Role default: ${roleAllows ? "allow" : "deny"}`}
               </Text>
             </View>
             <View style={styles.options}>

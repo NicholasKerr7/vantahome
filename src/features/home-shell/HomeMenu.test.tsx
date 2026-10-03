@@ -82,3 +82,18 @@ test('reduces row count using usable height and font scale instead of clipping c
   expect(getMenuPageSize(457, 2)).toBe(1);
   expect(getMenuPageSize(739, 2)).toBe(2);
 });
+
+test('removes empty categories and immediately replaces a selected category when permissions change', () => {
+  const onSelect = jest.fn();
+  const onClose = jest.fn();
+  const screen = render(<HomeMenu onClose={onClose} onSelect={onSelect} rendererAvailable activityAvailable />);
+  fireEvent.press(screen.getByRole('tab', { name: 'Connections' }));
+  screen.rerender(<HomeMenu onClose={onClose} onSelect={onSelect} rendererAvailable activityAvailable
+    availableDestinations={{ rooms: true, household: true, settings: true }} />);
+  expect(screen.queryByRole('tab', { name: 'Connections' })).toBeNull();
+  expect(screen.queryByRole('tab', { name: 'Activity' })).toBeNull();
+  expect(screen.queryByLabelText('Cameras')).toBeNull();
+  expect(screen.queryByLabelText('Integrations')).toBeNull();
+  expect(screen.getByLabelText('Household')).toBeTruthy();
+  expect(screen.getByLabelText('Rooms')).toBeTruthy();
+});

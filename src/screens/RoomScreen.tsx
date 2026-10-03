@@ -47,6 +47,8 @@ import { isModelHome } from "../features/three-d-home/modelHomeScope";
 import { canShareDemoDevices } from "../features/three-d-home/simulationSession";
 import { useSimulationControls } from "../features/three-d-home/useSimulationControls";
 import { guardModelDeviceControls } from "../features/three-d-home/modelDeviceControls";
+import { sceneIsVisible } from "../features/scenes/sceneScope";
+import { selectHomeNavigationAccess } from "../features/home-shell/homeNavigationAccess";
 
 const DEVICE_OPTIONS: Array<{
   kind: Device["kind"];
@@ -484,14 +486,12 @@ export default function RoomScreen({ route, navigation }: Props) {
     [devicesAll, roomId, isWholeHome],
   );
   const scenes = useMemo(() => {
-    const allowedRoomIds = new Set(visibleRooms.map((r) => r.id));
-    const visibleScenes = scenesAll.filter((scene) =>
-      allowedRoomIds.has(scene.roomId),
-    );
+    if (!canCreateRoutines) return [];
+    const visibleScenes = scenesAll.filter((scene) => sceneIsVisible(scene, visibleRooms, devicesAll));
     return isWholeHome
       ? visibleScenes
       : visibleScenes.filter((scene) => scene.roomId === roomId);
-  }, [scenesAll, visibleRooms, roomId, isWholeHome]);
+  }, [scenesAll, visibleRooms, devicesAll, roomId, isWholeHome, canCreateRoutines]);
   const running = devices.filter((d) => d.isOn).length;
   const pageCount = Math.max(1, Math.ceil(devices.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
@@ -595,8 +595,10 @@ export default function RoomScreen({ route, navigation }: Props) {
 
   const handleRunScene = async (sceneId: string) => {
     if (sceneRequestPending.current) return;
-    const scene = scenesAll.find((s) => s.id === sceneId);
-    if (!scene) return;
+    const current = useHomeStore.getState();
+    const scene = current.scenes.find((s) => s.id === sceneId);
+    if (!selectHomeNavigationAccess(current).scenes || !scene
+      || !sceneIsVisible(scene, selectVisibleRooms(current), selectVisibleDevices(current))) return;
     const deviceMap = new Map(devicesAll.map((d) => [d.id, d]));
     const patches = scene.actions
       .map((action) => {

@@ -1,3 +1,4 @@
+import { EMPTY_SCENE_ACCESS } from './sceneAccess';
 import { useEffect, useState } from 'react';
 import { isEmbeddedScene } from './embeddedHost';
 import { createSimulationBridgeClient } from './simulationBridgeClient';
@@ -14,7 +15,7 @@ export function useSimulationBridge(): { hydrated: boolean; syncError: boolean }
     const transport = connectSimulationBridgeTransport(window, (message) => client?.receive(message));
     client = createSimulationBridgeClient({
       store: {
-        applySnapshot: (state) => useHomeStore.setState({ ...state, activePreset: null }),
+        applySnapshot: (state, access) => useHomeStore.getState().applyAccessSnapshot(state, access ?? EMPTY_SCENE_ACCESS),
         subscribe: useHomeStore.subscribe,
       },
       send: transport.send,

@@ -82,6 +82,29 @@ describe("architectural settings workspace", () => {
     expect(mockNavigate).toHaveBeenLastCalledWith("AuditLog");
   });
 
+  it("keeps personal settings while removing administrator cards for a room assignee", () => {
+    useHomeStore.setState({ activeMemberId: 'tenant', household: [{ id: 'tenant', name: 'Tenant', role: 'Tenant', status: 'home' }] });
+    tree = renderWorkspace();
+    expect(action(tree!, 'Edit profile')).toBeTruthy();
+    expect(action(tree!, 'Initialize cloud home')).toBeUndefined();
+    expect(action(tree!, 'Voice settings')).toBeUndefined();
+    expect(action(tree!, 'Tools settings')).toBeUndefined();
+    act(() => { action(tree!, 'Activity settings').props.onPress(); });
+    expect(action(tree!, 'Open command activity')).toBeTruthy();
+    expect(action(tree!, 'View activity log')).toBeUndefined();
+  });
+
+  it("replaces an open administrative category and rejects its retained callback after role revocation", () => {
+    tree = renderWorkspace();
+    act(() => { action(tree!, 'Voice settings').props.onPress(); });
+    const retainedOpen = action(tree!, 'Open voice and integrations').props.onPress;
+    act(() => { useHomeStore.setState({ activeMemberId: 'tenant', household: [{ id: 'tenant', name: 'Tenant', role: 'Tenant', status: 'home' }] }); });
+    expect(action(tree!, 'Open voice and integrations')).toBeUndefined();
+    expect(action(tree!, 'Edit profile')).toBeTruthy();
+    act(() => { retainedOpen(); });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it("keeps all existing development controls on short connection pages", () => {
     tree = renderWorkspace();
     act(() => { action(tree!, "Tools settings").props.onPress(); });

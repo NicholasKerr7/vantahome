@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   StyleSheet,
   Text,
@@ -19,7 +20,6 @@ import {
   DeepScreen,
 } from "../components/deep/DeepScreen";
 import {
-  selectActiveMember,
   selectVisibleDevices,
   selectVisibleRooms,
   useHomeStore,
@@ -29,6 +29,8 @@ import { theme } from "../theme/theme";
 import { ROOMS } from "../../packages/home-scene/src/data";
 import { isModelHome } from "../features/three-d-home/modelHomeScope";
 import { useCollectionPagination } from "./components/collectionPagination";
+import { selectHomeNavigationAccess } from "../features/home-shell/homeNavigationAccess";
+import ModelRoomConnection from "../features/rooms/ModelRoomConnection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ManageRooms">;
 
@@ -47,13 +49,11 @@ export default function ManageRoomsScreen({ navigation }: Props) {
       }),
     [rowHeight, fontScale],
   );
-  const rooms = useHomeStore(selectVisibleRooms);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
   const modelHome = useHomeStore(isModelHome);
-  const devices = useHomeStore(selectVisibleDevices);
-  const activeMember = useHomeStore(selectActiveMember);
-  const canManageRooms = Boolean(
-    activeMember && ["Owner", "Admin"].includes(activeMember.role),
-  );
+  const devices = useHomeStore(useShallow(selectVisibleDevices));
+  const canManageRooms = useHomeStore((state) => selectHomeNavigationAccess(state).admin);
+  const canConnectModel = useHomeStore((state) => selectHomeNavigationAccess(state).admin && Boolean(state.authenticatedUserId));
   const canAddRooms = canManageRooms && !modelHome;
   const addRoom = useHomeStore((state) => state.addRoom);
   const renameRoom = useHomeStore((state) => state.renameRoom);
@@ -63,6 +63,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [connectingRoomId, setConnectingRoomId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const countByRoom = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -95,7 +96,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
 
   /** Create a room only for an authorized administrator, using the existing store action. */
   function createRoom() {
-    if (!canAddRooms || !roomName.trim()) return;
+    if (!canAddRooms || !roomName.trim() || !selectHomeNavigationAccess(useHomeStore.getState()).admin) return;
     addRoom(roomName.trim());
     setRoomName("");
     setShowAdd(false);
@@ -103,17 +104,22 @@ export default function ManageRoomsScreen({ navigation }: Props) {
 
   /** Commit the selected room's draft without changing its devices or order. */
   function saveRoom() {
-    if (!selectedRoom || !canSave) return;
+    if (!selectedRoom || !canSave || !selectHomeNavigationAccess(useHomeStore.getState()).admin) return;
     renameRoom(selectedRoom.id, draft.trim());
     setSelectedId(null);
   }
 
   /** Preserve the store's device reassignment behavior and the final-room guard. */
   function deleteRoom() {
-    if (!selectedRoom || !canManageRooms || modeledRoom || rooms.length <= 1)
+    if (!selectedRoom || !canManageRooms || modeledRoom || rooms.length <= 1 || !selectHomeNavigationAccess(useHomeStore.getState()).admin)
       return;
     removeRoom(selectedRoom.id);
     setSelectedId(null);
+  }
+
+  /** Recheck the role when a retained ordering action runs after household permissions change. */
+  function moveSelectedRoom(direction: -1 | 1): void {
+    if (selectedRoom && selectHomeNavigationAccess(useHomeStore.getState()).admin) moveRoom(selectedRoom.id, direction);
   }
 
   /** Resolve visibility again before opening a room from a potentially stale card or dialog. */
@@ -135,7 +141,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
       subtitle="Choose a room. Make yourself at home."
       onBack={() => navigation.goBack()}
       actions={
-        modelHome ? undefined : (
+        !canAddRooms ? undefined : (
           <DeepAction
             label="Add room"
             icon="add-outline"
@@ -242,7 +248,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Manage ${room.name}`}
+                accessibilityLabel={`${canManageRooms ? 'Manage' : 'Details for'} ${room.name}`}
                 accessibilityHint="View room details and organization options"
                 style={styles.manageRoom}
                 onPress={() => setSelectedId(room.id)}
@@ -252,7 +258,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                   size={18}
                   color={theme.colors.accentText}
                 />
-                <Text style={styles.manageLabel}>Manage</Text>
+                <Text style={styles.manageLabel}>{canManageRooms ? 'Manage' : 'Details'}</Text>
               </Pressable>
             </View>
           );
@@ -293,7 +299,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                   icon="arrow-forward-outline"
                   onPress={() => openRoom(selectedRoom.id)}
                 />
-                {!modeledRoom && (
+                {canManageRooms && !modeledRoom && (
                   <DeepAction
                     label="Save"
                     primary
@@ -351,7 +357,12 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                   />
                 </View>
               )}
-              <View style={styles.section}>
+              {canConnectModel && <DeepAction label={selectedRoom.modelRoomId ? 'Edit 3D connection' : 'Connect to 3D room'} icon="cube-outline" onPress={() => {
+                if (!selectHomeNavigationAccess(useHomeStore.getState()).admin) return;
+                setConnectingRoomId(selectedRoom.id);
+                setSelectedId(null);
+              }} />}
+              {canManageRooms && <View style={styles.section}>
                 <Text style={styles.label}>Position in your home</Text>
                 <View style={styles.actions}>
                   <DeepAction
@@ -359,7 +370,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                     accessibilityLabel={`Move ${selectedRoom.name} up`}
                     icon="arrow-up-outline"
                     disabled={!canManageRooms || selectedIndex === 0}
-                    onPress={() => moveRoom(selectedRoom.id, -1)}
+                    onPress={() => moveSelectedRoom(-1)}
                   />
                   <DeepAction
                     label="Move down"
@@ -368,11 +379,11 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                     disabled={
                       !canManageRooms || selectedIndex === rooms.length - 1
                     }
-                    onPress={() => moveRoom(selectedRoom.id, 1)}
+                    onPress={() => moveSelectedRoom(1)}
                   />
                 </View>
-              </View>
-              {!modeledRoom && (
+              </View>}
+              {canManageRooms && !modeledRoom && (
                 <Pressable
                   accessibilityLabel={`Delete ${selectedRoom.name}`}
                   disabled={!canManageRooms || rooms.length <= 1}
@@ -394,7 +405,8 @@ export default function ManageRoomsScreen({ navigation }: Props) {
           </ModalForm>
         </ModalCard>
       )}
-      {showAdd && (
+      {connectingRoomId && canConnectModel && <ModelRoomConnection key={connectingRoomId} roomId={connectingRoomId} onClose={() => setConnectingRoomId(null)} />}
+      {showAdd && canAddRooms && (
         <ModalCard
           visible
           onRequestClose={() => setShowAdd(false)}

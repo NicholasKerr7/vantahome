@@ -1,3 +1,4 @@
+import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { Power, X } from 'lucide-react';
 import { DEVICE_ICONS } from './DeviceControlCard';
@@ -17,6 +18,8 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
   const Icon = DEVICE_ICONS[device.kind];
   const tone = gasStatusTone(device.kind, current);
+  const visible = useHomeStore((state) => canViewSceneDevice(state.access, deviceId));
+  const controllable = useHomeStore((state) => canControlSceneDevice(state.access, deviceId));
 
   // Release native modality during the commit, before the parent restores focus.
   useLayoutEffect(() => {
@@ -56,6 +59,7 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
     }
   }
 
+  if (!visible) return null;
   return <dialog ref={dialog} id="full-device-controls" className="device-control-sheet" aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
       <header className="device-sheet-heading" data-device-tone={tone}>
@@ -67,8 +71,8 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
         </div>
         <button type="button" className="quick-device-close" aria-label="Close full controls" onClick={dismiss}><X size={20} aria-hidden="true" /></button>
       </header>
-      <button type="button" className="device-sheet-primary" onClick={() => toggleDevice(deviceId)}><Power size={17} aria-hidden="true" /><span>{quickActionLabel(device, current)}</span></button>
-      <PagedDeviceControls key={deviceId} device={device} current={current} />
+      <button type="button" className="device-sheet-primary" disabled={!controllable} onClick={() => toggleDevice(deviceId)}><Power size={17} aria-hidden="true" /><span>{quickActionLabel(device, current)}</span></button>
+      {controllable ? <PagedDeviceControls key={deviceId} device={device} current={current} /> : <p className="device-hint">View only. Your household role does not allow changing this device.</p>}
     </div>
   </dialog>;
 }

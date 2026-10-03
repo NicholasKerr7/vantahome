@@ -1,3 +1,6 @@
+import { FULL_SCENE_ACCESS } from '../sceneAccess';
+import { getRoom } from '../data';
+import { disposeRoomGeometry, isolateRoomGeometry } from './roomPrivacy';
 import { getModelUrl } from '../embeddedHost';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -20,10 +23,10 @@ import { RENDER_QUALITY, type RenderQualityTier } from './renderQuality';
 import { bindSceneVisibilityScheduling } from './visibilityScheduling';
 import './scene.css';
 
-type ModelProps = Pick<HouseSceneProps, 'view' | 'deviceStates' | 'reducedMotion' | 'onReady'>;
+type ModelProps = Pick<HouseSceneProps, 'view' | 'roomId' | 'access' | 'deviceStates' | 'reducedMotion' | 'onReady'>;
 
 /** Load a faithful Blender export and animate its preserved washing-machine part. */
-function HouseModel({ view, deviceStates, reducedMotion, onReady }: ModelProps) {
+function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, reducedMotion, onReady }: ModelProps) {
   const model = view === 'ground' || view === 'upper' ? view : 'exterior';
   // Exports are uncompressed; avoid unused remote/WASM decoder initialization.
   const { scene } = useGLTF(getModelUrl(model), false, false);
@@ -32,8 +35,9 @@ function HouseModel({ view, deviceStates, reducedMotion, onReady }: ModelProps) 
   const canAnimate = usePageMotion(reducedMotion);
   const speed = useRef(0);
   const washer = readDevice(deviceStates, 'laundry-washer');
+  const privateRoomId = access.fullHome ? '' : roomId;
   const preparedScene = useMemo(() => {
-    const copy = scene.clone(true);
+    const copy = access.fullHome ? scene.clone(true) : isolateRoomGeometry(scene, getRoom(privateRoomId));
     // Replace the original presentation lawn only in the complete house view.
     const oldSite = copy.getObjectByName(siteLayout.runtime.replaceExistingGroup);
     if (model === 'exterior' && oldSite) oldSite.visible = false;
@@ -44,7 +48,11 @@ function HouseModel({ view, deviceStates, reducedMotion, onReady }: ModelProps) 
       }
     });
     return copy;
-  }, [scene, model]);
+  }, [scene, model, access.fullHome, privateRoomId]);
+
+  useEffect(() => () => {
+    if (privateRoomId) disposeRoomGeometry(preparedScene);
+  }, [preparedScene, privateRoomId]);
 
   useEffect(() => {
     drum.current = preparedScene.getObjectByName('washer-drum') ?? null;
@@ -62,7 +70,7 @@ function HouseModel({ view, deviceStates, reducedMotion, onReady }: ModelProps) 
 
   return <>
     <primitive object={preparedScene} />
-    {model !== 'upper' && <group ref={markers} position={[13.16, 0.42, -15.103]}>
+    {access.fullHome && model !== 'upper' && <group ref={markers} position={[13.16, 0.42, -15.103]}>
       {[0, 1, 2].map((index) => <group key={index} rotation={[0, 0, index * Math.PI * 2 / 3]}><mesh position={[0.068, 0, 0]} rotation={[0, 0, 0.3]}><boxGeometry args={[0.054, 0.035, 0.009]} /><meshStandardMaterial color={index === 0 ? '#ded5bb' : '#70958b'} roughness={0.85} /></mesh></group>)}
     </group>}
   </>;
@@ -83,6 +91,9 @@ function VisibilityScheduling({ suspended }: { suspended: boolean }) {
 export default function HouseScene({ suspended = false, ...props }: HouseSceneProps & { suspended?: boolean }) {
   const [qualityTier, setQualityTier] = useState<RenderQualityTier>('high');
   const quality = RENDER_QUALITY[qualityTier];
+  const roomOnly = props.access ? !props.access.fullHome : false;
+  const bounds = roomOnly ? getRoom(props.roomId).bounds : undefined;
+  const visibleStates = roomOnly ? Object.fromEntries(Object.entries(props.deviceStates).filter(([id]) => props.access?.deviceIds.includes(id))) : props.deviceStates;
   return <Canvas className={`house-canvas ${props.view === 'immersive' ? 'is-immersive' : ''}`} shadows dpr={[1, quality.maxDpr]} camera={{ position: [28, 20, 16], fov: 42, near: 0.08, far: 500 }} gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping }} onCreated={({ gl }) => {
       gl.shadowMap.type = PCFSoftShadowMap;
       gl.domElement.tabIndex = 0;
@@ -92,18 +103,21 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       <AdaptiveQuality onChange={setQualityTier} />
       <VisibilityScheduling suspended={suspended} />
       <MaterialEnvironment />
-      <SceneLighting daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
-      <CameraRig view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} />
-      {props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
+      <SceneLighting daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} deviceStates={visibleStates} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
+      <CameraRig roomOnly={roomOnly} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} />
+      {!roomOnly && props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
       <Suspense fallback={null}>
-        <HouseModel view={props.view} deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
-        <HotspotLayout roomId={props.roomId} view={props.view}>
+        <HouseModel access={props.access} roomId={props.roomId} view={props.view} deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
+        <HotspotLayout access={props.access} roomId={props.roomId} view={props.view}>
         <Devices {...props} />
-        {(props.view === 'exterior' || props.view === 'immersive') && <Landscape {...props} windSpeedKmh={props.environment.weather?.windSpeedKmh ?? 0} windDirectionDeg={props.environment.weather?.windDirectionDeg ?? 0} />}
+        {!roomOnly && (props.view === 'exterior' || props.view === 'immersive') && <Landscape {...props} windSpeedKmh={props.environment.weather?.windSpeedKmh ?? 0} windDirectionDeg={props.environment.weather?.windDirectionDeg ?? 0} />}
         </HotspotLayout>
-        {(props.view === 'exterior' || props.view === 'immersive') && <SolarLightPools deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} />}
-        {props.environment.weather ? <WeatherEffects weather={props.environment.weather} view={props.view} roomId={props.roomId} reducedMotion={props.reducedMotion} /> : null}
+        {!roomOnly && (props.view === 'exterior' || props.view === 'immersive') && <SolarLightPools deviceStates={props.deviceStates} reducedMotion={props.reducedMotion} />}
+        {!roomOnly && props.environment.weather ? <WeatherEffects weather={props.environment.weather} view={props.view} roomId={props.roomId} reducedMotion={props.reducedMotion} /> : null}
       </Suspense>
+      {bounds && <mesh position={[(bounds[0] + bounds[1]) / 2, -0.08, (bounds[2] + bounds[3]) / 2]} receiveShadow>
+        <boxGeometry args={[bounds[1] - bounds[0], 0.12, bounds[3] - bounds[2]]} /><meshStandardMaterial color="#b6aca0" roughness={0.7} />
+      </mesh>}
       <mesh position={[8, -1.02, -8]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[200, 200]} /><shadowMaterial color="#02080c" transparent opacity={0.42} depthWrite={false} /></mesh>
     </Canvas>;
 }

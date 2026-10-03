@@ -14,6 +14,8 @@ import { homeVoiceStyles as styles } from './homeVoiceStyles';
 /** Explain a verified local result without claiming that a safety-held command completed. */
 function commandFeedback(outcome: VoiceCommandOutcome, description: string): string {
   if (outcome.status === 'reconnecting') return 'Controls are reconnecting. Close and reopen voice control.';
+  if (outcome.status === 'denied') return 'Those controls are not available with your current access.';
+  if (outcome.status === 'scoped') return 'Updated your permitted devices. Other controls remain restricted.';
   if (outcome.status === 'completed') return `${description}. Simulation updated.`;
   if (outcome.status === 'pending') return 'Command started. Check device controls for movement progress.';
   const summary = `${outcome.completedCount} of ${outcome.requestedCount} devices match your command.`;

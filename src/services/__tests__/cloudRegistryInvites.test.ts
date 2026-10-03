@@ -107,6 +107,9 @@ test.each([
   { ...invite, created_at: undefined },
   { ...invite, created_at: 'not a timestamp' },
   { ...invite, expires_at: 'not a timestamp' },
+  { ...invite, access_expires_at: 'not a timestamp' },
+  { ...invite, access_expires_at: 12345 },
+  { ...invite, role: 'tenant', access_expires_at: '2026-10-10T12:00:00Z' },
 ])('excludes malformed invitation rows: %p', async (row) => {
   mockRows = [row, invite];
   await expect(listPendingInvites('alice')).resolves.toEqual([invite]);

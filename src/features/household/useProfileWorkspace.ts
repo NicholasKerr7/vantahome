@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Alert } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
@@ -34,6 +35,8 @@ import {
 } from "../../security/permissions";
 import { runtimePolicy } from "../../config/runtimeMode";
 import { cancelAuthFlow, waitForAuthExchange } from "../../services/authFlow";
+import { buildInvitationAccess, type GuestAccessHours } from "./invitationAccess";
+import { isInvitationExpired } from "../home-access/invitationExpiry";
 
 /** Reject delayed household mutations after changing home, account, or session. */
 function scopeIsCurrent(previous: ReturnType<typeof useHomeStore.getState>) {
@@ -47,6 +50,15 @@ function scopeIsCurrent(previous: ReturnType<typeof useHomeStore.getState>) {
   );
 }
 
+/** Re-evaluate invitation authority against the current role and its effective overrides. */
+function canInviteFromState(state: ReturnType<typeof useHomeStore.getState>, requestedRole: string) {
+  const actor = selectActiveMember(state);
+  return Boolean(actor && ["Owner", "Admin"].includes(actor.role) &&
+    (requestedRole !== "Admin" || actor.role === "Owner") && roleHasPermission(
+    actor.role, "member.invite", state.memberPermissionOverrides.filter((item) => item.memberId === actor.id),
+  ));
+}
+
 /** Keep profile edits and protected household actions separate from their paged presentation. */
 export function useProfileWorkspace(navigation: { goBack: () => void }) {
   const profile = useHomeStore((s) => s.profile);
@@ -57,7 +69,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   const roomsCount = useHomeStore((s) => selectVisibleRooms(s).length);
   const devicesCount = useHomeStore((s) => selectVisibleDevices(s).length);
   const household = useHomeStore((s) => s.household);
-  const rooms = useHomeStore(selectVisibleRooms);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
   const activeMember = useHomeStore(selectActiveMember);
   const activeMemberId = useHomeStore((s) => s.activeMemberId);
   const roomMembers = useHomeStore((s) => s.roomMembers);
@@ -87,6 +99,8 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   const [newMemberRole, setNewMemberRole] = useState<
     "Admin" | "Member" | "Guest" | "Tenant"
   >("Guest");
+  const [newMemberRoomIds, setNewMemberRoomIds] = useState<string[]>([]);
+  const [guestAccessHours, setGuestAccessHours] = useState<GuestAccessHours>(0);
   const [newMemberAvatar, setNewMemberAvatar] = useState("");
   const [pendingInvites, setPendingInvites] = useState<HomeInvite[]>([]);
   const [invitesRefreshing, setInvitesRefreshing] = useState(false);
@@ -129,6 +143,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   );
   const canInviteMembers = Boolean(
     activeMember &&
+    ["Owner", "Admin"].includes(activeMember.role) &&
     roleHasPermission(
       activeMember.role,
       "member.invite",
@@ -338,21 +353,25 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     const scope = useHomeStore.getState();
     const trimmed = newMemberName.trim();
     const email = newMemberEmail.trim().toLowerCase();
-    if (!trimmed || !canInviteMembers) return;
+    if (!trimmed || !canInviteFromState(scope, newMemberRole)) return;
     if (newMemberRole === "Admin" && activeMember?.role !== "Owner") return;
     if (!email) {
       Alert.alert("Email required", "Add an email to invite this member.");
       return;
     }
+    let access: ReturnType<typeof buildInvitationAccess>;
+    try {
+      access = buildInvitationAccess(newMemberRole, newMemberRoomIds, rooms.map((room) => room.id), guestAccessHours);
+    } catch (error) {
+      Alert.alert("Review room access", (error as Error).message);
+      return;
+    }
     if (!(await confirmHouseholdAdminChange())) return;
-    if (!scopeIsCurrent(scope)) return;
+    if (!scopeIsCurrent(scope) || !canInviteFromState(useHomeStore.getState(), newMemberRole)) return;
     /** Create a local demo person with the same initial room scope as an invite. */
     const addMemberLocally = () => {
       const localId = `m${Date.now()}`;
-      const initialRoomIds =
-        newMemberRole === "Guest" || newMemberRole === "Tenant"
-          ? rooms.map((room) => room.id).slice(0, 1)
-          : [];
+      const initialRoomIds = access.roomIds;
       addHouseholdMember({
         id: localId,
         userId: localId,
@@ -361,6 +380,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
         status: "away",
         avatarUri: newMemberAvatar,
         avatarColor: avatarColor,
+        accessExpiresAt: access.accessExpiresAt,
       });
       if (initialRoomIds.length) {
         setRoomMembership(localId, initialRoomIds);
@@ -369,6 +389,8 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
       setNewMemberEmail("");
       setNewMemberRole("Guest");
       setNewMemberAvatar("");
+      setNewMemberRoomIds([]);
+      setGuestAccessHours(0);
     };
     if (!supabase) {
       if (!runtimePolicy.allowUnauthenticatedDemo) return;
@@ -377,7 +399,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
         "Invite added locally",
         "Sign in to send real invites from the cloud.",
       );
-      return;
+      return true;
     }
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -401,10 +423,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
       setInviteLoading(true);
       const roleLower = newMemberRole.toLowerCase() as
         "admin" | "member" | "guest" | "tenant";
-      const initialRoomIds =
-        newMemberRole === "Guest" || newMemberRole === "Tenant"
-          ? rooms.map((room) => room.id).slice(0, 1)
-          : [];
+      const initialRoomIds = access.roomIds;
       const result = await inviteHomeMember(
         {
           homeId: scope.activeHomeId ?? undefined,
@@ -412,6 +431,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
           name: trimmed,
           role: roleLower,
           roomIds: initialRoomIds.length ? initialRoomIds : undefined,
+          accessExpiresAt: access.accessExpiresAt,
         },
         scope.authenticatedUserId ?? undefined,
       );
@@ -431,7 +451,10 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
       setNewMemberEmail("");
       setNewMemberRole("Guest");
       setNewMemberAvatar("");
+      setNewMemberRoomIds([]);
+      setGuestAccessHours(0);
       await refreshInvites();
+      return true;
     } catch (err) {
       if (!scopeIsCurrent(scope)) return;
       const message = (err as Error).message ?? "Unable to invite member.";
@@ -481,6 +504,10 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     const scope = useHomeStore.getState();
     const invitation = pendingInvites.find((item) => item.id === inviteId);
     if (!invitation || inviteResponsePending.current || !scopeIsCurrent(scope)) return;
+    if (action === "accept" && isInvitationExpired(invitation) && acceptedInvite.current?.inviteId !== inviteId) {
+      Alert.alert("Invitation expired", "Ask the home administrator for a new invitation.");
+      return;
+    }
     const accepted = acceptedInvite.current;
     const pendingAcceptance = accepted?.userId === scope.authenticatedUserId && accepted.epoch === scope.sessionEpoch;
     // Once the server accepts, retry only the registry read before another household decision.
@@ -581,6 +608,10 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     setNewMemberRole,
     newMemberAvatar,
     setNewMemberAvatar,
+    newMemberRoomIds,
+    setNewMemberRoomIds,
+    guestAccessHours,
+    setGuestAccessHours,
     pendingInvites,
     invitesRefreshing,
     inviteInboxError,

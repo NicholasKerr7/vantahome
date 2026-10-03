@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {
@@ -52,8 +53,8 @@ export default function CamerasScreen({ navigation }: Props) {
       ),
     [activeMember?.id, allPermissionOverrides],
   );
-  const rooms = useHomeStore(selectVisibleRooms);
-  const visibleDevices = useHomeStore(selectVisibleDevices);
+  const rooms = useHomeStore(useShallow(selectVisibleRooms));
+  const visibleDevices = useHomeStore(useShallow(selectVisibleDevices));
   const allDevices = useHomeStore((state) => state.devices);
   const canViewCamera = Boolean(
     activeMember &&

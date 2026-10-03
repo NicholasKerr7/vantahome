@@ -4,13 +4,11 @@ import { useShallow } from "zustand/react/shallow";
 import { DeviceControlsSheet } from "../three-d-home/DeviceControlsSheet";
 import { useDecorativeMotion } from "../../components/useDecorativeMotion";
 import { useSimulationControls } from "../three-d-home/useSimulationControls";
-import { canUseModelFavorites } from "../three-d-home/useDeviceBrowserFavorites";
 import {
   guardModelDeviceControls,
-  canControlModelDevice,
 } from "../three-d-home/modelDeviceControls";
-import { selectVisibleDevices, useHomeStore } from "../../store/useHomeStore";
-import { getDevice } from "../../../packages/home-scene/src/data";
+import { useHomeStore } from "../../store/useHomeStore";
+import { resolveModelSceneAccess, selectModelLibraryDeviceIds } from "../three-d-home/modelSceneAccess";
 import Pressable from "../../components/Pressable";
 import { theme } from "../../theme/theme";
 
@@ -20,18 +18,14 @@ export default function HomeDeviceLibrary({
 }: {
   onClose: () => void;
 }) {
-  const allowed = useHomeStore(canUseModelFavorites);
-  const devices = useHomeStore(useShallow(selectVisibleDevices));
+  const allowed = useHomeStore((state) => resolveModelSceneAccess(state).roomIds.length > 0);
+  const libraryIds = useHomeStore(useShallow(selectModelLibraryDeviceIds));
   const snapshot = useSimulationControls(allowed);
   const client = useMemo(
     () => guardModelDeviceControls(snapshot.client),
     [snapshot.client],
   );
-  const allowedDeviceIds = allowed
-    ? devices
-        .filter((device) => getDevice(device.id)?.kind === device.kind)
-        .map((device) => device.id)
-    : [];
+  const allowedDeviceIds = allowed ? libraryIds.filter((id) => snapshot.access?.deviceIds.includes(id)) : [];
   const motionAllowed = useDecorativeMotion(true);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   if (!allowed)
@@ -43,8 +37,8 @@ export default function HomeDeviceLibrary({
               Device library unavailable
             </Text>
             <Text style={styles.detail}>
-              This library belongs to the offline house preview. Return to your
-              home to use the devices available to your account.
+              No 3D devices are available for your assigned rooms. Your homeowner
+              can review room access and model connections.
             </Text>
             <Pressable onPress={onClose} style={styles.button}>
               <Text style={styles.label}>Back to home</Text>
@@ -62,7 +56,7 @@ export default function HomeDeviceLibrary({
       motionAllowed={motionAllowed}
       onClose={onClose}
       onSelect={(id) => {
-        if (canControlModelDevice(id)) setDeviceId(id);
+        if (selectModelLibraryDeviceIds(useHomeStore.getState()).includes(id)) setDeviceId(id);
       }}
     />
   );

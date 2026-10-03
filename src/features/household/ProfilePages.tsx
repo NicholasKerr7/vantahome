@@ -1,3 +1,5 @@
+import { useHomeStore } from "../../store/useHomeStore";
+import { selectHomeNavigationAccess } from "../home-shell/homeNavigationAccess";
 import React, { useState } from "react";
 import { Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -264,6 +266,11 @@ export function AccessPage({
   model: ProfileWorkspaceModel;
   onIntegrations: () => void;
 }) {
+  const canManageIntegrations = useHomeStore((state) => selectHomeNavigationAccess(state).integrations);
+  /** Recheck current membership before opening a previously rendered service action. */
+  const reviewIntegrations = () => {
+    if (selectHomeNavigationAccess(useHomeStore.getState()).integrations) onIntegrations();
+  };
   return (
     <DeepCard style={styles.fill}>
       <ProfileForm>
@@ -274,7 +281,7 @@ export function AccessPage({
             Voice assistants, bridges, and your account.
           </Text>
         </View>
-        {model.serviceItems.map((item) => (
+        {canManageIntegrations && model.serviceItems.map((item) => (
           <View key={item.provider} style={[styles.row, styles.rowDivider]}>
             <View style={styles.serviceIcon}>
               <Ionicons
@@ -296,7 +303,7 @@ export function AccessPage({
             <DeepAction
               label="Review"
               accessibilityLabel={`Review ${item.label} setup`}
-              onPress={onIntegrations}
+              onPress={reviewIntegrations}
             />
           </View>
         ))}

@@ -9,6 +9,7 @@ import type { HomeInvite } from '../../services/cloudRegistry';
 import { theme } from '../../theme/theme';
 import { useHomeAccess } from './useHomeAccess';
 import { invitationExpiryLabel, isInvitationExpired } from './invitationExpiry';
+import { formatGuestAccessExpiry } from '../household/invitationAccess';
 
 type Props = {
   userId: string;
@@ -35,6 +36,7 @@ function InvitationCard({ invite, disabled, busy, onRespond }: InvitationCardPro
       Join as {role}{invite.room_ids.length ? ` · ${invite.room_ids.length} assigned ${invite.room_ids.length === 1 ? 'room' : 'rooms'}` : ''}
     </Text>
     {expiryLabel && <Text style={styles.expiry}>{expiryLabel}</Text>}
+    {invite.role === 'guest' && <Text style={styles.expiry}>{formatGuestAccessExpiry(invite.access_expires_at)}</Text>}
     <View style={styles.actions}>
       <Pressable
         accessibilityLabel={`Accept invitation to ${invite.home_name}`}
