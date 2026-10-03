@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "postinstall": "node scripts/patch-query-string.js && node scripts/patch-expo-metro-watchers.js && npm run build:scenes",
+    "postinstall": "npm run patch:dependencies && npm run build:scenes",
+    "patch:dependencies": "node scripts/patch-query-string.js && node scripts/patch-expo-metro-watchers.js && node scripts/patch-security-dependencies.js",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",

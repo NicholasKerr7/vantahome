@@ -212,5 +212,5 @@ flow remains unverified.** The current preview remains a simulation. A fresh
 local PostgreSQL 17 database applied migrations 001–016; six SQL suites passed
 323 pgTAP assertions. Full app and scene tests, browser role/layout checks, builds,
 and type checks also passed; see [Room access](ROOM_ACCESS.md) for counts and the
-separate unresolved dependency audit. These checks and deployed metadata do not
+subsequent dependency source remediation. These checks and deployed metadata do not
 prove hosted email delivery, mobile sign-in, or physical-device control.

@@ -90,16 +90,18 @@ staging rollout: migration history is **001–016**, the new columns/constraints
 indexes are present, RLS remains enabled, anonymous helper execution is denied,
 and **home-invite version 17** is active with JWT verification enabled.
 
-The aggregate release verification is **blocked by the dependency audit**.
-On 2026-10-03, `npm run security:dependencies` failed for two high-severity
+The initial release verification was blocked on 2026-10-03 by two high-severity
 upstream advisories with no published patched version:
 
 - `braces@3.0.3`: [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), reached through Expo → Metro → metro-file-map → micromatch.
 - `node-forge@1.4.0`: [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv), reached through Expo CLI, also through its code-signing certificates dependency.
 
-The installed versions matched the registry's latest releases when checked. No
-exceptions, unreviewed forks, or package substitutions were introduced. Passing
-the other checks does not clear this release blocker.
+The subsequent dependency remediation backports the pinned upstream proposed
+fixes, verifies every installed copy by source hash, and runs attack regressions
+before assessing the audit. Full `npm run verify` now passes with these local
+patches. Raw npm audit still reports the published versions; they have not been
+relabeled as official patched releases. See [Dependency security](DEPENDENCY_SECURITY.md)
+for provenance, clean-install evidence, limitations, and upstream retirement rules.
 
 Staging deployment did not send emails, create accounts/invitations/grants, or
 change production. The iPhone build, actual invitation delivery, two-account

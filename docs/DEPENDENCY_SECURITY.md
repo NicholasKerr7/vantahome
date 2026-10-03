@@ -1,11 +1,17 @@
 # Dependency Security Notes
 
-Last reviewed: 2026-09-29
+Last reviewed: 2026-10-03
 
 ## Current baseline
 
-- `npm audit --omit=dev` reports zero vulnerabilities at every severity. No
-  production dependency advisory exceptions remain.
+- The npm registry currently flags `braces@3.0.3` and `node-forge@1.4.0` with
+  advisories for which no fixed release is published. Both installed sources
+  receive narrowly scoped, pinned local backports; their original package
+  names, versions, lockfile entries, and advisory visibility are preserved.
+  **Raw `npm audit --include=dev` is not clean.** The repository gate distinguishes
+  verified source remediation from an upstream-fixed dependency; see below.
+- The scene workspace now uses the official Vitest 4.1.11 security release,
+  resolving the separate development dependency advisory described below.
 - Patched overrides move PostCSS to 8.5.26 and the `xcode` build helper's UUID
   dependency to 11.1.1. Both versions clear their current advisories while the
   Expo SDK 54 dependency check, configuration, tests, and web export pass.
@@ -32,12 +38,130 @@ Last reviewed: 2026-09-29
   are present in SDK 54, and `expo config` validates the resulting configuration.
 - Added the optional `@lottiefiles/dotlottie-react` 0.13.5 peer required by
   `lottie-react-native` on web. The production Expo web export now completes.
-- `npm run security:dependencies` fails on any production vulnerability and is
-  part of `npm run verify` and CI. It also fails when the audit cannot finish or
-  returns an invalid report; a missing audit is not a security pass. Propagated
-  npm entries are not printed as duplicate concrete advisories.
+- `npm run security:dependencies` audits both production and development
+  dependencies and fails on any unremediated vulnerability. It is part of
+  `npm run verify` and CI. The two precise
+  advisories described below are recognized only after installed-source hashes
+  and attack regressions pass. Missing patches, unknown source bytes, changed
+  advisory fingerprints, and unavailable or malformed audit results fail the
+  gate. A missing audit is not a security pass. Propagated npm entries are not
+  printed as duplicate concrete advisories.
 - CI also builds the production web export so optional web-runtime dependency
   drift cannot pass on type checks and native-focused tests alone.
+
+## Vitest development-server remediation
+
+The complete dependency audit found
+[GHSA-82fw-gwwq-j7x9](https://github.com/advisories/GHSA-82fw-gwwq-j7x9) in Vitest
+and `@vitest/mocker` 3.2.7. The official fix validates redirect mock targets
+against Vite's file-access rules. Upgrade the scene workspace to **4.1.11**, the
+smallest patched stable release; no local patch or advisory exception is used.
+The existing Vite 7.3.6 and Node 22.22.3 satisfy its supported requirements.
+
+The lockfile change is confined to Vitest's dependency family and explicit
+workspace Node test types. Vitest 4 removes the old accidental injection of Node
+declarations, so the workspace now declares Node 22 types and includes them in its
+existing combined source/test TypeScript configuration. This changes development
+typing only. The 725 scene tests pass unchanged under Vitest 4.1.11, and the
+scene TypeScript check and production Vite build pass.
+
+The npm 10.9.8 resolver encountered an internal `edgesOut` error while exploring
+optional peers. A temporary npm 12.2.0 CLI generated the lockfile without
+`--force`, ignored peer requirements, or a global npm upgrade. Locked installation
+is still validated with the repository's normal npm toolchain. The security gate
+now explicitly includes development dependencies so this class of finding cannot
+be excluded by an environment's production-only installation setting.
+
+## Temporary braces and node-forge source backports
+
+As of October 3, 2026, the registry's newest releases are still `braces` 3.0.3
+and `node-forge` 1.4.0. Neither advisory identifies a published fixed version.
+The pending upstream fixes are **open pull requests**, not official security
+releases. VantaHome carries their narrowly reviewed runtime changes until a
+compatible official release is available.
+
+| Package | Reachability in this repository | Backported correction |
+| --- | --- | --- |
+| `braces@3.0.3` | Expo → Metro file map → micromatch; also Jest's glob matching. | Bound parser and AST walker depth, including parentheses and caller-supplied ASTs; reject cyclic expansion parent chains. |
+| `node-forge@1.4.0` | Expo CLI's Apple signing-certificate parsing and `@expo/code-signing-certificates` certificate/CSR/signature helpers. | Reject unconsumed children in the RSA PKCS#1 v1.5 nested DigestAlgorithm sequence. |
+
+These paths belong to development/build tooling; Expo is classified as a
+production dependency by npm, so `--omit=dev` still includes them. This
+classification is not changed to hide a finding. A broad Expo upgrade would not
+solve the issue by itself: the current CLI 57.0.27 still depends on node-forge,
+and the current Metro file map still depends on micromatch/braces. Replacing
+these libraries wholesale would introduce unrelated glob and certificate API
+changes.
+
+The reviewed provenance is:
+
+- Braces [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm),
+  backporting only runtime changes from
+  [upstream PR #72](https://github.com/micromatch/braces/pull/72), pinned at
+  [`28d440b5dd449dbf1fe6f3506cf94ecca4d02660`](https://github.com/FSDevelop/braces/commit/28d440b5dd449dbf1fe6f3506cf94ecca4d02660).
+  The patch retains the published 3.0.3 behavior outside the depth guards and
+  includes corrections for fractional limits and `escapeInvalid` compatibility.
+  Nesting above 100 levels is rejected intentionally; callers may choose a
+  stricter limit but cannot disable or raise that ceiling.
+- Node-forge [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv),
+  using the exact `lib/rsa.js` change from
+  [upstream PR #1152](https://github.com/digitalbazaar/forge/pull/1152), pinned at
+  [`ceba34402e329f0365134f23fe19898756527d65`](https://github.com/Krysthyan/forge/commit/ceba34402e329f0365134f23fe19898756527d65).
+  Valid algorithm identifiers containing an OID and optional NULL remain valid;
+  extra nested elements are rejected.
+
+`scripts/security-patches/` stores each transformation, exact original and
+patched SHA-256 hashes, package version, advisory identity, and upstream license.
+`scripts/patch-security-dependencies.js` compares every physical installed copy
+against the lockfile, checks all target bytes before writing any, and refuses
+unknown versions or sources. It does not invent a fixed package version, rename
+a vulnerable package, fetch an unpinned branch, or modify the lockfile to evade
+registry detection. `npm ci` invokes it through `postinstall`. If lifecycle
+scripts are intentionally disabled, run `npm run patch:dependencies` before
+building. The check-only form never repairs a missing patch silently.
+
+The security gate first verifies those source hashes, then executes bounded
+regressions against the installed packages, then runs the live npm audit. It
+recognizes only the exact two reviewed advisory fingerprints on verified
+installed locations; unknown findings, changed fingerprints, missing copies,
+and broken propagated advisory references fail. It also requires review when
+npm starts reporting an available upstream fix. Successful output explicitly
+states that the registry still reports the versions and that remediation is
+local. Raw npm audit and dependency alerts must continue to report the original
+findings until upstream releases supersede these backports.
+
+Regression coverage includes normal and hostile brace patterns, direct ASTs,
+depth boundaries, optional escaping, real micromatch consumers, a public
+low-exponent RSA forgery vector, nested and outer malformed DigestInfo variants,
+valid signatures, and Expo certificate/CSR/signing operations. The tests check
+behavior rather than only matching patch text. A passing local gate does not
+replace independent review or native-device release validation.
+
+Verification on October 3, 2026:
+
+- A fresh isolated install of the full lockfile using `npm ci --ignore-scripts`
+  succeeded. The unpatched source check failed as intended; applying
+  `npm run patch:dependencies` twice was idempotent, and the dependency security
+  gate then passed. The backports retain the original braces and node-forge
+  versions and lockfile entries; the separate Vitest upgrade changes its family.
+- All 31 installed-source security regressions and 42 patch-manager/audit-gate
+  tests passed. The unchanged upstream braces suite passed 764 tests; selected
+  upstream forge suites passed 385 tests with four existing pending tests.
+- Full `npm run verify` passed: 2,276 app tests across 165 suites, 725 scene tests
+  across 61 files, 127 bridge tests, and 36 script tests, plus its type and
+  release checks. Postinstall rebuilt scene assets, and the production web
+  export passed.
+- Raw npm audit continues reporting both affected version numbers. Passing the
+  repository gate means verified local source remediation, not a clean registry
+  audit, an official upstream fix, or a new iPhone build.
+
+When a fixed release becomes available, review its advisory range and upstream
+diff, update the compatible dependency resolution, and remove the corresponding
+patch and locally remediated advisory entry together. Never refresh source hashes
+blindly after dependency drift. Validate a fresh locked install, the attack
+regressions, Expo compatibility, full verification, and a production web export.
+Rollback means restoring the last reviewed dependency/patch combination and
+reinstalling it; disabling the patch or audit gate is not a rollback strategy.
 
 ## IP classification, brace expansion, and HTTP client remediation
 
