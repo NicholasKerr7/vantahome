@@ -67,14 +67,21 @@ function dismiss() {
   waitFor('!document.querySelector("dialog:modal") && !document.querySelector("#quick-device-controls")');
 }
 
-/** Open the shared settings surface and its environment page using real controls. */
+/** Open the environment page through the dashboard's visible time button. */
 function openEnvironment() {
   if (evaluate('!!document.querySelector(".environment-panel")')) return;
   dismiss();
-  browser('click', '[aria-label="Home settings and help"]');
-  browser('wait', '#dashboard-library[open]');
-  browser('click', '#dashboard-library .dashboard-preference:last-of-type');
+  browser('click', 'button[aria-label^="Property time and weather:"]');
   browser('wait', '.environment-panel');
+}
+
+/** Choose a lighting mode in its full panel, then return to the property view. */
+function selectLightingMode(mode) {
+  const selector = `.environment-modes button:nth-child(${['auto', 'day', 'night'].indexOf(mode) + 1})`;
+  openEnvironment();
+  browser('click', selector);
+  waitFor(`document.querySelector(${JSON.stringify(selector)})?.getAttribute('aria-pressed') === 'true'`);
+  dismiss();
 }
 
 /** Open room or device browsing in either the landscape inspector or portrait dock. */
@@ -91,14 +98,12 @@ function pageFits(label) {
     overflowX:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,
     overflowY:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)-innerHeight,
     scrollX,scrollY,layout:document.querySelector('.device-viewport')?.dataset.layout,
-    controls:[...document.querySelectorAll('.light-mode-switch button, .environment-modes button, [aria-label="Close home browser"]')].filter(e=>e.checkVisibility()).map(e=>{
+    controls:[...(document.querySelector('dialog:modal')??document).querySelectorAll('button[aria-label^="Property time and weather:"], .environment-modes button, [aria-label="Close home browser"]')].filter(e=>e.checkVisibility()).map(e=>{
       const r=e.getBoundingClientRect();const target=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
       return {label:e.getAttribute('aria-label')||e.textContent.trim(),height:r.height,fits:r.left>=-1&&r.top>=-1&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1,reachable:e.disabled||e.contains(target)};
     })}))()`);
   check(layout.overflowX <= 1 && layout.overflowY <= 1 && Math.abs(layout.scrollX) <= 1 && Math.abs(layout.scrollY) <= 1, `${label}: no page scroll or overflow`);
-  const modal = evaluate('!!document.querySelector("dialog:modal")');
-  const relevant = modal ? layout.controls.filter((control) => !['Automatic local daylight', 'Daylight preview', 'Night lighting preview'].includes(control.label)) : layout.controls;
-  check(relevant.length > 0 && relevant.every((control) => control.fits && control.height >= 44 && control.reachable), `${label}: environment actions fit and have reachable touch targets`);
+  check(layout.controls.length > 0 && layout.controls.every((control) => control.fits && control.height >= 44 && control.reachable), `${label}: environment actions fit and have reachable touch targets`);
   return layout;
 }
 
@@ -134,7 +139,7 @@ function showProperty() {
   ready();
 }
 
-/** Check all four devices agree with the mode shown in the actual header controls. */
+/** Check all four devices agree with the mode chosen in the environment panel. */
 function checkPoles(on, description) {
   waitFor(`${JSON.stringify(poles.map((pole) => pole.id))}.every(id=>${stateExpression}?.deviceStates[id]?.on===${on})`);
   check(poles.length === 4, 'exactly four corner solar streetlights are cataloged');
@@ -333,9 +338,9 @@ try {
   screenshot('weather-actual-live-status');dismiss();showProperty();
   if (!resume) {
   phase='controls';
-  browser('click','[aria-label="Night lighting preview"]');checkPoles(true,'night preview automatically enables all four streetlights');screenshot('weather-four-streetlights-night');
+  selectLightingMode('night');checkPoles(true,'night preview automatically enables all four streetlights');screenshot('weather-four-streetlights-night');
   verifyPoleControls();
-  browser('click','[aria-label="Daylight preview"]');checkPoles(false,'day preview automatically disables all four streetlights');screenshot('weather-four-streetlights-day');
+  selectLightingMode('day');checkPoles(false,'day preview automatically disables all four streetlights');screenshot('weather-four-streetlights-day');
   startIrrigation();
   check(browser('errors').errors.length===0,'live weather and light/irrigation controls produce no uncaught page errors');
   check(browser('console').messages.filter(m=>m.type==='error'||m.level==='error').length===0,'live weather and device controls produce no console errors');
@@ -348,10 +353,12 @@ try {
   fixtureScenario('fog',45,'Fog');
   fixtureScenario('snow',73,'Snow');
   fixtureScenario('auto-day',0,'Clear sky');
-  browser('click','[aria-label="Automatic local daylight"]');checkPoles(false,'automatic mode follows the synthetic daytime sunrise/sunset schedule');
+  selectLightingMode('auto');checkPoles(false,'automatic mode follows the synthetic daytime sunrise/sunset schedule');
   fixtureScenario('auto-night',0,'Clear sky','night');
   checkPoles(true,'automatic mode follows a synthetic sunset transition without pressing the night control');
-  check(evaluate(`document.querySelector('[aria-label="Automatic local daylight"]').getAttribute('aria-pressed')`)==='true','clock automation remains selected during the synthetic sunset transition');
+  openEnvironment();
+  check(evaluate(`document.querySelector('.environment-modes button:first-child').getAttribute('aria-pressed')`)==='true','clock automation remains selected during the synthetic sunset transition');
+  dismiss();
   fixtureScenario('mobile-rain',63,'Rain');responsiveChecks();reducedMotionCheck();
   check(browser('errors').errors.length===0,'all visual weather scenarios produce no uncaught page errors');
   check(browser('console').messages.filter(m=>m.type==='error'||m.level==='error').length===0,'rain, fog, snow and wind compile without console/shader errors');

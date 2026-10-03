@@ -171,9 +171,16 @@ function checkLayout(width, height, expectedLayout) {
   } else {
     check(current.inspector.top >= current.house.bottom - 1, `${label}: full inspector is below the scene`);
   }
-  browser('scrollintoview', '.light-mode-switch');
-  settle('.light-mode-switch button');
-  reachableControls('.light-mode-switch button', `${label} day/night`);
+  const timeButton = 'button[aria-label^="Property time and weather:"]';
+  browser('scrollintoview', timeButton);
+  settle(timeButton);
+  reachableControls(timeButton, `${label} time and weather access`);
+  browser('click', timeButton);
+  browser('wait', '.environment-panel');
+  settle('.environment-modes button');
+  reachableControls('.environment-modes button', `${label} local/day/night options`);
+  browser('click', '[aria-label="Close home browser"]');
+  waitFor('!document.querySelector("dialog:modal")');
   browser('scrollintoview', '.view-controls');
   settle('.view-controls button');
   reachableControls('.view-controls button', `${label} view navigation`);

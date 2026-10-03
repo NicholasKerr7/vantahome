@@ -9,7 +9,7 @@ const weather: WeatherSnapshot = { tempC: 29.2, precipitationMm: 2, rainMm: 2, s
   intervalSeconds: 900, timeZone: 'America/Jamaica', daylightDays: [] };
 
 describe('home workspace chrome', () => {
-  it('removes duplicate embedded identity while retaining time, lighting and environment access', () => {
+  it('keeps one embedded time entry point without duplicate lighting shortcuts', () => {
     const markup = renderToStaticMarkup(<DashboardHeader embedded environment={environment} onSettings={() => undefined} />);
     expect(markup).not.toContain('dashboard-brand');
     expect(markup).not.toContain('dashboard-address');
@@ -18,7 +18,8 @@ describe('home workspace chrome', () => {
     expect(markup).toContain('10:42 AM');
     expect(markup).toContain('Property time and weather: Weather unavailable');
     expect(markup).not.toContain('°');
-    for (const control of ['Automatic local daylight', 'Daylight preview', 'Night lighting preview', 'Home settings and help']) expect(markup).toContain(control);
+    expect(markup).toContain('Home settings and help');
+    expect(markup).not.toContain('light-mode-switch');
   });
 
   it('shows measured weather without presenting cached conditions as live', () => {
@@ -37,6 +38,8 @@ describe('home workspace chrome', () => {
     const header = renderToStaticMarkup(<DashboardHeader environment={environment} onSettings={() => undefined} />);
     expect(header).toContain('VantaHome house preview');
     expect(header).toContain('dashboard-address');
+    expect(header).toContain('<time>10:42 AM</time>');
+    expect(header).not.toContain('light-mode-switch');
     expect(header.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
     const markup = renderToStaticMarkup(<DashboardRoomBar onRooms={() => undefined} />);
     for (const control of ['Choose a room', 'Choose floor', 'Ground', 'Upper']) expect(markup).toContain(control);

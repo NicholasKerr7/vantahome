@@ -462,3 +462,22 @@ touch and spoken-command retesting remain outstanding. The saved snapshot
 still contained all 92 devices. Its living-room fan power value differed between
 the before-build and after-install snapshots, so byte-identical persistence is
 not claimed for this update. No stored state was overwritten by the verification.
+
+## Dashboard time controls
+
+The dashboard no longer duplicates Local time, Day preview and Night preview
+as quick buttons. Those choices remain in the time/weather panel, reached by
+one visible time control on phones and both tablet orientations. The standalone
+preview keeps that control visible at narrow widths; its brand no longer repeats
+the clock. Removed shortcut styles and store subscriptions were cleaned up, and
+the existing browser checks now use the panel.
+
+Verification: three header tests, scene TypeScript/build, browser-script syntax
+checks and focused browser checks at 320×562, 390×844, 834×1194 and 1194×834 passed.
+The time entry remains reachable, all three lighting choices work, and the
+header change adds no page scrolling. The broader weather/layout sweeps were
+not rerun for this presentation-only change.
+
+Preview **build 32** was signed, installed and launched on the iPhone 16 Pro Max.
+All bundled scene documents matched the generated assets, and production
+identity files were restored. Physical touch retesting remains outstanding.

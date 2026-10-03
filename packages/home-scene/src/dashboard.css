@@ -10,10 +10,9 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
 .dashboard-brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; letter-spacing: 1.5px; }
 .dashboard-brand-mark { width: 37px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 13px 13px 8px 8px; color: var(--accent-text); background: rgb(var(--accent-rgb) / 2.4%); }
 .dashboard-brand small { display: block; margin-top: 5px; font-size: 8px; font-weight: 450; letter-spacing: 2px; color: var(--text-soft); }
-.dashboard-address { display: flex; align-items: center; gap: 8px; color: var(--text-soft); font-size: 11px; }
+.dashboard-address { display: flex; align-items: center; gap: 8px; color: var(--text-soft); font-size: 11px; white-space: nowrap; }
+.dashboard-address time { font-variant-numeric: tabular-nums; }
 .dashboard-header .header-actions { gap: 8px; margin-left: auto; }
-.dashboard-header .light-mode-switch { margin: 0; padding: 3px; background: transparent; border-color: transparent; }
-.dashboard-header .light-mode-switch button { width: 44px; height: 44px; }
 .dashboard-icon-button { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; color: var(--text-soft); background: transparent; flex-shrink: 0; }
 .dashboard-icon-button:hover { background: var(--surface-raised); color: var(--accent-text); }
 .dashboard-shell .dashboard-workspace { display: grid; grid-template-columns: 144px minmax(0, 1fr) 252px; gap: 16px; min-height: 0; padding: 0; }
@@ -119,7 +118,7 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
 
 @container app-viewport (max-width: 1100px) {
   [data-layout='tablet-landscape'] .dashboard-workspace { grid-template-columns: 135px minmax(0, 1fr) 230px; gap: 12px; }
-  .dashboard-address { display: none; }
+  .dashboard-address-weather { display: none; }
   .dashboard-shell .view-controls button { padding-inline: 9px; font-size: 10px; }
   .dashboard-shell .viewport-top { left: 20px; right: 20px; }
   .dashboard-shell .view-tag { display: none; }
@@ -132,7 +131,6 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
   .dashboard-brand-mark { width: 30px; height: 34px; }
   .dashboard-shell .dashboard-header { gap: 10px; }
   .dashboard-header .header-actions { gap: 4px; }
-  .dashboard-header .light-mode-switch { padding: 2px; gap: 0; }
   .dashboard-shell .viewport { border-radius: 20px; }
   .dashboard-shell .viewport-top { top: 16px; left: 18px; right: 18px; }
   .dashboard-shell .viewport-top h1 { font-size: 25px; }
@@ -206,9 +204,6 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
 .dashboard-room-choice > span { color: var(--text); font-size: 13px; font-weight: 500; }
 .dashboard-shell.is-embedded { grid-template-rows: 44px minmax(0, 1fr) 52px; gap: 8px; padding: 0 12px 8px; }
 .dashboard-shell.is-embedded .dashboard-header { grid-row: 1; border-bottom: 0; gap: 16px; }
-.dashboard-shell.is-embedded .dashboard-header .light-mode-switch { padding: 0; gap: 0; }
-.dashboard-shell.is-embedded .dashboard-header .light-mode-switch button { border-radius: 11px; }
-.dashboard-shell.is-embedded .dashboard-header .light-mode-switch button.is-selected { background: var(--surface); color: var(--accent-text); }
 .dashboard-shell.is-embedded .dashboard-workspace { grid-row: 2; grid-template-columns: minmax(0, 1fr) 242px; gap: 16px; }
 .dashboard-shell.is-embedded .dashboard-room-rail,
 .dashboard-shell.is-embedded .dashboard-dock { display: none; }

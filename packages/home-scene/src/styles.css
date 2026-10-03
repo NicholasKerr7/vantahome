@@ -72,9 +72,6 @@ svg { display: block; }
 .simulation-badge { display: inline-flex; align-items: center; gap: 6px; color: var(--text-soft); border: 1px solid var(--line); border-radius: 5px; padding: 4px 7px; font-size: 10px; margin-left: 8px; }
 .simulation-badge > span { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
 .header-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-.light-mode-switch { display: flex; gap: 3px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 25px; margin-right: 5px; }
-.light-mode-switch button { width: 33px; height: 29px; border-radius: 20px; display: grid; place-items: center; background: transparent; color: var(--muted); }
-.light-mode-switch button.is-selected { background: var(--accent); color: var(--accent-ink); }
 .icon-button { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: transparent; color: var(--muted); }
 .icon-button:hover, .icon-button.is-active { background: var(--surface); color: var(--accent-text); }
 .help-banner { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin-top: 18px; }
@@ -290,9 +287,6 @@ svg { display: block; }
   .header-actions { gap: 2px; }
   .reset-button { display: none; }
   .header-actions > .icon-button { width: 29px; }
-  .light-mode-switch { margin-right: 0; padding: 3px; gap: 1px; }
-  .light-mode-switch button { width: 26px; height: 25px; }
-  .light-mode-switch button svg { width: 14px; }
   .workspace { display: flex; flex-direction: column; gap: 21px; padding-top: 20px; }
   .room-sidebar { padding-top: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 12px; }
   .home-label h2 { font-size: 17px; margin-top: 3px; }
@@ -393,7 +387,6 @@ svg { display: block; }
 .preset-card { min-height: 80px; }
 .floor-switch button, .room-button, .device-list-item, .view-controls button, .all-devices button, .all-devices summary, .motion-button, .footer-reset, .footer-help summary, .icon-button { min-height: 44px; }
 .icon-button { width: 44px; }
-.light-mode-switch button { width: 40px; height: 40px; }
 .power-switch { width: 48px; height: 32px; padding: 7px; position: relative; }
 .power-switch::before { content: ''; position: absolute; inset: -6px 0; }
 .power-switch span { width: 18px; height: 18px; }
@@ -443,7 +436,6 @@ svg { display: block; }
 @container app-viewport (max-width: 599px) {
   .header-actions { gap: 0; }
   .header-actions > .icon-button { width: 34px; }
-  .light-mode-switch button { width: 32px; height: 38px; }
   .simulation-badge { font-size: 10px; }
   .brand sup { font-size: 10px; }
   .room-list { gap: 7px; }
@@ -482,7 +474,6 @@ svg { display: block; }
   .brand sup { font-size: 9px; }
   .header-actions { flex-shrink: 0; }
   .header-actions > .icon-button { display: none; }
-  .light-mode-switch button { width: 29px; }
   .simulation-badge { font-size: 10px; padding: 4px 5px; }
   .home-label h2 { font-size: 16px; }
   .floor-switch { width: 154px; }

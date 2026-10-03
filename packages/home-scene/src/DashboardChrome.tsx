@@ -23,19 +23,42 @@ function weatherIcon(code: number | undefined): LucideIcon {
   return code <= 2 ? CloudSun : Cloud;
 }
 
-/** Let the native shell own identity while keeping time, weather, and lighting within reach. */
+/** Keep one time/weather entry point while the native shell owns embedded identity. */
 export function DashboardHeader({ onSettings, onEnvironment = onSettings, environment, embedded = false }: { onSettings: () => void; onEnvironment?: () => void; environment: Pick<LiveEnvironment, 'localTime' | 'weather' | 'status'>; embedded?: boolean }) {
-  const mode = useHomeStore((state) => state.lightingMode);
-  const setMode = useHomeStore((state) => state.setLightingMode);
-  const setNight = useHomeStore((state) => state.setNight);
   const WeatherIcon = weatherIcon(environment.weather?.weatherCode);
   const weatherLabel = environment.weather ? `${weatherDescription(environment.weather.weatherCode)} · ${environment.status === 'live' ? 'Live weather' : 'Last available weather'}`
     : environment.status === 'loading' ? 'Checking local weather' : 'Weather unavailable';
   const contextLabel = `Property time and weather: ${weatherLabel}, ${environment.localTime}${environment.weather ? `, ${Math.round(environment.weather.tempC)} degrees Celsius` : ''}`;
   return <header className="app-header dashboard-header">
-    {embedded ? <button className="dashboard-context" onClick={onEnvironment} aria-label={contextLabel}><span>HOPEWELL</span><span className="dashboard-context-weather"><WeatherIcon size={14} strokeWidth={1.6} aria-hidden="true" />{environment.weather ? <strong>{Math.round(environment.weather.tempC)}°</strong> : null}<time>{environment.localTime}</time></span></button> : <a className="dashboard-brand" href="#house-preview" aria-label="VantaHome house preview"><span className="dashboard-brand-mark"><Home size={21} strokeWidth={1.4} /></span><span>VANTA<span className="brand-light">HOME</span><small>HOPEWELL · {environment.localTime}</small></span></a>}
-    {!embedded && <button className="dashboard-address" onClick={onEnvironment} aria-label={contextLabel}><WeatherIcon size={17} aria-hidden="true" />{environment.weather ? `${Math.round(environment.weather.tempC)}°C · ${weatherDescription(environment.weather.weatherCode)}` : 'Local time & weather'}</button>}
-    <div className="header-actions"><div className="light-mode-switch" aria-label="Preview lighting"><button type="button" aria-label="Automatic local daylight" title="Follow Hopewell’s local sunrise and sunset" aria-pressed={mode === 'auto'} className={mode === 'auto' ? 'is-selected' : ''} onClick={() => setMode('auto')}><Clock3 size={18} /></button><button type="button" aria-label="Daylight preview" aria-pressed={mode === 'day'} className={mode === 'day' ? 'is-selected' : ''} onClick={() => setNight(false)}><Sun size={18} /></button><button type="button" aria-label="Night lighting preview" aria-pressed={mode === 'night'} className={mode === 'night' ? 'is-selected' : ''} onClick={() => setNight(true)}><Moon size={18} /></button></div><button className="dashboard-icon-button" aria-label="Home settings and help" onClick={onSettings}><Settings2 size={19} /></button></div>
+    {embedded ? (
+      <button className="dashboard-context" onClick={onEnvironment} aria-label={contextLabel}>
+        <span>HOPEWELL</span>
+        <span className="dashboard-context-weather">
+          <WeatherIcon size={14} strokeWidth={1.6} aria-hidden="true" />
+          {environment.weather ? <strong>{Math.round(environment.weather.tempC)}°</strong> : null}
+          <time>{environment.localTime}</time>
+        </span>
+      </button>
+    ) : (
+      <a className="dashboard-brand" href="#house-preview" aria-label="VantaHome house preview">
+        <span className="dashboard-brand-mark"><Home size={21} strokeWidth={1.4} /></span>
+        <span>VANTA<span className="brand-light">HOME</span><small>HOPEWELL</small></span>
+      </a>
+    )}
+    <div className="header-actions">
+      {!embedded && (
+        <button className="dashboard-address" onClick={onEnvironment} aria-label={contextLabel}>
+          <Clock3 size={17} aria-hidden="true" />
+          <time>{environment.localTime}</time>
+          <span className="dashboard-address-weather">
+            {environment.weather ? `${Math.round(environment.weather.tempC)}°C · ${weatherDescription(environment.weather.weatherCode)}` : 'Local time & weather'}
+          </span>
+        </button>
+      )}
+      <button className="dashboard-icon-button" aria-label="Home settings and help" onClick={onSettings}>
+        <Settings2 size={19} />
+      </button>
+    </div>
   </header>;
 }
 

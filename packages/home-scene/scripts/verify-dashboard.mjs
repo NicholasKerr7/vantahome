@@ -180,7 +180,7 @@ function dashboardLayout(width, height, expectedLayout) {
   check(inViewport(current.app, current) && current.app.height >= height - 24, `${label}: dashboard fills the screen height`);
   for (const name of ['header', 'house', 'canvas', 'viewControls', 'presets']) check(inViewport(current[name], current), `${label}: ${name} is fully within the viewport`);
   check(current.canvas.width >= (width < 360 ? 200 : 240) && current.canvas.height >= (height <= 600 ? 160 : 240), `${label}: model retains a useful interactive canvas`);
-  controlsFit('.light-mode-switch button', `${label} day/night`);
+  controlsFit('button[aria-label^="Property time and weather:"]', `${label} time and weather access`);
   controlsFit('.floor-switch button', `${label} floor navigation`);
   controlsFit('.view-controls button', `${label} view modes`);
   controlsFit('.preset-grid button', `${label} scene presets`);
@@ -196,6 +196,10 @@ function dashboardLayout(width, height, expectedLayout) {
     controlsFit('.dashboard-room-select', `${label} room selector`);
   }
   check(evaluate('document.querySelector(".app-shell").classList.contains("reduce-motion") && getComputedStyle(document.querySelector(".device-hotspot")).transitionDuration === "0s"'), `${label}: reduced motion disables hotspot transitions`);
+  openLibrary('environment');
+  controlsFit('.environment-modes button', `${label} local/day/night options`);
+  browser('click', '[aria-label="Close home browser"]');
+  waitFor('!document.querySelector("dialog:modal")');
   screenshot(`dashboard-${width}x${height}`);
   console.log(`PASS dashboard ${label}`);
 }
@@ -281,6 +285,7 @@ function phoneRotation() {
 function openLibrary(view) {
   const portrait = snapshot().layout !== 'tablet-landscape';
   const selector = view === 'settings' ? '[aria-label="Home settings and help"]'
+    : view === 'environment' ? 'button[aria-label^="Property time and weather:"]'
     : view === 'rooms' ? portrait ? '.dashboard-room-select' : '.dashboard-browse'
       : portrait ? '.dashboard-dock button:last-child' : '.dashboard-browse-devices';
   browser('click', selector);
@@ -427,10 +432,14 @@ function settingsControls() {
   screenshot('dashboard-phone-settings');
   browser('click', '[aria-label="Close home browser"]');
   waitFor('!document.querySelector("dialog:modal")');
-  browser('click', '[aria-label="Night lighting preview"]');
-  check(snapshot().state.night && evaluate(`document.querySelector('[aria-label="Night lighting preview"]').getAttribute('aria-pressed')`) === 'true', 'night control changes the persisted environment and visible pressed state');
-  browser('click', '[aria-label="Daylight preview"]');
-  check(!snapshot().state.night, 'daylight control restores the daytime environment');
+  openLibrary('environment');
+  controlsFit('.environment-modes button', 'phone lighting options');
+  browser('click', '.environment-modes button:nth-child(3)');
+  check(snapshot().state.night && evaluate(`document.querySelector('.environment-modes button:nth-child(3)').getAttribute('aria-pressed')`) === 'true', 'night control changes the persisted environment and visible pressed state');
+  browser('click', '.environment-modes button:nth-child(2)');
+  check(!snapshot().state.night && evaluate(`document.querySelector('.environment-modes button:nth-child(2)').getAttribute('aria-pressed')`) === 'true', 'daylight control restores the daytime environment and visible pressed state');
+  browser('click', '[aria-label="Close home browser"]');
+  waitFor('!document.querySelector("dialog:modal")');
   pageFits('phone lighting actions');
 }
 
