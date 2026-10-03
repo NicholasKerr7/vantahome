@@ -444,15 +444,21 @@ keyboard focus, dismissal, reopening and reload at 390×844, 834×1194 and
 that expanded labels stack above adjacent markers and passive phone selection
 hides its label. The browser regression is repeatable with
 `node packages/home-scene/scripts/verify-hotspot-appearance.mjs <scene-url>`.
-Alarm paint and silence passed against the production bundle. Browser CLI
-timeouts prevented completing the final clear/reset retest; its state transition
-is covered by the passing simulation tests, but a completed browser run is not
-claimed. The script preserves failure evidence and retries only read operations.
+The follow-up public-browser check completed alarm, acknowledgment, silence,
+source clearing and reset against the production bundle. Clearing changed the
+hotspot to a dark fill with an amber warning border and “reset pending” status;
+reset restored neutral monitoring and removed the emergency notice. The reset
+state survived a full reload. The regression script now preserves the current
+control page when an action is already visible and waits for clear/reset status
+updates. Its focused alarm run passed all 31 checks. It preserves failure
+evidence and retries only read operations. The dependency audit was rechecked
+and still reports the two existing advisories above.
 
 Release preview **build 31** was signed and installed on the iPhone 16 Pro Max.
 All three bundled scene documents matched the generated assets, and production
-identity files were restored. iOS denied automatic launch because the phone was
-locked; physical launch/touch retesting remains outstanding. The saved snapshot
+identity files were restored. The initial launch was blocked by the locked phone;
+the follow-up launch succeeded and its running process was confirmed. Physical
+touch and spoken-command retesting remain outstanding. The saved snapshot
 still contained all 92 devices. Its living-room fan power value differed between
 the before-build and after-install snapshots, so byte-identical persistence is
 not claimed for this update. No stored state was overwritten by the verification.

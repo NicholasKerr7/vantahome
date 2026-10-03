@@ -304,10 +304,24 @@ function verifyPassiveSelection(width, height) {
 
 /** Find an alarm action through the sheet's actual paginated control category. */
 function runAlarmAction(command) {
-  browser('click', '#full-device-controls [data-control-group="controls"]');
+  browser('wait', '#full-device-controls[open]');
   const selector = `#full-device-controls [data-capability-id="smoke-${command}"]`;
+  // Related alarm actions often share a page; preserve it instead of resetting the tab.
+  const actionVisible = () => evaluate(`document.querySelector(${JSON.stringify(selector)})?.checkVisibility() === true`);
+  if (actionVisible()) {
+    browser('click', selector);
+    return;
+  }
+  if (!evaluate('document.querySelector("#full-device-controls [data-control-group=\"controls\"]")?.getAttribute("aria-selected") === "true"')) {
+    browser('click', '#full-device-controls [data-control-group="controls"]');
+  }
+  // Rewind through the public pager only when the requested action is on another page.
+  for (let page = 0; page < 20 && !actionVisible(); page += 1) {
+    if (!evaluate('document.querySelector("#full-device-controls [aria-label=\"Previous controls page\"]")?.disabled === false')) break;
+    browser('click', '#full-device-controls [aria-label="Previous controls page"]');
+  }
   for (let page = 0; page < 20; page += 1) {
-    if (evaluate(`!!document.querySelector(${JSON.stringify(selector)})`)) {
+    if (actionVisible()) {
       browser('click', selector);
       return;
     }
@@ -349,7 +363,9 @@ function verifyAlarm() {
   alarmAppearance(appearance('family-smoke', '390×844 silenced smoke alarm'), '390×844 silenced smoke alarm');
   browser('click', '.quick-device-full');
   runAlarmAction('clear-alarm');
+  waitFor('document.querySelector(\'[data-device-hotspot="family-smoke"]\')?.dataset.deviceTone === "warning" && document.querySelector(\'[data-device-hotspot="family-smoke"] .device-hotspot-state\')?.textContent === "Simulation clear · reset pending"');
   runAlarmAction('reset');
+  waitFor('document.querySelector(\'[data-device-hotspot="family-smoke"]\')?.dataset.deviceTone === "normal" && document.querySelector(\'[data-device-hotspot="family-smoke"] .device-hotspot-state\')?.textContent === "Monitoring sample"');
   browser('press', 'Escape');
   openControls('family-smoke', false);
   const cleared = appearance('family-smoke', '390×844 smoke alarm reset');
