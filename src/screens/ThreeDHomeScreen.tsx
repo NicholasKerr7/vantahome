@@ -5,7 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Pressable from '../components/Pressable';
 import CinematicSurface from '../components/CinematicSurface';
+import VantaHomeMark from '../components/VantaHomeMark';
 import SceneSurface from '../features/three-d-home/SceneSurface';
+import HomeSceneLoading from '../features/three-d-home/components/HomeSceneLoading';
 import type { SceneStatus } from '../features/three-d-home/protocol';
 import type { SimulationSaveStatus } from '../features/three-d-home/simulationPersistence';
 import HomeWorkspace from '../features/home-shell/HomeWorkspace';
@@ -37,11 +39,7 @@ function SceneSession({ onRetry, onDevices, covered }: { onRetry: () => void; on
         : 'Your app session changed. Reload the house to reconnect.'}</Text>
       {saveStatus === 'disconnected' && <Pressable onPress={onRetry} accessibilityLabel="Reconnect house controls" style={styles.retry}><Text style={styles.retryText}>Reconnect</Text></Pressable>}
     </View>}
-    {status === 'loading' && <View style={styles.feedback} accessibilityLiveRegion="polite">
-      <ActivityIndicator size="large" color={theme.colors.accent} />
-      <Text style={styles.feedbackTitle}>Preparing your home…</Text>
-      <Text style={styles.feedbackText}>Loading the furnished house and landscape.</Text>
-    </View>}
+    {status === 'loading' && <HomeSceneLoading active={!covered && !workspaceCovered} />}
     {status === 'error' && <View style={styles.feedback} accessibilityRole="alert">
       <Ionicons name="cube-outline" size={32} color={theme.colors.accent} />
       <Text style={styles.feedbackTitle}>The 3D view couldn’t load</Text>
@@ -72,7 +70,7 @@ export default function ThreeDHomeScreen() {
   return <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
     <HomeWorkspace section="home">
     <CinematicSurface style={styles.header}>
-      <View style={styles.brandIcon}><Ionicons name="cube-outline" size={21} color={theme.colors.accent} /></View>
+      <View style={styles.brandIcon}><VantaHomeMark size={32} decorative /></View>
       <View style={styles.identity}>
         <Text style={styles.title}>VANTA<Text style={styles.brandTail}>HOME</Text></Text>
         <Text style={styles.caption}>Simulation · no real device control</Text>

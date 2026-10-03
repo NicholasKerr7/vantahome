@@ -7,6 +7,7 @@ import { useHomeStore } from './state';
 import { paginateItems } from './dashboardPagination';
 import type { LiveEnvironment } from './environment/useLiveEnvironment';
 import { weatherDescription } from './environment/weatherClient';
+import vantahomeMark from '../../../assets/brand/vantahome-mark-256.png?inline';
 
 /** Keep room symbols familiar without coupling navigation to device geometry. */
 export function roomIcon(id: RoomId): LucideIcon {
@@ -41,7 +42,7 @@ export function DashboardHeader({ onSettings, onEnvironment = onSettings, enviro
       </button>
     ) : (
       <a className="dashboard-brand" href="#house-preview" aria-label="VantaHome house preview">
-        <span className="dashboard-brand-mark"><Home size={21} strokeWidth={1.4} /></span>
+        <span className="dashboard-brand-mark"><img src={vantahomeMark} width={256} height={256} alt="" aria-hidden="true" /></span>
         <span>VANTA<span className="brand-light">HOME</span><small>HOPEWELL</small></span>
       </a>
     )}

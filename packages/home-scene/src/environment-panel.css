@@ -26,9 +26,9 @@
   .environment-modes button { flex-direction: column; font-size: 10px; gap: 5px; }
 }
 @container app-viewport (max-width: 359px) {
-  .dashboard-shell .dashboard-brand-mark { display: none; }
+  .dashboard-brand-mark { width: 28px; height: 28px; }
   .dashboard-shell .dashboard-header { gap: 6px; }
-  .dashboard-brand { font-size: 11px; letter-spacing: .6px; }
+  .dashboard-brand { gap: 6px; font-size: 11px; letter-spacing: .6px; }
   .dashboard-brand small { font-size: 6px; letter-spacing: .9px; }
 }
 @media (prefers-reduced-motion: reduce) { .environment-panel, .library-settings .dashboard-preferences { scroll-behavior: auto; } }

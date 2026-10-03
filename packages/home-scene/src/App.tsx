@@ -18,6 +18,7 @@ import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
 import { CinematicViewControl } from './CinematicViewControl';
 import { ResetViewControl } from './ResetViewControl';
+import { SceneLoading } from './SceneLoading';
 import { useCinematicStore } from './cinematicStore';
 import { useHostPresentation } from './useHostPresentation';
 import { useViewportManipulation } from './useViewportManipulation';
@@ -151,7 +152,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
     <div className="scene-container">
       <SceneErrorBoundary key={attempt} onRetry={retryScene}>
         <HouseScene daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
-        {!ready ? <div className="scene-loading" role="status"><span className="loading-orbit"><Home size={24} strokeWidth={1.4} aria-hidden="true" /></span><span>Preparing your home<span className="loading-dots">…</span></span></div> : null}
+        {!ready ? <SceneLoading /> : null}
       </SceneErrorBoundary>
     </div>
     {!orientationPaused && quickDeviceId ? <QuickDeviceControls deviceId={quickDeviceId} onClose={closeQuickControls} onFullControls={openFullControls} /> : null}

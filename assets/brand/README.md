@@ -5,6 +5,9 @@ This folder contains the approved VantaHome icon master.
 ## Files
 
 - `vantahome-icon-master.png` — approved, product-owner-supplied app icon master.
+- `vantahome-mark-256.png` — compact 256px derivative for dashboard branding and
+  loading displays. Generated from `assets/release/icon.png` without altering the
+  approved artwork; the scene embeds it for offline use.
 
 ## Meaning
 
@@ -35,3 +38,9 @@ Recommended sizes:
 Keep `vantahome-icon-master.png` unchanged as the single source of truth. The
 app icon, adaptive icon, favicon, and padded splash derivative must all use this
 approved artwork.
+
+To regenerate the compact UI mark on macOS:
+
+```sh
+sips -Z 256 assets/release/icon.png --out assets/brand/vantahome-mark-256.png
+```

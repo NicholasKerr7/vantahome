@@ -12,6 +12,7 @@ describe('home workspace chrome', () => {
   it('keeps one embedded time entry point without duplicate lighting shortcuts', () => {
     const markup = renderToStaticMarkup(<DashboardHeader embedded environment={environment} onSettings={() => undefined} />);
     expect(markup).not.toContain('dashboard-brand');
+    expect(markup).not.toContain('<img');
     expect(markup).not.toContain('dashboard-address');
     expect(markup.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
     expect(markup).toContain('HOPEWELL');
@@ -37,6 +38,8 @@ describe('home workspace chrome', () => {
   it('retains standalone identity and accessible room/floor navigation', () => {
     const header = renderToStaticMarkup(<DashboardHeader environment={environment} onSettings={() => undefined} />);
     expect(header).toContain('VantaHome house preview');
+    expect(header).toContain('class="dashboard-brand-mark"><img');
+    expect(header).toContain('alt="" aria-hidden="true"');
     expect(header).toContain('dashboard-address');
     expect(header).toContain('<time>10:42 AM</time>');
     expect(header).not.toContain('light-mode-switch');
