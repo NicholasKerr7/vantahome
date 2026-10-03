@@ -55,6 +55,7 @@ export type MembershipSyncResult = {
   activeMemberId: string;
 };
 
+/** Translate server roles into the presentation and local authorization vocabulary. */
 function mapRole(role: string): HouseholdMember["role"] {
   switch (role) {
     case "owner":
@@ -72,8 +73,10 @@ function mapRole(role: string): HouseholdMember["role"] {
   }
 }
 
+/** Read an authorized home, retaining the active one unless an invitation selects another. */
 export async function syncMembershipFromSupabase(
   expectedUserId?: string,
+  preferredHomeId?: string,
 ): Promise<MembershipSyncResult | null> {
   if (!supabase) return null;
   const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -82,14 +85,19 @@ export async function syncMembershipFromSupabase(
 
   const userId = userData.user.id;
   if (expectedUserId && expectedUserId !== userId) return null;
-  const { data: membership, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await supabase
     .from("home_members")
     .select("home_id, role")
     .eq("user_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
   if (membershipError) throw membershipError;
+  const rows = (memberships ?? []) as Array<{ home_id: string; role: string }>;
+  const current = useHomeStore.getState();
+  const retainedHomeId = current.authenticatedUserId === userId ? current.accountHomeId : null;
+  // An explicit invitation must never silently open a different household.
+  const membership = preferredHomeId !== undefined
+    ? rows.find((row) => row.home_id === preferredHomeId)
+    : rows.find((row) => row.home_id === retainedHomeId) ?? rows[0];
   if (!membership) return null;
 
   const { data: membersData, error: membersError } = await supabase
@@ -188,8 +196,9 @@ export async function syncMembershipFromSupabase(
 }
 
 /** Install registry and policy atomically, and reject an old account's late response. */
-export function applyMembershipSnapshot(result: MembershipSyncResult) {
+export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSessionEpoch?: number) {
   const current = useHomeStore.getState();
+  if (expectedSessionEpoch !== undefined && current.sessionEpoch !== expectedSessionEpoch) return false;
   if (current.authenticatedUserId !== result.activeMemberId) return false;
   if (!result.household.some((member) => member.id === result.activeMemberId))
     return false;
@@ -219,6 +228,9 @@ export function applyMembershipSnapshot(result: MembershipSyncResult) {
     )[0];
   });
   useHomeStore.setState({
+    // Identity belongs to this verified account even when its household changes.
+    profile: current.profile,
+    userName: current.userName,
     accountHomeId: result.homeId,
     activeHomeId: result.homeId,
     membershipReady: true,

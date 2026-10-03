@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseClient } from "../_shared/supabaseClient.ts";
 import { getSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { getHomeInvitationRedirect } from "../_shared/homeInvitationRedirect.ts";
 import {
   boundedString,
   isUuid,
@@ -53,6 +54,9 @@ Deno.serve(async (req) => {
     const body = await readJsonObject(req, 8_192);
     const email = boundedString(body.email, "email", 320).toLowerCase();
     const name = boundedString(body.name, "name", 120, false);
+    if (body.homeId !== undefined && !isUuid(body.homeId)) {
+      throw new RequestValidationError("homeId is invalid.");
+    }
     const roleInput =
       typeof body?.role === "string" ? body.role.trim().toLowerCase() : "member";
     if (!ROLES.includes(roleInput as InviteRole)) {
@@ -70,10 +74,14 @@ Deno.serve(async (req) => {
       throw new RequestValidationError("roomIds contains an invalid identifier.");
     }
 
-    const { data: membership, error: membershipError } = await supabase
+    let membershipQuery = supabase
       .from("home_members")
       .select("home_id, role")
-      .eq("user_id", userData.user.id)
+      .eq("user_id", userData.user.id);
+    // Explicitly bind invitations to the selected home for multi-home accounts.
+    if (typeof body.homeId === "string")
+      membershipQuery = membershipQuery.eq("home_id", body.homeId);
+    const { data: membership, error: membershipError } = await membershipQuery
       .limit(1)
       .maybeSingle();
 
@@ -126,10 +134,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Only trusted deployment configuration controls the nonsecret email link.
+    const invitationRedirect = getHomeInvitationRedirect(
+      Deno.env.get("VANTAHOME_INVITE_REDIRECT_URL"),
+    );
     const admin = getSupabaseAdmin();
     const { data: inviteData, error: inviteError } =
       await admin.auth.admin.inviteUserByEmail(email, {
         data: name ? { name } : undefined,
+        redirectTo: invitationRedirect,
       });
 
     let invitedUserId: string | null = null;
@@ -200,6 +213,7 @@ Deno.serve(async (req) => {
           role,
         },
         status: existingMember ? "already_member" : "invited",
+        delivery: existingMember ? "none" : inviteError ? "in_app" : "email_code",
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

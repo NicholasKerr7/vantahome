@@ -1,202 +1,73 @@
-import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import Pressable from "../components/Pressable";
-import { supabase } from "../services/supabaseClient";
-import { theme } from "../theme/theme";
-import { cancelAuthFlow, waitForAuthExchange } from "../services/authFlow";
+import React, { useRef, useState } from 'react';
+import { StyleSheet, Text } from 'react-native';
+import Pressable from '../components/Pressable';
+import { AuthAction, AuthEntryFrame, AuthField, AuthMessage } from '../features/auth-entry/AuthEntryFrame';
+import { supabase } from '../services/supabaseClient';
+import { theme } from '../theme/theme';
+import { completeInvitationPasswordSetup, waitForAuthExchange } from '../services/authFlow';
+import { signOutAccount } from '../features/account/accountSession';
+import { useHomeStore } from '../store/useHomeStore';
 
 /** Require a matching recovery password before enabling the update action. */
 export function isValidRecoveryPassword(password: string, confirm: string) {
   return password.length >= 8 && password === confirm;
 }
 
-/** Keep recovery fields reachable with the keyboard open and retain the isolated auth flow. */
-export default function PasswordRecoveryScreen({
-  onComplete,
-}: {
-  onComplete: () => void;
+/** Keep invitation enrollment and account recovery isolated until password setup succeeds. */
+export default function PasswordRecoveryScreen({ onComplete, purpose = 'recovery' }: {
+  onComplete: () => void; purpose?: 'recovery' | 'invitation';
 }) {
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const operation = useRef(false);
   const canSave = isValidRecoveryPassword(password, confirm) && !saving;
 
-  const savePassword = async () => {
-    if (!supabase || !canSave) return;
-    setSaving(true);
+  /** Update only the account that opened this isolated screen, then release the home gate. */
+  async function savePassword() {
+    if (!supabase || !canSave || operation.current) return;
+    const scope = useHomeStore.getState();
+    operation.current = true; setSaving(true); setError('');
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) {
-        Alert.alert("Update failed", error.message);
-        return;
-      }
-      Alert.alert("Password updated", "Your new password is ready to use.");
+      await waitForAuthExchange();
+      const { data, error: userError } = await supabase.auth.getUser();
+      if (userError || !data.user || data.user.id !== scope.authenticatedUserId || useHomeStore.getState().sessionEpoch !== scope.sessionEpoch) throw new Error('Your account changed. Please sign in again.');
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      if (useHomeStore.getState().sessionEpoch !== scope.sessionEpoch) return;
+      if (purpose === 'invitation') await completeInvitationPasswordSetup(data.user.id);
+      if (useHomeStore.getState().sessionEpoch !== scope.sessionEpoch) return;
       onComplete();
-    } catch (error: any) {
-      Alert.alert(
-        "Update failed",
-        error?.message ?? "Unable to update your password.",
-      );
+    } catch {
+      if (useHomeStore.getState().sessionEpoch === scope.sessionEpoch) setError('We could not save your password. Please try again or return to sign in.');
     } finally {
-      setSaving(false);
+      operation.current = false; setSaving(false);
     }
-  };
+  }
 
-  const returnToSignIn = async () => {
-    await cancelAuthFlow();
-    await waitForAuthExchange();
-    await supabase?.auth.signOut({ scope: "local" });
-    onComplete();
-  };
+  /** End this local enrollment/recovery session before returning to account entry. */
+  async function returnToSignIn() {
+    if (operation.current) return;
+    const scope = useHomeStore.getState();
+    operation.current = true; setSaving(true); setError('');
+    try {
+      if (await signOutAccount(scope)) onComplete();
+    } catch {
+      if (useHomeStore.getState().sessionEpoch === scope.sessionEpoch) setError('We could not sign out on this device. Please try again.');
+    } finally { operation.current = false; setSaving(false); }
+  }
 
-  return (
-    <LinearGradient
-      colors={[theme.colors.bg1, theme.colors.bg0]}
-      style={styles.root}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.select({ ios: "padding", android: undefined })}
-        style={styles.keyboard}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          overScrollMode="never"
-          decelerationRate="normal"
-        >
-          <View style={styles.card}>
-            <View style={styles.icon}>
-              <Ionicons
-                name="key-outline"
-                size={28}
-                color={theme.colors.text}
-              />
-            </View>
-            <Text style={styles.title}>Set a new password</Text>
-            <Text style={styles.subtitle}>
-              Choose at least eight characters. This recovery session is used
-              only to replace your password.
-            </Text>
-            <TextInput
-              accessibilityLabel="New password"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="New password"
-              placeholderTextColor={theme.colors.muted}
-              secureTextEntry
-              autoCapitalize="none"
-              style={styles.input}
-            />
-            <TextInput
-              accessibilityLabel="Confirm new password"
-              value={confirm}
-              onChangeText={setConfirm}
-              placeholder="Confirm new password"
-              placeholderTextColor={theme.colors.muted}
-              secureTextEntry
-              autoCapitalize="none"
-              style={styles.input}
-            />
-            <Pressable
-              accessibilityRole="button"
-              style={[styles.primary, !canSave && styles.disabled]}
-              disabled={!canSave}
-              onPress={savePassword}
-            >
-              {saving ? (
-                <ActivityIndicator color={theme.colors.bg0} />
-              ) : (
-                <Text style={styles.primaryText}>Update password</Text>
-              )}
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              style={styles.secondaryAction}
-              onPress={returnToSignIn}
-            >
-              <Text style={styles.secondaryText}>Return to sign in</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
-  );
+  return <AuthEntryFrame title={purpose === 'invitation' ? 'Make yourself at home.' : 'Set a new password'} subtitle={purpose === 'invitation' ? 'Your email is verified. Choose a password, then review the home you were invited to join.' : 'Choose at least eight characters. Your home stays protected while you reset your password.'}>
+    <AuthField label="New password" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="new-password" editable={!saving} />
+    <AuthField label="Confirm new password" value={confirm} onChangeText={setConfirm} secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="new-password" editable={!saving} />
+    {error && <AuthMessage message={error} error />}
+    <AuthAction label={purpose === 'invitation' ? 'Save password & review invitation' : 'Update password'} disabled={!canSave} busy={saving} onPress={() => void savePassword()} />
+    <Pressable style={styles.return} disabled={saving} onPress={() => void returnToSignIn()}><Text style={styles.returnText}>Return to sign in</Text></Pressable>
+  </AuthEntryFrame>;
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  keyboard: { flex: 1, width: "100%" },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 460,
-    padding: 24,
-    borderRadius: 28,
-    gap: 14,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  icon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.card,
-  },
-  title: { color: theme.colors.text, fontSize: 24, fontWeight: "500" },
-  subtitle: { color: theme.colors.subtext, lineHeight: 20, fontWeight: "600" },
-  input: {
-    height: 52,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.stroke,
-  },
-  primary: {
-    height: 52,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.accent,
-  },
-  disabled: { opacity: 0.45 },
-  primaryText: { color: theme.colors.bg0, fontWeight: "500" },
-  secondaryAction: {
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryText: {
-    color: theme.colors.subtext,
-    textAlign: "center",
-    fontWeight: "600",
-  },
+  return: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  returnText: { color: theme.colors.accentText, fontSize: 12 },
 });

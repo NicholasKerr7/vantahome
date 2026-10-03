@@ -1,14 +1,18 @@
 import {
   NATIVE_AUTH_CALLBACK_URI,
   NATIVE_VOICE_LINK_URI,
+  NATIVE_HOME_INVITATION_URI,
   getAuthRedirectParams,
   isAuthCallbackUrl,
+  isHomeInvitationUrl,
+  makeHomeInvitationUri,
 } from "./authRedirects";
 
 describe("auth redirects", () => {
   test("keeps stable native callback URIs", () => {
     expect(NATIVE_AUTH_CALLBACK_URI).toBe("vantahome://auth-callback");
     expect(NATIVE_VOICE_LINK_URI).toBe("vantahome://voice-link");
+    expect(NATIVE_HOME_INVITATION_URI).toBe("vantahome://join-home");
   });
 
   test("recognizes only the app auth callback", () => {
@@ -48,5 +52,28 @@ describe("auth redirects", () => {
     expect(params?.get("access_token")).toBe("a");
     expect(params?.get("refresh_token")).toBe("b");
     expect(getAuthRedirectParams("not a URL")).toBeNull();
+  });
+});
+
+describe("household invitation entry", () => {
+  test("opens a separate nonsecret invitation path", () => {
+    expect(makeHomeInvitationUri()).toBe("vantahome://join-home");
+    expect(isHomeInvitationUrl("vantahome://join-home")).toBe(true);
+    expect(isAuthCallbackUrl("vantahome://join-home")).toBe(false);
+  });
+
+  test.each([
+    "vantahome://join-home?code=123456",
+    "vantahome://join-home?email=recipient@example.test",
+    "vantahome://join-home?token_hash=secret",
+    "vantahome://join-home#access_token=secret",
+    "vantahome://person:password@join-home",
+    "vantahome://join-home:123",
+    "vantahome:///join-home",
+    "vantahome://join-home/other",
+    "https://untrusted.example.test/join-home",
+    "not a URL",
+  ])("rejects credentials and noncanonical invitation links: %s", (url) => {
+    expect(isHomeInvitationUrl(url)).toBe(false);
   });
 });

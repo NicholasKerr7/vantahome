@@ -254,9 +254,7 @@ describe("App screens smoke coverage", () => {
   });
 
   it("renders AuthScreen", () => {
-    const navigation = { replace: jest.fn(), goBack: jest.fn() } as any;
-    const route = { key: "Auth", name: "Auth" } as any;
-    renderScreen(<AuthScreen navigation={navigation} route={route} />);
+    renderScreen(<AuthScreen />);
   });
 
   it("renders PasswordRecoveryScreen", () => {

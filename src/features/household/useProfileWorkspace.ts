@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
@@ -89,7 +89,13 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   >("Guest");
   const [newMemberAvatar, setNewMemberAvatar] = useState("");
   const [pendingInvites, setPendingInvites] = useState<HomeInvite[]>([]);
+  const [invitesRefreshing, setInvitesRefreshing] = useState(false);
+  const [inviteInboxError, setInviteInboxError] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
+  const [acceptedInviteId, setAcceptedInviteId] = useState<string | null>(null);
+  const inviteResponsePending = useRef(false);
+  const acceptedInvite = useRef<{ inviteId: string; homeId: string; userId: string | null; epoch: number } | null>(null);
   const canManageRooms = activeMember
     ? ["Owner", "Admin"].includes(activeMember.role)
     : false;
@@ -220,15 +226,21 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   /** Fetch invitations only for the account and home that requested them. */
   const refreshInvites = useCallback(async () => {
     const scope = useHomeStore.getState();
+    // Keep the accepted invitation visible until its exact home's registry can be installed.
+    if (acceptedInvite.current?.userId === scope.authenticatedUserId && acceptedInvite.current?.epoch === scope.sessionEpoch) return;
     if (!supabase) {
       setPendingInvites([]);
       return;
     }
+    setInvitesRefreshing(true);
+    setInviteInboxError(null);
     try {
-      const invites = await listPendingInvites();
+      const invites = await listPendingInvites(scope.authenticatedUserId ?? undefined);
       if (scopeIsCurrent(scope)) setPendingInvites(invites);
     } catch {
-      if (scopeIsCurrent(scope)) setPendingInvites([]);
+      if (scopeIsCurrent(scope)) setInviteInboxError("Your invitation inbox could not be loaded. Please try again.");
+    } finally {
+      if (scopeIsCurrent(scope)) setInvitesRefreshing(false);
     }
   }, []);
   useEffect(() => {
@@ -395,6 +407,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
           : [];
       const result = await inviteHomeMember(
         {
+          homeId: scope.activeHomeId ?? undefined,
           email,
           name: trimmed,
           role: roleLower,
@@ -407,10 +420,12 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
       Alert.alert(
         result.status === "already_member"
           ? "Already a member"
-          : "Invitation sent",
+          : result.delivery === "email_code" ? "Invitation emailed" : "Invitation ready",
         result.status === "already_member"
           ? "This person already belongs to your home."
-          : "They will appear as a member after accepting.",
+          : result.delivery === "email_code"
+            ? "They can open VantaHome and enter the code from their email to review and accept your invitation."
+            : "Ask them to sign in and open People to review their invitation. They will appear as a member after accepting.",
       );
       setNewMemberName("");
       setNewMemberEmail("");
@@ -464,26 +479,43 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     action: "accept" | "decline",
   ) => {
     const scope = useHomeStore.getState();
+    const invitation = pendingInvites.find((item) => item.id === inviteId);
+    if (!invitation || inviteResponsePending.current || !scopeIsCurrent(scope)) return;
+    const accepted = acceptedInvite.current;
+    const pendingAcceptance = accepted?.userId === scope.authenticatedUserId && accepted.epoch === scope.sessionEpoch;
+    // Once the server accepts, retry only the registry read before another household decision.
+    if (pendingAcceptance && (action !== "accept" || accepted.inviteId !== inviteId)) return;
+    inviteResponsePending.current = true;
+    setRespondingInviteId(inviteId);
     try {
-      await respondHomeInvite(
-        inviteId,
-        action,
-        scope.authenticatedUserId ?? undefined,
-      );
-      if (!scopeIsCurrent(scope)) return;
-      setPendingInvites((prev) => prev.filter((item) => item.id !== inviteId));
-      if (action === "accept") {
-        const result = await syncMembershipFromSupabase();
-        if (result) {
-          applyMembershipSnapshot(result);
+      const alreadyAccepted = action === "accept" && accepted?.inviteId === inviteId
+        && accepted.userId === scope.authenticatedUserId && accepted.epoch === scope.sessionEpoch;
+      if (!alreadyAccepted) {
+        const response = await respondHomeInvite(inviteId, action, scope.authenticatedUserId ?? undefined);
+        if (response.inviteId !== inviteId || response.status !== (action === "accept" ? "accepted" : "declined")) throw new Error("The invitation was not confirmed. Please refresh and try again.");
+        if (action === "accept" && scopeIsCurrent(scope)) {
+          acceptedInvite.current = { inviteId, homeId: invitation.home_id, userId: scope.authenticatedUserId, epoch: scope.sessionEpoch };
+          setAcceptedInviteId(inviteId);
         }
       }
+      if (!scopeIsCurrent(scope)) return;
+      if (action === "accept") {
+        const result = await syncMembershipFromSupabase(scope.authenticatedUserId ?? undefined, invitation.home_id);
+        if (!scopeIsCurrent(scope)) return;
+        if (!result || result.homeId !== invitation.home_id || !applyMembershipSnapshot(result, scope.sessionEpoch)) throw new Error("Your invitation was accepted, but home access could not be refreshed. Tap Retry home access to continue.");
+        acceptedInvite.current = null;
+        setAcceptedInviteId(null);
+      }
+      setPendingInvites((prev) => prev.filter((item) => item.id !== inviteId));
     } catch (err) {
       if (!scopeIsCurrent(scope)) return;
       Alert.alert(
         "Invite response failed",
         (err as Error).message ?? "Unable to respond to invite.",
       );
+    } finally {
+      inviteResponsePending.current = false;
+      if (scopeIsCurrent(scope)) setRespondingInviteId(null);
     }
   };
 
@@ -550,7 +582,12 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     newMemberAvatar,
     setNewMemberAvatar,
     pendingInvites,
+    invitesRefreshing,
+    inviteInboxError,
+    refreshInvites,
     inviteLoading,
+    respondingInviteId,
+    acceptedInviteId,
     canManageRooms,
     canManageHousehold,
     canInviteMembers,

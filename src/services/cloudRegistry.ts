@@ -62,6 +62,7 @@ export async function bootstrapHome(name: string, expectedUserId?: string) {
 }
 
 export type InviteMemberPayload = {
+  homeId?: string;
   email: string;
   name?: string;
   role?: "admin" | "member" | "guest" | "tenant";
@@ -75,35 +76,51 @@ export async function inviteHomeMember(
   return callEdge<{
     member: { userId: string; email: string; name: string; role: string };
     status?: "invited" | "already_member";
+    delivery?: "email_code" | "in_app" | "none";
   }>("home-invite", payload, "POST", expectedUserId);
 }
 
 export type HomeInvite = {
   id: string;
   home_id: string;
+  home_name: string;
   email: string;
   invited_user_id: string | null;
   role: string;
   room_ids: string[];
   status: "pending" | "accepted" | "declined" | "cancelled";
   created_at: string;
+  expires_at?: string;
 };
 
-export async function listPendingInvites() {
+/** Read only invitations addressed to the verified account, never an editable profile email. */
+export async function listPendingInvites(expectedUserId?: string) {
   assertSupabaseReady();
   const { data: userData, error: userError } = await supabase!.auth.getUser();
   if (userError || !userData?.user) throw new Error("Missing auth session.");
-  const email = userData.user.email ?? "";
+  if (expectedUserId && userData.user.id !== expectedUserId) {
+    throw new Error("The account changed. Please try again.");
+  }
+  const email = userData.user.email?.trim().toLowerCase();
+  if (!email || !userData.user.email_confirmed_at) throw new Error("Verify your account email before reviewing invitations.");
   const userId = userData.user.id;
-  const { data, error } = await supabase!
-    .from("home_invites")
-    .select(
-      "id, home_id, email, invited_user_id, role, room_ids, status, created_at",
-    )
-    .eq("status", "pending")
-    .or(`invited_user_id.eq.${userId},email.eq.${email}`);
+  // This recipient-only RPC reveals a home's name without granting access to its registry.
+  const { data, error } = await supabase!.rpc("list_my_home_invitations");
   if (error) throw new Error(error.message);
-  return (data as HomeInvite[]) ?? [];
+  if (!Array.isArray(data)) return [];
+  const rows: unknown[] = data;
+  return rows.filter((row): row is HomeInvite => {
+    if (!row || typeof row !== "object") return false;
+    const invite = row as Record<string, unknown>;
+    return typeof invite.id === "string" && invite.id.trim().length > 0
+      && typeof invite.home_id === "string" && invite.home_id.trim().length > 0
+      && typeof invite.home_name === "string" && invite.home_name.trim().length > 0
+      && invite.email === email && (invite.invited_user_id === null || invite.invited_user_id === userId)
+      && invite.status === "pending" && typeof invite.role === "string" && ["admin", "member", "guest", "tenant"].includes(invite.role)
+      && Array.isArray(invite.room_ids) && invite.room_ids.every((roomId) => typeof roomId === "string" && roomId.trim().length > 0)
+      && typeof invite.created_at === "string" && Number.isFinite(Date.parse(invite.created_at))
+      && (invite.expires_at === undefined || (typeof invite.expires_at === "string" && Number.isFinite(Date.parse(invite.expires_at))));
+  });
 }
 
 export async function respondHomeInvite(

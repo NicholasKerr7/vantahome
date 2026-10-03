@@ -1,5 +1,11 @@
 project_id = "vantahome"
 
+# Local Auth uses code entry. Hosted projects require the same template to be
+# installed separately in Auth > Email Templates; deploying functions is not enough.
+[auth.email.template.invite]
+subject = "Your VantaHome invitation"
+content_path = "./supabase/templates/invite.html"
+
 # These functions are called only by signed-in VantaHome clients.
 [functions.home-bootstrap]
 verify_jwt = true

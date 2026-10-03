@@ -15,6 +15,9 @@ const mockGetSession = jest.fn();
 const mockDeleteResult = jest.fn();
 const mockEq = jest.fn();
 const mockFrom = jest.fn();
+const mockRespondInvite = jest.fn();
+const mockSyncMembership = jest.fn();
+const mockApplyMembership = jest.fn();
 
 jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: require("react-native").View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock("../../services/supabaseClient", () => ({
@@ -26,11 +29,11 @@ jest.mock("../../services/supabaseClient", () => ({
 jest.mock("../../services/cloudRegistry", () => ({
   inviteHomeMember: (...args: unknown[]) => mockInvite(...args),
   listPendingInvites: (...args: unknown[]) => mockListInvites(...args),
-  respondHomeInvite: jest.fn(),
+  respondHomeInvite: (...args: unknown[]) => mockRespondInvite(...args),
 }));
 jest.mock("../../services/membership", () => ({
-  applyMembershipSnapshot: jest.fn(),
-  syncMembershipFromSupabase: jest.fn(),
+  applyMembershipSnapshot: (...args: unknown[]) => mockApplyMembership(...args),
+  syncMembershipFromSupabase: (...args: unknown[]) => mockSyncMembership(...args),
 }));
 jest.mock("../../services/roomMembers", () => ({ setRoomMembershipRemote: jest.fn() }));
 jest.mock("../../services/memberPermissions", () => ({
@@ -104,6 +107,9 @@ describe("Profile household authorization and account isolation", () => {
     jest.clearAllMocks();
     mockInvite.mockReset().mockResolvedValue({ status: "pending" });
     mockListInvites.mockReset().mockResolvedValue([]);
+    mockRespondInvite.mockReset().mockImplementation(async (inviteId: string) => ({ status: "accepted", inviteId }));
+    mockSyncMembership.mockReset().mockResolvedValue({ homeId: "invited-home" });
+    mockApplyMembership.mockReset().mockReturnValue(true);
     mockConfirm.mockReset().mockResolvedValue(undefined);
     mockSetPermission.mockReset().mockResolvedValue(undefined);
     mockGetSession.mockReset().mockResolvedValue({ data: { session: { access_token: "fixture-session" } } });
@@ -284,7 +290,7 @@ describe("Profile household authorization and account isolation", () => {
       owner.userId,
     );
     expect(useHomeStore.getState().household).toEqual(initial);
-    expect(alert).toHaveBeenCalledWith("Invitation sent", expect.any(String));
+    expect(alert).toHaveBeenCalledWith("Invitation ready", expect.stringContaining("sign in and open People"));
   });
 
   it("keeps rejected cloud invitations out of local household membership", async () => {
@@ -372,6 +378,79 @@ describe("Profile household authorization and account isolation", () => {
       invitations.resolve([{ id: "old-account-invitation", role: "guest", email: "previous-account@example.test" }]);
     });
     expect(screenRoot().findAllByType(Text).some((node) => node.props.children === "previous-account@example.test")).toBe(false);
+  });
+
+  it("submits one invitation response and disables both decisions while it is pending", async () => {
+    const response = deferred<{ status: string; inviteId: string }>();
+    mockRespondInvite.mockReturnValueOnce(response.promise);
+    mockListInvites.mockResolvedValueOnce([{ id: "incoming", home_id: "invited-home", home_name: "Hopewell", role: "guest", email: "owner@example.test" }]);
+    await mount();
+    await press(button("Inbox"));
+    expect(screenRoot().findAllByType(Text).some((node) => node.props.children === "Hopewell")).toBe(true);
+    const accept = button("Accept");
+    const decline = button("Decline");
+    await act(async () => { accept.props.onPress(); accept.props.onPress(); decline.props.onPress(); });
+    expect(mockRespondInvite).toHaveBeenCalledTimes(1);
+    expect(button("Accept").props.disabled).toBe(true);
+    expect(button("Decline").props.disabled).toBe(true);
+    await act(async () => { response.resolve({ status: "accepted", inviteId: "incoming" }); });
+    expect(mockSyncMembership).toHaveBeenCalledWith(owner.userId, "invited-home");
+    expect(button("Accept")).toBeUndefined();
+  });
+
+  it("retries only home synchronization after acceptance succeeds but registry refresh fails", async () => {
+    mockListInvites.mockResolvedValueOnce([{ id: "incoming", home_id: "invited-home", home_name: "Hopewell", role: "guest", email: "owner@example.test" }]);
+    mockSyncMembership.mockRejectedValueOnce(new Error("Registry offline"));
+    await mount();
+    await press(button("Inbox"));
+    await press(button("Accept"));
+    expect(mockRespondInvite).toHaveBeenCalledTimes(1);
+    expect(button("Decline").props.disabled).toBe(true);
+    expect(button("Retry home access").props.disabled).toBe(false);
+    await press(button("Decline"));
+    expect(mockRespondInvite).toHaveBeenCalledTimes(1);
+    await press(button("Retry home access"));
+    expect(mockRespondInvite).toHaveBeenCalledTimes(1);
+    expect(mockSyncMembership).toHaveBeenCalledTimes(2);
+    expect(button("Retry home access")).toBeUndefined();
+  });
+
+  it("does not install membership from an invitation accepted after changing accounts", async () => {
+    const response = deferred<{ status: string; inviteId: string }>();
+    mockRespondInvite.mockReturnValueOnce(response.promise);
+    mockListInvites.mockResolvedValueOnce([{ id: "incoming", home_id: "invited-home", home_name: "Hopewell", role: "guest", email: "owner@example.test" }]);
+    await mount();
+    await press(button("Inbox"));
+    await press(button("Accept"));
+    await act(async () => { switchHousehold(); });
+    await act(async () => { response.resolve({ status: "accepted", inviteId: "incoming" }); });
+    expect(mockSyncMembership).not.toHaveBeenCalled();
+    expect(mockApplyMembership).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it("does not install home access when the server responds for a different invitation", async () => {
+    mockListInvites.mockResolvedValueOnce([{ id: "incoming", home_id: "invited-home", home_name: "Hopewell", role: "guest", email: "owner@example.test" }]);
+    mockRespondInvite.mockResolvedValueOnce({ status: "accepted", inviteId: "different-invitation" });
+    await mount();
+    await press(button("Inbox"));
+    await press(button("Accept"));
+    expect(mockSyncMembership).not.toHaveBeenCalled();
+    expect(mockApplyMembership).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith("Invite response failed", expect.stringContaining("not confirmed"));
+    expect(button("Accept").props.disabled).toBe(false);
+  });
+
+  it("reports an unavailable invitation inbox and retries without claiming it is empty", async () => {
+    mockListInvites.mockRejectedValueOnce(new Error("RPC migration unavailable"));
+    await mount();
+    await press(button("Inbox"));
+    expect(screenRoot().findAllByType(Text).some((node) => node.props.children === "No pending invites.")).toBe(false);
+    expect(button("Retry invitation inbox")).toBeDefined();
+    await press(button("Retry invitation inbox"));
+    expect(mockListInvites).toHaveBeenCalledTimes(2);
+    expect(button("Retry invitation inbox")).toBeUndefined();
+    expect(screenRoot().findAllByType(Text).some((node) => node.props.children === "No pending invites.")).toBe(true);
   });
 
   it("does not roll back another account's permission state after a delayed failure", async () => {

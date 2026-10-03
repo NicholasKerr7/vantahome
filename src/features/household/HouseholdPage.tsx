@@ -115,33 +115,47 @@ function InvitationInbox({ model }: { model: ProfileWorkspaceModel }) {
     Math.max(0, model.pendingInvites.length - 1),
   );
   const invite = model.pendingInvites[currentPage];
+  const responsePending = model.respondingInviteId !== null;
+  const waitingForAccess = model.acceptedInviteId === invite?.id;
+  const anotherHomePending = model.acceptedInviteId !== null && !waitingForAccess;
   return (
     <View style={styles.body}>
       <View style={styles.section}>
         <Text style={styles.eyebrow}>PENDING INVITES</Text>
         <Text style={styles.title}>An invitation to belong.</Text>
       </View>
+      {model.invitesRefreshing && <Text accessibilityLiveRegion="polite" style={styles.detail}>Refreshing your invitations…</Text>}
+      {model.inviteInboxError && <View style={styles.section} accessibilityRole="alert">
+        <Text style={styles.detail}>{model.inviteInboxError}</Text>
+        <DeepAction label="Retry invitation inbox" disabled={model.invitesRefreshing || responsePending} onPress={() => void model.refreshInvites()} />
+      </View>}
       {invite ? (
         <>
           <View style={styles.section}>
+            <Text style={styles.title}>{invite.home_name}</Text>
             <Text style={styles.rowText}>Invite to join as {invite.role}</Text>
             <Text style={styles.subtitle}>{invite.email}</Text>
           </View>
           <View style={styles.actions}>
             <DeepAction
-              label="Accept"
+              label={waitingForAccess ? "Retry home access" : "Accept"}
+              accessibilityLabel={waitingForAccess ? "Retry home access" : "Accept"}
               primary
+              disabled={responsePending || anotherHomePending || model.invitesRefreshing || Boolean(model.inviteInboxError)}
               onPress={() =>
                 void model.handleRespondInvite(invite.id, "accept")
               }
             />
             <DeepAction
               label="Decline"
+              disabled={responsePending || Boolean(model.acceptedInviteId) || model.invitesRefreshing || Boolean(model.inviteInboxError)}
               onPress={() =>
                 void model.handleRespondInvite(invite.id, "decline")
               }
             />
           </View>
+          {responsePending && <Text accessibilityLiveRegion="polite" style={styles.detail}>Updating your invitation…</Text>}
+          {!responsePending && waitingForAccess && <Text accessibilityLiveRegion="polite" style={styles.detail}>Invitation accepted. Retry to finish refreshing your home access.</Text>}
           <View style={styles.fill} />
           <DeepPager
             label="invitation"
@@ -150,7 +164,7 @@ function InvitationInbox({ model }: { model: ProfileWorkspaceModel }) {
             onChange={setPage}
           />
         </>
-      ) : (
+      ) : !model.invitesRefreshing && !model.inviteInboxError ? (
         <View style={styles.empty}>
           <Ionicons
             name="mail-open-outline"
@@ -162,7 +176,7 @@ function InvitationInbox({ model }: { model: ProfileWorkspaceModel }) {
             New household invitations will appear here.
           </Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }

@@ -62,7 +62,7 @@ const originalDeno = (globalThis as any).Deno;
 beforeAll(() => {
   let currentName = "";
   (globalThis as any).Deno = {
-    env: { get: () => "local-test-placeholder" },
+    env: { get: (key: string) => key === "VANTAHOME_INVITE_REDIRECT_URL" ? undefined : "local-test-placeholder" },
     serve: (handler: Handler) => { handlers[currentName] = handler; },
   };
   for (const endpoint of [
@@ -152,7 +152,13 @@ describe("authenticated API boundaries", () => {
 
 describe("invitation recipient binding", () => {
   test("preserves new-account invitations with a matching Auth email", async () => {
-    expect((await handlers["home-invite"](inviteRequest())).status).toBe(200);
+    const response = await handlers["home-invite"](inviteRequest());
+    expect(response.status).toBe(200);
+    expect(mockAdmin.auth.admin.inviteUserByEmail).toHaveBeenCalledWith(
+      "intended@example.test",
+      expect.objectContaining({ redirectTo: "vantahome://join-home" }),
+    );
+    expect(await response.json()).toEqual(expect.objectContaining({ delivery: "email_code" }));
     expect(mockInviteUpsert).toHaveBeenCalledWith(expect.objectContaining({
       invited_user_id: recipientId, email: "intended@example.test",
     }));
@@ -168,7 +174,41 @@ describe("invitation recipient binding", () => {
     expect(mockInviteUpsert).toHaveBeenCalledWith(expect.objectContaining({ invited_user_id: recipientId }));
     expect(await response.json()).toEqual(expect.objectContaining({
       member: expect.objectContaining({ name: "intended@example.test", userId: recipientId }),
+      delivery: "in_app",
     }));
+  });
+
+  test("does not accept a redirect supplied by the inviting client", async () => {
+    const response = await handlers["home-invite"](new Request("https://edge.example.test/home-invite", {
+      method: "POST",
+      body: JSON.stringify({ email: "intended@example.test", role: "member", redirectTo: "https://untrusted.example.test/join-home" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(mockAdmin.auth.admin.inviteUserByEmail).toHaveBeenCalledWith(
+      "intended@example.test",
+      expect.objectContaining({ redirectTo: "vantahome://join-home" }),
+    );
+  });
+
+  test("checks membership in the explicitly selected household", async () => {
+    const response = await handlers["home-invite"](new Request("https://edge.example.test/home-invite", {
+      method: "POST",
+      body: JSON.stringify({ email: "intended@example.test", role: "member", homeId }),
+    }));
+    expect(response.status).toBe(200);
+    const membershipQuery = mockCaller.from.mock.results[0].value;
+    expect(membershipQuery.eq).toHaveBeenCalledWith("home_id", homeId);
+    expect(membershipQuery.eq).toHaveBeenCalledWith("user_id", actorId);
+  });
+
+  test("rejects malformed household selection before querying membership or sending mail", async () => {
+    const response = await handlers["home-invite"](new Request("https://edge.example.test/home-invite", {
+      method: "POST",
+      body: JSON.stringify({ email: "intended@example.test", role: "member", homeId: "untrusted" }),
+    }));
+    expect(response.status).toBe(400);
+    expect(mockCaller.from).not.toHaveBeenCalled();
+    expect(mockAdmin.auth.admin.inviteUserByEmail).not.toHaveBeenCalled();
   });
 
   test.each([

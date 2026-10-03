@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your VantaHome invitation</title>
+  </head>
+  <body>
+    <h1>Your home is waiting.</h1>
+    <p>You have been invited to VantaHome using {{ .Email }}.</p>
+    <p>Open VantaHome, choose <strong>Accept invitation</strong>, and enter this email address and your one-time invitation code:</p>
+    <p><strong>{{ .Token }}</strong></p>
+    <p><a href="{{ .RedirectTo }}">Open VantaHome</a></p>
+    <p>You will choose a password and review the household invitation before joining. This link opens the app; it does not sign you in or grant access.</p>
+    <p>Do not share this code. If you did not expect this invitation, you can ignore this email. If the code has expired, ask the homeowner for a new invitation.</p>
+  </body>
+</html>

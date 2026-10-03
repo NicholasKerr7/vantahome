@@ -16,9 +16,11 @@ import { theme } from '../theme/theme';
 import { isThreeDHomeEnabled } from '../config/threeDHome';
 import { useDeviceRoutines } from '../features/three-d-home/useDeviceRoutines';
 import { useScenePresentationPaused } from '../features/home-shell/ScenePresentationContext';
+import DashboardAccountButton from '../features/account/DashboardAccountButton';
 
 const HomeVoicePanel = React.lazy(() => import('../features/home-voice/HomeVoicePanel'));
 const HomeDeviceLibrary = React.lazy(() => import('../features/home-shell/HomeDeviceLibrary'));
+const AccountSheet = React.lazy(() => import('../features/account/AccountSheet'));
 
 /** Bound loading time while the surrounding home navigation always remains available. */
 function SceneSession({ onRetry, onDevices, covered }: { onRetry: () => void; onDevices: () => void; covered: boolean }) {
@@ -55,7 +57,7 @@ export default function ThreeDHomeScreen() {
   const focused = useIsFocused();
   const [active, setActive] = useState(AppState.currentState !== 'background');
   const [attempt, setAttempt] = useState(0);
-  const [panel, setPanel] = useState<'voice' | 'devices' | null>(null);
+  const [panel, setPanel] = useState<'voice' | 'devices' | 'account' | null>(null);
   const sceneEnabled = isThreeDHomeEnabled();
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
@@ -72,14 +74,16 @@ export default function ThreeDHomeScreen() {
     <CinematicSurface style={styles.header}>
       <View style={styles.brandIcon}><VantaHomeMark size={32} decorative /></View>
       <View style={styles.identity}>
-        <Text style={styles.title}>VANTA<Text style={styles.brandTail}>HOME</Text></Text>
-        <Text style={styles.caption}>Simulation · no real device control</Text>
+        <Text style={styles.title} numberOfLines={1}>VANTA<Text style={styles.brandTail}>HOME</Text></Text>
+        <Text style={styles.caption} numberOfLines={1}>Simulation · no real device control</Text>
       </View>
       <Pressable style={[styles.iconButton, styles.voiceButton]} onPress={() => setPanel('voice')} accessibilityLabel="Open voice control"><Ionicons name="mic-outline" size={19} color={theme.colors.accent} /></Pressable>
+      <DashboardAccountButton onPress={() => setPanel('account')} />
     </CinematicSurface>
     {focused && active && sceneEnabled ? <SceneSession key={attempt} covered={panel !== null} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}
     </HomeWorkspace>
+    {focused && active && panel === 'account' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><AccountSheet onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
     {focused && active && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeDeviceLibrary onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
     {focused && active && panel === 'voice' && <Modal transparent visible animationType="none" onRequestClose={() => setPanel(null)}>
       <SafeAreaView style={styles.modalOverlay}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.voiceWrap}>
@@ -96,7 +100,7 @@ function LoadingFeature() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.bg0 },
-  header: { minHeight: 54, paddingHorizontal: 14, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
+  header: { minHeight: 54, paddingHorizontal: 14, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.stroke },
   brandIcon: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center' },
   iconButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 22 },
   voiceButton: { borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2 },

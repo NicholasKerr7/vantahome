@@ -11,6 +11,7 @@ const mockMembership = jest.fn();
 const mockNavigationMount = jest.fn();
 const mockModelHomeSyncMount = jest.fn();
 const mockFeedbackEnabled = jest.fn();
+const mockNeedsInvitationPasswordSetup = jest.fn();
 let mockSupabaseAvailable = true;
 let mockAuthChanged: (event: string, session: Session | null) => void;
 
@@ -35,6 +36,10 @@ jest.mock("../services/supabaseClient", () => {
 jest.mock("../services/membership", () => ({
   ...jest.requireActual("../services/membership"),
   syncMembershipFromSupabase: (...args: unknown[]) => mockMembership(...args),
+}));
+jest.mock('../services/authFlow', () => ({
+  ...jest.requireActual('../services/authFlow'),
+  needsInvitationPasswordSetup: (...args: unknown[]) => mockNeedsInvitationPasswordSetup(...args),
 }));
 jest.mock("../services/secureSessionStorage", () => ({
   secureSessionStorage: {
@@ -100,6 +105,7 @@ jest.mock("../screens/CamerasScreen", () => () => null);
 jest.mock("../screens/AuditLogScreen", () => () => null);
 jest.mock("../screens/CameraViewerScreen", () => () => null);
 jest.mock("../screens/PasswordRecoveryScreen", () => () => null);
+jest.mock("../features/home-access/HomeAccessScreen", () => () => null);
 
 import AppNavigator from "./AppNavigator";
 import {
@@ -109,6 +115,7 @@ import {
 } from "../store/useHomeStore";
 import { deviceClient } from "../services/deviceClient";
 import type { MembershipSyncResult } from "../services/membership";
+import { bootstrapHome } from '../services/cloudRegistry';
 
 const sessionFor = (id: string) =>
   ({
@@ -148,6 +155,7 @@ describe("navigation session boundaries", () => {
       data: { session: sessionFor("alice") },
     });
     mockMembership.mockImplementation(async (id: string) => membershipFor(id));
+    mockNeedsInvitationPasswordSetup.mockResolvedValue(false);
     jest.spyOn(Linking, "getInitialURL").mockResolvedValue(null);
     jest
       .spyOn(Linking, "addEventListener")
@@ -189,6 +197,44 @@ describe("navigation session boundaries", () => {
     expect(consoleError.mock.calls.filter(([message]) =>
       String(message).includes("Encountered two children with the same key"),
     )).toEqual([]);
+  });
+
+  test('demo hydration failure shows a retry without mounting the model or private routes', async () => {
+    mockSupabaseAvailable = false;
+    jest.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('Storage unavailable'));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Unable to prepare your home on this device.')).toBeTruthy());
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+    expect(mockNavigationMount).not.toHaveBeenCalled();
+    expect(screen.queryByText('Sign out')).toBeNull();
+    fireEvent.press(screen.getByText('Retry'));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(screen.queryByText('Unable to prepare your home on this device.')).toBeNull();
+  });
+
+  test('authenticated hydration failure keeps household routes closed until retry succeeds', async () => {
+    jest.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('Storage unavailable'));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Unable to prepare your account on this device.')).toBeTruthy());
+    expect(screen.getByText('Sign out')).toBeTruthy();
+    expect(mockNavigationMount).not.toHaveBeenCalled();
+    expect(mockMembership).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByText('Retry'));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(useHomeStore.getState().authenticatedUserId).toBe('alice');
+    expect(mockMembership).toHaveBeenCalledWith('alice');
+  });
+
+  test('a late hydration error from a previous account cannot replace the current home', async () => {
+    let fail: (error: Error) => void = () => {};
+    jest.mocked(AsyncStorage.getItem).mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(useHomeStore.getState().authenticatedUserId).toBe('alice'));
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    await act(async () => { fail(new Error('Old account storage failed')); });
+    expect(screen.queryByText('Unable to prepare your account on this device.')).toBeNull();
+    expect(useHomeStore.getState().activeMemberId).toBe('bob');
   });
 
   test("3D Home is available within the authenticated stack only", async () => {
@@ -250,6 +296,45 @@ describe("navigation session boundaries", () => {
     expect(mockNavigationMount).toHaveBeenCalled();
   });
 
+  test('accounts with no membership enter the invitation gate without creating a household', async () => {
+    mockMembership.mockResolvedValueOnce(null);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.queryByText('Verifying your home…')).toBeNull());
+    await waitFor(() => expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy());
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(bootstrapHome).not.toHaveBeenCalled();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+  });
+
+  test('private routes are not mounted before membership verification finishes', async () => {
+    mockMembership.mockImplementationOnce(() => new Promise(() => {}));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Verifying your home…')).toBeTruthy());
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(screen.queryByTestId('registered-route-ThreeDHome')).toBeNull();
+  });
+
+  test('a canonical invitation link opens the inbox for an existing member without exchanging credentials', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    await act(async () => { deliverLink({ url: 'vantahome://join-home' }); });
+    expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockExchangeCode).not.toHaveBeenCalled();
+    expect(mockSetSession).not.toHaveBeenCalled();
+  });
+
+  test('an invitation URL carrying tokens cannot alter the authenticated navigation state', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    await act(async () => { deliverLink({ url: 'vantahome://join-home#access_token=other&refresh_token=other' }); });
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-HomeAccess')).toBeNull();
+    expect(mockExchangeCode).not.toHaveBeenCalled();
+    expect(mockSetSession).not.toHaveBeenCalled();
+  });
+
   test("password recovery hides feedback even for an already verified account", async () => {
     render(<AppNavigator />);
     await waitFor(() => expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true));
@@ -258,6 +343,47 @@ describe("navigation session boundaries", () => {
     expect(useHomeStore.getState().membershipReady).toBe(true);
     expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
     expect(mockNavigationMount).toHaveBeenCalledTimes(mounts);
+  });
+
+  test('unfinished invitation password setup resumes on launch before household access', async () => {
+    mockNeedsInvitationPasswordSetup.mockResolvedValueOnce(true);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy());
+    expect(mockNeedsInvitationPasswordSetup).toHaveBeenCalledWith('alice');
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+  });
+
+  test('an unreadable invitation marker exposes credential setup rather than leaving startup blank', async () => {
+    mockNeedsInvitationPasswordSetup.mockRejectedValueOnce(new Error('Secure storage is unavailable.'));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy());
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+  });
+
+  test('a slow enrollment check for another account cannot replace the current navigation', async () => {
+    let finish: (value: boolean) => void = () => {};
+    mockNeedsInvitationPasswordSetup.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(mockNeedsInvitationPasswordSetup).toHaveBeenCalledWith('alice'));
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    await act(async () => { finish(true); });
+    expect(useHomeStore.getState().authenticatedUserId).toBe('bob');
+    expect(screen.queryByTestId('registered-route-PasswordRecovery')).toBeNull();
+  });
+
+  test('password setup for a previous identity cannot follow a different signed-in account', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true));
+    await act(async () => { mockAuthChanged('PASSWORD_RECOVERY', sessionFor('alice')); });
+    expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy();
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(useHomeStore.getState().activeMemberId).toBe('bob'));
+    expect(screen.queryByTestId('registered-route-PasswordRecovery')).toBeNull();
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
   });
 
   test("an unsolicited token callback cannot replace an existing account", async () => {
