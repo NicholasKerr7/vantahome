@@ -117,14 +117,27 @@ match the migration. Anonymous requests to the RPC and all three account
 functions returned HTTP 401. The rate-limit hashing secret is present. These
 checks do not establish successful sign-in or email delivery.
 
-Email setup remains incomplete. Neither project has custom SMTP configured.
-Supabase rejected the invitation template update with HTTP 400 because custom
-email templates are unavailable on this free-tier project with the default email
-provider. The default invitation template remains in place; public sign-up is
-still disabled on staging. Configure a verified sender, install the checked-in
-template, and deliberately enable owner enrollment for staging before testing
-the complete flow with authorized test recipients. No invitation or recovery
-email was sent during these checks.
+The owner registered `vantahome.app`, and staging email configuration is now
+complete. Resend verified `auth-staging.vantahome.app` in North Virginia
+(`us-east-1`); receiving and tracking remain disabled. Public DNS checks confirmed
+the generated DKIM TXT at `resend._domainkey.auth-staging` and DNS-only CNAMEs
+`rsend.auth-staging` → `rsend.forge.rmta.net` and `send.auth-staging` →
+`send.forge.rmta.net`. The scoped `_dmarc.auth-staging` TXT is
+`v=DMARC1; p=none;`; it does not enforce rejection of unauthenticated messages.
+
+The **VantaHome staging SMTP** key has Sending access restricted to that domain.
+Its secret was saved only in staging Supabase, never in the repository or local
+files. A management API read verified `smtp.resend.com:465`, username `resend`,
+sender `no-reply@auth-staging.vantahome.app`, display name **VantaHome Preview**,
+and a configured password. Limits remain 30 email messages per hour and a
+60-second minimum interval.
+
+The hosted invitation template now exactly matches `supabase/templates/invite.html`,
+with subject **Your VantaHome invitation**. Eight-digit OTP, required email
+confirmation, and disabled public sign-up were preserved. No test, invitation,
+or recovery emails were sent; actual delivery and the complete account flow
+remain unverified. Deliberately enable owner enrollment for staging when ready
+to test the full flow with authorized test recipients.
 
 Keep the installed offline Preview separate until native auth integration is
 ready. Preview 34 registers `vantahome-preview`, while current client callbacks
@@ -133,6 +146,6 @@ Authenticated accounts also do not inherit the local demo device catalog. A
 connected simulation needs explicit account-scoped model state and matching
 preview callback configuration before replacing the current iPhone preview.
 
-Production was inspected but no release was promoted: its recorded migration
-history remains through `011`, so it also needs review of migrations `012` and
-`013` before the new invitation migration.
+Production remains unchanged, without custom SMTP. No release was promoted:
+its recorded migration history remains through `011`, so it also needs review
+of migrations `012` and `013` before the new invitation migration.
