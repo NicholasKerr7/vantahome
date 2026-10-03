@@ -57,11 +57,11 @@ beforeEach(async () => {
 });
 
 describe("explicit invitation code verification", () => {
-  test("verifies a deliberately entered email and six-digit invite code", async () => {
-    const session = await verifyInvitationCode(" Invited@Example.Test ", " 123456 ");
+  test.each(["123456", "1234567", "01234567", "123456789", "0123456789"])("verifies a deliberately entered invite code without truncating %s", async (code) => {
+    const session = await verifyInvitationCode(" Invited@Example.Test ", ` ${code} `);
     expect(session.user.id).toBe("invitee");
     expect(auth.verifyOtp).toHaveBeenCalledWith({
-      email: "invited@example.test", token: "123456", type: "invite",
+      email: "invited@example.test", token: code, type: "invite",
     });
     expect(auth.setSession).not.toHaveBeenCalled();
     expect(auth.exchangeCodeForSession).not.toHaveBeenCalled();
@@ -70,11 +70,13 @@ describe("explicit invitation code verification", () => {
   test.each([
     ["missing", "123456"],
     ["invited@example.test", "12345"],
-    ["invited@example.test", "1234567"],
+    ["invited@example.test", "12345678901"],
     ["invited@example.test", "12a456"],
+    ["invited@example.test", "1234 5678"],
+    ["invited@example.test", "１２３４５６７８"],
     ["invited@example.test", "token_hash=secret"],
   ])("does not verify malformed invitation input", async (email, code) => {
-    await expect(verifyInvitationCode(email, code)).rejects.toThrow("six-digit");
+    await expect(verifyInvitationCode(email, code)).rejects.toThrow("one-time");
     expect(auth.verifyOtp).not.toHaveBeenCalled();
   });
 

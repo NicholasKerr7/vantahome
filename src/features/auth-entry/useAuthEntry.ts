@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import { makeAuthCallbackUri } from '../../config/authRedirects';
+import { isValidInvitationCode } from '../../config/invitationCode';
 import { supabase } from '../../services/supabaseClient';
 import { beginAuthFlow, cancelAuthFlow, completeAuthCallback, verifyInvitationCode, waitForAuthExchange } from '../../services/authFlow';
 import { fetchAuthProviderAvailability, type AuthProviderAvailability } from '../../services/authProviderAvailability';
@@ -32,7 +33,7 @@ export function useAuthEntry({ initialMode = 'login', preview = false, onInvitat
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && email.trim().length <= 320;
   const detailsValid = name.trim().length >= 2 && name.trim().length <= 120 && emailValid;
   const canSubmit = configured && !busy && emailValid && (
-    mode === 'recovery' || (mode === 'invite' ? /^\d{6}$/.test(code) : mode === 'owner' ? detailsValid && password.length >= 8 && password === confirm : password.length > 0)
+    mode === 'recovery' || (mode === 'invite' ? isValidInvitationCode(code) : mode === 'owner' ? detailsValid && password.length >= 8 && password === confirm : password.length > 0)
   );
 
   useEffect(() => {

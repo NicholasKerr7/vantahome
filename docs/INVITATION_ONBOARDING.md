@@ -11,7 +11,8 @@ sign in normally and review their invitation inbox.
    The server checks that household's membership and invitation permissions; it
    never accepts a client-supplied email redirect.
 2. Supabase creates the invited Auth account and sends the configured invitation
-   template. The message contains `{{ .Token }}`, a six-digit one-time code.
+   template. The message contains `{{ .Token }}`, a one-time code whose length
+   follows the project's hosted email OTP setting.
 3. The recipient opens VantaHome's **Accept invitation** entry and enters their
    invited email address and code. The email's bare `vantahome://join-home` link
    can open this screen, but contains no authentication credentials or home role.
@@ -43,7 +44,11 @@ These files prepare the integration; a client build or Edge Function deployment
 does **not** update the hosted Supabase email template or SMTP settings.
 
 - In Supabase **Authentication → Email Templates → Invite user**, install the
-  contents of `supabase/templates/invite.html`. Use a six-digit email OTP setting.
+  contents of `supabase/templates/invite.html`. Preserve the project's email OTP
+  length: both hosted VantaHome projects used eight digits when inspected on
+  2026-10-03. The client accepts Supabase's supported six-to-ten-digit format;
+  the server verifies the exact configured token. Do not shorten the hosted code
+  to work around a client input limit.
   The template intentionally uses `{{ .Token }}` and the bare `{{ .RedirectTo }}`;
   do not replace it with `{{ .ConfirmationURL }}`. The latter uses an implicit
   invitation flow that is incompatible with this app's local PKCE safeguards.
@@ -87,6 +92,47 @@ members or modifying production Auth settings without the relevant authorization
 Unit and handler tests cover local validation and state boundaries; they do not
 prove a hosted template, SMTP sender, or deployed invitation is configured.
 
-Supabase documents [email template variables](https://supabase.com/docs/guides/auth/auth-email-templates),
+Supabase documents [email OTP length bounds](https://supabase.com/docs/guides/local-development/cli/config#auth.email.otp_length),
+[email template variables](https://supabase.com/docs/guides/auth/auth-email-templates),
 [OTP verification](https://supabase.com/docs/reference/javascript/auth-verifyotp),
 and [the invitation API](https://supabase.com/docs/reference/javascript/auth-admin-inviteuserbyemail).
+
+## Hosted staging checkpoint — 2026-10-03
+
+Both `vantahome-staging` and the production VantaHome project reported
+`ACTIVE_HEALTHY`. The following changes were applied only to staging
+(`dcevusczjtmdpzrxpdou`):
+
+- Applied migration `014_recipient_invitation_names.sql`; migration history now
+  runs through `014`.
+- Deployed `home-bootstrap`, `home-invite`, and `home-invite-respond`, each at
+  version 16 with JWT verification enabled.
+- Added the exact `vantahome://join-home` redirect alongside the existing
+  `vantahome://auth-callback` entry. Eight-digit OTP, email confirmation, and
+  existing sign-up policies were preserved.
+
+Remote checks confirmed the invitation RPC exists, authenticated execution is
+granted, anonymous execution is denied, and its restricted function settings
+match the migration. Anonymous requests to the RPC and all three account
+functions returned HTTP 401. The rate-limit hashing secret is present. These
+checks do not establish successful sign-in or email delivery.
+
+Email setup remains incomplete. Neither project has custom SMTP configured.
+Supabase rejected the invitation template update with HTTP 400 because custom
+email templates are unavailable on this free-tier project with the default email
+provider. The default invitation template remains in place; public sign-up is
+still disabled on staging. Configure a verified sender, install the checked-in
+template, and deliberately enable owner enrollment for staging before testing
+the complete flow with authorized test recipients. No invitation or recovery
+email was sent during these checks.
+
+Keep the installed offline Preview separate until native auth integration is
+ready. Preview 34 registers `vantahome-preview`, while current client callbacks
+use `vantahome`; adding staging credentials alone would route links incorrectly.
+Authenticated accounts also do not inherit the local demo device catalog. A
+connected simulation needs explicit account-scoped model state and matching
+preview callback configuration before replacing the current iPhone preview.
+
+Production was inspected but no release was promoted: its recorded migration
+history remains through `011`, so it also needs review of migrations `012` and
+`013` before the new invitation migration.

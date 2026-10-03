@@ -38,7 +38,7 @@ test('starts with personal sign-in and keeps owner creation behind an explicit p
   expect(supabase!.auth.signUp).not.toHaveBeenCalled();
 });
 
-test('arms the invitation password gate before the SDK can emit signed-in', async () => {
+test('submits the complete eight-digit invitation after arming the password gate', async () => {
   const enrollment = jest.fn(); const requested = jest.fn();
   jest.mocked(verifyInvitationCode).mockImplementation(async () => {
     expect(enrollment).toHaveBeenCalledWith(true);
@@ -46,13 +46,33 @@ test('arms the invitation password gate before the SDK can emit signed-in', asyn
   });
   const screen = render(<AuthScreen initialMode="invite" onInvitationRequested={requested} onInvitationEnrollmentChange={enrollment} />); await settle();
   fireEvent.changeText(screen.getByLabelText('Email'), 'guest@example.com');
-  fireEvent.changeText(screen.getByLabelText('Invitation code'), '123456');
+  expect(screen.getByLabelText('Invitation code').props.maxLength).toBe(10);
+  fireEvent.changeText(screen.getByLabelText('Invitation code'), '01234567');
   fireEvent.press(screen.getByRole('button', { name: 'Verify invitation' })); await settle();
-  expect(verifyInvitationCode).toHaveBeenCalledWith('guest@example.com', '123456');
+  expect(verifyInvitationCode).toHaveBeenCalledWith('guest@example.com', '01234567');
   expect(enrollment.mock.calls.map(([active]) => active)).toEqual([true, false]);
   expect(requested).toHaveBeenCalledTimes(1);
   expect(screen.getByText(/That invitation could not be verified/)).toBeTruthy();
   expect(supabase!.auth.signUp).not.toHaveBeenCalled();
+});
+
+test.each(['123456', '0123456789'])('allows the supported invitation length boundary %s', async (code) => {
+  jest.mocked(verifyInvitationCode).mockRejectedValue(new Error('Invalid test token'));
+  const screen = render(<AuthScreen initialMode="invite" />); await settle();
+  fireEvent.changeText(screen.getByLabelText('Email'), 'guest@example.com');
+  fireEvent.changeText(screen.getByLabelText('Invitation code'), code);
+  fireEvent.press(screen.getByRole('button', { name: 'Verify invitation' })); await settle();
+  expect(verifyInvitationCode).toHaveBeenCalledWith('guest@example.com', code);
+});
+
+test.each(['12345', '12345678901', '1234a678'])('keeps malformed invitation input %s out of the authentication flow', async (code) => {
+  const enrollment = jest.fn();
+  const screen = render(<AuthScreen initialMode="invite" onInvitationEnrollmentChange={enrollment} />); await settle();
+  fireEvent.changeText(screen.getByLabelText('Email'), 'guest@example.com');
+  fireEvent.changeText(screen.getByLabelText('Invitation code'), code);
+  fireEvent.press(screen.getByRole('button', { name: 'Verify invitation' })); await settle();
+  expect(verifyInvitationCode).not.toHaveBeenCalled();
+  expect(enrollment).not.toHaveBeenCalled();
 });
 
 test('preview never performs authentication, email delivery or account creation', async () => {

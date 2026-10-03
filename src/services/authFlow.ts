@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { getAuthRedirectParams } from "../config/authRedirects";
+import { isValidInvitationCode } from "../config/invitationCode";
 import { secureSessionStorage } from "./secureSessionStorage";
 import { supabase } from "./supabaseClient";
 import { ensureSecureAuthCrypto } from "./authCrypto";
@@ -87,9 +88,9 @@ export async function verifyInvitationCode(
   if (
     normalizedEmail.length > 320 ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
-    !/^\d{6}$/.test(normalizedToken)
+    !isValidInvitationCode(normalizedToken)
   ) {
-    throw new Error("Enter your invited email address and six-digit invitation code.");
+    throw new Error("Enter your invited email address and one-time invitation code.");
   }
   if (activeCodeExchange)
     throw new Error("Sign-in is finishing. Please wait a moment.");

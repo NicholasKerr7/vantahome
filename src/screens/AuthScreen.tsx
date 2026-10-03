@@ -6,6 +6,7 @@ import Pressable from '../components/Pressable';
 import { AuthAction, AuthEntryFrame, AuthField, AuthMessage } from '../features/auth-entry/AuthEntryFrame';
 import { useAuthEntry, type AuthEntryProps } from '../features/auth-entry/useAuthEntry';
 import { theme } from '../theme/theme';
+import { INVITATION_CODE_MAX_LENGTH } from '../config/invitationCode';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -15,7 +16,7 @@ export default function AuthScreen(props: AuthEntryProps) {
   const { mode } = model;
   const ownerDetails = mode === 'owner' && !model.ownerPasswordStep;
   const title = mode === 'invite' ? 'You’re invited.' : mode === 'owner' ? 'A home of your own.' : mode === 'recovery' ? 'Find your way back.' : 'Welcome home.';
-  const subtitle = mode === 'invite' ? 'Enter the email and six-digit code from your invitation. You will review your access before joining.'
+  const subtitle = mode === 'invite' ? 'Enter the email and one-time code from your invitation. You will review your access before joining.'
     : mode === 'owner' ? 'Create your personal account, then set up your home. Joining someone else? Accept their invitation instead.'
     : mode === 'recovery' ? 'We’ll send a password reset link to your account email.' : 'Your space, ready when you are. Sign in to your personal account.';
   const action = mode === 'invite' ? 'Verify invitation' : mode === 'owner' ? 'Create account' : mode === 'recovery' ? 'Send reset link' : 'Sign in';
@@ -28,7 +29,7 @@ export default function AuthScreen(props: AuthEntryProps) {
     </View>}
     {ownerDetails && <AuthField label="Your name" value={model.name} onChangeText={model.setName} autoComplete="name" maxLength={120} editable={!model.busy} />}
     {(!model.ownerPasswordStep || mode !== 'owner') && <AuthField label="Email" value={model.email} onChangeText={model.setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" maxLength={320} editable={!model.busy} />}
-    {mode === 'invite' && <AuthField label="Invitation code" value={model.code} onChangeText={model.setCode} keyboardType="number-pad" autoComplete="one-time-code" maxLength={6} editable={!model.busy} />}
+    {mode === 'invite' && <AuthField label="Invitation code" value={model.code} onChangeText={model.setCode} keyboardType="number-pad" autoComplete="one-time-code" maxLength={INVITATION_CODE_MAX_LENGTH} editable={!model.busy} />}
     {(mode === 'login' || (mode === 'owner' && model.ownerPasswordStep)) && <>
       <AuthField label={mode === 'login' ? 'Password' : 'Create password'} value={model.password} onChangeText={model.setPassword} autoCapitalize="none" autoCorrect={false} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} secureTextEntry editable={!model.busy} />
       {mode === 'owner' && <><AuthField label="Confirm password" value={model.confirm} onChangeText={model.setConfirm} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" secureTextEntry editable={!model.busy} /><Text style={styles.hint}>Use at least eight characters.</Text></>}
