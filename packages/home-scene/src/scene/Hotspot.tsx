@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Html } from '@react-three/drei';
 import { Vector3 } from 'three';
 import { HotspotLeader, useHotspotLayout } from './HotspotLayout';
+import './hotspot.css';
 
 interface HotspotProps {
   id: string;
@@ -9,6 +10,7 @@ interface HotspotProps {
   icon: string;
   position: [number, number, number];
   on: boolean;
+  monitoring?: boolean;
   selected: boolean;
   expanded: boolean;
   controlMode: 'inspector' | 'quick';
@@ -24,6 +26,7 @@ export function Hotspot({
   icon,
   position,
   on,
+  monitoring = false,
   selected,
   expanded,
   controlMode,
@@ -34,6 +37,7 @@ export function Hotspot({
   const layout = useHotspotLayout();
   const button = useRef<HTMLButtonElement>(null);
   const quickControls = controlMode === 'quick';
+  const status = stateLabel ?? (on ? 'On' : 'Off');
   return (
     <>
       <HotspotLeader id={id} position={position} />
@@ -63,6 +67,7 @@ export function Hotspot({
         position={position}
         center
         zIndexRange={[30, 0]}
+        wrapperClass="device-hotspot-layer"
         className="device-hotspot-anchor"
       >
         <button
@@ -71,7 +76,8 @@ export function Hotspot({
           className={`device-hotspot ${on ? 'is-on' : ''} ${selected ? 'is-selected' : ''}`}
           data-device-hotspot={id}
           data-device-tone={tone}
-          aria-label={`${label}: ${stateLabel ?? (on ? 'on' : 'off')}. ${quickControls ? 'Quick controls.' : 'Show full controls.'}`}
+          data-device-monitoring={monitoring}
+          aria-label={`${label}: ${status}. ${quickControls ? 'Quick controls.' : 'Show full controls.'}`}
           aria-haspopup={quickControls ? 'dialog' : undefined}
           aria-expanded={quickControls ? expanded : undefined}
           aria-pressed={quickControls ? undefined : selected}
@@ -90,7 +96,10 @@ export function Hotspot({
           <span className="device-hotspot-symbol" aria-hidden="true">
             {icon}
           </span>
-          <span className="device-hotspot-label">{label}</span>
+          <span className="device-hotspot-label" aria-hidden="true">
+            <span>{label}</span>
+            <span className="device-hotspot-state">{status}</span>
+          </span>
         </button>
       </Html>
     </>

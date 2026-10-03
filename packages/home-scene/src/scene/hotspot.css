@@ -1,0 +1,139 @@
+/* Device state owns fill/glow. Selection and keyboard focus only add a neutral outline. */
+.device-hotspot-anchor { pointer-events: none; }
+/* Lift the entire projected layer above nearby markers. Drei writes its depth
+   inline, so the inspected label needs a CSS override without changing position. */
+.device-hotspot-layer:has(.device-hotspot:is(.is-selected, [aria-expanded='true'])) { z-index: 31 !important; }
+.device-hotspot-layer:has(.device-hotspot:focus-visible) { z-index: 32 !important; }
+@media (hover: hover) {
+  .device-hotspot-layer:has(.device-hotspot:hover) { z-index: 32 !important; }
+}
+.device-hotspot {
+  --hotspot-fill: rgb(var(--surface-rgb) / 96%);
+  --hotspot-ink: var(--text-soft);
+  --hotspot-border: var(--line-strong);
+  --hotspot-shadow: 0 2px 9px #0004;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  color: var(--hotspot-ink);
+  background: var(--hotspot-fill);
+  border: 1px solid var(--hotspot-border);
+  border-radius: 50%;
+  box-shadow: var(--hotspot-shadow);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: border-color 180ms, background-color 180ms, transform 180ms;
+}
+.device-hotspot.is-on {
+  --hotspot-fill: var(--accent);
+  --hotspot-ink: var(--accent-ink);
+  --hotspot-border: var(--accent-text);
+  --hotspot-shadow: 0 0 0 4px rgb(var(--accent-rgb) / 8.6%), 0 0 20px rgb(var(--accent-rgb) / 20%);
+}
+/* Healthy monitoring gets a small steady indicator, never the powered-device fill. */
+.device-hotspot[data-device-monitoring='true']::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  width: 4px;
+  height: 4px;
+  right: 3px;
+  bottom: 3px;
+  border-radius: 50%;
+  background: var(--text-soft);
+  box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+}
+.device-hotspot:is([data-device-tone='warning'], [data-device-tone='closed']) {
+  --hotspot-border: var(--device-status-accent);
+}
+.device-hotspot:is([data-device-tone='warning'], [data-device-tone='closed'])::after {
+  background: var(--device-status-accent);
+}
+/* An alarm remains visible even when the device has no power switch or the sample is silenced. */
+.device-hotspot[data-device-tone='alarm'] {
+  --hotspot-fill: var(--device-status-accent);
+  --hotspot-ink: var(--accent-ink);
+  --hotspot-border: var(--device-status-accent);
+  --hotspot-shadow: 0 2px 9px #0004;
+}
+.device-hotspot[data-device-tone='alarm']::after { display: none; }
+.device-hotspot:is(.is-selected, [aria-expanded='true'], :focus-visible) {
+  outline: 1px solid var(--text-soft);
+  outline-offset: 3px;
+}
+.device-hotspot:focus-visible { outline-width: 2px; }
+.device-hotspot-symbol { position: relative; z-index: 1; font-size: 19px; line-height: 1; }
+.device-hotspot-label {
+  pointer-events: none;
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  display: grid;
+  gap: 3px;
+  width: max-content;
+  max-width: 180px;
+  padding: 6px 9px;
+  color: var(--text);
+  background: rgb(var(--surface-rgb) / 96%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: 500 13px/1.2 sans-serif;
+  letter-spacing: .03em;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 3px);
+  transition: opacity 150ms, transform 150ms;
+}
+.device-hotspot-state { color: var(--device-status-accent, var(--text-soft)); font-size: 11px; }
+.device-hotspot:is(.is-selected, [aria-expanded='true'], :focus-visible) .device-hotspot-label {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+@media (hover: hover) {
+  .device-hotspot:hover { border-color: var(--text-soft); }
+  .device-hotspot:hover .device-hotspot-label { opacity: 1; transform: translate(-50%, 0); }
+}
+.device-hotspot[data-label-edge='left'] .device-hotspot-label { left: 0; transform: translateY(0); }
+.device-hotspot[data-label-edge='right'] .device-hotspot-label { left: auto; right: 0; transform: translateY(0); }
+
+@container app-viewport (max-width: 599px) {
+  /* The visible disc may shrink; every target retains its full 44px touch area. */
+  .device-hotspot {
+    isolation: isolate;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    transition: opacity 120ms;
+  }
+  .device-hotspot::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    inset: 5px;
+    border: 1px solid var(--hotspot-border);
+    border-radius: 50%;
+    background: var(--hotspot-fill);
+    box-shadow: var(--hotspot-shadow);
+    pointer-events: none;
+  }
+  .device-hotspot-symbol { font-size: 17px; }
+  .device-hotspot:is(.is-selected, [aria-expanded='true'], :focus-visible)::before { inset: 0; }
+  .device-hotspot[data-device-monitoring='true']::after { right: 6px; bottom: 6px; }
+  .device-hotspot.is-selected .device-hotspot-label { opacity: 0; }
+  .device-hotspot:is([aria-expanded='true'], :focus-visible) .device-hotspot-label { opacity: 1; }
+  .viewport.is-manipulating .device-hotspot:not(:focus-visible):not([aria-expanded='true']):not([data-device-tone='alarm']) { opacity: .24; }
+  @media (hover: hover) {
+    .device-hotspot:hover { border-color: transparent; }
+    .device-hotspot:hover .device-hotspot-label { opacity: 1; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .device-hotspot, .device-hotspot-label { transition: none; }
+}

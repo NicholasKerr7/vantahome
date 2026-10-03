@@ -14,91 +14,6 @@
   outline-offset: -4px;
 }
 
-.device-hotspot-anchor {
-  pointer-events: none;
-}
-
-.device-hotspot {
-  --hotspot-accent: var(--muted);
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  color: var(--text);
-  background: var(--hud);
-  border: 1px solid var(--accent-border);
-  border-radius: 50%;
-  box-shadow: 0 2px 12px rgb(0 0 0 / 28%);
-  pointer-events: auto;
-  cursor: pointer;
-  transition: border-color 180ms, background-color 180ms, transform 180ms;
-}
-
-.device-hotspot.is-on {
-  --hotspot-accent: var(--accent);
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-color: var(--accent-border);
-  box-shadow: 0 0 0 4px rgb(var(--accent-rgb) / 17%), 0 3px 14px rgb(0 0 0 / 25%);
-}
-
-.device-hotspot.is-on:is([data-device-tone='alarm'], [data-device-tone='warning'], [data-device-tone='closed']) {
-  background: var(--device-status-accent);
-  border-color: var(--device-status-accent);
-  box-shadow: 0 2px 12px rgb(0 0 0 / 28%);
-}
-
-.device-hotspot:hover,
-.device-hotspot.is-selected,
-.device-hotspot[aria-expanded="true"] {
-  transform: scale(1.12);
-  border-color: white;
-}
-
-.device-hotspot[aria-expanded="true"] {
-  box-shadow: 0 0 0 3px rgb(var(--background-rgb) / 100%), 0 0 0 5px rgb(var(--accent-rgb) / 100%), 0 3px 14px rgb(0 0 0 / 30%);
-}
-
-.device-hotspot:focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: 4px;
-}
-
-.device-hotspot-symbol {
-  font-size: 19px;
-  line-height: 1;
-}
-
-.device-hotspot-label {
-  pointer-events: none;
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 10px);
-  padding: 6px 9px;
-  color: var(--text);
-  background: var(--hud);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  font: 500 13px/1.2 sans-serif;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-  opacity: 0;
-  transform: translate(-50%, 3px);
-  transition: opacity 150ms, transform 150ms;
-}
-
-.device-hotspot:hover .device-hotspot-label,
-.device-hotspot:focus-visible .device-hotspot-label,
-.device-hotspot.is-selected .device-hotspot-label,
-.device-hotspot[aria-expanded="true"] .device-hotspot-label {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
 .scene-error {
   display: flex;
   flex-direction: column;
@@ -133,14 +48,3 @@
   border-radius: 8px;
   cursor: pointer;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .device-hotspot,
-  .device-hotspot-label {
-    transition: none;
-  }
-}
-
-/* Keep selected labels inside the model viewport while preserving marker coordinates. */
-.device-hotspot[data-label-edge='left'] .device-hotspot-label { left: 0; transform: translateY(0); }
-.device-hotspot[data-label-edge='right'] .device-hotspot-label { left: auto; right: 0; transform: translateY(0); }

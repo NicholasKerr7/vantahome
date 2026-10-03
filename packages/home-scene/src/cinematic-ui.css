@@ -159,15 +159,6 @@
 .environment-footer { border-color: var(--line); }
 .environment-footer a { color: var(--ice); }
 
-/* Hotspots retain their position and 44px touch area while the new palette
-   responds to actual simulated device state. Alarm colors remain meaningful. */
-.device-hotspot { color: var(--text); background: rgb(var(--surface-rgb) / 92.9%); border-color: rgb(var(--accent-text-rgb) / 40%); box-shadow: 0 5px 16px #0005; }
-.device-hotspot.is-on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent-text); box-shadow: 0 0 0 4px rgb(var(--accent-rgb) / 8.6%), 0 0 20px rgb(var(--accent-rgb) / 20%); }
-.device-hotspot[aria-expanded='true'] { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--ice), 0 0 24px rgb(var(--accent-text-rgb) / 20%); }
-.device-hotspot-label { color: var(--text); background: rgb(var(--surface-rgb) / 96.1%); border-color: var(--line); border-radius: 10px; }
-.house-canvas canvas:focus-visible { outline-color: var(--accent); }
-.device-hotspot:focus-visible { outline-color: var(--accent-text); }
-
 /* Entrance motion is short and only uses compositor-friendly properties. */
 .dashboard-shell .viewport, .dashboard-inspector, .dashboard-room-bar { animation: cinematic-hud-enter 420ms cubic-bezier(.2,.8,.2,1) both; }
 .dashboard-library[open] { animation: cinematic-hud-enter 220ms ease-out both; }
@@ -183,28 +174,6 @@
   .cinematic-view-control { padding-inline: 10px; gap: 5px; }
 }
 @container app-viewport (max-width: 599px) {
-  /* The invisible 44px button keeps its full touch target. Only its visual disc shrinks. */
-  .dashboard-shell .viewport .device-hotspot[data-device-hotspot] { isolation: isolate; color: var(--text-soft); background: transparent; border-color: transparent; box-shadow: none; transform: none; transition: opacity 120ms; }
-  .dashboard-shell .viewport .device-hotspot::before { content: ''; position: absolute; z-index: 0; inset: 5px; border: 1px solid rgb(var(--accent-text-rgb) / 28%); border-radius: 50%; background: rgb(var(--surface-rgb) / 95%); box-shadow: 0 2px 9px #0004; pointer-events: none; }
-  .dashboard-shell .viewport .device-hotspot-symbol { position: relative; z-index: 1; font-size: 17px; }
-  .dashboard-shell .viewport .device-hotspot.is-on::before { border-color: rgb(var(--accent-text-rgb) / 65%); }
-  .dashboard-shell .viewport .device-hotspot.is-on::after { content: ''; position: absolute; z-index: 2; width: 4px; height: 4px; right: 7px; bottom: 7px; border-radius: 50%; background: var(--accent-text); box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
-  /* Selection outlines the target; only powered devices receive the bright fill. */
-  .dashboard-shell .viewport .device-hotspot:is(.is-selected, [aria-expanded='true'])::before { inset: 0; border-color: var(--accent-text); box-shadow: 0 0 0 2px rgb(var(--accent-rgb) / 14%); }
-  .dashboard-shell .viewport .device-hotspot.is-on:is(.is-selected, [aria-expanded='true']) { color: var(--accent-ink); }
-  .dashboard-shell .viewport .device-hotspot.is-on:is(.is-selected, [aria-expanded='true'])::before { background: var(--accent); }
-  .dashboard-shell .viewport .device-hotspot:is([data-device-tone='warning'], [data-device-tone='closed'])::before { border-color: var(--device-status-accent); }
-  .dashboard-shell .viewport .device-hotspot:is([data-device-tone='warning'], [data-device-tone='closed'])::after { background: var(--device-status-accent); }
-  .dashboard-shell .viewport .device-hotspot[data-device-tone='alarm'] { color: var(--accent-ink); }
-  .dashboard-shell .viewport .device-hotspot[data-device-tone='alarm']::before { inset: 0; background: var(--device-status-accent); border-color: var(--device-status-accent); }
-  .dashboard-shell .viewport .device-hotspot:is(.is-selected, [aria-expanded='true'], [data-device-tone='alarm'])::after { display: none; }
-  /* Passive selection and touch hover should never leave labels covering the floor plan. */
-  .dashboard-shell .viewport .device-hotspot .device-hotspot-label { z-index: 3; opacity: 0; }
-  .dashboard-shell .viewport .device-hotspot:is([aria-expanded='true'], :focus-visible) .device-hotspot-label { opacity: 1; }
-  .dashboard-shell .viewport.is-manipulating .device-hotspot:not(:focus-visible):not([aria-expanded='true']):not([data-device-tone='alarm']) { opacity: .24; }
-  @media (hover: hover) {
-    .dashboard-shell .viewport .device-hotspot:hover .device-hotspot-label { opacity: 1; }
-  }
   .dashboard-shell .viewport, .dashboard-shell.is-embedded .viewport { border-radius: 22px; }
   .dashboard-shell .viewport-top, .dashboard-shell.is-embedded .viewport-top { top: 13px; left: 15px; right: 12px; gap: 10px; }
   .dashboard-shell .viewport-top h1, .dashboard-shell.is-embedded .viewport-top h1 { font-size: 25px; line-height: 1.15; }

@@ -4,6 +4,8 @@ import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { Group, MathUtils, Mesh, type Object3D } from 'three';
 import siteLayout from '../site-layout.json';
+import { getDevice } from '../data';
+import { hotspotPresentation } from '../hotspotPresentation';
 import { Hotspot } from './Hotspot';
 import { getGatePosition } from './siteGeometry';
 import { readDevice, type HouseSceneProps } from './types';
@@ -46,7 +48,8 @@ export function Landscape({ view, roomId, deviceStates, selectedDevice, quickDev
   // R3F must not reapply the target transform on every control update; animation owns it.
   const initialPosition = useRef(getGatePosition(gate.level));
   const showHotspot = roomId === 'grounds' && (view === 'exterior' || view === 'immersive');
-  const stateLabel = gate.level === 0 ? 'closed' : gate.level === 100 ? 'fully open' : `${gate.level}% open`;
+  const gateDevice = getDevice('entry-gate');
+  const hotspot = gateDevice ? hotspotPresentation(gateDevice, gate) : null;
 
   useFrame((_, delta) => {
     if (document.hidden) return;
@@ -62,6 +65,25 @@ export function Landscape({ view, roomId, deviceStates, selectedDevice, quickDev
     <group ref={carriage} name="entry-gate-carriage" position={initialPosition.current} rotation={[0, gateLayout.rotationY, 0]} onClick={(event) => { event.stopPropagation(); onSelectDevice('entry-gate'); }}>
       <primitive object={preparedLeaf} />
     </group>
-    {showHotspot && <Hotspot id="entry-gate" label="Entry gate" icon="▥" position={[gateLayout.position[0], gateLayout.position[1] + gateLayout.height / 2 + 0.75, gateLayout.position[2]]} on={gate.level > 0} stateLabel={stateLabel} selected={selectedDevice === 'entry-gate'} expanded={quickDeviceId === 'entry-gate'} controlMode={hotspotControlMode} onSelect={onSelectDevice} />}
+    {showHotspot && hotspot && (
+      <Hotspot
+        id="entry-gate"
+        label="Entry gate"
+        icon="▥"
+        position={[
+          gateLayout.position[0],
+          gateLayout.position[1] + gateLayout.height / 2 + 0.75,
+          gateLayout.position[2],
+        ]}
+        on={hotspot.active}
+        monitoring={hotspot.monitoring}
+        stateLabel={hotspot.stateLabel}
+        tone={hotspot.tone}
+        selected={selectedDevice === 'entry-gate'}
+        expanded={quickDeviceId === 'entry-gate'}
+        controlMode={hotspotControlMode}
+        onSelect={onSelectDevice}
+      />
+    )}
   </group>;
 }

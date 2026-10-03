@@ -415,3 +415,44 @@ the 92-device saved simulation was byte-identical before and after the update.
 Production app identity files were restored. Physical spoken-command and touch
 retesting, sustained device performance, and iPad/Android hardware verification
 remain outstanding.
+
+## Hotspot state and selection
+
+All 92 catalog devices share one presentation policy. Switchable devices follow
+power, cameras follow arming, and gates/blinds/doors/windows follow their opening
+position. Healthy sensors and meters use a neutral monitoring indicator. Smoke,
+CO and gas alarms keep their distinct alarm color after silence or acknowledgment;
+a cleared, unreset fire incident remains a warning.
+
+Phone and tablet hotspots use the same power colors. An Off device stays dark
+without an accent halo even while selected, expanded or keyboard-focused.
+Selection uses a neutral outline, and the visible/accessibility labels include
+the operating state. Touch targets remain at least 44px; reduced-motion behavior
+and the mobile quick-control/tablet inspector split are preserved. Appearance
+rules now live together in `scene/hotspot.css` instead of conflicting overrides.
+
+Verification: 1,962 app tests, 716 scene tests (including 112 new catalog/state
+cases), 127 bridge tests and 36 script tests passed. TypeScript, edge checks,
+release checks and both scene builds passed. The aggregate `npm run verify`
+stopped at its strict dependency audit: existing `braces@3.0.3` and
+`node-forge@1.4.0` advisories have no published fixed version. Dependency files and
+the audit policy are unchanged; all remaining verification stages ran separately.
+
+The public-browser checks exercised TV/light On/Off, selection, expansion,
+keyboard focus, dismissal, reopening and reload at 390×844, 834×1194 and
+1024×768. Healthy monitoring remained neutral. Production-bundle checks confirmed
+that expanded labels stack above adjacent markers and passive phone selection
+hides its label. The browser regression is repeatable with
+`node packages/home-scene/scripts/verify-hotspot-appearance.mjs <scene-url>`.
+Alarm paint and silence passed against the production bundle. Browser CLI
+timeouts prevented completing the final clear/reset retest; its state transition
+is covered by the passing simulation tests, but a completed browser run is not
+claimed. The script preserves failure evidence and retries only read operations.
+
+Release preview **build 31** was signed and installed on the iPhone 16 Pro Max.
+All three bundled scene documents matched the generated assets, and production
+identity files were restored. iOS denied automatic launch because the phone was
+locked; physical launch/touch retesting remains outstanding. The saved snapshot
+still contained all 92 devices. Its living-room fan power value differed between
+the before-build and after-install snapshots, so byte-identical persistence is
+not claimed for this update. No stored state was overwritten by the verification.

@@ -5,11 +5,10 @@ import { Group, MathUtils } from 'three';
 import {
   DEVICES,
   getRoom,
-  isPositionDevice,
   type DeviceDefinition,
 } from '../data';
-import { deviceStatus } from '../deviceCapabilities';
 import { gasStatusTone } from '../gasSimulation';
+import { hotspotPresentation } from '../hotspotPresentation';
 import type { DeviceState } from '../state';
 import { Hotspot } from './Hotspot';
 import { DeviceEffects } from './DeviceEffects';
@@ -392,6 +391,7 @@ export function Devices({
         const room = getRoom(device.roomId);
         const elevation = full && room.floor === 'upper' ? UPPER_ELEVATION : 0;
         const state = readDevice(deviceStates, device.id);
+        const hotspot = hotspotPresentation(device, state);
         const showHotspot =
           device.roomId === roomId && device.id !== 'entry-gate';
         return (
@@ -409,9 +409,10 @@ export function Devices({
                 label={device.name}
                 icon={SYMBOLS[device.kind] ?? '◉'}
                 position={device.hotspot}
-                on={isPositionDevice(device) ? state.level > 0 : state.on}
-                stateLabel={deviceStatus(device, state)}
-                tone={gasStatusTone(device.kind, state)}
+                on={hotspot.active}
+                monitoring={hotspot.monitoring}
+                stateLabel={hotspot.stateLabel}
+                tone={hotspot.tone}
                 selected={selectedDevice === device.id}
                 expanded={quickDeviceId === device.id}
                 controlMode={hotspotControlMode}
