@@ -12,15 +12,21 @@ expired at **11:59:51 p.m. on October 3, America/New_York**
 profile, now expiring at **2:55:16 a.m. on October 11, America/New_York**
 (`2026-10-11 06:55:16 UTC`). It retains the authenticated simulation timer fix.
 
-Launch is currently denied by developer-trust security error **10002**. The user
-has been asked to open **Settings → General → VPN & Device Management**, select
-the developer profile, trust/verify it, and then open **VantaHome Preview**.
-Installation is confirmed; successful launch and visual/native callback checks
-are still pending. Supabase accepted the authorized first Owner Auth invitation
-at **2026-10-04 07:00:34 UTC**, using `vantahome-preview://join-home`. The Owner
-Auth account now exists but remains unconfirmed. Actual email delivery, code
-entry, and password setup are unverified; the Guest has not been invited and no
-recovery email has been sent.
+Initial launch encountered developer-trust security error **10002**. The user
+subsequently confirmed trusting/verifying the profile, opening Preview, and
+completing the Owner invitation email/code, password, household creation, and
+model preparation steps on the physical iPhone. Supabase had accepted the
+authorized Owner invitation at **2026-10-04 07:00:34 UTC**, using
+`vantahome-preview://join-home`. A subsequent read-only staging check confirmed
+email confirmation, a recorded sign-in, one owned home, and its 20 rooms and 92
+simulation-only devices. The model setup receipt is version 1 with counts 20/92.
+
+The user also confirmed sending the Guest invitation from the Owner app and
+receiving its email. A read-only check verified a pending Guest invitation for
+Living room only with a 24-hour access deadline. Guest enrollment and acceptance
+remain pending. The Owner completion report
+does not establish cold/warm callback, foreground/background, recovery, or
+network-loss behavior; those physical-iPhone checks remain outstanding.
 
 ## Explicit native identities
 

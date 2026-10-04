@@ -6,12 +6,14 @@ cloud reads and commands. Migrations **001–018** and the preview-aware invitat
 function are deployed to **staging only**. Authenticated API verification has
 passed with disposable accounts. At the **2026-10-04** checkpoint, Preview **37**
 is installed on the user's iPhone 16 Pro Max, with the installed version confirmed
-by the device app listing. Developer-trust error 10002 currently prevents launch;
-the user is completing the device's trust/verify step. Supabase accepted the
-authorized first Owner Auth invitation at **2026-10-04 07:00:34 UTC**. The Owner
-Auth account exists but is unconfirmed; actual delivery, code entry, password
-setup, native visuals, and callbacks remain pending. The Guest has not been
-created or invited. Build 37 includes the authenticated simulation timer fix.
+by the device app listing. The user confirmed resolving developer-trust error
+10002 and completing the Owner email/code, password, home creation, and 3D model
+setup on the physical iPhone. A read-only staging check confirmed the verified
+email, recorded sign-in, one owned home, 20 rooms, and 92 simulation-only devices,
+with a version-1 setup receipt recording 20/92. The user confirmed sending the
+Guest invitation and receiving its email; the saved invitation grants Living
+room only for 24 hours. Guest enrollment and acceptance remain pending. Build 37
+includes the authenticated simulation timer fix.
 
 ## Defaults
 
@@ -118,8 +120,9 @@ The authenticated staging milestone has the following evidence:
 | Validation | App/edge TypeScript, dependency source/attack checks, release assets/version/redirect checks; web build exported to `dist` |
 | Browser | Synthetic account sign-in, home creation, 20-space/92-device preparation, saved light state after reload, native-library full controls, gate manual/automatic close, and sign-out passed; 375 × 667 forms visually reviewed without vertical scrolling |
 | Native build/install | Preview 37 Release build passed with renewed automatic signing; exact bundle/schemes, profile device coverage, and strict code signature verified. Production metadata restored byte-for-byte; iPhone 16 Pro Max app listing confirms installed build 37 |
-| Owner invitation | Staging Supabase accepted the authorized Owner Auth invitation at 2026-10-04 07:00:34 UTC with the exact preview join redirect; account unconfirmed. Delivery is not yet verified; Guest not created or invited |
-| Native/email pending | Developer-trust security error 10002 prevents launch until the user trusts/verifies the profile. Visual controls, callbacks, email delivery/code entry, recovery, and physical iPhone account flow remain pending |
+| Physical iPhone Owner setup | User confirmed developer trust, app launch, invitation email/code, password setup, home creation, and model preparation. Read-only staging evidence: verified email, recorded sign-in, one owned home, 20 rooms, 92 simulation-only devices, version-1 setup receipt 20/92, no household invitations at that check |
+| Guest invitation | User confirmed sending from the Owner app and email receipt; staging confirms a pending Guest invitation for Living room only with a 24-hour deadline |
+| Guest/native pending | Guest code/password setup, household acceptance, and room/control checks; explicit cold/warm callbacks, recovery, account switching, foreground/background, and network-loss checks |
 
 Final integration review found the simulation timer host was mounted only in the
 offline demo. It now also mounts for an authenticated home. With the fix, a
@@ -127,7 +130,8 @@ signed-in gate closed manually from 100% to 0%, and automatic close progressed
 from 29 seconds to 7 seconds to **Closed**. The browser also retained light state
 after reload, opened model full controls from the native device library, and
 signed out successfully. Its synthetic account and home were removed. These
-results are browser evidence; physical-iPhone verification remains pending.
+results are browser evidence. The physical-iPhone Owner onboarding report above
+does not establish these separate control and lifecycle checks.
 
 The hosted API sweep verified password authentication, normal owner bootstrap,
 model provisioning/idempotency, Guest/Tenant defaults, assigned-room reads,
@@ -157,11 +161,11 @@ patches. Raw npm audit still reports the published versions; they have not been
 relabeled as official patched releases. See [Dependency security](DEPENDENCY_SECURITY.md)
 for provenance, clean-install evidence, limitations, and upstream retirement rules.
 
-Production was not changed. The staging API test accounts and homes have been
+Production was not changed. The disposable staging API test accounts and homes have been
 removed, and its isolated local database was stopped and removed. Before
-promotion, finish developer trust and successful native launch, then confirm
-delivery of the accepted Owner invitation and complete private code/password
-setup, Guest invitation, recovery, account switching, and foreground/background tests.
+promotion, complete Guest private code/password setup,
+acceptance, and room-scoped controls, plus recovery, account switching, native
+callback, and foreground/background tests.
 Physical-device operation still requires a configured hub. See
 [Invitation onboarding](INVITATION_ONBOARDING.md) and
 [Preview packaging](AUTH_REDIRECTS.md) for configuration and remaining checks.
