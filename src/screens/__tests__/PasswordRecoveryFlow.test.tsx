@@ -29,11 +29,12 @@ beforeEach(() => {
 afterEach(() => useHomeStore.setState(initial, true));
 
 /** Exercise password setup through the same labelled fields used by the app. */
-async function submitPassword(onComplete: () => void) {
-  const screen = render(<PasswordRecoveryScreen purpose="invitation" onComplete={onComplete} />);
+async function submitPassword(onComplete: () => void, purpose: 'invitation' | 'recovery' = 'invitation') {
+  const screen = render(<PasswordRecoveryScreen purpose={purpose} onComplete={onComplete} />);
   fireEvent.changeText(screen.getByLabelText('New password'), 'new-password');
   fireEvent.changeText(screen.getByLabelText('Confirm new password'), 'new-password');
-  await act(async () => { fireEvent.press(screen.getByRole('button', { name: 'Save password & review invitation' })); });
+  const action = purpose === 'invitation' ? 'Save password & review invitation' : 'Update password';
+  await act(async () => { fireEvent.press(screen.getByRole('button', { name: action })); });
   return screen;
 }
 
@@ -80,4 +81,41 @@ test('returns to sign-in only if the scoped account was signed out', async () =>
   await act(async () => { fireEvent.press(screen.getByRole('button', { name: 'Return to sign in' })); });
   expect(mockSignOutAccount).toHaveBeenCalledWith(expect.objectContaining({ authenticatedUserId: 'alice', sessionEpoch: 10 }));
   expect(onComplete).not.toHaveBeenCalled();
+});
+
+test('recovery releases the password gate only after the verified password update succeeds', async () => {
+  let finish!: (value: { error: null }) => void;
+  mockUpdateUser.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  const onComplete = jest.fn();
+  const screen = await submitPassword(onComplete, 'recovery');
+  expect(screen.getByText('Set a new password')).toBeTruthy();
+  expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'new-password' });
+  expect(onComplete).not.toHaveBeenCalled();
+  await act(async () => { finish({ error: null }); });
+  expect(onComplete).toHaveBeenCalledTimes(1);
+  expect(mockCompleteSetup).not.toHaveBeenCalled();
+});
+
+test('a failed recovery update leaves the gate closed and allows a successful retry', async () => {
+  mockUpdateUser.mockResolvedValueOnce({ error: new Error('Offline') });
+  const onComplete = jest.fn();
+  const screen = await submitPassword(onComplete, 'recovery');
+  expect(onComplete).not.toHaveBeenCalled();
+  expect(screen.getByText(/We could not save your password/)).toBeTruthy();
+  await act(async () => { fireEvent.press(screen.getByRole('button', { name: 'Update password' })); });
+  expect(onComplete).toHaveBeenCalledTimes(1);
+  expect(mockUpdateUser).toHaveBeenCalledTimes(2);
+  expect(mockCompleteSetup).not.toHaveBeenCalled();
+});
+
+test('a recovery update finishing after an account change cannot release the new account', async () => {
+  mockUpdateUser.mockImplementationOnce(async () => {
+    useHomeStore.setState({ authenticatedUserId: 'bob', sessionEpoch: 11 });
+    return { error: null };
+  });
+  const onComplete = jest.fn();
+  await submitPassword(onComplete, 'recovery');
+  expect(mockUpdateUser).toHaveBeenCalledTimes(1);
+  expect(onComplete).not.toHaveBeenCalled();
+  expect(mockCompleteSetup).not.toHaveBeenCalled();
 });

@@ -127,7 +127,16 @@ The authenticated staging milestone has the following evidence:
 | Physical iPhone Owner setup | User confirmed developer trust, app launch, invitation email/code, password setup, home creation, and model preparation. Read-only staging evidence: verified email, recorded sign-in, one owned home, 20 rooms, 92 simulation-only devices, version-1 setup receipt 20/92, no household invitations at that check |
 | Physical iPhone Guest access | User confirmed invitation delivery, Owner sign-out, Guest code/password setup and acceptance, Living-room-only visibility, working Pendant light, and blocked Front entry door. Staging confirms verified Guest sign-in, accepted invite, Guest membership, one Living-room grant, 24-hour deadline, and no overrides |
 | Physical iPhone session scope | User confirmed that fully closing and reopening Preview retained Guest restrictions, then signing back in with the existing Owner credentials restored the full home |
+| Focused lifecycle/recovery sweep (October 4) | Nine app suites / 111 tests passed, plus app TypeScript and diff checks. Nine added cases cover failed membership refresh and recovery, foreground verification, late responses after backgrounding or a new session, Guest expiry stopping runtimes, and password-update success, retry, and account-change boundaries |
 | Native checks pending | Explicit cold/warm callbacks, recovery, foreground/background transitions, network loss, and expiry observed at its actual deadline |
+
+The focused sweep uses controlled network responses and clocks with the real
+membership snapshot installer, permission selectors, and app lifecycle host.
+It verifies that failed membership checks stop realtime and flow runtimes, a
+successful later check restores access, and Guest expiry stops those runtimes
+without waiting for the next periodic refresh. These automated checks do not
+replace the pending physical-iPhone results. The sweep changes tests and
+documentation only; Preview 37 does not need rebuilding for it.
 
 Final integration review found the simulation timer host was mounted only in the
 offline demo. It now also mounts for an authenticated home. With the fix, a

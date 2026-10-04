@@ -141,8 +141,14 @@ Review the completed build before installing it on the intended device.
 
 ## Verification still required
 
-Warm and cold Preview auth/invitation links, real invitation delivery and code
-entry, password recovery, sign-out/account switching, background/resume, and
-network-loss behavior must be exercised on the physical iPhone. The hosted API
-checks and local automated tests do not establish these native results. Production
-configuration and iPad testing remain outside this rollout.
+Invitation delivery/code entry, Guest restrictions after reopening, and
+Guest-to-Owner account switching passed by the user's physical-iPhone report
+above. Explicit warm/cold Preview auth and invitation links, password recovery,
+background/resume, network loss, and Guest expiry at its deadline remain pending.
+
+The October 4 focused sweep passed nine app suites / 111 tests and app TypeScript.
+Added cases cover failed and delayed membership verification, background return,
+Guest expiry stopping runtimes, and password recovery success, retry, and account
+changes. These controlled tests and the hosted API checks do not establish the
+remaining native results. See [Room access](ROOM_ACCESS.md) for the evidence
+table. Production configuration and iPad testing remain outside this rollout.

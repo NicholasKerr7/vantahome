@@ -2,10 +2,11 @@ import React from "react";
 import { AppState } from "react-native";
 import { act, render } from "@testing-library/react-native";
 import App from "../../App";
-import { hydrateHomeAccount, useHomeStore } from "../store/useHomeStore";
+import { hydrateHomeAccount, selectVisibleRooms, useHomeStore } from "../store/useHomeStore";
 import { startDeviceRealtime } from "../services/realtime";
 import { startFlowRuntime } from "../services/flowRuntime";
 import { deviceClient } from "../services/deviceClient";
+import { syncMembershipFromSupabase, type MembershipSyncResult } from "../services/membership";
 
 const mockStopRealtime = jest.fn();
 const mockStopFlows = jest.fn();
@@ -30,7 +31,7 @@ jest.mock("../services/orientation", () => ({
   applyDeviceOrientationPolicy: jest.fn(async () => {}),
 }));
 jest.mock("../services/membership", () => ({
-  applyMembershipSnapshot: jest.fn(),
+  ...jest.requireActual("../services/membership"),
   syncMembershipFromSupabase: jest.fn(async () => null),
 }));
 jest.mock("@sentry/react-native", () => ({
@@ -42,6 +43,7 @@ let changeState: (state: "active" | "inactive" | "background") => void;
 beforeEach(async () => {
   jest.useFakeTimers();
   jest.clearAllMocks();
+  jest.mocked(syncMembershipFromSupabase).mockReset().mockResolvedValue(null);
   await hydrateHomeAccount("alice");
   useHomeStore.setState({
     activeHomeId: "home",
@@ -114,5 +116,114 @@ test.each(['sessionEpoch', 'activeMemberId'] as const)('a new %s replaces scoped
   });
   expect(mockStopRealtime).toHaveBeenCalledTimes(1);
   expect(startDeviceRealtime).toHaveBeenCalledTimes(2);
+  screen.unmount();
+});
+
+/** Build an authorized response that exercises real snapshot installation and selectors. */
+function ownerSnapshot(): MembershipSyncResult {
+  return {
+    homeId: "home",
+    activeMemberId: "alice",
+    household: [{ id: "alice", name: "Alice", role: "Owner", status: "home" }],
+    rooms: [{ id: "living", name: "Living room" }],
+    devices: [],
+    roomMembers: [],
+    permissionOverrides: [],
+  };
+}
+
+/** Hold a membership response so lifecycle changes can happen before it arrives. */
+function pendingMembership() {
+  let resolve!: (value: MembershipSyncResult | null) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<MembershipSyncResult | null>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  jest.mocked(syncMembershipFromSupabase).mockReturnValueOnce(promise);
+  return { resolve, reject };
+}
+
+test("a failed refresh stops home runtimes; a later verified refresh restores them", async () => {
+  jest.mocked(syncMembershipFromSupabase)
+    .mockRejectedValueOnce(new Error("Offline"))
+    .mockResolvedValueOnce(ownerSnapshot());
+  const screen = render(<App />);
+  await act(async () => { jest.advanceTimersByTime(60_000); });
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  expect(selectVisibleRooms(useHomeStore.getState())).toEqual([]);
+  expect(mockStopRealtime).toHaveBeenCalledTimes(1);
+  expect(mockStopFlows).toHaveBeenCalledTimes(1);
+
+  await act(async () => { jest.advanceTimersByTime(60_000); });
+  expect(useHomeStore.getState().membershipReady).toBe(true);
+  expect(selectVisibleRooms(useHomeStore.getState()).map((room) => room.id)).toEqual(["living"]);
+  expect(startDeviceRealtime).toHaveBeenCalledTimes(2);
+  expect(startFlowRuntime).toHaveBeenCalledTimes(2);
+  screen.unmount();
+});
+
+test("resuming keeps access closed until fresh membership verification completes", async () => {
+  const pending = pendingMembership();
+  const screen = render(<App />);
+  await act(async () => {
+    changeState("background");
+    jest.advanceTimersByTime(60_000);
+  });
+  expect(syncMembershipFromSupabase).not.toHaveBeenCalled();
+  act(() => { changeState("active"); });
+  expect(syncMembershipFromSupabase).toHaveBeenCalledTimes(1);
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  expect(startDeviceRealtime).toHaveBeenCalledTimes(1);
+
+  await act(async () => { pending.resolve(ownerSnapshot()); });
+  expect(useHomeStore.getState().membershipReady).toBe(true);
+  expect(startDeviceRealtime).toHaveBeenCalledTimes(2);
+  screen.unmount();
+});
+
+test("a response arriving after backgrounding cannot reopen the home", async () => {
+  const pending = pendingMembership();
+  const screen = render(<App />);
+  await act(async () => { jest.advanceTimersByTime(60_000); });
+  act(() => { changeState("background"); });
+  await act(async () => { pending.resolve(ownerSnapshot()); });
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  expect(startDeviceRealtime).toHaveBeenCalledTimes(1);
+  screen.unmount();
+});
+
+test.each(["success", "failure"] as const)("a late %s from an earlier login cannot change the new session", async (outcome) => {
+  const pending = pendingMembership();
+  const screen = render(<App />);
+  await act(async () => { jest.advanceTimersByTime(60_000); });
+  act(() => {
+    useHomeStore.setState({
+      sessionEpoch: useHomeStore.getState().sessionEpoch + 1,
+      rooms: [{ id: "new-room", name: "New session room" }],
+    });
+  });
+  await act(async () => {
+    if (outcome === "success") pending.resolve(ownerSnapshot());
+    else pending.reject(new Error("Old request failed"));
+  });
+  expect(useHomeStore.getState().membershipReady).toBe(true);
+  expect(selectVisibleRooms(useHomeStore.getState()).map((room) => room.id)).toEqual(["new-room"]);
+  screen.unmount();
+});
+
+test("guest expiry stops transports and flows without waiting for the next cloud refresh", () => {
+  useHomeStore.setState({
+    household: [{ id: "alice", name: "Guest", role: "Guest", status: "home", accessExpiresAt: new Date(Date.now() + 1000).toISOString() }],
+    rooms: [{ id: "living", name: "Living room" }],
+    roomMembers: [{ memberId: "alice", roomIds: ["living"] }],
+  });
+  const screen = render(<App />);
+  expect(selectVisibleRooms(useHomeStore.getState())).toHaveLength(1);
+  act(() => { jest.advanceTimersByTime(1001); });
+  expect(selectVisibleRooms(useHomeStore.getState())).toEqual([]);
+  expect(mockStopRealtime).toHaveBeenCalledTimes(1);
+  expect(mockStopFlows).toHaveBeenCalledTimes(1);
+  expect(syncMembershipFromSupabase).not.toHaveBeenCalled();
   screen.unmount();
 });
