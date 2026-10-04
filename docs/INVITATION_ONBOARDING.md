@@ -20,8 +20,10 @@ light worked, and Front entry door control was blocked. Staging confirms the
 accepted invitation, Guest membership, one Living-room grant, the 24-hour
 deadline, and no permission overrides. The user also confirmed that Guest
 restrictions survived fully closing and reopening Preview, and signing back in
-with the existing Owner credentials restored the full home. Explicit callback
-routing, recovery, other lifecycle checks, and network loss remain pending.
+with the existing Owner credentials restored the full home. The user subsequently
+confirmed Owner password recovery, including its cold callback and signing back
+in with the new password. Warm recovery, explicit invitation-link routing,
+other lifecycle checks, network loss, and observed Guest expiry remain pending.
 Production is unchanged.
 
 ## New invitee flow
@@ -345,7 +347,7 @@ the iPhone. The Guest saw only Living room, could toggle Pendant light, and coul
 not control Front entry door. A further read-only check confirmed Guest email
 verification and sign-in, accepted invitation status, Guest membership, exactly
 one Living-room assignment, the preserved deadline, and no action overrides.
-No recovery email has been sent.
+No recovery email had been sent at that earlier verification checkpoint.
 
 The user then fully closed and reopened Preview while signed in as Guest and
 confirmed that only Living room remained available. After signing out and signing
@@ -353,11 +355,18 @@ back in as Owner with the existing password, the full Owner home returned. This
 completes the reported two-account enrollment, acceptance, initial controls,
 Guest scope persistence after reopening, and return-to-Owner check on iPhone.
 
+The user subsequently confirmed the physical-iPhone Owner recovery test:
+requesting a reset from Preview, fully closing the app, opening the newest reset
+email link to **Set a new password**, saving privately, then signing out and
+signing back in with the new password to the full Owner home. This records the
+user's result for password recovery and its cold callback; no password or reset
+credential was collected.
+
 An initial Owner Auth invitation creates no household invite card: after password
 setup, **No pending invitations** is expected. The completed Owner route was
 **Set up my home → Create my home → Prepare my 3D home**.
 
-**Pending:** explicit warm/cold callbacks, recovery, foreground/background
+**Pending:** warm recovery, explicit warm/cold invitation links, foreground/background
 transitions, network-loss handling, and expiry observed at its actual deadline
 on the physical iPhone. The passed reopening and account-switch checks do not
 establish those separate flows. Keep iPad verification deferred and

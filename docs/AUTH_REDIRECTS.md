@@ -33,9 +33,13 @@ The user then fully closed and reopened Preview as Guest and confirmed that
 Living-room-only access remained. Signing out of Guest and signing back in with
 the existing Owner credentials restored the full Owner home. This verifies the
 reported round-trip account switch and Guest restrictions after reopening.
-Explicit cold/warm callback routing, recovery, foreground/background transitions,
-network-loss behavior, and expiry observed at its deadline remain separate
-pending checks.
+The user subsequently confirmed the Owner password-recovery test: requesting the
+reset from Preview, fully closing the app, opening the newest email link to
+**Set a new password**, saving privately, and signing back in with the new
+password restored the full Owner home. This is user-reported physical-iPhone
+evidence for recovery and its cold callback. Warm recovery, explicit invitation
+link routing, foreground/background transitions, network loss, and expiry
+observed at its deadline remain separate pending checks.
 
 ## Explicit native identities
 
@@ -143,8 +147,10 @@ Review the completed build before installing it on the intended device.
 
 Invitation delivery/code entry, Guest restrictions after reopening, and
 Guest-to-Owner account switching passed by the user's physical-iPhone report
-above. Explicit warm/cold Preview auth and invitation links, password recovery,
-background/resume, network loss, and Guest expiry at its deadline remain pending.
+above. Owner password recovery and its cold callback also passed by user report.
+Warm recovery, explicit warm/cold invitation links, background/resume, network
+loss, and Guest expiry at its deadline remain pending. Other authentication
+providers require separate verification if enabled.
 
 The October 4 focused sweep passed nine app suites / 111 tests and app TypeScript.
 Added cases cover failed and delayed membership verification, background return,
