@@ -5,15 +5,17 @@ does not grant membership. New owners explicitly create their home; invitees rev
 and accept a pending database invitation after authenticating. Existing accounts
 sign in normally and review their invitation inbox.
 
-**Current staging checkpoint — 2026-10-03:** migrations 001–018 are deployed;
+**Current staging checkpoint — 2026-10-04:** migrations 001–018 are deployed;
 preview callbacks and the invitation function use `vantahome-preview`. Public
 sign-up remains disabled and invitation OTP length remains eight digits. The
 hosted API permission sweep passed 32 checks with disposable accounts. Preview
-36 built successfully with its scheme/signature verified and production metadata
-restored. It supersedes build 35 with an authenticated simulation timer fix. The
-earlier install attempt could not reach the iPhone (CoreDevice 4016); installation,
-real email delivery/code entry, and the physical iPhone account flow remain
-pending. Production is unchanged.
+**37** is installed on the user's **iPhone 16 Pro Max**, confirmed by the device's
+app listing. Launch currently requires the user's developer-profile trust/verify
+step (security error 10002). Supabase accepted the authorized first Owner Auth
+invitation at **2026-10-04 07:00:34 UTC**, using `vantahome-preview://join-home`.
+The Owner Auth account exists but remains unconfirmed; the Guest has not been
+created or invited. Native visual/callback verification, actual email delivery,
+code entry, and password setup remain pending. Production is unchanged.
 
 ## New invitee flow
 
@@ -178,10 +180,11 @@ explicitly creates their own home or accepts an existing household invitation.
 
 Preview 34 used `vantahome-preview` while the former client had hard-coded
 production callbacks. The current source resolves an explicit app variant, and
-the Preview 36 build uses matching native/JavaScript preview identity plus staging
-account configuration. Production metadata is restored after packaging. The
-installed offline Preview has not yet been replaced at this checkpoint; do not
-infer native success from the completed source or hosted API tests.
+the current Preview build uses matching native/JavaScript preview identity plus
+staging account configuration. Production metadata is restored after packaging.
+Preview 37 has replaced the earlier installed build, but launch still requires
+developer trust; installation and hosted API tests do not establish a successful
+visual/native account flow.
 
 Authenticated accounts do not inherit the offline device catalog. An empty
 owner-created home now offers **Prepare my 3D home** to create the authored
@@ -288,13 +291,9 @@ Verification evidence:
   authenticated simulation timer host. Afterward, gate manual close moved from
   100% to 0%, and automatic close progressed from 29 seconds to 7 seconds to
   **Closed**. The browser's synthetic account and home were cleaned up.
-- Preview 36's native Release build succeeded and supersedes build 35 with that
-  timer-host fix. The signed bundle registers only the preview scheme and
-  preview bundle identifier; strict code-signature verification passed.
-  Production Expo/plist/Xcode metadata was restored to its exact original bytes.
-  The earlier build 35 installation attempt returned CoreDevice 4016 while the
-  iPhone was unavailable. Build 36 installation remains pending; no physical
-  installed-build success is claimed yet.
+- Preview 36's Release build included the timer-host fix. Its subsequent install
+  failed because the seven-day development profile had expired; the October 4
+  installation checkpoint below supersedes its pending-install status.
 - A fresh isolated PostgreSQL 17 instance applied migrations 001–018; eight SQL
   suites passed 369 pgTAP assertions. That instance was stopped and removed.
 - The hosted staging API sweep passed **32 checks** using four synthetic accounts
@@ -306,11 +305,41 @@ Verification evidence:
   retry's resources were cleaned up. No physical commands/observations were
   created, and no real recipient was contacted by this sweep.
 
-**Pending:** Preview 36 installation after the iPhone reconnects, warm/cold native
-callbacks, authorized owner/invitee email delivery and code entry, password setup
-and recovery, account switching, foreground/background behavior, and network-loss
-handling on the physical iPhone. No real account invitation or recovery email has
-been sent at this checkpoint. Hosted API authentication does not prove invitation
-email delivery or the OTP UI. Keep iPad verification deferred and physical hub
-control out of the simulation milestone. See [Room access](ROOM_ACCESS.md) and
-[Preview packaging](AUTH_REDIRECTS.md).
+## Native installation checkpoint — 2026-10-04
+
+Preview 36's Apple development profile expired at **11:59:51 p.m. on October 3,
+America/New_York** (`2026-10-04 03:59:51 UTC`). A normal automatic-signing build
+renewed the profile and produced **Preview 37**, expiring at **2:55:16 a.m. on
+October 11, America/New_York** (`2026-10-11 06:55:16 UTC`). The build completed;
+its exact preview bundle/schemes, profile device coverage, and strict code
+signature all passed verification. Production source metadata was restored
+byte-for-byte.
+
+Preview 37 installed on the user's **iPhone 16 Pro Max**. The device app listing
+confirms build 37. Launch is denied by developer-trust security error **10002**;
+the user has been asked to trust/verify the developer profile in **Settings →
+General → VPN & Device Management**, then open **VantaHome Preview**. This is an
+installed build awaiting the device's approval, not a completed native account
+verification.
+
+Both intended recipient accounts were absent before the authorized first Owner
+Auth invitation. Supabase's `inviteUserByEmail` API accepted that invitation at
+**3:00:34 a.m. on October 4, America/New_York** (`2026-10-04 07:00:34 UTC`), with
+the exact `vantahome-preview://join-home` redirect. The Owner Auth account now
+exists and is unconfirmed. **API acceptance does not confirm email delivery**;
+delivery, private code entry, and password setup still need verification. The
+Guest account has not been created or invited, and no household invitation or
+recovery email has been sent.
+
+After successful native launch, the owner can complete the private invitation
+code and password flow. An initial owner Auth invitation creates no household
+invite card: after password setup, **No pending invitations** is expected. The
+owner then chooses **Set up my home → Create my home → Prepare my 3D home**.
+
+**Pending:** successful native launch and visual review after developer trust,
+warm/cold callbacks, authorized owner/invitee delivery and code entry, password
+setup/recovery, account switching, foreground/background behavior, and network
+loss handling on the physical iPhone. Hosted API authentication does not prove
+invitation email delivery or the OTP UI. Keep iPad verification deferred and
+physical hub control out of this simulation milestone. See
+[Room access](ROOM_ACCESS.md) and [Preview packaging](AUTH_REDIRECTS.md).

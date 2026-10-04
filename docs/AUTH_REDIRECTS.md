@@ -1,12 +1,26 @@
 # Authentication redirects and preview packaging
 
-Configuration checkpoint: 2026-10-03. Hosted staging configuration is verified.
-Preview 36 built successfully; its native URL schemes contain only the preview
-scheme and preview bundle identifier, strict code-signature verification passed,
-and production native metadata was restored byte-for-byte. Build 36 includes
-the authenticated simulation timer fix and supersedes build 35. An earlier
-installation attempt returned CoreDevice 4016 while the iPhone was unavailable;
-build 36 installation and physical iPhone callback testing remain pending.
+Configuration checkpoint: **2026-10-04**. Preview **37** built successfully and
+is installed on the user's **iPhone 16 Pro Max**; the device's app listing
+confirms build 37. Its bundle identifier, exact preview URL schemes, signing
+profile device coverage, and strict code signature were verified. Production
+native source metadata was restored to its original bytes.
+
+Build 36 could not install because its seven-day Apple development profile had
+expired at **11:59:51 p.m. on October 3, America/New_York**
+(`2026-10-04 03:59:51 UTC`). Build 37 used normal automatic signing to renew the
+profile, now expiring at **2:55:16 a.m. on October 11, America/New_York**
+(`2026-10-11 06:55:16 UTC`). It retains the authenticated simulation timer fix.
+
+Launch is currently denied by developer-trust security error **10002**. The user
+has been asked to open **Settings → General → VPN & Device Management**, select
+the developer profile, trust/verify it, and then open **VantaHome Preview**.
+Installation is confirmed; successful launch and visual/native callback checks
+are still pending. Supabase accepted the authorized first Owner Auth invitation
+at **2026-10-04 07:00:34 UTC**, using `vantahome-preview://join-home`. The Owner
+Auth account now exists but remains unconfirmed. Actual email delivery, code
+entry, and password setup are unverified; the Guest has not been invited and no
+recovery email has been sent.
 
 ## Explicit native identities
 
@@ -96,7 +110,7 @@ Apple signing team; replace all path/team placeholders:
 ```sh
 python3 scripts/build-ios-preview.py \
   --env-file /absolute/path/outside-repo/vantahome-preview.env \
-  --build-number 36 \
+  --build-number 37 \
   --team-id YOURTEAMID \
   --derived-data /absolute/path/outside-repo/preview-derived-data \
   --log /absolute/path/outside-repo/preview-build.log

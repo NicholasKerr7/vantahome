@@ -4,10 +4,14 @@ Access combines a current household membership, room scope, and action
 permissions. The app filters the experience; Supabase independently authorizes
 cloud reads and commands. Migrations **001–018** and the preview-aware invitation
 function are deployed to **staging only**. Authenticated API verification has
-passed with disposable accounts. Preview 36 built successfully and its signature
-and native scheme were verified. Installation and real email/code verification
-remain pending while the iPhone reconnects. This build includes the authenticated
-simulation timer fix and supersedes build 35.
+passed with disposable accounts. At the **2026-10-04** checkpoint, Preview **37**
+is installed on the user's iPhone 16 Pro Max, with the installed version confirmed
+by the device app listing. Developer-trust error 10002 currently prevents launch;
+the user is completing the device's trust/verify step. Supabase accepted the
+authorized first Owner Auth invitation at **2026-10-04 07:00:34 UTC**. The Owner
+Auth account exists but is unconfirmed; actual delivery, code entry, password
+setup, native visuals, and callbacks remain pending. The Guest has not been
+created or invited. Build 37 includes the authenticated simulation timer fix.
 
 ## Defaults
 
@@ -108,13 +112,14 @@ The authenticated staging milestone has the following evidence:
 | Check | Result |
 | --- | --- |
 | Full verification checkpoint | Before the final authenticated timer-host mount fix: 172 app suites / 2,400 tests; 61 scene files / 725 tests; 127 bridge tests; 45 script tests |
-| Final timer-host fix | 26 AppNavigator/ModelHomeSync tests, app TypeScript, and diff checks passed after the mount change; included in Preview 36 |
+| Final timer-host fix | 26 AppNavigator/ModelHomeSync tests, app TypeScript, and diff checks passed after the mount change; retained in Preview 37 |
 | Local PostgreSQL 17 | Eight SQL suites, 369 pgTAP assertions; migrations 001–018 applied to a fresh isolated database |
 | Hosted staging API | 32 checks passed using disposable accounts and temporary homes; all created resources removed |
 | Validation | App/edge TypeScript, dependency source/attack checks, release assets/version/redirect checks; web build exported to `dist` |
 | Browser | Synthetic account sign-in, home creation, 20-space/92-device preparation, saved light state after reload, native-library full controls, gate manual/automatic close, and sign-out passed; 375 × 667 forms visually reviewed without vertical scrolling |
-| Native build | Preview 36 Release build passed; intended preview-only native schemes and strict code signature verified; production metadata restored byte-for-byte |
-| Native/email pending | Build 36 installation pending; the earlier build 35 attempt returned CoreDevice 4016 while the iPhone was unavailable. Actual delivery, code entry, recovery, and physical iPhone account flow remain pending |
+| Native build/install | Preview 37 Release build passed with renewed automatic signing; exact bundle/schemes, profile device coverage, and strict code signature verified. Production metadata restored byte-for-byte; iPhone 16 Pro Max app listing confirms installed build 37 |
+| Owner invitation | Staging Supabase accepted the authorized Owner Auth invitation at 2026-10-04 07:00:34 UTC with the exact preview join redirect; account unconfirmed. Delivery is not yet verified; Guest not created or invited |
+| Native/email pending | Developer-trust security error 10002 prevents launch until the user trusts/verifies the profile. Visual controls, callbacks, email delivery/code entry, recovery, and physical iPhone account flow remain pending |
 
 Final integration review found the simulation timer host was mounted only in the
 offline demo. It now also mounts for an authenticated home. With the fix, a
@@ -154,8 +159,9 @@ for provenance, clean-install evidence, limitations, and upstream retirement rul
 
 Production was not changed. The staging API test accounts and homes have been
 removed, and its isolated local database was stopped and removed. Before
-promotion, finish native installation and the authorized real-email invitation,
-password setup/recovery, account switching, and foreground/background tests.
+promotion, finish developer trust and successful native launch, then confirm
+delivery of the accepted Owner invitation and complete private code/password
+setup, Guest invitation, recovery, account switching, and foreground/background tests.
 Physical-device operation still requires a configured hub. See
 [Invitation onboarding](INVITATION_ONBOARDING.md) and
 [Preview packaging](AUTH_REDIRECTS.md) for configuration and remaining checks.
