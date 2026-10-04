@@ -11,8 +11,12 @@ by the device app listing. The user confirmed resolving developer-trust error
 setup on the physical iPhone. A read-only staging check confirmed the verified
 email, recorded sign-in, one owned home, 20 rooms, and 92 simulation-only devices,
 with a version-1 setup receipt recording 20/92. The user confirmed sending the
-Guest invitation and receiving its email; the saved invitation grants Living
-room only for 24 hours. Guest enrollment and acceptance remain pending. Build 37
+Guest invitation and receiving its email, then completing Guest enrollment and
+household acceptance. On the iPhone, only Living room appeared, Pendant light
+worked, and Front entry door control was blocked. Staging confirms the accepted
+invite, Guest membership, one Living-room grant, 24-hour deadline, and no action
+overrides. The user confirmed that fully closing and reopening Preview retained
+Guest restrictions; signing back in as Owner restored the full home. Build 37
 includes the authenticated simulation timer fix.
 
 ## Defaults
@@ -121,8 +125,9 @@ The authenticated staging milestone has the following evidence:
 | Browser | Synthetic account sign-in, home creation, 20-space/92-device preparation, saved light state after reload, native-library full controls, gate manual/automatic close, and sign-out passed; 375 × 667 forms visually reviewed without vertical scrolling |
 | Native build/install | Preview 37 Release build passed with renewed automatic signing; exact bundle/schemes, profile device coverage, and strict code signature verified. Production metadata restored byte-for-byte; iPhone 16 Pro Max app listing confirms installed build 37 |
 | Physical iPhone Owner setup | User confirmed developer trust, app launch, invitation email/code, password setup, home creation, and model preparation. Read-only staging evidence: verified email, recorded sign-in, one owned home, 20 rooms, 92 simulation-only devices, version-1 setup receipt 20/92, no household invitations at that check |
-| Guest invitation | User confirmed sending from the Owner app and email receipt; staging confirms a pending Guest invitation for Living room only with a 24-hour deadline |
-| Guest/native pending | Guest code/password setup, household acceptance, and room/control checks; explicit cold/warm callbacks, recovery, account switching, foreground/background, and network-loss checks |
+| Physical iPhone Guest access | User confirmed invitation delivery, Owner sign-out, Guest code/password setup and acceptance, Living-room-only visibility, working Pendant light, and blocked Front entry door. Staging confirms verified Guest sign-in, accepted invite, Guest membership, one Living-room grant, 24-hour deadline, and no overrides |
+| Physical iPhone session scope | User confirmed that fully closing and reopening Preview retained Guest restrictions, then signing back in with the existing Owner credentials restored the full home |
+| Native checks pending | Explicit cold/warm callbacks, recovery, foreground/background transitions, network loss, and expiry observed at its actual deadline |
 
 Final integration review found the simulation timer host was mounted only in the
 offline demo. It now also mounts for an authenticated home. With the fix, a
@@ -163,9 +168,10 @@ for provenance, clean-install evidence, limitations, and upstream retirement rul
 
 Production was not changed. The disposable staging API test accounts and homes have been
 removed, and its isolated local database was stopped and removed. Before
-promotion, complete Guest private code/password setup,
-acceptance, and room-scoped controls, plus recovery, account switching, native
-callback, and foreground/background tests.
+promotion, complete recovery, native callbacks, foreground/background
+transitions, network loss, and observed deadline
+expiry. SQL/API expiry checks are separate from waiting for a real device session
+to reach its deadline.
 Physical-device operation still requires a configured hub. See
 [Invitation onboarding](INVITATION_ONBOARDING.md) and
 [Preview packaging](AUTH_REDIRECTS.md) for configuration and remaining checks.

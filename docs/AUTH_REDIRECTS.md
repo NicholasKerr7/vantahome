@@ -21,12 +21,21 @@ authorized Owner invitation at **2026-10-04 07:00:34 UTC**, using
 email confirmation, a recorded sign-in, one owned home, and its 20 rooms and 92
 simulation-only devices. The model setup receipt is version 1 with counts 20/92.
 
-The user also confirmed sending the Guest invitation from the Owner app and
-receiving its email. A read-only check verified a pending Guest invitation for
-Living room only with a 24-hour access deadline. Guest enrollment and acceptance
-remain pending. The Owner completion report
-does not establish cold/warm callback, foreground/background, recovery, or
-network-loss behavior; those physical-iPhone checks remain outstanding.
+The user also confirmed sending the Guest invitation, receiving its email,
+signing out of Owner, completing Guest code/password setup, and accepting the
+household invitation on the iPhone. Only Living room appeared; Pendant light
+control worked and Front entry door control was blocked. Read-only staging
+checks confirmed the verified Guest account, recorded sign-in, accepted invite,
+Guest membership, exactly one Living-room grant, a 24-hour access deadline,
+and no permission overrides.
+
+The user then fully closed and reopened Preview as Guest and confirmed that
+Living-room-only access remained. Signing out of Guest and signing back in with
+the existing Owner credentials restored the full Owner home. This verifies the
+reported round-trip account switch and Guest restrictions after reopening.
+Explicit cold/warm callback routing, recovery, foreground/background transitions,
+network-loss behavior, and expiry observed at its deadline remain separate
+pending checks.
 
 ## Explicit native identities
 

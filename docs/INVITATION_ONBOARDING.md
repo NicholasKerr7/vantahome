@@ -14,9 +14,15 @@ app listing. The user confirmed resolving developer trust and completing the
 Owner email/code, password, household creation, and model preparation steps on
 the physical iPhone. A read-only staging check confirmed email verification, a
 recorded sign-in, one home with Owner membership, 20 rooms, and 92 simulation-only
-devices; the version-1 setup receipt records 20/92. Guest invitation/acceptance
-and explicit cold/warm callback, recovery, account-switching, and app-lifecycle
-checks remain pending. Production is unchanged.
+devices; the version-1 setup receipt records 20/92. The user also completed Guest
+enrollment and household acceptance: only Living room appeared, its Pendant
+light worked, and Front entry door control was blocked. Staging confirms the
+accepted invitation, Guest membership, one Living-room grant, the 24-hour
+deadline, and no permission overrides. The user also confirmed that Guest
+restrictions survived fully closing and reopening Preview, and signing back in
+with the existing Owner credentials restored the full home. Explicit callback
+routing, recovery, other lifecycle checks, and network loss remain pending.
+Production is unchanged.
 
 ## New invitee flow
 
@@ -332,18 +338,28 @@ recorded sign-in, exactly one home with Owner membership, 20 rooms, 92 devices a
 marked simulation-only, and a version-1 model setup receipt with counts 20/92.
 That initial check found no household invitations. The user then sent the Guest
 invitation through the Owner app and confirmed email receipt. A subsequent
-read-only check verified the new Guest Auth account and a pending household
-invitation granting Living room only, with a 24-hour access deadline. Guest
-enrollment and acceptance are still being tested; no recovery email has been sent.
+read-only check first verified the pending invitation for Living room only with
+a 24-hour deadline. The user then confirmed signing out of Owner, completing the
+Guest email-code/password flow, and accepting the existing home invitation on
+the iPhone. The Guest saw only Living room, could toggle Pendant light, and could
+not control Front entry door. A further read-only check confirmed Guest email
+verification and sign-in, accepted invitation status, Guest membership, exactly
+one Living-room assignment, the preserved deadline, and no action overrides.
+No recovery email has been sent.
+
+The user then fully closed and reopened Preview while signed in as Guest and
+confirmed that only Living room remained available. After signing out and signing
+back in as Owner with the existing password, the full Owner home returned. This
+completes the reported two-account enrollment, acceptance, initial controls,
+Guest scope persistence after reopening, and return-to-Owner check on iPhone.
 
 An initial Owner Auth invitation creates no household invite card: after password
 setup, **No pending invitations** is expected. The completed Owner route was
 **Set up my home → Create my home → Prepare my 3D home**.
 
-**Pending:** Guest private code/password setup, household
-acceptance, and Living-room-only access with a 24-hour deadline; explicit
-warm/cold callbacks, recovery, account switching, foreground/background behavior,
-and network-loss handling on the physical iPhone. Owner setup completion does not
+**Pending:** explicit warm/cold callbacks, recovery, foreground/background
+transitions, network-loss handling, and expiry observed at its actual deadline
+on the physical iPhone. The passed reopening and account-switch checks do not
 establish those separate flows. Keep iPad verification deferred and
 physical hub control out of this simulation milestone. See
 [Room access](ROOM_ACCESS.md) and [Preview packaging](AUTH_REDIRECTS.md).
