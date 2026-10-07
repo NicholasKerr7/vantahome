@@ -1,8 +1,10 @@
 import { createStore } from 'zustand/vanilla';
 import { useHomeStore, type HomeState, type HouseholdMember } from '../../../store/useHomeStore';
-import { resolveModelSceneAccess, modelSimulationScope } from '../modelSceneAccess';
+import { resolveModelSceneAccess, modelSimulationScope, scopeSimulationSnapshot } from '../modelSceneAccess';
 import { SimulationSession } from '../simulationSession';
 import { SimulationPersistence } from '../simulationPersistence';
+import { EMPTY_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
+import { createDefaultSimulationSnapshot } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
 
 /** Model a verified account using database IDs distinct from authored mesh/device IDs. */
 function account(role: HouseholdMember['role'] = 'Guest'): HomeState {
@@ -22,8 +24,8 @@ function account(role: HouseholdMember['role'] = 'Guest'): HomeState {
 /** Drain hydration and transport microtasks without real clocks or account services. */
 async function settle(): Promise<void> { for (let i = 0; i < 24; i++) await Promise.resolve(); }
 
-test('guests see only explicitly bound assigned rooms and control only their permitted categories', () => {
-  expect(resolveModelSceneAccess(account(), 'production')).toEqual({ fullHome: false,
+test('guests can explore the property while only assigned room states and permitted controls are granted', () => {
+  expect(resolveModelSceneAccess(account(), 'production')).toEqual({ fullHome: false, propertyOverview: true, interiorLayout: false,
     roomIds: ['master'], deviceIds: ['master-blinds', 'master-light'], controllableDeviceIds: ['master-light'] });
   expect(resolveModelSceneAccess(account('Tenant'), 'production').controllableDeviceIds).toContain('master-blinds');
 });
@@ -33,6 +35,27 @@ test('Member remains whole-home scoped but no room or device is inferred from it
   expect(resolveModelSceneAccess(state, 'production').roomIds).toEqual(['master', 'family']);
   state.rooms = state.rooms.map((room) => ({ ...room, modelRoomId: null }));
   expect(resolveModelSceneAccess(state, 'production').roomIds).toEqual([]);
+});
+
+test.each(['Guest', 'Tenant'] as const)('sharing the %s interior layout does not grant extra device information or controls', (role) => {
+  const state = account(role);
+  const before = resolveModelSceneAccess(state, 'production');
+  state.household[0].shareInteriorLayout = true;
+  expect(resolveModelSceneAccess(state, 'production')).toEqual({ ...before, interiorLayout: true });
+  const snapshot = createDefaultSimulationSnapshot();
+  snapshot.deviceStates['family-tv'] = { on: true, level: 80, settings: { source: 'HDMI 1' } };
+  const scoped = scopeSimulationSnapshot(snapshot, resolveModelSceneAccess(state, 'production'));
+  expect(scoped.deviceStates['family-tv']).toEqual({ on: false, level: 0 });
+  expect(scoped.deviceStates['master-light']).toEqual(snapshot.deviceStates['master-light']);
+});
+
+test('a current member with no room assignment can view the grounds without receiving device grants', () => {
+  const state = account();
+  state.roomMembers = [];
+  expect(resolveModelSceneAccess(state, 'production')).toEqual({
+    fullHome: false, propertyOverview: true, interiorLayout: false,
+    roomIds: [], deviceIds: [], controllableDeviceIds: [],
+  });
 });
 
 test('wrong-room and wrong-kind bindings fail closed and explicit denials remove controls', () => {
@@ -47,7 +70,8 @@ test.each(['pending', 'expired', 'mismatched'] as const)('%s identity cannot vie
   if (condition === 'pending') state.membershipReady = false;
   if (condition === 'mismatched') state.accountUserId = 'other';
   if (condition === 'expired') state.household[0].accessExpiresAt = new Date(Date.now() - 1).toISOString();
-  expect(resolveModelSceneAccess(state, 'production').roomIds).toEqual([]);
+  state.household[0].shareInteriorLayout = true;
+  expect(resolveModelSceneAccess(state, 'production')).toEqual(EMPTY_SCENE_ACCESS);
 });
 
 test('isolated simulation keys distinguish both household and person', () => {
@@ -56,8 +80,9 @@ test('isolated simulation keys distinguish both household and person', () => {
   expect(modelSimulationScope(state, false)).not.toBe(modelSimulationScope({ ...state, activeMemberId: 'other' }, false));
 });
 
-test('host denies forged or stale actions, masks hidden state, and never mutates the real registry', async () => {
+test('shared interior tour denies forged or stale actions, masks hidden state, and never mutates the real registry', async () => {
   const state = account();
+  state.household[0].shareInteriorLayout = true;
   const store = createStore<HomeState>(() => state);
   const storage = { getItem: async () => null, setItem: jest.fn(async () => undefined) };
   const deliver = jest.fn();
@@ -98,4 +123,22 @@ test('an open scene revokes guest access at its deadline without another user ac
   expect(deliver.mock.lastCall?.[0].access.roomIds).toEqual([]);
   session.dispose();
   jest.useRealTimers();
+});
+
+test('an open scene receives layout sharing and revocation without broadening its device grants', async () => {
+  const state = account();
+  const store = createStore<HomeState>(() => state);
+  const deliver = jest.fn();
+  const session = new SimulationSession(deliver, jest.fn(), { store, mode: 'production',
+    persistence: new SimulationPersistence({ getItem: async () => null, setItem: async () => undefined }) });
+  session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'request' });
+  await settle();
+  const initialAccess = deliver.mock.lastCall?.[0].access;
+  expect(initialAccess).toMatchObject({ propertyOverview: true, interiorLayout: false });
+  store.setState({ household: [{ ...state.household[0], shareInteriorLayout: true }] });
+  expect(deliver.mock.lastCall?.[0].access).toEqual({ ...initialAccess, interiorLayout: true });
+  expect(deliver.mock.lastCall?.[0].state.deviceStates['family-tv']).toEqual({ on: false, level: 0 });
+  store.setState({ household: [{ ...state.household[0], shareInteriorLayout: false }] });
+  expect(deliver.mock.lastCall?.[0].access).toEqual(initialAccess);
+  session.dispose();
 });

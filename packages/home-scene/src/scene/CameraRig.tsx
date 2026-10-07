@@ -3,7 +3,7 @@ import { OrbitControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { MathUtils, PerspectiveCamera, Vector3 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
-import { getLandscapeCamera } from './siteGeometry';
+import { getExteriorPrivacyDistance, getLandscapeCamera } from './siteGeometry';
 import { getOverviewDistanceScale } from './overviewFraming';
 import siteLayout from '../site-layout.json';
 import { getRoom } from '../data';
@@ -14,10 +14,10 @@ import { advanceCinematicOrbit, bindCinematicInterruptions, canPlayCinematic } f
 type CameraProps = Pick<
   HouseSceneProps,
   'view' | 'floor' | 'roomId' | 'reducedMotion'
-> & { suspended: boolean; roomOnly?: boolean };
+> & { suspended: boolean; roomOnly?: boolean; exteriorOnly?: boolean };
 
 /** Animate camera presets, then hand complete control back to the visitor. */
-export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomOnly = false }: CameraProps) {
+export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomOnly = false, exteriorOnly = false }: CameraProps) {
   const controls = useRef<OrbitControlsImpl>(null);
   const { camera, gl, size } = useThree();
   const destination = useRef(new Vector3(27, 23, 14));
@@ -146,13 +146,14 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
     }
     moving.current = true;
     // Interior room changes use a clean cut, avoiding a flight through solid walls.
-    if (reducedMotion || view === 'immersive') finishCameraMove();
+    if (reducedMotion || view === 'immersive' || exteriorOnly) finishCameraMove();
   }, [
     finishCameraMove,
     cameraFloor,
     reducedMotion,
     cameraRoomId,
     roomOnly,
+    exteriorOnly,
     size.width,
     size.height,
     view,
@@ -288,11 +289,12 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
       ref={controls}
       makeDefault
       enableDamping={!reducedMotion}
+      enablePan={!exteriorOnly}
       dampingFactor={0.08}
       rotateSpeed={0.55}
       zoomSpeed={0.65}
       panSpeed={0.65}
-      minDistance={view === 'exterior' ? 10 : 5}
+      minDistance={exteriorOnly ? getExteriorPrivacyDistance(getLandscapeCamera(size.width / Math.max(1, size.height)).target) : view === 'exterior' ? 10 : 5}
       maxDistance={view === 'exterior' ? 300 : 55}
       maxPolarAngle={Math.PI / 2.06}
       minPolarAngle={0.08}

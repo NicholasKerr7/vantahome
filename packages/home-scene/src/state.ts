@@ -1,4 +1,4 @@
-import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS, canViewSceneRoom, canViewSceneDevice, canControlSceneDevice, type SceneAccess } from './sceneAccess';
+import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS, canNavigateSceneRoom, canViewPropertyOverview, canExploreInteriorLayout, canViewSceneDevice, canControlSceneDevice, type SceneAccess } from './sceneAccess';
 import { isEmbeddedScene } from './embeddedHost';
 import { createDefaultSimulationSnapshot } from './simulationBridgeProtocol';
 import { applyModelPreset } from './modelScenePresets';
@@ -176,6 +176,26 @@ function outdoorNavigation(state: HomeSnapshot, roomId: RoomId = 'grounds', sele
   return { roomId, floor: getRoom(indoorContext.roomId).floor, view, selectedDevice, indoorContext };
 }
 
+/** Select only a granted device belonging to the chosen room. */
+function visibleRoomDevice(access: SceneAccess, roomId: RoomId, preferred?: DeviceId | null): DeviceId | null {
+  if (preferred && getDevice(preferred)?.roomId === roomId && canViewSceneDevice(access, preferred)) return preferred;
+  return DEVICES.find((device) => device.roomId === roomId && canViewSceneDevice(access, device.id))?.id ?? null;
+}
+
+/** Share device navigation rules between browser cards and rendered hotspots. */
+function deviceNavigation(state: HomeStore, id: DeviceId, preserveExterior: boolean): Partial<HomeSnapshot> {
+  const device = getDevice(id);
+  if (!device || !canViewSceneDevice(state.access, id)) return {};
+  const room = getRoom(device.roomId);
+  if (room.outdoor && canViewPropertyOverview(state.access)) {
+    return outdoorNavigation(state, room.id, device.id, state.view === 'immersive' && canExploreInteriorLayout(state.access)
+      && (preserveExterior || getRoom(state.roomId).outdoor) ? 'immersive' : 'exterior');
+  }
+  const view = canExploreInteriorLayout(state.access) && (state.view === 'immersive' || (preserveExterior && state.view === 'exterior'))
+    ? state.view : room.floor;
+  return indoorNavigation(room.id, device.id, view);
+}
+
 /** Prevent cross-device simulation effects from changing devices outside the current action grant. */
 function authorizedDeviceChanges(state: HomeStore, next: DeviceStates): DeviceStates {
   if (next === state.deviceStates || state.access.controllableDeviceIds.length === DEVICES.length) return next;
@@ -191,63 +211,63 @@ function authorizedDeviceChanges(state: HomeStore, next: DeviceStates): DeviceSt
 export const useHomeStore = create<HomeStore>((set) => ({
   ...readInitialState(), persistenceError: false,
   access: isEmbeddedScene() ? EMPTY_SCENE_ACCESS : FULL_SCENE_ACCESS,
-  /** Apply host scope and navigation together so a revoked room never flashes during reconciliation. */
+  /** Reconcile grants and navigation atomically, retaining valid choices on host echoes. */
   applyAccessSnapshot: (snapshot, access) => set((state) => {
-    const keepRoom = canViewSceneRoom(access, state.roomId);
-    const roomId = keepRoom ? state.roomId : access.roomIds[0] ?? '';
+    const overview = canViewPropertyOverview(access);
+    const layout = canExploreInteriorLayout(access);
+    const firstRoom = ROOMS.find((room) => !room.outdoor && access.roomIds.includes(room.id))
+      ?? ROOMS.find((room) => !room.outdoor && canNavigateSceneRoom(access, room.id));
+    const oldBookmark = state.indoorContext.roomId;
+    const bookmarkRoom = canNavigateSceneRoom(access, oldBookmark) && !getRoom(oldBookmark).outdoor
+      ? oldBookmark : firstRoom?.id ?? '';
+    const indoorContext = { roomId: bookmarkRoom, selectedDevice: visibleRoomDevice(access, bookmarkRoom, state.indoorContext.selectedDevice) };
+    const newlyScopedOverview = !access.fullHome && overview
+      && (state.access.fullHome || !canViewPropertyOverview(state.access));
+    const keepRoom = canNavigateSceneRoom(access, state.roomId);
+    const roomId = newlyScopedOverview ? 'grounds' : keepRoom ? state.roomId
+      : overview ? 'grounds' : firstRoom?.id ?? access.roomIds[0] ?? '';
     const room = ROOMS.find((candidate) => candidate.id === roomId);
-    const selectedDevice = state.selectedDevice && canViewSceneDevice(access, state.selectedDevice)
-      && getDevice(state.selectedDevice)?.roomId === roomId ? state.selectedDevice
-      : DEVICES.find((device) => device.roomId === roomId && canViewSceneDevice(access, device.id))?.id ?? null;
-    // Whole-property host echoes preserve the exact indoor bookmark when inspecting the gate.
-    const navigation = room && (!access.fullHome || !keepRoom)
-      ? { floor: room.floor, view: access.fullHome && room.outdoor ? 'exterior' as const : room.floor,
-        ...(!room.outdoor ? { indoorContext: { roomId, selectedDevice } } : {}) } : {};
-    return { ...snapshot, access, activePreset: null, roomId, selectedDevice, ...navigation };
+    const selectedDevice = visibleRoomDevice(access, roomId, state.selectedDevice);
+    let view = state.view;
+    if (newlyScopedOverview || (room?.outdoor && overview)) view = state.view === 'immersive' && layout && !newlyScopedOverview ? 'immersive' : 'exterior';
+    else if (room && (!keepRoom || (view === 'exterior' && !overview) || (view === 'immersive' && !layout))) view = room.floor;
+    return { ...snapshot, access, activePreset: null, roomId, selectedDevice, view,
+      floor: room?.outdoor ? getRoom(bookmarkRoom).floor : room?.floor ?? state.floor,
+      indoorContext: room && !room.outdoor ? { roomId, selectedDevice } : indoorContext };
   }),
-  /** Navigate to a room and select its first controllable object when present. */
+  /** Explore assigned rooms or shared layouts without inferring device visibility. */
   setRoom: (roomId) => set((state) => {
-    if (!canViewSceneRoom(state.access, roomId)) return {};
+    if (!canNavigateSceneRoom(state.access, roomId)) return {};
     const room = getRoom(roomId);
-    if (!state.access.fullHome) return indoorNavigation(room.id, DEVICES.find((device) => device.roomId === room.id && canViewSceneDevice(state.access, device.id))?.id ?? null, room.floor);
-    if (room.outdoor) return outdoorNavigation(state, room.id);
-    const selectedDevice = DEVICES.find((device) => device.roomId === room.id)?.id ?? null;
-    return indoorNavigation(room.id, selectedDevice, state.view === 'immersive' ? 'immersive' : room.floor);
+    const selectedDevice = visibleRoomDevice(state.access, roomId);
+    if (room.outdoor && canViewPropertyOverview(state.access)) return outdoorNavigation(state, room.id, selectedDevice);
+    const view = canExploreInteriorLayout(state.access) && state.view === 'immersive' ? 'immersive' : room.floor;
+    return indoorNavigation(room.id, selectedDevice, view);
   }),
-  /** Show the main gathering room on the requested floor. */
-  setFloor: (floor) => set((state) => state.access.fullHome ? indoorNavigation(floor === 'ground' ? 'living' : 'family', floor === 'ground' ? 'living-light' : 'family-tv', floor) : {}),
-  /** Switch between complete exterior, floor cutaway and fixed room perspective. */
+  /** Full floor exploration requires layout sharing, never merely an exterior overview. */
+  setFloor: (floor) => set((state) => {
+    if (!canExploreInteriorLayout(state.access)) return {};
+    const roomId = floor === 'ground' ? 'living' : 'family';
+    return indoorNavigation(roomId, visibleRoomDevice(state.access, roomId), floor);
+  }),
+  /** Navigate property and layout views while preserving the authorized interior bookmark. */
   setView: (view) => set((state) => {
-    if (!state.access.fullHome) return {};
-    if (view === 'exterior') return outdoorNavigation(state);
-    if (view === 'ground' || view === 'upper') {
-      if (view === state.floor && !getRoom(state.roomId).outdoor) return { view };
-      if (getRoom(state.roomId).outdoor && view === getRoom(state.indoorContext.roomId).floor) {
-        return indoorNavigation(state.indoorContext.roomId, state.indoorContext.selectedDevice, view);
-      }
-      return indoorNavigation(view === 'ground' ? 'living' : 'family', view === 'ground' ? 'living-light' : 'family-tv', view);
+    if (view === 'exterior') return canViewPropertyOverview(state.access)
+      ? outdoorNavigation(state, 'grounds', visibleRoomDevice(state.access, 'grounds')) : {};
+    if (view === 'immersive') return canExploreInteriorLayout(state.access) ? { view } : {};
+    const bookmark = getRoom(state.indoorContext.roomId);
+    if (getRoom(state.roomId).outdoor && bookmark.floor === view && canNavigateSceneRoom(state.access, bookmark.id)) {
+      return indoorNavigation(bookmark.id, visibleRoomDevice(state.access, bookmark.id, state.indoorContext.selectedDevice), view);
     }
-    return { view, floor: state.floor };
+    if (!getRoom(state.roomId).outdoor && state.floor === view) return { view };
+    if (!canExploreInteriorLayout(state.access)) return {};
+    const roomId = view === 'ground' ? 'living' : 'family';
+    return indoorNavigation(roomId, visibleRoomDevice(state.access, roomId), view);
   }),
-  /** Resolve scene picks to an accessible inspector and the device's floor. */
-  selectDevice: (id) => set((state) => {
-    const device = getDevice(id);
-    if (!device || !canViewSceneDevice(state.access, id)) return {};
-    const room = getRoom(device.roomId);
-    if (!state.access.fullHome) return indoorNavigation(room.id, device.id, room.floor);
-    if (room.outdoor) return outdoorNavigation(state, room.id, device.id, getRoom(state.roomId).outdoor && state.view === 'immersive' ? 'immersive' : 'exterior');
-    return indoorNavigation(room.id, device.id, state.view === 'immersive' ? 'immersive' : room.floor);
-  }),
-  /** Synchronize the inspector while retaining exterior or immersive presentation. */
-  selectHotspotDevice: (id) => set((state) => {
-    const device = getDevice(id);
-    if (!device || !canViewSceneDevice(state.access, id)) return {};
-    const room = getRoom(device.roomId);
-    if (!state.access.fullHome) return indoorNavigation(room.id, device.id, room.floor);
-    if (room.outdoor) return outdoorNavigation(state, room.id, device.id, state.view === 'immersive' ? 'immersive' : 'exterior');
-    const view = state.view === 'ground' || state.view === 'upper' ? room.floor : state.view;
-    return indoorNavigation(room.id, device.id, view);
-  }),
+  /** Resolve scene picks to an authorized inspector while retaining permitted camera views. */
+  selectDevice: (id) => set((state) => deviceNavigation(state, id, false)),
+  /** Hotspot selection preserves a shared exterior camera without expanding the selected device grant. */
+  selectHotspotDevice: (id) => set((state) => deviceNavigation(state, id, true)),
   /** Perform a kind-appropriate quick action without altering the selected camera. */
   toggleDevice: (id) => set((state) => getDevice(id) && canControlSceneDevice(state.access, id) ? {
     deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation({ ...state.deviceStates, [id]: toggleDeviceState(id, state.deviceStates[id]) }, state.deviceStates)), activePreset: null,

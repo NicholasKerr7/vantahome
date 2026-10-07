@@ -18,11 +18,17 @@ import { ProfileChoice, ProfileField, ProfileForm } from "./ProfileControls";
 import type { ProfileWorkspaceModel } from "./useProfileWorkspace";
 import { GUEST_ACCESS_DURATIONS, formatGuestAccessExpiry } from "./invitationAccess";
 import { isInvitationExpired } from "../home-access/invitationExpiry";
+import { InteriorLayoutAccess } from "./InteriorLayoutAccess";
 
 const HOUSEHOLD_TABS = [
   { id: "people", label: "Members" },
   { id: "invite", label: "Invite" },
   { id: "inbox", label: "Inbox" },
+] as const;
+
+const MEMBER_ACCESS_TABS = [
+  { id: "rooms", label: "Rooms" },
+  { id: "layout", label: "Interior layout" },
 ] as const;
 
 /** Present the complete invitation form without exposing accepted membership prematurely. */
@@ -255,7 +261,7 @@ function InvitationInbox({ model }: { model: ProfileWorkspaceModel }) {
 function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
   const modalViewportStyle = useModalViewportStyle();
   const [selectedId, setSelectedId] = useState(model.household[0]?.id ?? "");
-  const [sheet, setSheet] = useState<"rooms" | "permissions" | null>(null);
+  const [sheet, setSheet] = useState<"rooms" | "layout" | "permissions" | null>(null);
   const [roomPage, setRoomPage] = useState(0);
   const memberIndex = Math.max(
     0,
@@ -295,6 +301,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
         {limitedRooms && (
           <Pressable
             accessibilityLabel={`Room access for ${member.name}`}
+            accessibilityHint="Review assigned rooms and interior layout sharing."
             style={styles.memberAction}
             onPress={() => {
               setRoomPage(0);
@@ -307,7 +314,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
               color={theme.colors.accentText}
             />
             <View style={styles.heading}>
-              <Text style={styles.rowText}>Room access</Text>
+              <Text style={styles.rowText}>Rooms & interior layout</Text>
               <Text style={styles.detail}>{roomIds.length} rooms assigned</Text>
             </View>
             <Ionicons
@@ -382,11 +389,12 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
               <View style={styles.header}>
                 <View style={styles.heading}>
                   <Text style={styles.eyebrow}>
-                    {sheet === "rooms" ? "ROOM ACCESS" : "ACTION PERMISSIONS"}
+                    {sheet === "permissions" ? "ACTION PERMISSIONS" : "HOME VISIBILITY"}
                   </Text>
                   <Text style={styles.title}>{member.name}</Text>
                 </View>
               </View>
+              {sheet !== "permissions" && <DeepTabs items={MEMBER_ACCESS_TABS} selectedId={sheet} onSelect={setSheet} />}
               {sheet === "permissions" ? (
                 <MemberPermissionEditor
                   role={member.role}
@@ -405,6 +413,8 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
                     )
                   }
                 />
+              ) : sheet === "layout" ? (
+                <InteriorLayoutAccess member={member} sharing={model.interiorLayoutSharing} />
               ) : (
                 <View style={styles.section}>
                   <Text style={styles.subtitle}>

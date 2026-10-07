@@ -1,4 +1,5 @@
 import { getModelUrl } from '../embeddedHost';
+import { FULL_SCENE_ACCESS, canViewSceneDevice } from '../sceneAccess';
 import { useEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
@@ -12,7 +13,7 @@ import { readDevice, type HouseSceneProps } from './types';
 import { usePageMotion } from './usePageMotion';
 import { prepareVegetationWind, type VegetationWind } from './vegetationWind';
 
-type LandscapeProps = Pick<HouseSceneProps, 'view' | 'roomId' | 'deviceStates' | 'selectedDevice' | 'quickDeviceId' | 'hotspotControlMode' | 'reducedMotion' | 'onSelectDevice'> & { windSpeedKmh?: number; windDirectionDeg?: number };
+type LandscapeProps = Pick<HouseSceneProps, 'access' | 'view' | 'roomId' | 'deviceStates' | 'selectedDevice' | 'quickDeviceId' | 'hotspotControlMode' | 'reducedMotion' | 'onSelectDevice'> & { windSpeedKmh?: number; windDirectionDeg?: number };
 const gateLayout = siteLayout.runtime.gate;
 
 /** Clone cached GLTF objects so shadows and parenting remain local to this scene. */
@@ -28,7 +29,7 @@ function prepareLandscapeModel(source: Object3D): Object3D {
 }
 
 /** Render the traced parcel and move the Blender gate leaf along its real track. */
-export function Landscape({ view, roomId, deviceStates, selectedDevice, quickDeviceId, hotspotControlMode = 'quick', reducedMotion, onSelectDevice, windSpeedKmh = 0, windDirectionDeg = 0 }: LandscapeProps) {
+export function Landscape({ access = FULL_SCENE_ACCESS, view, roomId, deviceStates, selectedDevice, quickDeviceId, hotspotControlMode = 'quick', reducedMotion, onSelectDevice, windSpeedKmh = 0, windDirectionDeg = 0 }: LandscapeProps) {
   const [{ scene: site }, { scene: leaf }] = useGLTF([
     getModelUrl('landscape'),
     getModelUrl('gate'),
@@ -42,12 +43,13 @@ export function Landscape({ view, roomId, deviceStates, selectedDevice, quickDev
     wind.current = controller;
     return () => { controller.dispose(); wind.current = null; };
   }, [preparedSite]);
-  const gate = readDevice(deviceStates, 'entry-gate');
+  const canViewGate = canViewSceneDevice(access, 'entry-gate');
+  const gate = canViewGate ? readDevice(deviceStates, 'entry-gate') : { on: false, level: 0 };
   const carriage = useRef<Group>(null);
   const position = useRef(gate.level);
   // R3F must not reapply the target transform on every control update; animation owns it.
   const initialPosition = useRef(getGatePosition(gate.level));
-  const showHotspot = roomId === 'grounds' && (view === 'exterior' || view === 'immersive');
+  const showHotspot = canViewGate && roomId === 'grounds' && (view === 'exterior' || view === 'immersive');
   const gateDevice = getDevice('entry-gate');
   const hotspot = gateDevice ? hotspotPresentation(gateDevice, gate) : null;
 
@@ -62,7 +64,7 @@ export function Landscape({ view, roomId, deviceStates, selectedDevice, quickDev
 
   return <group name="seaview-landscape">
     <primitive object={preparedSite} />
-    <group ref={carriage} name="entry-gate-carriage" position={initialPosition.current} rotation={[0, gateLayout.rotationY, 0]} onClick={(event) => { event.stopPropagation(); onSelectDevice('entry-gate'); }}>
+    <group ref={carriage} name="entry-gate-carriage" position={initialPosition.current} rotation={[0, gateLayout.rotationY, 0]} onClick={canViewGate ? (event) => { event.stopPropagation(); onSelectDevice('entry-gate'); } : undefined}>
       <primitive object={preparedLeaf} />
     </group>
     {showHotspot && hotspot && (

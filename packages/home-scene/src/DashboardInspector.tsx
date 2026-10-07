@@ -1,7 +1,9 @@
-import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
+import { canExploreInteriorLayout, canViewPropertyOverview, canViewSceneRoom, canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useState } from 'react';
-import { ArrowUpRight, ChevronLeft, ChevronRight, Grid2X2, SlidersHorizontal, type LucideIcon } from 'lucide-react';
-import { DEVICES, getDevice, getRoom, type DeviceDefinition, type DeviceId } from './data';
+import { ArrowUpRight, ChevronLeft, ChevronRight, Grid2X2, Home, SlidersHorizontal, type LucideIcon } from 'lucide-react';
+import { DEVICES, ROOMS, getDevice, getRoom, type DeviceDefinition, type DeviceId } from './data';
+import { roomIcon } from './DashboardChrome';
+import { paginateItems } from './dashboardPagination';
 import { DEVICE_ICONS } from './DeviceControlCard';
 import { deviceStatus, isMonitor } from './deviceCapabilities';
 import { PrimaryDeviceRange } from './PrimaryDeviceRange';
@@ -18,6 +20,28 @@ interface DashboardInspectorProps {
 }
 
 const DEVICES_PER_PAGE = 2;
+
+/** Give a shared overview a useful, bounded route back to the person's assigned controls. */
+function PropertyOverviewCompanion() {
+  const access = useHomeStore((state) => state.access);
+  const view = useHomeStore((state) => state.view);
+  const roomId = useHomeStore((state) => state.roomId);
+  const setRoom = useHomeStore((state) => state.setRoom);
+  const [requestedPage, setRequestedPage] = useState(0);
+  const rooms = ROOMS.filter((room) => canViewSceneRoom(access, room.id));
+  const page = paginateItems(rooms, requestedPage, 3);
+  const exterior = view === 'exterior' || getRoom(roomId).outdoor;
+  return <aside className="device-inspector dashboard-inspector card-inspector property-companion" aria-labelledby="property-companion-title">
+    <div className="property-companion-symbol"><Home size={26} strokeWidth={1.4} aria-hidden="true" /></div>
+    <div className="property-companion-intro"><span className="device-focus-eyebrow">{exterior ? 'EXTERIOR OVERVIEW' : 'SHARED INTERIOR TOUR'}</span><h2 id="property-companion-title">{exterior ? 'Your home, in view.' : 'A little more to explore.'}</h2><p>{exterior ? 'Explore the grounds, then step into your space.' : 'Layout only. Explore the shared interior at your own pace.'}</p></div>
+    <section className="property-assigned-rooms" aria-labelledby="property-assigned-title"><h3 id="property-assigned-title">Your assigned rooms</h3>
+      {page.items.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} onClick={() => setRoom(room.id)}><Icon size={19} strokeWidth={1.5} aria-hidden="true" /><span>{room.name}<small>Open your room</small></span><ArrowUpRight size={16} aria-hidden="true" /></button>; })}
+      {!rooms.length && <p>Your administrator can share a room with you.</p>}
+    </section>
+    {page.pages > 1 && <div className="dashboard-pager" aria-label="Assigned room pages"><button aria-label="Previous assigned rooms" disabled={page.page === 0} onClick={() => setRequestedPage(page.page - 1)}><ChevronLeft size={17} /></button><span>{page.page + 1} / {page.pages}</span><button aria-label="Next assigned rooms" disabled={page.page + 1 === page.pages} onClick={() => setRequestedPage(page.page + 1)}><ChevronRight size={17} /></button></div>}
+    <p className="property-control-note">Your controls stay in assigned rooms.{canExploreInteriorLayout(access) ? ' Other rooms show layout only.' : ''}</p>
+  </aside>;
+}
 
 /** Give the selected device the same kind-aware action used by hotspot controls. */
 function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefinition; onFullControls: (id: DeviceId) => void }) {
@@ -82,6 +106,10 @@ export function DashboardInspector({ onFullControls, onBrowseDevices }: Dashboar
   const pageStart = page * DEVICES_PER_PAGE;
   const visibleDevices = roomDevices.slice(pageStart, pageStart + DEVICES_PER_PAGE);
   const rangeLabel = roomDevices.length ? `${pageStart + 1}–${pageStart + visibleDevices.length} of ${roomDevices.length}` : '0 devices';
+
+  if (!access.fullHome && !roomDevices.length && (canViewPropertyOverview(access) || canExploreInteriorLayout(access))) {
+    return <PropertyOverviewCompanion />;
+  }
 
   return <aside className="device-inspector dashboard-inspector card-inspector" aria-labelledby="dashboard-inspector-room">
     <header className="dashboard-inspector-heading"><div><span className="device-focus-eyebrow">ROOM CONTROLS</span><h2 id="dashboard-inspector-room" title={room.name}>{room.name}</h2></div><span className="inspector-device-count" aria-label={`${roomDevices.length} devices`}>{roomDevices.length}</span></header>

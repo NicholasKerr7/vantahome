@@ -5,12 +5,16 @@ does not grant membership. New owners explicitly create their home; invitees rev
 and accept a pending database invitation after authenticating. Existing accounts
 sign in normally and review their invitation inbox.
 
-**Current staging checkpoint — 2026-10-04:** migrations 001–018 are deployed;
+**Current staging checkpoint — 2026-10-07:** migrations 001–019 are deployed;
 preview callbacks and the invitation function use `vantahome-preview`. Public
 sign-up remains disabled and invitation OTP length remains eight digits. The
-hosted API permission sweep passed 32 checks with disposable accounts. Preview
-**37** is installed on the user's **iPhone 16 Pro Max**, confirmed by the device's
-app listing. The user confirmed resolving developer trust and completing the
+earlier hosted API permission sweep passed 32 checks with disposable accounts.
+Preview **38** is installed on the user's **iPhone 16 Pro Max**, confirmed by the
+device's app listing, and the developer service launched it successfully. It adds
+the property overview and owner-controlled interior sharing; see the new
+[verification checkpoint](ROOM_ACCESS.md#property-overview-checkpoint--2026-10-07).
+The new flow has browser/API coverage and awaits physical-iPhone confirmation.
+On Preview 37, the user confirmed resolving developer trust and completing the
 Owner email/code, password, household creation, and model preparation steps on
 the physical iPhone. A read-only staging check confirmed email verification, a
 recorded sign-in, one home with Owner membership, 20 rooms, and 92 simulation-only
@@ -115,7 +119,7 @@ does **not** update the hosted Supabase email template or SMTP settings.
   `017_model_simulation_setup.sql` adds the owner-only catalog setup and immutable
   `devices.simulation_only` boundary. Migration
   `018_scoped_room_memberships.sql` replaces grants atomically inside the selected
-  household. The current client requires all migrations through 018; it does not
+  household. The current client requires all migrations through 019; it does not
   fall back to unscoped direct room-access writes.
 
 The existing-account case (`email_exists` or `user_already_exists`) resolves the

@@ -337,6 +337,8 @@ export type HouseholdMember = {
   lastSeenAt?: number;
   /** Absolute server-enforced expiry for an optional temporary guest invitation. */
   accessExpiresAt?: string | null;
+  /** Owner-confirmed layout visibility; this never expands room or device access. */
+  shareInteriorLayout?: boolean;
 };
 
 export type RoomMembership = {

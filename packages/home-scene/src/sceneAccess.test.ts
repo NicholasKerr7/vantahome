@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { BoxGeometry, BufferGeometry, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial } from 'three';
 import { DEVICES, getRoom } from './data';
-import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS, canControlSceneDevice, canViewSceneDevice, parseSceneAccess, type SceneAccess } from './sceneAccess';
+import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS, canControlSceneDevice, canNavigateSceneRoom, canViewSceneDevice, parseSceneAccess, type SceneAccess } from './sceneAccess';
 import { useHomeStore, createDefaultState } from './state';
 import { disposeRoomGeometry, isolateRoomGeometry } from './scene/roomPrivacy';
 
@@ -13,6 +13,64 @@ const bedroom: SceneAccess = {
 afterEach(() => useHomeStore.setState({ ...createDefaultState(), access: FULL_SCENE_ACCESS }));
 
 describe('host-issued scene access', () => {
+  it('validates independent presentation flags without expanding explicit room or action grants', () => {
+    const overview = { ...bedroom, propertyOverview: true, interiorLayout: false };
+    expect(parseSceneAccess(overview)).toEqual(overview);
+    expect(parseSceneAccess({ ...overview, interiorLayout: 'true' })).toBeNull();
+    expect(parseSceneAccess({ ...overview, propertyOverview: null })).toBeNull();
+    expect(canNavigateSceneRoom(overview, 'grounds')).toBe(true);
+    expect(canNavigateSceneRoom(overview, 'living')).toBe(false);
+    const layout = { ...overview, interiorLayout: true };
+    expect(canNavigateSceneRoom(layout, 'living')).toBe(true);
+    expect(canNavigateSceneRoom(layout, 'invented-room')).toBe(false);
+    expect(canViewSceneDevice(layout, 'living-light')).toBe(false);
+    expect(canControlSceneDevice(layout, 'living-light')).toBe(false);
+    expect(parseSceneAccess({ ...layout, deviceIds: [...layout.deviceIds, 'living-light'] })).toBeNull();
+  });
+
+  it('opens new guests on the property, preserves host echoes, and returns to their assigned room', () => {
+    const overview = { ...bedroom, propertyOverview: true, interiorLayout: false };
+    useHomeStore.setState({ ...createDefaultState(), access: EMPTY_SCENE_ACCESS });
+    useHomeStore.getState().applyAccessSnapshot({}, overview);
+    expect(useHomeStore.getState()).toMatchObject({ roomId: 'grounds', view: 'exterior', selectedDevice: null,
+      indoorContext: { roomId: 'master' } });
+    useHomeStore.getState().applyAccessSnapshot({}, overview);
+    expect(useHomeStore.getState().view).toBe('exterior');
+    useHomeStore.getState().setView('immersive');
+    useHomeStore.getState().setRoom('living');
+    useHomeStore.getState().setFloor('ground');
+    expect(useHomeStore.getState()).toMatchObject({ roomId: 'grounds', view: 'exterior' });
+    useHomeStore.getState().setRoom('master');
+    useHomeStore.getState().applyAccessSnapshot({}, overview);
+    expect(useHomeStore.getState()).toMatchObject({ roomId: 'master', floor: 'upper', view: 'upper' });
+    useHomeStore.getState().setView('exterior');
+    useHomeStore.getState().setView('upper');
+    expect(useHomeStore.getState().roomId).toBe('master');
+  });
+
+  it('allows a shared interior tour and immediately exits a revoked layout without new device authority', () => {
+    const layout = { ...bedroom, propertyOverview: true, interiorLayout: true };
+    useHomeStore.getState().applyAccessSnapshot({}, layout);
+    useHomeStore.getState().setRoom('living');
+    useHomeStore.getState().setView('immersive');
+    expect(useHomeStore.getState()).toMatchObject({ roomId: 'living', view: 'immersive', selectedDevice: null });
+    const before = useHomeStore.getState().deviceStates;
+    useHomeStore.getState().toggleDevice('living-light');
+    useHomeStore.getState().activatePreset('away');
+    useHomeStore.getState().reset();
+    expect(useHomeStore.getState().deviceStates).toBe(before);
+    useHomeStore.getState().applyAccessSnapshot({}, { ...layout, interiorLayout: false });
+    expect(useHomeStore.getState()).toMatchObject({ roomId: 'grounds', view: 'exterior', selectedDevice: null });
+    useHomeStore.getState().applyAccessSnapshot({}, bedroom);
+    expect(useHomeStore.getState()).toMatchObject({ roomId: 'master', view: 'upper' });
+  });
+
+  it('offers a property overview without assigned rooms and removes it when membership is revoked', () => {
+    useHomeStore.getState().applyAccessSnapshot({}, { ...EMPTY_SCENE_ACCESS, propertyOverview: true });
+    expect(useHomeStore.getState()).toMatchObject({ roomId: 'grounds', view: 'exterior', selectedDevice: null });
+    useHomeStore.getState().applyAccessSnapshot({}, EMPTY_SCENE_ACCESS);
+    expect(useHomeStore.getState()).toMatchObject({ roomId: '', selectedDevice: null });
+  });
   it('keeps only assigned-room triangles from a material-batched mesh and hides the house for outdoor access', () => {
     const room = getRoom('master');
     const [x, z] = room.center;

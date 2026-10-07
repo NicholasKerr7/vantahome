@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, Mesh, Vector3, type Object3D } from 'three';
+import { BufferAttribute, BufferGeometry, Mesh, MeshStandardMaterial, Vector3, type Object3D } from 'three';
 import type { RoomDefinition } from '../data';
 
 /** Extract complete indoor triangles, since exported meshes batch furniture from many rooms by material. */
@@ -58,5 +58,31 @@ export function isolateRoomGeometry(scene: Object3D, room: RoomDefinition): Obje
 export function disposeRoomGeometry(scene: Object3D): void {
   scene.traverse((node) => {
     if (node instanceof Mesh && node.userData.privateRoomGeometry === true) node.geometry.dispose();
+  });
+}
+
+/** Show the authored exterior shell without furnishing or see-through interior windows. */
+export function prepareExteriorOverview(scene: Object3D): Object3D {
+  const copy = scene.clone(true);
+  copy.traverse((node) => {
+    if (!(node instanceof Mesh)) return;
+    if (/--(?:furniture|luxury-device)-|^(?:washer|dryer|family-tv|gas-fixture)-/.test(node.name)) {
+      node.visible = false;
+    }
+    if (/^(?:ground|upper)--glass$/.test(node.name)) {
+      // Clone no cached materials: an owner opening the same asset must retain its original glass.
+      node.material = new MeshStandardMaterial({ color: '#465159', roughness: 0.32, metalness: 0.45 });
+      node.userData = { ...node.userData, exteriorPrivacyMaterial: true };
+    }
+  });
+  return copy;
+}
+
+/** Dispose only the opaque overview materials created for this presentation. */
+export function disposeExteriorOverview(scene: Object3D): void {
+  scene.traverse((node) => {
+    if (node instanceof Mesh && node.userData.exteriorPrivacyMaterial === true) {
+      for (const material of Array.isArray(node.material) ? node.material : [node.material]) material.dispose();
+    }
   });
 }

@@ -12,6 +12,12 @@ const FRAME_PADDING = 1.12;
 const DEFAULT_FOV = 42;
 const HOUSE_BOUNDS = { min: [-0.7, -0.25, -16.9], max: [17.3, 7.9, 0.7] } as const;
 
+/** Keep exterior-only orbiting cameras outside every corner of the furnished house. */
+export function getExteriorPrivacyDistance(target: SitePoint3): number {
+  return Math.max(...boxCorners(HOUSE_BOUNDS.min, HOUSE_BOUNDS.max)
+    .map((point) => Math.hypot(...point.map((value, axis) => value - target[axis]!)))) + 2;
+}
+
 /** Reject malformed local geometry before it can create invalid camera coordinates. */
 function point3(values: readonly number[]): SitePoint3 {
   if (values.length !== 3 || !values.every(Number.isFinite)) {

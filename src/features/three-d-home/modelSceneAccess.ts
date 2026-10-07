@@ -51,8 +51,13 @@ export function resolveModelSceneAccess(state: HomeState, mode: RuntimeMode = ru
       && (!openingDevice || roleHasPermission(member.role, 'device.control', overrides))) controllable.add(definition.id);
   }
   const assigned = new Set(modeledRooms.values());
+  const fullHome = member.role !== 'Guest' && member.role !== 'Tenant'
+    && ROOMS.every((room) => assigned.has(room.id));
   return {
-    fullHome: member.role !== 'Guest' && member.role !== 'Tenant' && ROOMS.every((room) => assigned.has(room.id)),
+    fullHome,
+    // Geometry sharing never broadens the separately resolved room and device grants.
+    propertyOverview: true,
+    interiorLayout: fullHome || member.shareInteriorLayout === true,
     roomIds: ROOMS.filter((room) => assigned.has(room.id)).map((room) => room.id),
     deviceIds: DEVICES.filter((device) => visible.has(device.id)).map((device) => device.id),
     controllableDeviceIds: DEVICES.filter((device) => controllable.has(device.id)).map((device) => device.id),

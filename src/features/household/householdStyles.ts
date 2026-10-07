@@ -141,6 +141,17 @@ export const householdStyles = StyleSheet.create({
     textAlign: "center",
   },
   memberActions: { gap: 10 },
+  layoutOverview: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: theme.colors.card2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.stroke,
+  },
+  layoutSwitch: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" },
   memberAction: {
     flexDirection: "row",
     alignItems: "center",

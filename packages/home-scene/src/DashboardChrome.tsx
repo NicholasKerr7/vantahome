@@ -1,4 +1,4 @@
-import { canViewSceneRoom, canViewSceneDevice } from './sceneAccess';
+import { canExploreInteriorLayout, canNavigateSceneRoom, canViewSceneRoom, canViewSceneDevice } from './sceneAccess';
 import { useState } from 'react';
 import { BedDouble, Clock3, ChevronDown, ChevronLeft, ChevronRight, Cloud, CloudLightning, CloudOff, CloudRain, CloudSun, Grid2X2, Home, Layers3, Moon, Settings2, Snowflake, Sofa, Sparkles, Sun, Utensils, type LucideIcon } from 'lucide-react';
 import { DEVICES, ROOMS, getRoom, type RoomId } from './data';
@@ -68,8 +68,8 @@ export function DashboardHeader({ onSettings, onEnvironment = onSettings, enviro
 export function DashboardFloorSwitch() {
   const floor = useHomeStore((state) => state.floor);
   const setFloor = useHomeStore((state) => state.setFloor);
-  const fullHome = useHomeStore((state) => state.access.fullHome);
-  if (!fullHome) return null;
+  const layout = useHomeStore((state) => canExploreInteriorLayout(state.access));
+  if (!layout) return null;
   return <div className="floor-switch dashboard-floor-switch" aria-label="Choose floor"><button type="button" aria-pressed={floor === 'ground'} onClick={() => setFloor('ground')}>Ground</button><button type="button" aria-pressed={floor === 'upper'} onClick={() => setFloor('upper')}>Upper</button></div>;
 }
 
@@ -79,11 +79,11 @@ export function DashboardRooms({ onBrowse }: { onBrowse: () => void }) {
   const roomId = useHomeStore((state) => state.roomId);
   const setRoom = useHomeStore((state) => state.setRoom);
   const access = useHomeStore((state) => state.access);
-  const rooms = ROOMS.filter((room) => canViewSceneRoom(access, room.id) && (!access.fullHome || room.floor === floor || room.outdoor));
+  const rooms = ROOMS.filter((room) => canNavigateSceneRoom(access, room.id) && (!canExploreInteriorLayout(access) || room.floor === floor || room.outdoor));
   const [requested, setRequested] = useState({ roomId, floor, page: 0 });
   const selectedPage = Math.floor(Math.max(0, rooms.findIndex((room) => room.id === roomId)) / 6);
   const page = paginateItems(rooms, requested.roomId === roomId && requested.floor === floor ? requested.page : selectedPage, 6);
-  return <aside className="dashboard-room-rail" aria-label="Room navigation"><div className="dashboard-rail-title"><span className="eyebrow">YOUR SPACE</span><h2>Seaview House<span className="small-dot" /></h2></div><DashboardFloorSwitch /><div className="dashboard-section-label"><span>Rooms & grounds</span><span>{rooms.length}</span></div><nav className="dashboard-room-list" aria-label="Rooms">{page.items.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} data-room-id={room.id} aria-current={roomId === room.id ? 'true' : undefined} onClick={() => setRoom(room.id)}><Icon size={18} strokeWidth={1.5} /><span>{room.name}</span>{roomId === room.id ? <span className="dashboard-selected-dot" /> : null}</button>; })}</nav><div className="dashboard-pager" aria-label="Room pages"><button aria-label="Previous room page" disabled={page.page === 0} onClick={() => setRequested({ roomId, floor, page: page.page - 1 })}><ChevronLeft size={17} /></button><span data-room-page role="status">{page.page + 1} / {page.pages}</span><button aria-label="Next room page" disabled={page.page + 1 === page.pages} onClick={() => setRequested({ roomId, floor, page: page.page + 1 })}><ChevronRight size={17} /></button></div><button className="dashboard-browse" onClick={onBrowse}><Grid2X2 size={17} />All rooms<ChevronRight size={15} /></button></aside>;
+  return <aside className="dashboard-room-rail" aria-label="Room navigation"><div className="dashboard-rail-title"><span className="eyebrow">YOUR SPACE</span><h2>Seaview House<span className="small-dot" /></h2></div><DashboardFloorSwitch /><div className="dashboard-section-label"><span>{canExploreInteriorLayout(access) ? 'Rooms & grounds' : 'Your rooms & property'}</span><span>{rooms.length}</span></div><nav className="dashboard-room-list" aria-label="Rooms">{page.items.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} data-room-id={room.id} aria-current={roomId === room.id ? 'true' : undefined} onClick={() => setRoom(room.id)}><Icon size={18} strokeWidth={1.5} /><span>{room.name}{!canViewSceneRoom(access, room.id) && !room.outdoor ? <small className="room-layout-label">Layout only</small> : null}</span>{roomId === room.id ? <span className="dashboard-selected-dot" /> : null}</button>; })}</nav><div className="dashboard-pager" aria-label="Room pages"><button aria-label="Previous room page" disabled={page.page === 0} onClick={() => setRequested({ roomId, floor, page: page.page - 1 })}><ChevronLeft size={17} /></button><span data-room-page role="status">{page.page + 1} / {page.pages}</span><button aria-label="Next room page" disabled={page.page + 1 === page.pages} onClick={() => setRequested({ roomId, floor, page: page.page + 1 })}><ChevronRight size={17} /></button></div><button className="dashboard-browse" onClick={onBrowse}><Grid2X2 size={17} />All rooms<ChevronRight size={15} /></button></aside>;
 }
 
 /** Portrait navigation gives the model its own full-width canvas. */

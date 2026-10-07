@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const mockGetUser = jest.fn();
 let mockMemberships: Array<{ home_id: string; role: string }> = [];
 let mockRowsError: Error | null = null;
-let mockMemberRows: Array<{ user_id: string; role: string; access_expires_at?: string | null }> = [];
+let mockMemberRows: Array<{ user_id: string; role: string; access_expires_at?: string | null; share_interior_layout?: unknown }> = [];
 let mockRegistryRows: Record<string, unknown[]> = {};
 const mockHomeReads = jest.fn();
 jest.mock('./supabaseClient', () => ({ supabase: {
@@ -79,6 +79,18 @@ test('a different authenticated identity cannot query the expected user’s hous
   mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'bob' } }, error: null });
   expect(await syncMembershipFromSupabase('alice')).toBeNull();
   expect(mockHomeReads).not.toHaveBeenCalled();
+});
+
+test.each([true, false, undefined, null, 'true', 1])('maps layout sharing only from an explicit server boolean: %j', async (shared) => {
+  mockMemberRows = [{ user_id: 'alice', role: 'guest', share_interior_layout: shared }];
+  const result = await syncMembershipFromSupabase('alice') as MembershipSyncResult;
+  expect(result.household[0].shareInteriorLayout).toBe(shared === true);
+  expect(applyMembershipSnapshot(result)).toBe(true);
+  expect(useHomeStore.getState().household[0].shareInteriorLayout).toBe(shared === true);
+  mockMemberRows = [{ user_id: 'alice', role: 'guest', share_interior_layout: false }];
+  const revoked = await syncMembershipFromSupabase('alice') as MembershipSyncResult;
+  expect(applyMembershipSnapshot(revoked)).toBe(true);
+  expect(useHomeStore.getState().household[0].shareInteriorLayout).toBe(false);
 });
 
 test('an unavailable membership read remains an error, not a prompt to create a home', async () => {

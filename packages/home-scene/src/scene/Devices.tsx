@@ -1,4 +1,4 @@
-import { FULL_SCENE_ACCESS, canViewSceneDevice } from '../sceneAccess';
+import { FULL_SCENE_ACCESS, canExploreInteriorLayout, canViewSceneDevice } from '../sceneAccess';
 import { memo, useMemo, useRef, type RefObject } from 'react';
 import { RoundedBox } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
@@ -379,8 +379,10 @@ export function Devices({
   const full = view === 'exterior' || view === 'immersive';
   const visible = DEVICES.filter((device) => {
     const room = getRoom(device.roomId);
-    if (!canViewSceneDevice(access, device.id) || (!access.fullHome && device.roomId !== roomId)) return false;
-    return !access.fullHome || full || (!room.outdoor && room.floor === floor);
+    if (!canViewSceneDevice(access, device.id)) return false;
+    if (view === 'exterior' && !canExploreInteriorLayout(access) && !room.outdoor) return false;
+    if (!canExploreInteriorLayout(access) && !full) return device.roomId === roomId;
+    return full || (!room.outdoor && room.floor === floor);
   });
   const practical = DEVICES.filter(
     (device) =>

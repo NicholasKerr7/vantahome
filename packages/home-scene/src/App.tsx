@@ -1,10 +1,11 @@
-import { canViewSceneDevice } from './sceneAccess';
+import { canExploreInteriorLayout, canViewPropertyOverview, canViewSceneRoom, canViewSceneDevice } from './sceneAccess';
 import { getFireIncident } from './fireSafetySimulation';
 import { SafetyPreview, useSafetyPreviewClock } from './SafetyPreview';
 import { getModelUrl, isEmbeddedScene, reportSceneStatus, type ModelName } from './embeddedHost';
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
-import { Home, Layers3, MoveUpRight, RotateCcw } from 'lucide-react';
+import { Layers3, RotateCcw } from 'lucide-react';
+import { SceneViewControls } from './SceneViewControls';
 import HouseScene from './scene/HouseScene';
 import { QuickDeviceControls } from './QuickDeviceControls';
 import { DeviceControlSheet } from './DeviceControlSheet';
@@ -64,7 +65,7 @@ class SceneErrorBoundary extends Component<{ children: ReactNode; onRetry: () =>
 }
 
 /** Show the home with persistent, accessible scene controls and loading feedback. */
-function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceId, onCloseFullControls, covered }: { environment: LiveEnvironment; reducedMotion: boolean; onFullControls: (id: DeviceId) => void; sheetDeviceId: DeviceId | null; onCloseFullControls: () => void; covered: boolean }): ReactNode {
+function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, sheetDeviceId, onCloseFullControls, covered }: { environment: LiveEnvironment; reducedMotion: boolean; onFullControls: (id: DeviceId) => void; onRooms: () => void; sheetDeviceId: DeviceId | null; onCloseFullControls: () => void; covered: boolean }): ReactNode {
   const viewportRef = useViewportManipulation();
   const access = useHomeStore((state) => state.access);
   const showcase = useCinematicStore((state) => state.showcase);
@@ -77,7 +78,6 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
   const lightingMode = useHomeStore((state) => state.lightingMode);
   const deviceStates = useHomeStore((state) => state.deviceStates);
   const selectedDevice = useHomeStore((state) => state.selectedDevice);
-  const setView = useHomeStore((state) => state.setView);
   const selectHotspotDevice = useHomeStore((state) => state.selectHotspotDevice);
   const inlineInspector = useInlineInspectorVisibility(selectedDevice);
   const [readyModel, setReadyModel] = useState<string | null>(null);
@@ -149,8 +149,11 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
     setAttempt((value) => value + 1);
   }, []);
   const room = getRoom(roomId);
+  const layoutOnly = !canViewSceneRoom(access, roomId);
+  const overviewLabel = !access.fullHome ? 'EXTERIOR OVERVIEW' : 'PROPERTY VIEW';
+  const interiorLabel = layoutOnly ? 'SHARED INTERIOR TOUR' : view === 'immersive' ? 'ROOM VIEW' : canExploreInteriorLayout(access) ? `${floor.toUpperCase()} FLOOR` : 'YOUR ROOM';
   return <section ref={viewportRef} id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''} ${showcase ? 'is-cinematic' : ''}`} aria-label="Interactive furnished house preview">
-    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? 'PROPERTY VIEW' : view === 'immersive' ? 'ROOM VIEW' : access.fullHome ? `${floor.toUpperCase()} FLOOR` : 'YOUR ROOM'}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The full property, from arrival to home.' : room.area}</p></div><div className="viewport-camera-controls" role="group" aria-label="Camera controls"><ResetViewControl unavailable={orientationPaused || !ready} />{access.fullHome && <CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} />}</div></div>
+    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? overviewLabel : interiorLabel}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The property, from arrival to home.' : layoutOnly ? 'Layout only · Controls stay in your assigned rooms.' : room.area}</p></div><div className="viewport-camera-controls" role="group" aria-label="Camera controls"><ResetViewControl unavailable={orientationPaused || !ready} />{canExploreInteriorLayout(access) && <CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} />}</div></div>
     <div className="scene-container">
       <SceneErrorBoundary key={attempt} onRetry={retryScene}>
         <HouseScene access={access} daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
@@ -158,7 +161,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, sheetDeviceI
       </SceneErrorBoundary>
     </div>
     {!orientationPaused && quickDeviceId ? <QuickDeviceControls deviceId={quickDeviceId} onClose={closeQuickControls} onFullControls={openFullControls} /> : null}
-    <div className="viewport-bottom"><span className="scene-instruction"><span className="mouse-indicator" />{view === 'immersive' ? 'Drag to look around · fixed viewpoint' : 'Drag to rotate · pinch to zoom · select a device'}</span>{access.fullHome && <div className="view-controls" aria-label="House view"><button aria-pressed={view === 'exterior'} onClick={() => setView(view === 'exterior' ? floor : 'exterior')}><Home size={15} aria-hidden="true" /><span>Landscape</span></button><button aria-pressed={view === 'ground' || view === 'upper'} onClick={() => setView(floor)}><Layers3 size={15} aria-hidden="true" /><span>Floor plan</span></button><button aria-pressed={view === 'immersive'} onClick={() => setView(view === 'immersive' ? floor : 'immersive')}><MoveUpRight size={15} aria-hidden="true" /><span>{roomId === 'grounds' ? 'Gate view' : 'Immersive'}</span></button></div>}</div>
+    <div className="viewport-bottom"><span className="scene-instruction"><span className="mouse-indicator" />{view === 'immersive' ? 'Drag to look around · fixed viewpoint' : layoutOnly ? 'Drag to rotate · pinch to zoom' : 'Drag to rotate · pinch to zoom · select a device'}</span><SceneViewControls onRooms={onRooms} /></div>
   </section>;
 }
 
@@ -170,8 +173,8 @@ export default function App(): ReactNode {
   const { hydrated: simulationHydrated, syncError: simulationSyncError } = useSimulationBridge();
   useSafetyPreviewClock(!embedded && simulationHydrated);
   useEffect(() => {
-    if (simulationHydrated && !access.roomIds.length) reportSceneStatus('ready');
-  }, [simulationHydrated, access.roomIds.length]);
+    if (simulationHydrated && !access.roomIds.length && !canViewPropertyOverview(access) && !canExploreInteriorLayout(access)) reportSceneStatus('ready');
+  }, [simulationHydrated, access]);
   const prefersReduced = usePrefersReducedMotion();
   const environment = useLiveEnvironment();
   const lightingMode = useHomeStore((state) => state.lightingMode);
@@ -251,7 +254,7 @@ export default function App(): ReactNode {
   }, [access, sheetDeviceId]);
 
   const graphicsCovered = hostSuspended || library !== null || sheetDeviceId !== null || emergencyVisible;
-  if (!access.roomIds.length) return <div className="scene-access-empty" role="status">
+  if (!access.roomIds.length && !canViewPropertyOverview(access) && !canExploreInteriorLayout(access)) return <div className="scene-access-empty" role="status">
     <h1>{simulationHydrated ? 'No rooms assigned' : 'Preparing your rooms'}</h1>
     <p>{simulationHydrated ? 'Ask your household administrator to share a room with you.' : 'Checking your home access before showing the property.'}</p>
   </div>;
@@ -261,7 +264,7 @@ export default function App(): ReactNode {
     <DashboardRoomBar onRooms={() => setLibrary('rooms')} />
     <main id="home-workspace" className="workspace dashboard-workspace">
       <DashboardRooms onBrowse={() => setLibrary('rooms')} />
-      <div className="center-column"><HomeViewport environment={environment} reducedMotion={reducedMotion} onFullControls={openFullControls} sheetDeviceId={sheetDeviceId} onCloseFullControls={closeFullControls} covered={graphicsCovered} /><DashboardScenes /></div>
+      <div className="center-column"><HomeViewport environment={environment} reducedMotion={reducedMotion} onFullControls={openFullControls} onRooms={() => setLibrary('assigned-rooms')} sheetDeviceId={sheetDeviceId} onCloseFullControls={closeFullControls} covered={graphicsCovered} /><DashboardScenes /></div>
       <div id="room-controls" tabIndex={-1}><DashboardInspector onFullControls={openFullControls} onBrowseDevices={() => setLibrary('devices')} /></div>
     </main>
     <DashboardDock onRooms={() => setLibrary('rooms')} onDevices={() => setLibrary('devices')} />

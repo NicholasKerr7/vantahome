@@ -2,10 +2,12 @@
 
 Access combines a current household membership, room scope, and action
 permissions. The app filters the experience; Supabase independently authorizes
-cloud reads and commands. Migrations **001–018** and the preview-aware invitation
+cloud reads and commands. Migrations **001–019** and the preview-aware invitation
 function are deployed to **staging only**. Authenticated API verification has
-passed with disposable accounts. At the **2026-10-04** checkpoint, Preview **37**
-is installed on the user's iPhone 16 Pro Max, with the installed version confirmed
+passed with disposable accounts. **Preview 38** is installed and was launched on
+the user's iPhone 16 Pro Max on **2026-10-07**; see the property-overview checkpoint
+below. At the earlier **2026-10-04** checkpoint, Preview **37**
+was installed on that phone, with the installed version confirmed
 by the device app listing. The user confirmed resolving developer-trust error
 10002 and completing the Owner email/code, password, home creation, and 3D model
 setup on the physical iPhone. A read-only staging check confirmed the verified
@@ -28,6 +30,11 @@ includes the authenticated simulation timer fix.
 | Member | Whole home | General devices, appliances, lights, climate, live cameras/history, and routines. No default gate/door opening, cooking/safety changes, alarm actions, camera settings, or invitations. |
 | Guest | Explicitly assigned rooms | Device viewing, lights, and climate. Optional expiry. |
 | Tenant | Explicitly assigned rooms | Guest controls plus general devices such as TV, fan, and blinds. Permanent until changed or removed. |
+
+Room scope in this table governs live information and actions. Current members
+also receive a **property overview** of the exterior and grounds. Guest/Tenant
+interiors remain limited to their assigned rooms unless the Owner explicitly
+shares the interior layout; that visual grant does not expand room/device access.
 
 **A Member assigned a bedroom still has whole-home room access.** Use Guest or
 Tenant for room-limited access. Shared spaces must also be explicitly assigned.
@@ -73,10 +80,38 @@ one account is not evidence of physical or cross-account device synchronization.
    3D room** (or **Edit 3D connection**). Select its authored model room, match
    same-kind cloud devices to model positions, and save. Unmapped devices remain
    in their room collection. Names are not used to infer access or bindings.
-4. Review **People → Members → Room access / Action permissions**. Room-limited
-   users receive the permitted room view, device list, hotspots, and controls.
+4. Review **People → Members → Rooms & interior layout / Action permissions**.
+   Room-limited users receive the property overview and their permitted room
+   interiors, device list, hotspots, and controls.
    Administrative tools and unauthorized cameras are hidden; action permission
    is checked again when a control is used.
+
+## Property overview and shared interiors
+
+Guest/Tenant sessions open on the full exterior and landscaped property, with
+orbit/zoom and a direct route to their assigned rooms. Unshared interiors are
+hidden behind tinted glazing in this exterior presentation. Device hotspots
+appear only for separately permitted devices.
+
+The verified homeowner can open **Members → Rooms & interior layout → Interior
+layout → Share interior layout** for an accepted Guest or Tenant. This permits a
+furnished interior tour and floor navigation. Unassigned rooms are marked
+**Layout only**; their live device states, hotspots, controls, occupancy, cameras,
+and activity are not shared. Hidden lights, screens, blinds, irrigation, and gate
+movement use neutral presentation state rather than the restricted readings.
+
+Migration 019 stores consent on the specific home membership. Only the canonical
+home owner may change it through `set_member_interior_layout`; generic membership
+writes cannot set the flag, and Admins cannot grant it. A changed membership role,
+identity, home, or access deadline resets the consent. Granting expired Guest
+access is rejected; revoking an existing consent remains possible. The app shows
+the confirmed server snapshot rather than granting visibility optimistically.
+
+Renderer `propertyOverview` and `interiorLayout` grants are independent of
+`roomIds`, `deviceIds`, and `controllableDeviceIds`. Sharing a layout neither sets
+`fullHome` nor changes device or room row-level security. Revocation on another
+device arrives at the normal membership refresh; it is applied atomically when
+received. Membership expiry removes both overview and layout access.
 
 Model bindings are unique per home and saved as one transaction. Another room's
 or household's device cannot be attached through this operation. Connecting a
@@ -113,7 +148,32 @@ and cloud operations remain protected by server authorization.
 
 ## Verification and deployment
 
-The authenticated staging milestone has the following evidence:
+### Property overview checkpoint — 2026-10-07
+
+Preview **38** includes exterior access for current members and optional
+owner-confirmed interior sharing for Guests/Tenants. Verification completed
+before packaging; the signed Release build was installed and launched on October 7.
+
+| Check | Result |
+| --- | --- |
+| Full `npm run verify` | 173 app suites / 2,464 tests; 62 scene files / 738 tests; 127 bridge tests; 45 script tests; app/edge TypeScript, dependency and release checks passed |
+| Fresh PostgreSQL 17 | All 19 migrations; nine SQL suites / 414 assertions passed, including 45 interior-sharing checks; temporary database removed |
+| Hosted staging | Migration 019 applied only to staging. Owner share/revoke succeeds; Guest self-grant RPC and direct-column mutation are rejected; the same six devices remain visible |
+| Authenticated browser | Owner switch saves; Guest can tour shared furnished floors without private hotspots; revocation returns an open unassigned tour to exterior at the next refresh; assigned Pendant light still works and Front entry door remains blocked; no browser errors |
+| Responsive presentation | Reviewed at 375 × 667, 430 × 932, 768 × 1024, and 1024 × 768; no vertical page overflow; corrected the switch track's touch-target sizing |
+| Scene packaging | Web and offline native bundles rebuilt; native scene is approximately 28.1 MiB |
+| Native packaging | Preview 38 Release build passed; bundle/schemes, device profile coverage and strict signature verified; production metadata restored; device listing confirms installed version 1.0.0 (38), and launch succeeded |
+| Cleanup | Disposable QA home, two synthetic accounts, and temporary credential record removed; no real membership consent changed |
+| Physical check pending | Owner sharing switch and Guest exterior/interior/revocation flow on Preview 38; installation/launch alone does not establish those UI results |
+
+The original 24-hour test Guest grant ended October 5. It was not extended by
+this work; a fresh, deliberate Owner invitation is needed for another physical
+Guest test if access remains expired. Production and physical iPad testing are
+unchanged.
+
+### Earlier account and lifecycle checkpoint — 2026-10-04
+
+The earlier authenticated staging milestone has the following evidence:
 
 | Check | Result |
 | --- | --- |

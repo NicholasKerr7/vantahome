@@ -4,6 +4,7 @@ import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import ProfileScreen from "../ProfileScreen";
 import Pressable from "../../components/Pressable";
 import MemberPermissionEditor from "../../components/MemberPermissionEditor";
+import ThemedSwitch from "../../components/ThemedSwitch";
 import { ProfileAvailabilityRow, ProfileToggle } from "../../features/household/ProfileControls";
 import { useHomeStore, type HouseholdMember } from "../../store/useHomeStore";
 
@@ -19,6 +20,7 @@ const mockRespondInvite = jest.fn();
 const mockSyncMembership = jest.fn();
 const mockApplyMembership = jest.fn();
 const mockSetRooms = jest.fn();
+const mockSaveMemberLayout = jest.fn();
 
 jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: require("react-native").View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock("../../services/supabaseClient", () => ({
@@ -37,6 +39,10 @@ jest.mock("../../services/membership", () => ({
   syncMembershipFromSupabase: (...args: unknown[]) => mockSyncMembership(...args),
 }));
 jest.mock("../../services/roomMembers", () => ({ setRoomMembershipRemote: (...args: unknown[]) => mockSetRooms(...args) }));
+jest.mock("../../services/memberLayout", () => ({
+  ...jest.requireActual("../../services/memberLayout"),
+  saveMemberInteriorLayout: (...args: unknown[]) => mockSaveMemberLayout(...args),
+}));
 jest.mock("../../services/memberPermissions", () => ({
   setMemberPermissionOverrideRemote: (...args: unknown[]) => mockSetPermission(...args),
 }));
@@ -63,22 +69,23 @@ jest.mock("../../components/LandscapeFrame", () => {
 });
 
 const owner: HouseholdMember = {
-  id: "owner", userId: "10000000-0000-4000-8000-000000000001", name: "Owner", role: "Owner", status: "home",
+  id: "10000000-0000-4000-8000-000000000001", userId: "10000000-0000-4000-8000-000000000001", name: "Owner", role: "Owner", status: "home",
 };
 const administrator: HouseholdMember = {
-  id: "admin", userId: "10000000-0000-4000-8000-000000000002", name: "Administrator", role: "Admin", status: "home",
+  id: "10000000-0000-4000-8000-000000000002", userId: "10000000-0000-4000-8000-000000000002", name: "Administrator", role: "Admin", status: "home",
 };
 const peer: HouseholdMember = {
-  id: "peer", userId: "10000000-0000-4000-8000-000000000003", name: "Peer administrator", role: "Admin", status: "away",
+  id: "10000000-0000-4000-8000-000000000003", userId: "10000000-0000-4000-8000-000000000003", name: "Peer administrator", role: "Admin", status: "away",
 };
 const member: HouseholdMember = {
-  id: "member", userId: "10000000-0000-4000-8000-000000000004", name: "Ordinary member", role: "Member", status: "home",
+  id: "10000000-0000-4000-8000-000000000004", userId: "10000000-0000-4000-8000-000000000004", name: "Ordinary member", role: "Member", status: "home",
 };
 const homeId = "20000000-0000-4000-8000-000000000001";
 const seed = useHomeStore.getState();
 type TestNode = {
   props: {
     accessibilityLabel?: string;
+    accessibilityRole?: string;
     children?: unknown;
     disabled?: boolean;
     onPress: () => unknown;
@@ -113,6 +120,9 @@ describe("Profile household authorization and account isolation", () => {
     mockApplyMembership.mockReset().mockReturnValue(true);
     mockConfirm.mockReset().mockResolvedValue(undefined);
     mockSetRooms.mockReset().mockResolvedValue(undefined);
+    mockSaveMemberLayout.mockReset().mockImplementation(async (memberId: string, shared: boolean) => {
+      useHomeStore.setState((state) => ({ household: state.household.map((item) => item.id === memberId ? { ...item, shareInteriorLayout: shared } : item) }));
+    });
     mockSetPermission.mockReset().mockResolvedValue(undefined);
     mockGetSession.mockReset().mockResolvedValue({ data: { session: { access_token: "fixture-session" } } });
     mockDeleteResult.mockReset().mockResolvedValue({ data: { user_id: member.userId }, error: null });
@@ -127,6 +137,8 @@ describe("Profile household authorization and account isolation", () => {
     useHomeStore.setState({
       ...seed,
       authenticatedUserId: owner.userId,
+      accountUserId: owner.userId,
+      accountHomeId: homeId,
       activeHomeId: homeId,
       activeMemberId: owner.id,
       membershipReady: true,
@@ -143,7 +155,7 @@ describe("Profile household authorization and account isolation", () => {
 
   /** Mount an authenticated profile and optionally use the menu's direct section target. */
   async function mount(actor = owner, section?: "household" | "preferences") {
-    useHomeStore.setState({ authenticatedUserId: actor.userId, activeMemberId: actor.id });
+    useHomeStore.setState({ authenticatedUserId: actor.userId, accountUserId: actor.userId, activeMemberId: actor.id });
     await act(async () => {
       tree = renderer.create(<ProfileScreen navigation={{ navigate: jest.fn(), goBack: jest.fn() } as never} route={{ key: "Profile", name: "Profile", params: section ? { section } : undefined }} />);
     });
@@ -175,6 +187,20 @@ describe("Profile household authorization and account isolation", () => {
     await press(button(`Permissions for ${target.name}`));
     return screenRoot().findAllByType(MemberPermissionEditor)[0];
   }
+  /** Seed a restricted member without changing their independent room or action grants. */
+  function setRestrictedMember(role: "Guest" | "Tenant" = "Guest", shared = false) {
+    useHomeStore.setState((state) => ({ household: state.household.map((item) => item.id === member.id ? { ...item, role, shareInteriorLayout: shared } : item) }));
+  }
+  /** Reach visual sharing through the same bounded member sheet as room access. */
+  async function openInteriorLayout() {
+    await selectMember(member);
+    await press(button(`Room access for ${member.name}`));
+    await press(button("Interior layout"));
+  }
+  /** Read the accessible native switch rather than relying on its decorative styling. */
+  function interiorLayoutSwitch() {
+    return tree!.root.findAllByType(ThemedSwitch).find((node: { props: React.ComponentProps<typeof ThemedSwitch> }) => node.props.accessibilityLabel === `Share interior layout with ${member.name}`)!;
+  }
   /** Locate a permission on its bounded page, preserving disabled-control assertions. */
   async function permissionButton(label: string, editor: TestNode) {
     while (!button("Previous permissions", editor).props.disabled) await press(button("Previous permissions", editor));
@@ -201,10 +227,11 @@ describe("Profile household authorization and account isolation", () => {
     if (button("Review invitation")) await press(button("Review invitation"));
   }
   function switchHousehold() {
-    const nextOwner = { ...owner, id: "next-owner", userId: "10000000-0000-4000-8000-000000000005" };
+    const nextOwner = { ...owner, id: "10000000-0000-4000-8000-000000000005", userId: "10000000-0000-4000-8000-000000000005" };
     const nextMembers = [nextOwner, { ...member, name: "Different home member" }];
     useHomeStore.setState({
       authenticatedUserId: nextOwner.userId, activeMemberId: nextOwner.id,
+      accountUserId: nextOwner.userId, accountHomeId: "20000000-0000-4000-8000-000000000002",
       activeHomeId: "20000000-0000-4000-8000-000000000002", membershipReady: true,
       household: nextMembers, memberPermissionOverrides: [],
     });
@@ -311,6 +338,111 @@ describe("Profile household authorization and account isolation", () => {
     await press(button('Living room'));
     expect(useHomeStore.getState().roomMembers).toEqual([]);
     expect(alert).toHaveBeenCalledWith('Room access update failed', 'Household administration required');
+  });
+
+  it.each([false, true])("waits for confirmed interior sharing and suppresses repeated changes (initially %s)", async (initialSharing) => {
+    const pending = deferred<void>();
+    setRestrictedMember("Tenant", initialSharing);
+    mockSaveMemberLayout.mockImplementationOnce((memberId: string, shared: boolean) => pending.promise.then(() => {
+      useHomeStore.setState((state) => ({ household: state.household.map((item) => item.id === memberId ? { ...item, shareInteriorLayout: shared } : item) }));
+    }));
+    await mount();
+    await openInteriorLayout();
+    const before = useHomeStore.getState();
+    const control = interiorLayoutSwitch();
+    expect(control.props.value).toBe(initialSharing);
+    await act(async () => {
+      control.props.onValueChange(!initialSharing);
+      control.props.onValueChange(!initialSharing);
+    });
+    expect(mockSaveMemberLayout).toHaveBeenCalledTimes(1);
+    expect(mockSaveMemberLayout).toHaveBeenCalledWith(member.id, !initialSharing);
+    expect(interiorLayoutSwitch().props.disabled).toBe(true);
+    expect(interiorLayoutSwitch().props.value).toBe(initialSharing);
+    await act(async () => { pending.resolve(); });
+    expect(interiorLayoutSwitch().props.value).toBe(!initialSharing);
+    expect(interiorLayoutSwitch().props.disabled).toBe(false);
+    expect(useHomeStore.getState().roomMembers).toBe(before.roomMembers);
+    expect(useHomeStore.getState().memberPermissionOverrides).toBe(before.memberPermissionOverrides);
+  });
+
+  it("keeps interior sharing unchanged on failure and offers the same control for retry", async () => {
+    setRestrictedMember();
+    mockSaveMemberLayout.mockRejectedValueOnce(new Error("Homeowner confirmation could not be verified."));
+    await mount();
+    await openInteriorLayout();
+    await act(async () => { interiorLayoutSwitch().props.onValueChange(true); });
+    expect(interiorLayoutSwitch().props.value).toBe(false);
+    expect(interiorLayoutSwitch().props.disabled).toBe(false);
+    expect(screenRoot().findAllByType(Text).some((node) => node.props.accessibilityRole === "alert" && node.props.children === "Homeowner confirmation could not be verified.")).toBe(true);
+    await act(async () => { interiorLayoutSwitch().props.onValueChange(true); });
+    expect(interiorLayoutSwitch().props.value).toBe(true);
+    expect(mockSaveMemberLayout).toHaveBeenCalledTimes(2);
+    expect(screenRoot().findAllByType(Text).some((node) => node.props.accessibilityRole === "alert")).toBe(false);
+  });
+
+  it("keeps an administrator's interior sharing read-only, including programmatic callbacks", async () => {
+    setRestrictedMember();
+    await mount(administrator);
+    await openInteriorLayout();
+    expect(interiorLayoutSwitch().props.disabled).toBe(true);
+    await act(async () => { interiorLayoutSwitch().props.onValueChange(true); });
+    expect(mockSaveMemberLayout).not.toHaveBeenCalled();
+    expect(interiorLayoutSwitch().props.value).toBe(false);
+    expect(button("Rooms")).toBeDefined();
+  });
+
+  it("rechecks the owner's role when a previously enabled layout callback fires", async () => {
+    setRestrictedMember();
+    await mount();
+    await openInteriorLayout();
+    const callback = interiorLayoutSwitch().props.onValueChange;
+    await act(async () => {
+      useHomeStore.setState((state) => ({ household: state.household.map((item) => item.id === owner.id ? { ...item, role: "Admin" } : item) }));
+      callback(true);
+    });
+    expect(mockSaveMemberLayout).not.toHaveBeenCalled();
+    expect(interiorLayoutSwitch().props.disabled).toBe(true);
+  });
+
+  it("requires the verified account home before offering interior sharing", async () => {
+    setRestrictedMember();
+    useHomeStore.setState({ accountHomeId: "20000000-0000-4000-8000-000000000099" });
+    await mount();
+    await openInteriorLayout();
+    expect(interiorLayoutSwitch().props.disabled).toBe(true);
+    await act(async () => { interiorLayoutSwitch().props.onValueChange(true); });
+    expect(mockSaveMemberLayout).not.toHaveBeenCalled();
+  });
+
+  it("does not expose a delayed sharing error after changing accounts", async () => {
+    const pending = deferred<void>();
+    setRestrictedMember();
+    mockSaveMemberLayout.mockReturnValueOnce(pending.promise);
+    await mount();
+    await openInteriorLayout();
+    await act(async () => { interiorLayoutSwitch().props.onValueChange(true); });
+    await act(async () => { switchHousehold(); });
+    await act(async () => { pending.reject(new Error("Previous account sharing failed")); });
+    expect(screenRoot().findAllByType(Text).some((node) => node.props.children === "Previous account sharing failed")).toBe(false);
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it("blocks a new interior grant for an expired guest while retaining revocation", async () => {
+    setRestrictedMember();
+    useHomeStore.setState((state) => ({ household: state.household.map((item) => item.id === member.id ? { ...item, accessExpiresAt: "2020-01-01T00:00:00Z" } : item) }));
+    await mount();
+    await openInteriorLayout();
+    expect(interiorLayoutSwitch().props.disabled).toBe(true);
+    await act(async () => { interiorLayoutSwitch().props.onValueChange(true); });
+    expect(mockSaveMemberLayout).not.toHaveBeenCalled();
+    await act(async () => {
+      useHomeStore.setState((state) => ({ household: state.household.map((item) => item.id === member.id ? { ...item, shareInteriorLayout: true } : item) }));
+    });
+    expect(interiorLayoutSwitch().props.disabled).toBe(false);
+    await act(async () => { interiorLayoutSwitch().props.onValueChange(false); });
+    expect(mockSaveMemberLayout).toHaveBeenCalledWith(member.id, false);
+    expect(interiorLayoutSwitch().props.value).toBe(false);
   });
 
   it("does not apply a completed room grant to another account's household", async () => {

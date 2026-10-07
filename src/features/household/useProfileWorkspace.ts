@@ -34,6 +34,7 @@ import { runtimePolicy } from "../../config/runtimeMode";
 import { cancelAuthFlow, waitForAuthExchange } from "../../services/authFlow";
 import { buildInvitationAccess, type GuestAccessHours } from "./invitationAccess";
 import { isInvitationExpired } from "../home-access/invitationExpiry";
+import { useInteriorLayoutSharing } from "./useInteriorLayoutSharing";
 
 /** Reject delayed household mutations after changing home, account, or session. */
 function scopeIsCurrent(previous: ReturnType<typeof useHomeStore.getState>) {
@@ -58,6 +59,7 @@ function canInviteFromState(state: ReturnType<typeof useHomeStore.getState>, req
 
 /** Keep profile edits and protected household actions separate from their paged presentation. */
 export function useProfileWorkspace(navigation: { goBack: () => void }) {
+  const interiorLayoutSharing = useInteriorLayoutSharing();
   const profile = useHomeStore((s) => s.profile);
   const setProfile = useHomeStore((s) => s.setProfile);
   const prefs = useHomeStore((s) => s.preferences);
@@ -628,6 +630,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     canEditMember,
     canEditPermission,
     updateRoomAccess, roomAccessBusy,
+    interiorLayoutSharing,
     updatePermissionOverride,
     serviceItems,
     onSave,

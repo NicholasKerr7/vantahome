@@ -18,6 +18,7 @@ type HomeMemberRow = {
   user_id: string;
   role: string;
   access_expires_at?: string | null;
+  share_interior_layout?: boolean;
 };
 
 type RoomMemberRow = {
@@ -107,7 +108,7 @@ export async function syncMembershipFromSupabase(
 
   const { data: membersData, error: membersError } = await supabase
     .from("home_members")
-    .select("user_id, role, access_expires_at")
+    .select("user_id, role, access_expires_at, share_interior_layout")
     .eq("home_id", membership.home_id);
 
   const { data: roomsData, error: roomsError } = await supabase
@@ -177,6 +178,7 @@ export async function syncMembershipFromSupabase(
           : "Member",
       role: mapRole(row.role),
       accessExpiresAt: row.access_expires_at,
+      shareInteriorLayout: row.share_interior_layout === true,
       status: "away",
     })) ?? [];
 

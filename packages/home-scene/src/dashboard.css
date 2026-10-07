@@ -243,3 +243,25 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
 /* Keep access transitions private without allowing the empty state to scroll. */
 .scene-access-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 100dvh; padding: 24px; text-align: center; background: var(--surface); color: var(--text); }
 .scene-access-empty p { max-width: 360px; }
+
+/* Shared layouts keep the same bounded dashboard and make the assigned-room route explicit. */
+.room-layout-label { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; }
+.dashboard-shell .scoped-view-controls { display: flex; }
+.dashboard-shell .scoped-view-controls button { flex: 1; white-space: nowrap; }
+.property-companion { justify-content: flex-start; }
+.property-companion-symbol { display: grid; place-items: center; width: 54px; height: 54px; flex-shrink: 0; border: 1px solid var(--accent-border); border-radius: 18px; color: var(--accent-text); background: var(--accent-dark); }
+.property-companion-intro h2 { margin: 10px 0 8px; font-size: clamp(18px, 1.5vw, 23px); line-height: 1.2; letter-spacing: -.5px; color: var(--text); }
+.property-companion-intro p, .property-control-note, .property-assigned-rooms > p { color: var(--text-soft); font-size: 12px; line-height: 1.6; }
+.property-assigned-rooms { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; min-height: 0; }
+.property-assigned-rooms h3 { font-size: 10px; font-weight: 500; color: var(--muted); }
+.property-assigned-rooms button { display: flex; align-items: center; gap: 11px; padding: 12px; min-height: 56px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-raised); color: var(--text); text-align: left; }
+.property-assigned-rooms button > span { flex: 1; font-size: 12px; }
+.property-assigned-rooms button small { display: block; margin-top: 4px; font-size: 10px; color: var(--text-soft); }
+.property-control-note { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
+@media (max-height: 620px) {
+  .property-companion-symbol { display: none; }
+  .property-companion-intro h2 { margin-block: 5px; font-size: 18px; }
+  .property-assigned-rooms { gap: 5px; margin-top: 0; }
+  .property-assigned-rooms button { min-height: 44px; padding: 8px 10px; }
+  .property-control-note { padding-top: 6px; font-size: 10px; }
+}
