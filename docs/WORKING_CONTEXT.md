@@ -61,8 +61,12 @@ Last maintained: **2026-10-07**. Read this before rediscovering the project.
   app listing confirms 1.0.0 (39), and the developer service launched it.
 - The user confirmed the requested Preview 39 iPhone Guest renewal check works:
   renewal, return with the existing account, and retained Living-room/control
-  restrictions. Do not repeat that test. Shared-interior consent/revocation and
-  the remaining connection/session checks are separate.
+  restrictions. Do not repeat that test.
+- Preview 39 iPhone offline/reconnect also passed by user report: with Wi-Fi off
+  and Airplane Mode on, the supplied screenshot shows **Unable to verify home
+  access**, **Retry**, and **Sign out**. Restoring connectivity returned access;
+  door control remained blocked. Do not repeat this check or infer whether Retry
+  was tapped, how long recovery took, or broader lifecycle behavior from it.
 
 ## Current implementation and evidence
 
@@ -114,9 +118,10 @@ Previous property-sharing evidence (no scene source changed for Preview 39):
 
 ## Resume next
 
-1. Next physical check: Guest background/resume and offline/reconnect. Renewal
-   and retained room/control permissions already passed by the user's report.
-2. Other physical checks: shared-interior consent/revocation, warm recovery,
+1. Next physical check: Owner shared-interior consent and Guest layout/revocation.
+   Guest renewal and offline/reconnect with retained door restrictions already
+   passed by the user's report; do not repeat them.
+2. Other physical checks: online background/resume, warm recovery,
    explicit invitation-link routing, and observed Guest deadline expiry.
    Do not represent automated/browser results as physical-device results.
 3. Continue work from relevant source/tests and cached evidence; do not rerun all

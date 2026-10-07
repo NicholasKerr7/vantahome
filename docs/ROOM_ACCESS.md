@@ -173,11 +173,16 @@ before packaging; the signed Release build was installed and launched on October
 | Scene packaging | Web and offline native bundles rebuilt; native scene is approximately 28.1 MiB |
 | Native packaging | Preview 38 Release build passed; bundle/schemes, device profile coverage and strict signature verified; production metadata restored; device listing confirms installed version 1.0.0 (38), and launch succeeded |
 | Cleanup | Disposable QA home, two synthetic accounts, and temporary credential record removed; no real membership consent changed |
-| Physical check pending | Owner sharing switch and Guest exterior/interior/revocation flow on Preview 38; installation/launch alone does not establish those UI results |
+| Physical check pending | Owner sharing switch and Guest exterior/interior/revocation flow, retained in installed Preview 39; installation/launch alone does not establish those UI results |
 
 The original 24-hour test Guest grant ended October 5. It was not extended by
-this work. Preview 39 now provides a deliberate Owner **Renew access** action
-for the next physical Guest test. Production and physical iPad testing are unchanged.
+this work. The user subsequently confirmed Preview 39 Owner **Renew access**,
+Guest return with the existing account, and retained room/control restrictions.
+The user also supplied an offline iPhone screenshot showing **Unable to verify
+home access**, **Retry**, and **Sign out** with Airplane Mode on and Wi-Fi off,
+then confirmed access returned after reconnecting with the door still blocked.
+Recovery timing and use of Retry were not specified. Production and physical
+iPad testing are unchanged.
 
 ### Earlier account and lifecycle checkpoint — 2026-10-04
 
@@ -197,7 +202,7 @@ The earlier authenticated staging milestone has the following evidence:
 | Physical iPhone session scope | User confirmed that fully closing and reopening Preview retained Guest restrictions, then signing back in with the existing Owner credentials restored the full home |
 | Physical iPhone password recovery | User confirmed requesting the Owner reset from Preview, fully closing the app, opening the newest email link to password setup, saving a new password privately, and signing back in with it to the full Owner home; this also covers the recovery cold callback |
 | Focused lifecycle/recovery sweep (October 4) | Nine app suites / 111 tests passed, plus app TypeScript and diff checks. Nine added cases cover failed membership refresh and recovery, foreground verification, late responses after backgrounding or a new session, Guest expiry stopping runtimes, and password-update success, retry, and account-change boundaries |
-| Native checks pending | Warm recovery, explicit warm/cold invitation links, foreground/background transitions, network loss, and expiry observed at its actual deadline |
+| Native checks pending | Warm recovery, explicit warm/cold invitation links, online foreground/background transitions, and expiry observed at its actual deadline; the later Preview 39 offline/reconnect report is recorded above |
 
 The focused sweep uses controlled network responses and clocks with the real
 membership snapshot installer, permission selectors, and app lifecycle host.

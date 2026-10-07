@@ -9,8 +9,11 @@ native source metadata was restored to its original bytes. This build adds
 [Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and retains Preview 38's
 property overview and owner-controlled interior sharing. Browser/automated checks
 passed. The user confirmed the Preview 39 iPhone Guest renewal check, including
-return with the existing account and retained room/control restrictions. Shared
-interior consent/revocation and the remaining lifecycle checks are separate.
+return with the existing account and retained room/control restrictions. A
+separate iPhone offline/reconnect check also passed: the screenshot shows
+**Unable to verify home access** while in Airplane Mode with Wi-Fi off, and the
+user reports access returned after reconnecting with the door still blocked.
+Shared-interior consent/revocation and the remaining lifecycle checks are separate.
 
 Build 36 could not install because its seven-day Apple development profile had
 expired at **11:59:51 p.m. on October 3, America/New_York**
@@ -46,7 +49,7 @@ reset from Preview, fully closing the app, opening the newest email link to
 **Set a new password**, saving privately, and signing back in with the new
 password restored the full Owner home. This is user-reported physical-iPhone
 evidence for recovery and its cold callback. Warm recovery, explicit invitation
-link routing, foreground/background transitions, network loss, and expiry
+link routing, online foreground/background transitions, and expiry
 observed at its deadline remain separate pending checks.
 
 ## Explicit native identities
@@ -156,8 +159,10 @@ Review the completed build before installing it on the intended device.
 Invitation delivery/code entry, Guest restrictions after reopening, and
 Guest-to-Owner account switching passed by the user's physical-iPhone report
 above. Owner password recovery and its cold callback also passed by user report.
-Warm recovery, explicit warm/cold invitation links, background/resume, network
-loss, and Guest expiry at its deadline remain pending. Other authentication
+Preview 39 offline/reconnect also passed by user report and screenshot as recorded
+above; no particular recovery timing or Retry interaction was confirmed.
+Warm recovery, explicit warm/cold invitation links, online background/resume,
+and Guest expiry at its deadline remain pending. Other authentication
 providers require separate verification if enabled.
 
 The October 4 focused sweep passed nine app suites / 111 tests and app TypeScript.

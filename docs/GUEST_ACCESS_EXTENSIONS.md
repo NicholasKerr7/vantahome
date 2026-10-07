@@ -80,7 +80,12 @@ October 7, 2026:
   The user subsequently confirmed the requested iPhone renewal check works:
   renewal, Guest return with the existing account, Living-room light access, and
   blocked door control. This is user-reported physical evidence; it does not
-  establish custom deadlines, automatic expiry, or network/lifecycle behavior.
+  establish custom deadlines or automatic expiry.
+  In a separate physical check, the user supplied an Airplane Mode screenshot
+  showing **Unable to verify home access**, **Retry**, and **Sign out** with Wi-Fi
+  off, then confirmed that reconnecting restored access with door control still
+  blocked. Recovery timing and use of Retry were not specified; broader lifecycle
+  behavior remains separate.
   Physical iPad testing remains deferred.
 
 The first hosted stale-request check exposed PostgREST's retry behavior for

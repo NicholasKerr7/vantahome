@@ -16,8 +16,11 @@ see [Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and the earlier
 [property checkpoint](ROOM_ACCESS.md#property-overview-checkpoint--2026-10-07).
 The new flow has browser/API coverage. The user also confirmed the Preview 39
 iPhone Guest renewal check works, including return with the existing account and
-retained Living-room/control restrictions. Network/lifecycle and actual deadline
-expiry checks remain separate.
+retained Living-room/control restrictions. The subsequent physical offline check
+showed **Unable to verify home access**, **Retry**, and **Sign out** in the user's
+screenshot with Airplane Mode on and Wi-Fi off. The user confirmed reconnecting
+restored access and the door remained blocked; recovery timing and use of Retry
+were not specified. Other lifecycle and actual deadline expiry checks remain separate.
 On Preview 37, the user confirmed resolving developer trust and completing the
 Owner email/code, password, household creation, and model preparation steps on
 the physical iPhone. A read-only staging check confirmed email verification, a
@@ -31,7 +34,7 @@ restrictions survived fully closing and reopening Preview, and signing back in
 with the existing Owner credentials restored the full home. The user subsequently
 confirmed Owner password recovery, including its cold callback and signing back
 in with the new password. Warm recovery, explicit invitation-link routing,
-other lifecycle checks, network loss, and observed Guest expiry remain pending.
+other lifecycle checks and observed Guest expiry remain pending.
 Production is unchanged.
 
 ## New invitee flow
@@ -381,8 +384,8 @@ An initial Owner Auth invitation creates no household invite card: after passwor
 setup, **No pending invitations** is expected. The completed Owner route was
 **Set up my home → Create my home → Prepare my 3D home**.
 
-**Pending:** warm recovery, explicit warm/cold invitation links, foreground/background
-transitions, network-loss handling, and expiry observed at its actual deadline
+**Pending:** warm recovery, explicit warm/cold invitation links, online foreground/background
+transitions, and expiry observed at its actual deadline
 on the physical iPhone. The passed reopening and account-switch checks do not
 establish those separate flows. Keep iPad verification deferred and
 physical hub control out of this simulation milestone. See
