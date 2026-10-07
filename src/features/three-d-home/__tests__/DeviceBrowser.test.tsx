@@ -45,6 +45,8 @@ test('limits room counts and device choices to the route visibility scope', () =
   const snapshot = { ...client.getSnapshot(), ready: true, access: FULL_SCENE_ACCESS };
   const screen = render(<DeviceBrowser snapshot={snapshot} client={client} onSelect={jest.fn()} allowedDeviceIds={['living-light']} />);
   expect(screen.getByLabelText('Living room, 1 devices')).toBeTruthy();
+  expect(screen.getAllByTestId(/^room-artwork-/, { includeHiddenElements: true })).toHaveLength(1);
+  expect(screen.getByTestId('room-artwork-living', { includeHiddenElements: true })).toBeTruthy();
   expect(screen.queryByLabelText(/Primary suite,/)).toBeNull();
   fireEvent.press(screen.getByLabelText('Living room, 1 devices'));
   const device = DEVICES.find((item) => item.id === 'living-light')!;

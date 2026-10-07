@@ -1,6 +1,8 @@
 import React from "react";
 import { fireEvent, render } from "@testing-library/react-native";
 import DeviceCollectionCard from "../DeviceCollectionCard";
+import CinematicCardArtwork from "../../features/cinematic-artwork/CinematicCardArtwork";
+import { deviceArtwork } from "../../features/cinematic-artwork/artwork";
 
 jest.mock("@expo/vector-icons", () => ({
   Ionicons: require("react-native").View,
@@ -14,6 +16,19 @@ const presentation = {
   active: true,
   quickActionLabel: "Turn off",
 };
+
+test("reference artwork stays unchanged when the actual device switches off", () => {
+  const artwork = deviceArtwork({ kind: "light", id: "living-light" });
+  const onQuickAction = jest.fn();
+  const screen = render(<DeviceCollectionCard {...presentation} artwork={artwork} onOpen={jest.fn()} onQuickAction={onQuickAction} />);
+  expect(screen.UNSAFE_getByType(CinematicCardArtwork).props.artwork).toBe(artwork);
+  screen.rerender(<DeviceCollectionCard {...presentation} artwork={artwork} active={false} status="Off" value="Off" quickActionLabel="Turn on" onOpen={jest.fn()} onQuickAction={onQuickAction} />);
+  expect(screen.UNSAFE_getByType(CinematicCardArtwork).props.artwork).toBe(artwork);
+  expect(screen.getByText("Off")).toBeTruthy();
+  fireEvent.press(screen.getByRole("button", { name: "Turn on: Primary suite ceiling lights" }));
+  expect(onQuickAction).toHaveBeenCalledTimes(1);
+  expect(screen.getAllByRole("button")).toHaveLength(2);
+});
 
 test("keeps the favorite action independent from device controls and reports selection", () => {
   const onOpen = jest.fn();

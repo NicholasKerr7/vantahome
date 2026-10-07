@@ -16,6 +16,8 @@ import { controlStyles as styles } from './deviceControlsStyles';
 import { useDeviceRoutines } from './useDeviceRoutines';
 import type { SimulationDeviceControls } from './modelDeviceControls';
 import { controlPageAnchor, getNativeControlCapacity, resolveControlPage, type NativeControlSpace } from './nativeControlPagination';
+import CinematicCardArtwork from '../cinematic-artwork/CinematicCardArtwork';
+import { deviceArtwork } from '../cinematic-artwork/artwork';
 
 const GROUPS = ['controls', 'modes', 'schedule', 'status'] as const;
 const GROUP_LABELS = { controls: 'Controls', modes: 'Modes', schedule: 'Routines', status: 'Status' };
@@ -48,6 +50,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
         <CinematicSurface style={[styles.card, compact && styles.compact]}>
           <View accessibilityViewIsModal style={[styles.cardContent, compact && styles.compactContent]}>
           <View style={styles.row}>
+            {!browsing && device && width >= 390 && fontScale <= 1.15 && <CinematicCardArtwork artwork={deviceArtwork(device)} variant="thumbnail" />}
             <View style={styles.grow}><Text numberOfLines={1} style={styles.eyebrow}>{browsing ? 'YOUR HOME' : getRoom(device?.roomId ?? '').name.toUpperCase()}</Text>
               <Text accessibilityRole="header" accessibilityLabel={browsing ? 'Device library' : device?.name} numberOfLines={compact ? 1 : 2} style={[styles.title, compact && styles.compactTitle]}>{browsing ? 'Device library' : device?.name}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close device controls" onPress={onClose} style={styles.button}><Text style={styles.label}>Done</Text></Pressable>

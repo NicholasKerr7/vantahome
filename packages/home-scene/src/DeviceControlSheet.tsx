@@ -7,6 +7,8 @@ import { deviceActionFeedback, deviceStatus, quickActionLabel } from './deviceCa
 import { gasStatusTone } from './gasSimulation';
 import { getDevice, getRoom, type DeviceId } from './data';
 import { useHomeStore } from './state';
+import { CinematicArtwork } from './CinematicCardArtwork';
+import { deviceArtwork } from './cinematicArtwork';
 import './device-control-sheet.css';
 
 /** Keep complete device controls in one screen without moving the home or its camera. */
@@ -62,7 +64,8 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
   if (!visible) return null;
   return <dialog ref={dialog} id="full-device-controls" className="device-control-sheet" aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
-      <header className="device-sheet-heading" data-device-tone={tone}>
+      <header className="device-sheet-heading has-cinematic-artwork" data-device-tone={tone}>
+        <CinematicArtwork artwork={deviceArtwork(device)} presentation="identity" />
         <span className={`device-sheet-icon ${current.on ? 'is-on' : ''}`}><Icon size={24} strokeWidth={1.5} aria-hidden="true" /></span>
         <div className="device-sheet-identity">
           <p className="device-sheet-location">{getRoom(device.roomId).name}<span aria-hidden="true"> · </span>Full controls</p>

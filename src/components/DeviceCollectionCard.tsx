@@ -9,6 +9,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Pressable from "./Pressable";
 import { theme } from "../theme/theme";
+import CinematicCardArtwork from "../features/cinematic-artwork/CinematicCardArtwork";
+import type { ArtworkKey } from "../features/cinematic-artwork/artwork";
 
 /** Both paged collections reserve this height before applying the user's font scale. */
 export const DEVICE_COLLECTION_CARD_MIN_HEIGHT = 192;
@@ -19,6 +21,7 @@ export type DeviceCollectionCardProps = {
   value: string;
   caption: string;
   active: boolean;
+  artwork?: ArtworkKey;
   quickActionLabel: string;
   onOpen: () => void;
   onQuickAction: () => void;
@@ -37,6 +40,7 @@ export default function DeviceCollectionCard({
   value,
   caption,
   active,
+  artwork = "device-generic",
   quickActionLabel,
   onOpen,
   onQuickAction,
@@ -49,6 +53,7 @@ export default function DeviceCollectionCard({
 }: DeviceCollectionCardProps) {
   return (
     <View style={[styles.card, active && styles.activeCard, style]}>
+      <CinematicCardArtwork artwork={artwork} testID="device-collection-artwork" />
       <Pressable
         accessibilityLabel={`${name}, ${status}. Full controls`}
         accessibilityHint={

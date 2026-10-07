@@ -111,6 +111,7 @@ describe("bounded card composition", () => {
       markup.match(/dashboard-device-row dashboard-device-card/g),
     ).toHaveLength(2);
     expect(markup).toContain("Next devices");
+    expect(markup.match(/data-artwork=/g)).toHaveLength(3);
   });
 
   it("shows exact room inventory counts and four distinct room cards", () => {
@@ -126,6 +127,7 @@ describe("bounded card composition", () => {
       />,
     );
     expect(markup.match(/data-library-room=/g)).toHaveLength(4);
+    expect(markup.match(/data-artwork=/g)).toHaveLength(4);
     for (const room of ROOMS.slice(0, 4)) {
       const count = DEVICES.filter(
         (device) => device.roomId === room.id,
@@ -150,6 +152,7 @@ describe("bounded card composition", () => {
       />,
     );
     expect(markup.match(/data-library-device=/g)).toHaveLength(4);
+    expect(markup.match(/data-artwork=/g)).toHaveLength(4);
     expect(markup.match(/Open full controls/g)).toHaveLength(4);
     expect(markup).toContain("library-card-state");
     expect(markup).toContain("Living room");

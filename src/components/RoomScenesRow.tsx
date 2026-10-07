@@ -6,13 +6,15 @@ import ModalCard from "./ModalCard";
 import ModalForm, { useModalViewportStyle } from "./ModalForm";
 import { DeepAction } from "./deep/DeepScreen";
 import { theme } from "../theme/theme";
-import { useHomeStore } from "../store/useHomeStore";
+import { useHomeStore, type Scene } from "../store/useHomeStore";
 import { useResponsive } from "../theme/layout";
 import { runtimePolicy } from "../config/runtimeMode";
+import CinematicCardArtwork from "../features/cinematic-artwork/CinematicCardArtwork";
+import { sceneArtwork } from "../features/cinematic-artwork/artwork";
 
 type Props = {
   title?: string;
-  scenes: Array<{ id: string; name: string }>;
+  scenes: Array<Pick<Scene, "id" | "name" | "modelPreset">>;
   onRun: (sceneId: string) => void;
   horizontalInset?: number;
 };
@@ -56,6 +58,7 @@ export default function RoomScenesRow({
               scene.id === activeSceneId && styles.selected,
             ]}
           >
+            <CinematicCardArtwork artwork={sceneArtwork(scene)} />
             <Ionicons
               name="sparkles-outline"
               size={15}
@@ -136,6 +139,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     backgroundColor: theme.colors.card2,
+    overflow: "hidden",
   },
   selected: {
     backgroundColor: theme.colors.bg1,

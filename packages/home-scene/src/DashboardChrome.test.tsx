@@ -45,6 +45,7 @@ describe('home workspace chrome', () => {
     expect(header).not.toContain('light-mode-switch');
     expect(header.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
     const markup = renderToStaticMarkup(<DashboardRoomBar onRooms={() => undefined} />);
+    expect(markup).toContain('cinematic-artwork--thumbnail');
     for (const control of ['Choose a room', 'Choose floor', 'Ground', 'Upper']) expect(markup).toContain(control);
   });
 });

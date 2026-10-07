@@ -8,6 +8,8 @@ import { useHomeStore } from './state';
 import { paginateItems } from './dashboardPagination';
 import type { LiveEnvironment } from './environment/useLiveEnvironment';
 import { weatherDescription } from './environment/weatherClient';
+import { CinematicArtwork } from './CinematicCardArtwork';
+import { roomArtwork, sceneArtwork } from './cinematicArtwork';
 import vantahomeMark from '../../../assets/brand/vantahome-mark-256.png?inline';
 
 /** Keep room symbols familiar without coupling navigation to device geometry. */
@@ -83,7 +85,7 @@ export function DashboardRooms({ onBrowse }: { onBrowse: () => void }) {
   const [requested, setRequested] = useState({ roomId, floor, page: 0 });
   const selectedPage = Math.floor(Math.max(0, rooms.findIndex((room) => room.id === roomId)) / 6);
   const page = paginateItems(rooms, requested.roomId === roomId && requested.floor === floor ? requested.page : selectedPage, 6);
-  return <aside className="dashboard-room-rail" aria-label="Room navigation"><div className="dashboard-rail-title"><span className="eyebrow">YOUR SPACE</span><h2>Seaview House<span className="small-dot" /></h2></div><DashboardFloorSwitch /><div className="dashboard-section-label"><span>{canExploreInteriorLayout(access) ? 'Rooms & grounds' : 'Your rooms & property'}</span><span>{rooms.length}</span></div><nav className="dashboard-room-list" aria-label="Rooms">{page.items.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} data-room-id={room.id} aria-current={roomId === room.id ? 'true' : undefined} onClick={() => setRoom(room.id)}><Icon size={18} strokeWidth={1.5} /><span>{room.name}{!canViewSceneRoom(access, room.id) && !room.outdoor ? <small className="room-layout-label">Layout only</small> : null}</span>{roomId === room.id ? <span className="dashboard-selected-dot" /> : null}</button>; })}</nav><div className="dashboard-pager" aria-label="Room pages"><button aria-label="Previous room page" disabled={page.page === 0} onClick={() => setRequested({ roomId, floor, page: page.page - 1 })}><ChevronLeft size={17} /></button><span data-room-page role="status">{page.page + 1} / {page.pages}</span><button aria-label="Next room page" disabled={page.page + 1 === page.pages} onClick={() => setRequested({ roomId, floor, page: page.page + 1 })}><ChevronRight size={17} /></button></div><button className="dashboard-browse" onClick={onBrowse}><Grid2X2 size={17} />All rooms<ChevronRight size={15} /></button></aside>;
+  return <aside className="dashboard-room-rail" aria-label="Room navigation"><div className="dashboard-rail-title"><span className="eyebrow">YOUR SPACE</span><h2>Seaview House<span className="small-dot" /></h2></div><DashboardFloorSwitch /><div className="dashboard-section-label"><span>{canExploreInteriorLayout(access) ? 'Rooms & grounds' : 'Your rooms & property'}</span><span>{rooms.length}</span></div><nav className="dashboard-room-list" aria-label="Rooms">{page.items.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} data-room-id={room.id} aria-current={roomId === room.id ? 'true' : undefined} onClick={() => setRoom(room.id)}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon strokeWidth={1.5} /></CinematicArtwork><span className="dashboard-room-name">{room.name}{!canViewSceneRoom(access, room.id) && !room.outdoor ? <small className="room-layout-label">Layout only</small> : null}</span>{roomId === room.id ? <span className="dashboard-selected-dot" /> : null}</button>; })}</nav><div className="dashboard-pager" aria-label="Room pages"><button aria-label="Previous room page" disabled={page.page === 0} onClick={() => setRequested({ roomId, floor, page: page.page - 1 })}><ChevronLeft size={17} /></button><span data-room-page role="status">{page.page + 1} / {page.pages}</span><button aria-label="Next room page" disabled={page.page + 1 === page.pages} onClick={() => setRequested({ roomId, floor, page: page.page + 1 })}><ChevronRight size={17} /></button></div><button className="dashboard-browse" onClick={onBrowse}><Grid2X2 size={17} />All rooms<ChevronRight size={15} /></button></aside>;
 }
 
 /** Portrait navigation gives the model its own full-width canvas. */
@@ -91,7 +93,7 @@ export function DashboardRoomBar({ onRooms }: { onRooms: () => void }) {
   const roomId = useHomeStore((state) => state.roomId);
   const room = getRoom(roomId);
   const Icon = roomIcon(roomId);
-  return <div className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><Icon size={18} /><span className="dashboard-room-choice"><small>EXPLORE YOUR HOME</small><span>{room.name}</span></span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
+  return <div className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon /></CinematicArtwork><span className="dashboard-room-choice"><small>EXPLORE YOUR HOME</small><span>{room.name}</span></span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
 }
 
 /** Page through the same saved scenes as the native collection without enlarging the home layout. */
@@ -106,9 +108,11 @@ export function DashboardScenes() {
     {paged && <button className="dashboard-scene-page" aria-label="Previous scenes" disabled={page.page === 0} onClick={() => setRequestedPage(page.page - 1)}><ChevronLeft size={17} /></button>}
     <div className={`preset-grid${paged ? ' has-scene-pages' : ''}`}>
       {page.items.map((scene) => {
-        const Icon = icons[MODEL_SCENE_PRESETS.findIndex((preset) => preset.sceneId === scene.id)] ?? Sparkles;
-        return <button key={scene.id} className="dashboard-preset" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id}
-          onClick={() => runScene(scene.id)}><Icon size={17} strokeWidth={1.5} /><span>{scene.name}</span></button>;
+        const presetIndex = MODEL_SCENE_PRESETS.findIndex((preset) => preset.sceneId === scene.id);
+        const Icon = icons[presetIndex] ?? Sparkles;
+        const artwork = sceneArtwork({ name: scene.name, modelPreset: MODEL_SCENE_PRESETS[presetIndex]?.id });
+        return <button key={scene.id} className="dashboard-preset has-cinematic-artwork" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id}
+          onClick={() => runScene(scene.id)}><CinematicArtwork artwork={artwork} /><Icon size={17} strokeWidth={1.5} aria-hidden="true" /><span>{scene.name}</span></button>;
       })}
     </div>
     {paged && <button className="dashboard-scene-page" aria-label="Next scenes" disabled={page.page === page.pages - 1} onClick={() => setRequestedPage(page.page + 1)}><ChevronRight size={17} /></button>}

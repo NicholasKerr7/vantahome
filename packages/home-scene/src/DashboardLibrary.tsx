@@ -11,6 +11,8 @@ import { EnvironmentPanel } from './EnvironmentPanel';
 import type { LiveEnvironment } from './environment/useLiveEnvironment';
 import { libraryCardPageSize } from './dashboardCardPresentation';
 import { gasStatusTone } from './gasSimulation';
+import { CinematicArtwork } from './CinematicCardArtwork';
+import { deviceArtwork, roomArtwork } from './cinematicArtwork';
 import './dashboard-cards.css';
 
 export type DashboardLibraryView = 'rooms' | 'assigned-rooms' | 'devices' | 'settings' | 'environment';
@@ -40,7 +42,8 @@ function LibraryRoomCard({ room, selected, onSelect }: { room: RoomDefinition; s
   const Icon = roomIcon(room.id);
   const access = useHomeStore((state) => state.access);
   const count = DEVICES.filter((device) => device.roomId === room.id && canViewSceneDevice(access, device.id)).length;
-  return <button className="library-item library-space-card" data-library-room={room.id} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
+  return <button className="library-item library-space-card has-cinematic-artwork" data-library-room={room.id} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
+    <CinematicArtwork artwork={roomArtwork(room)} />
     <span className="library-card-top"><span className="library-card-symbol"><Icon size={22} strokeWidth={1.4} aria-hidden="true" /></span><span className="library-card-location">{room.outdoor ? 'Outdoors' : `${room.floor === 'ground' ? 'Ground' : 'Upper'} floor`}</span></span>
     <span className="library-card-identity"><strong>{room.name}</strong></span>
     <span className="library-card-footer"><span>{canViewSceneRoom(access, room.id) ? `${count} ${count === 1 ? 'device' : 'devices'}` : room.outdoor ? 'Exterior overview' : 'Layout only'}</span><span className="library-card-destination">Explore<ChevronRight size={14} aria-hidden="true" /></span></span>
@@ -52,7 +55,8 @@ function LibraryDeviceCard({ device, onSelect }: { device: DeviceDefinition; onS
   const storedState = useHomeStore((state) => state.deviceStates[device.id]);
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
   const Icon = DEVICE_ICONS[device.kind];
-  return <button className="library-item library-device-card" data-library-device={device.id} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-label={`${device.name}, ${getRoom(device.roomId).name}, ${deviceStatus(device, current)}. Open full controls`} onClick={onSelect}>
+  return <button className="library-item library-device-card has-cinematic-artwork" data-library-device={device.id} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-label={`${device.name}, ${getRoom(device.roomId).name}, ${deviceStatus(device, current)}. Open full controls`} onClick={onSelect}>
+    <CinematicArtwork artwork={deviceArtwork(device)} />
     <span className="library-card-top"><span className="library-card-symbol"><Icon size={22} strokeWidth={1.4} aria-hidden="true" /></span><span className="library-card-destination">Controls<ChevronRight size={14} aria-hidden="true" /></span></span>
     <span className="library-card-identity"><small>{getRoom(device.roomId).name}</small><strong>{device.name}</strong></span>
     <span className={`library-card-footer library-card-state ${current.on ? 'library-active' : ''}`}><span className="library-card-state-dot" aria-hidden="true" />{deviceStatus(device, current)}</span>

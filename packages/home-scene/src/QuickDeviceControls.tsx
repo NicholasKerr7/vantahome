@@ -8,6 +8,8 @@ import { PrimaryDeviceRange } from './PrimaryDeviceRange';
 import { primaryDeviceAction, primaryDeviceRange } from './quickDevicePresentation';
 import { gasStatusTone } from './gasSimulation';
 import { useHomeStore } from './state';
+import { CinematicArtwork } from './CinematicCardArtwork';
+import { deviceArtwork } from './cinematicArtwork';
 import './quick-device-controls.css';
 
 interface QuickDeviceControlsProps {
@@ -58,7 +60,8 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
 
   if (!visible) return null;
   return <section ref={panel} id="quick-device-controls" className={`quick-device-controls ${range ? 'has-primary-range' : ''}`} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
-    <div className="quick-device-heading">
+    <div className="quick-device-heading has-cinematic-artwork">
+      <CinematicArtwork artwork={deviceArtwork(device)} presentation="identity" />
       <span className="quick-device-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.5} /></span>
       <div className="quick-device-identity"><p className="quick-device-room">{getRoom(device.roomId).name}</p><h2 id="quick-device-title">{device.name}</h2></div>
       <button type="button" className="quick-device-close" aria-label="Close quick controls" onClick={() => onClose()}><X size={18} aria-hidden="true" /></button>

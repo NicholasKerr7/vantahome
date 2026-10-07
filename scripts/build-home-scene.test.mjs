@@ -1,6 +1,58 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { MODEL_NAMES, contentSecurityPolicy, createNativeHtml, escapeScriptContent, sha256, validateGlb } from './build-home-scene.mjs';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { MODEL_NAMES, contentSecurityPolicy, createNativeHtml, escapeScriptContent, sha256, validateGlb, validateWebBuild } from './build-home-scene.mjs';
+
+/** Create the minimum web artifact inventory and always remove temporary test files. */
+async function withWebBuild(run) {
+  const root = await mkdtemp(join(tmpdir(), 'vantahome-card-package-'));
+  try {
+    await mkdir(join(root, 'models'));
+    await mkdir(join(root, 'assets'));
+    for (const file of ['index.html', 'embedded.html', 'models/site-layout.json', ...MODEL_NAMES.map((name) => `models/${name}.glb`)]) {
+      await writeFile(join(root, file), 'fixture');
+    }
+    await run(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+/** Build a JPEG boundary fixture; image decoding is separately checked in the browser sweep. */
+function jpegBoundary(bytes = 32) {
+  const buffer = Buffer.alloc(bytes);
+  buffer.writeUInt16BE(0xffd8, 0);
+  buffer.writeUInt16BE(0xffd9, bytes - 2);
+  return buffer;
+}
+
+test('packages bounded card references while rejecting unrelated or malformed image output', async () => {
+  await withWebBuild(async (root) => {
+    const path = join(root, 'assets/device-tv-abcd.jpg');
+    await writeFile(path, jpegBoundary());
+    assert.equal((await validateWebBuild(root))['assets/device-tv-abcd.jpg'].bytes, 32);
+    await writeFile(path, '<svg>not a JPEG</svg>');
+    await assert.rejects(validateWebBuild(root), /complete JPEG/u);
+    await rm(path);
+    await writeFile(join(root, 'assets/unrelated.jpg'), jpegBoundary());
+    await assert.rejects(validateWebBuild(root), /Unexpected generated web asset/u);
+  });
+});
+
+test('rejects oversized individual and combined card artwork payloads', async () => {
+  await withWebBuild(async (root) => {
+    const path = join(root, 'assets/room-living-abcd.jpg');
+    await writeFile(path, jpegBoundary(128 * 1024 + 1));
+    await assert.rejects(validateWebBuild(root), /128 KiB/u);
+    await rm(path);
+    for (let index = 0; index < 17; index += 1) {
+      await writeFile(join(root, `assets/device-${index}-abcd.jpg`), jpegBoundary(128 * 1024));
+    }
+    await assert.rejects(validateWebBuild(root), /2 MiB combined/u);
+  });
+});
 
 /** Construct a minimal valid GLB to exercise the packaging boundary without large fixtures. */
 function glb(document) {

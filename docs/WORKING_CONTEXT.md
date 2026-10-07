@@ -73,6 +73,51 @@ Last maintained: **2026-10-07**. Read this before rediscovering the project.
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
 
+## Cinematic reference cards (Preview 42)
+
+- Built-in image generation produced **47 local reference images** for every
+  room family, all 30 device kinds and fixture variants, scene moods, and routine
+  purposes. Optimized JPEGs total **1,751,527 bytes**. Assets and exact prompts:
+  `assets/cinematic/README.md`, `assets/cinematic/prompts.json`.
+- Shared pure selectors live in `packages/home-scene/src/cinematicArtwork.ts`;
+  native presentation is in `src/features/cinematic-artwork`. Native collections,
+  embedded libraries/inspector, scene chips, routine cards, search results and
+  device headings now use the same visual language. Cards keep existing paging
+  and touch actions; no new dependency, network request or loading gate.
+- Artwork is decorative and independent of live state. Existing room grants,
+  camera feeds, explicit status and action permissions remain authoritative.
+  Shared scene selection uses only public identity; no extra bridge data.
+- Packaging validates bounded JPEG outputs (128 KiB each / 2 MiB total), with
+  the existing 32 MiB offline scene limit unchanged. Final offline scene:
+  **31,758,259 bytes**, SHA256
+  `4a06fa1875dbcae56dfe0f9b7d9d2d728878a676092670f940a8fcec4f7047e3`.
+- Browser review found duplicate sibling keys in HouseScene; distinct lighting
+  and model prefixes retain the same permission-scope reset behavior.
+- Verification: **180 app suites / 2,619 tests**, **64 scene files / 748 tests**,
+  **47 script tests**, app/scene TypeScript, release version/assets/redirects and
+  offline packaging pass. After the key fix, 18 access/lighting/artwork tests and
+  three suspension tests passed. No backend change or repeated real Guest test.
+- Native browser harness: **28 captures**, including 320px phone large text and
+  reduced motion; no overflow, failed images, unreachable actions or errors.
+  Embedded browser: **153 checks / 19 captures**, all 20 rooms / 30 device kinds
+  across phone and tablet orientations; no browser errors. Review harnesses were
+  removed from the repository and owned servers/browsers stopped.
+- Evidence in the work cache: `cinematic-app-tests.log`,
+  `cinematic-scene-tests.log`, `cinematic-script-tests.log`,
+  `cinematic-native-visual-evidence.json`,
+  `cinematic-native-accessibility-evidence.json`,
+  `cinematic-embedded/verification.json`. Original source PNG paths are indexed
+  in `cinematic-artwork-source-paths.json`; use them to re-optimize without
+  regenerating. Do not add those large originals to Git.
+- Preview **42** Release build succeeded and was installed/launched on the
+  physical iPhone; the device app listing confirms **1.0.0 / 42**. Exact preview
+  identity/schemes, all 47 packaged images, strict signature and profile device
+  coverage passed. Production metadata was restored. Signing expires October 11
+  as above. On-device visual feedback for the new cards has not yet been reported.
+  Receipts: `preview42-package-check.json`, `preview42-install.json`,
+  `preview42-installed-app.json`, `preview42-launch.json`; build logs use
+  `native-preview-build-42` and `native-preview-build-42-summary`.
+
 ## Continuous arrival and warm return (Preview 41)
 
 Startup now uses one mounted arrival component through account preparation and

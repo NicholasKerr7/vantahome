@@ -7,6 +7,7 @@ import { DashboardInspector } from './DashboardInspector';
 import { QuickDeviceControls } from './QuickDeviceControls';
 import { DeviceControlSheet } from './DeviceControlSheet';
 import { SceneViewControls } from './SceneViewControls';
+import { roomArtwork } from './cinematicArtwork';
 
 vi.mock('./state', async (importOriginal) => {
   const original = await importOriginal<typeof import('./state')>();
@@ -25,6 +26,7 @@ it('offers an exterior companion and assigned-room entry without empty device co
   expect(inspector).toContain('Your home, in view.');
   expect(inspector).toContain('Your assigned rooms');
   expect(inspector).toContain('Primary suite');
+  expect(inspector).toContain(`data-artwork="${roomArtwork({ id: 'master' })}"`);
   expect(inspector).not.toContain('No device selected');
   expect(inspector).not.toContain('Next devices');
   const controls = renderToStaticMarkup(<SceneViewControls onRooms={() => undefined} />);

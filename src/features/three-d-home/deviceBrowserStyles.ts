@@ -17,9 +17,11 @@ export const deviceBrowserStyles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     padding: 12,
-    justifyContent: "center",
-    gap: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
+  compactCopy: { flex: 1, minWidth: 0, gap: 6 },
   compactName: {
     color: theme.colors.text,
     fontSize: 13,
@@ -120,6 +122,7 @@ export const deviceBrowserStyles = StyleSheet.create({
     borderColor: theme.colors.stroke,
     justifyContent: "space-between",
     gap: 8,
+    overflow: "hidden",
   },
   cardTop: {
     flexDirection: "row",

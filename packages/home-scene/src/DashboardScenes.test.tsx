@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardScenes } from "./DashboardChrome";
 import type { SceneCatalog } from "./sceneCatalogProtocol";
+import { sceneArtwork } from './cinematicArtwork';
 
 const shared = vi.hoisted(() => ({
   catalog: { scenes: [], activeSceneId: null } as SceneCatalog,
@@ -32,6 +33,7 @@ describe("saved scene shortcuts", () => {
     const markup = renderToStaticMarkup(<DashboardScenes />);
     expect(markup).toContain("Quiet evening");
     expect(markup).toContain('aria-pressed="true"');
+    expect(markup).toContain(`data-artwork="${sceneArtwork({ name: 'Quiet evening' })}"`);
     expect(markup).not.toContain("Morning");
     expect(markup).not.toContain("Movie time");
   });
@@ -48,6 +50,14 @@ describe("saved scene shortcuts", () => {
     expect(markup).toContain("Next scenes");
     expect(markup).toContain("Saved scene 2");
     expect(markup).not.toContain("Saved scene 3");
+    expect(markup.match(/data-artwork=/g)).toHaveLength(3);
+  });
+
+  it('retains the authored preset artwork when its display name changes', () => {
+    shared.catalog.scenes = [{ id: 'model-scene:night', name: 'Morning ritual', scope: 'Whole home', deviceCount: 3 }];
+    const markup = renderToStaticMarkup(<DashboardScenes />);
+    expect(markup).toContain('Morning ritual');
+    expect(markup).toContain('data-artwork="mood-night"');
   });
 
   it("distinguishes loading, empty and failed catalog states", () => {

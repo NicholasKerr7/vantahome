@@ -5,6 +5,8 @@ import Pressable from '../../components/Pressable';
 import type { Scene } from '../../store/useHomeStore';
 import { theme } from '../../theme/theme';
 import { sceneDeviceSummary, sceneIdentity, type CollectionDirectory, type SceneIdentity } from './collectionDescriptions';
+import CinematicCardArtwork from '../../features/cinematic-artwork/CinematicCardArtwork';
+import { routineArtwork, sceneArtwork } from '../../features/cinematic-artwork/artwork';
 
 const IDENTITY_ICONS: Record<SceneIdentity, keyof typeof Ionicons.glyphMap> = {
   light: 'sunny-outline', rest: 'moon-outline', off: 'power-outline', climate: 'snow-outline', media: 'play-outline', security: 'shield-checkmark-outline', home: 'home-outline',
@@ -21,6 +23,7 @@ export function SceneMoodCard({ scene, roomName, active, compact, directory, onR
   const warm = identity === 'light';
   const cool = identity === 'climate' || identity === 'media' || identity === 'rest';
   return <View testID={`scene-tile-${scene.id}`} style={[styles.sceneCard, active && styles.sceneActive, compact && styles.sceneCompact]}>
+    <CinematicCardArtwork artwork={sceneArtwork(scene)} testID={`scene-artwork-${scene.id}`} />
     <View style={styles.sceneHeader}>
       <View style={styles.roomLabel}><Ionicons name="location-outline" size={12} color={theme.colors.subtext} /><Text style={styles.roomText} numberOfLines={1}>{roomName}</Text></View>
       <View style={styles.sceneState}><View style={[styles.stateDot, active && styles.stateDotOn]} /><Text style={[styles.sceneStateText, active && styles.sceneStateTextOn]}>{active ? 'Last used' : 'Saved'}</Text></View>
@@ -77,6 +80,7 @@ function RoutineToggle({ name, enabled, readOnly, onToggle }: { name: string; en
 /** Expose a real when/then path and independent enable state without making the whole card a toggle. */
 export function RoutineCard({ id, name, enabled, when, then, condition, actionCount, conditionCount, compact, schedule = false, readOnly = false, onOpen, onToggle }: RoutineCardProps) {
   return <View testID={`routine-row-${id}`} style={[styles.routineCard, enabled && styles.routineActive, compact && styles.routineCompact]}>
+    <CinematicCardArtwork artwork={routineArtwork({ name, when, then, schedule })} testID={`routine-artwork-${id}`} />
     <View style={styles.routineHeader}>
       <View style={styles.routineIdentity}><Ionicons name={schedule ? 'time-outline' : 'git-network-outline'} size={17} color={theme.colors.accent} /></View>
       <Text accessibilityRole="header" style={styles.routineName} numberOfLines={compact ? 1 : 2}>{name}</Text>
@@ -101,7 +105,7 @@ export function RoutineCard({ id, name, enabled, when, then, condition, actionCo
 }
 
 const styles = StyleSheet.create({
-  sceneCard: { flex: 1, minWidth: 0, minHeight: 0, padding: 16, borderRadius: 26, backgroundColor: theme.colors.card, borderWidth: 1, borderColor: theme.colors.stroke },
+  sceneCard: { flex: 1, minWidth: 0, minHeight: 0, padding: 16, borderRadius: 26, backgroundColor: theme.colors.card, borderWidth: 1, borderColor: theme.colors.stroke, overflow: 'hidden' },
   sceneActive: { borderColor: theme.colors.accent },
   sceneCompact: { padding: 12, borderRadius: 22 },
   sceneHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -131,7 +135,7 @@ const styles = StyleSheet.create({
   detailButton: { minHeight: 46, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 16, backgroundColor: theme.colors.card2 },
   detailText: { color: theme.colors.text, fontSize: 12, fontWeight: '500' },
   routineReadOnly: { opacity: 0.35 },
-  routineCard: { flex: 1, minWidth: 0, minHeight: 0, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6, borderRadius: 24, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke },
+  routineCard: { flex: 1, minWidth: 0, minHeight: 0, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6, borderRadius: 24, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, overflow: 'hidden' },
   routineActive: { borderColor: theme.colors.accent2 },
   routineCompact: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 2 },
   routineHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },

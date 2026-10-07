@@ -112,10 +112,10 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       <AdaptiveQuality onChange={setQualityTier} />
       <VisibilityScheduling suspended={suspended} />
       <MaterialEnvironment />
-      <SceneLighting key={presentationScope} daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} deviceStates={visibleStates} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
+      <SceneLighting key={`lighting:${presentationScope}`} daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} deviceStates={visibleStates} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
       <CameraRig roomOnly={roomOnly} exteriorOnly={exteriorOnly} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} />
       {!roomOnly && props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
-      <Suspense key={presentationScope} fallback={null}>
+      <Suspense key={`model:${presentationScope}`} fallback={null}>
         <HouseModel access={access} roomId={props.roomId} view={props.view} deviceStates={visibleStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
         <HotspotLayout access={props.access} roomId={props.roomId} view={props.view}>
         <Devices {...visibleProps} />

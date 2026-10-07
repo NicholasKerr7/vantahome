@@ -48,6 +48,7 @@ import { useSimulationControls } from "../features/three-d-home/useSimulationCon
 import { selectSimulationDeviceBindings } from "../features/three-d-home/simulationDeviceBindings";
 import { sceneIsVisible } from "../features/scenes/sceneScope";
 import { selectHomeNavigationAccess } from "../features/home-shell/homeNavigationAccess";
+import { deviceArtwork } from "../features/cinematic-artwork/artwork";
 
 const DEVICE_OPTIONS: Array<{
   kind: Device["kind"];
@@ -698,6 +699,7 @@ export default function RoomScreen({ route, navigation }: Props) {
               const presentation = devicePresentation(item);
               return <View style={cardFrameStyle}>
                 <DeviceCollectionCard {...presentation}
+                  artwork={deviceArtwork({ ...item, modelDeviceId: modelId ?? item.modelDeviceId })}
                   disabled={Boolean(modelId) ? !simulation.ready || !simulation.access?.controllableDeviceIds.includes(modelId)
                     : Boolean(item.simulationOnly || (modelHome && definition?.kind === item.kind))}
                   onOpen={() => navigation.navigate("DeviceDetail", { deviceId: item.id })}

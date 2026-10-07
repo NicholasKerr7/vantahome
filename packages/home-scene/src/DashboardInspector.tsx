@@ -11,6 +11,8 @@ import { primaryDeviceAction } from './quickDevicePresentation';
 import { gasStatusTone } from './gasSimulation';
 import { useHomeStore } from './state';
 import { deviceCardReading } from './dashboardCardPresentation';
+import { CinematicArtwork } from './CinematicCardArtwork';
+import { deviceArtwork, roomArtwork } from './cinematicArtwork';
 import './dashboard-inspector.css';
 import './dashboard-cards.css';
 
@@ -35,7 +37,7 @@ function PropertyOverviewCompanion() {
     <div className="property-companion-symbol"><Home size={26} strokeWidth={1.4} aria-hidden="true" /></div>
     <div className="property-companion-intro"><span className="device-focus-eyebrow">{exterior ? 'EXTERIOR OVERVIEW' : 'SHARED INTERIOR TOUR'}</span><h2 id="property-companion-title">{exterior ? 'Your home, in view.' : 'A little more to explore.'}</h2><p>{exterior ? 'Explore the grounds, then step into your space.' : 'Layout only. Explore the shared interior at your own pace.'}</p></div>
     <section className="property-assigned-rooms" aria-labelledby="property-assigned-title"><h3 id="property-assigned-title">Your assigned rooms</h3>
-      {page.items.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} onClick={() => setRoom(room.id)}><Icon size={19} strokeWidth={1.5} aria-hidden="true" /><span>{room.name}<small>Open your room</small></span><ArrowUpRight size={16} aria-hidden="true" /></button>; })}
+      {page.items.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} onClick={() => setRoom(room.id)}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon strokeWidth={1.5} /></CinematicArtwork><span>{room.name}<small>Open your room</small></span><ArrowUpRight size={16} aria-hidden="true" /></button>; })}
       {!rooms.length && <p>Your administrator can share a room with you.</p>}
     </section>
     {page.pages > 1 && <div className="dashboard-pager" aria-label="Assigned room pages"><button aria-label="Previous assigned rooms" disabled={page.page === 0} onClick={() => setRequestedPage(page.page - 1)}><ChevronLeft size={17} /></button><span>{page.page + 1} / {page.pages}</span><button aria-label="Next assigned rooms" disabled={page.page + 1 === page.pages} onClick={() => setRequestedPage(page.page + 1)}><ChevronRight size={17} /></button></div>}
@@ -53,7 +55,8 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
   const controllable = useHomeStore((state) => canControlSceneDevice(state.access, device.id));
   const reading = deviceCardReading(device, current);
 
-  return <section className="dashboard-selected-device device-focus-card" data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-labelledby="device-control-title">
+  return <section className="dashboard-selected-device device-focus-card has-cinematic-artwork" data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-labelledby="device-control-title">
+    <CinematicArtwork artwork={deviceArtwork(device)} />
     <div className="dashboard-selected-heading">
       <span className={`dashboard-device-icon ${current.on ? 'is-on' : ''}`}><Icon size={19} strokeWidth={1.5} aria-hidden="true" /></span>
       <div className="dashboard-selected-copy">
@@ -81,7 +84,8 @@ function DashboardDeviceCard({ device, selected }: { device: DeviceDefinition; s
   const selectDevice = useHomeStore((state) => state.selectDevice);
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
   const Icon = DEVICE_ICONS[device.kind];
-  return <button type="button" className={`dashboard-device-row dashboard-device-card ${selected ? 'is-selected' : ''}`} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
+  return <button type="button" className={`dashboard-device-row dashboard-device-card has-cinematic-artwork ${selected ? 'is-selected' : ''}`} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
+    <CinematicArtwork artwork={deviceArtwork(device)} />
     <span className="device-card-top"><Icon size={18} strokeWidth={1.5} aria-hidden="true" /><span className={`dashboard-device-indicator ${current.on || isMonitor(device.kind) ? 'is-on' : ''}`} aria-hidden="true" /></span>
     <span className="dashboard-device-copy"><span title={device.name}>{device.name}</span><small>{deviceStatus(device, current)}</small></span>
   </button>;

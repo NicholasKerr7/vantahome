@@ -31,6 +31,8 @@ import { isModelHome } from "../features/three-d-home/modelHomeScope";
 import { useCollectionPagination } from "./components/collectionPagination";
 import { selectHomeNavigationAccess } from "../features/home-shell/homeNavigationAccess";
 import ModelRoomConnection from "../features/rooms/ModelRoomConnection";
+import CinematicCardArtwork from "../features/cinematic-artwork/CinematicCardArtwork";
+import { roomArtwork } from "../features/cinematic-artwork/artwork";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ManageRooms">;
 
@@ -217,6 +219,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
               key={room.id}
               style={[styles.card, wide && styles.cardWide, cardSizing.card]}
             >
+              <CinematicCardArtwork artwork={roomArtwork(room)} testID={`room-artwork-${room.id}`} />
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Open ${room.name}`}

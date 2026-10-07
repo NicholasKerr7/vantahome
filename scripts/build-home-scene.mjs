@@ -133,16 +133,26 @@ export function createNativeHtml(javascript, css, models) {
 `;
 }
 
-/** Constrain the public web build to the known models and Vite's JS/CSS outputs. */
-async function validateWebBuild(webRoot) {
+/** Constrain the web build to known models, code, and small generated card references. */
+export async function validateWebBuild(webRoot) {
   const files = await listFiles(webRoot);
   const known = new Set(['index.html', 'embedded.html', 'models/site-layout.json', ...MODEL_NAMES.map((name) => `models/${name}.glb`)]);
   const hashes = {};
+  let artworkBytes = 0;
   for (const file of files) {
-    if (!known.has(file) && !/^assets\/[\w.-]+\.(?:js|css)$/u.test(file)) {
+    const artwork = /^assets\/(?:room|mood|device)-[\w-]+\.jpg$/u.test(file);
+    if (!known.has(file) && !/^assets\/[\w.-]+\.(?:js|css)$/u.test(file) && !artwork) {
       throw new Error(`Unexpected generated web asset: ${file}`);
     }
     const content = await readFile(join(webRoot, file));
+    if (artwork) {
+      if (content.length > 128 * 1024) throw new Error(`Card artwork exceeds its 128 KiB budget: ${file}`);
+      if (content.length < 4 || content.readUInt16BE(0) !== 0xffd8 || content.readUInt16BE(content.length - 2) !== 0xffd9) {
+        throw new Error(`Card artwork must be a complete JPEG: ${file}`);
+      }
+      artworkBytes += content.length;
+      if (artworkBytes > 2 * 1024 * 1024) throw new Error('Card artwork exceeds its 2 MiB combined budget.');
+    }
     if (file.startsWith('assets/') && content.length > 5 * 1024 * 1024) {
       throw new Error(`Generated scene code exceeds the 5 MiB per-file budget: ${file}`);
     }

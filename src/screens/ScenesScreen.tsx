@@ -43,6 +43,8 @@ import { sceneChoiceKeyboard } from "../features/scenes/sceneChoiceKeyboard";
 import { homeEditorScope } from "../features/home-shell/homeEditorScope";
 import { sceneValuesEqual } from "../features/scenes/sceneEdits";
 import { isWholeHomeScene, sceneIsVisible, sceneScopeLabel, sceneSelectableDevices, sceneSelectionInScope, type SceneEditorScope } from "../features/scenes/sceneScope";
+import CinematicCardArtwork from "../features/cinematic-artwork/CinematicCardArtwork";
+import { deviceArtwork } from "../features/cinematic-artwork/artwork";
 
 export type ScenesScreenProps = {
   /** The root feature wrapper provides the title, safe areas and back navigation. */
@@ -1283,14 +1285,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.stroke,
   },
   deviceControlHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  deviceControlIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 12,
-    backgroundColor: theme.colors.bg1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   deviceControlTitle: { color: theme.colors.text, fontWeight: "500" },
   deviceControlSub: {
     marginTop: 4,
@@ -1405,9 +1399,6 @@ function DeviceControlCard({
   const { isTablet, scale } = useResponsive();
   const cardPad = Math.round((isTablet ? 16 : 12) * scale);
   const cardRadius = Math.round((isTablet ? 20 : 18) * scale);
-  const iconWrap = Math.round((isTablet ? 46 : 44) * scale);
-  const iconSize = Math.round((isTablet ? 18 : 16) * scale);
-  const iconRadius = Math.round(iconWrap * 0.38);
   const titleSize = Math.round((isTablet ? 15 : 14) * scale);
   const subSize = Math.round((isTablet ? 12 : 11) * scale);
   const toggleHeight = Math.round((isTablet ? 46 : 44) * scale);
@@ -1427,10 +1418,6 @@ function DeviceControlCard({
   const cardStyle: StyleProp<ViewStyle> = [
     styles.deviceControlCard,
     { padding: cardPad, borderRadius: cardRadius },
-  ];
-  const iconStyle: StyleProp<ViewStyle> = [
-    styles.deviceControlIcon,
-    { width: iconWrap, height: iconWrap, borderRadius: iconRadius },
   ];
   const headerBodyStyle: ViewStyle = { flex: 1 };
   const titleStyle: StyleProp<TextStyle> = [
@@ -1873,9 +1860,7 @@ function DeviceControlCard({
   return (
     <View style={cardStyle}>
       <View style={styles.deviceControlHeader}>
-        <View style={iconStyle}>
-          <DeviceIcon kind={device.kind} size={iconSize} color={theme.colors.accent} />
-        </View>
+        <CinematicCardArtwork artwork={deviceArtwork(device)} variant="thumbnail" />
         <View style={headerBodyStyle}>
           <Text style={titleStyle}>{device.name}</Text>
           <Text style={subStyle}>{labelForKind(device.kind)}</Text>

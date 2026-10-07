@@ -31,6 +31,8 @@ import { ControlPagination } from "./ControlPagination";
 import { deviceMatchesQuery } from "./deviceBrowserSearch";
 import { useDeviceBrowserFavorites } from "./useDeviceBrowserFavorites";
 import { deviceBrowserStyles as styles } from "./deviceBrowserStyles";
+import CinematicCardArtwork from "../cinematic-artwork/CinematicCardArtwork";
+import { deviceArtwork, roomArtwork } from "../cinematic-artwork/artwork";
 
 type Props = {
   allowedDeviceIds?: readonly string[];
@@ -324,6 +326,7 @@ export default function DeviceBrowser({
                   }}
                   style={styles.roomCard}
                 >
+                  <CinematicCardArtwork artwork={roomArtwork(choice)} testID={`room-artwork-${choice.id}`} />
                   <View style={styles.cardTop}>
                     <Ionicons
                       name={
@@ -401,12 +404,15 @@ function DeviceCard({
           onPress={() => onSelect(device.id)}
           style={styles.compactIdentity}
         >
-          <Text numberOfLines={2} style={styles.compactName}>
-            {device.name}
-          </Text>
-          <Text numberOfLines={1} style={styles.roomDetail}>
-            {reading.value} · {getRoom(device.roomId).name}
-          </Text>
+          <CinematicCardArtwork artwork={deviceArtwork(device)} variant="thumbnail" />
+          <View style={styles.compactCopy}>
+            <Text numberOfLines={2} style={styles.compactName}>
+              {device.name}
+            </Text>
+            <Text numberOfLines={1} style={styles.roomDetail}>
+              {reading.value} · {getRoom(device.roomId).name}
+            </Text>
+          </View>
         </Pressable>
         <View style={styles.compactActions}>
           <Pressable
@@ -449,6 +455,7 @@ function DeviceCard({
     );
   return (
     <DeviceCollectionCard
+      artwork={deviceArtwork(device)}
       name={device.name}
       status={status}
       value={reading.value}
