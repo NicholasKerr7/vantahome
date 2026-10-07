@@ -5,6 +5,7 @@ import { cancelAuthFlow, waitForAuthExchange } from '../../services/authFlow';
 import { supabase } from '../../services/supabaseClient';
 import { useHomeStore } from '../../store/useHomeStore';
 import { isInvitationExpired } from './invitationExpiry';
+import { hasCurrentMembershipAccess } from '../../security/guestAccess';
 
 type Options = { userId: string; onComplete: () => void };
 
@@ -49,16 +50,28 @@ export function useHomeAccess({ userId, onComplete }: Options) {
     complete.current();
   }, [isCurrent, userId]);
 
-  /** Refresh the inbox, or finish a successful invitation whose registry read was interrupted. */
-  const reload = useCallback(async () => {
+  /** Recheck renewed access or finish an interrupted join before refreshing the inbox. */
+  const reload = useCallback(async (checkMembership = true) => {
     if (!isCurrent() || operation.current) return;
     operation.current = true;
     setLoading(true);
     setError(null);
+    setNotice(null);
     try {
       if (pendingHomeId.current) {
         await enterHome(pendingHomeId.current);
       } else {
+        if (checkMembership && !useHomeStore.getState().membershipReady) {
+          const snapshot = await syncMembershipFromSupabase(userId);
+          if (!isCurrent()) return;
+          const member = snapshot?.household.find((entry) => entry.id === userId);
+          if (snapshot && member && hasCurrentMembershipAccess(member)
+            && applyMembershipSnapshot(snapshot, sessionEpoch.current)) {
+            complete.current();
+            return;
+          }
+          setNotice('No active home access yet. Ask your homeowner to renew your access or send an invitation.');
+        }
         const next = await listPendingInvites(userId);
         if (isCurrent()) setInvites(next.filter((invite) => invite.status === 'pending'));
       }
@@ -72,7 +85,8 @@ export function useHomeAccess({ userId, onComplete }: Options) {
 
   useEffect(() => {
     mounted.current = true;
-    void reload();
+    // The navigator already checked membership before presenting this inbox.
+    void reload(false);
     return () => { mounted.current = false; };
   }, [reload]);
 

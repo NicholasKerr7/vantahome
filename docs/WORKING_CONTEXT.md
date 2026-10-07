@@ -34,12 +34,16 @@ Last maintained: **2026-10-07**. Read this before rediscovering the project.
   activity. Unassigned rooms remain layout-only. Do not grant `fullHome` to
   implement this. All source GLBs are still bundled: visual privacy is not
   confidential asset delivery.
+- Existing finite Guests use **Extend / Renew access**, not another invitation.
+  Owner/authorized Admin can add 1 hour / 24 hours / 7 days or set a custom local deadline within
+  365 days. Preserve rooms/actions, reset optional interior consent, and cancel
+  superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
 ## Environment and confirmed milestones
 
-- Staging Supabase: `dcevusczjtmdpzrxpdou`. Migrations **001–019** applied only here.
-  Migration 019 adds owner-only per-member `share_interior_layout` consent.
+- Staging Supabase: `dcevusczjtmdpzrxpdou`. Migrations **001–020** applied only here.
+  019 adds owner-only interior consent; 020 adds checked Guest deadline changes.
 - Use configured CLI/Keychain credentials in memory; never print/store privileged
   keys or put them in `EXPO_PUBLIC_*`. Do not read account credentials into chat.
 - Preview bundle: `com.anonymous.vantahome.preview`; scheme `vantahome-preview`.
@@ -51,18 +55,36 @@ Last maintained: **2026-10-07**. Read this before rediscovering the project.
   new password, and full Owner home after sign-in. Passwords/codes were not read.
 - The original test Guest used 24-hour access ending October 5; do not silently
   extend that grant. Check current server state before further Guest testing.
-- Preview 38 Release build **succeeded**; exact bundle/schemes, device coverage and
+- Preview 39 Release build **succeeded**; exact bundle/schemes, device coverage and
   strict signature verified. Production metadata restored. Signing profile
   expires **2026-10-11 06:55:16 UTC**. Installed October 7; the physical device's
-  app listing confirms 1.0.0 (38), and the developer service launched it. The new
-  sharing UI still needs the user's physical check.
+  app listing confirms 1.0.0 (39), and the developer service launched it. The new
+  extension/sharing UI still needs the user's physical check.
 
 ## Current implementation and evidence
 
-Property overview/interior sharing implementation, staging rollout, and Preview 38
-installation are complete. The feature commit also maintains this handoff; use
+Guest Extend/Renew implementation, staging rollout, and Preview 39 installation
+are complete. Prior property sharing landed in `9ac2056`. Use
 `git log -1` for the latest commit/push state rather than treating an old hash as
-current. The prior baseline was `0fa017e` (iPhone password recovery evidence).
+current.
+
+- Latest app verification: **176 suites / 2,561 tests**, including 50 service,
+  24 deadline-policy and 14 new UI tests. After final tablet/copy tweaks, 47 UI/security
+  tests and TypeScript passed again. SQL: all 20 migrations / 482 checks / 10 suites.
+- Hosted API passed with exact denial codes. Browser: Owner extend and renew
+  succeed; expired Guest **Check access** restores the property with only Living
+  room / six devices and door control still blocked. Reviewed 375×667, 768×1024, 1024×768.
+- A stale-deadline RPC initially used 40001, exposing PostgREST retry behavior.
+  Repaired to 22023; repeated SQL/strict hosted checks pass. No stuck extension RPCs
+  remained. Final 020 SHA256: c76ba01f63ffbae32b817cd0578fb26a859db9921dc232ab9caa90dc31524a02.
+- Latest logs: `guest-extension-app-tests.log`, `guest-extension-final-ui-tests.log`,
+  `guest-extension-final-typecheck.log`, `guest-extension-postgres-test.log`,
+  `native-preview-build-39.log` and `native-preview-build-39-summary.log`.
+  Receipts: `preview39-install.json`, `preview39-installed-app.json`, `preview39-launch.json`.
+  Synthetic QA home/accounts/private file removed; browser sessions and task's 5184
+  Expo server closed. No real Guest renewed automatically; production unchanged.
+
+Previous property-sharing evidence (no scene source changed for Preview 39):
 
 - Full `npm run verify`: **2,464 app tests / 173 suites**, **738 scene tests /
   62 files**, **127 bridge tests**, **45 script tests**, app/edge TypeScript,
@@ -89,10 +111,12 @@ current. The prior baseline was `0fa017e` (iPhone password recovery evidence).
 
 ## Resume next
 
-1. Physical Preview 38 check: Owner dashboard account → Household → Members →
-   Guest/Tenant → Rooms & interior layout → Interior layout. After deliberately
-   renewing expired Guest access if needed, confirm exterior overview by default,
-   shared interior tour when enabled, unchanged device controls, and revocation.
+1. Physical Preview 39 check: Owner dashboard account → Household → Members →
+   Guest → **Renew access** (or **Extend access**). Choose duration, review, confirm.
+   Then check Guest return without another invitation and unchanged permissions.
+   Owner can enable **Rooms & interior layout → Interior layout** separately;
+   deadline changes reset that optional consent. Verify exterior/shared tour and
+   revocation on the phone; browser coverage already passed.
 2. Remaining broader physical tests: warm recovery, explicit invitation-link
    routing, offline/reconnect, background/resume, observed Guest deadline expiry.
    Do not represent automated/browser results as physical-device results.
@@ -100,6 +124,7 @@ current. The prior baseline was `0fa017e` (iPhone password recovery evidence).
    checks or rediscover the repository merely to resume. Recheck volatile state.
 
 Detailed references: [Room access](ROOM_ACCESS.md),
+[Guest access extensions](GUEST_ACCESS_EXTENSIONS.md),
 [Auth redirects / build recipe](AUTH_REDIRECTS.md),
 [Invitations](INVITATION_ONBOARDING.md),
 [Dependency patches](DEPENDENCY_SECURITY.md).

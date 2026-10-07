@@ -309,7 +309,9 @@ export default function AppNavigator() {
     </View>;
   }
 
-  const missingMembership = Boolean(session && missingMembershipFor === session.user.id);
+  // A renewal confirmed by the foreground or periodic sync replaces the earlier
+  // missing-access result without requiring another login or invitation.
+  const missingMembership = Boolean(session && !membershipReady && missingMembershipFor === session.user.id);
   const checkingMembership = Boolean(session && !passwordRecovery && !membershipReady && !missingMembership);
   const needsHomeAccess = Boolean(session && !passwordRecovery && (missingMembership || invitationRequested));
   const authExperience = resolveAuthExperience({

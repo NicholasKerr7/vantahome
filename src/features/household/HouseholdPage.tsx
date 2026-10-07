@@ -19,6 +19,10 @@ import type { ProfileWorkspaceModel } from "./useProfileWorkspace";
 import { GUEST_ACCESS_DURATIONS, formatGuestAccessExpiry } from "./invitationAccess";
 import { isInvitationExpired } from "../home-access/invitationExpiry";
 import { InteriorLayoutAccess } from "./InteriorLayoutAccess";
+import { GuestAccessDeadline, GuestAccessExtension } from "./GuestAccessExtension";
+import { canManageGuestAccessExtension } from "../../services/guestAccessExtension";
+import { useHomeStore } from "../../store/useHomeStore";
+import { supabase } from "../../services/supabaseClient";
 
 const HOUSEHOLD_TABS = [
   { id: "people", label: "Members" },
@@ -259,9 +263,12 @@ function InvitationInbox({ model }: { model: ProfileWorkspaceModel }) {
 
 /** Use one member card at a time; reveal detailed permissions only when requested. */
 function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
+  const { height, fontScale } = useWindowDimensions();
+  // Landscape tablets need the same room for fixed actions as smaller phones.
+  const compact = height < 850 || fontScale > 1.2;
   const modalViewportStyle = useModalViewportStyle();
   const [selectedId, setSelectedId] = useState(model.household[0]?.id ?? "");
-  const [sheet, setSheet] = useState<"rooms" | "layout" | "permissions" | null>(null);
+  const [sheet, setSheet] = useState<"rooms" | "layout" | "permissions" | "guest-access" | null>(null);
   const [roomPage, setRoomPage] = useState(0);
   const memberIndex = Math.max(
     0,
@@ -282,20 +289,19 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
   const limitedRooms = member.role === "Guest" || member.role === "Tenant";
   return (
     <View style={styles.body}>
-      <View style={styles.memberIdentity}>
-        <View style={styles.avatarRing}>
-          <AvatarChip
-            name={member.name}
-            size={68}
-            color={member.avatarColor}
-            uri={member.avatarUri}
-          />
+      <View style={[styles.memberIdentity, compact && styles.memberIdentityCompact]}>
+        <View style={[styles.memberIdentityHeader, compact && styles.memberIdentityHeaderCompact]}>
+          <View style={[styles.avatarRing, compact && styles.avatarRingCompact]}>
+            <AvatarChip name={member.name} size={compact ? 44 : 68} color={member.avatarColor} uri={member.avatarUri} />
+          </View>
+          <View style={[styles.memberIdentityCopy, compact && styles.memberIdentityCopyCompact]}>
+            <Text numberOfLines={1} style={[styles.memberName, compact && styles.memberNameCompact]}>{member.name}</Text>
+            <Text style={styles.memberMeta}>
+              {member.role} · {member.status === "home" ? "Home" : "Away"}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.memberName}>{member.name}</Text>
-        <Text style={styles.memberMeta}>
-          {member.role} · {member.status === "home" ? "Home" : "Away"}
-        </Text>
-        {member.role === "Guest" && <Text style={styles.detail}>{formatGuestAccessExpiry(member.accessExpiresAt)}</Text>}
+        {member.role === "Guest" && <GuestAccessDeadline member={member} canEdit={Boolean(supabase && canManageGuestAccessExtension(useHomeStore.getState(), member.id))} onPress={() => setSheet("guest-access")} />}
       </View>
       <View style={styles.memberActions}>
         {limitedRooms && (
@@ -315,7 +321,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
             />
             <View style={styles.heading}>
               <Text style={styles.rowText}>Rooms & interior layout</Text>
-              <Text style={styles.detail}>{roomIds.length} rooms assigned</Text>
+              <Text style={styles.detail}>{roomIds.length} {roomIds.length === 1 ? "room" : "rooms"} assigned</Text>
             </View>
             <Ionicons
               name="chevron-forward"
@@ -372,7 +378,13 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
         pageCount={model.household.length}
         onChange={(page) => setSelectedId(model.household[page].id)}
       />
-      {sheet && (
+      {sheet === "guest-access" && <GuestAccessExtension
+        key={member.id}
+        member={member}
+        roomNames={model.rooms.filter((room) => roomIds.includes(room.id)).map((room) => room.name)}
+        onClose={() => setSheet(null)}
+      />}
+      {sheet && sheet !== "guest-access" && (
         <ModalCard
           visible
           onRequestClose={() => setSheet(null)}

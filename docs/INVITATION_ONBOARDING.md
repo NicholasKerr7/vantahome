@@ -5,14 +5,15 @@ does not grant membership. New owners explicitly create their home; invitees rev
 and accept a pending database invitation after authenticating. Existing accounts
 sign in normally and review their invitation inbox.
 
-**Current staging checkpoint — 2026-10-07:** migrations 001–019 are deployed;
+**Current staging checkpoint — 2026-10-07:** migrations 001–020 are deployed;
 preview callbacks and the invitation function use `vantahome-preview`. Public
 sign-up remains disabled and invitation OTP length remains eight digits. The
 earlier hosted API permission sweep passed 32 checks with disposable accounts.
-Preview **38** is installed on the user's **iPhone 16 Pro Max**, confirmed by the
+Preview **39** is installed on the user's **iPhone 16 Pro Max**, confirmed by the
 device's app listing, and the developer service launched it successfully. It adds
-the property overview and owner-controlled interior sharing; see the new
-[verification checkpoint](ROOM_ACCESS.md#property-overview-checkpoint--2026-10-07).
+in-app Guest extension/renewal and retains property overview/interior sharing;
+see [Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and the earlier
+[property checkpoint](ROOM_ACCESS.md#property-overview-checkpoint--2026-10-07).
 The new flow has browser/API coverage and awaits physical-iPhone confirmation.
 On Preview 37, the user confirmed resolving developer trust and completing the
 Owner email/code, password, household creation, and model preparation steps on
@@ -119,7 +120,7 @@ does **not** update the hosted Supabase email template or SMTP settings.
   `017_model_simulation_setup.sql` adds the owner-only catalog setup and immutable
   `devices.simulation_only` boundary. Migration
   `018_scoped_room_memberships.sql` replaces grants atomically inside the selected
-  household. The current client requires all migrations through 019; it does not
+  household. The current client requires all migrations through 020; it does not
   fall back to unscoped direct room-access writes.
 
 The existing-account case (`email_exists` or `user_already_exists`) resolves the
@@ -129,6 +130,13 @@ new invitation-code email. The API distinguishes delivery as `email_code`,
 email was sent. Existing users sign in with their current account and check their
 inbox. Expired initial invitations require the homeowner to issue a fresh
 invitation; this flow does not expose an unauthenticated resend endpoint.
+
+For an already accepted Guest, the new member-card **Extend / Renew access**
+flow is simpler: it preserves their room assignments and action permissions and
+requires no new invitation acceptance. It replaces obsolete pending invitations
+for that person/home. The existing-account invitation path remains available
+when deliberately issuing different access. See
+[Guest access extensions](GUEST_ACCESS_EXTENSIONS.md).
 
 ## Verification before production
 

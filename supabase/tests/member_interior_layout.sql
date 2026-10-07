@@ -100,9 +100,12 @@ select is((select share_interior_layout from home_members where home_id='a290000
 select set_member_interior_layout('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000003',true);
 update home_members set role='member' where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003';
 select is((select share_interior_layout from home_members where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003'),false,'whole-home role never retains a latent scoped grant');
+-- Initial finite deadline is a privileged fixture; authenticated edits now use migration 020 RPC.
+reset role;
 update home_members set role='guest',access_expires_at=now()+interval '1 day' where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003';
+set local role authenticated;
 select set_member_interior_layout('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000003',true);
-update home_members set access_expires_at=now()+interval '2 days' where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003';
+select extend_guest_access('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000003',now()+interval '1 day',24,null);
 select is((select share_interior_layout from home_members where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003'),false,'extended access requires renewed layout consent');
 select set_member_interior_layout('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000004',true);
 update home_members set home_id='a2900000-0000-4000-8000-000000000003' where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000004';

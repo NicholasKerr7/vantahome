@@ -119,7 +119,7 @@ export default function HomeAccessScreen({ userId, email, onComplete, onContinue
                     <Ionicons name="mail-open-outline" size={22} color={theme.colors.accentText} />
                     <Text accessibilityRole="header" style={styles.sectionTitle}>Your invitations</Text>
                   </View>
-                  <Pressable accessibilityLabel="Refresh invitations" disabled={disabled} onPress={() => { void access.reload(); }} style={styles.iconButton}>
+                  <Pressable accessibilityLabel={onContinue ? "Refresh invitations" : "Check home access and refresh invitations"} disabled={disabled} onPress={() => { void access.reload(); }} style={styles.iconButton}>
                     <Ionicons name="refresh-outline" size={21} color={theme.colors.accentText} />
                   </Pressable>
                 </View>
@@ -128,8 +128,11 @@ export default function HomeAccessScreen({ userId, email, onComplete, onContinue
                   <Text style={styles.body}>{access.finishingHome ? 'Confirming your home access…' : 'Checking your invitations…'}</Text>
                 </View>}
                 {!access.loading && access.invites.length === 0 && !access.error && <Text style={styles.body}>
-                  No pending invitations for this account. Ask your home owner to invite the email shown above.
+                  No pending invitations for this account. Your homeowner can renew existing access or invite the email shown above.
                 </Text>}
+                {!onContinue && !access.loading && <Pressable disabled={disabled} style={styles.retry} onPress={() => { void access.reload(); }}>
+                  <Text style={styles.secondaryText}>Check access</Text>
+                </Pressable>}
                 {!access.loading && access.invites.map((invite) => (
                   <InvitationCard
                     key={invite.id}

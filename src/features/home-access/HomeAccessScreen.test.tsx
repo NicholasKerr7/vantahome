@@ -58,6 +58,67 @@ test('new members see their inbox without automatically creating a household', a
   expect(useHomeStore.getState().membershipReady).toBe(false);
 });
 
+test('Check access enters a renewed guest membership without accepting another invitation', async () => {
+  mockList.mockResolvedValue([]);
+  const renewed = snapshot();
+  renewed.household[0].accessExpiresAt = '2099-01-01T12:00:00Z';
+  renewed.roomMembers = [{ memberId: 'alice', roomIds: ['living-room'] }];
+  mockSync.mockResolvedValueOnce(renewed);
+  const complete = jest.fn();
+  const screen = render(<HomeAccessScreen userId="alice" onComplete={complete} />);
+  await waitFor(() => expect(screen.getByText('Check access')).toBeTruthy());
+  expect(mockSync).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Check access'));
+  await waitFor(() => expect(complete).toHaveBeenCalledTimes(1));
+  expect(mockSync).toHaveBeenCalledWith('alice');
+  expect(useHomeStore.getState().membershipReady).toBe(true);
+  expect(useHomeStore.getState().roomMembers).toEqual(renewed.roomMembers);
+  expect(mockRespond).not.toHaveBeenCalled();
+  expect(mockBootstrap).not.toHaveBeenCalled();
+});
+
+test.each(['missing', 'expired', 'malformed'])('Check access keeps %s membership outside the home', async (condition) => {
+  mockList.mockResolvedValue([]);
+  const membership = snapshot();
+  membership.household[0].accessExpiresAt = condition === 'expired' ? '2000-01-01T00:00:00Z' : 'invalid';
+  mockSync.mockResolvedValueOnce(condition === 'missing' ? null : membership);
+  const complete = jest.fn();
+  const screen = render(<HomeAccessScreen userId="alice" onComplete={complete} />);
+  await waitFor(() => expect(screen.getByText('Check access')).toBeTruthy());
+  fireEvent.press(screen.getByText('Check access'));
+  await waitFor(() => expect(screen.getByText('No active home access yet. Ask your homeowner to renew your access or send an invitation.')).toBeTruthy());
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  expect(complete).not.toHaveBeenCalled();
+  expect(mockList).toHaveBeenCalledTimes(2);
+});
+
+test('Check access reports a connection failure without installing cached access', async () => {
+  mockList.mockResolvedValue([]);
+  mockSync.mockRejectedValueOnce(new Error('Home access is unavailable. Please retry.'));
+  const complete = jest.fn();
+  const screen = render(<HomeAccessScreen userId="alice" onComplete={complete} />);
+  await waitFor(() => expect(screen.getByText('Check access')).toBeTruthy());
+  fireEvent.press(screen.getByText('Check access'));
+  await waitFor(() => expect(screen.getByText('Home access is unavailable. Please retry.')).toBeTruthy());
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  expect(complete).not.toHaveBeenCalled();
+});
+
+test.each(['bob', 'alice'])('a delayed access check cannot restore data after a new %s login', async (nextUser) => {
+  mockList.mockResolvedValue([]);
+  let finish: (value: MembershipSyncResult) => void = () => {};
+  mockSync.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  const complete = jest.fn();
+  const screen = render(<HomeAccessScreen userId="alice" onComplete={complete} />);
+  await waitFor(() => expect(screen.getByText('Check access')).toBeTruthy());
+  fireEvent.press(screen.getByText('Check access'));
+  await waitFor(() => expect(mockSync).toHaveBeenCalled());
+  await act(async () => { await hydrateHomeAccount(null); await hydrateHomeAccount(nextUser); });
+  await act(async () => { finish(snapshot()); });
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  expect(complete).not.toHaveBeenCalled();
+});
+
 test('acceptance enters the invited home only after its authorized membership is synchronized', async () => {
   const complete = jest.fn();
   const screen = render(<HomeAccessScreen userId="alice" onComplete={complete} />);

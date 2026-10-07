@@ -118,7 +118,7 @@ import {
   useHomeStore,
 } from "../store/useHomeStore";
 import { deviceClient } from "../services/deviceClient";
-import type { MembershipSyncResult } from "../services/membership";
+import { applyMembershipSnapshot, type MembershipSyncResult } from "../services/membership";
 import { bootstrapHome } from '../services/cloudRegistry';
 
 const sessionFor = (id: string) =>
@@ -310,6 +310,37 @@ describe("navigation session boundaries", () => {
     expect(bootstrapHome).not.toHaveBeenCalled();
     expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
     expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+  });
+
+  test('a verified renewal refresh releases the earlier missing-membership gate', async () => {
+    mockMembership.mockResolvedValueOnce(null);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy());
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+    const renewed = membershipFor('alice');
+    renewed.household[0] = { ...renewed.household[0], role: 'Guest', accessExpiresAt: '2099-01-01T12:00:00Z' };
+    renewed.roomMembers = [{ memberId: 'alice', roomIds: ['alice-room'] }];
+    // The runtime installs the same authoritative snapshot on its timer or foreground refresh.
+    act(() => { expect(applyMembershipSnapshot(renewed, useHomeStore.getState().sessionEpoch)).toBe(true); });
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-HomeAccess')).toBeNull();
+    expect(mockModelHomeSyncMount).toHaveBeenCalledTimes(1);
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true);
+    expect(bootstrapHome).not.toHaveBeenCalled();
+  });
+
+  test('a stale renewal snapshot cannot release another account from the invitation gate', async () => {
+    mockMembership.mockResolvedValue(null);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy());
+    const oldEpoch = useHomeStore.getState().sessionEpoch;
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(mockMembership).toHaveBeenCalledWith('bob'));
+    act(() => { expect(applyMembershipSnapshot(membershipFor('alice'), oldEpoch)).toBe(false); });
+    expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
   });
 
   test('private routes are not mounted before membership verification finishes', async () => {

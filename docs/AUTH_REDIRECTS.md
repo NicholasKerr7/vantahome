@@ -1,20 +1,20 @@
 # Authentication redirects and preview packaging
 
-Configuration checkpoint: **2026-10-07**. Preview **38** built successfully and
+Configuration checkpoint: **2026-10-07**. Preview **39** built successfully and
 is installed on the user's **iPhone 16 Pro Max**; the device's app listing
-confirms build 38 and the developer service launched it successfully. Its bundle
+confirms build 39 and the developer service launched it successfully. Its bundle
 identifier, exact preview URL schemes, signing profile device coverage, and strict
 code signature were verified. Production
-native source metadata was restored to its original bytes. This build adds the
-property overview and owner-controlled interior sharing described in
-[Room access](ROOM_ACCESS.md). Browser/automated checks passed; its new sharing
-flow still needs the user's physical-iPhone check.
+native source metadata was restored to its original bytes. This build adds
+[Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and retains Preview 38's
+property overview and owner-controlled interior sharing. Browser/automated
+checks passed; the new native flows still need the user's physical-iPhone check.
 
 Build 36 could not install because its seven-day Apple development profile had
 expired at **11:59:51 p.m. on October 3, America/New_York**
 (`2026-10-04 03:59:51 UTC`). Build 37 used normal automatic signing to renew the
 profile, now expiring at **2:55:16 a.m. on October 11, America/New_York**
-(`2026-10-11 06:55:16 UTC`). Preview 38 uses that still-valid profile and retains
+(`2026-10-11 06:55:16 UTC`). Preview 39 uses that still-valid profile and retains
 the authenticated simulation timer fix. The following user-reported account
 tests were completed on Preview 37.
 
@@ -135,7 +135,7 @@ Apple signing team; replace all path/team placeholders:
 ```sh
 python3 scripts/build-ios-preview.py \
   --env-file /absolute/path/outside-repo/vantahome-preview.env \
-  --build-number 38 \
+  --build-number 39 \
   --team-id YOURTEAMID \
   --derived-data /absolute/path/outside-repo/preview-derived-data \
   --log /absolute/path/outside-repo/preview-build.log

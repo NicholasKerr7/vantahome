@@ -2,11 +2,12 @@
 
 Access combines a current household membership, room scope, and action
 permissions. The app filters the experience; Supabase independently authorizes
-cloud reads and commands. Migrations **001–019** and the preview-aware invitation
+cloud reads and commands. Migrations **001–020** and the preview-aware invitation
 function are deployed to **staging only**. Authenticated API verification has
-passed with disposable accounts. **Preview 38** is installed and was launched on
-the user's iPhone 16 Pro Max on **2026-10-07**; see the property-overview checkpoint
-below. At the earlier **2026-10-04** checkpoint, Preview **37**
+passed with disposable accounts. **Preview 39** is installed and was launched on
+the user's iPhone 16 Pro Max on **2026-10-07**; it adds
+[Guest access extension/renewal](GUEST_ACCESS_EXTENSIONS.md) and retains the
+property-overview checkpoint below. At the earlier **2026-10-04** checkpoint, Preview **37**
 was installed on that phone, with the installed version confirmed
 by the device app listing. The user confirmed resolving developer-trust error
 10002 and completing the Owner email/code, password, home creation, and 3D model
@@ -120,6 +121,13 @@ The 3D preview uses separate simulation state for each account/home/member scope
 
 ## Changes, expiry, and privacy
 
+An Owner or authorized Admin can now select **Extend access** or **Renew access**
+on an existing finite Guest's member card. This preserves rooms and action
+permissions without another invitation. The reviewed deadline is checked by
+the server; Admins cannot prolong powers withheld from themselves. Interior
+layout consent resets and remains a separate Owner choice. See
+[Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) for the flow and evidence.
+
 Room-assignment edits use migration 018's atomic `set_home_room_memberships` RPC
 with an explicit home and target person. The server derives their current role;
 mixed-home room lists are rejected, and grants in other homes remain intact. The
@@ -137,8 +145,9 @@ refresh interval.
 Temporary Guest access is enforced by server time, including when the app is
 closed. The client also checks its cached deadline on use, at expiry, and on
 resume. Expired memberships remain visible to administrators for review. A fresh
-invitation may deliberately renew an expired Guest; acceptance replaces old room
-assignments and clears old action overrides. Tenant access does not expire.
+invitation may still deliberately renew an expired Guest; acceptance replaces old
+room assignments and clears old action overrides. Use the member-card renewal to
+retain existing assignments and overrides. Tenant access does not expire.
 
 Assigned-room rendering provides **visual privacy in the app**, not confidentiality
 of the bundled architectural assets. The complete model ships in the app bundle;
@@ -167,9 +176,8 @@ before packaging; the signed Release build was installed and launched on October
 | Physical check pending | Owner sharing switch and Guest exterior/interior/revocation flow on Preview 38; installation/launch alone does not establish those UI results |
 
 The original 24-hour test Guest grant ended October 5. It was not extended by
-this work; a fresh, deliberate Owner invitation is needed for another physical
-Guest test if access remains expired. Production and physical iPad testing are
-unchanged.
+this work. Preview 39 now provides a deliberate Owner **Renew access** action
+for the next physical Guest test. Production and physical iPad testing are unchanged.
 
 ### Earlier account and lifecycle checkpoint — 2026-10-04
 

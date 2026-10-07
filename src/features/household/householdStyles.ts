@@ -129,6 +129,13 @@ export const householdStyles = StyleSheet.create({
   gold: { backgroundColor: "#FFD166" },
   green: { backgroundColor: "#A5FF9B" },
   memberIdentity: { alignItems: "center", gap: 12, paddingVertical: 14 },
+  memberIdentityCompact: { alignItems: "stretch", gap: 10, paddingVertical: 4 },
+  memberIdentityHeader: { alignItems: "center", gap: 12, width: "100%" },
+  memberIdentityHeaderCompact: { flexDirection: "row", gap: 12 },
+  memberIdentityCopy: { alignItems: "center", gap: 8, maxWidth: "100%" },
+  memberIdentityCopyCompact: { alignItems: "flex-start", flex: 1, minWidth: 0, gap: 4 },
+  avatarRingCompact: { padding: 6 },
+  memberNameCompact: { fontSize: 20, textAlign: "left" },
   memberName: {
     color: theme.colors.text,
     fontSize: 24,
