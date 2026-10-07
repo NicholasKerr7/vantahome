@@ -73,7 +73,51 @@ Last maintained: **2026-10-07**. Read this before rediscovering the project.
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
 
-## Current implementation and evidence
+## Continuous arrival and warm return (Preview 41)
+
+Startup now uses one mounted arrival component through account preparation and
+membership verification. Its artwork continues without a new intro; copy follows
+real state. Once verified, controls/navigation are available while a compact
+`PropertyArrival` occupies only the scene. The old native ring loader was removed.
+There are no minimum animation holds, fake percentages, or new dependencies.
+
+- Membership reads run concurrently after user/home selection; room grants wait
+  only for room IDs. Any failed policy/registry read rejects the entire snapshot.
+- Native packaged HTML prewarms alongside account setup. In-flight copies deduplicate;
+  later calls still detect an OS-evicted cache.
+- Same-account Home can retain a paused WebView/iframe for up to 45 seconds behind
+  an opaque input/accessibility shield during re-verification. This is a resource
+  lease, **never cached authorization**. Shared runtimes stop, frame access/catalog
+  clear, native panels close, and fresh permissions reconnect the bridge.
+- Failure, missing/revoked access, Guest expiry, scope change, timeout, and memory
+  pressure release retained resources. Only Main/Home qualifies; no camera or
+  account route is retained during a check. Queued frame navigation also requires
+  live authority and an unsuspended view.
+- `membershipVerification` is ephemeral and excluded from persistence. A lifecycle
+  generation rejects pre-background requests that arrive after foregrounding.
+- Verification: **180 app suites / 2,616 tests**, app TypeScript and release
+  version/assets/auth-redirect checks pass. Independent lifecycle review found and
+  repaired the stale-request race and queued-frame-navigation issue. Final logs:
+  `arrival-full-tests-final.log`, `arrival-root-typecheck-final.log`,
+  `arrival-release-checks.log`, `arrival-warm-guard-tests.log`.
+- Real-component browser harness: preparing/checking/returning/property at
+  320×568, 430×932, 768×1024, 1024×768 (16 captures), no page/internal overflow.
+  Preparing→checking preserves the artwork DOM node. Motion animates normally;
+  Reduce Motion freezes it. Simulated 1.5× text fits the smallest phone with
+  artwork hidden and actions reachable. No browser errors; harness/browser/servers
+  removed. Evidence: `arrival-consolidated-visual-evidence.json`,
+  `arrival-consolidated-accessibility-evidence.json`, `arrival-consolidated-*.png`.
+- Preview **41** Release build succeeded and strict signature/bundle/scheme/device
+  checks passed. Installed and launched October 7; device listing independently
+  confirms **1.0.0 / 41**. Production metadata was restored. The signing profile
+  still expires October 11 at 06:55:16 UTC. Logs/receipts: `native-preview-build-41.log`,
+  `native-preview-build-41-summary.log`, `preview41-package-check.json`,
+  `preview41-install.json`, `preview41-installed-app.json`, `preview41-launch.json`.
+- Native startup latency and physical Dynamic Type are not measured by these browser
+  checks. The prior offline/renewal tests remain valid historical evidence; the new
+  warm-return presentation still needs the user's physical review.
+
+## Previous cinematic arrival (Preview 40)
 
 The verification/connection fallback now has a cinematic purple arrival screen:
 generic floating villa artwork, gentle light-ring motion, distinct checking and

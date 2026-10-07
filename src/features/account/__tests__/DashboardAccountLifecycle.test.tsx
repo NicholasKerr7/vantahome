@@ -1,10 +1,12 @@
 import React from 'react';
+import { AppState } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import ThreeDHomeScreen from '../../../screens/ThreeDHomeScreen';
 import type { SceneSurfaceProps } from '../../three-d-home/protocol';
 
 let mockSceneProps: SceneSurfaceProps;
 const mockNavigate = jest.fn();
+const originalAppState = AppState.currentState;
 // Jest's CommonJS VM cannot execute this import boundary; exercise the real sheet eagerly here.
 jest.mock('react', () => {
   const actual = jest.requireActual('react');
@@ -26,6 +28,9 @@ jest.mock('../../three-d-home/SceneSurface', () => ({ __esModule: true, default:
   return <Text testID="scene-surface">Loaded house</Text>;
 } }));
 
+beforeEach(() => { AppState.currentState = 'active'; });
+afterEach(() => { AppState.currentState = originalAppState; });
+
 test('account controls pause the loaded property and resume it without a second load', async () => {
   const screen = render(<ThreeDHomeScreen />);
   act(() => mockSceneProps.onStatus('ready'));
@@ -37,5 +42,5 @@ test('account controls pause the loaded property and resume it without a second 
   fireEvent.press(screen.getByLabelText('Close account'));
   expect(mockSceneProps.suspended).toBe(false);
   expect(screen.getByTestId('scene-surface')).toBe(scene);
-  expect(screen.queryByText('Preparing your home…')).toBeNull();
+  expect(screen.queryByText('Opening your property…')).toBeNull();
 });

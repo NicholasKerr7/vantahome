@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Linking, View, Text, ActivityIndicator, StyleSheet, Platform, useWindowDimensions } from "react-native";
+import { AppState, Linking, View, StyleSheet, Platform, useWindowDimensions } from "react-native";
 import {
   NavigationContainer,
   DefaultTheme,
   type NavigatorScreenParams,
+  type NavigationState,
+  type PartialState,
 } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -27,7 +29,7 @@ import {
   applyMembershipSnapshot,
   syncMembershipFromSupabase,
 } from "../services/membership";
-import { hydrateHomeAccount, useHomeStore } from "../store/useHomeStore";
+import { hydrateHomeAccount, invalidateHomeMembership, useHomeStore } from "../store/useHomeStore";
 import { resolveAuthExperience, runtimePolicy } from "../config/runtimeMode";
 import {
   cancelAuthFlow,
@@ -35,7 +37,6 @@ import {
   needsInvitationPasswordSetup,
 } from "../services/authFlow";
 import { deviceClient } from "../services/deviceClient";
-import Pressable from "../components/Pressable";
 import PasswordRecoveryScreen from "../screens/PasswordRecoveryScreen";
 import CommandFeedbackProvider from "../components/command-feedback/CommandFeedbackProvider";
 import ModelHomeSync from '../features/three-d-home/ModelHomeSync';
@@ -45,6 +46,7 @@ import { isHomeInvitationUrl } from '../config/authRedirects';
 import { signOutAccount } from '../features/account/accountSession';
 import { isAccountScopeCurrent } from '../features/account/accountIdentity';
 import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
+import { useWarmHomeRetention } from './useWarmHomeRetention';
 
 /**
  * Root stack for the app.
@@ -84,9 +86,14 @@ function IntegrationsRoute(props: NativeStackScreenProps<RootStackParamList, 'In
 }
 
 /** Keep verification actions local to this account and discard results after the gate closes. */
-function MembershipVerificationGate({ status, onRetry }: {
-  status: 'checking' | 'unavailable';
-  onRetry: () => void;
+function MembershipVerificationGate({ status, onRetry, returning, canSignOut, busy, statusMessage, statusDescription }: {
+  status: 'preparing' | 'checking' | 'unavailable';
+  onRetry?: () => void;
+  returning: boolean;
+  canSignOut: boolean;
+  busy?: boolean;
+  statusMessage?: string;
+  statusDescription?: string;
 }) {
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -95,7 +102,7 @@ function MembershipVerificationGate({ status, onRetry }: {
 
   /** Ignore duplicate taps and never carry a delayed sign-out result into another account. */
   const handleSignOut = () => {
-    if (signOutAttempt.current) return;
+    if (signOutAttempt.current || busy) return;
     const attempt = Symbol('verification-sign-out');
     const scope = useHomeStore.getState();
     signOutAttempt.current = attempt;
@@ -115,9 +122,13 @@ function MembershipVerificationGate({ status, onRetry }: {
 
   return <HomeVerificationScreen
     status={status}
-    onRetry={() => { if (!signOutAttempt.current) onRetry(); }}
-    onSignOut={handleSignOut}
+    variant={returning ? 'returning' : 'arrival'}
+    statusMessage={statusMessage}
+    statusDescription={statusDescription}
+    onRetry={onRetry ? () => { if (!signOutAttempt.current && !busy) onRetry(); } : undefined}
+    onSignOut={canSignOut ? handleSignOut : undefined}
     signingOut={signingOut}
+    retrying={busy}
     signOutError={signOutError}
   />;
 }
@@ -132,15 +143,34 @@ export default function AppNavigator() {
   const [authReady, setAuthReady] = useState(false);
   const [startupError, setStartupError] = useState<string | null>(null);
   const [startupRetrying, setStartupRetrying] = useState(false);
-  const [startupSigningOut, setStartupSigningOut] = useState(false);
   const retryStartup = useRef<(() => void) | null>(null);
-  const [membershipError, setMembershipError] = useState(false);
   const [membershipRetry, setMembershipRetry] = useState(0);
-  const [missingMembershipFor, setMissingMembershipFor] = useState<string | null>(null);
   const membershipReady = useHomeStore((s) => s.membershipReady);
+  const verification = useHomeStore((s) => s.membershipVerification);
+  const guestExpiresAt = useHomeStore((s) => {
+    const member = s.household.find((candidate) => candidate.id === s.activeMemberId);
+    return member?.role === 'Guest' ? member.accessExpiresAt : null;
+  });
+  const [homeRouteVisible, setHomeRouteVisible] = useState(true);
+  const appActive = useRef(AppState.currentState !== 'background');
+  const lifecycleGeneration = useRef(0);
   const navigationScope = useHomeStore((s) =>
     `${s.authenticatedUserId ?? "demo"}:${s.sessionEpoch}:${s.accountHomeId ?? "unverified"}`,
   );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'background') lifecycleGeneration.current += 1;
+      if (next !== 'inactive') appActive.current = next === 'active';
+    });
+    // Packaged immutable files may warm up alongside authentication; no household
+    // data, WebView, renderer, or controls are opened before access is verified.
+    if (Platform.OS !== 'web') {
+      const { prewarmNativeScene } = require('../features/three-d-home/prepareNativeScene') as typeof import('../features/three-d-home/prepareNativeScene');
+      prewarmNativeScene();
+    }
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -194,13 +224,10 @@ export default function AppNavigator() {
       retryStartup.current = null;
       setStartupError(null);
       setStartupRetrying(retry);
-      setStartupSigningOut(false);
       deviceClient.resetSession();
       // Clearing is synchronous, before React can render the new identity.
       const hydration = hydrateHomeAccount(userId);
       setAuthReady(false);
-      setMissingMembershipFor(null);
-      setMembershipError(false);
       setSession(nextSession);
       if (!nextSession) {
         setPasswordRecovery(false);
@@ -295,63 +322,34 @@ export default function AppNavigator() {
     if (!session || passwordRecovery || !authReady) return;
     let active = true;
     const sessionEpoch = useHomeStore.getState().sessionEpoch;
+    const generation = lifecycleGeneration.current;
     const isCurrent = () =>
-      active && useHomeStore.getState().sessionEpoch === sessionEpoch &&
+      active && appActive.current && lifecycleGeneration.current === generation &&
+      useHomeStore.getState().sessionEpoch === sessionEpoch &&
       useHomeStore.getState().authenticatedUserId === session.user.id;
     const ensureMembership = async () => {
-      setMembershipError(false);
+      useHomeStore.setState({ membershipVerification: 'checking' });
       const result = await syncMembershipFromSupabase(session.user.id);
       if (!isCurrent()) return;
       if (!result) {
-        setMissingMembershipFor(session.user.id);
+        invalidateHomeMembership('missing');
         return;
       }
-      if (!applyMembershipSnapshot(result, sessionEpoch)) setMembershipError(true);
-      else setMissingMembershipFor(null);
+      if (!applyMembershipSnapshot(result, sessionEpoch)) {
+        invalidateHomeMembership('failed');
+      }
     };
     void ensureMembership().catch(() => {
-      if (isCurrent()) setMembershipError(true);
+      if (isCurrent()) invalidateHomeMembership('failed');
     });
     return () => {
       active = false;
     };
   }, [passwordRecovery, session?.user.id, authReady, membershipRetry]);
 
-  if (!authReady) {
-    if (!startupError && !startupRetrying) return null;
-    return <View style={[styles.viewport, desktopPreview && styles.desktopViewport]}>
-      <View style={styles.membershipOverlay} accessibilityLiveRegion="polite">
-        {startupRetrying && <ActivityIndicator color={theme.colors.accent2} />}
-        <Text style={[styles.text, styles.startupMessage]}>{startupRetrying ? 'Preparing your account…' : startupError}</Text>
-        <Pressable
-          accessibilityRole="button"
-          style={styles.startupAction}
-          disabled={startupRetrying || startupSigningOut}
-          onPress={() => retryStartup.current?.()}
-        ><Text style={styles.actionText}>Retry</Text></Pressable>
-        {session && <Pressable
-          accessibilityRole="button"
-          style={styles.startupAction}
-          disabled={startupRetrying || startupSigningOut}
-          onPress={() => {
-            const scope = useHomeStore.getState();
-            setStartupSigningOut(true);
-            void signOutAccount(scope).catch(() => {
-              if (useHomeStore.getState().sessionEpoch === scope.sessionEpoch) {
-                setStartupError('Unable to sign out on this device. Retry or try signing out again.');
-              }
-            }).finally(() => {
-              if (useHomeStore.getState().sessionEpoch === scope.sessionEpoch) setStartupSigningOut(false);
-            });
-          }}
-        ><Text style={styles.subtext}>{startupSigningOut ? 'Signing out…' : 'Sign out'}</Text></Pressable>}
-      </View>
-    </View>;
-  }
-
   // A renewal confirmed by the foreground or periodic sync replaces the earlier
   // missing-access result without requiring another login or invitation.
-  const missingMembership = Boolean(session && !membershipReady && missingMembershipFor === session.user.id);
+  const missingMembership = Boolean(session && !membershipReady && verification === 'missing');
   const checkingMembership = Boolean(session && !passwordRecovery && !membershipReady && !missingMembership);
   const needsHomeAccess = Boolean(session && !passwordRecovery && (missingMembership || invitationRequested));
   const authExperience = resolveAuthExperience({
@@ -360,23 +358,39 @@ export default function AppNavigator() {
   });
   // Shared background controls must obey the same credential and household gates
   // as private navigation, including when a verified session is later revoked.
-  const homeReady = !passwordRecovery && !checkingMembership && !needsHomeAccess
+  const homeReady = authReady && !passwordRecovery && !checkingMembership && !needsHomeAccess
     && (authExperience === "authenticated" || authExperience === "demo");
+  const retainHome = useWarmHomeRetention({
+    admitted: homeReady && Boolean(session) && homeRouteVisible,
+    checking: authReady && checkingMembership && verification === 'checking' && !needsHomeAccess && homeRouteVisible,
+    scope: navigationScope,
+    guestExpiresAt,
+  });
+
+  /** Reuse graphics only from the main Home route, never a retained camera or account screen. */
+  const trackHomeRoute = (state: NavigationState | PartialState<NavigationState> | undefined) => {
+    const root = state?.routes[state.index ?? 0];
+    const nested = root?.state;
+    const leaf = nested?.routes[nested.index ?? 0];
+    setHomeRouteVisible(root?.name === 'Main' && (!leaf || leaf.name === 'Home'));
+  };
+
   return (
     <View style={[styles.viewport, desktopPreview && styles.desktopViewport]}>
       <View
-        style={styles.fill}
+        style={[styles.fill, checkingMembership && styles.hidden]}
         pointerEvents={checkingMembership ? "none" : "auto"}
         accessibilityElementsHidden={checkingMembership}
         importantForAccessibility={
           checkingMembership ? "no-hide-descendants" : "auto"
         }
       >
-        <CommandFeedbackProvider enabled={homeReady}>
+        {authReady && <CommandFeedbackProvider enabled={homeReady}>
           <BottomSheetModalProvider>
             {homeReady && <ModelHomeSync key={`model-home:${navigationScope}`} />}
             <NavigationContainer
               key={navigationScope}
+              onStateChange={trackHomeRoute}
               theme={{
                 ...DefaultTheme,
                 // Ensure the “safe” default background matches our gradient base.
@@ -398,15 +412,12 @@ export default function AppNavigator() {
                   </Stack.Screen>
                 ) : authExperience === "configuration-required" ? (
                   <Stack.Screen name="Auth" component={AuthRequiredScreen} />
-                ) : session && (checkingMembership || needsHomeAccess) ? (
+                ) : session && ((checkingMembership && !retainHome) || needsHomeAccess) ? (
                   <Stack.Screen name="HomeAccess">
                     {() => checkingMembership ? null : <HomeAccessScreen
                       userId={session.user.id}
                       email={session.user.email}
-                      onComplete={() => {
-                        setMissingMembershipFor(null);
-                        setInvitationRequested(false);
-                      }}
+                      onComplete={() => setInvitationRequested(false)}
                       onContinue={membershipReady ? () => setInvitationRequested(false) : undefined}
                     />}
                   </Stack.Screen>
@@ -459,13 +470,22 @@ export default function AppNavigator() {
               </Stack.Navigator>
             </NavigationContainer>
           </BottomSheetModalProvider>
-        </CommandFeedbackProvider>
+        </CommandFeedbackProvider>}
       </View>
-      {checkingMembership && (
+      {(!authReady || checkingMembership) && (
         <MembershipVerificationGate
-          key={`verification:${navigationScope}`}
-          status={membershipError ? 'unavailable' : 'checking'}
-          onRetry={() => setMembershipRetry((value) => value + 1)}
+          key={`verification:${session?.user.id ?? 'pending'}`}
+          status={!authReady
+            ? startupError && !startupRetrying ? 'unavailable' : 'preparing'
+            : verification === 'failed' ? 'unavailable' : 'checking'}
+          statusMessage={!authReady && startupError && !startupRetrying ? startupError : undefined}
+          statusDescription={!authReady && startupError && !startupRetrying ? 'Retry to prepare your account on this device.' : undefined}
+          returning={retainHome}
+          busy={startupRetrying}
+          canSignOut={Boolean(session) && (authReady || Boolean(startupError))}
+          onRetry={authReady
+            ? () => setMembershipRetry((value) => value + 1)
+            : startupError ? () => retryStartup.current?.() : undefined}
         />
       )}
     </View>
@@ -476,10 +496,5 @@ const styles = StyleSheet.create({
   viewport: { flex: 1, width: '100%', alignSelf: 'center', overflow: 'hidden', backgroundColor: theme.colors.bg0 },
   desktopViewport: { maxWidth: 1366, maxHeight: 1024 },
   fill: { flex: 1, minHeight: 0 },
-  membershipOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: theme.colors.bg0 },
-  text: { color: theme.colors.text },
-  actionText: { color: theme.colors.accent },
-  subtext: { color: theme.colors.subtext },
-  startupAction: { minHeight: 44, minWidth: 88, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
-  startupMessage: { maxWidth: 360, paddingHorizontal: 24, textAlign: 'center', lineHeight: 22 },
+  hidden: { opacity: 0 },
 });

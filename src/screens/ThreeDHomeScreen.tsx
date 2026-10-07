@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,7 @@ import Pressable from '../components/Pressable';
 import CinematicSurface from '../components/CinematicSurface';
 import VantaHomeMark from '../components/VantaHomeMark';
 import SceneSurface from '../features/three-d-home/SceneSurface';
-import HomeSceneLoading from '../features/three-d-home/components/HomeSceneLoading';
+import PropertyArrival from '../features/home-access/PropertyArrival';
 import type { SceneStatus } from '../features/three-d-home/protocol';
 import type { SimulationSaveStatus } from '../features/three-d-home/simulationPersistence';
 import HomeWorkspace from '../features/home-shell/HomeWorkspace';
@@ -18,7 +18,8 @@ import { useDeviceRoutines } from '../features/three-d-home/useDeviceRoutines';
 import { useScenePresentationPaused } from '../features/home-shell/ScenePresentationContext';
 import DashboardAccountButton from '../features/account/DashboardAccountButton';
 import { useHomeStore } from '../store/useHomeStore';
-import { modelSimulationIdentity } from '../features/three-d-home/modelSceneAccess';
+import { modelPresentationIdentity } from '../features/three-d-home/modelSceneAccess';
+import { useRetainedScene } from '../features/three-d-home/useRetainedScene';
 import ModelSimulationSetup from '../features/three-d-home/components/ModelSimulationSetup';
 import { canPrepareModelSimulation } from '../services/modelSimulationSetup';
 
@@ -45,7 +46,7 @@ function SceneSession({ onRetry, onDevices, covered }: { onRetry: () => void; on
         : 'Your app session changed. Reload the house to reconnect.'}</Text>
       {saveStatus === 'disconnected' && <Pressable onPress={onRetry} accessibilityLabel="Reconnect house controls" style={styles.retry}><Text style={styles.retryText}>Reconnect</Text></Pressable>}
     </View>}
-    {status === 'loading' && <HomeSceneLoading active={!covered && !workspaceCovered} />}
+    {status === 'loading' && <PropertyArrival active={!covered && !workspaceCovered} />}
     {status === 'error' && <View style={styles.feedback} accessibilityRole="alert">
       <Ionicons name="cube-outline" size={32} color={theme.colors.accent} />
       <Text style={styles.feedbackTitle}>The 3D view couldn’t load</Text>
@@ -58,23 +59,18 @@ function SceneSession({ onRetry, onDevices, covered }: { onRetry: () => void; on
 
 /** Keep the property central while primary navigation remains visible beside or below it. */
 export default function ThreeDHomeScreen() {
-  const identity = useHomeStore(modelSimulationIdentity);
+  const identity = useHomeStore(modelPresentationIdentity);
+  const accessCurrent = useHomeStore((state) => !(state.accountUserId || state.authenticatedUserId) || state.membershipReady);
   const needsModelSetup = useHomeStore(canPrepareModelSimulation);
   const focused = useIsFocused();
-  const [active, setActive] = useState(AppState.currentState !== 'background');
+  const { active, retained, suspended } = useRetainedScene(focused && accessCurrent && !needsModelSetup);
   const [attempt, setAttempt] = useState(0);
   const [panel, setPanel] = useState<'voice' | 'devices' | 'account' | null>(null);
   const sceneEnabled = isThreeDHomeEnabled();
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      // Brief system overlays retain graphics; actual backgrounding releases them and the mic.
-      if (state !== 'inactive') {
-        setActive(state === 'active');
-        if (state !== 'active') setPanel(null);
-      }
-    });
-    return () => subscription.remove();
-  }, []);
+    // Native modals are separate windows; close them before an access-recheck shield appears.
+    if (!active || !focused || !accessCurrent) setPanel(null);
+  }, [active, focused, accessCurrent]);
   return <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
     <HomeWorkspace section="home">
     <CinematicSurface style={styles.header}>
@@ -86,12 +82,12 @@ export default function ThreeDHomeScreen() {
       <Pressable style={[styles.iconButton, styles.voiceButton]} onPress={() => setPanel('voice')} accessibilityLabel="Open voice control"><Ionicons name="mic-outline" size={19} color={theme.colors.accent} /></Pressable>
       <DashboardAccountButton onPress={() => setPanel('account')} />
     </CinematicSurface>
-    {focused && active && needsModelSetup ? <ModelSimulationSetup /> : focused && active && sceneEnabled ? <SceneSession key={`${identity}:${attempt}`} covered={panel !== null} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
+    {needsModelSetup ? (focused && active ? <ModelSimulationSetup /> : <View style={styles.scene} />) : retained && sceneEnabled ? <SceneSession key={`${identity}:${attempt}`} covered={panel !== null || suspended || !accessCurrent} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}
     </HomeWorkspace>
-    {focused && active && panel === 'account' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><AccountSheet onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
-    {focused && active && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeDeviceLibrary onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
-    {focused && active && panel === 'voice' && <Modal transparent visible animationType="none" onRequestClose={() => setPanel(null)}>
+    {focused && active && accessCurrent && panel === 'account' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><AccountSheet onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
+    {focused && active && accessCurrent && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeDeviceLibrary onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
+    {focused && active && accessCurrent && panel === 'voice' && <Modal transparent visible animationType="none" onRequestClose={() => setPanel(null)}>
       <SafeAreaView style={styles.modalOverlay}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.voiceWrap}>
         <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeVoicePanel onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>
       </KeyboardAvoidingView></SafeAreaView>

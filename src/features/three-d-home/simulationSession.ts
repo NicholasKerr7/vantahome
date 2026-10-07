@@ -82,15 +82,16 @@ export class SimulationSession {
           return device.id !== before?.id || device.kind !== before?.kind || device.roomId !== before?.roomId
             || device.modelDeviceId !== before?.modelDeviceId || device.simulationOnly !== before?.simulationOnly;
         }));
-      if (state.roomMembers !== previous.roomMembers || state.memberPermissionOverrides !== previous.memberPermissionOverrides
+      const accessChanged = state.roomMembers !== previous.roomMembers || state.memberPermissionOverrides !== previous.memberPermissionOverrides
         || state.household !== previous.household || state.rooms !== previous.rooms || state.membershipReady !== previous.membershipReady
-        || registryChanged) {
+        || registryChanged;
+      if (accessChanged) {
         this.scheduleExpiry();
         if (this.requested) this.sendSnapshot();
       }
-      // Slider changes do not alter scene metadata; only registry changes can affect visibility.
+      // Slider changes do not alter metadata; registry or authorization changes can affect visibility.
       if (this.catalogRequested && (state.scenes !== previous.scenes || state.activeSceneId !== previous.activeSceneId
-        || state.rooms !== previous.rooms || registryChanged)) this.sendSceneCatalog();
+        || accessChanged)) this.sendSceneCatalog();
       if (!this.sharedDemo || this.projecting || !this.state || state.devices === previous.devices) return;
       const previousSnapshot = this.state;
       const next = overlayDemoDevices(this.state, state.devices, previous.devices);
@@ -229,6 +230,11 @@ export class SimulationSession {
     if (this.expiryTimer) clearTimeout(this.expiryTimer);
   }
 
+  /** Reject queued host navigation immediately when this scene loses its current permission scope. */
+  canNavigate(): boolean {
+    return !this.disposed && resolveModelSceneAccess(this.store.getState(), this.mode).propertyOverview === true;
+  }
+
   /** Send the complete canonical snapshot so either renderer can recover after reopening. */
   private sendSnapshot(acknowledgedRequestId?: number): void {
     if (!this.state || this.disposed) return;
@@ -259,9 +265,12 @@ export class SimulationSession {
 
   /** Remove the previous identity's presentation before disconnecting an existing frame or inspector. */
   private revokeAccess(): void {
-    if (!this.state || !this.requested) return;
-    try { this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot',
-      state: scopeSimulationSnapshot(this.state, EMPTY_SCENE_ACCESS), access: EMPTY_SCENE_ACCESS }); }
+    try {
+      if (this.state && this.requested) this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot',
+        state: scopeSimulationSnapshot(this.state, EMPTY_SCENE_ACCESS), access: EMPTY_SCENE_ACCESS });
+      if (this.catalogRequested) this.deliverCatalog?.({ channel: SCENE_CATALOG_CHANNEL, version: 1, type: 'catalog',
+        catalog: { scenes: [], activeSceneId: null } });
+    }
     catch { /* Teardown can already have detached its renderer. */ }
   }
 }

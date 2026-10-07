@@ -1,5 +1,5 @@
 import React from "react";
-import { Linking } from "react-native";
+import { AppState, Linking } from "react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import type { Session } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,6 +13,8 @@ const mockNavigationMount = jest.fn();
 const mockModelHomeSyncMount = jest.fn();
 const mockModelHomeSyncUnmount = jest.fn();
 const mockFeedbackEnabled = jest.fn();
+const mockArrivalMount = jest.fn();
+const mockPrewarmScene = jest.fn();
 const mockNeedsInvitationPasswordSetup = jest.fn();
 let mockSupabaseAvailable = true;
 let mockAuthChanged: (event: string, session: Session | null) => void;
@@ -50,6 +52,7 @@ jest.mock("../services/secureSessionStorage", () => ({
     removeItem: jest.fn(async () => {}),
   },
 }));
+jest.mock('../features/three-d-home/prepareNativeScene', () => ({ prewarmNativeScene: () => mockPrewarmScene() }));
 jest.mock("../services/deviceClient", () => ({
   deviceClient: { resetSession: jest.fn() },
 }));
@@ -114,18 +117,21 @@ jest.mock("../features/home-access/HomeAccessScreen", () => () => null);
 jest.mock('../features/home-access/HomeVerificationScreen', () => ({
   __esModule: true,
   /** Keep gate integration tests independent of decorative animation and responsive presentation. */
-  default: ({ status, onRetry, onSignOut, signingOut, signOutError }: {
-    status: 'checking' | 'unavailable';
-    onRetry: () => void;
-    onSignOut: () => void;
+  default: ({ status, statusMessage, onRetry, onSignOut, signingOut, signOutError, retrying }: {
+    status: 'preparing' | 'checking' | 'unavailable';
+    statusMessage?: string;
+    onRetry?: () => void;
+    onSignOut?: () => void;
+    retrying?: boolean;
     signingOut?: boolean;
     signOutError?: string | null;
   }) => {
+    require('react').useEffect(() => { mockArrivalMount(); }, []);
     const { View, Text, Pressable } = require('react-native');
     return <View testID="home-verification-screen">
-      <Text>{status === 'checking' ? 'Verifying your home…' : 'Unable to verify home access.'}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Retry" disabled={signingOut} onPress={onRetry}><Text>Retry</Text></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Sign out" disabled={signingOut} onPress={onSignOut}><Text>{signingOut ? 'Signing out…' : 'Sign out'}</Text></Pressable>
+      <Text>{statusMessage ?? (status === 'checking' ? 'Verifying your home…' : status === 'preparing' ? 'Preparing your account…' : 'Unable to verify home access.')}</Text>
+      {onRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry" disabled={signingOut || retrying} onPress={onRetry}><Text>Retry</Text></Pressable>}
+      {onSignOut && <Pressable accessibilityRole="button" accessibilityLabel="Sign out" disabled={signingOut || retrying} onPress={onSignOut}><Text>{signingOut ? 'Signing out…' : 'Sign out'}</Text></Pressable>}
       {signOutError && <Text>{signOutError}</Text>}
     </View>;
   },
@@ -135,6 +141,7 @@ import AppNavigator from "./AppNavigator";
 import HomeVerificationScreen from '../features/home-access/HomeVerificationScreen';
 import {
   hydrateHomeAccount,
+  invalidateHomeMembership,
   selectVisibleDevices,
   useHomeStore,
 } from "../store/useHomeStore";
@@ -169,9 +176,15 @@ const membershipFor = (id: string): MembershipSyncResult => ({
 
 describe("navigation session boundaries", () => {
   const previousThreeDFlag = process.env.EXPO_PUBLIC_ENABLE_3D_HOME;
+  let changeAppState: (state: "active" | "inactive" | "background") => void;
   let deliverLink: (event: { url: string }) => void;
   beforeEach(async () => {
     mockSupabaseAvailable = true;
+    AppState.currentState = 'active';
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
+      changeAppState = callback;
+      return { remove: jest.fn() };
+    });
     process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "true";
     jest.clearAllMocks();
     await AsyncStorage.clear();
@@ -200,6 +213,64 @@ describe("navigation session boundaries", () => {
       process.env.EXPO_PUBLIC_ENABLE_3D_HOME = previousThreeDFlag;
     }
     jest.restoreAllMocks();
+  });
+
+
+  test('account preparation and verification keep the same arrival component mounted', async () => {
+    let finishPreparation: (value: boolean) => void = () => {};
+    mockNeedsInvitationPasswordSetup.mockImplementationOnce(() => new Promise((resolve) => { finishPreparation = resolve; }));
+    mockMembership.mockImplementationOnce(() => new Promise(() => {}));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(mockNeedsInvitationPasswordSetup).toHaveBeenCalledWith('alice'));
+    expect(screen.getByText('Preparing your account…')).toBeTruthy();
+    const mounts = mockArrivalMount.mock.calls.length;
+    await act(async () => { finishPreparation(false); });
+    expect(screen.getByText('Verifying your home…')).toBeTruthy();
+    expect(mockArrivalMount).toHaveBeenCalledTimes(mounts);
+    expect(mockPrewarmScene).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+  });
+
+  test('a warm check retains hidden Home but immediately removes all shared control runtimes', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    act(() => { invalidateHomeMembership('checking'); });
+    expect(screen.getByText('Verifying your home…')).toBeTruthy();
+    expect(screen.getByTestId('registered-route-Main', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(selectVisibleDevices(useHomeStore.getState())).toEqual([]);
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockModelHomeSyncUnmount).toHaveBeenCalledTimes(1);
+    act(() => { applyMembershipSnapshot(membershipFor('alice'), useHomeStore.getState().sessionEpoch); });
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+    expect(screen.queryByTestId('home-verification-screen')).toBeNull();
+  });
+
+  test.each(['failed', 'missing', 'blocked'] as const)('a %s check discards the retained route and later checking cannot resurrect it', async (reason) => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    act(() => { invalidateHomeMembership('checking'); });
+    expect(screen.getByTestId('registered-route-Main', { includeHiddenElements: true })).toBeTruthy();
+    act(() => { invalidateHomeMembership(reason); });
+    expect(screen.queryByTestId('registered-route-Main', { includeHiddenElements: true })).toBeNull();
+    act(() => { invalidateHomeMembership('checking'); });
+    expect(screen.queryByTestId('registered-route-Main', { includeHiddenElements: true })).toBeNull();
+  });
+
+  test('verification started before background cannot overwrite newly checked foreground grants', async () => {
+    let finishOld: (value: MembershipSyncResult) => void = () => {};
+    mockMembership.mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(mockMembership).toHaveBeenCalled());
+    act(() => { changeAppState('background'); invalidateHomeMembership('checking'); });
+    act(() => { changeAppState('active'); });
+    const fresh = membershipFor('alice');
+    fresh.household[0].role = 'Guest';
+    fresh.roomMembers = [{ memberId: 'alice', roomIds: [] }];
+    act(() => { applyMembershipSnapshot(fresh, useHomeStore.getState().sessionEpoch); });
+    await act(async () => { finishOld(membershipFor('alice')); });
+    expect(useHomeStore.getState().household[0].role).toBe('Guest');
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
   });
 
   test("offline demo keeps sibling keys distinct and resets both components only for a new session scope", async () => {

@@ -469,6 +469,8 @@ export type HomeState = {
   authenticatedUserId: string | null;
   activeHomeId: string | null;
   membershipReady: boolean;
+  /** Ephemeral verification reason; never persisted or usable as an access grant. */
+  membershipVerification: 'idle' | 'checking' | 'failed' | 'missing' | 'blocked';
   sessionEpoch: number;
   userName: string;
   profile: Profile;
@@ -1785,6 +1787,7 @@ export const useHomeStore = create<HomeState>()(
       authenticatedUserId: null,
       activeHomeId: null,
       membershipReady: false,
+      membershipVerification: 'idle',
       sessionEpoch: 0,
       userName: "Nick",
       profile: profileSeed,
@@ -2321,6 +2324,7 @@ export const useHomeStore = create<HomeState>()(
           authenticatedUserId: current.authenticatedUserId,
           activeHomeId: null,
           membershipReady: false,
+          membershipVerification: 'idle',
           sessionEpoch: current.sessionEpoch,
           ...(current.accountUserId
             ? { household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "", modelCatalogVersion: undefined, modelSceneCatalogVersion: undefined, modelCatalogArchive: undefined }
@@ -2402,6 +2406,7 @@ export function clearHomeAccountState(userId: string | null) {
     authenticatedUserId: userId,
     activeHomeId: null,
     membershipReady: false,
+    membershipVerification: 'idle',
     userName: "",
     profile: { name: "", timeFormat: "12h", tempUnit: "C", timezone: "Auto" },
     outdoor: { tempC: 0, label: "Unavailable" },
@@ -2449,9 +2454,11 @@ export async function hydrateHomeAccount(userId: string | null, demo = false) {
   return generation === accountGeneration;
 }
 
-export function invalidateHomeMembership() {
+/** Remove all authority immediately; a checking reason permits only hidden resource retention. */
+export function invalidateHomeMembership(reason: HomeState['membershipVerification'] = 'blocked') {
   useHomeStore.setState({
     activeHomeId: null, membershipReady: false,
+    membershipVerification: reason,
     household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "",
   });
 }

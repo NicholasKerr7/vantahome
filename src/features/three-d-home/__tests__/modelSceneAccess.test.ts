@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import { useHomeStore, type HomeState, type HouseholdMember } from '../../../store/useHomeStore';
-import { resolveModelSceneAccess, modelSimulationScope, scopeSimulationSnapshot } from '../modelSceneAccess';
+import { resolveModelSceneAccess, modelPresentationIdentity, modelSimulationIdentity, modelSimulationScope, scopeSimulationSnapshot } from '../modelSceneAccess';
 import { SimulationSession } from '../simulationSession';
 import { SimulationPersistence } from '../simulationPersistence';
 import { EMPTY_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
@@ -78,6 +78,27 @@ test('isolated simulation keys distinguish both household and person', () => {
   const state = account();
   expect(modelSimulationScope(state, false)).not.toBe(modelSimulationScope({ ...state, accountHomeId: 'other' }, false));
   expect(modelSimulationScope(state, false)).not.toBe(modelSimulationScope({ ...state, activeMemberId: 'other' }, false));
+});
+
+test('a membership recheck retains only the presentation identity, while its authority bridge changes', () => {
+  const current = account();
+  const checking: HomeState = { ...current, membershipReady: false, activeHomeId: null, activeMemberId: '', household: [] };
+  expect(modelPresentationIdentity(checking)).toBe(modelPresentationIdentity(current));
+  expect(modelSimulationIdentity(checking)).not.toBe(modelSimulationIdentity(current));
+  expect(resolveModelSceneAccess(checking, 'production')).toEqual(EMPTY_SCENE_ACCESS);
+});
+
+test.each([
+  { authenticatedUserId: 'other' }, { accountUserId: 'other' }, { accountHomeId: 'other' },
+  { sessionEpoch: 100 }, { realtime: { enabled: true, useMqtt: false, wsUrl: '' } },
+])('presentation resources remain isolated when the account or transport scope changes %#', (change) => {
+  const current = account();
+  expect(modelPresentationIdentity({ ...current, ...change })).not.toBe(modelPresentationIdentity(current));
+});
+
+test('unauthenticated demo member previews do not share a presentation identity', () => {
+  const current = { ...account(), accountUserId: null, authenticatedUserId: null, accountHomeId: null, activeHomeId: null };
+  expect(modelPresentationIdentity({ ...current, activeMemberId: 'another-demo-member' })).not.toBe(modelPresentationIdentity(current));
 });
 
 test('shared interior tour denies forged or stale actions, masks hidden state, and never mutates the real registry', async () => {

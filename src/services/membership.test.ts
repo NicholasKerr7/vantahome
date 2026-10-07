@@ -1,4 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { waitFor } from '@testing-library/react-native';
+
+type ReadResult = { data: unknown[] | null; error: Error | null };
+
+/** Hold one backend response so tests can observe dependencies before data arrives. */
+function deferredRead() {
+  let resolve!: (result: ReadResult) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<ReadResult>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
 
 const mockGetUser = jest.fn();
 let mockMemberships: Array<{ home_id: string; role: string }> = [];
@@ -6,6 +20,9 @@ let mockRowsError: Error | null = null;
 let mockMemberRows: Array<{ user_id: string; role: string; access_expires_at?: string | null; share_interior_layout?: unknown }> = [];
 let mockRegistryRows: Record<string, unknown[]> = {};
 const mockHomeReads = jest.fn();
+const mockReadStarts = jest.fn();
+const mockRoomFilters = jest.fn();
+let mockPendingReads: Partial<Record<string, Promise<ReadResult>>> = {};
 jest.mock('./supabaseClient', () => ({ supabase: {
   auth: { getUser: () => mockGetUser() },
   /** Model the query builder without weakening filtering or active-home assertions. */
@@ -15,12 +32,15 @@ jest.mock('./supabaseClient', () => ({ supabase: {
       select(value: string) { columns = value; return query; },
       eq(field: string, value: string) { if (field === 'home_id') mockHomeReads(table, value); return query; },
       order() { return query; },
-      in() { return query; },
-      then(resolve: (value: unknown) => unknown) {
+      in(field: string, values: string[]) { mockRoomFilters(field, values); return query; },
+      then(resolve: (value: ReadResult) => unknown, reject?: (error: Error) => unknown) {
+        const readKey = table === 'home_members' && columns === 'home_id, role, access_expires_at'
+          ? 'memberships' : table;
+        mockReadStarts(readKey);
         const rows = table === 'home_members'
           ? columns === 'home_id, role, access_expires_at' ? mockMemberships : mockMemberRows
           : mockRegistryRows[table] ?? [];
-        return Promise.resolve({ data: rows, error: mockRowsError }).then(resolve);
+        return (mockPendingReads[readKey] ?? Promise.resolve({ data: rows, error: mockRowsError })).then(resolve, reject);
       },
     };
     return query;
@@ -39,6 +59,7 @@ beforeEach(async () => {
   mockRowsError = null;
   mockMemberRows = [{ user_id: 'alice', role: 'member' }];
   mockRegistryRows = {};
+  mockPendingReads = {};
 });
 
 test('ordinary membership synchronization retains the authorized active household', async () => {
@@ -133,4 +154,109 @@ test('maps authoritative guest expiry and UUID model bindings without inferring 
   useHomeStore.setState({ devices: [{ ...result.devices[0], observedAt: Date.parse('2099-01-01T00:00:00Z'), modelDeviceId: 'old-binding', simulationOnly: false, isOn: false }] });
   expect(applyMembershipSnapshot(result)).toBe(true);
   expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ modelDeviceId: 'bedroom-1-light', simulationOnly: true, isOn: false }));
+});
+
+
+test('starts independent reads together and room grants as soon as rooms arrive, then applies one complete policy', async () => {
+  const members = deferredRead();
+  const rooms = deferredRead();
+  const devices = deferredRead();
+  const overrides = deferredRead();
+  const grants = deferredRead();
+  mockPendingReads = {
+    home_members: members.promise,
+    rooms: rooms.promise,
+    devices: devices.promise,
+    member_permission_overrides: overrides.promise,
+    room_members: grants.promise,
+  };
+  useHomeStore.setState({ accountHomeId: 'active-home', membershipReady: false });
+  const installed = jest.fn((snapshot: MembershipSyncResult | null) => snapshot && applyMembershipSnapshot(snapshot));
+  const synchronization = syncMembershipFromSupabase('alice').then(installed);
+
+  await waitFor(() => expect(mockReadStarts.mock.calls.map(([table]) => table)).toEqual(
+    expect.arrayContaining(['home_members', 'rooms', 'devices', 'member_permission_overrides']),
+  ));
+  expect(mockReadStarts).not.toHaveBeenCalledWith('room_members');
+  expect(mockHomeReads.mock.calls.every(([, homeId]) => homeId === 'active-home')).toBe(true);
+  expect(installed).not.toHaveBeenCalled();
+
+  rooms.resolve({ data: [{ id: 'living-room', name: 'Living room' }], error: null });
+  await waitFor(() => expect(mockReadStarts).toHaveBeenCalledWith('room_members'));
+  expect(mockRoomFilters).toHaveBeenCalledWith('room_id', ['living-room']);
+  expect(installed).not.toHaveBeenCalled();
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+
+  members.resolve({ data: [{ user_id: 'alice', role: 'guest', access_expires_at: '2099-01-01T00:00:00Z' }], error: null });
+  devices.resolve({ data: [], error: null });
+  grants.resolve({ data: [{ room_id: 'living-room', user_id: 'alice' }], error: null });
+  expect(installed).not.toHaveBeenCalled();
+  overrides.resolve({ data: [{ user_id: 'alice', permission: 'lock.unlock', allowed: false }], error: null });
+
+  expect(await synchronization).toBe(true);
+  expect(installed).toHaveBeenCalledTimes(1);
+  expect(useHomeStore.getState()).toEqual(expect.objectContaining({
+    membershipReady: true,
+    rooms: [{ id: 'living-room', name: 'Living room' }],
+    roomMembers: [{ memberId: 'alice', roomIds: ['living-room'] }],
+    memberPermissionOverrides: [{ memberId: 'alice', permission: 'lock.unlock', allowed: false }],
+  }));
+});
+
+test('does not start household reads while home authorization is still unresolved', async () => {
+  const memberships = deferredRead();
+  mockPendingReads.memberships = memberships.promise;
+  const synchronization = syncMembershipFromSupabase('alice', 'unauthorized-home');
+  await waitFor(() => expect(mockReadStarts).toHaveBeenCalledWith('memberships'));
+  expect(mockHomeReads).not.toHaveBeenCalled();
+  memberships.resolve({ data: [{ home_id: 'active-home', role: 'guest' }], error: null });
+  expect(await synchronization).toBeNull();
+  expect(mockHomeReads).not.toHaveBeenCalled();
+});
+
+test.each(['home_members', 'rooms', 'devices', 'room_members', 'member_permission_overrides'])(
+  'a failed %s read rejects the whole snapshot without replacing existing policy',
+  async (failedRead) => {
+    const failure = deferredRead();
+    mockPendingReads[failedRead] = failure.promise;
+    mockRegistryRows.rooms = [{ id: 'living-room', name: 'Living room' }];
+    const previousOverrides = [{ memberId: 'alice', permission: 'light.control' as const, allowed: false }];
+    const previousRooms = [{ id: 'prior-room', name: 'Prior room' }];
+    useHomeStore.setState({ membershipReady: false, rooms: previousRooms, memberPermissionOverrides: previousOverrides });
+    const installed = jest.fn((snapshot: MembershipSyncResult | null) => snapshot && applyMembershipSnapshot(snapshot));
+    const synchronization = syncMembershipFromSupabase('alice').then(installed);
+    const rejected = expect(synchronization).rejects.toThrow('Read unavailable');
+
+    await waitFor(() => expect(mockReadStarts).toHaveBeenCalledWith(failedRead));
+    failure.resolve({ data: null, error: new Error('Read unavailable') });
+    await rejected;
+    expect(installed).not.toHaveBeenCalled();
+    expect(useHomeStore.getState()).toEqual(expect.objectContaining({
+      membershipReady: false,
+      rooms: previousRooms,
+      memberPermissionOverrides: previousOverrides,
+    }));
+    if (failedRead === 'rooms') expect(mockReadStarts).not.toHaveBeenCalledWith('room_members');
+  },
+);
+
+test('a rejected permission transport fails promptly while other reads are still pending', async () => {
+  const devices = deferredRead();
+  const overrides = deferredRead();
+  mockPendingReads = { devices: devices.promise, member_permission_overrides: overrides.promise };
+  const synchronization = syncMembershipFromSupabase('alice');
+  const rejected = expect(synchronization).rejects.toThrow('Network request failed');
+  await waitFor(() => expect(mockReadStarts).toHaveBeenCalledWith('devices'));
+  overrides.reject(new Error('Network request failed'));
+  await rejected;
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  devices.resolve({ data: [], error: null });
+});
+
+test('an empty room registry skips room grants without skipping permission overrides', async () => {
+  mockRegistryRows.member_permission_overrides = [{ user_id: 'alice', permission: 'light.control', allowed: false }];
+  const result = await syncMembershipFromSupabase('alice');
+  expect(mockReadStarts).not.toHaveBeenCalledWith('room_members');
+  expect(result?.roomMembers).toEqual([]);
+  expect(result?.permissionOverrides).toEqual([{ memberId: 'alice', permission: 'light.control', allowed: false }]);
 });

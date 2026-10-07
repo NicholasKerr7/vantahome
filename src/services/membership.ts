@@ -79,19 +79,29 @@ function mapRole(role: string): HouseholdMember["role"] {
   }
 }
 
+/** Reject any failed policy or registry read before an incomplete snapshot can escape. */
+async function requireMembershipRead<Result extends { error: unknown }>(
+  query: PromiseLike<Result>,
+): Promise<Result> {
+  const result = await query;
+  if (result.error) throw result.error;
+  return result;
+}
+
 /** Read an authorized home, retaining the active one unless an invitation selects another. */
 export async function syncMembershipFromSupabase(
   expectedUserId?: string,
   preferredHomeId?: string,
 ): Promise<MembershipSyncResult | null> {
-  if (!supabase) return null;
-  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const client = supabase;
+  if (!client) return null;
+  const { data: userData, error: userError } = await client.auth.getUser();
   if (userError) throw userError;
   if (!userData?.user) return null;
 
   const userId = userData.user.id;
   if (expectedUserId && expectedUserId !== userId) return null;
-  const { data: memberships, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await client
     .from("home_members")
     .select("home_id, role, access_expires_at")
     .eq("user_id", userId)
@@ -106,22 +116,53 @@ export async function syncMembershipFromSupabase(
     : rows.find((row) => row.home_id === retainedHomeId) ?? rows[0];
   if (!membership) return null;
 
-  const { data: membersData, error: membersError } = await supabase
-    .from("home_members")
-    .select("user_id, role, access_expires_at, share_interior_layout")
-    .eq("home_id", membership.home_id);
-
-  const { data: roomsData, error: roomsError } = await supabase
+  // These reads share the verified account/home scope, but do not depend on each
+  // other. Only room grants wait for room IDs; the result remains one snapshot.
+  const roomsRequest = requireMembershipRead(client
     .from("rooms")
     .select("id, name, model_room_id")
-    .eq("home_id", membership.home_id);
-  if (membersError || roomsError) throw membersError ?? roomsError;
+    .eq("home_id", membership.home_id));
+  const roomMembersRequest = roomsRequest.then(async ({ data }): Promise<RoomMembership[]> => {
+    const roomIds = ((data ?? []) as RoomRow[]).map((room) => room.id);
+    if (!roomIds.length) return [];
+    const { data: roomMembersData } = await requireMembershipRead(client
+      .from("room_members")
+      .select("room_id, user_id")
+      .in("room_id", roomIds));
+    const grouped: Record<string, string[]> = {};
+    (roomMembersData as RoomMemberRow[] | null)?.forEach((row) => {
+      if (!grouped[row.user_id]) grouped[row.user_id] = [];
+      grouped[row.user_id].push(row.room_id);
+    });
+    return Object.keys(grouped).map((memberId) => ({
+      memberId,
+      roomIds: grouped[memberId],
+    }));
+  });
+  const [
+    { data: membersData },
+    { data: roomsData },
+    { data: devicesData },
+    { data: overrideData },
+    roomMembers,
+  ] = await Promise.all([
+    requireMembershipRead(client
+      .from("home_members")
+      .select("user_id, role, access_expires_at, share_interior_layout")
+      .eq("home_id", membership.home_id)),
+    roomsRequest,
+    requireMembershipRead(client
+      .from("devices")
+      .select("id, name, kind, room_id, model_device_id, simulation_only, device_state(state, updated_at)")
+      .eq("home_id", membership.home_id)),
+    // Failed overrides must never silently become the role's default permissions.
+    requireMembershipRead(client
+      .from("member_permission_overrides")
+      .select("user_id, permission, allowed")
+      .eq("home_id", membership.home_id)),
+    roomMembersRequest,
+  ]);
 
-  const { data: devicesData, error: devicesError } = await supabase
-    .from("devices")
-    .select("id, name, kind, room_id, model_device_id, simulation_only, device_state(state, updated_at)")
-    .eq("home_id", membership.home_id);
-  if (devicesError) throw devicesError;
   const devices = ((devicesData ?? []) as unknown as DeviceRow[]).map((row) => {
     const device: Device = {
       id: row.id,
@@ -146,25 +187,6 @@ export async function syncMembershipFromSupabase(
     };
   });
 
-  const roomIds = (roomsData as RoomRow[] | null)?.map((room) => room.id) ?? [];
-  let roomMembers: RoomMembership[] = [];
-  if (roomIds.length) {
-    const { data: roomMembersData, error: roomMembersError } = await supabase
-      .from("room_members")
-      .select("room_id, user_id")
-      .in("room_id", roomIds);
-    if (roomMembersError) throw roomMembersError;
-    const grouped: Record<string, string[]> = {};
-    (roomMembersData as RoomMemberRow[] | null)?.forEach((row) => {
-      if (!grouped[row.user_id]) grouped[row.user_id] = [];
-      grouped[row.user_id].push(row.room_id);
-    });
-    roomMembers = Object.keys(grouped).map((memberId) => ({
-      memberId,
-      roomIds: grouped[memberId],
-    }));
-  }
-
   // Account metadata is external input; only a nonempty string can label a member.
   const ownNames: unknown[] = [userData.user.user_metadata?.full_name, userData.user.user_metadata?.name, userData.user.email];
   const ownName = ownNames.find((name): name is string => typeof name === "string" && name.trim().length > 0)?.trim() ?? "You";
@@ -182,13 +204,6 @@ export async function syncMembershipFromSupabase(
       status: "away",
     })) ?? [];
 
-  const { data: overrideData, error: overrideError } = await supabase
-    .from("member_permission_overrides")
-    .select("user_id, permission, allowed")
-    .eq("home_id", membership.home_id);
-  // Do not replace a previously synchronized security policy with role defaults
-  // when the override read fails.
-  if (overrideError) throw overrideError;
   const validPermissions = new Set<string>(ACTION_PERMISSIONS);
   const permissionOverrides =
     (overrideData as PermissionOverrideRow[] | null)
@@ -251,6 +266,7 @@ export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSe
     accountHomeId: result.homeId,
     activeHomeId: result.homeId,
     membershipReady: true,
+    membershipVerification: 'idle',
     rooms: result.rooms,
     devices,
     household: result.household,

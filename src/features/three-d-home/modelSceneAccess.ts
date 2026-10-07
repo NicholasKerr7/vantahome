@@ -19,6 +19,18 @@ export function modelSimulationIdentity(state: HomeState): string {
   ]);
 }
 
+/** Keep packaged graphics warm during a same-account recheck, never across account or home changes. */
+export function modelPresentationIdentity(state: HomeState): string {
+  const account = Boolean(state.accountUserId || state.authenticatedUserId);
+  return JSON.stringify([
+    state.accountUserId, state.authenticatedUserId, state.accountHomeId, state.sessionEpoch,
+    state.realtime.enabled, state.realtime.useMqtt,
+    // Demo member previews have no authenticated identity and must remain isolated.
+    ...(account ? [] : [state.activeHomeId, state.activeMemberId,
+      state.household.find((member) => member.id === state.activeMemberId)?.role]),
+  ]);
+}
+
 /** Resolve authorized model identities only; names and renderer input can never grant room access. */
 export function resolveModelSceneAccess(state: HomeState, mode: RuntimeMode = runtimePolicy.mode): SceneAccess {
   const member = state.household.find((candidate) => candidate.id === state.activeMemberId);

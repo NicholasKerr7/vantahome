@@ -25,6 +25,7 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const commandActivity = useCommandActivityLauncher();
   const access = useHomeStore(useShallow(selectHomeNavigationAccess));
+  const accessCurrent = useHomeStore((state) => !(state.accountUserId || state.authenticatedUserId) || state.membershipReady);
   const focused = useIsFocused();
   const [panel, setPanel] = useState<'menu' | 'devices' | null>(null);
   const motionAllowed = useDecorativeMotion(focused && panel !== null);
@@ -32,7 +33,7 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
     const subscription = AppState.addEventListener('change', (state) => { if (state === 'background') setPanel(null); });
     return () => subscription.remove();
   }, []);
-  useEffect(() => { if (!focused) setPanel(null); }, [focused]);
+  useEffect(() => { if (!focused || !accessCurrent) setPanel(null); }, [focused, accessCurrent]);
   useEffect(() => { if (panel === 'devices' && !access.devices) setPanel(null); }, [access.devices, panel]);
 
   /** Route primary destinations directly; drawers retain the current property or collection. */
@@ -72,9 +73,9 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
         {section === 'scenes' || section === 'automations' ? <HomeDestinationGuard destination={section}>{children}</HomeDestinationGuard> : children}
       </HomeNavigation>
     </ScenePresentationContext.Provider>
-    {focused && panel === 'menu' && <HomeMenu motionAllowed={motionAllowed} onClose={() => setPanel(null)} onSelect={selectDestination}
+    {focused && accessCurrent && panel === 'menu' && <HomeMenu motionAllowed={motionAllowed} onClose={() => setPanel(null)} onSelect={selectDestination}
       rendererAvailable={isRendererLabEnabled()} activityAvailable={Boolean(commandActivity)} availableDestinations={access} />}
-    {focused && panel === 'devices' && access.devices && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<View style={styles.loading}><ActivityIndicator color={theme.colors.accent} /></View>}>
+    {focused && accessCurrent && panel === 'devices' && access.devices && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<View style={styles.loading}><ActivityIndicator color={theme.colors.accent} /></View>}>
       <HomeDeviceLibrary onClose={() => setPanel(null)} />
     </Suspense></HomePanelBoundary>}
   </>;

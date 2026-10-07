@@ -4,6 +4,8 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import ThreeDHomeScreen from '../../../screens/ThreeDHomeScreen';
 import type { SceneSurfaceProps } from '../protocol';
 import { CommandActivityContext } from '../../../components/command-feedback/CommandActivityContext';
+import { SCENE_RETENTION_MS } from '../useRetainedScene';
+import { useHomeStore } from '../../../store/useHomeStore';
 
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
@@ -11,6 +13,7 @@ const mockDispatch = jest.fn();
 let mockFocused = true;
 let mockStatus: SceneSurfaceProps['onStatus'];
 let mockSceneProps: SceneSurfaceProps;
+const originalAppState = AppState.currentState;
 jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, dispatch: mockDispatch }), useIsFocused: () => mockFocused }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
@@ -23,18 +26,18 @@ jest.mock('../SceneSurface', () => ({ __esModule: true, default: (props: SceneSu
   return <Text testID="scene-surface">Packaged scene</Text>;
 } }));
 
-beforeEach(() => { mockFocused = true; mockGoBack.mockClear(); mockNavigate.mockClear(); mockDispatch.mockClear(); jest.useFakeTimers(); });
-afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
+beforeEach(() => { AppState.currentState = 'active'; mockFocused = true; mockGoBack.mockClear(); mockNavigate.mockClear(); mockDispatch.mockClear(); jest.useFakeTimers(); });
+afterEach(() => { AppState.currentState = originalAppState; jest.useRealTimers(); jest.restoreAllMocks(); });
 
 test('keeps the simulation boundary and main feature menu available during load', () => {
   const screen = render(<ThreeDHomeScreen />);
   expect(screen.getByText('Simulation · no real device control')).toBeTruthy();
-  expect(screen.getByText('Preparing your home…')).toBeTruthy();
+  expect(screen.getByText('Opening your property…')).toBeTruthy();
   expect(screen.queryByLabelText('Back to dashboard')).toBeNull();
   fireEvent.press(screen.getByLabelText('Scenes'));
   expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'NAVIGATE', payload: { name: 'Main', params: { screen: 'Scenes', pop: true }, pop: true } }));
   act(() => mockStatus('ready'));
-  expect(screen.queryByText('Preparing your home…')).toBeNull();
+  expect(screen.queryByText('Opening your property…')).toBeNull();
 });
 
 test('opens integrations and household tools from the home menu', () => {
@@ -61,7 +64,7 @@ test('pauses covered graphics without replacing the loaded scene and resumes on 
   expect(screen.getByTestId('scene-surface')).toBe(loadedSurface);
   fireEvent.press(screen.getByLabelText('Close home menu'));
   expect(mockSceneProps.suspended).toBe(false);
-  expect(screen.queryByText('Preparing your home…')).toBeNull();
+  expect(screen.queryByText('Opening your property…')).toBeNull();
 });
 test('keeps the loaded scene paused until the global command activity dialog closes', () => {
   const launcher = { open: jest.fn(), count: 0, visible: false };
@@ -74,7 +77,7 @@ test('keeps the loaded scene paused until the global command activity dialog clo
   screen.rerender(<CommandActivityContext.Provider value={launcher}><ThreeDHomeScreen /></CommandActivityContext.Provider>);
   expect(mockSceneProps.suspended).toBe(false);
   expect(screen.getByTestId('scene-surface')).toBe(loadedSurface);
-  expect(screen.queryByText('Preparing your home…')).toBeNull();
+  expect(screen.queryByText('Opening your property…')).toBeNull();
 });
 test('recovers from renderer errors and slow loads with a fresh scene', () => {
   const screen = render(<ThreeDHomeScreen />);
@@ -85,23 +88,54 @@ test('recovers from renderer errors and slow loads with a fresh scene', () => {
   act(() => jest.advanceTimersByTime(90_000));
   expect(screen.getByText('The 3D view couldn’t load')).toBeTruthy();
 });
-test('unmounts graphics when the app backgrounds or navigation leaves the scene', () => {
-  let onStateChange: (state: string) => void = () => undefined;
+test('preserves a paused scene during short background visits and releases graphics after a bounded absence', () => {
+  const listeners: ((state: string) => void)[] = [];
   const remove = jest.fn();
-  jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
-    onStateChange = listener as (state: string) => void;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((type, listener) => {
+    if (type === 'change') listeners.push(listener as (state: string) => void);
     return { remove };
   });
   const screen = render(<ThreeDHomeScreen />);
-  act(() => onStateChange('inactive'));
-  expect(screen.getByTestId('scene-surface')).toBeTruthy();
-  act(() => onStateChange('background'));
-  expect(screen.queryByTestId('scene-surface')).toBeNull();
-  act(() => onStateChange('active'));
-  expect(screen.getByTestId('scene-surface')).toBeTruthy();
+  act(() => mockStatus('ready'));
+  const scene = screen.getByTestId('scene-surface');
+  act(() => listeners.forEach((listener) => listener('inactive')));
+  expect(screen.getByTestId('scene-surface')).toBe(scene);
+  act(() => listeners.forEach((listener) => listener('background')));
+  expect(mockSceneProps.suspended).toBe(true);
+  expect(screen.getByTestId('scene-surface')).toBe(scene);
+  act(() => listeners.forEach((listener) => listener('active')));
+  expect(mockSceneProps.suspended).toBe(false);
+  expect(screen.getByTestId('scene-surface')).toBe(scene);
+  expect(screen.queryByText('Opening your property…')).toBeNull();
   mockFocused = false;
   screen.rerender(<ThreeDHomeScreen />);
+  expect(mockSceneProps.suspended).toBe(true);
+  expect(screen.getByTestId('scene-surface')).toBe(scene);
+  act(() => jest.advanceTimersByTime(SCENE_RETENTION_MS));
   expect(screen.queryByTestId('scene-surface')).toBeNull();
   screen.unmount();
-  expect(remove).toHaveBeenCalledTimes(2);
+  expect(remove).toHaveBeenCalledTimes(3);
+});
+
+test('a same-account recheck retains paused graphics and closes the native menu until fresh verification', () => {
+  const original = useHomeStore.getState();
+  const verified = { ...original, accountUserId: 'warm-person', authenticatedUserId: 'warm-person', accountHomeId: 'warm-home',
+    activeHomeId: 'warm-home', activeMemberId: 'warm-person', membershipReady: true,
+    household: [{ id: 'warm-person', name: 'Person', role: 'Owner' as const, status: 'home' as const }] };
+  useHomeStore.setState(verified);
+  const screen = render(<ThreeDHomeScreen />);
+  act(() => mockStatus('ready'));
+  const scene = screen.getByTestId('scene-surface');
+  fireEvent.press(screen.getByLabelText('Open home menu'));
+  expect(screen.getByLabelText('Close home menu')).toBeTruthy();
+  act(() => { useHomeStore.setState({ membershipReady: false, household: [], activeMemberId: '', activeHomeId: null }); });
+  expect(screen.queryByLabelText('Close home menu')).toBeNull();
+  expect(screen.getByTestId('scene-surface')).toBe(scene);
+  expect(mockSceneProps.suspended).toBe(true);
+  act(() => { useHomeStore.setState(verified); });
+  expect(screen.getByTestId('scene-surface')).toBe(scene);
+  expect(mockSceneProps.suspended).toBe(false);
+  expect(screen.queryByText('Opening your property…')).toBeNull();
+  screen.unmount();
+  useHomeStore.setState(original, true);
 });

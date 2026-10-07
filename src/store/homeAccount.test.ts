@@ -244,3 +244,25 @@ test("an old hydration cannot overwrite a newer session, even when returning to 
   expect(useHomeStore.getState().membershipReady).toBe(true);
   spy.mockRestore();
 });
+
+
+test('verification state is never restored from cache or treated as authorization', async () => {
+  await hydrateHomeAccount('alice');
+  applyMembershipSnapshot(snapshot('alice'));
+  invalidateHomeMembership('checking');
+  expect(useHomeStore.getState().membershipVerification).toBe('checking');
+  expect(authorizeLocalDeviceCommand({ op: 'toggle', deviceId: 'alice-camera', on: true }).allowed).toBe(false);
+  const partial = useHomeStore.persist.getOptions().partialize!(useHomeStore.getState());
+  expect(partial).not.toHaveProperty('membershipVerification');
+  const merged = useHomeStore.persist.getOptions().merge!({
+    accountUserId: 'alice',
+    membershipReady: true,
+    membershipVerification: 'checking',
+    activeHomeId: 'alice-home',
+  }, useHomeStore.getState());
+  expect(merged.membershipReady).toBe(false);
+  expect(merged.membershipVerification).toBe('idle');
+  expect(merged.activeHomeId).toBeNull();
+  await hydrateHomeAccount('bob');
+  expect(useHomeStore.getState().membershipVerification).toBe('idle');
+});

@@ -116,8 +116,8 @@ function App() {
           useHomeStore.getState().sessionEpoch !== sessionEpoch
         )
           return;
-        if (!result || !applyMembershipSnapshot(result))
-          invalidateHomeMembership();
+        if (!result) invalidateHomeMembership('missing');
+        else if (!applyMembershipSnapshot(result)) invalidateHomeMembership('failed');
       } catch {
         if (
           !disposed &&
@@ -125,7 +125,7 @@ function App() {
           useHomeStore.getState().authenticatedUserId === userId &&
           useHomeStore.getState().sessionEpoch === sessionEpoch
         ) {
-          invalidateHomeMembership();
+          invalidateHomeMembership('failed');
         }
       }
     };
@@ -138,7 +138,7 @@ function App() {
       const previous = currentAppState;
       currentAppState = next;
       ++refreshVersion;
-      if (next !== "active" && supabase) invalidateHomeMembership();
+      if (next !== "active" && supabase) invalidateHomeMembership('checking');
       reconcile();
       if (next === "active" && previous !== "active") void refresh();
     });
