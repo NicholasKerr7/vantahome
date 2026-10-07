@@ -1,12 +1,16 @@
 # Authentication redirects and preview packaging
 
-Configuration checkpoint: **2026-10-07**. Preview **39** built successfully and
+Configuration checkpoint: **2026-10-07**. Preview **40** built successfully and
 is installed on the user's **iPhone 16 Pro Max**; the device's app listing
-confirms build 39 and the developer service launched it successfully. Its bundle
+confirms build 40 and the developer service launched it successfully. Its bundle
 identifier, exact preview URL schemes, signing profile device coverage, and strict
 code signature were verified. Production
-native source metadata was restored to its original bytes. This build adds
-[Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and retains Preview 38's
+native source metadata was restored to its original bytes. This build redesigns
+the verification/recovery screen with generic animated villa artwork and scoped
+sign-out feedback. The permission checks are unchanged. Focused verification:
+46 tests / three suites, TypeScript, and phone/tablet browser layouts passed;
+physical review of the new presentation is still separate. It retains Preview 39's
+[Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and Preview 38's
 property overview and owner-controlled interior sharing. Browser/automated checks
 passed. The user confirmed the Preview 39 iPhone Guest renewal check, including
 return with the existing account and retained room/control restrictions. A
@@ -19,7 +23,7 @@ Build 36 could not install because its seven-day Apple development profile had
 expired at **11:59:51 p.m. on October 3, America/New_York**
 (`2026-10-04 03:59:51 UTC`). Build 37 used normal automatic signing to renew the
 profile, now expiring at **2:55:16 a.m. on October 11, America/New_York**
-(`2026-10-11 06:55:16 UTC`). Preview 39 uses that still-valid profile and retains
+(`2026-10-11 06:55:16 UTC`). Preview 40 uses that still-valid profile and retains
 the authenticated simulation timer fix. The following user-reported account
 tests were completed on Preview 37.
 
@@ -140,7 +144,7 @@ Apple signing team; replace all path/team placeholders:
 ```sh
 python3 scripts/build-ios-preview.py \
   --env-file /absolute/path/outside-repo/vantahome-preview.env \
-  --build-number 39 \
+  --build-number 40 \
   --team-id YOURTEAMID \
   --derived-data /absolute/path/outside-repo/preview-derived-data \
   --log /absolute/path/outside-repo/preview-build.log

@@ -33,7 +33,6 @@ import {
   cancelAuthFlow,
   completeAuthCallback,
   needsInvitationPasswordSetup,
-  waitForAuthExchange,
 } from "../services/authFlow";
 import { deviceClient } from "../services/deviceClient";
 import Pressable from "../components/Pressable";
@@ -41,8 +40,10 @@ import PasswordRecoveryScreen from "../screens/PasswordRecoveryScreen";
 import CommandFeedbackProvider from "../components/command-feedback/CommandFeedbackProvider";
 import ModelHomeSync from '../features/three-d-home/ModelHomeSync';
 import HomeAccessScreen from '../features/home-access/HomeAccessScreen';
+import HomeVerificationScreen from '../features/home-access/HomeVerificationScreen';
 import { isHomeInvitationUrl } from '../config/authRedirects';
 import { signOutAccount } from '../features/account/accountSession';
+import { isAccountScopeCurrent } from '../features/account/accountIdentity';
 import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
 
 /**
@@ -80,6 +81,45 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function IntegrationsRoute(props: NativeStackScreenProps<RootStackParamList, 'Integrations'>) {
   const Screen = require('../screens/IntegrationsScreen').default as typeof import('../screens/IntegrationsScreen').default;
   return <HomeDestinationGuard destination="integrations"><Screen {...props} /></HomeDestinationGuard>;
+}
+
+/** Keep verification actions local to this account and discard results after the gate closes. */
+function MembershipVerificationGate({ status, onRetry }: {
+  status: 'checking' | 'unavailable';
+  onRetry: () => void;
+}) {
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const signOutAttempt = useRef<symbol | null>(null);
+  useEffect(() => () => { signOutAttempt.current = null; }, []);
+
+  /** Ignore duplicate taps and never carry a delayed sign-out result into another account. */
+  const handleSignOut = () => {
+    if (signOutAttempt.current) return;
+    const attempt = Symbol('verification-sign-out');
+    const scope = useHomeStore.getState();
+    signOutAttempt.current = attempt;
+    setSigningOut(true);
+    setSignOutError(null);
+    void signOutAccount(scope).catch(() => {
+      if (signOutAttempt.current === attempt && isAccountScopeCurrent(scope, useHomeStore.getState())) {
+        setSignOutError('Unable to sign out on this device. Please try again.');
+      }
+    }).finally(() => {
+      if (signOutAttempt.current === attempt) {
+        signOutAttempt.current = null;
+        setSigningOut(false);
+      }
+    });
+  };
+
+  return <HomeVerificationScreen
+    status={status}
+    onRetry={() => { if (!signOutAttempt.current) onRetry(); }}
+    onSignOut={handleSignOut}
+    signingOut={signingOut}
+    signOutError={signOutError}
+  />;
 }
 
 export default function AppNavigator() {
@@ -422,35 +462,11 @@ export default function AppNavigator() {
         </CommandFeedbackProvider>
       </View>
       {checkingMembership && (
-        <View
-          accessibilityViewIsModal
-          style={styles.membershipOverlay}
-        >
-          {!membershipError && (
-            <ActivityIndicator color={theme.colors.accent2} />
-          )}
-          <Text style={styles.text}>
-            {membershipError
-              ? "Unable to verify home access."
-              : "Verifying your home…"}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setMembershipRetry((value) => value + 1)}
-          >
-            <Text style={styles.actionText}>Retry</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              void cancelAuthFlow()
-                .then(waitForAuthExchange)
-                .then(() => supabase?.auth.signOut({ scope: "local" }));
-            }}
-          >
-            <Text style={styles.subtext}>Sign out</Text>
-          </Pressable>
-        </View>
+        <MembershipVerificationGate
+          key={`verification:${navigationScope}`}
+          status={membershipError ? 'unavailable' : 'checking'}
+          onRetry={() => setMembershipRetry((value) => value + 1)}
+        />
       )}
     </View>
   );

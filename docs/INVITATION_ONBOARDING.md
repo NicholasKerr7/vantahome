@@ -9,9 +9,10 @@ sign in normally and review their invitation inbox.
 preview callbacks and the invitation function use `vantahome-preview`. Public
 sign-up remains disabled and invitation OTP length remains eight digits. The
 earlier hosted API permission sweep passed 32 checks with disposable accounts.
-Preview **39** is installed on the user's **iPhone 16 Pro Max**, confirmed by the
-device's app listing, and the developer service launched it successfully. It adds
-in-app Guest extension/renewal and retains property overview/interior sharing;
+Preview **40** is installed on the user's **iPhone 16 Pro Max**, confirmed by the
+device's app listing, and the developer service launched it successfully. It
+redesigns verification/recovery without changing permissions, and retains Preview
+39's in-app Guest extension/renewal and property overview/interior sharing;
 see [Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and the earlier
 [property checkpoint](ROOM_ACCESS.md#property-overview-checkpoint--2026-10-07).
 The new flow has browser/API coverage. The user also confirmed the Preview 39

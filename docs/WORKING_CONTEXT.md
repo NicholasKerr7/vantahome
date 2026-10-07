@@ -67,8 +67,42 @@ Last maintained: **2026-10-07**. Read this before rediscovering the project.
   access**, **Retry**, and **Sign out**. Restoring connectivity returned access;
   door control remained blocked. Do not repeat this check or infer whether Retry
   was tapped, how long recovery took, or broader lifecycle behavior from it.
+- Preview **40** is now installed and launched on the same iPhone (device listing
+  confirms 1.0.0 / 40). It adds the cinematic verification/recovery screen below.
+  Release packaging, exact identity/schemes, profile device coverage, and strict
+  signature passed; production metadata was restored. Signing expiry remains
+  October 11 as above. Physical review of the new presentation is not yet reported.
 
 ## Current implementation and evidence
+
+The verification/connection fallback now has a cinematic purple arrival screen:
+generic floating villa artwork, gentle light-ring motion, distinct checking and
+unconfirmed-access copy, and accessible Retry/Sign out actions. The artwork uses
+small SVGs, never household data or the private scene; there are no new dependencies
+or artificial loading delays. Reduce Motion, background pauses, and large-text
+fallbacks are preserved. Scoped sign-out now rejects duplicate taps and displays
+failures without leaking feedback across accounts. Permission gates are unchanged.
+
+- Focused verification: **46 tests / three suites**, app TypeScript, and diff checks
+  passed. Independent review found no actionable security/motion regressions.
+- Actual-component browser harness: checking/unavailable at 320×568, 375×667,
+  375×812, 430×932, 768×1024 and 1024×768 with representative safe-area insets.
+  No document or internal scrolling; actions stay visible. Reduced Motion is
+  static; regular checking motion animates. Larger-text layout and approximate
+  browser text scaling were checked, not physical iOS Dynamic Type.
+- The exact sign-out failure copy also fits 320×568 with no scrolling. The final
+  small-screen artwork is 88 px high. Temporary harness entry, both servers and
+  test browsers were removed before the final native packaging run.
+- Evidence in the work directory: `arrival-focused-tests.log`,
+  `arrival-typecheck.log`, `arrival-visual-evidence.json`,
+  `arrival-final-browser-errors.json`, and `arrival-*-safe-*.png` screenshots.
+  Fresh browser reports no errors; the existing RN Web pointerEvents deprecation
+  warning remains. The harness uses no accounts or backend calls.
+- Preview 40 logs/receipts: `native-preview-build-40.log`,
+  `native-preview-build-40-summary.log`, `preview40-package-check.json`,
+  `preview40-install.json`, `preview40-installed-app.json`, `preview40-launch.json`.
+  Apple initially could not see the phone; reconnecting made it available and
+  installation/launch succeeded. No further reconnect request is pending.
 
 Guest Extend/Renew implementation, staging rollout, and Preview 39 installation
 are complete. Prior property sharing landed in `9ac2056`. Use
@@ -118,7 +152,9 @@ Previous property-sharing evidence (no scene source changed for Preview 39):
 
 ## Resume next
 
-1. Next physical check: Owner shared-interior consent and Guest layout/revocation.
+1. Preview 40 is installed for visual review; no repeated Guest renewal/offline
+   test is needed merely to see the redesign. Next permission check remains Owner
+   shared-interior consent and Guest layout/revocation.
    Guest renewal and offline/reconnect with retained door restrictions already
    passed by the user's report; do not repeat them.
 2. Other physical checks: online background/resume, warm recovery,

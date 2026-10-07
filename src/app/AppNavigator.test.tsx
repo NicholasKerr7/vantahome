@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const mockGetSession = jest.fn();
 const mockSetSession = jest.fn();
 const mockExchangeCode = jest.fn();
+const mockSignOut = jest.fn();
 const mockMembership = jest.fn();
 const mockNavigationMount = jest.fn();
 const mockModelHomeSyncMount = jest.fn();
@@ -22,7 +23,7 @@ jest.mock("../services/supabaseClient", () => {
       getSession: () => mockGetSession(),
       setSession: (tokens: unknown) => mockSetSession(tokens),
       exchangeCodeForSession: (code: string) => mockExchangeCode(code),
-      signOut: jest.fn(async () => ({ error: null })),
+      signOut: (...args: unknown[]) => mockSignOut(...args),
       onAuthStateChange: (callback: typeof mockAuthChanged) => {
         mockAuthChanged = callback;
         return { data: { subscription: { unsubscribe: jest.fn() } } };
@@ -110,8 +111,28 @@ jest.mock("../screens/AuditLogScreen", () => () => null);
 jest.mock("../screens/CameraViewerScreen", () => () => null);
 jest.mock("../screens/PasswordRecoveryScreen", () => () => null);
 jest.mock("../features/home-access/HomeAccessScreen", () => () => null);
+jest.mock('../features/home-access/HomeVerificationScreen', () => ({
+  __esModule: true,
+  /** Keep gate integration tests independent of decorative animation and responsive presentation. */
+  default: ({ status, onRetry, onSignOut, signingOut, signOutError }: {
+    status: 'checking' | 'unavailable';
+    onRetry: () => void;
+    onSignOut: () => void;
+    signingOut?: boolean;
+    signOutError?: string | null;
+  }) => {
+    const { View, Text, Pressable } = require('react-native');
+    return <View testID="home-verification-screen">
+      <Text>{status === 'checking' ? 'Verifying your home…' : 'Unable to verify home access.'}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Retry" disabled={signingOut} onPress={onRetry}><Text>Retry</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Sign out" disabled={signingOut} onPress={onSignOut}><Text>{signingOut ? 'Signing out…' : 'Sign out'}</Text></Pressable>
+      {signOutError && <Text>{signOutError}</Text>}
+    </View>;
+  },
+}));
 
 import AppNavigator from "./AppNavigator";
+import HomeVerificationScreen from '../features/home-access/HomeVerificationScreen';
 import {
   hydrateHomeAccount,
   selectVisibleDevices,
@@ -158,6 +179,7 @@ describe("navigation session boundaries", () => {
     mockGetSession.mockResolvedValue({
       data: { session: sessionFor("alice") },
     });
+    mockSignOut.mockResolvedValue({ error: null });
     mockMembership.mockImplementation(async (id: string) => membershipFor(id));
     mockNeedsInvitationPasswordSetup.mockResolvedValue(false);
     jest.spyOn(Linking, "getInitialURL").mockResolvedValue(null);
@@ -523,6 +545,86 @@ describe("navigation session boundaries", () => {
     fireEvent.press(screen.getByText("Retry"));
     await waitFor(() => expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true));
     expect(screen.queryByText("Unable to verify home access.")).toBeNull();
+  });
+
+  test('Retry restarts a stalled verification and ignores the replaced response', async () => {
+    let finishOld: (value: MembershipSyncResult | null) => void = () => {};
+    mockMembership.mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Verifying your home…')).toBeTruthy());
+    expect(screen.getByTestId('home-verification-screen')).toBeTruthy();
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    await act(async () => { finishOld(null); });
+    expect(screen.queryByTestId('home-verification-screen')).toBeNull();
+    expect(screen.queryByTestId('registered-route-HomeAccess')).toBeNull();
+    expect(mockMembership).toHaveBeenCalledTimes(2);
+    expect(mockModelHomeSyncMount).toHaveBeenCalledTimes(1);
+    expect(useHomeStore.getState().activeHomeId).toBe('alice-home');
+  });
+
+  test('verification sign-out prevents duplicate requests, exposes failure, and permits another attempt', async () => {
+    let failSignOut: (error: Error) => void = () => {};
+    mockMembership.mockRejectedValue(new Error('Offline'));
+    mockSignOut.mockImplementationOnce(() => new Promise((_, reject) => { failSignOut = reject; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Unable to verify home access.')).toBeTruthy());
+    // Invoke before React commits disabled buttons to exercise the synchronous tap guard.
+    const { onSignOut: signOut, onRetry: retry } = screen.UNSAFE_getByType(HomeVerificationScreen).props;
+    act(() => { signOut(); signOut(); retry(); });
+    await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1));
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(screen.getByText('Signing out…')).toBeTruthy();
+    expect(mockMembership).toHaveBeenCalledTimes(1);
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+    await act(async () => { failSignOut(new Error('Local session storage unavailable')); });
+    expect(screen.getByText('Unable to sign out on this device. Please try again.')).toBeTruthy();
+    expect(screen.queryByText('Signing out…')).toBeNull();
+    mockSignOut.mockImplementationOnce(async () => {
+      mockAuthChanged('SIGNED_OUT', null);
+      return { error: null };
+    });
+    fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Auth')).toBeTruthy());
+    expect(screen.queryByTestId('home-verification-screen')).toBeNull();
+    expect(mockSignOut).toHaveBeenCalledTimes(2);
+    expect(mockFeedbackEnabled).not.toHaveBeenCalledWith(true);
+  });
+
+  test('a delayed sign-out session check cannot sign out a newly selected account', async () => {
+    let finishSession: (value: { data: { session: Session } }) => void = () => {};
+    mockMembership.mockRejectedValue(new Error('Offline'));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Unable to verify home access.')).toBeTruthy());
+    mockGetSession.mockImplementationOnce(() => new Promise((resolve) => { finishSession = resolve; }));
+    fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(mockGetSession).toHaveBeenCalledTimes(2));
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(mockMembership).toHaveBeenCalledWith('bob'));
+    await act(async () => { finishSession({ data: { session: sessionFor('alice') } }); });
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(screen.getByText('Sign out')).toBeTruthy();
+    expect(screen.queryByText('Unable to sign out on this device. Please try again.')).toBeNull();
+    expect(useHomeStore.getState().authenticatedUserId).toBe('bob');
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+  });
+
+  test('a late sign-out error from the prior account does not enter the new verification screen', async () => {
+    let failSignOut: (error: Error) => void = () => {};
+    mockMembership.mockRejectedValue(new Error('Offline'));
+    mockSignOut.mockImplementationOnce(() => new Promise((_, reject) => { failSignOut = reject; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Unable to verify home access.')).toBeTruthy());
+    fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1));
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(mockMembership).toHaveBeenCalledWith('bob'));
+    await act(async () => { failSignOut(new Error('Previous account storage failed')); });
+    expect(screen.queryByText('Unable to sign out on this device. Please try again.')).toBeNull();
+    expect(screen.getByText('Sign out')).toBeTruthy();
+    expect(useHomeStore.getState().authenticatedUserId).toBe('bob');
+    expect(mockFeedbackEnabled).not.toHaveBeenCalledWith(true);
   });
 
   test("account changes remount private screen state but ordinary home refresh does not", async () => {

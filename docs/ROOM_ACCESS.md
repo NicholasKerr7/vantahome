@@ -4,9 +4,10 @@ Access combines a current household membership, room scope, and action
 permissions. The app filters the experience; Supabase independently authorizes
 cloud reads and commands. Migrations **001–020** and the preview-aware invitation
 function are deployed to **staging only**. Authenticated API verification has
-passed with disposable accounts. **Preview 39** is installed and was launched on
-the user's iPhone 16 Pro Max on **2026-10-07**; it adds
-[Guest access extension/renewal](GUEST_ACCESS_EXTENSIONS.md) and retains the
+passed with disposable accounts. **Preview 40** is installed and was launched on
+the user's iPhone 16 Pro Max on **2026-10-07**; it redesigns the verification/recovery
+screen while preserving permission gates. It retains Preview 39's
+[Guest access extension/renewal](GUEST_ACCESS_EXTENSIONS.md) and the
 property-overview checkpoint below. At the earlier **2026-10-04** checkpoint, Preview **37**
 was installed on that phone, with the installed version confirmed
 by the device app listing. The user confirmed resolving developer-trust error
@@ -173,7 +174,7 @@ before packaging; the signed Release build was installed and launched on October
 | Scene packaging | Web and offline native bundles rebuilt; native scene is approximately 28.1 MiB |
 | Native packaging | Preview 38 Release build passed; bundle/schemes, device profile coverage and strict signature verified; production metadata restored; device listing confirms installed version 1.0.0 (38), and launch succeeded |
 | Cleanup | Disposable QA home, two synthetic accounts, and temporary credential record removed; no real membership consent changed |
-| Physical check pending | Owner sharing switch and Guest exterior/interior/revocation flow, retained in installed Preview 39; installation/launch alone does not establish those UI results |
+| Physical check pending | Owner sharing switch and Guest exterior/interior/revocation flow, retained in installed Preview 40; installation/launch alone does not establish those UI results |
 
 The original 24-hour test Guest grant ended October 5. It was not extended by
 this work. The user subsequently confirmed Preview 39 Owner **Renew access**,
