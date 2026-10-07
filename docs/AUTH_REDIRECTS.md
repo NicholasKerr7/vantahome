@@ -7,8 +7,10 @@ identifier, exact preview URL schemes, signing profile device coverage, and stri
 code signature were verified. Production
 native source metadata was restored to its original bytes. This build adds
 [Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and retains Preview 38's
-property overview and owner-controlled interior sharing. Browser/automated
-checks passed; the new native flows still need the user's physical-iPhone check.
+property overview and owner-controlled interior sharing. Browser/automated checks
+passed. The user confirmed the Preview 39 iPhone Guest renewal check, including
+return with the existing account and retained room/control restrictions. Shared
+interior consent/revocation and the remaining lifecycle checks are separate.
 
 Build 36 could not install because its seven-day Apple development profile had
 expired at **11:59:51 p.m. on October 3, America/New_York**

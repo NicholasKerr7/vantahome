@@ -77,7 +77,11 @@ October 7, 2026:
 - Preview **39** Release build, identity/scheme/profile/signature checks passed.
   The iPhone 16 Pro Max app listing confirms installed version 1.0.0 (39), and the
   developer service launched it. Production source metadata was restored.
-  User confirmation of the native UI and physical iPad testing remain pending.
+  The user subsequently confirmed the requested iPhone renewal check works:
+  renewal, Guest return with the existing account, Living-room light access, and
+  blocked door control. This is user-reported physical evidence; it does not
+  establish custom deadlines, automatic expiry, or network/lifecycle behavior.
+  Physical iPad testing remains deferred.
 
 The first hosted stale-request check exposed PostgREST's retry behavior for
 custom `40001` errors. Business staleness now returns `22023` and the regression

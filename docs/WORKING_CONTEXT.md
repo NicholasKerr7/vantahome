@@ -58,8 +58,11 @@ Last maintained: **2026-10-07**. Read this before rediscovering the project.
 - Preview 39 Release build **succeeded**; exact bundle/schemes, device coverage and
   strict signature verified. Production metadata restored. Signing profile
   expires **2026-10-11 06:55:16 UTC**. Installed October 7; the physical device's
-  app listing confirms 1.0.0 (39), and the developer service launched it. The new
-  extension/sharing UI still needs the user's physical check.
+  app listing confirms 1.0.0 (39), and the developer service launched it.
+- The user confirmed the requested Preview 39 iPhone Guest renewal check works:
+  renewal, return with the existing account, and retained Living-room/control
+  restrictions. Do not repeat that test. Shared-interior consent/revocation and
+  the remaining connection/session checks are separate.
 
 ## Current implementation and evidence
 
@@ -111,14 +114,10 @@ Previous property-sharing evidence (no scene source changed for Preview 39):
 
 ## Resume next
 
-1. Physical Preview 39 check: Owner dashboard account → Household → Members →
-   Guest → **Renew access** (or **Extend access**). Choose duration, review, confirm.
-   Then check Guest return without another invitation and unchanged permissions.
-   Owner can enable **Rooms & interior layout → Interior layout** separately;
-   deadline changes reset that optional consent. Verify exterior/shared tour and
-   revocation on the phone; browser coverage already passed.
-2. Remaining broader physical tests: warm recovery, explicit invitation-link
-   routing, offline/reconnect, background/resume, observed Guest deadline expiry.
+1. Next physical check: Guest background/resume and offline/reconnect. Renewal
+   and retained room/control permissions already passed by the user's report.
+2. Other physical checks: shared-interior consent/revocation, warm recovery,
+   explicit invitation-link routing, and observed Guest deadline expiry.
    Do not represent automated/browser results as physical-device results.
 3. Continue work from relevant source/tests and cached evidence; do not rerun all
    checks or rediscover the repository merely to resume. Recheck volatile state.

@@ -14,7 +14,10 @@ device's app listing, and the developer service launched it successfully. It add
 in-app Guest extension/renewal and retains property overview/interior sharing;
 see [Guest access extensions](GUEST_ACCESS_EXTENSIONS.md) and the earlier
 [property checkpoint](ROOM_ACCESS.md#property-overview-checkpoint--2026-10-07).
-The new flow has browser/API coverage and awaits physical-iPhone confirmation.
+The new flow has browser/API coverage. The user also confirmed the Preview 39
+iPhone Guest renewal check works, including return with the existing account and
+retained Living-room/control restrictions. Network/lifecycle and actual deadline
+expiry checks remain separate.
 On Preview 37, the user confirmed resolving developer trust and completing the
 Owner email/code, password, household creation, and model preparation steps on
 the physical iPhone. A read-only staging check confirmed email verification, a
