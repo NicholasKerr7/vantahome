@@ -176,7 +176,7 @@ function runCase({ width, height, device, persistence = false }) {
     const tabId = browser('tab', 'list').tabs.find((tab) => tab.active)?.tabId;
     assert.ok(tabId, 'The isolated QA tab exists');
     browser('tab', tabId);
-    waitFor(`!document.hidden && document.querySelector('.reset-view-control')?.disabled === false
+    waitFor(`!document.hidden && document.querySelector('#house-preview')?.dataset.sceneReady === 'true'
       && !document.querySelector('.scene-loading') && !document.querySelector('vite-error-overlay')
       && document.querySelector('.device-viewport').dataset.layout === '${width > height ? 'tablet-landscape' : width < 600 ? 'mobile-portrait' : 'tablet-portrait'}'`);
     let pages = [];

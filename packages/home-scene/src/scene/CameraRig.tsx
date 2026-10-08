@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { OrbitControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { MathUtils, PerspectiveCamera, Vector3 } from 'three';
+import { MathUtils, PerspectiveCamera, Quaternion, Vector3 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { getExteriorPrivacyDistance, getLandscapeCamera } from './siteGeometry';
 import { getOverviewDistanceScale } from './overviewFraming';
@@ -9,15 +9,33 @@ import siteLayout from '../site-layout.json';
 import { getRoom } from '../data';
 import { ROOM_POSITIONS, type HouseSceneProps } from './types';
 import { useCinematicStore } from '../cinematicStore';
-import { advanceCinematicOrbit, bindCinematicInterruptions, canPlayCinematic } from './cinematicMotion';
+import { canPlayCinematic } from './cinematicMotion';
+import { advanceCinematicTour, createCinematicTourFrame, sampleCinematicTour, type CinematicTourFrame } from './cinematicTour';
 
 type CameraProps = Pick<
   HouseSceneProps,
   'view' | 'floor' | 'roomId' | 'reducedMotion'
-> & { suspended: boolean; roomOnly?: boolean; exteriorOnly?: boolean };
+> & { suspended: boolean; roomOnly?: boolean; exteriorOnly?: boolean; tourAllowed?: boolean; tourFrame?: CinematicTourFrame };
+
+interface TourReturnLayout {
+  canvasWidth: number;
+  canvasHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}
+
+interface TourReturnPose extends TourReturnLayout {
+  position: Vector3;
+  orientation: Quaternion;
+  up: Vector3;
+  target: Vector3;
+  fov: number | null;
+  yaw: number;
+  pitch: number;
+}
 
 /** Animate camera presets, then hand complete control back to the visitor. */
-export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomOnly = false, exteriorOnly = false }: CameraProps) {
+export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomOnly = false, exteriorOnly = false, tourAllowed = true, tourFrame }: CameraProps) {
   const controls = useRef<OrbitControlsImpl>(null);
   const { camera, gl, size } = useThree();
   const destination = useRef(new Vector3(27, 23, 14));
@@ -26,9 +44,92 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
   const direction = useRef(new Vector3());
   const moving = useRef(true);
   const lookAngles = useRef({ yaw: 0, pitch: 0 });
-  const cinematicElapsed = useRef(0);
+  const [localTourFrame] = useState(createCinematicTourFrame);
+  const frame = tourFrame ?? localTourFrame;
+  const returnPose = useRef<TourReturnPose | null>(null);
+  const restoredLayout = useRef<TourReturnLayout | null>(null);
+  const retainedFov = useRef<number | null>(null);
+  const suspendedRef = useRef(suspended);
+  suspendedRef.current = suspended;
   const showcase = useCinematicStore((state) => state.showcase);
   const resetViewVersion = useCinematicStore((state) => state.resetViewVersion);
+
+  /** Restore the exact saved pose before the input that interrupted playback is processed. */
+  const restoreTourCamera = useCallback(() => {
+    frame.active = false;
+    const saved = returnPose.current;
+    if (!saved) return;
+    camera.position.copy(saved.position);
+    camera.quaternion.copy(saved.orientation);
+    camera.up.copy(saved.up);
+    destination.current.copy(saved.position);
+    target.current.copy(saved.target);
+    currentLook.current.copy(saved.target);
+    lookAngles.current.yaw = saved.yaw;
+    lookAngles.current.pitch = saved.pitch;
+    if (camera instanceof PerspectiveCamera && saved.fov !== null) {
+      camera.fov = saved.fov;
+      camera.updateProjectionMatrix();
+      retainedFov.current = saved.fov;
+    }
+    if (controls.current) {
+      controls.current.target.copy(saved.target);
+      controls.current.enabled = !suspendedRef.current;
+    }
+    camera.updateMatrixWorld();
+    moving.current = false;
+    returnPose.current = null;
+    restoredLayout.current = {
+      canvasWidth: saved.canvasWidth, canvasHeight: saved.canvasHeight,
+      viewportWidth: saved.viewportWidth, viewportHeight: saved.viewportHeight,
+    };
+  }, [camera, frame]);
+
+  useLayoutEffect(() => {
+    // A synchronous subscription also covers parent-owned idle, access and lifecycle stops.
+    const unsubscribe = useCinematicStore.subscribe((state, previous) => {
+      if (previous.showcase && !state.showcase) restoreTourCamera();
+    });
+    return () => {
+      unsubscribe();
+      restoreTourCamera();
+      stopShowcase();
+    };
+  }, [restoreTourCamera]);
+
+  useLayoutEffect(() => {
+    if (!showcase || !tourAllowed || !canPlayCinematic(reducedMotion, suspended, document.hidden)) {
+      restoreTourCamera();
+      if (showcase) stopShowcase();
+      return;
+    }
+    if (returnPose.current) return;
+    const saved: TourReturnPose = {
+      position: camera.position.clone(), orientation: camera.quaternion.clone(), up: camera.up.clone(),
+      target: (controls.current?.target ?? currentLook.current).clone(),
+      fov: camera instanceof PerspectiveCamera ? camera.fov : null,
+      yaw: lookAngles.current.yaw, pitch: lookAngles.current.pitch,
+      canvasWidth: size.width, canvasHeight: size.height,
+      viewportWidth: window.innerWidth, viewportHeight: window.innerHeight,
+    };
+    returnPose.current = saved;
+    // Flush residual orbit damping synchronously, then put the captured pose back
+    // before a frame can render. It cannot resume moving after the tour ends.
+    if (controls.current) {
+      const damping = controls.current.enableDamping;
+      controls.current.enableDamping = false;
+      controls.current.update();
+      controls.current.enableDamping = damping;
+      controls.current.target.copy(saved.target);
+      controls.current.enabled = false;
+    }
+    camera.position.copy(saved.position);
+    camera.quaternion.copy(saved.orientation);
+    camera.updateMatrixWorld();
+    moving.current = false;
+    sampleCinematicTour(0, size.width / Math.max(1, size.height), frame);
+    useCinematicStore.getState().setChapter(frame.chapter);
+  }, [camera, frame, reducedMotion, restoreTourCamera, showcase, size.height, size.width, suspended, tourAllowed, view]);
 
   /** Finish on the exact preset so repeated resets cannot accumulate framing drift. */
   const finishCameraMove = useCallback(() => {
@@ -40,32 +141,37 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
     moving.current = false;
   }, [camera]);
 
+  const navigation = `${view}:${floor}:${roomId}`;
+  const previousNavigation = useRef(navigation);
   useEffect(() => {
-    const unbind = bindCinematicInterruptions(document, stopShowcase);
-    return () => {
-      unbind();
-      stopShowcase();
-    };
-  }, []);
-
-  useEffect(() => {
-    // A presentation never follows a navigation change into a different room or floor.
-    stopShowcase();
-  }, [view, floor, roomId]);
-
-  useEffect(() => {
-    if (!canPlayCinematic(view, reducedMotion, suspended, document.hidden)) stopShowcase();
-  }, [reducedMotion, suspended, view, showcase]);
-
-  useEffect(() => {
-    cinematicElapsed.current = 0;
-  }, [showcase]);
+    // The idle controller owns input cancellation; this only covers direct navigation.
+    if (previousNavigation.current !== navigation) stopShowcase();
+    previousNavigation.current = navigation;
+  }, [navigation]);
 
   // Device inspection must not reset an orbit; only immersive room navigation moves it.
   const cameraFloor = view === 'exterior' ? 'ground' : floor;
   const cameraRoomId = view === 'exterior' ? 'grounds' : roomId;
+  const presetNavigation = `${view}:${cameraFloor}:${cameraRoomId}:${resetViewVersion}`;
+  const previousPresetNavigation = useRef(presetNavigation);
+  const previousPrivacy = useRef({ roomOnly, exteriorOnly });
 
   useEffect(() => {
+    const navigationChanged = previousPresetNavigation.current !== presetNavigation;
+    previousPresetNavigation.current = presetNavigation;
+    const privacyChanged = previousPrivacy.current.roomOnly !== roomOnly || previousPrivacy.current.exteriorOnly !== exteriorOnly;
+    previousPrivacy.current = { roomOnly, exteriorOnly };
+    if (useCinematicStore.getState().showcase || returnPose.current) return;
+    // Consume only the return from fullscreen. A later rotation/window resize
+    // still fits normally, as does an orientation change made during the tour.
+    const layout = restoredLayout.current;
+    const viewportChanged = layout && (window.innerWidth !== layout.viewportWidth || window.innerHeight !== layout.viewportHeight);
+    if (layout && !navigationChanged && !privacyChanged && !viewportChanged) {
+      if (size.width === layout.canvasWidth && size.height === layout.canvasHeight) restoredLayout.current = null;
+      return;
+    }
+    restoredLayout.current = null;
+    retainedFov.current = null;
     const room =
       ROOM_POSITIONS[cameraRoomId] ??
       ROOM_POSITIONS[cameraFloor === 'upper' ? 'family' : 'living'];
@@ -158,6 +264,8 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
     size.height,
     view,
     resetViewVersion,
+    presetNavigation,
+    showcase,
   ]);
 
   useEffect(() => {
@@ -222,8 +330,23 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
   // Negative priority orders camera motion before hotspot projection without taking over rendering.
   useFrame((_, delta) => {
     if (document.hidden || suspended) return;
+    if (useCinematicStore.getState().showcase && tourAllowed && canPlayCinematic(reducedMotion, suspended, document.hidden)) {
+      if (!returnPose.current) return;
+      advanceCinematicTour(frame, delta, size.width / Math.max(1, size.height));
+      camera.position.set(...frame.eye);
+      currentLook.current.set(...frame.target);
+      camera.lookAt(currentLook.current);
+      if (camera instanceof PerspectiveCamera && camera.fov !== frame.fov) {
+        camera.fov = frame.fov;
+        camera.updateProjectionMatrix();
+      }
+      if (controls.current) controls.current.enabled = false;
+      if (useCinematicStore.getState().chapter !== frame.chapter) useCinematicStore.getState().setChapter(frame.chapter);
+      camera.updateMatrixWorld();
+      return;
+    }
     if (camera instanceof PerspectiveCamera) {
-      const desiredFov = view === 'immersive' ? 72 : 42;
+      const desiredFov = retainedFov.current ?? (view === 'immersive' ? 72 : 42);
       const nextFov = reducedMotion
         ? desiredFov
         : MathUtils.damp(camera.fov, desiredFov, 6, Math.min(delta, 0.08));
@@ -256,16 +379,6 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
       camera.lookAt(currentLook.current);
     } else if (controls.current) {
       currentLook.current.copy(controls.current.target);
-      // Read the transient store directly so capture-phase input stops the very next frame.
-      if (useCinematicStore.getState().showcase && canPlayCinematic(view, reducedMotion, suspended, document.hidden)) {
-        cinematicElapsed.current = advanceCinematicOrbit(
-          camera.position,
-          controls.current.target,
-          cinematicElapsed.current,
-          delta,
-        );
-        camera.lookAt(controls.current.target);
-      }
     }
     camera.updateMatrixWorld();
   }, -2);
@@ -288,6 +401,7 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
       key={resetViewVersion}
       ref={controls}
       makeDefault
+      enabled={!showcase && !suspended}
       enableDamping={!reducedMotion}
       enablePan={!exteriorOnly}
       dampingFactor={0.08}

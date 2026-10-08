@@ -18,8 +18,8 @@ import { DashboardLibrary, type DashboardLibraryView } from './DashboardLibrary'
 import { useHomeStore } from './state';
 import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
-import { CinematicViewControl } from './CinematicViewControl';
-import { ResetViewControl } from './ResetViewControl';
+import { CinematicTourOverlay } from './CinematicTourOverlay';
+import { useIdleCinematic } from './useIdleCinematic';
 import { SceneLoading } from './SceneLoading';
 import { useCinematicStore } from './cinematicStore';
 import { useHostPresentation } from './useHostPresentation';
@@ -28,6 +28,7 @@ import './styles.css';
 import './device-catalog.css';
 import './dashboard.css';
 import './cinematic-ui.css';
+import './idle-cinematic.css';
 
 /** React to live operating-system motion changes without polling or duplicate listeners. */
 function usePrefersReducedMotion(): boolean {
@@ -43,14 +44,14 @@ function usePrefersReducedMotion(): boolean {
 }
 
 /** Contain graphics failures so the ordinary device controls remain usable. */
-class SceneErrorBoundary extends Component<{ children: ReactNode; onRetry: () => void }, { failed: boolean }> {
+class SceneErrorBoundary extends Component<{ children: ReactNode; onRetry: () => void; onError: () => void }, { failed: boolean }> {
   state = { failed: false };
 
   /** Replace an unsuccessful WebGL tree with a useful recovery action. */
   static getDerivedStateFromError(): { failed: boolean } { return { failed: true }; }
 
   /** Let the host offer its dashboard fallback when graphics fail. */
-  componentDidCatch(): void { reportSceneStatus('error'); }
+  componentDidCatch(): void { reportSceneStatus('error'); this.props.onError(); }
 
   /** Keep the fallback independent of the graphics runtime. */
   render(): ReactNode {
@@ -65,7 +66,7 @@ class SceneErrorBoundary extends Component<{ children: ReactNode; onRetry: () =>
 }
 
 /** Show the home with persistent, accessible scene controls and loading feedback. */
-function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, sheetDeviceId, onCloseFullControls, covered }: { environment: LiveEnvironment; reducedMotion: boolean; onFullControls: (id: DeviceId) => void; onRooms: () => void; sheetDeviceId: DeviceId | null; onCloseFullControls: () => void; covered: boolean }): ReactNode {
+function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, sheetDeviceId, onCloseFullControls, covered, idleAllowed }: { environment: LiveEnvironment; reducedMotion: boolean; onFullControls: (id: DeviceId) => void; onRooms: () => void; sheetDeviceId: DeviceId | null; onCloseFullControls: () => void; covered: boolean; idleAllowed: boolean }): ReactNode {
   const viewportRef = useViewportManipulation();
   const access = useHomeStore((state) => state.access);
   const showcase = useCinematicStore((state) => state.showcase);
@@ -80,7 +81,9 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
   const selectedDevice = useHomeStore((state) => state.selectedDevice);
   const selectHotspotDevice = useHomeStore((state) => state.selectHotspotDevice);
   const inlineInspector = useInlineInspectorVisibility(selectedDevice);
-  const [readyModel, setReadyModel] = useState<string | null>(null);
+  const idleEnabled = useCinematicStore((state) => state.idleEnabled);
+  const [readyModels, setReadyModels] = useState<string[]>([]);
+  const [sceneFailed, setSceneFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [quickDeviceId, setQuickDeviceId] = useState<DeviceId | null>(null);
   const quickTrigger = useRef<DeviceId | null>(null);
@@ -116,8 +119,6 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
 
   // Floor cutaways have distinct views; exterior picks can cross floors in place.
   useEffect(() => { setQuickDeviceId(null); }, [view]);
-  // Keyboard-started playback dismisses the non-modal quick panel just like an outside tap.
-  useEffect(() => { if (showcase) setQuickDeviceId(null); }, [showcase]);
   // Dismiss transient controls while retaining the mounted scene and its camera.
   useEffect(() => {
     if (!orientationPaused) return;
@@ -137,26 +138,39 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
     requestAnimationFrame(() => document.getElementById('device-control-title')?.focus({ preventScroll: true }));
   }, [inlineInspector, quickDeviceId, sheetDeviceId, onCloseFullControls]);
   // Immersive and exterior share one asset; device updates never reset loading.
-  const modelId = view === 'ground' || view === 'upper' ? view : 'exterior';
+  const displayView = showcase ? 'exterior' : view;
+  const modelId = displayView === 'ground' || displayView === 'upper' ? displayView : 'exterior';
+  const normalModelId = view === 'ground' || view === 'upper' ? view : 'exterior';
   const readinessId = `${attempt}:${modelId}`;
-  const ready = readyModel === readinessId;
-  const onReady = useCallback(() => { setReadyModel(readinessId); reportSceneStatus('ready'); }, [readinessId]);
+  const ready = readyModels.includes(readinessId);
+  const normalReady = readyModels.includes(`${attempt}:${normalModelId}`);
+  const onReady = useCallback(() => {
+    setReadyModels((previous) => previous.includes(readinessId) ? previous : [...previous, readinessId]);
+    reportSceneStatus('ready');
+  }, [readinessId]);
+  const onSceneError = useCallback(() => { setSceneFailed(true); setShowcase(false); }, [setShowcase]);
+  useIdleCinematic({
+    eligible: idleAllowed && idleEnabled && normalReady && !sceneFailed && !covered && !orientationPaused && !reducedMotion && !quickDeviceId && canViewPropertyOverview(access),
+    scopeKey: `${JSON.stringify(access)}:${view}:${floor}:${roomId}`,
+  });
   const retryScene = useCallback(() => {
     // Failed GLTF requests are cached across remounts; retry each view with a fresh request.
     for (const model of ['exterior', 'ground', 'upper', 'landscape', 'gate'] as ModelName[]) {
       useGLTF.clear(getModelUrl(model));
     }
+    setSceneFailed(false);
+    setReadyModels([]);
     setAttempt((value) => value + 1);
   }, []);
   const room = getRoom(roomId);
   const layoutOnly = !canViewSceneRoom(access, roomId);
   const overviewLabel = !access.fullHome ? 'EXTERIOR OVERVIEW' : 'PROPERTY VIEW';
   const interiorLabel = layoutOnly ? 'SHARED INTERIOR TOUR' : view === 'immersive' ? 'ROOM VIEW' : canExploreInteriorLayout(access) ? `${floor.toUpperCase()} FLOOR` : 'YOUR ROOM';
-  return <section ref={viewportRef} id="house-preview" tabIndex={-1} className={`viewport ${night ? 'is-night' : ''} ${showcase ? 'is-cinematic' : ''}`} aria-label="Interactive furnished house preview">
-    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{view === 'exterior' ? overviewLabel : interiorLabel}</span><h1>{view === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{view === 'exterior' ? 'The property, from arrival to home.' : layoutOnly ? 'Layout only · Controls stay in your assigned rooms.' : room.area}</p></div><div className="viewport-camera-controls" role="group" aria-label="Camera controls"><ResetViewControl unavailable={orientationPaused || !ready} />{canExploreInteriorLayout(access) && <CinematicViewControl reducedMotion={reducedMotion} immersive={view === 'immersive'} unavailable={orientationPaused || !ready} />}</div></div>
+  return <section ref={viewportRef} id="house-preview" data-scene-ready={ready && !sceneFailed} tabIndex={-1} className={`viewport ${night ? 'is-night' : ''} ${showcase ? 'is-cinematic' : ''}`} aria-label="Interactive furnished house preview">
+    <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{displayView === 'exterior' ? overviewLabel : interiorLabel}</span><h1>{displayView === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{displayView === 'exterior' ? 'The property, from arrival to home.' : layoutOnly ? 'Layout only · Controls stay in your assigned rooms.' : room.area}</p></div></div>
     <div className="scene-container">
-      <SceneErrorBoundary key={attempt} onRetry={retryScene}>
-        <HouseScene access={access} daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
+      <SceneErrorBoundary key={attempt} onRetry={retryScene} onError={onSceneError}>
+        <HouseScene access={access} daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} cinematic={showcase} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
         {!ready ? <SceneLoading /> : null}
       </SceneErrorBoundary>
     </div>
@@ -193,6 +207,8 @@ export default function App(): ReactNode {
   });
   const selectDevice = useHomeStore((state) => state.selectDevice);
   const reducedMotion = prefersReduced || motionDisabled;
+  const emergencyActive = useHomeStore((state) => getFireIncident(state.deviceStates).active);
+  const showcase = useCinematicStore((state) => state.showcase);
   const orientationPaused = useOrientationPaused();
   const [library, setLibrary] = useState<DashboardLibraryView | null>(null);
   const [sheetDeviceId, setSheetDeviceId] = useState<DeviceId | null>(null);
@@ -258,19 +274,20 @@ export default function App(): ReactNode {
     <h1>{simulationHydrated ? 'No rooms assigned' : 'Preparing your rooms'}</h1>
     <p>{simulationHydrated ? 'Ask your household administrator to share a room with you.' : 'Checking your home access before showing the property.'}</p>
   </div>;
-  return <div data-rendering={graphicsCovered || orientationPaused || documentHidden ? 'paused' : 'active'} className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''}`}>
+  return <div inert={showcase} data-rendering={graphicsCovered || orientationPaused || documentHidden ? 'paused' : 'active'} className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''} ${showcase ? 'is-touring' : ''}`}>
     <a className="skip-link" href="#house-preview">Skip to house controls</a>
     <DashboardHeader embedded={embedded} environment={environment} onSettings={() => setLibrary('settings')} onEnvironment={() => setLibrary('environment')} />
     <DashboardRoomBar onRooms={() => setLibrary('rooms')} />
     <main id="home-workspace" className="workspace dashboard-workspace">
       <DashboardRooms onBrowse={() => setLibrary('rooms')} />
-      <div className="center-column"><HomeViewport environment={environment} reducedMotion={reducedMotion} onFullControls={openFullControls} onRooms={() => setLibrary('assigned-rooms')} sheetDeviceId={sheetDeviceId} onCloseFullControls={closeFullControls} covered={graphicsCovered} /><DashboardScenes /></div>
+      <div className="center-column"><HomeViewport environment={environment} reducedMotion={reducedMotion} onFullControls={openFullControls} onRooms={() => setLibrary('assigned-rooms')} sheetDeviceId={sheetDeviceId} onCloseFullControls={closeFullControls} covered={graphicsCovered} idleAllowed={simulationHydrated && !documentHidden && !emergencyActive} /><DashboardScenes /></div>
       <div id="room-controls" tabIndex={-1}><DashboardInspector onFullControls={openFullControls} onBrowseDevices={() => setLibrary('devices')} /></div>
     </main>
     <DashboardDock onRooms={() => setLibrary('rooms')} onDevices={() => setLibrary('devices')} />
     {!orientationPaused && library ? <DashboardLibrary environment={environment} onEnvironment={() => setLibrary('environment')} key={library} view={library} reducedMotion={reducedMotion} systemReducedMotion={prefersReduced} onClose={() => setLibrary(null)} onDevice={(id) => { selectDevice(id); openFullControls(id); }} /> : null}
     {!orientationPaused && sheetDeviceId ? <DeviceControlSheet deviceId={sheetDeviceId} onClose={closeFullControls} /> : null}
     {!embedded ? <SafetyPreview /> : null}
+    {showcase ? <CinematicTourOverlay /> : null}
     {simulationSyncError || persistenceError ? <p className="storage-notice" role="status">{simulationSyncError ? "Your saved simulation couldn’t sync. Changes in this view may not be saved." : "Your browser couldn’t save these settings. The preview still works for this session."}</p> : null}
   </div>;
 }

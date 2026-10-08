@@ -21,6 +21,8 @@ export interface HouseSceneProps {
   quickDeviceId?: string | null;
   hotspotControlMode?: 'inspector' | 'quick';
   reducedMotion: boolean;
+  /** Presentation-only exterior tour; never a navigation or device-state update. */
+  cinematic?: boolean;
   onSelectDevice: (id: string) => void;
   onReady: () => void;
 }

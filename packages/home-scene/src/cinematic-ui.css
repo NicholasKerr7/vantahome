@@ -25,12 +25,6 @@
 .dashboard-shell .viewport-top h1 { color: var(--text); font-size: clamp(24px, 3.4cqw, 40px); font-weight: 450; letter-spacing: -1.2px; text-shadow: 0 2px 12px rgb(0 0 0 / 73.3%); }
 .viewport-live-mark { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 9px rgb(var(--accent-rgb) / 37.6%); }
 .is-night .viewport-live-mark { background: var(--gold); box-shadow: 0 0 10px #ebd0a64d; }
-.viewport-camera-controls { display: flex; gap: 8px; flex-shrink: 0; }
-.cinematic-view-control, .reset-view-control { display: flex; align-items: center; justify-content: center; gap: 7px; flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid rgb(var(--accent-text-rgb) / 20%); border-radius: 14px; background: var(--hud); color: var(--text-soft); font-size: 10px; pointer-events: auto; box-shadow: inset 0 1px rgb(var(--text-rgb) / 3.1%), 0 8px 20px #0003; }
-.cinematic-view-control .cinematic-control-symbol { color: var(--ice); }
-.cinematic-view-control[aria-pressed='true'] { border-color: rgb(var(--accent-rgb) / 43.9%); color: var(--accent-text); background: rgb(var(--surface-raised-rgb) / 96.1%); box-shadow: 0 0 22px rgb(var(--accent-rgb) / 8.6%); }
-.cinematic-view-control:disabled, .reset-view-control:disabled { opacity: .48; }
-.cinematic-view-control:hover:not(:disabled), .reset-view-control:hover:not(:disabled) { border-color: var(--ice); }
 .viewport.is-cinematic .device-hotspot-anchor,
 .viewport.is-cinematic .device-hotspot { visibility: hidden; pointer-events: none; }
 .dashboard-shell .scene-fallback { background: rgb(var(--background-rgb) / 93.7%); color: var(--text-soft); }
@@ -163,17 +157,10 @@
 }
 .dashboard-shell.reduce-motion *, .dashboard-shell.reduce-motion *::before, .dashboard-shell.reduce-motion *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 
-@container app-viewport (max-width: 1100px) {
-  .cinematic-view-control > span, .reset-view-control > span { display: none; }
-  .cinematic-view-control { padding-inline: 10px; gap: 5px; }
-}
 @container app-viewport (max-width: 599px) {
   .dashboard-shell .viewport, .dashboard-shell.is-embedded .viewport { border-radius: 22px; }
   .dashboard-shell .viewport-top, .dashboard-shell.is-embedded .viewport-top { top: 13px; left: 15px; right: 12px; gap: 10px; }
   .dashboard-shell .viewport-top h1, .dashboard-shell.is-embedded .viewport-top h1 { font-size: 25px; line-height: 1.15; }
-  .cinematic-view-control, .reset-view-control { width: 44px; padding: 8px; }
-  .cinematic-view-control .cinematic-control-symbol { display: none; }
-  .cinematic-view-control > svg:last-child { width: 16px; height: 16px; }
   .dashboard-context .dashboard-context-weather { gap: 4px; }
   .dashboard-context-weather time { font-size: 12px; }
   .dashboard-context-weather strong { font-size: 12px; }

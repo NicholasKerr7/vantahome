@@ -1,0 +1,35 @@
+/* The tour expands only the scene. Its saved room, device selection and page layout stay intact underneath. */
+.dashboard-shell.is-touring .viewport {
+  position: fixed;
+  inset: 0;
+  left: 50%;
+  right: auto;
+  z-index: 80;
+  width: min(100%, 1366px);
+  height: auto;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  animation: none;
+  transform: translateX(-50%);
+  box-shadow: none;
+}
+.dashboard-shell.is-touring .viewport-top,
+.dashboard-shell.is-touring .viewport-bottom { visibility: hidden; pointer-events: none; }
+.cinematic-tour-overlay { position: fixed; inset: 0; left: 50%; right: auto; width: min(100%, 1366px); transform: translateX(-50%); z-index: 100; isolation: isolate; }
+.cinematic-tour-overlay::before,
+.cinematic-tour-overlay::after { content: ''; position: absolute; left: 0; right: 0; height: clamp(12px, 3vh, 28px); z-index: 1; background: #07050c; pointer-events: none; }
+.cinematic-tour-overlay::before { top: 0; }
+.cinematic-tour-overlay::after { bottom: 0; }
+.cinematic-tour-return { position: absolute; inset: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 20px; padding: max(38px, env(safe-area-inset-top)) clamp(22px, 4vw, 48px) max(42px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; color: var(--text); background: linear-gradient(180deg, #07050c8c, transparent 25%, transparent 62%, #07050cb8); text-align: left; touch-action: none; cursor: pointer; }
+.cinematic-tour-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: -5px; }
+.cinematic-tour-brand { display: flex; justify-content: space-between; gap: 16px; color: var(--text-soft); font-size: 9px; font-weight: 500; letter-spacing: .25em; }
+.cinematic-tour-brand > span { color: var(--muted); letter-spacing: .16em; }
+.cinematic-tour-caption { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.cinematic-tour-chapter { max-width: 620px; font-size: clamp(24px, 3.8vw, 46px); line-height: 1.16; font-weight: 400; letter-spacing: -.035em; text-wrap: balance; text-shadow: 0 2px 14px #0009; }
+.cinematic-tour-hint { display: flex; gap: 14px; align-items: center; min-height: 44px; flex-shrink: 0; font-size: 11px; color: var(--text-soft); white-space: nowrap; }
+.cinematic-tour-hint > span { color: var(--accent-text); font-size: 19px; }
+@media (max-width: 540px) {
+  .cinematic-tour-caption { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .cinematic-tour-brand { font-size: 8px; letter-spacing: .17em; }
+}

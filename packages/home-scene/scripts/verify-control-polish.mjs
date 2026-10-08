@@ -76,7 +76,7 @@ try {
   browser('set', 'media', 'light', 'reduced-motion');
   browser('open', url);
   activateTab();
-  waitFor('document.querySelector(".reset-view-control")?.disabled === false');
+  waitFor('document.querySelector("#house-preview")?.dataset.sceneReady === "true"');
   browser('click', '[data-device-hotspot="living-light"]');
   verifyReachable('#quick-level-living-light');
   if (evaluate('document.querySelector(".quick-device-toggle").getAttribute("aria-checked") === "true"')) browser('click', '.quick-device-toggle');
@@ -91,15 +91,15 @@ try {
   browser('press', 'Escape');
   browser('reload');
   activateTab();
-  waitFor('document.querySelector(".reset-view-control")?.disabled === false');
+  waitFor('document.querySelector("#house-preview")?.dataset.sceneReady === "true"');
   browser('click', '[data-device-hotspot="living-light"]');
   assert.equal(evaluate('document.querySelector("#quick-level-living-light").value'), '1', 'Quick brightness survives reload');
   browser('press', 'Escape');
 
   for (const [width, height] of [[320, 562], [390, 844], [834, 1194], [1194, 834], [960, 600]]) {
     browser('set', 'viewport', String(width), String(height));
-    waitFor(`innerWidth === ${width} && document.querySelector('.reset-view-control')?.disabled === false`);
-    verifyReachable('.reset-view-control');
+    waitFor(`innerWidth === ${width} && document.querySelector('#house-preview')?.dataset.sceneReady === 'true'`);
+    assert.equal(evaluate('!!document.querySelector(".reset-view-control, .cinematic-view-control")'), false, 'Presentation starts automatically without dashboard buttons');
     browser('click', '[data-device-hotspot="living-light"]');
     const landscape = width > height;
     assert.equal(evaluate('!!document.querySelector("#quick-device-controls")'), !landscape, 'Tablet inspector avoids a duplicate popup');
@@ -109,8 +109,7 @@ try {
       if (height > 640) verifyReachable('#quick-level-living-light');
       browser('press', 'Escape');
     } else verifyReachable('.dashboard-full-controls');
-    browser('click', '.reset-view-control');
-    console.log(`PASS ${width}x${height}: quick actions, no duplicate inspector, reset view`);
+    console.log(`PASS ${width}x${height}: quick actions and no duplicate inspector`);
   }
 
   browser('set', 'viewport', '1194', '834');
@@ -126,11 +125,8 @@ try {
   browser('focus', '#dashboard-level-bedroom-1-ac');
   browser('press', 'End');
   assert.equal(evaluate('document.querySelector("#dashboard-level-bedroom-1-ac").getAttribute("aria-valuetext")'), '28°C');
-  const saved = evaluate('localStorage.getItem("vantahome-simulation-v2")');
-  browser('click', '.reset-view-control');
-  assert.equal(evaluate('localStorage.getItem("vantahome-simulation-v2")'), saved, 'Reset view preserves room and device preferences');
   assert.deepEqual(browser('errors').errors, []);
-  console.log('PASS saved brightness, off-state semantics, repeated fixture controls, Celsius and reset isolation');
+  console.log('PASS saved brightness, off-state semantics, repeated fixture controls, Celsius');
 } catch (error) {
   browser('screenshot', '/tmp/vantahome-control-polish-failure.png');
   console.error(JSON.stringify({ errors: browser('errors'), scene: evaluate('({ hidden: document.hidden, loading: !!document.querySelector(".scene-loading"), fallback: document.querySelector(".scene-fallback")?.textContent })') }));

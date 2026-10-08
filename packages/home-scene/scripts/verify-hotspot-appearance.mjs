@@ -59,7 +59,7 @@ function activateTab() {
   const tab = browser('tab', 'list').tabs.find((candidate) => candidate.active);
   assert.ok(tab?.tabId, 'The isolated browser tab exists');
   browser('tab', tab.tabId);
-  waitFor('!document.hidden && document.querySelector(".reset-view-control")?.disabled === false');
+  waitFor('!document.hidden && document.querySelector("#house-preview")?.dataset.sceneReady === "true"');
 }
 
 /** Locate a catalog device through the visible device browser and dismiss its full sheet. */
@@ -77,7 +77,7 @@ function selectDevice(id, landscape) {
   browser('click', `[data-library-device="${id}"]`);
   browser('wait', '#full-device-controls[open]');
   browser('press', 'Escape');
-  waitFor(`!document.querySelector('#full-device-controls[open]') && !!document.querySelector('[data-device-hotspot="${id}"]') && document.querySelector('.reset-view-control')?.disabled === false`);
+  waitFor(`!document.querySelector('#full-device-controls[open]') && !!document.querySelector('[data-device-hotspot="${id}"]') && document.querySelector('#house-preview')?.dataset.sceneReady === 'true'`);
   settleAnchors();
 }
 

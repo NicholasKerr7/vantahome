@@ -3,7 +3,7 @@ import { getRoom } from '../data';
 import { disposeRoomGeometry, isolateRoomGeometry, prepareExteriorOverview, disposeExteriorOverview } from './roomPrivacy';
 import { requiresRoomIsolation, scopeSceneDeviceStates } from './scenePresentationAccess';
 import { getModelUrl } from '../embeddedHost';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { ACESFilmicToneMapping, Group, MathUtils, Mesh, PCFSoftShadowMap, type Object3D } from 'three';
@@ -22,12 +22,16 @@ import { usePageMotion } from './usePageMotion';
 import { AdaptiveQuality } from './AdaptiveQuality';
 import { RENDER_QUALITY, type RenderQualityTier } from './renderQuality';
 import { bindSceneVisibilityScheduling } from './visibilityScheduling';
+import { canPresentCinematic } from './cinematicPresentation';
+import { createCinematicTourFrame } from './cinematicTour';
+import { CinematicAtmosphere } from './CinematicAtmosphere';
+import { prepareCinematicMaterials } from './cinematicMaterials';
 import './scene.css';
 
-type ModelProps = Pick<HouseSceneProps, 'view' | 'roomId' | 'access' | 'deviceStates' | 'reducedMotion' | 'onReady'>;
+type ModelProps = Pick<HouseSceneProps, 'view' | 'roomId' | 'access' | 'deviceStates' | 'reducedMotion' | 'onReady' | 'cinematic'>;
 
 /** Load a faithful Blender export and animate its preserved washing-machine part. */
-function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, reducedMotion, onReady }: ModelProps) {
+function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, reducedMotion, onReady, cinematic = false }: ModelProps) {
   const model = view === 'ground' || view === 'upper' ? view : 'exterior';
   // Exports are uncompressed; avoid unused remote/WASM decoder initialization.
   const { scene } = useGLTF(getModelUrl(model), false, false);
@@ -37,7 +41,7 @@ function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, re
   const speed = useRef(0);
   const washer = readDevice(deviceStates, 'laundry-washer');
   const privateRoomId = requiresRoomIsolation(access, view) ? roomId : '';
-  const exteriorOnly = view === 'exterior' && !canExploreInteriorLayout(access);
+  const exteriorOnly = view === 'exterior' && (cinematic || !canExploreInteriorLayout(access));
   const preparedScene = useMemo(() => {
     const copy = privateRoomId ? isolateRoomGeometry(scene, getRoom(privateRoomId))
       : exteriorOnly ? prepareExteriorOverview(scene) : scene.clone(true);
@@ -53,6 +57,12 @@ function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, re
     return copy;
   }, [scene, model, exteriorOnly, privateRoomId]);
 
+  useLayoutEffect(() => {
+    if (!cinematic) return;
+    const finish = prepareCinematicMaterials(preparedScene);
+    return () => finish.dispose();
+  }, [cinematic, preparedScene]);
+
   useEffect(() => () => {
     if (privateRoomId) disposeRoomGeometry(preparedScene);
     if (exteriorOnly) disposeExteriorOverview(preparedScene);
@@ -65,7 +75,7 @@ function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, re
   }, [onReady, preparedScene]);
 
   useFrame((_, delta) => {
-    if (!canAnimate.current) return;
+    if (!canAnimate.current || cinematic) return;
     const dt = Math.min(delta, 0.065);
     speed.current = MathUtils.damp(speed.current, washer.on ? washer.level * 0.09 : 0, 2.2, dt);
     drum.current?.rotateY(speed.current * dt);
@@ -74,7 +84,7 @@ function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, re
 
   return <>
     <primitive object={preparedScene} />
-    {canExploreInteriorLayout(access) && model !== 'upper' && <group ref={markers} position={[13.16, 0.42, -15.103]}>
+    {!cinematic && canExploreInteriorLayout(access) && model !== 'upper' && <group ref={markers} position={[13.16, 0.42, -15.103]}>
       {[0, 1, 2].map((index) => <group key={index} rotation={[0, 0, index * Math.PI * 2 / 3]}><mesh position={[0.068, 0, 0]} rotation={[0, 0, 0.3]}><boxGeometry args={[0.054, 0.035, 0.009]} /><meshStandardMaterial color={index === 0 ? '#ded5bb' : '#70958b'} roughness={0.85} /></mesh></group>)}
     </group>}
   </>;
@@ -96,14 +106,17 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
   const [qualityTier, setQualityTier] = useState<RenderQualityTier>('high');
   const quality = RENDER_QUALITY[qualityTier];
   const access = props.access ?? FULL_SCENE_ACCESS;
-  const roomOnly = requiresRoomIsolation(access, props.view);
+  const cinematic = canPresentCinematic(props.cinematic ?? false, access, props.reducedMotion, suspended);
+  const view = cinematic ? 'exterior' : props.view;
+  const tourFrame = useMemo(createCinematicTourFrame, []);
+  const roomOnly = requiresRoomIsolation(access, view);
   const exteriorOnly = props.view === 'exterior' && !canExploreInteriorLayout(access);
   const bounds = roomOnly ? getRoom(props.roomId).bounds : undefined;
   const visibleStates = useMemo(() => scopeSceneDeviceStates(props.deviceStates, access), [props.deviceStates, access]);
-  const visibleProps = { ...props, access, deviceStates: visibleStates };
+  const visibleProps = { ...props, access, view, cinematic, deviceStates: visibleStates };
   // Reset animation history immediately on revocation instead of easing from a formerly visible reading.
   const presentationScope = `${access.deviceIds.join('|')}:${canExploreInteriorLayout(access)}`;
-  return <Canvas className={`house-canvas ${props.view === 'immersive' ? 'is-immersive' : ''}`} shadows dpr={[1, quality.maxDpr]} camera={{ position: [28, 20, 16], fov: 42, near: 0.08, far: 500 }} gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping }} onCreated={({ gl }) => {
+  return <Canvas className={`house-canvas ${view === 'immersive' ? 'is-immersive' : ''}`} shadows dpr={[1, quality.maxDpr]} camera={{ position: [28, 20, 16], fov: 42, near: 0.08, far: 500 }} gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping }} onCreated={({ gl }) => {
       gl.shadowMap.type = PCFSoftShadowMap;
       gl.domElement.tabIndex = 0;
       gl.domElement.setAttribute('role', 'img');
@@ -112,17 +125,18 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       <AdaptiveQuality onChange={setQualityTier} />
       <VisibilityScheduling suspended={suspended} />
       <MaterialEnvironment />
-      <SceneLighting key={`lighting:${presentationScope}`} daylight={props.daylight} environment={props.environment} night={props.night} view={props.view} floor={props.floor} roomId={props.roomId} deviceStates={visibleStates} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
-      <CameraRig roomOnly={roomOnly} exteriorOnly={exteriorOnly} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} />
-      {!roomOnly && props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
+      <SceneLighting key={`lighting:${presentationScope}`} cinematic={cinematic} daylight={props.daylight} environment={props.environment} night={props.night} view={view} floor={props.floor} roomId={props.roomId} deviceStates={visibleStates} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
+      <CameraRig roomOnly={requiresRoomIsolation(access, props.view)} exteriorOnly={exteriorOnly} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} tourFrame={tourFrame} tourAllowed={cinematic} />
+      {cinematic && <CinematicAtmosphere daylight={props.daylight} weather={props.environment.weather} reducedMotion={props.reducedMotion} />}
+      {!cinematic && !roomOnly && props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
       <Suspense key={`model:${presentationScope}`} fallback={null}>
-        <HouseModel access={access} roomId={props.roomId} view={props.view} deviceStates={visibleStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
-        <HotspotLayout access={props.access} roomId={props.roomId} view={props.view}>
-        <Devices {...visibleProps} />
-        {!roomOnly && (props.view === 'exterior' || props.view === 'immersive') && <Landscape {...visibleProps} windSpeedKmh={props.environment.weather?.windSpeedKmh ?? 0} windDirectionDeg={props.environment.weather?.windDirectionDeg ?? 0} />}
+        <HouseModel access={access} roomId={props.roomId} view={view} cinematic={cinematic} deviceStates={visibleStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
+        <HotspotLayout access={props.access} roomId={props.roomId} view={view}>
+        {!cinematic && <Devices {...visibleProps} />}
+        {!roomOnly && (view === 'exterior' || view === 'immersive') && <Landscape {...visibleProps} tourFrame={tourFrame} windSpeedKmh={props.environment.weather?.windSpeedKmh ?? 0} windDirectionDeg={props.environment.weather?.windDirectionDeg ?? 0} />}
         </HotspotLayout>
-        {!roomOnly && (props.view === 'exterior' || props.view === 'immersive') && <SolarLightPools deviceStates={visibleStates} reducedMotion={props.reducedMotion} />}
-        {!roomOnly && props.environment.weather ? <WeatherEffects weather={props.environment.weather} view={props.view} roomId={props.roomId} reducedMotion={props.reducedMotion} /> : null}
+        {!roomOnly && (view === 'exterior' || view === 'immersive') && <SolarLightPools deviceStates={visibleStates} reducedMotion={props.reducedMotion} />}
+        {!roomOnly && props.environment.weather ? <WeatherEffects weather={props.environment.weather} view={view} roomId={props.roomId} reducedMotion={props.reducedMotion} /> : null}
       </Suspense>
       {bounds && <mesh position={[(bounds[0] + bounds[1]) / 2, -0.08, (bounds[2] + bounds[3]) / 2]} receiveShadow>
         <boxGeometry args={[bounds[1] - bounds[0], 0.12, bounds[3] - bounds[2]]} /><meshStandardMaterial color="#b6aca0" roughness={0.7} />

@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-07**. Read this before rediscovering the project.
+Last maintained: **2026-10-08**. Read this before rediscovering the project.
 
 ## Locations and branch
 
@@ -72,6 +72,62 @@ Last maintained: **2026-10-07**. Read this before rediscovering the project.
   Release packaging, exact identity/schemes, profile device coverage, and strict
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
+
+## Automatic property film (Preview 43)
+
+- Removed the dashboard Reset and Cinematic play buttons. Eligible Home views
+  now enter an **84-second looping exterior tour after 90 seconds of inactivity**:
+  gate arrival/opening, driveway approach, west facade, full-property aerial,
+  roof detail, east facade, and a final architectural view. The tour works from
+  floor plans, property view and immersive rooms without changing saved navigation.
+- The first touch/key/wheel ends the film and consumes that complete gesture.
+  Exact camera position, look, zoom and target return; later real rotations still
+  reframe normally. No click-through, device command or persisted gate change.
+  The authored gate opening is strictly visual; interruption restores its current
+  authorized device position. Tour windows are opaque and device hotspots hidden.
+- Settings → Automatic property tour can disable it. Only this separate versioned
+  local preference is persisted (`vantahome.cinematic-preferences.v1`). Reduced
+  motion, open controls/forms, held gestures, active fire incidents, host coverage,
+  hidden/background views and unavailable property access prevent idle playback.
+  Access revocation stops it immediately; no broader Guest grants are added.
+- Presentation uses a weather-aware sky/haze, calibrated sun/moon lighting,
+  grounded surrounding terrain and subtle finish grain on owned material clones.
+  Existing weather, scoped light states and adaptive quality remain authoritative.
+  No new dependencies, downloaded textures, model geometry or shadow maps. This
+  is cinematic real-time rendering of the existing mobile model, not an offline
+  photorealistic replacement model.
+- Implementation: `idleCinematic.ts`, `useIdleCinematic.ts`, `cinematicStore.ts`,
+  `CinematicTourOverlay.tsx`, `scene/cinematicTour.ts`, `scene/CameraRig.tsx`,
+  `scene/CinematicAtmosphere.tsx`, `scene/cinematicMaterials.ts`; integration in
+  `App.tsx`, `HouseScene.tsx`, `Landscape.tsx`. Old camera controls were deleted.
+  Existing browser scripts observe `data-scene-ready` instead of a removed button.
+- Verification: **69 scene files / 786 tests**, app and scene TypeScript, bounded
+  offline packaging pass. Browser actual idle entry occurred after 93.9 seconds;
+  accelerated shot review covered 320/390px phones, tablet orientations and the
+  1366px desktop preview bound. Exact orbit/immersive return, first-tap isolation,
+  later/during-tour rotation, night views, Guest grant revocation, reduced motion,
+  enlarged captions and opt-out persistence passed with no browser/shader errors.
+- Evidence: work cache `idle-tour-tests-final.log`, `idle-tour-app-typecheck.log`,
+  `idle-tour-scene-build-final.log`, `idle-tour-browser.log` (real timer check),
+  `idle-tour-browser-final.log`, `idle-tour-edge-final.log`, and `idle-tour/`
+  captures/verification JSON. Early harness failures were corrected (camera pose
+  initialized without ending preset motion; a quoted test selector); the final
+  sweeps pass. A separate code review caught and fixed permanent resize suppression.
+- Final native scene is **31,776,653 bytes**, SHA256
+  `1b5b97d1458e44d9605e7b6cf0c2336742d664caa651fb7e4be2b4988305151c`;
+  the existing **32 MiB** budget remains unchanged.
+- Preview **43** Release build succeeded, and the physical iPhone app listing
+  confirms **1.0.0 / 43** after installation; the developer service launched it.
+  Strict signature, exact preview identity/schemes, profile device coverage and
+  packaged scene SHA/size match passed. Production metadata was restored; release
+  version/assets/auth-redirect checks pass. Signing expiry remains October 11.
+  Receipts: `preview43-package-check.json`, `preview43-install.json`,
+  `preview43-installed-app.json`, `preview43-launch.json`; build logs use
+  `native-preview-build-43`. On-device visual/performance review is not yet reported.
+- The updated control-polish browser sweep also passes five responsive layouts,
+  quick/full setting parity, saved brightness, off-state semantics and Celsius.
+  Evidence: `idle-tour-control-polish.log`. Task-owned browser sessions and port
+  5184 were stopped; retained captures/helpers are only in the work cache.
 
 ## Cinematic reference cards (Preview 42)
 
@@ -241,9 +297,9 @@ Previous property-sharing evidence (no scene source changed for Preview 39):
 
 ## Resume next
 
-1. Preview 40 is installed for visual review; no repeated Guest renewal/offline
-   test is needed merely to see the redesign. Next permission check remains Owner
-   shared-interior consent and Guest layout/revocation.
+1. Review the latest installed Preview listed above, including idle tour entry,
+   touch return and the cinematic reference cards. Next permission check remains
+   Owner shared-interior consent and Guest layout/revocation.
    Guest renewal and offline/reconnect with retained door restrictions already
    passed by the user's report; do not repeat them.
 2. Other physical checks: online background/resume, warm recovery,

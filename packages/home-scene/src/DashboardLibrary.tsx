@@ -1,10 +1,11 @@
 import { canNavigateSceneRoom, canViewSceneRoom, canViewSceneDevice } from './sceneAccess';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, CloudSun, Pause, Play, RotateCcw, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clapperboard, CloudSun, Pause, Play, RotateCcw, Search, X } from 'lucide-react';
 import { DEVICES, ROOMS, getRoom, type DeviceDefinition, type DeviceId, type RoomDefinition } from './data';
 import { DEVICE_ICONS } from './DeviceControlCard';
 import { deviceStatus } from './deviceCapabilities';
 import { useHomeStore } from './state';
+import { useCinematicStore } from './cinematicStore';
 import { roomIcon } from './DashboardChrome';
 import { paginateItems } from './dashboardPagination';
 import { EnvironmentPanel } from './EnvironmentPanel';
@@ -72,6 +73,9 @@ export function DashboardLibrary({ environment, onEnvironment, view, onClose, on
   const roomId = useHomeStore((state) => state.roomId);
   const setRoom = useHomeStore((state) => state.setRoom);
   const setMotionDisabled = useHomeStore((state) => state.setMotionDisabled);
+  const idleEnabled = useCinematicStore((state) => state.idleEnabled);
+  const setIdleEnabled = useCinematicStore((state) => state.setIdleEnabled);
+  const preferenceError = useCinematicStore((state) => state.preferenceError);
   const reset = useHomeStore((state) => state.reset);
   const access = useHomeStore((state) => state.access);
   const roomsView = view === 'rooms' || view === 'assigned-rooms';
@@ -97,7 +101,7 @@ export function DashboardLibrary({ environment, onEnvironment, view, onClose, on
 
   return <dialog ref={dialog} id="dashboard-library" className={`dashboard-library card-library library-${view}`} aria-labelledby="dashboard-library-title" onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <header className="library-heading"><div><span className="eyebrow">{view === 'environment' ? 'TIME & WEATHER' : view === 'settings' ? 'HOME PREFERENCES' : roomsView ? 'YOUR ROOMS' : `YOUR ${view.toUpperCase()}`}</span><h2 id="dashboard-library-title" tabIndex={-1}>{title}</h2></div><button className="dashboard-icon-button" aria-label="Close home browser" onClick={onClose}><X size={21} /></button></header>
-    {view === 'environment' ? <EnvironmentPanel environment={environment} /> : view === 'settings' ? <div className="dashboard-preferences"><p>Explore the house, tap a device, and make it yours. This is a local simulation; no real hardware is connected.</p><button className="dashboard-preference" disabled={systemReducedMotion} aria-pressed={reducedMotion} onClick={() => setMotionDisabled(!reducedMotion)}>{reducedMotion ? <Pause size={20} /> : <Play size={20} />}<span>{systemReducedMotion ? 'Reduced motion · system' : reducedMotion ? 'Motion paused' : 'Motion on'}<small>Camera movement and animated devices</small></span></button><button className="dashboard-preference" disabled={!access.fullHome || access.controllableDeviceIds.length !== DEVICES.length} aria-label="Reset simulation to Morning" onClick={() => { reset(environment.isNight); onClose(); }}><RotateCcw size={20} /><span>Reset your home<small>Reset devices and follow local daylight</small></span></button><button className="dashboard-preference" onClick={onEnvironment}><CloudSun size={20} /><span>Time & weather<small>Hopewell · automatic daylight and live conditions</small></span></button><p className="dashboard-help-copy">Drag to orbit. Pinch to zoom. Use the view bar to explore the floor plan, landscape or immersive view. Changes stay in this browser.</p></div> : <>
+    {view === 'environment' ? <EnvironmentPanel environment={environment} /> : view === 'settings' ? <div className="dashboard-preferences"><p>Explore the house, tap a device, and make it yours. This is a local simulation; no real hardware is connected.</p><button className="dashboard-preference" disabled={systemReducedMotion} aria-pressed={reducedMotion} onClick={() => setMotionDisabled(!reducedMotion)}>{reducedMotion ? <Pause size={20} /> : <Play size={20} />}<span>{systemReducedMotion ? 'Reduced motion · system' : reducedMotion ? 'Motion paused' : 'Motion on'}<small>Camera movement and animated devices</small></span></button><button className="dashboard-preference" aria-pressed={idleEnabled} aria-label="Automatic property tour" onClick={() => setIdleEnabled(!idleEnabled)}><Clapperboard size={20} aria-hidden="true" /><span>Automatic property tour · {idleEnabled ? 'On' : 'Off'}<small>{reducedMotion ? 'Paused by your motion preference' : 'After 90 seconds of inactivity · touch to return'}</small></span></button>{preferenceError ? <p role="status">Your tour preference could not be saved. This choice lasts for this session.</p> : null}<button className="dashboard-preference" disabled={!access.fullHome || access.controllableDeviceIds.length !== DEVICES.length} aria-label="Reset simulation to Morning" onClick={() => { reset(environment.isNight); onClose(); }}><RotateCcw size={20} /><span>Reset your home<small>Reset devices and follow local daylight</small></span></button><button className="dashboard-preference" onClick={onEnvironment}><CloudSun size={20} /><span>Time & weather<small>Hopewell · automatic daylight and live conditions</small></span></button><p className="dashboard-help-copy">Drag to orbit. Pinch to zoom. Use the view bar to explore the floor plan, landscape or immersive view. Changes stay in this browser.</p></div> : <>
       <label className="library-search"><Search size={18} /><span className="sr-only">{roomsView ? 'Find a room' : 'Find a device'}</span><input autoComplete="off" type="search" id={roomsView ? 'room-search' : 'device-search'} value={query} placeholder={roomsView ? 'Search rooms or floors' : 'Search name, room or type'} onChange={(event) => { setQuery(event.currentTarget.value); setRequestedPage(0); }} /></label>
       <div className="library-result-summary"><span>{current.total} {roomsView ? 'rooms' : view}</span><span>Choose to {roomsView ? 'explore' : 'control'}</span></div>
       <div className="library-results library-card-grid" data-library-view={roomsView ? 'rooms' : view} data-page-size={pageSize}>{roomsView
