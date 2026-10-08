@@ -133,13 +133,15 @@ Last maintained: **2026-10-08**. Read this before rediscovering the project.
   release version/assets/auth-redirect checks passed. Profile expiry is still
   October 11. Logs use `native-preview-build-45-final`; package receipt is
   `preview45-package-check.json`.
-- Installation is **pending**: Apple lists the iPhone as paired but installation
-  returned CoreDevice **4016**, with developer-service/power/trusted-connectivity
-  assertions unavailable. Requested direct USB connection and an unlocked awake
-  screen. Do not claim Preview 45 is installed; last confirmed baseline is 44.
-  Retry the verified package after the device is ready; retain install/app-list/
-  launch receipts. No additional source rebuild is needed unless code changes.
+- Preview **45 is installed and launched** on the physical iPhone; its app listing
+  confirms **1.0.0 / 45**. The initial CoreDevice 4016 connection failure cleared
+  after the user connected/unlocked the phone. Receipts: `preview45-install.json`,
+  `preview45-installed-app.json`, `preview45-launch.json`. Native visual/keyboard
+  feedback and the Owner's actual coordinate setup are still pending; do not
+  claim measured on-property weather or a completed real-location test.
   Task-owned weather browser sessions and Vite port 5184 are stopped.
+- Implementation pushed as `09b4857` on `3d-home-integration`; this receipt update
+  records the later successful installation.
 
 ## Contextual camera recovery (Preview 44)
 
