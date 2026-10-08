@@ -5,7 +5,7 @@ import type { HouseView } from './types';
 import { usePageMotion } from './usePageMotion';
 import {
   PARCEL_POINTS, RAIN_CEILING, createWeatherAnchors, weatherLandingHeight,
-  weatherMagnitude, weatherParticleCount, weatherSeed, windTravelDirection, type SceneWeather,
+  weatherMagnitude, weatherParticleCount, weatherPrecipitation, weatherSeed, windTravelDirection, type SceneWeather,
 } from './weatherGeometry';
 
 interface WeatherEffectsProps {
@@ -55,10 +55,8 @@ const vertexShader = `
 function Precipitation({ weather, reducedMotion }: Pick<WeatherEffectsProps, 'weather' | 'reducedMotion'>) {
   const smallViewport = useThree((state) => state.size.width < 720);
   const canAnimate = usePageMotion(reducedMotion);
-  const snowfall = weatherMagnitude(weather.snowfallCm, 30);
-  const rain = weatherMagnitude(weather.precipitationMm, 50);
-  const snow = snowfall > 0 && (rain === 0 || [71, 73, 75, 77, 85, 86].includes(weather.weatherCode));
-  const particleCount = weatherParticleCount(Math.max(rain, snowfall), smallViewport);
+  const { snow, ratePerHour } = weatherPrecipitation(weather);
+  const particleCount = weatherParticleCount(ratePerHour, smallViewport);
   const [geometry, material] = useMemo(() => {
     const anchors = createWeatherAnchors(MAX_PARTICLES);
     const positions = new Float32Array(MAX_PARTICLES * 6);

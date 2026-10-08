@@ -1,22 +1,35 @@
-import { fetchWeather, WEATHER_CACHE_MAX_AGE_MS, WEATHER_FRESH_MS, WEATHER_POLL_MS } from './weatherClient';
-import { getWeatherStorage, readWeatherCache, writeWeatherCache } from './weatherCache';
+import { fetchWeather, WEATHER_FRESH_MS, WEATHER_POLL_MS } from './weatherClient';
+import { getWeatherStorage, isWeatherWithinCacheAge, readWeatherCache, writeWeatherCache } from './weatherCache';
 import type { WeatherStorage } from './weatherCache';
 import type { WeatherLocation, WeatherSnapshot, WeatherState, WeatherStatus } from './types';
 
 type VisibilitySource = Pick<Document, 'hidden' | 'addEventListener' | 'removeEventListener'>;
+type ConnectivitySource = Pick<Window, 'addEventListener' | 'removeEventListener'>;
 type WeatherLoader = (location: WeatherLocation, signal: AbortSignal) => Promise<WeatherSnapshot>;
 interface MonitorOptions {
   load?: WeatherLoader;
   now?: () => number;
   storage?: WeatherStorage;
   visibility?: VisibilitySource;
+  connectivity?: ConnectivitySource;
+  isOnline?: () => boolean;
 }
 
 /** "Live" requires a successful, recent model response, not merely a cached object. */
 export function weatherStatus(weather: WeatherSnapshot | null, now: number, error: string | null): WeatherStatus {
   if (!weather) return 'unavailable';
-  return error || now - weather.observedAt > WEATHER_FRESH_MS || now - weather.fetchedAt > WEATHER_FRESH_MS
-    || weather.observedAt > now + WEATHER_POLL_MS || weather.fetchedAt > now + WEATHER_POLL_MS ? 'stale' : 'live';
+  return error || !isWeatherWithinCacheAge(weather, now)
+    || now - weather.observedAt > WEATHER_FRESH_MS || now - weather.fetchedAt > WEATHER_FRESH_MS
+    ? 'stale' : 'live';
+}
+
+/** Age both model and download timestamps even while a request is pending or a tab resumes. */
+export function weatherStateAtTime(state: WeatherState, now: number): WeatherState {
+  if (state.weather && !isWeatherWithinCacheAge(state.weather, now)) {
+    return { weather: null, status: 'unavailable', error: state.error };
+  }
+  const status = state.status === 'live' ? weatherStatus(state.weather, now, state.error) : state.status;
+  return status === state.status ? state : { ...state, status };
 }
 
 /** A single cancellable weather subscription with no polling while its tab is hidden. */
@@ -31,13 +44,20 @@ export class WeatherMonitor {
   private readonly now: () => number;
   private readonly storage: WeatherStorage | undefined;
   private readonly visibility: VisibilitySource | undefined;
+  private readonly connectivity: ConnectivitySource | undefined;
+  private readonly isOnline: () => boolean;
 
   /** Read a validated cache without starting network work during React rendering. */
   constructor(private readonly location: WeatherLocation, options: MonitorOptions = {}) {
     this.load = options.load ?? fetchWeather;
     this.now = options.now ?? Date.now;
     this.storage = options.storage ?? getWeatherStorage();
-    this.visibility = options.visibility ?? (typeof document === 'undefined' ? undefined : document);
+    // The optional native renderer also uses this monitor; native globals are not necessarily DOM targets.
+    this.visibility = options.visibility ?? (typeof document !== 'undefined'
+      && typeof document.addEventListener === 'function' && typeof document.removeEventListener === 'function' ? document : undefined);
+    this.connectivity = options.connectivity ?? (typeof window !== 'undefined'
+      && typeof window.addEventListener === 'function' && typeof window.removeEventListener === 'function' ? window : undefined);
+    this.isOnline = options.isOnline ?? (() => typeof navigator === 'undefined' || navigator.onLine !== false);
     const weather = readWeatherCache(this.storage, location, this.now());
     this.state = { weather, status: weather ? 'stale' : 'loading', error: null };
   }
@@ -50,6 +70,8 @@ export class WeatherMonitor {
     this.listeners.add(listener);
     if (this.listeners.size === 1) {
       this.visibility?.addEventListener('visibilitychange', this.onVisibilityChange);
+      this.connectivity?.addEventListener('online', this.onConnectionChange);
+      this.connectivity?.addEventListener('offline', this.onConnectionChange);
       this.interval = setInterval(this.refresh, WEATHER_POLL_MS);
       this.refresh();
     }
@@ -58,6 +80,8 @@ export class WeatherMonitor {
       if (this.listeners.size) return;
       clearInterval(this.interval);
       this.visibility?.removeEventListener('visibilitychange', this.onVisibilityChange);
+      this.connectivity?.removeEventListener('online', this.onConnectionChange);
+      this.connectivity?.removeEventListener('offline', this.onConnectionChange);
       this.cancelRequest();
     };
   };
@@ -66,6 +90,12 @@ export class WeatherMonitor {
   private publish(state: WeatherState): void {
     this.state = state;
     this.listeners.forEach((listener) => listener());
+  }
+
+  /** Invalidate expired conditions immediately instead of waiting for network completion. */
+  private updateFreshness(): void {
+    const state = weatherStateAtTime(this.state, this.now());
+    if (state !== this.state) this.publish(state);
   }
 
   /** Invalidate an old promise even if a custom fetch implementation ignores abort. */
@@ -81,12 +111,30 @@ export class WeatherMonitor {
       this.cancelRequest();
       return;
     }
+    this.updateFreshness();
     if (this.state.status !== 'live' || this.now() - this.lastAttemptAt >= WEATHER_POLL_MS) this.refresh();
+  };
+
+  /** A known disconnection stops current effects; reconnect must earn freshness through a response. */
+  private onConnectionChange = (): void => {
+    if (this.isOnline()) {
+      this.refresh();
+      return;
+    }
+    this.cancelRequest();
+    const { weather } = weatherStateAtTime(this.state, this.now());
+    this.publish({ weather, status: weather ? 'stale' : 'unavailable', error: 'Weather could not be refreshed. Check your connection.' });
   };
 
   /** Coalesce repeated refresh presses while preserving last-good data on failures. */
   refresh = (): void => {
-    if (this.controller || this.visibility?.hidden || this.listeners.size === 0) return;
+    if (this.listeners.size === 0 || this.visibility?.hidden) return;
+    this.updateFreshness();
+    if (!this.isOnline()) {
+      this.onConnectionChange();
+      return;
+    }
+    if (this.controller) return;
     this.lastAttemptAt = this.now();
     const generation = ++this.generation;
     const controller = new AbortController();
@@ -95,11 +143,11 @@ export class WeatherMonitor {
     this.load(this.location, controller.signal).then((weather) => {
       if (generation !== this.generation || controller.signal.aborted) return;
       writeWeatherCache(this.storage, this.location, weather);
-      this.publish({ weather, status: weatherStatus(weather, this.now(), null), error: null });
+      this.publish(weatherStateAtTime({ weather, status: weatherStatus(weather, this.now(), null), error: null }, this.now()));
     }).catch((error: unknown) => {
       if (generation !== this.generation || controller.signal.aborted) return;
       const cached = this.state.weather;
-      const weather = cached && this.now() - cached.observedAt <= WEATHER_CACHE_MAX_AGE_MS ? cached : null;
+      const weather = cached && isWeatherWithinCacheAge(cached, this.now()) ? cached : null;
       this.publish({
         weather, status: weather ? 'stale' : 'unavailable',
         error: error instanceof Error ? error.message : 'Weather is temporarily unavailable.',

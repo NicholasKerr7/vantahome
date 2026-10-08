@@ -27,6 +27,16 @@ describe('shared storm conditions', () => {
     for (const weatherCode of [0, 3, 45, 48, 71, 73, 75, 77, 85, 86]) expect(classifyWeather({ ...observed, weatherCode }).weather).toBe('clear');
   });
 
+  it('keeps equal rates consistent and does not invent rain from a malformed interval', () => {
+    expect(classifyWeather({ ...observed, rainMm: 0.7 })).toEqual(
+      classifyWeather({ ...observed, rainMm: 2.8, intervalSeconds: 3600 }),
+    );
+    for (const intervalSeconds of [0, -900, Number.NaN, Infinity]) {
+      expect(classifyWeather({ ...observed, rainMm: 1, intervalSeconds }).weather).toBe('clear');
+    }
+    expect(classifyWeather({ ...observed, weatherCode: 95, intervalSeconds: 0 }).weather).toBe('storm');
+  });
+
   it('caps visual wind while preserving its observed direction', () => {
     expect(classifyWeather({ ...observed, windSpeedKmh: 250, windDirectionDeg: 360 }))
       .toEqual({ weather: 'clear', windSpeed: 180, windDirection: 0 });

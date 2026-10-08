@@ -89,9 +89,21 @@ describe("architectural settings workspace", () => {
     expect(action(tree!, 'Initialize cloud home')).toBeUndefined();
     expect(action(tree!, 'Voice settings')).toBeUndefined();
     expect(action(tree!, 'Tools settings')).toBeUndefined();
+    expect(action(tree!, 'Weather settings')).toBeUndefined();
     act(() => { action(tree!, 'Activity settings').props.onPress(); });
     expect(action(tree!, 'Open command activity')).toBeTruthy();
     expect(action(tree!, 'View activity log')).toBeUndefined();
+  });
+
+  it("exposes property weather only to a verified Owner and removes it immediately after revocation", () => {
+    useHomeStore.setState({ authenticatedUserId: 'owner', accountUserId: 'owner', activeHomeId: 'home', accountHomeId: 'home', membershipReady: true,
+      activeMemberId: 'owner', household: [{ id: 'owner', name: 'Owner', role: 'Owner', status: 'home' }] });
+    tree = renderWorkspace();
+    expect(action(tree, 'Weather settings')).toBeTruthy();
+    act(() => { action(tree!, 'Weather settings').props.onPress(); });
+    act(() => { useHomeStore.setState({ household: [{ id: 'owner', name: 'Admin', role: 'Admin', status: 'home' }] }); });
+    expect(action(tree!, 'Weather settings')).toBeUndefined();
+    expect(action(tree!, 'Edit profile')).toBeTruthy();
   });
 
   it("replaces an open administrative category and rejects its retained callback after role revocation", () => {

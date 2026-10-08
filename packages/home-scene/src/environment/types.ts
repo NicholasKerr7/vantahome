@@ -1,4 +1,4 @@
-/** Public town coordinates; no owner's name or private street address is sent. */
+/** An Owner-confirmed property location or the explicitly labelled public town fallback. */
 export interface WeatherLocation {
   name: string;
   latitude: number;

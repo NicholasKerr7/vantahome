@@ -1,14 +1,11 @@
 import siteLayout from '../site-layout.json';
 import { ROOMS } from '../data';
+import { precipitationRatePerHour } from '../environment/precipitation';
+import type { WeatherSnapshot } from '../environment/types';
 
-export interface SceneWeather {
-  precipitationMm: number;
-  snowfallCm: number;
-  cloudCover: number;
-  windSpeedKmh: number;
-  windDirectionDeg: number;
-  weatherCode: number;
-}
+/** Retain each accumulation's interval so visual intensity is independent of the API time step. */
+export type SceneWeather = Pick<WeatherSnapshot,
+  'rainMm' | 'snowfallCm' | 'cloudCover' | 'windSpeedKmh' | 'windDirectionDeg' | 'weatherCode' | 'intervalSeconds'>;
 
 export type WeatherPoint = [number, number];
 export const RAIN_CEILING = 13;
@@ -68,12 +65,20 @@ export function weatherLandingHeight(x: number, z: number): number {
   return RAIN_FLOOR;
 }
 
-/** Keep the particle budget restrained even during heavy rain, especially on small canvases. */
-export function weatherParticleCount(precipitation: number, smallViewport: boolean): number {
-  const amount = weatherMagnitude(precipitation, 50);
-  if (amount <= 0) return 0;
+/** Select rain in mm/h or snow in cm/h without counting snow water equivalent as rain. */
+export function weatherPrecipitation(weather: SceneWeather): { snow: boolean; ratePerHour: number } {
+  const rainRate = precipitationRatePerHour(weather.rainMm, weather.intervalSeconds);
+  const snowRate = precipitationRatePerHour(weather.snowfallCm, weather.intervalSeconds);
+  const snow = snowRate > 0 && (rainRate === 0 || [71, 73, 75, 77, 85, 86].includes(weather.weatherCode));
+  return { snow, ratePerHour: weatherMagnitude(snow ? snowRate : rainRate, snow ? 30 : 50) };
+}
+
+/** Scale hourly rain (mm) or snow (cm) intensity within the existing phone/desktop particle budgets. */
+export function weatherParticleCount(ratePerHour: number, smallViewport: boolean): number {
+  const rate = weatherMagnitude(ratePerHour, 50);
+  if (rate <= 0) return 0;
   const maximum = smallViewport ? 260 : 460;
-  return Math.round(Math.min(maximum, 85 + Math.sqrt(amount) * (smallViewport ? 54 : 98)));
+  return Math.round(Math.min(maximum, 85 + Math.sqrt(rate) * (smallViewport ? 54 : 98)));
 }
 
 /** A ballistic water jet leaves the nozzle and lands at lawn height, with pressure controlling reach. */

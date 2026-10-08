@@ -18,6 +18,7 @@ import { DashboardLibrary, type DashboardLibraryView } from './DashboardLibrary'
 import { useHomeStore } from './state';
 import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
+import { usePropertyWeatherLocation } from './environment/usePropertyWeatherLocation';
 import { CinematicTourOverlay } from './CinematicTourOverlay';
 import { RecenterViewControl } from './RecenterViewControl';
 import { useIdleCinematic } from './useIdleCinematic';
@@ -200,15 +201,19 @@ export default function App(): ReactNode {
     if (simulationHydrated && !access.roomIds.length && !canViewPropertyOverview(access) && !canExploreInteriorLayout(access)) reportSceneStatus('ready');
   }, [simulationHydrated, access]);
   const prefersReduced = usePrefersReducedMotion();
-  const environment = useLiveEnvironment();
+  const propertyWeather = usePropertyWeatherLocation();
+  const liveEnvironment = useLiveEnvironment(propertyWeather.location, propertyWeather.ready);
+  const environment = propertyWeather.status === 'unavailable'
+    ? { ...liveEnvironment, status: 'unavailable' as const, error: 'Property weather location could not be verified.' }
+    : liveEnvironment;
   const lightingMode = useHomeStore((state) => state.lightingMode);
   const syncAutomaticLighting = useHomeStore((state) => state.syncAutomaticLighting);
   // Apply dawn/dusk once per transition, leaving individual light overrides usable.
   useEffect(() => {
-    if (!simulationHydrated || lightingMode !== 'auto') return;
+    if (!simulationHydrated || !propertyWeather.ready || lightingMode !== 'auto') return;
     // Reopening an embedded scene preserves pole overrides until the next dawn or dusk.
     if (!isEmbeddedScene() || useHomeStore.getState().night !== environment.isNight) syncAutomaticLighting(environment.isNight);
-  }, [environment.isNight, lightingMode, simulationHydrated, syncAutomaticLighting]);
+  }, [environment.isNight, lightingMode, simulationHydrated, propertyWeather.ready, syncAutomaticLighting]);
   const motionDisabled = useHomeStore((state) => state.motionDisabled);
   const persistenceError = useHomeStore((state) => state.persistenceError);
   const emergencyVisible = useHomeStore((state) => {

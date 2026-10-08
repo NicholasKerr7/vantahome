@@ -1,7 +1,8 @@
 import { Color, MathUtils } from 'three';
+import { precipitationRatePerHour } from '../environment/precipitation';
 import type { SceneWeather } from './weatherGeometry';
 
-export type CinematicWeather = Pick<SceneWeather, 'cloudCover' | 'precipitationMm'> | null | undefined;
+export type CinematicWeather = Pick<SceneWeather, 'cloudCover' | 'rainMm' | 'intervalSeconds'> | null | undefined;
 
 export interface CinematicAtmosphereState {
   zenith: Color;
@@ -43,7 +44,8 @@ export function updateCinematicAtmosphereState(
   const day = bounded(daylight);
   const night = 1 - day;
   const clouds = bounded(weather?.cloudCover, 100) / 100;
-  const rain = bounded(weather?.precipitationMm, 12) / 12;
+  const rainRate = weather ? precipitationRatePerHour(weather.rainMm, weather.intervalSeconds) : 0;
+  const rain = bounded(rainRate, 12) / 12;
   const dusk = Math.sin(day * Math.PI) * (1 - clouds);
   state.zenith.copy(palette.dayZenith).lerp(palette.cloudZenith, clouds).lerp(palette.nightZenith, night);
   state.horizon.copy(palette.dayHorizon).lerp(palette.cloudHorizon, clouds)

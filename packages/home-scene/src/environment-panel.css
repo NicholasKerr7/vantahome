@@ -1,14 +1,14 @@
-.environment-panel { min-height: 0; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.environment-panel { min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 .environment-location { display: flex; align-items: center; gap: 14px; padding-top: 8px; }
 .environment-location > svg { color: var(--accent-text); flex-shrink: 0; }
-.environment-location h3 { font-size: 20px; font-weight: 500; letter-spacing: -.5px; }
+.environment-location h3 { font-size: 19px; font-weight: 500; letter-spacing: -.5px; }
 .environment-location p, .environment-status { font-size: 12px; color: var(--text-soft); line-height: 1.5; }
 .environment-location strong { margin-left: auto; font-size: 36px; font-weight: 450; }
 .environment-status { color: var(--text-soft); }
 .environment-measurements { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.environment-measurements > div { padding: 14px 10px; border: 1px solid var(--line); border-radius: 14px; background: #ffffff04; }
+.environment-measurements > div { padding: 12px 8px; border: 1px solid var(--line); border-radius: 14px; background: #ffffff04; }
 .environment-measurements dt { font-size: 10px; color: var(--text-soft); }
-.environment-measurements dd { margin: 8px 0 0; font-size: 21px; }
+.environment-measurements dd { margin: 8px 0 0; font-size: 20px; }
 .environment-measurements small { font-size: 11px; color: var(--text-soft); }
 .environment-modes { border: 0; padding: 0; margin: 0; }
 .environment-modes legend { padding: 0; margin-bottom: 10px; font-size: 12px; color: var(--text-soft); }
@@ -21,7 +21,7 @@
 .library-settings .dashboard-preferences { min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 .library-settings .dashboard-preference { flex-shrink: 0; }
 @container app-viewport (max-width: 599px) {
-  .environment-panel { gap: 14px; }
+  .environment-panel { gap: 10px; }
   .environment-location h3 { font-size: 18px; }
   .environment-modes button { flex-direction: column; font-size: 10px; gap: 5px; }
 }
@@ -33,3 +33,17 @@
 }
 @media (prefers-reduced-motion: reduce) { .environment-panel, .library-settings .dashboard-preferences { scroll-behavior: auto; } }
 .reduce-motion .environment-panel, .reduce-motion .library-settings .dashboard-preferences { scroll-behavior: auto; }
+
+.environment-location > div { min-width: 0; }
+.environment-location h3, .environment-location p { overflow-wrap: anywhere; }
+.environment-pages { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border: 1px solid var(--line); border-radius: 16px; }
+.environment-pages button { min-height: 44px; border-radius: 12px; background: transparent; color: var(--text-soft); font-size: 12px; }
+.environment-pages button[aria-pressed='true'] { background: var(--surface-raised); color: var(--text); }
+.environment-source { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 10px; color: var(--accent-text); letter-spacing: .35px; }
+.environment-age { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--text-soft); font-size: 10px; }
+.environment-age p { margin: 0; }
+.environment-footer .dashboard-icon-button { flex-shrink: 0; }
+.environment-pages button:focus-visible, .environment-modes button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.environment-location h3 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dashboard-context { min-width: 0; max-width: calc(100% - 56px); flex-shrink: 1; }
+.dashboard-context > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

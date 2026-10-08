@@ -28,15 +28,16 @@ function weatherIcon(code: number | undefined): LucideIcon {
 }
 
 /** Keep one time/weather entry point while the native shell owns embedded identity. */
-export function DashboardHeader({ onSettings, onEnvironment = onSettings, environment, embedded = false }: { onSettings: () => void; onEnvironment?: () => void; environment: Pick<LiveEnvironment, 'localTime' | 'weather' | 'status'>; embedded?: boolean }) {
+export function DashboardHeader({ onSettings, onEnvironment = onSettings, environment, embedded = false }: { onSettings: () => void; onEnvironment?: () => void; environment: Pick<LiveEnvironment, 'localTime' | 'weather' | 'status'> & Partial<Pick<LiveEnvironment, 'location'>>; embedded?: boolean }) {
   const WeatherIcon = weatherIcon(environment.weather?.weatherCode);
-  const weatherLabel = environment.weather ? `${weatherDescription(environment.weather.weatherCode)} · ${environment.status === 'live' ? 'Live weather' : 'Last available weather'}`
+  const weatherLabel = environment.weather ? `${weatherDescription(environment.weather.weatherCode)} · ${environment.status === 'live' ? 'Current regional estimate' : 'Saved regional estimate'}`
     : environment.status === 'loading' ? 'Checking local weather' : 'Weather unavailable';
+  const locationLabel = environment.location?.name ?? 'Hopewell';
   const contextLabel = `Property time and weather: ${weatherLabel}, ${environment.localTime}${environment.weather ? `, ${Math.round(environment.weather.tempC)} degrees Celsius` : ''}`;
   return <header className="app-header dashboard-header">
     {embedded ? (
       <button className="dashboard-context" onClick={onEnvironment} aria-label={contextLabel}>
-        <span>HOPEWELL</span>
+        <span>{locationLabel}</span>
         <span className="dashboard-context-weather">
           <WeatherIcon size={14} strokeWidth={1.6} aria-hidden="true" />
           {environment.weather ? <strong>{Math.round(environment.weather.tempC)}°</strong> : null}
@@ -46,7 +47,7 @@ export function DashboardHeader({ onSettings, onEnvironment = onSettings, enviro
     ) : (
       <a className="dashboard-brand" href="#house-preview" aria-label="VantaHome house preview">
         <span className="dashboard-brand-mark"><img src={vantahomeMark} width={256} height={256} alt="" aria-hidden="true" /></span>
-        <span>VANTA<span className="brand-light">HOME</span><small>HOPEWELL</small></span>
+        <span>VANTA<span className="brand-light">HOME</span><small>{locationLabel}</small></span>
       </a>
     )}
     <div className="header-actions">

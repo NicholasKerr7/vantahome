@@ -26,6 +26,7 @@ import { canPresentCinematic } from './cinematicPresentation';
 import { createCinematicTourFrame } from './cinematicTour';
 import { CinematicAtmosphere } from './CinematicAtmosphere';
 import { prepareCinematicMaterials } from './cinematicMaterials';
+import { currentWeather } from '../environment/weatherPresentation';
 import './scene.css';
 
 type ModelProps = Pick<HouseSceneProps, 'view' | 'roomId' | 'access' | 'deviceStates' | 'reducedMotion' | 'onReady' | 'cinematic'>;
@@ -105,6 +106,7 @@ function VisibilityScheduling({ suspended }: { suspended: boolean }) {
 export default function HouseScene({ suspended = false, ...props }: HouseSceneProps & { suspended?: boolean }) {
   const [qualityTier, setQualityTier] = useState<RenderQualityTier>('high');
   const quality = RENDER_QUALITY[qualityTier];
+  const weather = currentWeather(props.environment, props.environment.now);
   const access = props.access ?? FULL_SCENE_ACCESS;
   const cinematic = canPresentCinematic(props.cinematic ?? false, access, props.reducedMotion, suspended);
   const view = cinematic ? 'exterior' : props.view;
@@ -127,16 +129,16 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       <MaterialEnvironment />
       <SceneLighting key={`lighting:${presentationScope}`} cinematic={cinematic} daylight={props.daylight} environment={props.environment} night={props.night} view={view} floor={props.floor} roomId={props.roomId} deviceStates={visibleStates} reducedMotion={props.reducedMotion} shadowMapSize={quality.shadowMapSize} />
       <CameraRig roomOnly={requiresRoomIsolation(access, props.view)} exteriorOnly={exteriorOnly} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} tourFrame={tourFrame} tourAllowed={cinematic} />
-      {cinematic && <CinematicAtmosphere daylight={props.daylight} weather={props.environment.weather} reducedMotion={props.reducedMotion} />}
+      {cinematic && <CinematicAtmosphere daylight={props.daylight} weather={weather} reducedMotion={props.reducedMotion} />}
       {!cinematic && !roomOnly && props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
       <Suspense key={`model:${presentationScope}`} fallback={null}>
         <HouseModel access={access} roomId={props.roomId} view={view} cinematic={cinematic} deviceStates={visibleStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
         <HotspotLayout access={props.access} roomId={props.roomId} view={view}>
         {!cinematic && <Devices {...visibleProps} />}
-        {!roomOnly && (view === 'exterior' || view === 'immersive') && <Landscape {...visibleProps} tourFrame={tourFrame} windSpeedKmh={props.environment.weather?.windSpeedKmh ?? 0} windDirectionDeg={props.environment.weather?.windDirectionDeg ?? 0} />}
+        {!roomOnly && (view === 'exterior' || view === 'immersive') && <Landscape {...visibleProps} tourFrame={tourFrame} windSpeedKmh={weather?.windSpeedKmh ?? 0} windDirectionDeg={weather?.windDirectionDeg ?? 0} />}
         </HotspotLayout>
         {!roomOnly && (view === 'exterior' || view === 'immersive') && <SolarLightPools deviceStates={visibleStates} reducedMotion={props.reducedMotion} />}
-        {!roomOnly && props.environment.weather ? <WeatherEffects weather={props.environment.weather} view={view} roomId={props.roomId} reducedMotion={props.reducedMotion} /> : null}
+        {!roomOnly && weather ? <WeatherEffects weather={weather} view={view} roomId={props.roomId} reducedMotion={props.reducedMotion} /> : null}
       </Suspense>
       {bounds && <mesh position={[(bounds[0] + bounds[1]) / 2, -0.08, (bounds[2] + bounds[3]) / 2]} receiveShadow>
         <boxGeometry args={[bounds[1] - bounds[0], 0.12, bounds[3] - bounds[2]]} /><meshStandardMaterial color="#b6aca0" roughness={0.7} />

@@ -1,18 +1,21 @@
+import { buildWeatherUrl, isWeatherLocation } from '../../../packages/home-scene/src/environment/weatherLocation';
+import { PROPERTY_LOCATION, type WeatherLocation } from '../../../packages/home-scene/src/environment/types';
+
 const CHANNEL = 'vantahome-weather';
 export const NATIVE_WEATHER_EVENT = 'vantahome-native-weather-v1';
 export const NATIVE_WEATHER_TIMEOUT_MS = 10_000;
 export const NATIVE_WEATHER_MIN_INTERVAL_MS = 30_000;
 export const NATIVE_WEATHER_MAX_BODY_CHARS = 64 * 1024;
 
-// Fixed public town coordinates match the scene's PROPERTY_LOCATION. No URL or
-// coordinates from WebView messages are ever used to construct a request.
-export const NATIVE_WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=18.4538&longitude=-78.01534&current=temperature_2m%2Cprecipitation%2Crain%2Cshowers%2Csnowfall%2Ccloud_cover%2Cwind_speed_10m%2Cwind_direction_10m%2Cweather_code&daily=sunrise%2Csunset&timezone=America%2FJamaica&timeformat=unixtime&forecast_days=3&wind_speed_unit=kmh&precipitation_unit=mm&temperature_unit=celsius';
+// Only trusted household settings choose coordinates; renderer messages cannot
+// provide a URL, location, credentials, or request headers.
+export const NATIVE_WEATHER_URL = buildWeatherUrl(PROPERTY_LOCATION);
 
 type WeatherRequest = { channel: typeof CHANNEL; version: 1; type: 'current' | 'cancel'; requestId: number };
 export type NativeWeatherResponse = { channel: typeof CHANNEL; version: 1; requestId: number } & (
   { status: 'ok'; body: Record<string, unknown> } | { status: 'error' }
 );
-type BrokerOptions = { fetcher?: typeof fetch; now?: () => number };
+type BrokerOptions = { fetcher?: typeof fetch; now?: () => number; location?: WeatherLocation | null };
 type PendingRequest = { requestId: number; controller: AbortController; timer?: ReturnType<typeof setTimeout> };
 
 /** Accept only a bounded request identifier and a fixed operation, never arbitrary network input. */
@@ -42,11 +45,23 @@ export class NativeWeatherBroker {
   private disposed = false;
   private readonly fetcher: typeof fetch;
   private readonly now: () => number;
+  private location: WeatherLocation | null;
 
   /** Inject only the transport and clock needed for deterministic boundary tests. */
   constructor(private readonly deliver: (response: NativeWeatherResponse) => void, options: BrokerOptions = {}) {
     this.fetcher = options.fetcher ?? fetch;
     this.now = options.now ?? Date.now;
+    this.location = options.location === undefined ? PROPERTY_LOCATION : options.location;
+    if (this.location && !isWeatherLocation(this.location)) throw new Error('Invalid property weather location.');
+  }
+
+  /** Replace only host-owned configuration, cancelling any response for the previous household or location. */
+  setLocation(location: WeatherLocation | null): void {
+    if (location && !isWeatherLocation(location)) throw new Error('Invalid property weather location.');
+    if (JSON.stringify(this.location) === JSON.stringify(location)) return;
+    this.cancelActive();
+    this.location = location;
+    this.lastAttemptAt = -Infinity;
   }
 
   /** Handle recognized messages without permitting parallel requests or rapid polling. */
@@ -58,7 +73,7 @@ export class NativeWeatherBroker {
       if (this.active?.requestId === request.requestId) this.cancelActive();
       return true;
     }
-    if (this.active || this.now() - this.lastAttemptAt < NATIVE_WEATHER_MIN_INTERVAL_MS) {
+    if (!this.location || this.active || this.now() - this.lastAttemptAt < NATIVE_WEATHER_MIN_INTERVAL_MS) {
       this.deliver({ channel: CHANNEL, version: 1, requestId: request.requestId, status: 'error' });
       return true;
     }
@@ -92,7 +107,8 @@ export class NativeWeatherBroker {
     }, NATIVE_WEATHER_TIMEOUT_MS);
     let response: NativeWeatherResponse = { channel: CHANNEL, version: 1, requestId: pending.requestId, status: 'error' };
     try {
-      const result = await this.fetcher(NATIVE_WEATHER_URL, {
+      if (!this.location) throw new Error('Property weather settings are unavailable.');
+      const result = await this.fetcher(buildWeatherUrl(this.location), {
         signal: pending.controller.signal, credentials: 'omit', cache: 'no-store', redirect: 'error',
         headers: { Accept: 'application/json' },
       });

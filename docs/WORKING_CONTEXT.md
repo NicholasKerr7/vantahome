@@ -42,8 +42,9 @@ Last maintained: **2026-10-08**. Read this before rediscovering the project.
 
 ## Environment and confirmed milestones
 
-- Staging Supabase: `dcevusczjtmdpzrxpdou`. Migrations **001–020** applied only here.
+- Staging Supabase: `dcevusczjtmdpzrxpdou`. Migrations **001–021** applied only here.
   019 adds owner-only interior consent; 020 adds checked Guest deadline changes.
+  021 adds Owner-managed, consented property weather configuration.
 - Use configured CLI/Keychain credentials in memory; never print/store privileged
   keys or put them in `EXPO_PUBLIC_*`. Do not read account credentials into chat.
 - Preview bundle: `com.anonymous.vantahome.preview`; scheme `vantahome-preview`.
@@ -72,6 +73,73 @@ Last maintained: **2026-10-08**. Read this before rediscovering the project.
   Release packaging, exact identity/schemes, profile device coverage, and strict
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
+
+## Property weather accuracy (Preview 45)
+
+- Owner route: **Settings → Weather → Set property location**. Three bounded
+  steps review a name/latitude/longitude, IANA time zone, and explicit consent to
+  share coordinates with authorized household members and Open-Meteo. No phone
+  GPS is requested; do not infer the property's precise location. Town fallback
+  remains **Hopewell, Jamaica** until the Owner saves a setting. A confirmed
+  reset removes the saved coordinates and consent. At deployment there were
+  **zero saved property locations**; no account settings were fabricated.
+- `home_weather_settings` and migration 021 keep location separate from device
+  access. Authorized, unexpired members can read it; canonical `homes.owner_id`
+  alone can save/reset through checked RPCs. Direct writes and anonymous reads
+  are denied. Staging 021/schema/RLS verified; production remains unchanged.
+- The trusted native/web host supplies verified configuration to the scene.
+  Initial/switching/failed reads expose no old coordinates and do not fetch a
+  guessed location. Session changes and Guest expiry clear configuration;
+  cancelled/late responses cannot cross locations. Native renderer messages
+  still cannot choose a URL, coordinates, credentials or headers. Native and
+  opaque iframe storage do not persist private weather coordinates.
+- Shared settings refresh on foreground/local save and every **60 seconds**
+  while active. Same-location revalidation preserves its reference and does not
+  restart forecast polling. Changes on another device may take up to a minute.
+  Settings reads are separate from home verification; weather failure alone
+  does not change room/device permissions.
+- Forecasts remain Open-Meteo **regional model estimates**, checked every 15 min,
+  not on-property measurements or guaranteed rain detection. Model/download age
+  is shown separately. Both must be within **30 min** for current effects;
+  offline/failure/stale data pauses precipitation, wind and weather cloud effects.
+  Saved readings may display for at most **6 hours**, explicitly labelled.
+  Render-time freshness avoids showing a newly downloaded response as future.
+- Rain + showers totals are converted using the supplied interval to **mm/h**;
+  snow remains separate in cm/h. Particle budgets and reduced motion are intact.
+  The optional disabled renderer lab also pauses stale effects, but its explicitly
+  labelled town-weather comparison/manual previews remain separate.
+- Weather and lighting occupy two compact panel pages. Day/local/night previews
+  stay inside the time button; no dashboard shortcuts were reintroduced. Weather
+  labels/header follow the confirmed location. Native location forms preserve
+  44px targets and keyboard completion, with concise pages for small phones.
+- Verification: **78 scene suites / 887 tests**, **8 app suites / 116 tests**, app
+  and scene TypeScript, **530 PostgreSQL assertions / 11 suites** across all 21
+  migrations, protocol/privacy review, and bounded scene/renderer builds pass.
+  **36 browser checks** cover 320/390px phones and tablet portrait/landscape,
+  current/stale/offline/reconnect, mm/h, separate age labels, no scrolling and
+  lighting selection. Fresh-session browser/WebGL errors were empty; captures
+  were visually inspected. Native keyboard/font-scale review remains pending.
+- Final native scene: **31,788,123 bytes**, SHA256
+  `62111d1f998c43a7b7770c8bc6eae04c381f50f9c22dddc0766949d08f40ab48`;
+  32 MiB budget unchanged; no new dependencies or media assets.
+- Evidence in work cache: `weather-scene-tests-final.log`,
+  `weather-native-tests-final.log`, `weather-location-postgres-test.log`,
+  `weather-staging-schema-check.json`, `weather-scene-build-final.log`,
+  `weather-browser-final.log`, `property-weather/verification.json` and captures.
+  The first browser run's old hot-reload errors and clock assertion were replaced
+  by the clean fresh-session final run; use final evidence.
+- Preview **45** Release build and strict package/signature/device coverage checks
+  passed. Exact scene SHA/size match confirmed; production metadata restored and
+  release version/assets/auth-redirect checks passed. Profile expiry is still
+  October 11. Logs use `native-preview-build-45-final`; package receipt is
+  `preview45-package-check.json`.
+- Installation is **pending**: Apple lists the iPhone as paired but installation
+  returned CoreDevice **4016**, with developer-service/power/trusted-connectivity
+  assertions unavailable. Requested direct USB connection and an unlocked awake
+  screen. Do not claim Preview 45 is installed; last confirmed baseline is 44.
+  Retry the verified package after the device is ready; retain install/app-list/
+  launch receipts. No additional source rebuild is needed unless code changes.
+  Task-owned weather browser sessions and Vite port 5184 are stopped.
 
 ## Contextual camera recovery (Preview 44)
 
@@ -115,8 +183,8 @@ Last maintained: **2026-10-08**. Read this before rediscovering the project.
   Signing expiry remains October 11. Receipts: `preview44-package-check.json`,
   `preview44-install.json`, `preview44-installed-app.json`, `preview44-launch.json`;
   build logs use `native-preview-build-44`. Physical visual review is pending.
-  Task-owned browser sessions and port 5184 are stopped. Current iPhone baseline
-  is Preview 44; older Preview sections below retain their historical evidence.
+  Task-owned browser sessions and port 5184 were stopped at that milestone.
+  Older Preview sections below retain their historical evidence.
 
 ## Automatic property film (Preview 43)
 

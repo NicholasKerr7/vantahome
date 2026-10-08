@@ -13,12 +13,15 @@ import { useSettingsWorkspace, type SettingsWorkspaceModel } from "./useSettings
 import { useShallow } from "zustand/react/shallow";
 import { useHomeStore } from "../../store/useHomeStore";
 import { selectHomeNavigationAccess } from "../home-shell/homeNavigationAccess";
+import { canManageHomeWeather } from "../../services/homeWeather";
+import HomeWeatherSettings from "../weather-settings/HomeWeatherSettings";
 
-type Category = "home" | "preferences" | "voice" | "activity" | "about" | "development";
+type Category = "home" | "preferences" | "weather" | "voice" | "activity" | "about" | "development";
 type SettingsCategory = { id: Category; label: string; icon: keyof typeof Ionicons.glyphMap };
 const CATEGORIES: readonly SettingsCategory[] = [
   { id: "home", label: "Home", icon: "home-outline" },
   { id: "preferences", label: "Feel", icon: "options-outline" },
+  { id: "weather", label: "Weather", icon: "partly-sunny-outline" },
   { id: "voice", label: "Voice", icon: "mic-outline" },
   { id: "activity", label: "Activity", icon: "time-outline" },
   { id: "about", label: "About", icon: "information-circle-outline" },
@@ -79,6 +82,9 @@ export default function SettingsWorkspace() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const model = useSettingsWorkspace();
   const access = useHomeStore(useShallow(selectHomeNavigationAccess));
+  const canManageWeather = useHomeStore(canManageHomeWeather);
+  // Remount drafts on account/home changes, even when both identities are Owners.
+  const weatherScope = useHomeStore((state) => `${state.sessionEpoch}:${state.authenticatedUserId}:${state.activeHomeId}`);
   const { width, height } = useWindowDimensions();
   const wide = width >= 800 && width > height;
   const compact = height < 720;
@@ -86,6 +92,7 @@ export default function SettingsWorkspace() {
   const [toolPage, setToolPage] = useState(0);
   const [editing, setEditing] = useState(false);
   const categories = CATEGORIES.filter((item) => {
+    if (item.id === 'weather') return canManageWeather;
     if (item.id === 'voice') return access.integrations;
     if (item.id === 'development') return access.admin && model.developmentTools;
     if (item.id === 'activity') return access.audit || (access.activity && Boolean(model.commandActivity));
@@ -93,8 +100,11 @@ export default function SettingsWorkspace() {
   });
   // Resolve immediately during render so a revoked category cannot display one stale frame.
   const category = categories.some((item) => item.id === requestedCategory) ? requestedCategory : 'home';
-  const titles: Record<Category, string> = { home: "A place of your own.", preferences: "Make it feel right.", voice: "A home that listens.", activity: "Know what happened.", about: "VantaHome.", development: TOOL_PAGES[toolPage] };
+  const titles: Record<Category, string> = { home: "A place of your own.", preferences: "Make it feel right.", weather: "Weather for your home.", voice: "A home that listens.", activity: "Know what happened.", about: "VantaHome.", development: TOOL_PAGES[toolPage] };
   const chapter = categories.findIndex((item) => item.id === category) + 1;
+  const wrapCategories = !wide && width < 380 && categories.length > 6;
+  const editingWeather = category === 'weather' && editing;
+  const hideWeatherHeading = category === 'weather' && (editing || compact);
 
   /** Change categories without carrying the keyboard or a previous tool page into the next section. */
   function selectCategory(next: Category) {
@@ -103,17 +113,17 @@ export default function SettingsWorkspace() {
 
   return <CinematicSurface variant="quiet" style={styles.root}><KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={64}>
     <View style={[styles.workspace, compact && styles.compactWorkspace, wide && styles.wideWorkspace]}>
-      {!editing && <View accessibilityRole="tablist" style={[styles.navigation, wide && styles.sideNavigation]}>
+      {!editing && <View accessibilityRole="tablist" style={[styles.navigation, wide && styles.sideNavigation, wrapCategories && styles.wrappedNavigation]}>
         {categories.map((item) => <Pressable key={item.id} accessibilityRole="tab" accessibilityLabel={`${item.label} settings`} accessibilityState={{ selected: category === item.id }}
-          onPress={() => selectCategory(item.id)} style={[styles.category, wide && styles.sideCategory, category === item.id && styles.selectedCategory]}>
+          onPress={() => selectCategory(item.id)} style={[styles.category, wide && styles.sideCategory, wrapCategories && styles.wrappedCategory, category === item.id && styles.selectedCategory]}>
           <Ionicons name={item.icon} size={18} color={category === item.id ? theme.colors.accent : theme.colors.subtext} />
           <Text style={[styles.categoryLabel, wide && styles.sideCategoryLabel, category === item.id && styles.selectedLabel]}>{item.label}</Text>
         </Pressable>)}
       </View>}
-      <View style={[styles.panel, compact && styles.compactPanel]}>
+      <View style={[styles.panel, compact && styles.compactPanel, editingWeather && styles.editingWeatherPanel]}>
         <View pointerEvents="none" accessible={false} style={styles.panelOrbit} />
-        <View style={styles.panelHeading}><Text style={styles.eyebrow}>{String(chapter).padStart(2, "0")} / {category === "development" ? "DEVELOPMENT" : category.toUpperCase()}</Text>
-          <Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>{titles[category]}</Text></View>
+        {!hideWeatherHeading && <View style={styles.panelHeading}><Text style={styles.eyebrow}>{String(chapter).padStart(2, "0")} / {category === "development" ? "DEVELOPMENT" : category.toUpperCase()}</Text>
+          <Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>{titles[category]}</Text></View>}
 
         {category === "home" && <>
           <Text numberOfLines={2} style={styles.homeName}>{model.homeTitle}</Text>
@@ -125,6 +135,7 @@ export default function SettingsWorkspace() {
           <SettingToggle label="Notifications" value={model.preferences.notifications} onChange={(notifications) => model.setPreferences({ notifications })} />
           <SettingValue label="Appearance" value="Vanta violet" />
         </View>}
+        {category === "weather" && <HomeWeatherSettings key={weatherScope} onEditingChange={setEditing} />}
         {category === "voice" && <>
           <Text style={styles.description}>Your assistants and home connections, together in one place.</Text>
           <View style={styles.notice}><Text style={styles.detail}>Review account authorization, planned integrations and local hub setup.</Text></View>

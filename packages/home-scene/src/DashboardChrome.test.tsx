@@ -15,7 +15,7 @@ describe('home workspace chrome', () => {
     expect(markup).not.toContain('<img');
     expect(markup).not.toContain('dashboard-address');
     expect(markup.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
-    expect(markup).toContain('HOPEWELL');
+    expect(markup).toContain('Hopewell');
     expect(markup).toContain('10:42 AM');
     expect(markup).toContain('Property time and weather: Weather unavailable');
     expect(markup).not.toContain('°');
@@ -23,15 +23,15 @@ describe('home workspace chrome', () => {
     expect(markup).not.toContain('light-mode-switch');
   });
 
-  it('shows measured weather without presenting cached conditions as live', () => {
+  it('shows regional estimates without presenting cached conditions as live', () => {
     const live = renderToStaticMarkup(<DashboardHeader embedded environment={{ ...environment, weather, status: 'live' }} onSettings={() => undefined} />);
     expect(live).toContain('29°');
     expect(live).toContain('Thunderstorm');
-    expect(live).toContain('Live weather');
+    expect(live).toContain('Current regional estimate');
     expect(live.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
     const stale = renderToStaticMarkup(<DashboardHeader embedded environment={{ ...environment, weather, status: 'stale' }} onSettings={() => undefined} />);
-    expect(stale).toContain('Last available weather');
-    expect(stale).not.toContain('Live weather');
+    expect(stale).toContain('Saved regional estimate');
+    expect(stale).not.toContain('Current regional estimate');
     expect(stale.match(/aria-label="Property time and weather:/g)).toHaveLength(1);
   });
 

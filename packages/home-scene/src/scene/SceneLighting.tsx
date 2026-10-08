@@ -4,10 +4,12 @@ import { Color, MathUtils, Object3D } from 'three';
 import { ROOM_POSITIONS, UPPER_ELEVATION, type HouseSceneProps } from './types';
 import { resizeShadowMap } from './shadowQuality';
 import { roomFillLights } from './roomLighting';
+import { currentWeather } from '../environment/weatherPresentation';
 
 /** Sculpt architecture with one shadow map; the exterior tour uses a natural sun/moon treatment. */
 export function SceneLighting({ night, daylight, environment, view, floor, roomId, deviceStates, reducedMotion, shadowMapSize, cinematic = false }: Pick<HouseSceneProps, 'night' | 'daylight' | 'environment' | 'view' | 'floor' | 'roomId' | 'deviceStates' | 'reducedMotion'> & { shadowMapSize: number; cinematic?: boolean }) {
   const { scene } = useThree();
+  const weather = currentWeather(environment, environment.now);
   const shadowTarget = useMemo(() => new Object3D(), []);
   const room = ROOM_POSITIONS[roomId] ?? ROOM_POSITIONS.living;
   const focus: [number, number, number] = view === 'exterior' ? [10, 0, -7]
@@ -46,11 +48,11 @@ export function SceneLighting({ night, daylight, environment, view, floor, roomI
     mixed: new Color(),
   }), []);
   const amount = useRef(1 - daylight);
-  const cloudAmount = useRef((environment.weather?.cloudCover ?? 0) / 100);
+  const cloudAmount = useRef((weather?.cloudCover ?? 0) / 100);
   const full = view === 'exterior' || view === 'immersive';
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.08);
-    const cloudTarget = (environment.weather?.cloudCover ?? 0) / 100;
+    const cloudTarget = (weather?.cloudCover ?? 0) / 100;
     amount.current = reducedMotion ? 1 - daylight : MathUtils.damp(amount.current, 1 - daylight, 2, dt);
     cloudAmount.current = reducedMotion ? cloudTarget : MathUtils.damp(cloudAmount.current, cloudTarget, 1.2, dt);
     if (ambient.current) ambient.current.intensity = cinematic

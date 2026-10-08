@@ -5,6 +5,8 @@ import { parseRoutineNavigation } from '../../../packages/home-scene/src/routine
 import { scenePresentationMessage } from '../../../packages/home-scene/src/scenePresentation';
 import type { SimulationSnapshotMessage } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import type { SceneCatalogMessage } from '../../../packages/home-scene/src/sceneCatalogProtocol';
+import { useHomeWeatherSettings } from '../weather-settings/useHomeWeatherSettings';
+import { EMPTY_WEATHER_CONFIGURATION, WEATHER_CONFIGURATION_CHANNEL, type PropertyWeatherConfiguration } from '../../../packages/home-scene/src/environment/propertyWeatherConfiguration';
 import './scene-surface.css';
 
 /** Keep an optional save-status callback stable when callers do not display it. */
@@ -21,13 +23,22 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     frame.current?.contentWindow?.postMessage(message, '*');
   }, []);
   const simulation = useSceneSimulationSession(deliverSnapshot, deliverCatalog, onSaveStatus);
+  const propertyWeather = useHomeWeatherSettings();
+  const weatherConfiguration = useRef<PropertyWeatherConfiguration>(EMPTY_WEATHER_CONFIGURATION);
+  weatherConfiguration.current = {
+    channel: WEATHER_CONFIGURATION_CHANNEL, version: 1,
+    location: propertyWeather.location, configured: propertyWeather.configured,
+    canManage: propertyWeather.canManage,
+    status: propertyWeather.location ? 'ready' : propertyWeather.loading ? 'loading' : 'unavailable',
+  };
   const suspendedRef = useRef(suspended);
   suspendedRef.current = suspended;
   /** Send again after document readiness so an early covering panel cannot lose its pause. */
   const publishPresentation = useCallback(() => {
     frame.current?.contentWindow?.postMessage(scenePresentationMessage(suspendedRef.current), '*');
+    frame.current?.contentWindow?.postMessage(weatherConfiguration.current, '*');
   }, []);
-  useEffect(publishPresentation, [publishPresentation, suspended]);
+  useEffect(publishPresentation, [publishPresentation, suspended, propertyWeather.location, propertyWeather.configured, propertyWeather.loading, propertyWeather.canManage]);
   useEffect(() => {
     /** Accept messages only from this exact frame, never a neighboring tab or window. */
     function handleMessage(event: MessageEvent<unknown>) {

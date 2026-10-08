@@ -1,0 +1,37 @@
+import { StyleSheet } from 'react-native';
+import { theme } from '../../theme/theme';
+
+/** Bounded native form pages keep consent, errors, and 44-point actions inside the settings panel. */
+export const homeWeatherSettingsStyles = StyleSheet.create({
+  content: { gap: 12, minHeight: 0 },
+  compactContent: { gap: 8 },
+  hidden: { display: 'none' },
+  step: { color: theme.colors.accentText, fontSize: 11, fontWeight: '600', letterSpacing: 1 },
+  description: { color: theme.colors.subtext, fontSize: 13, lineHeight: 19 },
+  detail: { color: theme.colors.subtext, fontSize: 12, lineHeight: 17 },
+  locationName: { color: theme.colors.text, fontSize: 18, lineHeight: 24, fontWeight: '500' },
+  coordinates: { color: theme.colors.text, fontSize: 14, lineHeight: 20, fontVariant: ['tabular-nums'] },
+  review: { gap: 4 },
+  reviewName: { color: theme.colors.text, fontSize: 14, lineHeight: 18, fontWeight: '500' },
+  fieldRow: { flexDirection: 'row', gap: 10 },
+  field: { flex: 1, minWidth: 0, gap: 5 },
+  standaloneField: { flex: 0 },
+  label: { color: theme.colors.subtext, fontSize: 12, lineHeight: 16 },
+  input: { minHeight: 44, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10, color: theme.colors.text, fontSize: 14 },
+  focusedInput: { borderColor: theme.colors.accentText, borderWidth: 2 },
+  invalidInput: { borderColor: theme.colors.ember },
+  error: { color: theme.colors.ember, fontSize: 12, lineHeight: 17 },
+  success: { color: theme.colors.accentText, fontSize: 12, lineHeight: 17 },
+  actions: { flexDirection: 'row', gap: 8 },
+  action: { flex: 1, minHeight: 44, minWidth: 44, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
+  primaryAction: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  actionLabel: { color: theme.colors.text, fontSize: 13, lineHeight: 18, fontWeight: '600', textAlign: 'center' },
+  primaryLabel: { color: theme.colors.bg0 },
+  disabled: { opacity: 0.5 },
+  consent: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 12, padding: 10 },
+  consentSelected: { borderColor: theme.colors.accentText, backgroundColor: theme.colors.card2 },
+  checkbox: { width: 22, height: 22, borderWidth: 1, borderColor: theme.colors.accentText, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
+  checkmark: { color: theme.colors.accentText, fontSize: 17, lineHeight: 20 },
+  consentLabel: { flex: 1, color: theme.colors.text, fontSize: 13, lineHeight: 18 },
+  notice: { borderLeftWidth: 2, borderLeftColor: theme.colors.accentText, paddingLeft: 10 },
+});

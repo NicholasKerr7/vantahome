@@ -3,7 +3,7 @@ import type { DaylightDay, WeatherLocation, WeatherSnapshot } from './types';
 
 export type WeatherStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
-/** Scope cached weather to the town and zone so a location change cannot reuse it. */
+/** Scope cached weather to the coordinates and zone so a location change cannot reuse it. */
 export function weatherCacheKey(location: WeatherLocation): string {
   return `vantahome-weather-v1:${location.latitude}:${location.longitude}:${location.timeZone}`;
 }
@@ -40,12 +40,17 @@ function isSnapshot(value: unknown): value is WeatherSnapshot {
 }
 
 /** Retain at most six hours of last-good data, always presented as cached/stale. */
+export function isWeatherWithinCacheAge(weather: WeatherSnapshot, now: number): boolean {
+  return Number.isFinite(now) && [weather.observedAt, weather.fetchedAt].every((timestamp) =>
+    Number.isFinite(timestamp) && timestamp > 0 && timestamp <= now + WEATHER_POLL_MS
+    && now - timestamp <= WEATHER_CACHE_MAX_AGE_MS);
+}
+
+/** Read bounded last-good conditions without upgrading saved data to a current estimate. */
 export function readWeatherCache(storage: WeatherStorage | undefined, location: WeatherLocation, now: number): WeatherSnapshot | null {
   try {
     const cached: unknown = JSON.parse(storage?.getItem(weatherCacheKey(location)) ?? 'null');
-    if (!isSnapshot(cached) || cached.timeZone !== location.timeZone
-      || cached.fetchedAt > now + WEATHER_POLL_MS || cached.observedAt > now + WEATHER_POLL_MS
-      || now - cached.observedAt > WEATHER_CACHE_MAX_AGE_MS || now - cached.fetchedAt > WEATHER_CACHE_MAX_AGE_MS) return null;
+    if (!isSnapshot(cached) || cached.timeZone !== location.timeZone || !isWeatherWithinCacheAge(cached, now)) return null;
     return cached;
   } catch { return null; }
 }

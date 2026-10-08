@@ -12,6 +12,8 @@ import { nativeScenePresentationScript } from '../../../packages/home-scene/src/
 import { nativeSceneCatalogScript } from './modelSceneCatalog';
 import type { SimulationSnapshotMessage } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import type { SceneCatalogMessage } from '../../../packages/home-scene/src/sceneCatalogProtocol';
+import { useHomeWeatherSettings } from '../weather-settings/useHomeWeatherSettings';
+import { EMPTY_WEATHER_CONFIGURATION, WEATHER_CONFIGURATION_CHANNEL, nativePropertyWeatherScript, type PropertyWeatherConfiguration } from '../../../packages/home-scene/src/environment/propertyWeatherConfiguration';
 
 /** Keep the optional persistence notification from restarting a simulation session. */
 const ignoreSaveStatus = () => undefined;
@@ -30,17 +32,26 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     webView.current?.injectJavaScript(nativeSceneCatalogScript(message));
   }, []);
   const simulation = useSceneSimulationSession(deliverSnapshot, deliverCatalog, onSaveStatus);
+  const propertyWeather = useHomeWeatherSettings();
+  const weatherConfiguration = useRef<PropertyWeatherConfiguration>(EMPTY_WEATHER_CONFIGURATION);
+  weatherConfiguration.current = {
+    channel: WEATHER_CONFIGURATION_CHANNEL, version: 1,
+    location: propertyWeather.location, configured: propertyWeather.configured,
+    canManage: propertyWeather.canManage,
+    status: propertyWeather.location ? 'ready' : propertyWeather.loading ? 'loading' : 'unavailable',
+  };
   const suspendedRef = useRef(suspended);
   suspendedRef.current = suspended;
   /** Reapply current presentation state after a document load without reconnecting device controls. */
   const publishPresentation = useCallback(() => {
-    webView.current?.injectJavaScript(nativeScenePresentationScript(suspendedRef.current));
+    weather.current?.setLocation(weatherConfiguration.current.location);
+    webView.current?.injectJavaScript(nativeScenePresentationScript(suspendedRef.current) + nativePropertyWeatherScript(weatherConfiguration.current));
   }, []);
-  useEffect(publishPresentation, [publishPresentation, suspended]);
+  useEffect(publishPresentation, [publishPresentation, suspended, propertyWeather.location, propertyWeather.configured, propertyWeather.loading, propertyWeather.canManage]);
   useEffect(() => {
     const broker = new NativeWeatherBroker((response) => {
       webView.current?.injectJavaScript(nativeWeatherResponseScript(response));
-    });
+    }, { location: weatherConfiguration.current.location });
     weather.current = broker;
     return () => { broker.dispose(); weather.current = null; };
   }, []);

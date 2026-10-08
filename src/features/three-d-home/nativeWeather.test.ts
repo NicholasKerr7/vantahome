@@ -2,6 +2,7 @@ import {
   NativeWeatherBroker, NATIVE_WEATHER_MAX_BODY_CHARS, NATIVE_WEATHER_MIN_INTERVAL_MS,
   NATIVE_WEATHER_TIMEOUT_MS, NATIVE_WEATHER_URL, nativeWeatherResponseScript, parseNativeWeatherRequest,
 } from './nativeWeather';
+import { PROPERTY_LOCATION } from '../../../packages/home-scene/src/environment/types';
 
 /** Build only valid protocol messages; callers override fields to exercise rejection paths. */
 function message(requestId = 1, type = 'current', extra = {}) {
@@ -54,6 +55,94 @@ describe('native weather broker', () => {
     expect(new URL(NATIVE_WEATHER_URL).searchParams.get('latitude')).toBe('18.4538');
     expect(new URL(NATIVE_WEATHER_URL).searchParams.get('longitude')).toBe('-78.01534');
     expect(deliver).toHaveBeenCalledWith({ channel: 'vantahome-weather', version: 1, requestId: 1, status: 'ok', body: { current: {} } });
+    broker.dispose();
+  });
+
+  it('uses host-confirmed coordinates while retaining the fixed provider origin and request options', async () => {
+    const location = { ...PROPERTY_LOCATION, name: 'Home', latitude: 18.5, longitude: -78.1 };
+    const deliver = jest.fn();
+    const fetcher = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(response());
+    const broker = new NativeWeatherBroker(deliver, { fetcher, location });
+    expect(broker.handleMessage(message(1, 'current', { location: PROPERTY_LOCATION }))).toBe(false);
+    expect(broker.handleMessage(message(1, 'current', { headers: { Authorization: 'external' } }))).toBe(false);
+    expect(fetcher).not.toHaveBeenCalled();
+    broker.handleMessage(message());
+    await flush();
+    const url = new URL(String(fetcher.mock.calls[0][0]));
+    expect(url.origin).toBe('https://api.open-meteo.com');
+    expect(url.pathname).toBe('/v1/forecast');
+    expect(url.searchParams.get('latitude')).toBe('18.5');
+    expect(url.searchParams.get('longitude')).toBe('-78.1');
+    expect(url.searchParams.get('timezone')).toBe('America/Jamaica');
+    expect(url.searchParams.has('name')).toBe(false);
+    expect(fetcher.mock.calls[0][1]).toMatchObject({ credentials: 'omit', cache: 'no-store', redirect: 'error', headers: { Accept: 'application/json' } });
+    broker.dispose();
+  });
+
+  it('makes no network requests while shared settings are loading or unavailable', async () => {
+    const deliver = jest.fn();
+    const fetcher = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(response());
+    const broker = new NativeWeatherBroker(deliver, { fetcher, location: null });
+    broker.handleMessage(message(1));
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(deliver).toHaveBeenCalledWith(expect.objectContaining({ requestId: 1, status: 'error' }));
+    broker.setLocation(PROPERTY_LOCATION);
+    broker.handleMessage(message(2));
+    await flush();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    broker.setLocation(null);
+    broker.handleMessage(message(3));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(deliver).toHaveBeenCalledWith(expect.objectContaining({ requestId: 3, status: 'error' }));
+    broker.dispose();
+  });
+
+  it('cancels a previous location and suppresses its late response without delaying the new location', async () => {
+    let finishPrevious!: (value: Response) => void;
+    const fetcher = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockImplementationOnce(() => new Promise((resolve) => { finishPrevious = resolve; }))
+      .mockResolvedValue(response('{"current":{"location":"new"}}'));
+    const deliver = jest.fn();
+    const broker = new NativeWeatherBroker(deliver, { fetcher, now: () => 0 });
+    broker.handleMessage(message(1));
+    broker.setLocation({ ...PROPERTY_LOCATION, latitude: 18.6 });
+    expect(fetcher.mock.calls[0][1]?.signal?.aborted).toBe(true);
+    broker.handleMessage(message(2));
+    await flush();
+    finishPrevious(response('{"current":{"location":"previous"}}'));
+    await flush();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(deliver).toHaveBeenCalledTimes(1);
+    expect(deliver).toHaveBeenCalledWith(expect.objectContaining({ requestId: 2, status: 'ok', body: { current: { location: 'new' } } }));
+    broker.dispose();
+  });
+
+  it('revokes an in-flight weather request when the host loses its verified location', async () => {
+    let finish!: (value: Response) => void;
+    const fetcher = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    const deliver = jest.fn();
+    const broker = new NativeWeatherBroker(deliver, { fetcher });
+    broker.handleMessage(message());
+    broker.setLocation(null);
+    expect(fetcher.mock.calls[0][1]?.signal?.aborted).toBe(true);
+    finish(response());
+    await flush();
+    expect(deliver).not.toHaveBeenCalled();
+    broker.dispose();
+  });
+
+  it('retains throttling when the host republishes an unchanged location and rejects invalid configuration', async () => {
+    const deliver = jest.fn();
+    const fetcher = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(response());
+    const broker = new NativeWeatherBroker(deliver, { fetcher, now: () => 0 });
+    broker.handleMessage(message(1));
+    await flush();
+    broker.setLocation({ ...PROPERTY_LOCATION });
+    expect(() => broker.setLocation({ ...PROPERTY_LOCATION, latitude: 91 })).toThrow('Invalid property weather location.');
+    expect(() => new NativeWeatherBroker(deliver, { fetcher, location: { ...PROPERTY_LOCATION, timeZone: 'Wrong/Zone' } })).toThrow('Invalid property weather location.');
+    broker.handleMessage(message(2));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(deliver).toHaveBeenLastCalledWith(expect.objectContaining({ requestId: 2, status: 'error' }));
     broker.dispose();
   });
 

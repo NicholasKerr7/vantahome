@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createWeatherAnchors, irrigationJetPoint, isInsideWeatherParcel, weatherLandingHeight, weatherMagnitude, weatherParticleCount, windTravelDirection } from './weatherGeometry';
+import {
+  createWeatherAnchors, irrigationJetPoint, isInsideWeatherParcel, weatherLandingHeight,
+  weatherMagnitude, weatherParticleCount, weatherPrecipitation, windTravelDirection, type SceneWeather,
+} from './weatherGeometry';
+
+const dryWeather: SceneWeather = {
+  rainMm: 0, snowfallCm: 0, cloudCover: 0, windSpeedKmh: 0,
+  windDirectionDeg: 0, weatherCode: 0, intervalSeconds: 900,
+};
 
 describe('weather placement and motion', () => {
   it('keeps every rain anchor inside the irregular property and produces stable samples', () => {
@@ -32,6 +40,35 @@ describe('weather placement and motion', () => {
     expect(weatherParticleCount(40, false)).toBeLessThanOrEqual(460);
     expect(weatherParticleCount(2, true)).toBeLessThan(weatherParticleCount(2, false));
     expect(weatherMagnitude(Infinity, 30)).toBe(0);
+  });
+
+  it('renders equal rainfall rates equally across API accumulation intervals', () => {
+    const quarterHour = weatherPrecipitation({ ...dryWeather, rainMm: 0.5 });
+    const fullHour = weatherPrecipitation({ ...dryWeather, rainMm: 2, intervalSeconds: 3600 });
+    expect(quarterHour).toEqual({ snow: false, ratePerHour: 2 });
+    expect(fullHour).toEqual(quarterHour);
+    for (const smallViewport of [true, false]) {
+      expect(weatherParticleCount(quarterHour.ratePerHour, smallViewport))
+        .toBe(weatherParticleCount(fullHour.ratePerHour, smallViewport));
+      const drizzle = weatherPrecipitation({ ...dryWeather, rainMm: 0.02 });
+      const heavyRain = weatherPrecipitation({ ...dryWeather, rainMm: 3 });
+      expect(weatherParticleCount(drizzle.ratePerHour, smallViewport))
+        .toBeLessThan(weatherParticleCount(quarterHour.ratePerHour, smallViewport));
+      expect(weatherParticleCount(quarterHour.ratePerHour, smallViewport))
+        .toBeLessThan(weatherParticleCount(heavyRain.ratePerHour, smallViewport));
+    }
+  });
+
+  it('keeps snow in centimeters and selects the reported precipitation type without combining units', () => {
+    const snow = { ...dryWeather, snowfallCm: 0.3, weatherCode: 73 };
+    expect(weatherPrecipitation(snow)).toEqual({ snow: true, ratePerHour: 1.2 });
+    expect(weatherPrecipitation({ ...snow, snowfallCm: 1.2, intervalSeconds: 3600 }))
+      .toEqual(weatherPrecipitation(snow));
+    expect(weatherPrecipitation({ ...snow, rainMm: 2 })).toEqual({ snow: true, ratePerHour: 1.2 });
+    expect(weatherPrecipitation({ ...snow, rainMm: 2, weatherCode: 63 }))
+      .toEqual({ snow: false, ratePerHour: 8 });
+    expect(weatherPrecipitation({ ...dryWeather, rainMm: 0.5, intervalSeconds: 0 }))
+      .toEqual({ snow: false, ratePerHour: 0 });
   });
 
   it('launches irrigation at the real nozzle and lands exactly at the local lawn', () => {

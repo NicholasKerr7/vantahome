@@ -1,4 +1,5 @@
 import type { WeatherSnapshot } from '../environment/types';
+import { precipitationRatePerHour } from '../environment/precipitation';
 
 /** Renderer-independent precipitation modes, never a command to a physical device. */
 export type WeatherKind = 'clear' | 'light' | 'heavy' | 'storm';
@@ -37,8 +38,8 @@ type ObservedWeather = Pick<WeatherSnapshot, 'weatherCode' | 'rainMm' | 'interva
 /** WMO storm codes alone enable lightning; rainfall intensity never invents a thunderstorm. */
 export function classifyWeather(snapshot: ObservedWeather): WeatherSettings {
   const code = snapshot.weatherCode;
-  const rainPerHour = snapshot.rainMm * 3600 / Math.max(1, snapshot.intervalSeconds);
-  const raining = snapshot.rainMm > 0 || [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code);
+  const rainPerHour = precipitationRatePerHour(snapshot.rainMm, snapshot.intervalSeconds);
+  const raining = rainPerHour > 0 || [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code);
   const heavy = [63, 65, 67, 81, 82].includes(code) || rainPerHour >= 2.5;
   const weather = [95, 96, 99].includes(code) ? 'storm' : raining ? heavy ? 'heavy' : 'light' : 'clear';
   return {
