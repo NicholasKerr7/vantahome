@@ -20,6 +20,7 @@ const harness = vi.hoisted(() => ({
   scene: null as { camera: PerspectiveCamera; gl: { domElement: HTMLCanvasElement }; size: { width: number; height: number } } | null,
   controls: null as TestOrbitControls | null,
   beginOrbit: null as (() => void) | null,
+  endOrbit: null as (() => void) | null,
 }));
 
 vi.mock('@react-three/fiber', () => ({
@@ -32,13 +33,14 @@ vi.mock('@react-three/drei', async () => {
   const { Vector3 } = await import('three');
   return {
     /** Expose controller targets while keeping these camera lifecycle tests independent of WebGL. */
-    OrbitControls: forwardRef<TestOrbitControls, { onStart: () => void; enabled: boolean; enableDamping: boolean }>(function TestControls({ onStart, enabled, enableDamping }, ref) {
+    OrbitControls: forwardRef<TestOrbitControls, { onStart: () => void; onEnd: () => void; enabled: boolean; enableDamping: boolean }>(function TestControls({ onStart, onEnd, enabled, enableDamping }, ref) {
       const controls = useMemo(() => ({ target: new Vector3(), update: vi.fn(), enabled, enableDamping }), []);
       controls.enabled = enabled;
       controls.enableDamping = enableDamping;
       useImperativeHandle(ref, () => controls, [controls]);
       harness.controls = controls;
       harness.beginOrbit = onStart;
+      harness.endOrbit = onEnd;
       return null;
     }),
   };
@@ -66,7 +68,8 @@ beforeEach(() => {
   harness.scene = { camera: new PerspectiveCamera(42, 1, 0.08, 500), gl: { domElement: document.createElement('canvas') }, size: { width: 420, height: 580 } };
   harness.controls = null;
   harness.beginOrbit = null;
-  useCinematicStore.setState({ showcase: false, resetViewVersion: 0 });
+  harness.endOrbit = null;
+  useCinematicStore.setState({ showcase: false, canRecenter: false, resetViewVersion: 0 });
 });
 
 afterEach(() => {
@@ -316,5 +319,211 @@ describe('cinematic camera lifecycle', () => {
     act(() => root.render(null));
     expect(tourFrame.active).toBe(false);
     expect(useCinematicStore.getState().showcase).toBe(false);
+  });
+});
+
+
+describe('contextual recenter lifecycle', () => {
+  it.each(['exterior', 'ground', 'upper'] as const)('shows only after a meaningful manual %s movement ends and clears immediately on reset', (view) => {
+    renderCamera(view);
+    advanceFrames();
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    const camera = harness.scene!.camera;
+    const originalPosition = camera.position.clone();
+    const originalTarget = harness.controls!.target.clone();
+    act(() => harness.beginOrbit?.());
+    camera.position.x += 4;
+    harness.controls!.target.x += 4;
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    act(() => harness.endOrbit?.());
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    act(() => useCinematicStore.getState().resetView());
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    advanceFrames();
+    expect(camera.position.equals(originalPosition)).toBe(true);
+    expect(harness.controls!.target.equals(originalTarget)).toBe(true);
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+  });
+
+  it('settles an over-wide phone preset at the existing zoom limit and recognizes its actual default on manual return', () => {
+    harness.scene!.size = { width: 390, height: 760 };
+    renderCamera('ground', false, 'living');
+    const camera = harness.scene!.camera;
+    const controller = harness.controls!;
+    // Exercise the same radius constraint as the real controller, not an inert update.
+    vi.mocked(controller.update).mockImplementation(() => {
+      const offset = camera.position.clone().sub(controller.target);
+      offset.setLength(Math.max(5, Math.min(55, offset.length())));
+      camera.position.copy(controller.target).add(offset);
+      camera.lookAt(controller.target);
+    });
+    advanceFrames();
+    expect(camera.position.distanceTo(controller.target)).toBeCloseTo(55, 8);
+    const originalPosition = camera.position.clone();
+    const originalTarget = controller.target.clone();
+    const calls = vi.mocked(controller.update).mock.calls.length;
+    advanceFrames(20);
+    expect(vi.mocked(controller.update).mock.calls.length).toBe(calls);
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+
+    act(() => harness.beginOrbit?.());
+    camera.position.x += 4;
+    controller.target.x += 4;
+    act(() => harness.endOrbit?.());
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    camera.position.copy(originalPosition);
+    controller.target.copy(originalTarget);
+    controller.update();
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+  });
+
+  it('ignores an unmoved click and small jitter even during initial automatic framing', () => {
+    renderCamera('exterior');
+    advanceFrames(2);
+    act(() => harness.beginOrbit?.());
+    act(() => harness.endOrbit?.());
+    advanceFrames();
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    act(() => harness.beginOrbit?.());
+    harness.scene!.camera.position.x += 0.005;
+    harness.controls!.target.x += 0.005;
+    act(() => harness.endOrbit?.());
+    advanceFrames();
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+  });
+
+  it('preserves manual displacement through a tour and its delayed fullscreen return', () => {
+    renderCamera('exterior');
+    advanceFrames();
+    act(() => harness.beginOrbit?.());
+    harness.scene!.camera.position.x += 4;
+    harness.controls!.target.x += 4;
+    act(() => harness.endOrbit?.());
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    const position = harness.scene!.camera.position.clone();
+    act(() => useCinematicStore.getState().setShowcase(true));
+    harness.scene!.size = { width: 1024, height: 768 };
+    renderCamera('exterior');
+    act(() => advanceFrames(200));
+    act(() => useCinematicStore.getState().setShowcase(false));
+    harness.scene!.size = { width: 420, height: 580 };
+    renderCamera('exterior');
+    advanceFrames(1);
+    expect(harness.scene!.camera.position.equals(position)).toBe(true);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    act(() => useCinematicStore.getState().resetView());
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    advanceFrames();
+    expect(harness.scene!.camera.position.distanceTo(position)).toBeGreaterThan(1);
+  });
+
+  it('never enables recenter because of automatic tour movement or a normal responsive resize', () => {
+    renderCamera('exterior');
+    advanceFrames();
+    act(() => useCinematicStore.getState().setShowcase(true));
+    act(() => advanceFrames(900));
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    act(() => useCinematicStore.getState().setShowcase(false));
+    harness.scene!.size = { width: 800, height: 450 };
+    renderCamera('exterior');
+    advanceFrames();
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+  });
+
+  it('defers immersive keyboard reveal until key release and cleanly resets the look direction', () => {
+    renderCamera('immersive');
+    advanceFrames();
+    const { camera, gl } = harness.scene!;
+    const direction = camera.getWorldDirection(new Vector3());
+    gl.domElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }));
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    gl.domElement.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }));
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    act(() => useCinematicStore.getState().resetView());
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    expect(camera.getWorldDirection(new Vector3()).distanceTo(direction)).toBeLessThan(1e-8);
+  });
+
+  it.each(['blur', 'canvas-blur', 'visibilitychange'] as const)('releases a lost immersive key on %s without changing existing framing or visibility', (event) => {
+    renderCamera('immersive');
+    advanceFrames();
+    const canvas = harness.scene!.gl.domElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }));
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    const orientation = harness.scene!.camera.quaternion.clone();
+    if (event === 'blur') window.dispatchEvent(new Event('blur'));
+    else if (event === 'canvas-blur') canvas.dispatchEvent(new Event('blur'));
+    else {
+      vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+      document.dispatchEvent(new Event('visibilitychange'));
+    }
+    // A different key's release cannot be blocked by the missing ArrowRight keyup.
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true }));
+    advanceFrames(1);
+    canvas.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' }));
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    expect(harness.scene!.camera.quaternion.angleTo(orientation)).toBeGreaterThan(0.1);
+    window.dispatchEvent(new Event('blur'));
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+  });
+
+  it('defers immersive drag reveal until release and clears pointer capture on blur', () => {
+    renderCamera('immersive');
+    advanceFrames();
+    const canvas = harness.scene!.gl.domElement;
+    canvas.setPointerCapture = vi.fn();
+    canvas.hasPointerCapture = vi.fn(() => true);
+    canvas.releasePointerCapture = vi.fn();
+    /** Provide browser pointer coordinates without requiring a jsdom PointerEvent implementation. */
+    function pointer(type: string, x: number) {
+      const event = new Event(type);
+      Object.assign(event, { pointerId: 1, clientX: x, clientY: 10 });
+      canvas.dispatchEvent(event);
+    }
+    pointer('pointerdown', 10);
+    pointer('pointermove', 50);
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    window.dispatchEvent(new Event('blur'));
+    expect(canvas.releasePointerCapture).toHaveBeenCalledWith(1);
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    const orientation = harness.scene!.camera.quaternion.clone();
+    pointer('pointermove', 90);
+    advanceFrames(1);
+    expect(harness.scene!.camera.quaternion.angleTo(orientation)).toBeLessThan(1e-7);
+  });
+
+  it('clears the previous action before another room or canvas can inherit it', () => {
+    renderCamera('upper');
+    advanceFrames();
+    act(() => harness.beginOrbit?.());
+    harness.scene!.camera.position.x += 4;
+    harness.controls!.target.x += 4;
+    act(() => harness.endOrbit?.());
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    renderCamera('upper', false, 'kitchen');
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    advanceFrames();
+    act(() => harness.beginOrbit?.());
+    harness.scene!.camera.position.x += 4;
+    harness.controls!.target.x += 4;
+    act(() => harness.endOrbit?.());
+    advanceFrames(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(true);
+    act(() => root.render(null));
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
   });
 });

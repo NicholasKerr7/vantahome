@@ -5,7 +5,7 @@ import { useHomeStore } from './state';
 
 beforeEach(() => {
   localStorage.clear();
-  useCinematicStore.setState({ idleEnabled: true, preferenceError: false, showcase: false, chapter: 'Arrival', resetViewVersion: 0 });
+  useCinematicStore.setState({ idleEnabled: true, preferenceError: false, showcase: false, canRecenter: false, chapter: 'Arrival', resetViewVersion: 0 });
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -25,11 +25,13 @@ describe('separate cinematic preference', () => {
     const cinematic = useCinematicStore.getState();
     cinematic.setShowcase(true);
     cinematic.setChapter('Along the garden');
+    cinematic.setCanRecenter(true);
     cinematic.setIdleEnabled(false);
     expect(useCinematicStore.getState().showcase).toBe(false);
     expect(JSON.parse(localStorage.getItem(CINEMATIC_PREFERENCE_KEY)!)).toEqual({ version: 1, idleEnabled: false });
     cinematic.resetView();
     expect(useCinematicStore.getState().resetViewVersion).toBe(1);
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
     expect(useHomeStore.getState()).toBe(before);
   });
 
@@ -40,5 +42,23 @@ describe('separate cinematic preference', () => {
     useCinematicStore.getState().setShowcase(true);
     useCinematicStore.getState().setIdleEnabled(false);
     expect(useCinematicStore.getState()).toMatchObject({ idleEnabled: false, showcase: false, preferenceError: true });
+  });
+});
+
+
+describe('transient recenter visibility', () => {
+  it('publishes only boolean transitions and clears synchronously on reset without persistence', () => {
+    const listener = vi.fn();
+    const unsubscribe = useCinematicStore.subscribe(listener);
+    const store = useCinematicStore.getState();
+    store.setCanRecenter(false);
+    store.setCanRecenter(true);
+    store.setCanRecenter(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(CINEMATIC_PREFERENCE_KEY)).toBeNull();
+    store.resetView();
+    expect(useCinematicStore.getState().canRecenter).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(2);
+    unsubscribe();
   });
 });

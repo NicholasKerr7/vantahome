@@ -4,11 +4,13 @@ export const CINEMATIC_PREFERENCE_KEY = 'vantahome.cinematic-preferences.v1';
 
 interface CinematicState {
   showcase: boolean;
+  canRecenter: boolean;
   chapter: string;
   idleEnabled: boolean;
   preferenceError: boolean;
   resetViewVersion: number;
   setShowcase: (value: boolean) => void;
+  setCanRecenter: (value: boolean) => void;
   setChapter: (chapter: string) => void;
   setIdleEnabled: (value: boolean) => void;
   resetView: () => void;
@@ -32,11 +34,16 @@ export function readCinematicPreference(): Pick<CinematicState, 'idleEnabled' | 
 export const useCinematicStore = create<CinematicState>((set, get) => ({
   ...readCinematicPreference(),
   showcase: false,
+  canRecenter: false,
   chapter: 'A place to come home to',
   resetViewVersion: 0,
   /** Eligibility belongs to the idle controller; repeated activity must not publish redundant React updates. */
   setShowcase(value) {
     if (get().showcase !== value) set({ showcase: value });
+  },
+  /** Camera framing is transient, and only visibility transitions notify the dashboard. */
+  setCanRecenter(value) {
+    if (get().canRecenter !== value) set({ canRecenter: value });
   },
   /** The camera publishes a chapter only when its authored shot changes, never on every frame. */
   setChapter(chapter) {
@@ -49,8 +56,8 @@ export const useCinematicStore = create<CinematicState>((set, get) => ({
     catch { preferenceError = true; }
     set({ idleEnabled: value, preferenceError, ...(!value ? { showcase: false } : {}) });
   },
-  /** Preserve the existing camera reset contract for renderer compatibility, without a dashboard button. */
+  /** Hide the contextual action immediately while the current view returns to its default framing. */
   resetView() {
-    set((state) => ({ showcase: false, resetViewVersion: state.resetViewVersion + 1 }));
+    set((state) => ({ showcase: false, canRecenter: false, resetViewVersion: state.resetViewVersion + 1 }));
   },
 }));

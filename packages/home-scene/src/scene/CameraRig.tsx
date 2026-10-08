@@ -10,6 +10,7 @@ import { getRoom } from '../data';
 import { ROOM_POSITIONS, type HouseSceneProps } from './types';
 import { useCinematicStore } from '../cinematicStore';
 import { canPlayCinematic } from './cinematicMotion';
+import { CameraRecenterTracker } from './cameraRecenter';
 import { advanceCinematicTour, createCinematicTourFrame, sampleCinematicTour, type CinematicTourFrame } from './cinematicTour';
 
 type CameraProps = Pick<
@@ -46,6 +47,7 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
   const lookAngles = useRef({ yaw: 0, pitch: 0 });
   const [localTourFrame] = useState(createCinematicTourFrame);
   const frame = tourFrame ?? localTourFrame;
+  const [recenter] = useState(() => new CameraRecenterTracker((visible) => useCinematicStore.getState().setCanRecenter(visible)));
   const returnPose = useRef<TourReturnPose | null>(null);
   const restoredLayout = useRef<TourReturnLayout | null>(null);
   const retainedFov = useRef<number | null>(null);
@@ -53,6 +55,8 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
   suspendedRef.current = suspended;
   const showcase = useCinematicStore((state) => state.showcase);
   const resetViewVersion = useCinematicStore((state) => state.resetViewVersion);
+  const minimumOrbitDistance = exteriorOnly ? getExteriorPrivacyDistance(getLandscapeCamera(size.width / Math.max(1, size.height)).target) : view === 'exterior' ? 10 : 5;
+  const maximumOrbitDistance = view === 'exterior' ? 300 : 55;
 
   /** Restore the exact saved pose before the input that interrupted playback is processed. */
   const restoreTourCamera = useCallback(() => {
@@ -89,13 +93,16 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
     // A synchronous subscription also covers parent-owned idle, access and lifecycle stops.
     const unsubscribe = useCinematicStore.subscribe((state, previous) => {
       if (previous.showcase && !state.showcase) restoreTourCamera();
+      if (previous.resetViewVersion !== state.resetViewVersion) recenter.clear();
     });
     return () => {
       unsubscribe();
       restoreTourCamera();
       stopShowcase();
+      recenter.clear();
+      useCinematicStore.getState().setCanRecenter(false);
     };
-  }, [restoreTourCamera]);
+  }, [recenter, restoreTourCamera]);
 
   useLayoutEffect(() => {
     if (!showcase || !tourAllowed || !canPlayCinematic(reducedMotion, suspended, document.hidden)) {
@@ -138,8 +145,10 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
     camera.lookAt(target.current);
     controls.current?.target.copy(target.current);
     controls.current?.update();
+    // Use the realized pose after OrbitControls applies its existing constraints.
+    recenter.setDefault(camera.position, controls.current?.target ?? target.current, view === 'immersive' ? 72 : 42);
     moving.current = false;
-  }, [camera]);
+  }, [camera, recenter, view]);
 
   const navigation = `${view}:${floor}:${roomId}`;
   const previousNavigation = useRef(navigation);
@@ -155,6 +164,12 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
   const presetNavigation = `${view}:${cameraFloor}:${cameraRoomId}:${resetViewVersion}`;
   const previousPresetNavigation = useRef(presetNavigation);
   const previousPrivacy = useRef({ roomOnly, exteriorOnly });
+
+  useLayoutEffect(() => {
+    // A different authored view or privacy scope never inherits a stale camera action.
+    recenter.clear();
+    useCinematicStore.getState().setCanRecenter(false);
+  }, [exteriorOnly, presetNavigation, recenter, roomOnly]);
 
   useEffect(() => {
     const navigationChanged = previousPresetNavigation.current !== presetNavigation;
@@ -250,6 +265,14 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
         target.current.set(centerX, -1.8, centerZ);
       }
     }
+    if (view !== 'immersive') {
+      // A portrait overview can ask for a radius beyond the existing zoom limit.
+      // Match that limit before interpolation so the destination is reachable.
+      const offset = direction.current.subVectors(destination.current, target.current);
+      const radius = MathUtils.clamp(offset.length(), minimumOrbitDistance, maximumOrbitDistance);
+      destination.current.copy(target.current).add(offset.setLength(radius));
+    }
+    recenter.setDefault(destination.current, target.current, view === 'immersive' ? 72 : 42);
     moving.current = true;
     // Interior room changes use a clean cut, avoiding a flight through solid walls.
     if (reducedMotion || view === 'immersive' || exteriorOnly) finishCameraMove();
@@ -265,6 +288,9 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
     view,
     resetViewVersion,
     presetNavigation,
+    recenter,
+    minimumOrbitDistance,
+    maximumOrbitDistance,
     showcase,
   ]);
 
@@ -272,9 +298,11 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
     if (view !== 'immersive') return;
     const canvas = gl.domElement;
     let pointer: { id: number; x: number; y: number } | null = null;
+    const pressedKeys = new Set<string>();
 
     /** Begin a drag-to-look gesture without moving the camera through walls. */
     function beginLook(event: PointerEvent) {
+      recenter.beginManual(camera, currentLook.current);
       pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
       canvas.setPointerCapture(event.pointerId);
     }
@@ -293,6 +321,7 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
     /** Release a finished gesture, including interrupted touch input. */
     function endLook() {
       pointer = null;
+      if (!pressedKeys.size) recenter.endManual();
     }
     /** Offer keyboard look controls without taking over page navigation. */
     function keyLook(event: KeyboardEvent) {
@@ -302,6 +331,8 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
       )
         return;
       event.preventDefault();
+      pressedKeys.add(event.key);
+      recenter.beginManual(camera, currentLook.current);
       if (event.key === 'ArrowLeft') lookAngles.current.yaw += step;
       if (event.key === 'ArrowRight') lookAngles.current.yaw -= step;
       if (event.key === 'ArrowUp') lookAngles.current.pitch += step;
@@ -313,19 +344,44 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
       );
       moving.current = false;
     }
+    /** A held navigation key must not reveal a new action underneath an ongoing interaction. */
+    function endKeyLook(event: KeyboardEvent) {
+      pressedKeys.delete(event.key);
+      if (!pressedKeys.size && !pointer) recenter.endManual();
+    }
+    /** Abandon input ownership when the browser can no longer deliver its matching release. */
+    function releaseLookInput() {
+      if (pointer && canvas.hasPointerCapture(pointer.id)) canvas.releasePointerCapture(pointer.id);
+      pointer = null;
+      pressedKeys.clear();
+      recenter.endManual();
+    }
+    /** Returning to a visible canvas must not inherit a held key from its previous foreground session. */
+    function visibilityChanged() {
+      if (document.hidden) releaseLookInput();
+    }
     canvas.addEventListener('pointerdown', beginLook);
     canvas.addEventListener('pointermove', moveLook);
     canvas.addEventListener('pointerup', endLook);
     canvas.addEventListener('pointercancel', endLook);
     canvas.addEventListener('keydown', keyLook);
+    canvas.addEventListener('keyup', endKeyLook);
+    canvas.addEventListener('blur', releaseLookInput);
+    window.addEventListener('blur', releaseLookInput);
+    document.addEventListener('visibilitychange', visibilityChanged);
     return () => {
       canvas.removeEventListener('pointerdown', beginLook);
       canvas.removeEventListener('pointermove', moveLook);
       canvas.removeEventListener('pointerup', endLook);
       canvas.removeEventListener('pointercancel', endLook);
       canvas.removeEventListener('keydown', keyLook);
+      canvas.removeEventListener('keyup', endKeyLook);
+      canvas.removeEventListener('blur', releaseLookInput);
+      window.removeEventListener('blur', releaseLookInput);
+      document.removeEventListener('visibilitychange', visibilityChanged);
+      releaseLookInput();
     };
-  }, [gl, view]);
+  }, [camera, gl, recenter, view]);
 
   // Negative priority orders camera motion before hotspot projection without taking over rendering.
   useFrame((_, delta) => {
@@ -381,17 +437,25 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
       currentLook.current.copy(controls.current.target);
     }
     camera.updateMatrixWorld();
+    if (!moving.current) recenter.sample(camera, controls.current?.target ?? currentLook.current, view === 'immersive');
   }, -2);
 
   /** Refresh world and view matrices after OrbitControls changes the pose later in the frame. */
   function syncOrbitMatrices() {
     camera.updateMatrixWorld();
+    if (!moving.current && !useCinematicStore.getState().showcase && !suspended) recenter.sample(camera, controls.current?.target ?? currentLook.current, false);
   }
 
   /** Hand control over immediately and retain the exact pose where playback stopped. */
   function beginManualOrbit() {
-    moving.current = false;
     stopShowcase();
+    recenter.beginManual(camera, controls.current?.target ?? currentLook.current);
+    moving.current = false;
+  }
+
+  /** Reveal a newly useful recenter action only after the drag, pan, or wheel gesture ends. */
+  function endManualOrbit() {
+    recenter.endManual();
   }
 
   if (view === 'immersive') return null;
@@ -408,12 +472,13 @@ export function CameraRig({ view, floor, roomId, reducedMotion, suspended, roomO
       rotateSpeed={0.55}
       zoomSpeed={0.65}
       panSpeed={0.65}
-      minDistance={exteriorOnly ? getExteriorPrivacyDistance(getLandscapeCamera(size.width / Math.max(1, size.height)).target) : view === 'exterior' ? 10 : 5}
-      maxDistance={view === 'exterior' ? 300 : 55}
+      minDistance={minimumOrbitDistance}
+      maxDistance={maximumOrbitDistance}
       maxPolarAngle={Math.PI / 2.06}
       minPolarAngle={0.08}
       onChange={syncOrbitMatrices}
       onStart={beginManualOrbit}
+      onEnd={endManualOrbit}
     />
   );
 }

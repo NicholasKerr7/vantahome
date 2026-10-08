@@ -73,6 +73,51 @@ Last maintained: **2026-10-08**. Read this before rediscovering the project.
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
 
+## Contextual camera recovery (Preview 44)
+
+- The permanent Reset button remains removed. **Recenter view** appears beside
+  the view selector only after meaningful manual orbit, pan, zoom or immersive
+  look, after the gesture ends. Bare taps, jitter, automatic framing and cinematic
+  movement do not reveal it. It disappears when the camera returns to its default.
+- Activation restores only the current view's camera, hides the action immediately
+  and returns keyboard focus to the stable viewport. It preserves rooms, selected
+  devices, device state and access. Normal motion is smooth; reduced motion cuts
+  immediately. There is no idle camera reset. The property film still restores
+  the exact prior camera, retaining recovery when that camera was displaced.
+- The action stays hidden behind dialogs, quick controls, tours and unavailable
+  views. Full labels and 44px targets fit 320px phones, including the four-tab
+  shared-interior Guest layout. It uses the existing bottom strip without adding
+  a row, scrolling or covering more model height.
+- Camera thresholds are isolated in `scene/cameraRecenter.ts`; publication is
+  transient and only occurs on visibility changes. Immersive focus loss and
+  backgrounding release held input. The camera's authored destination now respects
+  its existing zoom limits before interpolation: tall phone overviews previously
+  could keep aiming beyond the 55-unit limit and never finish settling. Recenter
+  compares against the actual settled default; zoom/privacy limits are unchanged.
+- Verification: **71 scene files / 813 tests**, app and scene TypeScript, bounded
+  web/offline scene packaging and independent code review pass. **57 browser
+  checks** cover 320/390px phones, both tablet orientations, two Guest scopes,
+  real pointer orbit/pan/return, targeted canvas wheel zoom, immersive keyboard
+  look, tour return, focus, unchanged home state and reduced motion. No browser
+  or WebGL errors. Captures were visually reviewed; physical UI review is pending.
+- Evidence: work cache `recenter-scene-tests-final.log`,
+  `recenter-app-typecheck.log`, `recenter-scene-build-final.log`,
+  `recenter-browser-final.log`, and `recenter/verification.json` plus captures.
+  `recenter/wheel-diagnosis.json` records the automation issue: CLI wheel input
+  landed at (0,0), so the final zoom check targets actual canvas WheelEvents.
+- Native scene: **31,781,981 bytes**, SHA256
+  `5e93a1ef7f4d9d6b048735be0abe35acef2055e60cd1a5a410825af69a8007d3`;
+  the existing 32 MiB budget remains unchanged. No new assets or dependencies.
+- Preview **44** Release build succeeded and is installed/launched on the same
+  iPhone; its app listing confirms **1.0.0 / 44**. Exact identity/schemes, strict
+  signature, profile device coverage and packaged scene SHA/size match passed.
+  Production metadata is restored; version/assets/auth-redirect checks pass.
+  Signing expiry remains October 11. Receipts: `preview44-package-check.json`,
+  `preview44-install.json`, `preview44-installed-app.json`, `preview44-launch.json`;
+  build logs use `native-preview-build-44`. Physical visual review is pending.
+  Task-owned browser sessions and port 5184 are stopped. Current iPhone baseline
+  is Preview 44; older Preview sections below retain their historical evidence.
+
 ## Automatic property film (Preview 43)
 
 - Removed the dashboard Reset and Cinematic play buttons. Eligible Home views

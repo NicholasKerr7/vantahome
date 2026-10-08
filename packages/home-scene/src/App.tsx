@@ -19,6 +19,7 @@ import { useHomeStore } from './state';
 import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
 import { CinematicTourOverlay } from './CinematicTourOverlay';
+import { RecenterViewControl } from './RecenterViewControl';
 import { useIdleCinematic } from './useIdleCinematic';
 import { SceneLoading } from './SceneLoading';
 import { useCinematicStore } from './cinematicStore';
@@ -175,7 +176,16 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
       </SceneErrorBoundary>
     </div>
     {!orientationPaused && quickDeviceId ? <QuickDeviceControls deviceId={quickDeviceId} onClose={closeQuickControls} onFullControls={openFullControls} /> : null}
-    <div className="viewport-bottom"><span className="scene-instruction"><span className="mouse-indicator" />{view === 'immersive' ? 'Drag to look around · fixed viewpoint' : layoutOnly ? 'Drag to rotate · pinch to zoom' : 'Drag to rotate · pinch to zoom · select a device'}</span><SceneViewControls onRooms={onRooms} /></div>
+    <div className="viewport-bottom">
+      <span className="scene-instruction">
+        <span className="mouse-indicator" />
+        {view === 'immersive' ? 'Drag to look around · fixed viewpoint' : layoutOnly ? 'Drag to rotate · pinch to zoom' : 'Drag to rotate · pinch to zoom · select a device'}
+      </span>
+      <div className="scene-view-actions">
+        <SceneViewControls onRooms={onRooms} />
+        <RecenterViewControl unavailable={!ready || sceneFailed || covered || orientationPaused || Boolean(quickDeviceId)} />
+      </div>
+    </div>
   </section>;
 }
 
