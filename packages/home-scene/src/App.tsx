@@ -25,6 +25,7 @@ import { useIdleCinematic } from './useIdleCinematic';
 import { SceneLoading } from './SceneLoading';
 import { useCinematicStore } from './cinematicStore';
 import { useHostPresentation } from './useHostPresentation';
+import { useHomeChrome } from './useHomeChrome';
 import { useViewportManipulation } from './useViewportManipulation';
 import './styles.css';
 import './device-catalog.css';
@@ -231,6 +232,11 @@ export default function App(): ReactNode {
   const setShowcase = useCinematicStore((state) => state.setShowcase);
   const sheetTrigger = useRef<HTMLElement | null>(null);
   const sheetHotspot = useRef<string | null>(null);
+  /** Native account preferences and the property clock reuse these existing scene destinations. */
+  const openEnvironment = useCallback(() => { setShowcase(false); setLibrary('environment'); }, [setShowcase]);
+  const openPreferences = useCallback(() => { setShowcase(false); setLibrary('settings'); }, [setShowcase]);
+  useHomeChrome({ environment, motionDisabled, systemReducedMotion: prefersReduced, hostSuspended, ready: simulationHydrated,
+    onOpenEnvironment: openEnvironment, onOpenPreferences: openPreferences });
 
   /** Remember the actual opening control so every device sheet can return focus. */
   const openFullControls = useCallback((id: DeviceId) => {
@@ -291,7 +297,7 @@ export default function App(): ReactNode {
   </div>;
   return <div inert={showcase} data-rendering={graphicsCovered || orientationPaused || documentHidden ? 'paused' : 'active'} className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''} ${showcase ? 'is-touring' : ''}`}>
     <a className="skip-link" href="#house-preview">Skip to house controls</a>
-    <DashboardHeader embedded={embedded} environment={environment} onSettings={() => setLibrary('settings')} onEnvironment={() => setLibrary('environment')} />
+    {!embedded && <DashboardHeader environment={environment} onSettings={openPreferences} onEnvironment={openEnvironment} />}
     <DashboardRoomBar onRooms={() => setLibrary('rooms')} />
     <main id="home-workspace" className="workspace dashboard-workspace">
       <DashboardRooms onBrowse={() => setLibrary('rooms')} />

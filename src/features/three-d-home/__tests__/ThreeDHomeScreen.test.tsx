@@ -31,13 +31,30 @@ afterEach(() => { AppState.currentState = originalAppState; jest.useRealTimers()
 
 test('keeps the simulation boundary and main feature menu available during load', () => {
   const screen = render(<ThreeDHomeScreen />);
-  expect(screen.getByText('Simulation · no real device control')).toBeTruthy();
+  expect(screen.getByLabelText('VantaHome. Simulation, no real device control')).toBeTruthy();
   expect(screen.getByText('Opening your property…')).toBeTruthy();
   expect(screen.queryByLabelText('Back to dashboard')).toBeNull();
   fireEvent.press(screen.getByLabelText('Scenes'));
   expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'NAVIGATE', payload: { name: 'Main', params: { screen: 'Scenes', pop: true }, pop: true } }));
   act(() => mockStatus('ready'));
   expect(screen.queryByText('Opening your property…')).toBeNull();
+});
+
+test('keeps one header and sends weather actions only after the current scene is ready', () => {
+  const screen = render(<ThreeDHomeScreen />);
+  expect(screen.getAllByTestId('unified-home-header')).toHaveLength(1);
+  fireEvent.press(screen.getByLabelText(/Property time and weather:/));
+  expect(mockSceneProps.chromeCommand).toBeUndefined();
+  act(() => mockStatus('ready'));
+  act(() => mockSceneProps.onChromeSnapshot?.({ locationName: 'Property', localTime: '12:05 PM', tempC: 25, weatherCode: 0, weatherStatus: 'live',
+    isNight: false, motionDisabled: false, systemReducedMotion: false, idleEnabled: true, preferenceError: false }));
+  fireEvent.press(screen.getByLabelText(/Property time and weather:/));
+  expect(mockSceneProps.chromeCommand).toMatchObject({ id: 1, command: { type: 'open-environment' } });
+  act(() => mockStatus('error'));
+  fireEvent.press(screen.getByLabelText('Retry 3D Home'));
+  expect(mockSceneProps.chromeCommand).toBeUndefined();
+  expect(screen.getByLabelText('Open voice control')).toBeTruthy();
+  expect(screen.getByLabelText(/Open account:/)).toBeTruthy();
 });
 
 test('opens integrations and household tools from the home menu', () => {
@@ -53,6 +70,24 @@ test('opens integrations and household tools from the home menu', () => {
   }
   fireEvent.press(screen.getByLabelText('Household'));
   expect(mockNavigate).toHaveBeenCalledWith('Profile', { section: 'household' });
+});
+test('ignores late header and status callbacks from a replaced renderer', () => {
+  const screen = render(<ThreeDHomeScreen />);
+  const oldSurface = mockSceneProps;
+  act(() => mockStatus('error'));
+  fireEvent.press(screen.getByLabelText('Retry 3D Home'));
+  act(() => mockStatus('ready'));
+  const snapshot = { locationName: 'Current property', localTime: '12:05 PM', tempC: 25, weatherCode: 0, weatherStatus: 'live' as const,
+    isNight: false, motionDisabled: false, systemReducedMotion: false, idleEnabled: true, preferenceError: false };
+  act(() => mockSceneProps.onChromeSnapshot?.(snapshot));
+  act(() => {
+    oldSurface.onChromeSnapshot?.({ ...snapshot, locationName: 'Old property' });
+    oldSurface.onStatus('error');
+  });
+  expect(screen.getByText('Current property')).toBeTruthy();
+  expect(screen.queryByText('Old property')).toBeNull();
+  fireEvent.press(screen.getByLabelText(/Property time and weather:/));
+  expect(mockSceneProps.chromeCommand?.command).toEqual({ type: 'open-environment' });
 });
 test('pauses covered graphics without replacing the loaded scene and resumes on dismissal', () => {
   const screen = render(<ThreeDHomeScreen />);

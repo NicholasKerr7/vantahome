@@ -6,10 +6,10 @@ import { theme } from '../../theme/theme';
 import { useAccountIdentity } from './useAccountIdentity';
 
 /** Keep the current person visible without taking the house's space on a phone. */
-export default function DashboardAccountButton({ onPress }: { onPress: () => void }) {
+export default function DashboardAccountButton({ onPress, compact = false }: { onPress: () => void; compact?: boolean }) {
   const { identity } = useAccountIdentity();
   const { width, height, fontScale } = useWindowDimensions();
-  const expanded = Math.min(width, height) >= 600 && fontScale <= 1.3;
+  const expanded = !compact && Math.min(width, height) >= 600 && fontScale <= 1.3;
   const demo = identity.mode === 'demo';
   return <Pressable style={[styles.button, expanded && styles.expandedButton]} onPress={onPress}
     accessibilityLabel={`Open account: ${identity.name}`} accessibilityHint="View your identity and household access">
@@ -17,7 +17,7 @@ export default function DashboardAccountButton({ onPress }: { onPress: () => voi
       {demo ? <Ionicons name="person-outline" size={17} color={theme.colors.accentText} />
         : <Text style={styles.initials} numberOfLines={1}>{identity.initials}</Text>}
     </View>
-    {(expanded || demo) && <View style={styles.copy}>
+    {(expanded || (demo && !compact)) && <View style={styles.copy}>
       <Text style={styles.name} numberOfLines={1}>{expanded && demo ? 'Demo profile' : identity.firstName}</Text>
       {expanded && <Text style={styles.detail} numberOfLines={1}>{demo ? 'Local preview' : identity.role ?? 'Your account'}</Text>}
     </View>}

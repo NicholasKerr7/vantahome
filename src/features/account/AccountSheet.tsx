@@ -26,7 +26,7 @@ function AccountAction({ title, detail, icon, onPress }: { title: string; detail
 }
 
 /** Reveal truthful account and household identity while keeping the property loaded underneath. */
-export default function AccountSheet({ onClose }: { onClose: () => void }) {
+export default function AccountSheet({ onClose, onPreferences }: { onClose: () => void; onPreferences?: () => void }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width, height } = useWindowDimensions();
   const tablet = Math.min(width, height) >= 600;
@@ -41,9 +41,15 @@ export default function AccountSheet({ onClose }: { onClose: () => void }) {
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   /** Close the sheet before routing to an existing focused profile section. */
-  function openProfile(section: 'identity' | 'household') {
+  function openProfile(section: 'identity' | 'household' | 'preferences') {
     onClose();
     navigation.navigate('Profile', { section });
+  }
+
+  /** Open personal controls directly, with the existing profile page as a standalone fallback. */
+  function openPreferences() {
+    if (onPreferences) onPreferences();
+    else openProfile('preferences');
   }
 
   /** Preview account entry without creating a session or claiming demo access is authenticated. */
@@ -106,7 +112,8 @@ export default function AccountSheet({ onClose }: { onClose: () => void }) {
               </View>}
             {details.error && <View style={styles.notice} accessibilityLiveRegion="polite"><Text style={styles.noticeText}>{details.error}</Text><Pressable onPress={details.retry} style={styles.retry} accessibilityLabel="Retry account details"><Text style={styles.retryText}>Try again</Text></Pressable></View>}
             {identity.mode !== 'unavailable' && <View style={styles.actions}>
-              <AccountAction title={demo ? 'Demo preferences' : 'Profile & preferences'} detail={demo ? 'Personalise this device’s preview' : 'Your display name and home preferences'} icon="person-circle-outline" onPress={() => openProfile('identity')} />
+              <AccountAction title="Preferences" detail="Motion, cinematic tour and personal comfort" icon="options-outline" onPress={openPreferences} />
+              <AccountAction title={demo ? 'Demo profile' : 'Profile'} detail="Your name, portrait and personal details" icon="person-circle-outline" onPress={() => openProfile('identity')} />
               {!demo && identity.homeId && <AccountAction title="Household" detail="People and permissions in this home" icon="people-outline" onPress={() => openProfile('household')} />}
               {demo && <AccountAction title="Preview account access" detail="Explore sign-in, invitations and owner setup" icon="key-outline" onPress={previewAccountEntry} />}
             </View>}

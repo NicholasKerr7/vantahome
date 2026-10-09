@@ -74,6 +74,50 @@ Last maintained: **2026-10-09**. Read this before rediscovering the project.
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
 
+## Unified home header and account preferences (Preview 48)
+
+- Replaced the stacked native/embedded headers with one native cinematic header:
+  brand, truthful simulation label, property time/location/weather, voice and
+  current account. The embedded row is removed, returning space to the property.
+  The standalone scene authoring preview retains its own header.
+- Personal settings now open directly from **Account → Preferences**, with
+  Experience / Comfort / Display tabs. Motion and automatic tour live here;
+  3D help/reset and time/weather remain reachable. Units and clock format update
+  the new header immediately. Reset permissions and device controls are unchanged.
+- A strict presentation-only bridge carries bounded public weather/time values
+  and explicit navigation/preferences. Account identity stays native. Commands
+  require current access/readiness; backgrounded, covered or stale actions are
+  consumed without replay. Only the foreground Preferences sheet can change
+  presentation settings while it covers the retained scene. Late old-renderer
+  callbacks cannot replace the new home's header state.
+- Automatic tour now persists in host AsyncStorage under
+  `vantahome:cinematic-preferences:v1`; opaque embedded storage is never used.
+  A fresh install defaults on after hydration; unreadable/corrupt storage leaves
+  tours off with a visible error. Serialized writes retain the latest choice
+  through scene unmounts/reloads. No device/safety state or credentials added.
+- Verification: targeted native/scene unit tests, app/scene TypeScript,
+  diff checks and offline/web scene build pass. Real Expo-web native host plus
+  sandboxed packaged scene checked at 320×568, 430×932, 768×1024 and 1024×768:
+  exactly one header/weather control, 44px+ actions, no page overflow; weather,
+  voice, account/preferences, units/time, comfort and reduced-motion paths work.
+  Tour/motion survive a full page reload; help returns to the embedded panel.
+  Screenshots were visually reviewed. **28 responsive actions + 7 final
+  integration checks** passed, including Space/Enter, reload persistence and help
+  return, without browser errors. QA entry, ports 5186/5187 and test browser were
+  removed/stopped.
+- Native scene: **31,793,185 bytes**, SHA256
+  `3db9bda82b5c0bcff2e39b2f97e3d0d7d3cf0009ffd7c9860afa3ecf80eec208`.
+  Evidence: work cache `unified-header-*`, `account-preferences-*` and bridge
+  test logs. Browser fixtures use demo data; authenticated identity has unit
+  coverage. Physical iPhone presentation review remains user-owned; iPad deferred.
+- Preview **48** Release build, exact preview identity/schemes, strict signature,
+  device coverage and packaged scene hash/size passed. Production metadata was
+  restored; release version/assets/auth-redirect checks passed. Installed on the
+  physical iPhone October 9; device listing confirms **1.0.0 (48)** and Apple's
+  developer service launched it. Receipts: `native-preview-build-48{|-summary}.log`,
+  `preview48-package-check.json`, `preview48-install.json`,
+  `preview48-installed-app.json`, `preview48-launch.json`.
+
 ## Clearer scene artwork (Preview 47)
 
 - Extended the clearer artwork treatment to native scene cards and the embedded

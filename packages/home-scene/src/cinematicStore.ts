@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { isEmbeddedScene } from './embeddedHost';
 
 export const CINEMATIC_PREFERENCE_KEY = 'vantahome.cinematic-preferences.v1';
 
@@ -18,6 +19,8 @@ interface CinematicState {
 
 /** Read only this device's motion preference; malformed/unavailable storage conservatively leaves idle motion off. */
 export function readCinematicPreference(): Pick<CinematicState, 'idleEnabled' | 'preferenceError'> {
+  // Embedded hosts hydrate their durable device preference; do not touch opaque WebView storage.
+  if (isEmbeddedScene()) return { idleEnabled: false, preferenceError: false };
   if (typeof window === 'undefined') return { idleEnabled: true, preferenceError: false };
   try {
     const raw = window.localStorage.getItem(CINEMATIC_PREFERENCE_KEY);

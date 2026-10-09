@@ -11,7 +11,32 @@ const originalAppState = AppState.currentState;
 jest.mock('react', () => {
   const actual = jest.requireActual('react');
   return { ...actual, lazy: (loader: () => unknown) => loader.toString().includes('AccountSheet')
-    ? require('../AccountSheet').default : actual.lazy(loader) };
+    ? require('../AccountSheet').default : loader.toString().includes('AccountPreferences')
+      ? require('../AccountPreferences').default : actual.lazy(loader) };
+});
+
+test('Account opens Preferences directly and resumes scene help without reloading the property', async () => {
+  const screen = render(<ThreeDHomeScreen />);
+  act(() => mockSceneProps.onStatus('ready'));
+  act(() => mockSceneProps.onChromeSnapshot?.({ locationName: 'Property', localTime: '12:05 PM', tempC: 25, weatherCode: 0, weatherStatus: 'live',
+    isNight: false, motionDisabled: false, systemReducedMotion: false, idleEnabled: true, preferenceError: false }));
+  const scene = screen.getByTestId('scene-surface');
+  fireEvent.press(screen.getByLabelText('Open account: Demo profile'));
+  await waitFor(() => expect(screen.getByLabelText('Preferences')).toBeTruthy());
+  fireEvent.press(screen.getByLabelText('Preferences'));
+  expect(screen.queryByLabelText('Close account')).toBeNull();
+  expect(screen.getByLabelText('Close preferences')).toBeTruthy();
+  expect(mockSceneProps.suspended).toBe(true);
+  expect(mockSceneProps.allowChromePreferencesWhileSuspended).toBe(true);
+  fireEvent.press(screen.getByLabelText('Scene motion'));
+  expect(mockSceneProps.chromeCommand).toMatchObject({ command: { type: 'set-motion', disabled: true } });
+  fireEvent.press(screen.getByLabelText('3D help and reset'));
+  expect(screen.queryByLabelText('Close preferences')).toBeNull();
+  expect(mockSceneProps.suspended).toBe(false);
+  expect(mockSceneProps.allowChromePreferencesWhileSuspended).toBe(false);
+  expect(mockSceneProps.chromeCommand).toMatchObject({ command: { type: 'open-preferences' } });
+  expect(screen.getByTestId('scene-surface')).toBe(scene);
+  expect(mockNavigate).not.toHaveBeenCalled();
 });
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'), useIsFocused: () => true,

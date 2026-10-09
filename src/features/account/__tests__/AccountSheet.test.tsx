@@ -48,11 +48,24 @@ test('demo has a visible label and preview routes without account or owner claim
   expect(screen.queryByText('alice@example.com')).toBeNull();
   expect(screen.queryByLabelText('Sign out')).toBeNull();
   expect(screen.queryByLabelText('Household')).toBeNull();
-  fireEvent.press(screen.getByLabelText('Demo preferences'));
+  fireEvent.press(screen.getByLabelText('Preferences'));
   expect(close).toHaveBeenCalledTimes(1);
-  expect(mockNavigate).toHaveBeenCalledWith('Profile', { section: 'identity' });
+  expect(mockNavigate).toHaveBeenCalledWith('Profile', { section: 'preferences' });
   fireEvent.press(screen.getByLabelText('Preview account access'));
   expect(mockNavigate).toHaveBeenCalledWith('AccountEntry');
+});
+
+test('opens the focused preferences panel without routing through profile identity', () => {
+  const close = jest.fn();
+  const preferences = jest.fn();
+  const screen = render(<AccountSheet onClose={close} onPreferences={preferences} />);
+  fireEvent.press(screen.getByLabelText('Preferences'));
+  expect(preferences).toHaveBeenCalledTimes(1);
+  expect(close).not.toHaveBeenCalled();
+  expect(mockNavigate).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByLabelText('Profile'));
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).toHaveBeenCalledWith('Profile', { section: 'identity' });
 });
 
 test('shows the current home and routes household access after closing the sheet', () => {
