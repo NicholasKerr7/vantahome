@@ -68,7 +68,6 @@ export default function UnifiedHomeHeader({ scene, ready, active, onEnvironment,
       </Pressable>
       <DashboardAccountButton compact={!wide} onPress={onAccount} />
     </View>
-    <View pointerEvents="none" style={styles.horizon} />
   </CinematicSurface>;
 }
 
@@ -99,5 +98,4 @@ const styles = StyleSheet.create({
   readingDivider: { width: 1, height: 13, backgroundColor: theme.colors.stroke },
   temperature: { color: theme.colors.text, fontSize: 12, fontVariant: ['tabular-nums'], flexShrink: 1 },
   voice: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2, alignItems: 'center', justifyContent: 'center' },
-  horizon: { height: 1, marginHorizontal: 12, backgroundColor: theme.colors.accent, opacity: 0.28 },
 });

@@ -17,6 +17,9 @@ import { applyModelPreset } from '../../packages/home-scene/src/modelScenePreset
 import { simulationPersistence } from '../features/three-d-home/simulationPersistence';
 import { overlayDemoDevices } from '../features/three-d-home/demoDeviceMapping';
 import { sceneEditChangesBehavior } from '../features/scenes/sceneEdits';
+import { assertSceneWriteAccess, canManageScenes, removeSceneState } from '../features/scenes/sceneManagement';
+import { runSimulationScene } from '../features/scenes/simulationSceneExecution';
+import { homeEditorScope } from '../features/home-shell/homeEditorScope';
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -549,6 +552,7 @@ export type HomeState = {
   clearActiveScene: () => void;
   addScene: (scene: Omit<Scene, "id">) => void;
   updateScene: (sceneId: string, patch: Partial<Scene>) => void;
+  removeScene: (sceneId: string) => void;
   addFlow: (flow: Omit<AutomationFlow, "id">) => void;
   updateFlow: (flowId: string, patch: Partial<AutomationFlow>) => void;
   toggleFlow: (flowId: string) => void;
@@ -2183,6 +2187,14 @@ export const useHomeStore = create<HomeState>()(
           set({ devices: projectModelSnapshot(current.devices, snapshot), activeSceneId: sceneId, lastSceneRun: { sceneId, ts: Date.now() } });
           return;
         }
+        if (scene.actions.some((action) => initial.devices.find((device) => device.id === action.deviceId)?.simulationOnly)) {
+          if (await runSimulationScene(initial, scene, get, options?.signal)) {
+            set((current) => !options?.signal?.aborted && canManageScenes(current) && homeEditorScope(current) === homeEditorScope(initial)
+              && current.scenes.find((item) => item.id === sceneId) === scene
+              ? { activeSceneId: sceneId, lastSceneRun: { sceneId, ts: Date.now() } } : {});
+            return;
+          }
+        }
         if (runtimePolicy.requireRealTransport) {
           const scope = {
             userId: initial.authenticatedUserId,
@@ -2226,16 +2238,23 @@ export const useHomeStore = create<HomeState>()(
         })),
 
       addScene: (scene) =>
-        set((state) => ({
-          scenes: [...state.scenes, { ...scene, id: `s${Date.now()}` }],
-        })),
+        set((state) => {
+          assertSceneWriteAccess(state, scene);
+          return { scenes: [...state.scenes, { ...scene, id: nextRoutineRecordId(state.scenes, 's') }] };
+        }),
 
       updateScene: (sceneId, patch) =>
-        set((state) => ({
-          scenes: state.scenes.map((scene) =>
-            scene.id === sceneId ? { ...scene, ...patch, ...(sceneEditChangesBehavior(scene, patch) ? { modelPreset: undefined } : {}) } : scene,
-          ),
-        })),
+        set((state) => {
+          const scene = state.scenes.find((item) => item.id === sceneId);
+          if (!scene) return {};
+          assertSceneWriteAccess(state, scene);
+          const updated = { ...scene, ...patch, id: scene.id };
+          assertSceneWriteAccess(state, updated);
+          return { scenes: state.scenes.map((item) => item.id === sceneId
+            ? { ...updated, ...(sceneEditChangesBehavior(scene, patch) ? { modelPreset: undefined } : {}) } : item) };
+        }),
+
+      removeScene: (sceneId) => set((state) => removeSceneState(state, sceneId)),
 
       addFlow: (flow) =>
         set((state) => ({

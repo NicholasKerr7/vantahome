@@ -3,8 +3,9 @@ import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { Power, X } from 'lucide-react';
 import { DEVICE_ICONS } from './DeviceControlCard';
 import { PagedDeviceControls } from './PagedDeviceControls';
-import { deviceActionFeedback, deviceStatus, quickActionLabel } from './deviceCapabilities';
-import { gasStatusTone } from './gasSimulation';
+import { deviceActionFeedback, deviceStatus } from './deviceCapabilities';
+import { hotspotPresentation } from './hotspotPresentation';
+import { primaryDeviceAction } from './quickDevicePresentation';
 import { getDevice, getRoom, type DeviceId } from './data';
 import { useHomeStore } from './state';
 import { CinematicArtwork } from './CinematicCardArtwork';
@@ -19,7 +20,9 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
   const current = useHomeStore((state) => state.deviceStates[deviceId]);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
   const Icon = DEVICE_ICONS[device.kind];
-  const tone = gasStatusTone(device.kind, current);
+  const presentation = hotspotPresentation(device, current);
+  const action = primaryDeviceAction(device, current);
+  const ActionIcon = action.isSwitch ? Power : Icon;
   const visible = useHomeStore((state) => canViewSceneDevice(state.access, deviceId));
   const controllable = useHomeStore((state) => canControlSceneDevice(state.access, deviceId));
 
@@ -64,17 +67,17 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
   if (!visible) return null;
   return <dialog ref={dialog} id="full-device-controls" className="device-control-sheet" aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
-      <header className="device-sheet-heading has-cinematic-artwork" data-device-tone={tone}>
+      <header className="device-sheet-heading has-cinematic-artwork" data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone}>
         <CinematicArtwork artwork={deviceArtwork(device)} presentation="identity" />
-        <span className={`device-sheet-icon ${current.on ? 'is-on' : ''}`}><Icon size={24} strokeWidth={1.5} aria-hidden="true" /></span>
+        <span className={`device-sheet-icon ${presentation.active ? 'is-on' : ''}`}><Icon size={24} strokeWidth={1.5} aria-hidden="true" /></span>
         <div className="device-sheet-identity">
           <p className="device-sheet-location">{getRoom(device.roomId).name}<span aria-hidden="true"> · </span>Full controls</p>
           <h2 id="sheet-device-control-title" ref={title} tabIndex={-1}>{device.name}</h2>
-          <p className="device-sheet-state" aria-live="polite"><span className={current.on ? 'is-on' : ''} aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}</p>
+          <p className="device-sheet-state" aria-live="polite"><span className={presentation.active ? 'is-on' : ''} aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}</p>
         </div>
         <button type="button" className="quick-device-close" aria-label="Close full controls" onClick={dismiss}><X size={20} aria-hidden="true" /></button>
       </header>
-      <button type="button" className="device-sheet-primary" disabled={!controllable} onClick={() => toggleDevice(deviceId)}><Power size={17} aria-hidden="true" /><span>{quickActionLabel(device, current)}</span></button>
+      <button type="button" className="device-sheet-primary" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.isSwitch ? `${device.name} power` : action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span></button>
       {controllable ? <PagedDeviceControls key={deviceId} device={device} current={current} /> : <p className="device-hint">View only. Your household role does not allow changing this device.</p>}
     </div>
   </dialog>;

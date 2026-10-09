@@ -7,6 +7,8 @@ import { getDevice } from '../../../../packages/home-scene/src/data';
 import { DeviceControlsSheet } from '../DeviceControlsSheet';
 import { NativeCapabilityControl } from '../NativeCapabilityControl';
 import { SimulationControlClient } from '../simulationControlClient';
+import { theme } from '../../../theme/theme';
+import { deviceStatus, getCapabilities, readDeviceSetting } from '../../../../packages/home-scene/src/deviceCapabilities';
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
 jest.mock('../../../components/CinematicSurface', () => require('react-native').View);
@@ -132,4 +134,40 @@ test('returns to an enum field that was second on a tablet page after the phone 
   measure(screen, 130);
   expect(screen.UNSAFE_getAllByType(NativeCapabilityControl)).toHaveLength(1);
   expect(screen.getByLabelText(/^Color:.*Choose option$/)).toBeTruthy();
+});
+
+test.each([true, false])('acknowledged smoke controls retain their safety tone while source detection is %s', (detected) => {
+  const client = new SimulationControlClient();
+  const original = client.getSnapshot();
+  const device = getDevice('family-smoke')!;
+  const state = { ...original.state.deviceStates[device.id], on: true, settings: {
+    ...original.state.deviceStates[device.id].settings, smokeDetected: detected, coDetected: false,
+    fireIncidentActive: true, fireIncidentAcknowledged: true,
+  } };
+  const snapshot = { ...original, ready: true, access: FULL_SCENE_ACCESS,
+    state: { ...original.state, deviceStates: { ...original.state.deviceStates, [device.id]: state } } };
+  const screen = render(<DeviceControlsSheet deviceId={device.id} client={client} snapshot={snapshot} motionAllowed={false} onClose={jest.fn()} onSelect={jest.fn()} />);
+  fireEvent.press(screen.getByLabelText('Status'));
+  expect(screen.getByText(`${deviceStatus(device, state)} · Simulated readings`)).toHaveStyle({ color: detected ? theme.colors.alarmText : theme.colors.warningText });
+});
+
+test('native device toggles provide one large accessible target and wait for confirmed state', () => {
+  const device = getDevice('living-light')!;
+  const capability = getCapabilities(device.kind).find((item) => item.type === 'toggle')!;
+  if (capability.type !== 'toggle') throw new Error('Expected a light toggle capability');
+  const client = new SimulationControlClient();
+  const setSetting = jest.spyOn(client, 'setSetting').mockImplementation(() => undefined);
+  const state = client.getSnapshot().state.deviceStates[device.id];
+  const value = Boolean(readDeviceSetting(device, state, capability.field));
+  const props = { capability, device, state, client, disabled: false, compact: true, onOptions: jest.fn() };
+  const screen = render(<NativeCapabilityControl {...props} />);
+  const toggle = screen.getByRole('switch', { name: capability.label });
+  expect(screen.getAllByRole('switch')).toHaveLength(1);
+  expect(StyleSheet.flatten(toggle.props.style).minHeight).toBeGreaterThanOrEqual(44);
+  fireEvent.press(toggle);
+  expect(setSetting).toHaveBeenCalledWith(device.id, capability.field, !value);
+  expect(toggle.props.accessibilityState.checked).toBe(value);
+  screen.rerender(<NativeCapabilityControl {...props} disabled />);
+  fireEvent.press(screen.getByRole('switch', { name: capability.label }));
+  expect(setSetting).toHaveBeenCalledTimes(1);
 });

@@ -13,7 +13,7 @@ import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import Slider from "@react-native-community/slider";
+import LabSlider from '../features/renderer-lab/LabSlider';
 import * as Haptics from "expo-haptics";
 import { theme } from "../theme/theme";
 import BackgroundLines from "../components/BackgroundLines";
@@ -45,6 +45,12 @@ import { sceneValuesEqual } from "../features/scenes/sceneEdits";
 import { isWholeHomeScene, sceneIsVisible, sceneScopeLabel, sceneSelectableDevices, sceneSelectionInScope, type SceneEditorScope } from "../features/scenes/sceneScope";
 import CinematicCardArtwork from "../features/cinematic-artwork/CinematicCardArtwork";
 import { deviceArtwork } from "../features/cinematic-artwork/artwork";
+import { availableStarterScenes, type StarterScene } from '../features/scenes/starterScenes';
+import { StarterSceneLibrary } from '../features/scenes/StarterSceneLibrary';
+import { SceneDeleteConfirmation } from '../features/scenes/SceneDeleteConfirmation';
+import { canManageScenes } from '../features/scenes/sceneManagement';
+import { buildVirtualSceneAction, normalizeSceneOverride } from '../features/scenes/virtualSceneAction';
+import { isModelHome } from '../features/three-d-home/modelHomeScope';
 
 export type ScenesScreenProps = {
   /** The root feature wrapper provides the title, safe areas and back navigation. */
@@ -172,6 +178,12 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   const activeSceneId = useHomeStore((s) => s.activeSceneId);
   const addScene = useHomeStore((s) => s.addScene);
   const updateScene = useHomeStore((s) => s.updateScene);
+  const removeScene = useHomeStore((s) => s.removeScene);
+  const canManage = useHomeStore(canManageScenes);
+  const [showPresets, setShowPresets] = useState(false);
+  const [deleteReview, setDeleteReview] = useState<{ scene: Scene; scope: string } | null>(null);
+  const activeDeleteReview = useRef<typeof deleteReview>(null);
+  const [sceneError, setSceneError] = useState<string | null>(null);
 
   const [showCreate, setShowCreate] = useState(false);
   const [sceneName, setSceneName] = useState("");
@@ -499,6 +511,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   ];
 
   const openCreate = () => {
+    setSceneError(null);
     beginEditor();
     setShowCreate(true);
     setEditingSceneId(null);
@@ -515,34 +528,38 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     if (sceneScope === 'room' && !roomId) return;
     const room = rooms.find((r) => r.id === roomId);
     const name = sceneName.trim() || `${sceneScope === 'home' ? 'Whole home' : room?.name ?? 'Room'} Scene`;
-    const actions = permittedSelection
-      .map((id) => deviceMap.get(id))
-      .filter(Boolean)
-      .map((device) =>
-        buildSceneAction(device as Device, overrides[(device as Device).id]),
-      );
-    if (!actions.length) return;
+    try {
+      const actions = permittedSelection.flatMap((id) => {
+        const device = deviceMap.get(id);
+        return device ? [buildSceneAction(device, overrides[id])] : [];
+      });
+      if (!actions.length) return;
 
-    if (editingSceneId) {
-      // The editor can rebuild richer patches from live devices; an unchanged draft must retain its saved commands.
-      const actionsChanged = !sceneValuesEqual(editorSession.actions, { selectedDeviceIds: permittedSelection, overrides });
-      updateScene(editingSceneId, { roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, ...(actionsChanged ? { actions } : {}) });
-    } else {
-      addScene({ roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, actions });
+      if (editingSceneId) {
+        // An unchanged draft retains its saved commands instead of inheriting live device values.
+        const actionsChanged = !sceneValuesEqual(editorSession.actions, { selectedDeviceIds: permittedSelection, overrides });
+        updateScene(editingSceneId, { roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, ...(actionsChanged ? { actions } : {}) });
+      } else {
+        addScene({ roomId: sceneScope === 'home' ? '' : roomId, scope: sceneScope, name, actions });
+      }
+      closeEditor();
+    } catch (error) {
+      setSceneError(error instanceof Error ? error.message : 'Unable to save this scene. Please try again.');
     }
-    closeEditor();
   };
 
   const openEdit = (scene: Scene) => {
+    setSceneError(null);
     if (!sceneIsVisible(scene, rooms, devices)) return;
     setEditingSceneId(scene.id);
     setShowCreate(true);
     setSceneName(scene.name);
     setSceneScope(isWholeHomeScene(scene) ? 'home' : 'room');
     setRoomId(isWholeHomeScene(scene) ? '' : scene.roomId);
+    const selectableIds = new Set(sceneSelectableDevices(devices, 'home', '').map((device) => device.id));
     const deviceIds = Array.from(
       new Set(scene.actions.map((action) => action.deviceId)),
-    );
+    ).filter((id) => selectableIds.has(id));
     setSelectedDeviceIds(deviceIds);
     const nextOverrides: Record<string, Partial<Device>> = {};
     scene.actions.forEach((action) => {
@@ -555,6 +572,45 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     setOverrides(nextOverrides);
     beginEditor({ selectedDeviceIds: deviceIds, overrides: nextOverrides });
   };
+
+  /** Presets enter the ordinary editor as drafts; choosing one never runs or overwrites a scene. */
+  const choosePreset = (preset: StarterScene) => {
+    const current = availableStarterScenes(useHomeStore.getState()).find((entry) => entry.id === preset.id);
+    if (!current?.available) return;
+    setShowPresets(false);
+    openEdit({ ...current.draft, id: 'unsaved-preset' });
+    setEditingSceneId(null);
+  };
+
+  /** Retire the confirmation token immediately so a retained callback cannot delete after switching homes. */
+  const closeDelete = useCallback(() => { activeDeleteReview.current = null; setDeleteReview(null); }, []);
+
+  /** Capture one scene revision and scope before showing the destructive action. */
+  const beginDelete = () => {
+    if (!detailScene || !canManageScenes(useHomeStore.getState())) return;
+    const review = { scene: detailScene, scope: homeEditorScope(useHomeStore.getState()) };
+    activeDeleteReview.current = review;
+    setSceneError(null);
+    setDeleteReview(review);
+    setDetailSceneId(null);
+  };
+
+  /** A confirmation belongs to one exact scene and household opening, never a later account. */
+  const confirmDelete = () => {
+    if (!deleteReview || activeDeleteReview.current !== deleteReview) return;
+    const current = useHomeStore.getState();
+    if (homeEditorScope(current) !== deleteReview.scope || current.scenes.find((scene) => scene.id === deleteReview.scene.id) !== deleteReview.scene) {
+      closeDelete();
+      return;
+    }
+    try { removeScene(deleteReview.scene.id); closeDelete(); }
+    catch (error) { setSceneError(error instanceof Error ? error.message : 'Unable to delete this scene.'); }
+  };
+
+  useEffect(() => useHomeStore.subscribe((state) => {
+    if (!canManageScenes(state)) setShowPresets(false);
+    if (deleteReview && (homeEditorScope(state) !== deleteReview.scope || !canManageScenes(state))) closeDelete();
+  }), [deleteReview, closeDelete]);
 
   /** Switching scope prunes other rooms only when the user explicitly chooses One room. */
   const changeSceneScope = (scope: SceneEditorScope) => {
@@ -573,9 +629,11 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   };
 
   const updateOverride = (deviceId: string, patch: Partial<Device>) => {
+    const device = deviceMap.get(deviceId);
+    if (!device) return;
     setOverrides((prev) => ({
       ...prev,
-      [deviceId]: { ...prev[deviceId], ...patch },
+      [deviceId]: { ...prev[deviceId], ...normalizeSceneOverride(device, patch) },
     }));
   };
 
@@ -652,6 +710,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           onClear={clearActiveScene}
           onOpen={setDetailSceneId}
           onRun={(sceneId) => { void requestScene(sceneId); }}
+          onPresets={canManage ? () => setShowPresets(true) : undefined}
         /> : (
         <ScreenFrame
           isPortrait={isPortrait}
@@ -754,6 +813,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           </Text>
 
           <ModalField label="Scene name" labelStyle={modalLabelStyle}>
+            {sceneError && <Text accessibilityRole="alert" style={modalHintStyle}>{sceneError}</Text>}
             <TextInput
               accessibilityLabel="Scene name"
               value={sceneName}
@@ -767,6 +827,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
           <SceneScopePicker scope={sceneScope} roomId={roomId} rooms={rooms} selectedCount={permittedSelection.length} onScopeChange={changeSceneScope} onRoomChange={changeSceneRoom} />
 
           <ModalField label="Devices" labelStyle={modalLabelStyle}>
+            {devices.some((device) => device.simulationOnly) && <Text style={modalHintStyle}>Choose controls for this scene. Safety monitors stay available in device status.</Text>}
             {roomDevices.length === 0 ? (
               <Text style={modalHintStyle}>No devices in this room yet.</Text>
             ) : (
@@ -893,6 +954,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
                   </Text>
                 </View>
           <Text style={modalHintStyle}>A scene saves desired settings. Devices may have changed since it was last used.</Text>
+          {canManage && <Pressable accessibilityLabel={`Delete ${detailScene?.name ?? 'scene'}`} onPress={beginDelete} style={styles.deleteSceneButton}><Ionicons name="trash-outline" size={17} color={theme.colors.subtext} /><Text style={styles.deleteSceneText}>Delete scene</Text></Pressable>}
 
           <ModalField label="Actions" labelStyle={modalLabelStyle}>
             {detailActionLabels.length === 0 ? (
@@ -967,11 +1029,15 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
             ]}
           />
       </ModalCard>
+      {showPresets && <StarterSceneLibrary presets={availableStarterScenes(useHomeStore.getState())} onChoose={choosePreset} onClose={() => setShowPresets(false)} />}
+      {deleteReview && <SceneDeleteConfirmation name={deleteReview.scene.name} routineCount={useHomeStore.getState().flows.filter((flow) => flow.triggers.some((trigger) => trigger.type === 'scene' && trigger.sceneId === deleteReview.scene.id) || flow.actions.some((action) => action.type === 'run-scene' && action.sceneId === deleteReview.scene.id)).length} error={sceneError} onCancel={closeDelete} onDelete={confirmDelete} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  deleteSceneButton: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, backgroundColor: theme.colors.glass },
+  deleteSceneText: { color: theme.colors.subtext, fontSize: 12, fontWeight: '600' },
   root: { flex: 1, minHeight: 0 },
   embeddedRoot: { backgroundColor: "transparent" },
   content: { flex: 1, minHeight: 0, alignItems: "center" },
@@ -1446,9 +1512,6 @@ function DeviceControlCard({
     styles.sliderValue,
     { fontSize: sliderValueSize },
   ];
-  const sliderTopStyle: ViewStyle = {
-    marginTop: Math.round(6 * scale),
-  };
   const choicePillStyle = (active: boolean): StyleProp<ViewStyle> => [
     styles.choicePill,
     { height: choiceHeight, borderRadius: choiceRadius },
@@ -1500,14 +1563,8 @@ function DeviceControlCard({
                 {temp}°C
               </Text>
             </View>
-            <Slider
-              style={sliderTopStyle}
-              minimumValue={AC_TEMP_MIN_C}
-              maximumValue={AC_TEMP_MAX_C}
-              value={temp}
-              minimumTrackTintColor={theme.colors.accent}
-              maximumTrackTintColor={theme.colors.stroke}
-              thumbTintColor={theme.colors.accent}
+            <LabSlider label={`${device.name} temperature`} min={AC_TEMP_MIN_C} max={AC_TEMP_MAX_C}
+              value={temp} valueText={`${temp} degrees Celsius`}
               onValueChange={(v) => onPatch({ tempC: Math.round(v) })}
             />
             <View style={styles.choiceRow}>
@@ -1539,14 +1596,7 @@ function DeviceControlCard({
                 {Math.round(brightness)}%
               </Text>
             </View>
-            <Slider
-              style={sliderTopStyle}
-              minimumValue={0}
-              maximumValue={100}
-              value={brightness}
-              minimumTrackTintColor={theme.colors.accent}
-              maximumTrackTintColor={theme.colors.stroke}
-              thumbTintColor={theme.colors.accent}
+            <LabSlider label={`${device.name} brightness`} value={brightness} valueText={`${Math.round(brightness)} percent`}
               onValueChange={(v) => onPatch({ brightness: Math.round(v) })}
             />
             <View style={styles.colorRow}>
@@ -1573,14 +1623,7 @@ function DeviceControlCard({
                 {Math.round(volume)}
               </Text>
             </View>
-            <Slider
-              style={sliderTopStyle}
-              minimumValue={0}
-              maximumValue={100}
-              value={volume}
-              minimumTrackTintColor={theme.colors.accent}
-              maximumTrackTintColor={theme.colors.stroke}
-              thumbTintColor={theme.colors.accent}
+            <LabSlider label={`${device.name} volume`} value={volume} valueText={`${Math.round(volume)} percent`}
               onValueChange={(v) => onPatch({ volume: Math.round(v) })}
             />
             <View style={styles.stepRow}>
@@ -1641,19 +1684,13 @@ function DeviceControlCard({
                 {Math.round(speed)}%
               </Text>
             </View>
-            <Slider
-              style={sliderTopStyle}
-              minimumValue={0}
-              maximumValue={100}
-              value={speed}
-              minimumTrackTintColor={theme.colors.accent}
-              maximumTrackTintColor={theme.colors.stroke}
-              thumbTintColor={theme.colors.accent}
+            <LabSlider label={`${device.name} speed`} value={speed} valueText={`${Math.round(speed)} percent`}
               onValueChange={(v) => onPatch({ speed: Math.round(v) })}
             />
           </>
         );
       }
+      case "blinds":
       case "garage":
       case "door":
       case "gate":
@@ -1669,24 +1706,17 @@ function DeviceControlCard({
                 {Math.round(openPercent)}%
               </Text>
             </View>
-            <Slider
-              style={sliderTopStyle}
-              minimumValue={0}
-              maximumValue={100}
-              value={openPercent}
-              minimumTrackTintColor={theme.colors.accent}
-              maximumTrackTintColor={theme.colors.stroke}
-              thumbTintColor={theme.colors.accent}
+            <LabSlider label={`${device.name} opening`} value={openPercent} valueText={`${Math.round(openPercent)} percent open`}
               onValueChange={(v) => onPatch({ openPercent: Math.round(v) })}
             />
           </>
         );
       }
       case "vacuum": {
-        const status = override?.status ?? device.status ?? "docked";
+        const status = device.simulationOnly ? (isOn ? 'cleaning' : 'docked') : override?.status ?? device.status ?? "docked";
         return (
           <View style={styles.choiceRow}>
-            {VACUUM_STATES.map((state) => (
+            {(device.simulationOnly ? ['cleaning', 'docked'] as const : VACUUM_STATES).map((state) => (
               <Pressable
                 key={state}
                 style={choicePillStyle(status === state)}
@@ -1756,14 +1786,7 @@ function DeviceControlCard({
                 {Math.round(burnerLevel)}
               </Text>
             </View>
-            <Slider
-              style={sliderTopStyle}
-              minimumValue={0}
-              maximumValue={5}
-              value={burnerLevel}
-              minimumTrackTintColor={theme.colors.accent}
-              maximumTrackTintColor={theme.colors.stroke}
-              thumbTintColor={theme.colors.accent}
+            <LabSlider label={`${device.name} heat`} min={0} max={5} value={burnerLevel} valueText={`Level ${Math.round(burnerLevel)}`}
               onValueChange={(v) => onPatch({ burnerLevel: Math.round(v) })}
             />
           </>
@@ -1802,14 +1825,8 @@ function DeviceControlCard({
                 {minutes}m
               </Text>
             </View>
-            <Slider
-              style={sliderTopStyle}
-              minimumValue={60}
-              maximumValue={900}
-              value={timeRemainingSec}
-              minimumTrackTintColor={theme.colors.accent}
-              maximumTrackTintColor={theme.colors.stroke}
-              thumbTintColor={theme.colors.accent}
+            <LabSlider label={`${device.name} timer`} min={60} max={900} step={30}
+              value={timeRemainingSec} valueText={`${timeRemainingSec} seconds`}
               onValueChange={(v) =>
                 onPatch({ timeRemainingSec: Math.round(v / 30) * 30 })
               }
@@ -1829,14 +1846,7 @@ function DeviceControlCard({
                 {temp}°C
               </Text>
             </View>
-            <Slider
-              style={sliderTopStyle}
-              minimumValue={1}
-              maximumValue={8}
-              value={temp}
-              minimumTrackTintColor={theme.colors.accent}
-              maximumTrackTintColor={theme.colors.stroke}
-              thumbTintColor={theme.colors.accent}
+            <LabSlider label={`${device.name} temperature`} min={1} max={8} value={temp} valueText={`${temp} degrees Celsius`}
               onValueChange={(v) => onPatch({ tempC: Math.round(v) })}
             />
           </>
@@ -2180,10 +2190,13 @@ function formatAction(
   return `${device.name} update`;
 }
 
+/** Preserve physical scene authoring while virtual scenes use only supported writable control fields. */
 function buildSceneAction(
   device: Device,
   override?: Partial<Device>,
 ): SceneAction {
+  if (device.simulationOnly) return buildVirtualSceneAction(device, override);
+  if (isModelHome(useHomeStore.getState())) return buildVirtualSceneAction({ ...device, modelDeviceId: device.id }, override);
   const isOn = override?.isOn ?? device.isOn ?? true;
   const patch: Partial<Device> = { isOn };
   switch (device.kind) {
@@ -2205,6 +2218,7 @@ function buildSceneAction(
       patch.speed = device.speed ?? 60;
       break;
     case "garage":
+    case "blinds":
     case "door":
     case "gate":
     case "window":

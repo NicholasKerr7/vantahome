@@ -1,10 +1,11 @@
 import React from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { formatCapabilityValue, readDeviceSetting, type DeviceCapability } from '../../../packages/home-scene/src/deviceCapabilities';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
 import LabSlider from '../renderer-lab/LabSlider';
-import { labColors } from '../renderer-lab/styles';
+import SwitchMark from '../../components/SwitchMark';
+import { switchKeyboard } from '../../components/switchKeyboard';
 import type { SimulationDeviceControls } from './modelDeviceControls';
 import { controlStyles as styles } from './deviceControlsStyles';
 
@@ -31,13 +32,20 @@ export function NativeCapabilityControl({ capability, device, state, client, dis
     style={({ pressed }) => [styles.field, compact && styles.fieldCompact, disabled && styles.disabled, pressed && styles.pressed]}>
     <View style={[styles.row, stacked && styles.stackedField]}><Text style={[styles.label, !stacked && styles.grow]}>{capability.label}</Text><Text style={styles.value}>{formatted} ›</Text></View>
   </Pressable>;
+  if (capability.type === 'toggle') {
+    /** Toggle only from an explicit press; one semantic row supports touch and assistive input. */
+    const toggle = () => client.setSetting(device.id, capability.field, !Boolean(value));
+    return <Pressable accessibilityRole="switch" accessibilityLabel={capability.label} disabled={disabled}
+      accessibilityState={{ checked: Boolean(value), disabled }} aria-checked={Boolean(value)}
+      onPress={toggle} {...switchKeyboard(toggle, disabled)}
+      style={({ pressed }) => [styles.field, compact && styles.fieldCompact, disabled && styles.disabled, pressed && styles.pressed]}>
+      <View style={styles.row}><Text style={[styles.label, styles.grow]}>{capability.label}</Text><SwitchMark checked={Boolean(value)} /></View>
+    </Pressable>;
+  }
   return <View style={[styles.field, compact && styles.fieldCompact]}>
     <View style={[styles.row, stacked && styles.stackedField]}>
       <Text style={[styles.label, !stacked && styles.grow]}>{capability.label}</Text>
-      {capability.type === 'toggle' ? <Switch accessibilityLabel={capability.label} disabled={disabled} value={Boolean(value)}
-        trackColor={{ false: labColors.stroke, true: labColors.sage }} thumbColor={labColors.text}
-        onValueChange={(next) => client.setSetting(device.id, capability.field, next)} />
-        : <Text style={styles.value}>{formatted}</Text>}
+      <Text style={styles.value}>{formatted}</Text>
     </View>
     {capability.type === 'range' && <LabSlider label={capability.label} min={capability.min} max={capability.max}
       step={capability.step ?? 1} value={Number(value)} valueText={formatted} disabled={disabled}

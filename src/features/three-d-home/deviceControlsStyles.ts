@@ -11,8 +11,8 @@ const colors = {
   accent: theme.colors.accent,
   accentText: theme.colors.accentText,
   ink: theme.colors.bg0,
-  alarm: '#ffb7ac',
-  warning: '#efd391',
+  alarm: theme.colors.alarmText,
+  warning: theme.colors.warningText,
 };
 
 /** Fixed, touch-sized layouts shared by the native device inspector and its pickers. */

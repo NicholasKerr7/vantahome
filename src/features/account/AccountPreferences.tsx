@@ -8,7 +8,8 @@ import Pressable from '../../components/Pressable';
 import { theme } from '../../theme/theme';
 import { accountPreferencesStyles as styles } from './accountPreferencesStyles';
 import { useAccountPreferences } from './useAccountPreferences';
-import { preferenceSwitchKeyboard } from './preferenceSwitchKeyboard';
+import { switchKeyboard } from '../../components/switchKeyboard';
+import SwitchMark from '../../components/SwitchMark';
 
 type Props = {
   onClose: () => void;
@@ -33,11 +34,9 @@ function PreferenceToggle({ title, detail, value, disabled, onChange }: {
 }) {
   return <Pressable style={[styles.row, disabled && styles.disabled]} accessibilityRole="switch" accessibilityLabel={title}
     accessibilityHint={detail} accessibilityState={{ checked: value, disabled }} aria-checked={value} disabled={disabled} onPress={() => onChange(!value)}
-    {...preferenceSwitchKeyboard(() => onChange(!value), disabled)}>
+    {...switchKeyboard(() => onChange(!value), disabled)}>
     <View style={styles.copy}><Text style={styles.rowTitle}>{title}</Text><Text style={styles.detail}>{detail}</Text></View>
-    <View style={styles.toggle} pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <View style={[styles.toggleTrack, value && styles.toggleTrackOn]}><View style={[styles.toggleThumb, value && styles.toggleThumbOn]} /></View>
-    </View>
+    <SwitchMark checked={value} />
   </Pressable>;
 }
 

@@ -26,6 +26,7 @@ import {
   quickActionLabel,
 } from "../../../packages/home-scene/src/deviceCapabilities";
 import { deviceCardReading } from "../../../packages/home-scene/src/dashboardCardPresentation";
+import { hotspotPresentation } from "../../../packages/home-scene/src/hotspotPresentation";
 import type { ControlSnapshot } from "./simulationControlClient";
 import { ControlPagination } from "./ControlPagination";
 import { deviceMatchesQuery } from "./deviceBrowserSearch";
@@ -402,6 +403,8 @@ function DeviceCard({
   const controlDisabled = !snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id));
   const status = deviceStatus(device, state);
   const reading = deviceCardReading(device, state);
+  const presentation = hotspotPresentation(device, state);
+  const tone = presentation.tone === "closed" ? "warning" : presentation.tone;
   if (compact)
     return (
       <View style={styles.compactResult}>
@@ -415,7 +418,7 @@ function DeviceCard({
             <Text numberOfLines={2} style={styles.compactName}>
               {device.name}
             </Text>
-            <Text numberOfLines={1} style={styles.roomDetail}>
+            <Text numberOfLines={1} style={[styles.roomDetail, tone === "alarm" && styles.alarmValue, tone === "warning" && styles.warningValue]}>
               {reading.value} · {getRoom(device.roomId).name}
             </Text>
           </View>
@@ -469,7 +472,8 @@ function DeviceCard({
       favorite={favorite}
       favoriteDisabled={favoriteDisabled}
       onToggleFavorite={onToggleFavorite}
-      active={state.on}
+      active={presentation.active}
+      statusTone={tone}
       quickActionLabel={quickActionLabel(device, state)}
       disabled={controlDisabled}
       onOpen={() => onSelect(device.id)}

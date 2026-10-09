@@ -54,7 +54,7 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
 .dashboard-browse { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 11px; background: var(--surface); color: var(--text-soft); font-size: 11px; flex-shrink: 0; }
 .dashboard-browse > svg:last-child { margin-left: auto; }
 .dashboard-browse { padding: 10px; }
-.dashboard-scenes { display: flex; align-items: center; gap: 15px; padding: 4px 0; background: transparent; border-top: 1px solid var(--line); border-radius: 0; min-width: 0; }
+.dashboard-scenes { display: flex; align-items: center; gap: 15px; padding: 4px 0; background: transparent; border-radius: 0; min-width: 0; }
 .dashboard-scenes-label { display: none; align-items: center; gap: 8px; color: var(--text-soft); font-size: 11px; padding-left: 8px; white-space: nowrap; }
 .dashboard-scenes .preset-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; flex: 1; margin: 0; min-width: 0; }
 .dashboard-preset { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 5px; border-radius: 0; background: transparent; color: var(--text-soft); font-size: 10px; white-space: nowrap; }

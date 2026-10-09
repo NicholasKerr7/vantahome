@@ -18,6 +18,9 @@ export const theme = {
     accent2: "#7A5CFF",
     /** Lighter violet keeps small accent labels legible on translucent cards. */
     accentText: "#DFC4FF",
+    /** Readable safety-state accents shared by device cards and inspectors. */
+    alarmText: "#FFB7AC",
+    warningText: "#EFD391",
     electric: "#DFC4FF",
     ember: "#EBD0A6",
     glass: "rgba(53,19,127,0.96)",

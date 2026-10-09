@@ -139,5 +139,7 @@ export const deviceBrowserStyles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   roomDetail: { color: theme.colors.text, fontSize: 10, lineHeight: 15 },
+  alarmValue: { color: theme.colors.alarmText },
+  warningValue: { color: theme.colors.warningText },
   spacer: { flex: 1 },
 });

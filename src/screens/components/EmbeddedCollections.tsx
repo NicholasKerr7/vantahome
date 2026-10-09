@@ -30,10 +30,11 @@ function CollectionPager({ pagination, total, noun }: { pagination: Pagination; 
 type SceneCollectionProps = {
   scenes: readonly Scene[]; rooms: readonly Room[]; activeSceneId: string | null;
   onCreate: () => void; onClear: () => void; onOpen: (sceneId: string) => void; onRun: (sceneId: string) => void;
+  onPresets?: () => void;
 };
 
 /** Arrange scenes as actionable mood cards, with measured pagination instead of a scrolling gallery. */
-export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear, onOpen, onRun }: SceneCollectionProps) {
+export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear, onOpen, onRun, onPresets }: SceneCollectionProps) {
   const { height, fontScale } = useWindowDimensions();
   const compact = height < 740 || fontScale > 1.15;
   const pagination = useCollectionPagination(scenes.length, compact ? 194 : 234, true);
@@ -46,10 +47,11 @@ export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear
         {!compact && <Text style={styles.eyebrow}>ONE TOUCH. A DIFFERENT FEELING.</Text>}
         <Text style={[styles.headline, compact && styles.headlineCompact]} numberOfLines={1}>Set the mood<Text style={styles.headlineCount}> / {scenes.length}</Text></Text>
       </View>
+      {onPresets && <Pressable accessibilityLabel="Browse scene presets" style={styles.createButton} onPress={onPresets}><Ionicons name="sparkles-outline" size={18} color={theme.colors.accent} /><Text style={styles.createText}>Presets</Text></Pressable>}
       <Pressable accessibilityLabel="Create scene" style={styles.createButton} onPress={onCreate}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
     </View>
     <View style={styles.contextRow}>
-      <Text style={styles.contextText} numberOfLines={1}>{activeScene ? `Last used · ${activeScene.name}` : 'Choose a scene for your space'}</Text>
+      <Text style={styles.contextText} numberOfLines={1}>{activeScene ? `Last used · ${activeScene.name}` : 'Your scenes · Saved on this device'}</Text>
       {activeSceneId ? <Pressable accessibilityLabel="Clear last-used scene" style={styles.clearButton} onPress={onClear}><Text style={styles.linkText}>Clear</Text></Pressable> : null}
     </View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="scene-page-area">

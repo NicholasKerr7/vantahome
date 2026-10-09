@@ -6,6 +6,7 @@ import type { DeviceState } from '../state';
 import { readDeviceSetting } from '../deviceCapabilities';
 import { irrigationJetPoint } from './weatherGeometry';
 import { advanceTelevisionDisplay, createTelevisionUniforms } from './televisionDisplay';
+import { speakerPlaybackVisible } from './deviceEffectState';
 
 interface EffectProps {
   device: DeviceDefinition;
@@ -245,7 +246,7 @@ export function DeviceEffects(props: EffectProps) {
     return null;
   if (
     props.device.kind === 'speaker' &&
-    readDeviceSetting(props.device, props.state, 'muted')
+    !speakerPlaybackVisible(props.device, props.state)
   )
     return null;
   if (props.device.kind === 'sprinkler') return <IrrigationEffect {...props} />;

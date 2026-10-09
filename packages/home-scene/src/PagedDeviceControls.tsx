@@ -90,9 +90,9 @@ export function PagedDeviceControls({ device, current }: { device: DeviceDefinit
       {selectedGroup === 'status' ? <p className="device-control-context">Simulation readings</p> : null}
       {page?.id === 'shared-routines' ? <div className="device-routine-entry">
         <h3>One place for every routine</h3>
-        <p>Schedules and automatic actions are managed together in VantaHome. Device linking is required.</p>
+        <p>Manage schedules and automatic actions together. Device linking is required.</p>
         <button type="button" className="device-routine-open" disabled={!isEmbeddedScene()} onClick={() => requestDeviceRoutines(device.id)}>View device routines</button>
-        <small>{isEmbeddedScene() ? 'Preview routines run while the app is open. An always-on hub is not connected.' : 'Open the VantaHome app to manage routines.'}</small>
+        <small>{isEmbeddedScene() ? 'Preview runs while the app is open. No hub connected.' : 'Open the VantaHome app to manage routines.'}</small>
       </div> : page ? <CapabilityControls device={device} current={current} capabilities={page.capabilities} prefix="sheet-" /> : <p className="device-control-empty">No additional settings for this device.</p>}
     </div>
     <footer className="device-control-pagination">

@@ -1,4 +1,5 @@
 import type { Device, Room, Scene } from '../../store/useHomeStore';
+import { isMonitor } from '../../../packages/home-scene/src/deviceCapabilities';
 
 export type SceneEditorScope = 'home' | 'room';
 
@@ -23,11 +24,11 @@ export function sceneScopeLabel(scene: Scene, rooms: readonly Room[]): string {
 
 /** Room filters only limit browsing; a whole-home selection spans all visible rooms. */
 export function sceneSelectableDevices(devices: readonly Device[], scope: SceneEditorScope, roomId: string): Device[] {
-  return scope === 'home' && !roomId ? [...devices] : devices.filter((device) => device.roomId === roomId);
+  return devices.filter((device) => !isMonitor(device.kind) && (scope === 'home' && !roomId || device.roomId === roomId));
 }
 
 /** Retain only permitted selections, pruning other rooms only for an explicitly room-scoped scene. */
 export function sceneSelectionInScope(ids: readonly string[], devices: readonly Device[], scope: SceneEditorScope, roomId: string): string[] {
-  const allowedIds = new Set(devices.filter((device) => scope === 'home' || device.roomId === roomId).map((device) => device.id));
+  const allowedIds = new Set(sceneSelectableDevices(devices, scope, scope === 'home' ? '' : roomId).map((device) => device.id));
   return ids.filter((id) => allowedIds.has(id));
 }

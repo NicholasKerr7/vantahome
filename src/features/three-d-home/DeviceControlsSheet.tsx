@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { deviceActionFeedback, deviceStatus, quickActionLabel, readDeviceSetting } from '../../../packages/home-scene/src/deviceCapabilities';
 import { getInspectorPages } from '../../../packages/home-scene/src/deviceRoutinePages';
-import { gasStatusTone } from '../../../packages/home-scene/src/gasSimulation';
+import { hotspotPresentation } from '../../../packages/home-scene/src/hotspotPresentation';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
 import type { ControlSnapshot } from './simulationControlClient';
 import { NativeCapabilityControl, type EnumCapability } from './NativeCapabilityControl';
@@ -85,7 +85,7 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   const optionCount = Math.ceil((option?.options.length ?? 0) / optionSize);
   const visibleOptionPage = Math.min(Math.floor(optionAnchor / optionSize), Math.max(0, optionCount - 1));
   const options = option?.options.slice(visibleOptionPage * optionSize, (visibleOptionPage + 1) * optionSize);
-  const tone = gasStatusTone(device.kind, state);
+  const { tone } = hotspotPresentation(device, state);
 
   /** Measure the space left by real header, feedback, footer and Dynamic Type sizes. */
   function measureSpace(event: LayoutChangeEvent, choices = false): void {

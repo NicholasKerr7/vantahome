@@ -89,6 +89,15 @@ test('ignores late header and status callbacks from a replaced renderer', () => 
   fireEvent.press(screen.getByLabelText(/Property time and weather:/));
   expect(mockSceneProps.chromeCommand?.command).toEqual({ type: 'open-environment' });
 });
+
+test('a failed scene request never claims its changes were applied', () => {
+  const screen = render(<ThreeDHomeScreen />);
+  act(() => mockStatus('ready'));
+  act(() => mockSceneProps.onSaveStatus?.('error'));
+  expect(screen.getByText('A change couldn’t be completed or saved. Review your controls and try again.')).toBeTruthy();
+  expect(screen.queryByText(/Changes work for this session/)).toBeNull();
+  expect(screen.getByLabelText('Open voice control')).toBeTruthy();
+});
 test('pauses covered graphics without replacing the loaded scene and resumes on dismissal', () => {
   const screen = render(<ThreeDHomeScreen />);
   act(() => mockStatus('ready'));

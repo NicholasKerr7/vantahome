@@ -5,10 +5,10 @@ import { DEVICES, ROOMS, getDevice, getRoom, type DeviceDefinition, type DeviceI
 import { roomIcon } from './DashboardChrome';
 import { paginateItems } from './dashboardPagination';
 import { DEVICE_ICONS } from './DeviceControlCard';
-import { deviceStatus, isMonitor } from './deviceCapabilities';
+import { deviceStatus } from './deviceCapabilities';
 import { PrimaryDeviceRange } from './PrimaryDeviceRange';
 import { primaryDeviceAction } from './quickDevicePresentation';
-import { gasStatusTone } from './gasSimulation';
+import { hotspotPresentation } from './hotspotPresentation';
 import { useHomeStore } from './state';
 import { deviceCardReading } from './dashboardCardPresentation';
 import { CinematicArtwork } from './CinematicCardArtwork';
@@ -54,11 +54,12 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
   const action = primaryDeviceAction(device, current);
   const controllable = useHomeStore((state) => canControlSceneDevice(state.access, device.id));
   const reading = deviceCardReading(device, current);
+  const presentation = hotspotPresentation(device, current);
 
-  return <section className="dashboard-selected-device device-focus-card has-cinematic-artwork" data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-labelledby="device-control-title">
+  return <section className="dashboard-selected-device device-focus-card has-cinematic-artwork" data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-labelledby="device-control-title">
     <CinematicArtwork artwork={deviceArtwork(device)} />
     <div className="dashboard-selected-heading">
-      <span className={`dashboard-device-icon ${current.on ? 'is-on' : ''}`}><Icon size={19} strokeWidth={1.5} aria-hidden="true" /></span>
+      <span className={`dashboard-device-icon ${presentation.active ? 'is-on' : ''}`}><Icon size={19} strokeWidth={1.5} aria-hidden="true" /></span>
       <div className="dashboard-selected-copy">
         <span className="device-focus-eyebrow">SELECTED DEVICE</span>
         <h3 id="device-control-title" tabIndex={-1} title={device.name}>{device.name}</h3>
@@ -84,9 +85,10 @@ function DashboardDeviceCard({ device, selected }: { device: DeviceDefinition; s
   const selectDevice = useHomeStore((state) => state.selectDevice);
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
   const Icon = DEVICE_ICONS[device.kind];
-  return <button type="button" className={`dashboard-device-row dashboard-device-card has-cinematic-artwork ${selected ? 'is-selected' : ''}`} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
+  const presentation = hotspotPresentation(device, current);
+  return <button type="button" className={`dashboard-device-row dashboard-device-card has-cinematic-artwork ${selected ? 'is-selected' : ''}`} data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
     <CinematicArtwork artwork={deviceArtwork(device)} />
-    <span className="device-card-top"><Icon size={18} strokeWidth={1.5} aria-hidden="true" /><span className={`dashboard-device-indicator ${current.on || isMonitor(device.kind) ? 'is-on' : ''}`} aria-hidden="true" /></span>
+    <span className="device-card-top"><Icon size={18} strokeWidth={1.5} aria-hidden="true" /><span className={`dashboard-device-indicator ${presentation.active ? 'is-on' : ''}`} aria-hidden="true" /></span>
     <span className="dashboard-device-copy"><span title={device.name}>{device.name}</span><small>{deviceStatus(device, current)}</small></span>
   </button>;
 }

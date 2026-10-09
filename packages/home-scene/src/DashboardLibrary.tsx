@@ -12,7 +12,7 @@ import { ScenePreferencesPanel } from './ScenePreferencesPanel';
 import { isEmbeddedScene } from './embeddedHost';
 import type { LiveEnvironment } from './environment/useLiveEnvironment';
 import { libraryCardPageSize } from './dashboardCardPresentation';
-import { gasStatusTone } from './gasSimulation';
+import { hotspotPresentation } from './hotspotPresentation';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { deviceArtwork, roomArtwork } from './cinematicArtwork';
 import './dashboard-cards.css';
@@ -57,11 +57,12 @@ function LibraryDeviceCard({ device, onSelect }: { device: DeviceDefinition; onS
   const storedState = useHomeStore((state) => state.deviceStates[device.id]);
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
   const Icon = DEVICE_ICONS[device.kind];
-  return <button className="library-item library-device-card has-cinematic-artwork" data-library-device={device.id} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} aria-label={`${device.name}, ${getRoom(device.roomId).name}, ${deviceStatus(device, current)}. Open full controls`} onClick={onSelect}>
+  const presentation = hotspotPresentation(device, current);
+  return <button className="library-item library-device-card has-cinematic-artwork" data-library-device={device.id} data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-label={`${device.name}, ${getRoom(device.roomId).name}, ${deviceStatus(device, current)}. Open full controls`} onClick={onSelect}>
     <CinematicArtwork artwork={deviceArtwork(device)} />
     <span className="library-card-top"><span className="library-card-symbol"><Icon size={22} strokeWidth={1.4} aria-hidden="true" /></span><span className="library-card-destination">Controls<ChevronRight size={14} aria-hidden="true" /></span></span>
     <span className="library-card-identity"><small>{getRoom(device.roomId).name}</small><strong>{device.name}</strong></span>
-    <span className={`library-card-footer library-card-state ${current.on ? 'library-active' : ''}`}><span className="library-card-state-dot" aria-hidden="true" />{deviceStatus(device, current)}</span>
+    <span className={`library-card-footer library-card-state ${presentation.active ? 'library-active' : ''}`}><span className="library-card-state-dot" aria-hidden="true" />{deviceStatus(device, current)}</span>
   </button>;
 }
 

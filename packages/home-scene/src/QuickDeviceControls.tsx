@@ -6,7 +6,7 @@ import { deviceActionFeedback, deviceStatus, isMonitor } from './deviceCapabilit
 import { DEVICE_ICONS } from './DeviceControlCard';
 import { PrimaryDeviceRange } from './PrimaryDeviceRange';
 import { primaryDeviceAction, primaryDeviceRange } from './quickDevicePresentation';
-import { gasStatusTone } from './gasSimulation';
+import { hotspotPresentation } from './hotspotPresentation';
 import { useHomeStore } from './state';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { deviceArtwork } from './cinematicArtwork';
@@ -31,6 +31,7 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
   const range = primaryDeviceRange(device, current);
   const Icon = DEVICE_ICONS[device.kind];
   const ActionIcon = action.isSwitch ? Power : Icon;
+  const presentation = hotspotPresentation(device, current);
 
   useEffect(() => {
     // Focusing a button does not summon a mobile keyboard or scroll the house away.
@@ -59,14 +60,14 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
   }, [deviceId, onClose]);
 
   if (!visible) return null;
-  return <section ref={panel} id="quick-device-controls" className={`quick-device-controls ${range ? 'has-primary-range' : ''}`} data-device-active={current.on} data-device-tone={gasStatusTone(device.kind, current)} role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
+  return <section ref={panel} id="quick-device-controls" className={`quick-device-controls ${range ? 'has-primary-range' : ''}`} data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
     <div className="quick-device-heading has-cinematic-artwork">
       <CinematicArtwork artwork={deviceArtwork(device)} presentation="identity" />
       <span className="quick-device-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.5} /></span>
       <div className="quick-device-identity"><p className="quick-device-room">{getRoom(device.roomId).name}</p><h2 id="quick-device-title">{device.name}</h2></div>
       <button type="button" className="quick-device-close" aria-label="Close quick controls" onClick={() => onClose()}><X size={18} aria-hidden="true" /></button>
     </div>
-    <p id="quick-device-state" className={`quick-device-state ${current.on ? 'is-on' : ''}`} aria-live="polite"><span aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}<span className="quick-device-value">{range?.text ?? (isMonitor(device.kind) ? 'Demo readings' : '')}</span></p>
+    <p id="quick-device-state" className={`quick-device-state ${presentation.active ? 'is-on' : ''}`} aria-live="polite"><span aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}<span className="quick-device-value">{range?.text ?? (isMonitor(device.kind) ? 'Demo readings' : '')}</span></p>
     {controllable ? <PrimaryDeviceRange device={device} current={current} location="quick" /> : <p className="device-hint">View only</p>}
     <div className="quick-device-actions">
       <button ref={power} type="button" className="quick-device-toggle" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span>{action.isSwitch ? <span className="quick-device-switch" aria-hidden="true"><span /></span> : null}</button>

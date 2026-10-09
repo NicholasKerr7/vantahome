@@ -3,6 +3,7 @@ import { fireEvent, render } from "@testing-library/react-native";
 import DeviceCollectionCard from "../DeviceCollectionCard";
 import CinematicCardArtwork from "../../features/cinematic-artwork/CinematicCardArtwork";
 import { deviceArtwork } from "../../features/cinematic-artwork/artwork";
+import { theme } from "../../theme/theme";
 
 jest.mock("@expo/vector-icons", () => ({
   Ionicons: require("react-native").View,
@@ -160,4 +161,12 @@ test("uses device-specific sensor actions without assuming power-toggle behavior
   );
   expect(onQuickAction).toHaveBeenCalledTimes(1);
   expect(screen.queryByText("Turn off")).toBeNull();
+});
+
+test('alarm and reset-pending states take visual priority over the normal active accent', () => {
+  const props = { ...presentation, onOpen: jest.fn(), onQuickAction: jest.fn() };
+  const screen = render(<DeviceCollectionCard {...props} status="Smoke alarm" value="Smoke" statusTone="alarm" />);
+  expect(screen.getByText('Smoke')).toHaveStyle({ color: theme.colors.alarmText });
+  screen.rerender(<DeviceCollectionCard {...props} status="Incident awaiting reset" value="Reset pending" statusTone="warning" />);
+  expect(screen.getByText('Reset pending')).toHaveStyle({ color: theme.colors.warningText });
 });

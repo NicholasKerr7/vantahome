@@ -54,6 +54,9 @@ button, a, input, summary { outline-offset: 5px; }
 /* Status colors are steady, with readable text alongside every simulated alarm. */
 [data-device-tone='alarm'] { --device-status-accent: var(--device-alarm); }
 [data-device-tone='warning'], [data-device-tone='closed'] { --device-status-accent: var(--device-warning); }
+/* Monitoring has a steady neutral cue; a latched alarm keeps its safety color. */
+[data-device-monitoring='true'] :is(.dashboard-device-icon, .quick-device-icon, .device-sheet-icon, .library-card-symbol, .library-card-state) { color: var(--device-status-accent, var(--ice)); }
+[data-device-monitoring='true'] :is(.dashboard-device-indicator, .quick-device-state > span:first-child, .device-sheet-state > span, .library-card-state-dot) { background: var(--device-status-accent, var(--ice)); box-shadow: none; }
 button { transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 button svg, a svg { flex-shrink: 0; }
 button:disabled { opacity: .75; }

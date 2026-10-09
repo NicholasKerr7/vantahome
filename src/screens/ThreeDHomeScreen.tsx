@@ -49,7 +49,7 @@ function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnap
       onChromeSnapshot={onChromeSnapshot} chromeCommand={chromeCommand} allowChromePreferencesWhileSuspended={allowChromePreferencesWhileSuspended && !workspaceCovered} />}
     {status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected') && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
       <Text style={styles.saveNoticeText}>{saveStatus === 'error'
-        ? 'Changes work for this session, but couldn’t be saved on this device.'
+        ? 'A change couldn’t be completed or saved. Review your controls and try again.'
         : 'Your app session changed. Reload the house to reconnect.'}</Text>
       {saveStatus === 'disconnected' && <Pressable onPress={onRetry} accessibilityLabel="Reconnect house controls" style={styles.retry}><Text style={styles.retryText}>Reconnect</Text></Pressable>}
     </View>}

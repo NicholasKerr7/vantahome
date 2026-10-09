@@ -74,6 +74,54 @@ Last maintained: **2026-10-09**. Read this before rediscovering the project.
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
 
+## Dashboard cleanup, starter scenes and device audit (Preview 49)
+
+- Removed the horizontal rule below the unified header and above scene shortcuts.
+  Existing purple design, room navigation, touch and reduced-motion behavior stay intact.
+- **Scenes → Presets** offers Good morning, Movie time, Good night and Away as
+  editable drafts with cinematic artwork. Review/rename/adjust before saving;
+  nothing runs automatically. Scenes remain account/home-scoped, device-local
+  storage, explicitly labeled in the UI; there is no cloud scene sync.
+- Saved scenes can be edited or deleted with confirmation. Deletion clears their
+  dashboard shortcut/last-used metadata and pauses dependent routines. Deleted
+  scenes are not reseeded; a preset can be added explicitly again.
+- Authenticated virtual scene execution now uses current exact model bindings,
+  validated controls, atomic updates of the latest simulation snapshot and safety
+  reconciliation. It rechecks scope after hydration, rejects mixed hardware/model
+  scenes and cannot publish old-home completion metadata. Comfort starters leave
+  safety/security/exterior lighting untouched. No real-device integration added.
+- All device surfaces share kind-aware activity/alarm presentation: closed covers
+  and disarmed cameras do not glow as active, monitoring remains distinct from
+  power, and acknowledged smoke/CO incidents retain alarm/reset-pending status.
+  Speaker rings stop while paused, muted or silent. Native switches now have one
+  full-row accessible touch target; short-phone routine help no longer clips.
+  Scene sliders announce actual values; scene editing excludes monitor power and
+  read-only observations and normalizes cover/camera/appliance intent.
+- Verification: app/scene TypeScript, targeted native and scene regression suites,
+  diff check and offline/web scene build pass. Actual native web host plus bundled
+  renderer: all **92 devices / 30 kinds**, **2,419 full-control pages**, **152 quick
+  panels**, 30 kind-specific action/illumination roundtrips, at 320×568, 430×932,
+  768×1024 and 1024×768. Four presets fit all reviewed viewports; dialogs centered,
+  44px+ actions and keyboard switch behavior verified. Screenshots reviewed.
+  Browser create/edit/run/delete/cancel/reload flow passed, including TV Off
+  reaching the model and deleted scenes staying absent. Browser used a public
+  local demo; authenticated permission/execution paths have regression coverage,
+  not a new live-account or physical iPad test.
+- Evidence in work cache: `dashboard-final-qa-summary.json`,
+  `dashboard-scene-crud-evidence.json`, `dashboard-final-*.png`,
+  `dashboard-device-*.json`, `scene-presets-*.log`, `dashboard-*-tests.log`.
+  Public fixture retained at `work/dashboard-native-preview.tsx`; temporary repo
+  entry, both test browsers and owned ports 5186/5187 were removed/stopped.
+- Packaged scene: **31,794,347 bytes**, SHA256
+  `72df7951e47c3c680714a07e6383cc1b3c71e533f2301d079b766f2f44b17b4f`.
+  Preview **49** Release build succeeded; exact identity/schemes, packaged scene
+  hash/size, device profile coverage and strict signature verified. Installed and
+  launched on the iPhone; Apple reports **1.0.0 (49)**. Source production metadata
+  restored; release version/assets/auth-redirect checks pass. Evidence:
+  `native-preview-build-49*`, `preview49-package-check.json`, `preview49-install*`,
+  `preview49-installed-app*`, `preview49-launch*`. Physical review of these latest
+  changes by the user is not yet reported.
+
 ## Unified home header and account preferences (Preview 48)
 
 - Replaced the stacked native/embedded headers with one native cinematic header:

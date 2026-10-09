@@ -34,6 +34,14 @@ export class SimulationPersistence {
     return record.state;
   }
 
+  /** Reduce the latest hydrated state in one turn so concurrent scenes retain unrelated changes. */
+  async update(scope: string, reduce: (state: SimulationSnapshot) => SimulationSnapshot): Promise<void> {
+    const record = this.record(scope);
+    await record.loading;
+    const next = reduce(record.state);
+    if (next !== record.state) this.save(scope, next);
+  }
+
   /** Observe save failures without passing storage access into the renderer. */
   subscribe(scope: string, listener: (status: SimulationSaveStatus) => void): () => void {
     const record = this.record(scope);

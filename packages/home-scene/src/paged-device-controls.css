@@ -3,7 +3,7 @@
 .device-control-tabs button { min-width: 0; min-height: 44px; padding: 6px 2px; border-radius: 8px; color: var(--text-soft); background: transparent; font-size: 12px; touch-action: manipulation; }
 .device-control-tabs button[aria-selected='true'] { color: var(--accent-text); background: var(--surface-raised); box-shadow: 0 1px 4px #0003; }
 .device-control-tabs button:disabled { opacity: .42; }
-.device-control-page { min-height: 0; min-width: 0; padding: 2px 3px; overflow: hidden; }
+.device-control-page { container-type: size; container-name: device-control-page; min-height: 0; min-width: 0; padding: 2px 3px; overflow: hidden; }
 .device-control-page .capability-controls { display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 20px; margin: 0; }
 .device-control-page.is-compact .capability-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .device-control-page .capability-action { display: flex; align-items: center; justify-content: center; min-height: 58px; padding: 10px; font-size: 13px; line-height: 1.35; }
@@ -44,6 +44,12 @@
   .device-routine-entry { gap: 8px; }
   .device-routine-entry h3 { font-size: 16px; }
   .device-routine-entry p { font-size: 11px; }
+}
+/* The selected Routines tab supplies the heading when native navigation leaves a short body. */
+@container device-control-page (max-height: 170px) {
+  .device-routine-entry { justify-content: flex-start; gap: 6px; }
+  .device-routine-entry h3 { display: none; }
+  .device-routine-open { flex-shrink: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .device-control-tabs button, .device-control-pagination button, .device-sheet-primary { transition: none; }

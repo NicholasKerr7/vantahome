@@ -21,6 +21,7 @@ export type DeviceCollectionCardProps = {
   value: string;
   caption: string;
   active: boolean;
+  statusTone?: "normal" | "warning" | "alarm";
   artwork?: ArtworkKey;
   quickActionLabel: string;
   onOpen: () => void;
@@ -40,6 +41,7 @@ export default function DeviceCollectionCard({
   value,
   caption,
   active,
+  statusTone = "normal",
   artwork = "device-generic",
   quickActionLabel,
   onOpen,
@@ -52,7 +54,7 @@ export default function DeviceCollectionCard({
   style,
 }: DeviceCollectionCardProps) {
   return (
-    <View style={[styles.card, active && styles.activeCard, style]}>
+    <View style={[styles.card, active && styles.activeCard, style, statusTone === "alarm" && styles.alarmCard, statusTone === "warning" && styles.warningCard]}>
       <CinematicCardArtwork artwork={artwork} testID="device-collection-artwork" />
       <Pressable
         accessibilityLabel={`${name}, ${status}. Full controls`}
@@ -97,6 +99,8 @@ export default function DeviceCollectionCard({
               styles.value,
               value.length > 9 && styles.longValue,
               active && styles.activeValue,
+              statusTone === "alarm" && styles.alarmValue,
+              statusTone === "warning" && styles.warningValue,
             ]}
           >
             {value}
@@ -158,6 +162,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   activeCard: { borderColor: theme.colors.accent2 },
+  alarmCard: { borderColor: theme.colors.alarmText },
+  warningCard: { borderColor: theme.colors.warningText },
+  alarmValue: { color: theme.colors.alarmText },
+  warningValue: { color: theme.colors.warningText },
   identity: {
     flex: 1,
     minHeight: 64,

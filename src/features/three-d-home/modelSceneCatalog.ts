@@ -16,6 +16,9 @@ import { sceneIsVisible, sceneScopeLabel } from "../scenes/sceneScope";
 import type { HomeState, Scene } from "../../store/useHomeStore";
 import { isModelHome } from "./modelHomeScope";
 import { HOST_CONTROL_FIELDS, projectModelSnapshot } from "./modelHomeCatalog";
+import { canManageScenes } from '../scenes/sceneManagement';
+import { simulationSceneBindings } from '../scenes/simulationSceneExecution';
+import { selectVisibleDevices, selectVisibleRooms } from '../../store/useHomeStore';
 
 export const MODEL_SCENE_CATALOG_VERSION = 1;
 
@@ -79,13 +82,13 @@ export function upgradeModelSceneCatalog(
   };
 }
 
-/** Recheck local Owner scope for every catalog publication and execution, including stale callbacks. */
+/** Recheck scene-management authority before publishing local demo or authenticated virtual metadata. */
 export function canShareModelScenes(
   state: HomeState,
   mode: RuntimeMode = runtimePolicy.mode,
 ): boolean {
-  return (
-    isModelHome(state, mode) &&
+  return canManageScenes(state, mode) && (
+    !isModelHome(state, mode) ||
     state.household.some(
       (member) => member.id === state.activeMemberId && member.role === "Owner",
     )
@@ -99,7 +102,7 @@ export function modelPresetForScene(
   mode: RuntimeMode = runtimePolicy.mode,
 ): PresetId | null {
   if (
-    !canShareModelScenes(state, mode) ||
+    !isModelHome(state, mode) || !canShareModelScenes(state, mode) ||
     !isModelPreset(scene.modelPreset) ||
     !MODEL_SCENE_PRESETS.some(
       (preset) =>
@@ -110,7 +113,7 @@ export function modelPresetForScene(
   return scene.modelPreset;
 }
 
-/** Publish only scene metadata from the same visible native collection; actions and private fields stay local. */
+/** Publish only runnable virtual scene metadata from the native collection; actions and private fields stay local. */
 export function modelSceneCatalog(
   state: HomeState,
   mode: RuntimeMode = runtimePolicy.mode,
@@ -118,7 +121,12 @@ export function modelSceneCatalog(
   if (!canShareModelScenes(state, mode))
     return { scenes: [], activeSceneId: null };
   const scenes = state.scenes
-    .filter((scene) => sceneIsVisible(scene, state.rooms, state.devices))
+    .filter((scene) => {
+      if (!sceneIsVisible(scene, selectVisibleRooms(state), selectVisibleDevices(state))) return false;
+      if (isModelHome(state, mode)) return true;
+      try { return simulationSceneBindings(state, scene) !== null; }
+      catch { return false; }
+    })
     .slice(0, MAX_SCENE_CATALOG_ITEMS)
     .map((scene) => ({
       id: scene.id,

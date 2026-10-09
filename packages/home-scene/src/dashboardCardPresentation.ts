@@ -93,7 +93,9 @@ export function deviceCardReading(
           ? "Smoke"
           : readDeviceSetting(device, state, "coDetected") === true
             ? "CO alert"
-            : "Clear",
+            : state.settings?.fireIncidentActive === true
+              ? "Reset pending"
+              : "Clear",
       caption: "Smoke / CO · Simulation sample",
     };
   if (device.kind === "light" && state.on)
