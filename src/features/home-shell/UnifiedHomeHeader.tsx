@@ -1,18 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import CinematicSurface from '../../components/CinematicSurface';
 import Pressable from '../../components/Pressable';
 import VantaHomeMark from '../../components/VantaHomeMark';
 import DashboardAccountButton from '../account/DashboardAccountButton';
-import { useScenePresentationPaused } from './ScenePresentationContext';
 import { homeHeaderTime, homeHeaderWeather } from './homeHeaderPresentation';
 import { useHomeStore } from '../../store/useHomeStore';
 import { theme } from '../../theme/theme';
 import type { HomeChromeSnapshot } from '../../../packages/home-scene/src/homeChromeProtocol';
 
 type Props = {
-  scene: HomeChromeSnapshot | null; ready: boolean; active: boolean;
+  scene: HomeChromeSnapshot | null; ready: boolean;
   onEnvironment: () => void; onVoice: () => void; onAccount: () => void;
 };
 
@@ -28,17 +26,16 @@ function conditionIcon(scene: HomeChromeSnapshot | null): React.ComponentProps<t
 }
 
 /** One native header keeps account identity private while the scene supplies public atmosphere. */
-export default function UnifiedHomeHeader({ scene, ready, active, onEnvironment, onVoice, onAccount }: Props) {
+export default function UnifiedHomeHeader({ scene, ready, onEnvironment, onVoice, onAccount }: Props) {
   const { width, height, fontScale } = useWindowDimensions();
   const wide = Math.min(width, height) >= 600 && fontScale <= 1.3;
-  const covered = useScenePresentationPaused();
   const unit = useHomeStore(state => state.profile.tempUnit ?? 'C');
   const format = useHomeStore(state => state.profile.timeFormat ?? '12h');
   const time = homeHeaderTime(scene?.localTime, format);
   const weather = homeHeaderWeather(scene, unit);
   const location = scene?.locationName ?? 'Your property';
-  const motion = active && !covered && ready && !scene?.motionDisabled && !scene?.systemReducedMotion;
-  return <CinematicSurface variant="orbit" active={motion} style={styles.surface}>
+  // Match the safe area, navigation and embedded stage instead of restarting a gradient in this short row.
+  return <View style={styles.surface}>
     <View testID="unified-home-header" style={[styles.row, wide && styles.wideRow]}>
       <View style={[styles.brand, wide && styles.wideBrand]} accessibilityLabel="VantaHome. Simulation, no real device control" accessible>
         <View style={styles.mark}><VantaHomeMark size={32} decorative /></View>
@@ -68,11 +65,11 @@ export default function UnifiedHomeHeader({ scene, ready, active, onEnvironment,
       </Pressable>
       <DashboardAccountButton compact={!wide} onPress={onAccount} />
     </View>
-  </CinematicSurface>;
+  </View>;
 }
 
 const styles = StyleSheet.create({
-  surface: { flexShrink: 0 },
+  surface: { flexShrink: 0, backgroundColor: theme.colors.bg0 },
   row: { minHeight: 68, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
   wideRow: { minHeight: 76, paddingHorizontal: 18, gap: 14 },
   brand: { width: 44, alignItems: 'center', justifyContent: 'center', gap: 2 },

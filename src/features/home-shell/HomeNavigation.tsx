@@ -15,7 +15,7 @@ const DESTINATIONS = [
 
 type Props = PropsWithChildren<{ selected: HomeSection; onSelect: (section: HomeSection) => void; availableSections?: Readonly<Partial<Record<HomeSection, boolean>>> }>;
 
-/** Keep primary destinations visible, placing navigation beside the landscape tablet canvas. */
+/** Keep destinations together: a centered tablet rail or an evenly spaced portrait dock. */
 export default function HomeNavigation({ selected, onSelect, children, availableSections }: Props) {
   const { width, height } = useWindowDimensions();
   const rail = width >= 900 && width > height;
@@ -42,11 +42,11 @@ const styles = StyleSheet.create({
   workspace: { flex: 1, minHeight: 0, minWidth: 0, backgroundColor: theme.colors.bg0 },
   landscape: { flexDirection: 'row' },
   content: { flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' },
-  dock: { flexDirection: 'row', gap: 4, paddingHorizontal: 8, paddingTop: 7, paddingBottom: 5, borderTopWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.bg0 },
-  rail: { width: 86, flexDirection: 'column', gap: 12, paddingTop: 20, paddingHorizontal: 8, borderTopWidth: 0, borderRightWidth: 1 },
+  dock: { flexDirection: 'row', flexShrink: 0, gap: 4, paddingHorizontal: 8, paddingTop: 7, paddingBottom: 5, backgroundColor: theme.colors.bg0 },
+  rail: { width: 86, flexDirection: 'column', justifyContent: 'center', gap: 8, paddingTop: 12, paddingBottom: 12 },
   destination: { flex: 1, minWidth: 0, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 3, paddingVertical: 6, borderRadius: 17 },
   railDestination: { flex: 0, minHeight: 68 },
-  active: { backgroundColor: theme.colors.card },
+  active: { backgroundColor: theme.colors.bg1 },
   label: { fontSize: 10, fontWeight: '500', color: theme.colors.subtext },
   activeLabel: { color: theme.colors.accentText },
   selection: { width: 12, height: 2, borderRadius: 1, backgroundColor: 'transparent' },

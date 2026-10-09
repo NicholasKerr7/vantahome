@@ -13,7 +13,7 @@
 .card-inspector .dashboard-inspector-heading h2 { margin-top: 4px; }
 .device-focus-eyebrow { display: block; color: var(--muted); font-size: 8px; line-height: 10px; font-weight: 600; letter-spacing: 1.3px; }
 .inspector-device-count { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 10px; color: var(--ice); font-size: 12px; font-variant-numeric: tabular-nums; }
-.card-inspector .device-focus-card { display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 22px; background: linear-gradient(145deg, var(--surface-raised), var(--surface)); }
+.card-inspector .device-focus-card { display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
 .card-inspector .device-focus-card[data-device-active='true'] { border-color: rgb(var(--accent-rgb) / 33.3%); }
 .card-inspector .dashboard-selected-copy h3 { margin-top: 3px; font-size: 13px; }
 .card-inspector .dashboard-device-icon { width: 35px; height: 35px; border-radius: 12px; }

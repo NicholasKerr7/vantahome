@@ -137,7 +137,11 @@ svg { display: block; }
 .view-controls { display: flex; align-items: center; padding: 4px; gap: 3px; border: 1px solid var(--line); border-radius: 8px; background: rgb(var(--accent-rgb) / 91%); box-shadow: 0 3px 10px rgb(var(--background-rgb) / 3.9%); }
 .view-controls button { display: flex; align-items: center; gap: 5px; background: transparent; color: var(--accent-ink); border-radius: 5px; padding: 7px 9px; font-size: 10px; }
 .view-controls button[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); box-shadow: 0 1px 3px rgb(var(--background-rgb) / 6.3%); }
-.view-controls button:hover { background: var(--accent); color: var(--accent-ink); }
+/* Only the selected view receives the accent fill. Touch hover can persist after
+   exiting a mode or removing Recenter, so keep hover distinct and pointer-only. */
+@media (hover: hover) and (pointer: fine) {
+  .view-controls button:not([aria-pressed='true']):hover { background: var(--surface-raised); color: var(--accent-text); }
+}
 .view-controls :focus-visible { outline-color: var(--accent); }
 .is-night .viewport-top .eyebrow, .is-night .viewport-top p, .is-night .scene-instruction { color: var(--text); }
 .is-night .viewport-top h1 { color: var(--text); }

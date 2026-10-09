@@ -115,7 +115,7 @@ export default function ThreeDHomeScreen() {
   }, [retained]);
   return <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
     <HomeWorkspace section="home">
-    <UnifiedHomeHeader scene={visibleChrome} ready={sceneReady && Boolean(visibleChrome)} active={focused && !suspended && accessCurrent && panel === null}
+    <UnifiedHomeHeader scene={visibleChrome} ready={sceneReady && Boolean(visibleChrome)}
       onEnvironment={() => sendChromeCommand({ type: 'open-environment' })} onVoice={() => setPanel('voice')} onAccount={() => setPanel('account')} />
     {needsModelSetup ? (focused && active ? <ModelSimulationSetup /> : <View style={styles.scene} />) : retained && sceneEnabled ? <SceneSession key={sessionKey} covered={panel !== null || suspended || !accessCurrent} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')}
       onSceneStatus={updateRendererStatus} onChromeSnapshot={updateChrome} chromeCommand={command?.key === sessionKey ? command.request : undefined}

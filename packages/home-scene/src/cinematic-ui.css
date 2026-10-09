@@ -1,7 +1,8 @@
 /* The home stays one continuous stage. Translucency uses flat composited color,
    not animated blur, so the property keeps the rendering budget. */
 .device-viewport { background: var(--background); }
-.dashboard-shell { background: linear-gradient(145deg, var(--background), var(--background-raised)); color: var(--text); }
+/* The native header, safe areas and navigation share this exact base color. */
+.dashboard-shell { background: var(--background); color: var(--text); }
 .dashboard-brand small, .dashboard-section-label { color: var(--muted); }
 .dashboard-address { min-height: 44px; padding: 0; color: var(--text-soft); background: transparent; }
 .dashboard-address svg { color: var(--ice); }
@@ -15,8 +16,8 @@
 
 /* A full-size canvas, with restrained edge light and crisp overlays. */
 .dashboard-shell .viewport,
-.dashboard-shell .viewport.is-night { isolation: isolate; border: 1px solid var(--line); border-radius: 26px; background: var(--background); box-shadow: inset 0 1px rgb(var(--accent-text-rgb) / 8.6%), 0 16px 38px #0004; }
-.dashboard-shell .viewport::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: inherit; background: linear-gradient(180deg, rgb(0 0 0 / 18%) 0%, transparent 22%, transparent 74%, rgb(0 0 0 / 23.9%) 100%); box-shadow: inset 0 0 0 1px rgb(var(--text-rgb) / 3.1%); }
+.dashboard-shell .viewport.is-night { isolation: isolate; border: 1px solid var(--line); border-radius: 26px; background: var(--background); box-shadow: inset 0 1px rgb(var(--accent-text-rgb) / 8.6%); }
+.dashboard-shell .viewport::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: inherit; background: linear-gradient(180deg, rgb(0 0 0 / 12%) 0%, transparent 24%, transparent 76%, rgb(0 0 0 / 16%) 100%); }
 .dashboard-shell .scene-container,
 .dashboard-shell.is-embedded .scene-container { inset: 0; }
 .dashboard-shell .viewport-top { top: 18px; left: 20px; right: 18px; gap: 14px; }
@@ -41,7 +42,9 @@
 .dashboard-room-select, .dashboard-room-choice > span { color: var(--text); }
 .dashboard-room-select svg { color: var(--ice); }
 .dashboard-room-choice small { color: var(--muted); }
-.dashboard-shell.is-embedded .dashboard-room-bar { padding: 3px 8px; border: 1px solid var(--line); border-radius: 18px; background: rgb(var(--surface-rgb) / 85.1%); box-shadow: inset 0 1px rgb(var(--text-rgb) / 3.9%), 0 10px 24px #0003; }
+.dashboard-shell.is-embedded .dashboard-room-bar { padding: 3px 8px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+/* A 44px inner control fits the 52px row without nested borders crossing its edge. */
+.dashboard-shell.is-embedded .dashboard-room-bar .dashboard-floor-switch { padding: 0; border: 0; background: transparent; }
 .dashboard-room-list button { color: var(--text-soft); }
 .dashboard-room-list button svg { color: var(--muted); }
 .dashboard-room-list button:hover { background: var(--surface-raised); }
@@ -90,7 +93,7 @@
 .dashboard-empty p, .dashboard-no-devices { color: var(--text-soft); }
 
 /* Modal sheets keep the familiar paged controls in a brighter, softer HUD. */
-.dashboard-library, .device-control-sheet { color: var(--text); border-color: var(--line); background: linear-gradient(145deg, rgb(var(--surface-raised-rgb) / 98%), rgb(var(--surface-rgb) / 98.8%)); box-shadow: inset 0 1px rgb(var(--text-rgb) / 11%), 0 24px 90px #0009; }
+.dashboard-library, .device-control-sheet { color: var(--text); border-color: var(--line); background: var(--surface); box-shadow: inset 0 1px rgb(var(--text-rgb) / 11%), 0 24px 90px #0009; }
 .dashboard-library { border-radius: 28px; }
 .dashboard-library::backdrop, .device-control-sheet::backdrop { background: rgb(var(--background-rgb) / 73.3%); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .library-heading h2 { color: var(--text); letter-spacing: -.7px; }

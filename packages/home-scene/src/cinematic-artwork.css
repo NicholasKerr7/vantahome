@@ -2,12 +2,13 @@
    existing text, indicators and controls above this unchanging image. */
 .has-cinematic-artwork { position: relative; isolation: isolate; overflow: hidden; }
 .has-cinematic-artwork > :not(.cinematic-artwork) { position: relative; z-index: 1; }
-.cinematic-artwork { display: block; overflow: hidden; pointer-events: none; user-select: none; background: var(--surface-raised); }
+.cinematic-artwork { --artwork-shadow-rgb: 20 18 26; display: block; overflow: hidden; pointer-events: none; user-select: none; background: var(--surface); }
 .cinematic-artwork--backdrop,
 .cinematic-artwork--identity { position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
 .cinematic-artwork img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.cinematic-artwork-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(var(--background-rgb) / 18%) 0%, rgb(var(--background-rgb) / 29%) 30%, rgb(var(--background-rgb) / 86%) 65%, rgb(var(--background-rgb) / 98%) 100%); }
-.cinematic-artwork--identity .cinematic-artwork-shade { background: linear-gradient(90deg, rgb(var(--background-rgb) / 97%) 0%, rgb(var(--background-rgb) / 87%) 44%, rgb(var(--background-rgb) / 75%) 100%); }
+/* One neutral shade protects text while keeping reference images free of a purple wash. */
+.cinematic-artwork-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(var(--artwork-shadow-rgb) / 68%) 0%, rgb(var(--artwork-shadow-rgb) / 60%) 35%, rgb(var(--artwork-shadow-rgb) / 94%) 100%); }
+.cinematic-artwork--identity .cinematic-artwork-shade { background: linear-gradient(90deg, rgb(var(--artwork-shadow-rgb) / 94%) 0%, rgb(var(--artwork-shadow-rgb) / 85%) 44%, rgb(var(--artwork-shadow-rgb) / 75%) 100%); }
 .cinematic-artwork--identity img { object-position: right center; }
 .cinematic-artwork--thumbnail { position: relative; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 10px; }
 .cinematic-artwork--thumbnail .cinematic-artwork-shade { background: linear-gradient(135deg, rgb(var(--background-rgb) / 6%), rgb(var(--background-rgb) / 42%)); }
@@ -32,7 +33,7 @@
 .library-space-card.has-cinematic-artwork .library-card-symbol { background: rgb(var(--room-artwork-shade) / 68%); }
 .dashboard-device-card.has-cinematic-artwork .device-card-top { color: var(--text); }
 .dashboard-device-card.has-cinematic-artwork .dashboard-device-indicator { box-shadow: 0 0 0 3px rgb(var(--background-rgb) / 78%); }
-.device-focus-card > .cinematic-artwork .cinematic-artwork-shade { background: linear-gradient(180deg, rgb(var(--background-rgb) / 75%), rgb(var(--background-rgb) / 92%) 38%, rgb(var(--background-rgb) / 98%) 70%); }
+.device-focus-card > .cinematic-artwork .cinematic-artwork-shade { background: linear-gradient(180deg, rgb(var(--artwork-shadow-rgb) / 75%), rgb(var(--surface-rgb) / 96%) 38%, var(--surface) 70%); }
 
 /* Compact navigation uses thumbnails without changing row heights. */
 .dashboard-room-list button > .cinematic-artwork--thumbnail:first-of-type,

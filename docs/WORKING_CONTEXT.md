@@ -74,6 +74,47 @@ Last maintained: **2026-10-09**. Read this before rediscovering the project.
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
 
+## View selection and dashboard surface polish (Preview 50)
+
+- Fixed the apparent double selection after leaving Immersive/resetting the view.
+  Camera state already selected only one mode; persistent hover painted a second
+  mode with the same accent. Only `aria-pressed=true` now gets the selected fill;
+  fine-pointer hover is a different shade, and touch gets no sticky hover fill.
+  Reset/exit behavior, device state and camera geometry are unchanged.
+- Removed the native landscape rail's right border and centered its compact,
+  evenly spaced destinations. Portrait navigation retains its height and evenly
+  sized targets. Removed the dock's top separator and used solid selected purple.
+- Header, safe areas, native navigation and embedded dashboard now share the exact
+  base purple. Removed the short header's cropped ambient layer and the embedded
+  full-page gradient that caused bright bands at native boundaries. Motion within
+  the property and reduced-motion behavior remain intact. Card artwork uses a
+  single neutral fade, embedded panels have consistent solid surfaces and the viewport
+  vignette is lighter. Floor-switch inner padding/border no longer overflow the
+  52px room strip; its buttons retain 44px touch height.
+- **86 focused tests** pass across reset/camera/access, navigation and host/cards;
+  native/scene TypeScript, diff checks and scene build pass. Local demo browser
+  verification passed **36 mode/reset checks across four layouts** (320×568,
+  430×932, 768×1024, 1024×768), plus six touch gestures at 393×852 with coarse
+  pointer/no-hover in both host and sandboxed renderer. Real canvas drag/recenter,
+  upper-floor and gate exits, focus, reduced motion, 44px targets, rail centering,
+  removed borders and no page overflow verified. Final screenshots and card text
+  reviewed. Evidence: `work/dashboard-blend-{final,touch}-evidence.json`, final
+  PNGs, `dashboard-navigation-polish-tests.log`, `reset-view-regression-tests.log`.
+  An old Metro graph initially served stale native styles; restarting the owned
+  test server with a clean graph resolved it. Final assertions also verify the
+  absent header SVG and actual navigation colors/borders. No browser runtime
+  errors; existing development require-cycle/RN warnings remain unchanged. Final
+  summary: `work/dashboard-blend-qa-summary.json`. Temporary fixture, owned browser
+  and servers on 5186/5187 removed/stopped after verification.
+- Preview **50** Release built from production `index.ts`, packaged scene identity
+  and strict signature verified, installed and launched on the iPhone; Apple
+  reports **1.0.0 (50)**. Production source metadata restored; release version,
+  assets and redirect checks pass. Native scene **31,794,199 bytes**, SHA256
+  `b6b4b1eb25901dd836c52ac54e56422065eaf958c73aaeb28359ed6b36e41390`.
+  Receipts: `native-preview-build-50*`, `preview50-package-check.json`,
+  `preview50-install*`, `preview50-installed-app*`, `preview50-launch*`. Physical
+  presentation review remains user-owned; no live-account or hardware testing added.
+
 ## Dashboard cleanup, starter scenes and device audit (Preview 49)
 
 - Removed the horizontal rule below the unified header and above scene shortcuts.
