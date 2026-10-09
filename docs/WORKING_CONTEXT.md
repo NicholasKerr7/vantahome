@@ -74,6 +74,49 @@ Last maintained: **2026-10-09**. Read this before rediscovering the project.
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
 
+## Responsive room controls (Preview 51)
+
+- Fixed `#room-controls > aside` children shrinking below their assigned width:
+  a legacy narrow-layout `align-items: start` survived the switch from grid to
+  flex. The dashboard inspector now explicitly stretches its heading, selected
+  card, room inventory and footer across the panel.
+- Room cards fill the remaining height and add complete two-column rows based on
+  the measured grid and CSS minimum card height. Fractional measurements avoid
+  fitting a clipped extra row; an odd final card uses the row's full width.
+  Short panels retain readable cards, paging and 44px actions. Keyboard rings
+  are inset to remain visible at the panel edges.
+- Pagination preserves selected or focused devices through resizing and manual
+  browsing. A new selection clears stale page anchors, including returning to a
+  previously selected device. Hidden portrait panels retain their last capacity;
+  returning from a shared property overview observes the newly mounted grid.
+  Permissions, device state, portrait full-width model and hotspot controls are
+  unchanged. No page scrolling or dependencies added.
+- **126 focused tests** pass, including 17 inspector regressions for row capacity,
+  focus, selection, manual paging, room/access updates and overview transitions.
+  Native/scene TypeScript, scene builds and diff checks pass. Eleven browser
+  viewports (320×568 through 1440×900) passed 31 layout measurements and 12
+  portrait quick/full-control checks: full allocated width/height, adaptive rows,
+  no document overflow, 44px targets and reduced motion. Screenshots reviewed.
+  Evidence: `work/room-controls-{inspector-tests,scene-build,native-types}.log`,
+  `room-controls-final-evidence.json` and `room-controls-final-*.png`.
+- Final-bundle pointer/keyboard, tall-to-short resizing, portrait/landscape
+  rotation, hotspot reselection and genuine coarse-pointer tablet touch checks
+  pass. Selection/focus stay intact, full controls open/close correctly, and no
+  browser runtime errors occurred. Evidence: `room-controls-interactions.json`,
+  `room-controls-touch.json`, `room-controls-reselection.json`; summary:
+  `room-controls-qa-summary.json`. Temporary fixture, owned browser and ports
+  5186/5187 removed/stopped; production entry remains `index.ts`.
+- Preview **51** Release built from production `index.ts`, with exact packaged
+  scene identity, device profile coverage and strict signature verified. Installed
+  and launched on the iPhone; Apple reports **1.0.0 (51)**. Production source
+  metadata restored; release version/assets/redirect checks pass. Native scene:
+  **31,795,814 bytes**, SHA256
+  `4dbd0ca4b8629af378f370e0e446b174ea6d19d4e6a36ce0223812e178c53b2b`.
+  Receipts: `native-preview-build-51*`, `preview51-package-check.json`,
+  `preview51-install*`, `preview51-installed-app*`, `preview51-launch*`.
+  Physical presentation review remains user-owned; iPad physical testing remains
+  deferred. Browser verification uses the public local demo, not live accounts.
+
 ## View selection and dashboard surface polish (Preview 50)
 
 - Fixed the apparent double selection after leaving Immersive/resetting the view.

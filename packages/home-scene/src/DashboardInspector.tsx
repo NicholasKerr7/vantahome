@@ -13,6 +13,7 @@ import { useHomeStore } from './state';
 import { deviceCardReading } from './dashboardCardPresentation';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { deviceArtwork, roomArtwork } from './cinematicArtwork';
+import { useInspectorDevicePage } from './useInspectorDevicePage';
 import './dashboard-inspector.css';
 import './dashboard-cards.css';
 
@@ -20,8 +21,6 @@ interface DashboardInspectorProps {
   onFullControls: (id: DeviceId) => void;
   onBrowseDevices: () => void;
 }
-
-const DEVICES_PER_PAGE = 2;
 
 /** Give a shared overview a useful, bounded route back to the person's assigned controls. */
 function PropertyOverviewCompanion() {
@@ -86,14 +85,14 @@ function DashboardDeviceCard({ device, selected }: { device: DeviceDefinition; s
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
   const Icon = DEVICE_ICONS[device.kind];
   const presentation = hotspotPresentation(device, current);
-  return <button type="button" className={`dashboard-device-row dashboard-device-card has-cinematic-artwork ${selected ? 'is-selected' : ''}`} data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
+  return <button type="button" className={`dashboard-device-row dashboard-device-card has-cinematic-artwork ${selected ? 'is-selected' : ''}`} data-inspector-device={device.id} data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
     <CinematicArtwork artwork={deviceArtwork(device)} />
     <span className="device-card-top"><Icon size={18} strokeWidth={1.5} aria-hidden="true" /><span className={`dashboard-device-indicator ${presentation.active ? 'is-on' : ''}`} aria-hidden="true" /></span>
     <span className="dashboard-device-copy"><span title={device.name}>{device.name}</span><small>{deviceStatus(device, current)}</small></span>
   </button>;
 }
 
-/** Give selected controls and two room tiles separate spaces within a fixed-height panel. */
+/** Give selected controls and as many complete tile rows as fit their bounded panel. */
 export function DashboardInspector({ onFullControls, onBrowseDevices }: DashboardInspectorProps) {
   const roomId = useHomeStore((state) => state.roomId);
   const selectedId = useHomeStore((state) => state.selectedDevice);
@@ -102,15 +101,7 @@ export function DashboardInspector({ onFullControls, onBrowseDevices }: Dashboar
   const roomDevices = DEVICES.filter((device) => device.roomId === room.id && canViewSceneDevice(access, device.id));
   const selected = getDevice(selectedId);
   const selectedDevice = selected?.roomId === room.id && canViewSceneDevice(access, selected.id) ? selected : undefined;
-  const selectionKey = `${room.id}:${selectedDevice?.id ?? ''}`;
-  const selectedIndex = roomDevices.findIndex((device) => device.id === selectedDevice?.id);
-  const selectedPage = Math.floor(Math.max(0, selectedIndex) / DEVICES_PER_PAGE);
-  const [pageRequest, setPageRequest] = useState({ selectionKey, page: selectedPage });
-  const pageCount = Math.max(1, Math.ceil(roomDevices.length / DEVICES_PER_PAGE));
-  // A hotspot selection reveals its page; manual paging never changes the device.
-  const page = Math.min(pageCount - 1, pageRequest.selectionKey === selectionKey ? pageRequest.page : selectedPage);
-  const pageStart = page * DEVICES_PER_PAGE;
-  const visibleDevices = roomDevices.slice(pageStart, pageStart + DEVICES_PER_PAGE);
+  const { gridRef, page, pageCount, pageStart, visibleDevices, goToPage } = useInspectorDevicePage(roomDevices, room.id, selectedDevice?.id);
   const rangeLabel = roomDevices.length ? `${pageStart + 1}–${pageStart + visibleDevices.length} of ${roomDevices.length}` : '0 devices';
 
   if (!access.fullHome && !roomDevices.length && (canViewPropertyOverview(access) || canExploreInteriorLayout(access))) {
@@ -122,14 +113,14 @@ export function DashboardInspector({ onFullControls, onBrowseDevices }: Dashboar
     {selectedDevice ? <SelectedDeviceSummary device={selectedDevice} onFullControls={onFullControls} /> : <section className="dashboard-empty"><h3>No device selected</h3><p>{roomDevices.length ? 'Select a device below or in your home.' : 'Choose another room to explore its devices.'}</p></section>}
     <section className="dashboard-room-devices" aria-labelledby="dashboard-devices-heading">
       <div className="dashboard-list-heading"><h3 id="dashboard-devices-heading">In this room</h3><span aria-live="polite">{rangeLabel}</span></div>
-      <div id="dashboard-room-device-list" className="dashboard-device-list device-card-grid">
+      <div ref={gridRef} id="dashboard-room-device-list" className="dashboard-device-list device-card-grid">
         {visibleDevices.map((device) => <DashboardDeviceCard key={device.id} device={device} selected={device.id === selectedDevice?.id} />)}
         {!roomDevices.length ? <p className="dashboard-no-devices">A quiet space, ready to explore.</p> : null}
       </div>
     </section>
     <footer className="dashboard-device-footer">
-      <button type="button" className="dashboard-page-button" aria-label="Previous devices" aria-controls="dashboard-room-device-list" disabled={page === 0} onClick={() => setPageRequest({ selectionKey, page: page - 1 })}><ChevronLeft size={18} aria-hidden="true" /></button>
-      <button type="button" className="dashboard-page-button" aria-label="Next devices" aria-controls="dashboard-room-device-list" disabled={page === pageCount - 1} onClick={() => setPageRequest({ selectionKey, page: page + 1 })}><ChevronRight size={18} aria-hidden="true" /></button>
+      <button type="button" className="dashboard-page-button" aria-label="Previous devices" aria-controls="dashboard-room-device-list" disabled={page === 0} onClick={() => goToPage(page - 1)}><ChevronLeft size={18} aria-hidden="true" /></button>
+      <button type="button" className="dashboard-page-button" aria-label="Next devices" aria-controls="dashboard-room-device-list" disabled={page === pageCount - 1} onClick={() => goToPage(page + 1)}><ChevronRight size={18} aria-hidden="true" /></button>
       <button type="button" className="dashboard-browse-devices" onClick={onBrowseDevices}><Grid2X2 size={15} aria-hidden="true" />All devices</button>
     </footer>
   </aside>;

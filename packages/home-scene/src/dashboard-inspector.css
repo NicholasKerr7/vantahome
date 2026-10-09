@@ -1,8 +1,10 @@
-/* Three compact rows and one action rail fit the shortest landscape tablet. */
+/* The panel fills its workspace cell; detailed sheets keep their own scrolling. */
 .device-viewport .device-inspector.dashboard-inspector {
   container: dashboard-panel / size;
   display: flex;
   flex-direction: column;
+  /* Legacy narrow layouts align grid items to start; a column must stretch its cards. */
+  align-items: stretch;
   gap: 6px;
   width: 100%;
   height: 100%;
