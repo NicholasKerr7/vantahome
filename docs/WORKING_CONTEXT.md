@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-08**. Read this before rediscovering the project.
+Last maintained: **2026-10-09**. Read this before rediscovering the project.
 
 ## Locations and branch
 
@@ -73,6 +73,47 @@ Last maintained: **2026-10-08**. Read this before rediscovering the project.
   Release packaging, exact identity/schemes, profile device coverage, and strict
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
+
+## Clearer room artwork (Preview 46)
+
+- Lightened **Your rooms** cards in the embedded model and native room/library
+  collections. The embedded room-only style replaces the purple image wash with
+  a nearly clear upper image and a neutral-plum fade behind bottom-aligned labels.
+  Floor/icon badges and footer labels retain readable contrast.
+- Native artwork has explicit `room-backdrop` and `room-row` variants, each with
+  one localized shade. DeviceBrowser groups labels at the bottom; ManageRooms
+  preserves its compact centered text with a localized band and subtle text
+  shadow. Other device/scene/routine artwork treatments are unchanged. No new
+  media assets, dependencies, animations or loading gates; access/actions and
+  bounded pagination remain unchanged.
+- Verification: app/scene TypeScript, **31 existing scene tests**, **27 existing
+  native component tests**, and bounded web/offline scene build passed. Embedded
+  browser: **21 checks**, 320/390px phones and both tablet orientations, all 20
+  room images decoded, no scrolling, room selection works, no browser errors.
+  Before/after and light/dark room captures were visually reviewed.
+- Native components rendered through Expo web: eight captures and eight scoped
+  action groups across 320/430px phones, 768px portrait and 1024px landscape
+  tablets passed. Room paging, selection, and ManageRooms details/navigation
+  work; no page overflow or browser errors, visible buttons remain reachable
+  and at least 44px high. Phone and tablet captures were visually reviewed.
+  Temporary QA entry, browser and local servers were removed/stopped.
+- Native scene: **31,788,866 bytes**, SHA256
+  `7e9ee2ac8711de7389ce856a284c87649bc5dbac1c5cc90eaa92ce271084a667`;
+  the 32 MiB budget remains unchanged.
+- Work-cache evidence: `room-cards-before.png`, `room-artwork/` screenshots and
+  `verification.json`, `room-artwork-browser.log`, `room-artwork-scene-tests.log`,
+  `room-artwork-scene-build.log`, `room-artwork-native-evidence.json`, and
+  `room-artwork-native-{library|manage-rooms}-*.png`.
+- Preview **46** Release build succeeded; exact preview identity/schemes, strict
+  signature, physical-device profile coverage and packaged scene hash/size passed.
+  Production metadata was restored and version/assets/auth-redirect checks passed.
+  Build/signature receipts: `native-preview-build-46.log`,
+  `native-preview-build-46-summary.log`, and `preview46-package-check.json`.
+  Installed on the physical iPhone October 9: the device app listing confirms
+  **1.0.0 (46)** and Apple's developer service launched it successfully.
+  Receipts: `preview46-install.json`, `preview46-installed-app.json`, and
+  `preview46-launch.json`. User review of the room-card appearance on the
+  physical iPhone is not yet reported; iPad physical testing remains deferred.
 
 ## Property weather accuracy (Preview 45)
 

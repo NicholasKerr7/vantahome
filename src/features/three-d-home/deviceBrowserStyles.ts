@@ -130,12 +130,14 @@ export const deviceBrowserStyles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 6,
   },
+  roomIcon: { width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(20,18,26,0.64)" },
+  roomIdentity: { gap: 4, marginTop: "auto" },
   roomName: {
     color: theme.colors.text,
     fontSize: 18,
     fontWeight: "500",
     letterSpacing: -0.5,
   },
-  roomDetail: { color: theme.colors.subtext, fontSize: 10, lineHeight: 15 },
+  roomDetail: { color: theme.colors.text, fontSize: 10, lineHeight: 15 },
   spacer: { flex: 1 },
 });

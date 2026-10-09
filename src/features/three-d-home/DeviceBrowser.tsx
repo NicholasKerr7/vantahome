@@ -326,39 +326,45 @@ export default function DeviceBrowser({
                   }}
                   style={styles.roomCard}
                 >
-                  <CinematicCardArtwork artwork={roomArtwork(choice)} testID={`room-artwork-${choice.id}`} />
+                  <CinematicCardArtwork artwork={roomArtwork(choice)} variant="room-backdrop" testID={`room-artwork-${choice.id}`} />
                   <View style={styles.cardTop}>
-                    <Ionicons
-                      name={
-                        getRoom(choice.id).outdoor
-                          ? "leaf-outline"
-                          : "layers-outline"
-                      }
-                      size={24}
-                      color={theme.colors.accent}
-                    />
-                    <Ionicons
-                      name="arrow-forward"
-                      size={17}
-                      color={theme.colors.subtext}
-                    />
+                    <View style={styles.roomIcon}>
+                      <Ionicons
+                        name={
+                          getRoom(choice.id).outdoor
+                            ? "leaf-outline"
+                            : "layers-outline"
+                        }
+                        size={24}
+                        color={theme.colors.accentText}
+                      />
+                    </View>
+                    <View style={styles.roomIcon}>
+                      <Ionicons
+                        name="arrow-forward"
+                        size={17}
+                        color={theme.colors.text}
+                      />
+                    </View>
                   </View>
-                  <Text numberOfLines={2} style={styles.roomName}>
-                    {choice.name}
-                  </Text>
-                  <Text style={styles.roomDetail}>
-                    {
-                      availableDevices.filter(
-                        (device) => device.roomId === choice.id,
-                      ).length
-                    }{" "}
-                    devices ·{" "}
-                    {getRoom(choice.id).outdoor
-                      ? "Outside"
-                      : getRoom(choice.id).floor === "ground"
-                        ? "Ground"
-                        : "Upper"}
-                  </Text>
+                  <View style={styles.roomIdentity}>
+                    <Text numberOfLines={2} style={styles.roomName}>
+                      {choice.name}
+                    </Text>
+                    <Text style={styles.roomDetail}>
+                      {
+                        availableDevices.filter(
+                          (device) => device.roomId === choice.id,
+                        ).length
+                      }{" "}
+                      devices ·{" "}
+                      {getRoom(choice.id).outdoor
+                        ? "Outside"
+                        : getRoom(choice.id).floor === "ground"
+                          ? "Ground"
+                          : "Upper"}
+                    </Text>
+                  </View>
                 </Pressable>
               ),
             )}

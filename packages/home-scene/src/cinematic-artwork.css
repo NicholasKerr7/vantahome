@@ -22,6 +22,14 @@
 .library-item.has-cinematic-artwork .library-card-location,
 .library-item.has-cinematic-artwork .library-card-top > .library-card-destination { padding: 4px 7px; border-radius: 9px; background: rgb(var(--background-rgb) / 78%); }
 .library-item.has-cinematic-artwork .library-card-symbol { background: rgb(var(--background-rgb) / 74%); }
+
+/* Keep room imagery clear; concentrate a neutral plum fade behind its bottom labels. */
+.library-space-card { --room-artwork-shade: 15 7 32; }
+.library-space-card .cinematic-artwork-shade { background: linear-gradient(0deg, rgb(var(--room-artwork-shade) / 84%) 0, rgb(var(--room-artwork-shade) / 64%) 64px, rgb(var(--room-artwork-shade) / 8%) 120px, rgb(var(--room-artwork-shade) / 4%) 100%); }
+.library-space-card .library-card-identity { margin-top: auto; text-shadow: 0 1px 4px rgb(var(--room-artwork-shade) / 80%); }
+.library-space-card .library-card-footer { color: var(--text); border-top-color: rgb(var(--text-rgb) / 20%); text-shadow: 0 1px 3px rgb(var(--room-artwork-shade) / 80%); }
+.library-space-card.has-cinematic-artwork .library-card-location,
+.library-space-card.has-cinematic-artwork .library-card-symbol { background: rgb(var(--room-artwork-shade) / 68%); }
 .dashboard-device-card.has-cinematic-artwork .device-card-top { color: var(--text); }
 .dashboard-device-card.has-cinematic-artwork .dashboard-device-indicator { box-shadow: 0 0 0 3px rgb(var(--background-rgb) / 78%); }
 .device-focus-card > .cinematic-artwork .cinematic-artwork-shade { background: linear-gradient(180deg, rgb(var(--background-rgb) / 75%), rgb(var(--background-rgb) / 92%) 38%, rgb(var(--background-rgb) / 98%) 70%); }

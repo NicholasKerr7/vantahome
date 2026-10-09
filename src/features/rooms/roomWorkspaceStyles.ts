@@ -75,7 +75,7 @@ export const roomWorkspaceStyles = StyleSheet.create({
     borderLeftColor: theme.colors.stroke,
   },
   manageLabel: {
-    color: theme.colors.accentText,
+    color: theme.colors.text,
     fontSize: 11,
     fontWeight: "500",
   },
@@ -94,6 +94,8 @@ export const roomWorkspaceStyles = StyleSheet.create({
     lineHeight: 21,
     fontWeight: "500",
   },
+  cardDetail: { color: theme.colors.text },
+  cardLabelShadow: { textShadowColor: "rgba(20,18,26,0.85)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   sheet: {
     width: "100%",

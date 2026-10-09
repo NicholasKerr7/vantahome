@@ -219,7 +219,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
               key={room.id}
               style={[styles.card, wide && styles.cardWide, cardSizing.card]}
             >
-              <CinematicCardArtwork artwork={roomArtwork(room)} testID={`room-artwork-${room.id}`} />
+              <CinematicCardArtwork artwork={roomArtwork(room)} variant="room-row" testID={`room-artwork-${room.id}`} />
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Open ${room.name}`}
@@ -235,10 +235,10 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                   />
                 </View>
                 <View style={styles.roomText}>
-                  <Text numberOfLines={2} style={styles.roomName}>
+                  <Text numberOfLines={2} style={[styles.roomName, styles.cardLabelShadow]}>
                     {room.name}
                   </Text>
-                  <Text numberOfLines={1} style={styles.detail}>
+                  <Text numberOfLines={1} style={[styles.detail, styles.cardDetail, styles.cardLabelShadow]}>
                     {countByRoom[room.id] ?? 0} devices
                     {metadata ? ` · ${floor}` : ""}
                   </Text>
@@ -261,7 +261,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
                   size={18}
                   color={theme.colors.accentText}
                 />
-                <Text style={styles.manageLabel}>{canManageRooms ? 'Manage' : 'Details'}</Text>
+                <Text style={[styles.manageLabel, styles.cardLabelShadow]}>{canManageRooms ? 'Manage' : 'Details'}</Text>
               </Pressable>
             </View>
           );
