@@ -23,10 +23,10 @@ export function SceneMoodCard({ scene, roomName, active, compact, directory, onR
   const warm = identity === 'light';
   const cool = identity === 'climate' || identity === 'media' || identity === 'rest';
   return <View testID={`scene-tile-${scene.id}`} style={[styles.sceneCard, active && styles.sceneActive, compact && styles.sceneCompact]}>
-    <CinematicCardArtwork artwork={sceneArtwork(scene)} testID={`scene-artwork-${scene.id}`} />
+    <CinematicCardArtwork artwork={sceneArtwork(scene)} variant="scene-backdrop" testID={`scene-artwork-${scene.id}`} />
     <View style={styles.sceneHeader}>
-      <View style={styles.roomLabel}><Ionicons name="location-outline" size={12} color={theme.colors.subtext} /><Text style={styles.roomText} numberOfLines={1}>{roomName}</Text></View>
-      <View style={styles.sceneState}><View style={[styles.stateDot, active && styles.stateDotOn]} /><Text style={[styles.sceneStateText, active && styles.sceneStateTextOn]}>{active ? 'Last used' : 'Saved'}</Text></View>
+      <View style={[styles.sceneBadge, styles.roomLabel]}><Ionicons name="location-outline" size={12} color={theme.colors.text} /><Text style={styles.roomText} numberOfLines={1}>{roomName}</Text></View>
+      <View style={[styles.sceneBadge, styles.sceneState]}><View style={[styles.stateDot, active && styles.stateDotOn]} /><Text style={[styles.sceneStateText, active && styles.sceneStateTextOn]}>{active ? 'Last used' : 'Saved'}</Text></View>
     </View>
     <View style={styles.sceneMain}>
       <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.moodMark, warm && styles.moodWarm, cool && styles.moodCool, compact && styles.moodCompact]}>
@@ -34,9 +34,9 @@ export function SceneMoodCard({ scene, roomName, active, compact, directory, onR
         <Ionicons name={IDENTITY_ICONS[identity]} size={compact ? 27 : 38} color={warm ? theme.colors.ember : cool ? theme.colors.electric : theme.colors.accent} />
       </View>
       <View style={styles.sceneCopy}>
-        <Text accessibilityRole="header" style={[styles.sceneName, compact && styles.sceneNameCompact]} numberOfLines={compact ? 1 : 2}>{scene.name}</Text>
-        <Text style={styles.sceneDevices} numberOfLines={compact ? 1 : 2}>{sceneDeviceSummary(scene.actions, directory)}</Text>
-        {!compact && <Text style={styles.sceneCount}>{scene.actions.length} {scene.actions.length === 1 ? 'action' : 'actions'} together</Text>}
+        <Text accessibilityRole="header" style={[styles.sceneName, styles.sceneLabelShadow, compact && styles.sceneNameCompact]} numberOfLines={compact ? 1 : 2}>{scene.name}</Text>
+        <Text style={[styles.sceneDevices, styles.sceneLabelShadow]} numberOfLines={compact ? 1 : 2}>{sceneDeviceSummary(scene.actions, directory)}</Text>
+        {!compact && <Text style={[styles.sceneCount, styles.sceneLabelShadow]}>{scene.actions.length} {scene.actions.length === 1 ? 'action' : 'actions'} together</Text>}
       </View>
     </View>
     <View style={styles.sceneActions}>
@@ -109,14 +109,15 @@ const styles = StyleSheet.create({
   sceneActive: { borderColor: theme.colors.accent },
   sceneCompact: { padding: 12, borderRadius: 22 },
   sceneHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  roomLabel: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  roomText: { flexShrink: 1, color: theme.colors.subtext, fontSize: 11, fontWeight: '500' },
-  sceneState: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  sceneBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 9, backgroundColor: 'rgba(20,18,26,0.68)' },
+  roomLabel: { flexShrink: 1, minWidth: 0, gap: 4 },
+  roomText: { flexShrink: 1, color: theme.colors.text, fontSize: 11, fontWeight: '500' },
+  sceneState: { flexShrink: 0, gap: 5 },
   stateDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.muted },
   stateDotOn: { backgroundColor: theme.colors.accent },
-  sceneStateText: { color: theme.colors.muted, fontSize: 10 },
+  sceneStateText: { color: theme.colors.text, fontSize: 10 },
   sceneStateTextOn: { color: theme.colors.accentText },
-  sceneMain: { flex: 1, minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 15, paddingVertical: 10 },
+  sceneMain: { flexShrink: 1, minHeight: 0, marginTop: 'auto', flexDirection: 'row', alignItems: 'center', gap: 15, paddingVertical: 10 },
   moodMark: { width: 72, height: 90, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.accent2, overflow: 'hidden' },
   moodWarm: { backgroundColor: theme.colors.card },
   moodCool: { backgroundColor: theme.colors.bg1 },
@@ -127,12 +128,13 @@ const styles = StyleSheet.create({
   sceneCopy: { flex: 1, minWidth: 0 },
   sceneName: { color: theme.colors.text, fontSize: 27, fontWeight: '500', letterSpacing: -0.8 },
   sceneNameCompact: { fontSize: 22, letterSpacing: -0.5 },
-  sceneDevices: { color: theme.colors.subtext, fontSize: 11, lineHeight: 16, marginTop: 7 },
-  sceneCount: { color: theme.colors.muted, fontSize: 10, marginTop: 7 },
+  sceneDevices: { color: theme.colors.text, fontSize: 11, lineHeight: 16, marginTop: 7 },
+  sceneCount: { color: theme.colors.text, fontSize: 10, marginTop: 7 },
+  sceneLabelShadow: { textShadowColor: 'rgba(20,18,26,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   sceneActions: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
   runButton: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: theme.colors.accent, borderRadius: 16, paddingHorizontal: 8 },
   runText: { color: theme.colors.bg0, fontSize: 13, fontWeight: '700' },
-  detailButton: { minHeight: 46, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 16, backgroundColor: theme.colors.card2 },
+  detailButton: { minHeight: 46, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 16, backgroundColor: 'rgba(20,18,26,0.68)' },
   detailText: { color: theme.colors.text, fontSize: 12, fontWeight: '500' },
   routineReadOnly: { opacity: 0.35 },
   routineCard: { flex: 1, minWidth: 0, minHeight: 0, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6, borderRadius: 24, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, overflow: 'hidden' },

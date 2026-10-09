@@ -40,9 +40,10 @@
 .dashboard-room-list .dashboard-room-name { flex: 1; min-width: 0; }
 .dashboard-room-list button .cinematic-artwork-symbol svg,
 .dashboard-room-select .cinematic-artwork-symbol svg { color: var(--text); }
-.dashboard-preset.has-cinematic-artwork .cinematic-artwork-shade { background: linear-gradient(90deg, rgb(var(--background-rgb) / 87%), rgb(var(--background-rgb) / 75%), rgb(var(--background-rgb) / 80%)); }
-.dashboard-preset.has-cinematic-artwork { color: var(--text); }
-.dashboard-preset.has-cinematic-artwork[aria-pressed='true'] { color: var(--accent-text); }
+/* A soft lower fade supports both inline and stacked scene labels while keeping the image's upper edge clear. */
+.dashboard-preset.has-cinematic-artwork { --scene-artwork-shade: 20 18 26; color: var(--text); text-shadow: 0 1px 3px rgb(var(--scene-artwork-shade) / 85%); }
+.dashboard-preset.has-cinematic-artwork .cinematic-artwork-shade { background: linear-gradient(180deg, rgb(var(--scene-artwork-shade) / 4%), rgb(var(--scene-artwork-shade) / 12%) 16%, rgb(var(--scene-artwork-shade) / 64%) 40%, rgb(var(--scene-artwork-shade) / 80%)); }
+.dashboard-preset.has-cinematic-artwork[aria-pressed='true'] { color: var(--accent-text); border-color: rgb(var(--accent-rgb) / 72%); }
 /* Identity art clips itself; the close button keeps its existing 44px target
    and its visible focus outline beyond the heading's edges. */
 .device-sheet-heading.has-cinematic-artwork,

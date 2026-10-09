@@ -74,6 +74,37 @@ Last maintained: **2026-10-09**. Read this before rediscovering the project.
   signature passed; production metadata was restored. Signing expiry remains
   October 11 as above. Physical review of the new presentation is not yet reported.
 
+## Clearer scene artwork (Preview 47)
+
+- Extended the clearer artwork treatment to native scene cards and the embedded
+  dashboard's scene shortcuts. Native `scene-backdrop` keeps upper imagery clear,
+  with names/actions near the bottom fade and readable room/status badges. The
+  dashboard uses a neutral lower fade, text shadow and clearer selected border.
+  Existing artwork and Run/Details behavior are preserved; no new assets,
+  dependencies, animations, permissions or routine/device/room styling changes.
+- Verification: app TypeScript, **38 existing native component tests**, **10
+  existing scene tests**, and web/offline scene build passed. Dashboard browser:
+  **18 checks** across 320/390px phones and both tablet orientations; all four
+  simulation scene actions update the selection, images decode, controls fit,
+  reduced motion remains enabled, no scrolling or browser errors.
+- Native Expo-web fixture: four responsive captures, nine paginated pages and
+  local Run/Details/last-used/Clear checks passed. Images load and controls remain
+  reachable at least 44px high, with no page overflow/errors. Bright/dark artwork
+  and phone/tablet screenshots visually reviewed. QA entry/servers/browser removed.
+- Native scene: **31,789,061 bytes**, SHA256
+  `a1bb89b0807bc84e8f4cfe0152c874d5b8cf05ae31d068812c2b9c617d005ab3`.
+  Evidence in work cache: `scene-artwork/`, `scene-artwork-before.png`,
+  `scene-artwork-native-evidence.json`, `scene-artwork-native-scenes-*.png`,
+  `scene-artwork-{tests|browser|build}.log`, and native tests/TypeScript/capture logs.
+- Preview **47** Release build, exact identity/schemes, strict signature, device
+  coverage and packaged scene hash/size passed. Production metadata restored;
+  version/assets/auth-redirect checks passed. Packaging receipts are
+  `native-preview-build-47{|-summary}.log` and `preview47-package-check.json`.
+  Installed on the physical iPhone October 9; device listing confirms
+  **1.0.0 (47)** and Apple's developer service launched it. Receipts:
+  `preview47-install.json`, `preview47-installed-app.json`, `preview47-launch.json`.
+  Physical visual review is not yet user-confirmed; iPad physical testing deferred.
+
 ## Clearer room artwork (Preview 46)
 
 - Lightened **Your rooms** cards in the embedded model and native room/library
