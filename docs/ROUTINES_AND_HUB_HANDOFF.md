@@ -32,9 +32,11 @@ they are not durable exactly-once guarantees across relaunches. Multiple open
 clients do not have an execution-owner election. This is a foreground preview,
 not the always-on architecture described in `ARCHITECTURE.md`.
 
-The Home Assistant light contract and lifecycle modules under `bridge/` are
-offline adapters. There is no deployed pairing service or routine worker yet.
-The shared `ROUTINE_EXECUTION` copy must remain truthful until that changes.
+The pure light contract/lifecycle modules under `bridge/` remain free of I/O.
+`bridge/runtime/` now contains a SQLite journal, light worker and authenticated
+Home Assistant WebSocket adapter. These are a bounded one-light foundation, not
+a deployed pairing service or routine worker; see [the bridge contract](BRIDGE_LIGHT_CONTRACT.md).
+The shared `ROUTINE_EXECUTION` copy must remain truthful until hub execution exists.
 
 ## Implement when a hub is available
 

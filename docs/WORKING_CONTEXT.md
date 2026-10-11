@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-09**. Read this before rediscovering the project.
+Last maintained: **2026-10-11**. Read this before rediscovering the project.
 
 ## Locations and branch
 
@@ -39,6 +39,38 @@ Last maintained: **2026-10-09**. Read this before rediscovering the project.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Verified branch audit and implementation priorities
+
+- Read [Branch implementation audit](BRANCH_IMPLEMENTATION_AUDIT.md) before
+  choosing the next implementation. It pins app source **54d5e8a**, all six
+  fetched GitHub branch heads, and the four local branches in the original clone.
+  Four other remote branches are ancestors; `ios-build-cleanup` alone diverges:
+  **17 unique commits / 74 changed paths**. All 17 received a disposition.
+- That branch contains useful absent inbox/push, device-health, telemetry and
+  advanced routine work. Selectively adapt it; do not merge its older access,
+  direct device-state mutation, native configuration or synthetic-history logic.
+  The live GitHub default is `main`; this checkout's cached `origin/HEAD` pointing
+  at `sprint-two` is stale. Neither default nor branch layout was changed.
+- Immediate gaps: reachable notification UI still appends mock events and keeps
+  dismissals only in component state. Hosted Verify for **54d5e8a** fails at the
+  secret scan on synthetic preview-test assignments; subsequent tests/build were
+  skipped. The same redacted scan failure was reproduced October 11. Fix narrow
+  fixture/history handling without weakening actual secret checks.
+- The SQLite light journal, worker and authenticated HA adapter already exist.
+  Remaining hub work is secure provisioning/pairing, trusted host authorization,
+  an installed service, physical-device bindings and the app receipt/state path.
+  Routines still run only while foregrounded; scenes/routines need household
+  definition sync and durable hub execution for everyday multi-user operation.
+- Current 3D controls are intentionally simulated. Real-device routes still use
+  the legacy detail screen, including air-data fallbacks that need truthful
+  missing/stale states. Cameras and assistants have interface/handler foundations,
+  not fully verified physical integrations. Device health is useful; geofencing,
+  utility tariffs and Filament migration are optional.
+- Scope was source/branch/test-assertion review plus current GitHub CI status;
+  no new full test run, deployment or hardware verification. Detailed cache:
+  `work/branch-audit-2026-10-11.json` and its redacted `*-secret-scan.log`.
+  Existing Preview 51 installation evidence below remains historical evidence.
 
 ## Environment and confirmed milestones
 
@@ -659,6 +691,9 @@ Previous property-sharing evidence (no scene source changed for Preview 39):
   and launch, not a physical UI review.
 
 ## Resume next
+
+Use the [audited delivery order](BRANCH_IMPLEMENTATION_AUDIT.md#delivery-order)
+for implementation priorities; the physical follow-ups below are a separate list.
 
 1. Review the latest installed Preview listed above, including idle tour entry,
    touch return and the cinematic reference cards. Next permission check remains

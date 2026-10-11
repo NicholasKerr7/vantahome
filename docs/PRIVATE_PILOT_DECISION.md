@@ -55,10 +55,14 @@ check these boxes.
   action-level authorization, secure credential storage, stable discovery,
   and an allowlist for the single bound light and explicit power commands.
   Do not use demo/development transports or mock fallback to bypass these gates.
-- [ ] Implement the transactional durable journal/dispatcher and authenticated
-  adapter. Verify commit failure, real process restart, expiry, replay/conflict
-  rejection, revocation, disconnect, and late results with fault injection.
-  The current in-memory reference model is not sufficient.
+- [ ] Integrate and verify the transactional durable journal/worker and
+  authenticated adapter in the actual pilot host. These components now exist
+  with synthetic and real process-restart tests; see the
+  [implemented bridge foundation](./BRIDGE_LIGHT_CONTRACT.md). Pairing, host
+  credentials/authorization and app integration remain unfinished. Reverify
+  commit failure, restart, expiry, replay/conflict rejection, revocation,
+  disconnect and late results for the provisioned host. Core tests alone do not
+  satisfy this end-to-end readiness gate.
 - [ ] Verify truthful observations and uncertainty handling with synthetic
   adapter tests first. Service acceptance, `state_observed`, and physical
   evidence must remain distinct; no fabricated completion or automatic replay
@@ -108,7 +112,8 @@ not expand scope or close the independent-review gate.
 
 ## Roadmap and reconsideration
 
-1. Continue Docker-free bridge implementation and synthetic/failure testing.
+1. Complete host provisioning, pairing and app integration around the existing
+   Docker-free durable bridge foundation; retain synthetic/failure testing.
 2. Complete the readiness checklist and separately approve the hardware path.
 3. Run explicitly approved, supervised one-light sessions and fix their findings.
 4. Before public/customer use, obtain independent review of the actual release

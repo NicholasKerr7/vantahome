@@ -2,6 +2,12 @@
 
 Status: **hosted core and voice API checks passed; browser, native, and external review pending**
 
+This is a historical sprint record. For current implementation status and
+remaining work, use the [October 11 branch audit](BRANCH_IMPLEMENTATION_AUDIT.md)
+and [working context](WORKING_CONTEXT.md). In particular, the durable bridge
+runtime described as future work below has since been implemented; secure host
+provisioning/pairing and app integration remain unfinished.
+
 The owner-approved [private-pilot decision](./PRIVATE_PILOT_DECISION.md) now
 allows a supervised, owner-only one-bulb path before independent review once
 technical prerequisites and separate session approval are satisfied. This is
