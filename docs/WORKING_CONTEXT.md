@@ -40,7 +40,7 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Standalone brand animation — October 12
+## Unified cinematic arrival (Preview 52) — October 12
 
 - Created **Core Awakening** in Higgsfield from the approved VantaHome icon:
   a dimensional purple-glass disassembly/reassembly film. Preferred delivery is
@@ -52,7 +52,52 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
 - Reference and sampled motion frames inspected; portable output fully decoded
   without errors. No physical-device playback test. AI motion is a dimensional
   interpretation, not exact editable logo geometry. App runtime and original
-  approved icon remain unchanged; no loading sequence was installed.
+  approved icon remained unchanged at that creative milestone. Runtime integration follows.
+- Installed the film as one persistent arrival across account preparation,
+  membership verification, and the first authorized 3D frame. There is no forced
+  movie duration or normal checklist. A readiness-driven 300 ms fade reveals Home;
+  retained same-account returns use a still. Recovery appears after 8 seconds or
+  immediately on an actual error; verified device controls remain reachable while
+  the scene prepares. Login, invitation/setup, and scene failures stay reachable.
+- Bundled five local assets (silent H.264 entrance/hold/resolve + exact opening/hold
+  posters), **2,284,729 bytes total**, 1024×768/24 fps. No new generation credits.
+  Runtime metadata: `assets/brand/motion/arrival.production.json`; reproducible
+  processing: `scripts/build-arrival-media.py`. Native expo-video and a browser
+  video element pause in the background; reduced motion starts no decoder.
+- iOS uses the matching opening frame on brand navy, held by SDK-compatible
+  **expo-splash-screen 31.0.13** until the React poster settles, with a bounded
+  fallback. Android's OS splash remains its padded icon before the same arrival;
+  no Android native/device test. Original app icon untouched.
+- Authorization is independent of animation. Account/home/renderer leases reject
+  stale ready callbacks; membership loss hides private content immediately.
+  Browser content is inert while covered. The scene reports readiness after its
+  own completed renderer frame, scoped to the current visual permissions.
+- Verification: **83 focused native/arrival tests**, **1,028 scene tests**, native
+  and scene TypeScript, scene build, 20 release-asset/Metro tests, native storyboard
+  compilation, release asset guards, and diff review pass. Browser checks at
+  320×568, 430×932, 768×1024, and 1024×768 confirm contained artwork, no document
+  overflow, looping silent media, recovery, reduced-motion stills, and controls
+  after the real 3D dashboard reveal. Temporary visual QA entry was removed.
+- Full Jest: **2,791 passed / 1 pre-existing failure**. Optional renderer-lab test
+  line 202 dispatches `valueChange` to a Pressable migrated to `onPress`; isolated
+  unchanged HEAD `5a1e840` reproduces it. A corrected event in the isolated copy
+  passes all 11 lab tests; active lab source/test left unchanged.
+- Dependency audit is not green: existing compression, node-forge, shell-quote,
+  source-map-js, and sprintf-js findings require follow-up. The lockfile addition
+  only adds expo-splash-screen; all previously locked package versions are unchanged.
+  Local security backport integrity checks pass. Do not claim a clean full verify.
+- Preview **52** Release built and installed on the iPhone. Exact preview identity,
+  schemes, device-reported **1.0.0 (52)**, profile coverage, strict signature, all five shipped media files,
+  and current scene hash/size verified. Production source metadata restored.
+  Signing expires **2026-10-19 05:19:39 UTC**. Automatic launch was rejected by
+  iOS with a signature/entitlement/developer-trust message despite local strict
+  signature/profile checks passing. The user was asked to open Preview manually
+  and approve the existing developer profile only if prompted. Launch and physical
+  animation smoothness review remain pending; iPad testing remains deferred. Scene **31,796,443 bytes**, SHA256
+  `1ba87a3896687f44771b2400939daafc20be4017b1e9fc5b081e96929418f3ab`.
+- Evidence under `work/unified-arrival-*`: QA JSON/screenshots, root/focused/scene
+  tests, full Jest, type/build/package/install logs. Baseline evidence:
+  `work/renderer-baseline-ez8y30fd/{baseline-jest,corrected-event-jest}.log`.
 
 ## Verified branch audit and implementation priorities
 

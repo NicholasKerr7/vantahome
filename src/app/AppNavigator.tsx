@@ -41,7 +41,10 @@ import PasswordRecoveryScreen from "../screens/PasswordRecoveryScreen";
 import CommandFeedbackProvider from "../components/command-feedback/CommandFeedbackProvider";
 import ModelHomeSync from '../features/three-d-home/ModelHomeSync';
 import HomeAccessScreen from '../features/home-access/HomeAccessScreen';
-import HomeVerificationScreen from '../features/home-access/HomeVerificationScreen';
+import CinematicArrival from '../features/arrival/CinematicArrival';
+import { ArrivalContext, useArrivalCoordinator } from '../features/arrival/ArrivalContext';
+import { hideNativeLaunch } from '../features/arrival/nativeLaunch';
+import ArrivalInteractionShield from '../features/arrival/ArrivalInteractionShield';
 import { isHomeInvitationUrl } from '../config/authRedirects';
 import { signOutAccount } from '../features/account/accountSession';
 import { isAccountScopeCurrent } from '../features/account/accountIdentity';
@@ -86,19 +89,27 @@ function IntegrationsRoute(props: NativeStackScreenProps<RootStackParamList, 'In
 }
 
 /** Keep verification actions local to this account and discard results after the gate closes. */
-function MembershipVerificationGate({ status, onRetry, returning, canSignOut, busy, statusMessage, statusDescription }: {
-  status: 'preparing' | 'checking' | 'unavailable';
+function MembershipVerificationGate({ status, onRetry, returning, canSignOut, busy, statusMessage, statusDescription, onCoveredChange, onShowControls }: {
+  status: 'preparing' | 'checking' | 'rendering' | 'ready' | 'inactive' | 'unavailable';
   onRetry?: () => void;
   returning: boolean;
   canSignOut: boolean;
   busy?: boolean;
   statusMessage?: string;
   statusDescription?: string;
+  onCoveredChange: (covered: boolean) => void;
+  onShowControls?: () => void;
 }) {
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const signOutAttempt = useRef<symbol | null>(null);
   useEffect(() => () => { signOutAttempt.current = null; }, []);
+  const accountScope = useHomeStore((state) => `${state.authenticatedUserId}:${state.sessionEpoch}`);
+  useEffect(() => {
+    signOutAttempt.current = null;
+    setSigningOut(false);
+    setSignOutError(null);
+  }, [accountScope]);
 
   /** Ignore duplicate taps and never carry a delayed sign-out result into another account. */
   const handleSignOut = () => {
@@ -120,9 +131,12 @@ function MembershipVerificationGate({ status, onRetry, returning, canSignOut, bu
     });
   };
 
-  return <HomeVerificationScreen
+  return <CinematicArrival
     status={status}
-    variant={returning ? 'returning' : 'arrival'}
+    returning={returning}
+    onCoveredChange={onCoveredChange}
+    onPosterReady={hideNativeLaunch}
+    onShowControls={onShowControls}
     statusMessage={statusMessage}
     statusDescription={statusDescription}
     onRetry={onRetry ? () => { if (!signOutAttempt.current && !busy) onRetry(); } : undefined}
@@ -151,12 +165,17 @@ export default function AppNavigator() {
     const member = s.household.find((candidate) => candidate.id === s.activeMemberId);
     return member?.role === 'Guest' ? member.accessExpiresAt : null;
   });
-  const [homeRouteVisible, setHomeRouteVisible] = useState(true);
+  const [homeRoute, setHomeRoute] = useState<{ scope: string; visible: boolean } | null>(null);
   const appActive = useRef(AppState.currentState !== 'background');
   const lifecycleGeneration = useRef(0);
   const navigationScope = useHomeStore((s) =>
     `${s.authenticatedUserId ?? "demo"}:${s.sessionEpoch}:${s.accountHomeId ?? "unverified"}`,
   );
+  // A keyed navigator starts at Home; React Navigation does not emit an initial
+  // onStateChange, so a previous account's secondary route cannot suppress arrival.
+  const homeRouteVisible = homeRoute?.scope === navigationScope ? homeRoute.visible : true;
+  const arrival = useArrivalCoordinator(navigationScope);
+  const [arrivalCovered, setArrivalCovered] = useState(true);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (next) => {
@@ -366,25 +385,28 @@ export default function AppNavigator() {
     scope: navigationScope,
     guestExpiresAt,
   });
+  const awaitingScene = homeReady && homeRouteVisible && !arrival.dismissed
+    && (!arrival.scene || arrival.scene.status === 'loading');
+  const arrivalStatus = !authReady
+    ? startupError && !startupRetrying ? 'unavailable' : 'preparing'
+    : checkingMembership ? verification === 'failed' ? 'unavailable' : 'checking'
+    : awaitingScene ? 'rendering'
+    : homeReady && homeRouteVisible && arrival.scene?.status === 'ready' ? 'ready' : 'inactive';
+  // Privacy never waits for an animation callback; fades only affect presentation.
+  const shieldNavigation = checkingMembership || arrivalCovered;
 
   /** Reuse graphics only from the main Home route, never a retained camera or account screen. */
   const trackHomeRoute = (state: NavigationState | PartialState<NavigationState> | undefined) => {
     const root = state?.routes[state.index ?? 0];
     const nested = root?.state;
     const leaf = nested?.routes[nested.index ?? 0];
-    setHomeRouteVisible(root?.name === 'Main' && (!leaf || leaf.name === 'Home'));
+    setHomeRoute({ scope: navigationScope, visible: root?.name === 'ThreeDHome' || (root?.name === 'Main' && (!leaf || leaf.name === 'Home')) });
   };
 
   return (
     <View style={[styles.viewport, desktopPreview && styles.desktopViewport]}>
-      <View
-        style={[styles.fill, checkingMembership && styles.hidden]}
-        pointerEvents={checkingMembership ? "none" : "auto"}
-        accessibilityElementsHidden={checkingMembership}
-        importantForAccessibility={
-          checkingMembership ? "no-hide-descendants" : "auto"
-        }
-      >
+      <ArrivalContext.Provider value={arrival.context}>
+      <ArrivalInteractionShield blocked={shieldNavigation} hidden={checkingMembership}>
         {authReady && <CommandFeedbackProvider enabled={homeReady}>
           <BottomSheetModalProvider>
             {homeReady && <ModelHomeSync key={`model-home:${navigationScope}`} />}
@@ -471,23 +493,21 @@ export default function AppNavigator() {
             </NavigationContainer>
           </BottomSheetModalProvider>
         </CommandFeedbackProvider>}
-      </View>
-      {(!authReady || checkingMembership) && (
+      </ArrivalInteractionShield>
+      </ArrivalContext.Provider>
         <MembershipVerificationGate
-          key={`verification:${session?.user.id ?? 'pending'}`}
-          status={!authReady
-            ? startupError && !startupRetrying ? 'unavailable' : 'preparing'
-            : verification === 'failed' ? 'unavailable' : 'checking'}
+          status={arrivalStatus}
+          onCoveredChange={setArrivalCovered}
+          onShowControls={homeReady && awaitingScene && arrival.scene ? arrival.showControls : undefined}
           statusMessage={!authReady && startupError && !startupRetrying ? startupError : undefined}
           statusDescription={!authReady && startupError && !startupRetrying ? 'Retry to prepare your account on this device.' : undefined}
           returning={retainHome}
           busy={startupRetrying}
-          canSignOut={Boolean(session) && (authReady || Boolean(startupError))}
-          onRetry={authReady
-            ? () => setMembershipRetry((value) => value + 1)
-            : startupError ? () => retryStartup.current?.() : undefined}
+          canSignOut={Boolean(session) && (checkingMembership || Boolean(startupError))}
+          onRetry={!authReady
+            ? startupError ? () => retryStartup.current?.() : undefined
+            : checkingMembership ? () => setMembershipRetry((value) => value + 1) : undefined}
         />
-      )}
     </View>
   );
 }
@@ -495,6 +515,4 @@ export default function AppNavigator() {
 const styles = StyleSheet.create({
   viewport: { flex: 1, width: '100%', alignSelf: 'center', overflow: 'hidden', backgroundColor: theme.colors.bg0 },
   desktopViewport: { maxWidth: 1366, maxHeight: 1024 },
-  fill: { flex: 1, minHeight: 0 },
-  hidden: { opacity: 0 },
 });

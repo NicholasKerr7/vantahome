@@ -8,7 +8,7 @@
     "icon": "./assets/release/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/release/splash-icon.png",
+      "image": "./assets/brand/motion/vantahome-arrival-poster.png",
       "resizeMode": "contain",
       "backgroundColor": "#050612"
     },
@@ -35,7 +35,12 @@
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "splash": {
+        "image": "./assets/release/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#050612"
+      }
     },
     "web": {
       "favicon": "./assets/release/favicon.png"
@@ -56,6 +61,21 @@
         "expo-video",
         {
           "supportsPictureInPicture": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/motion/vantahome-arrival-poster.png",
+          "backgroundColor": "#050612",
+          "resizeMode": "contain",
+          "ios": {
+            "enableFullScreenImage_legacy": true
+          },
+          "android": {
+            "image": "./assets/release/splash-icon.png",
+            "imageWidth": 200
+          }
         }
       ]
     ]

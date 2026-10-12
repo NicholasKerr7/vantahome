@@ -7,6 +7,7 @@ import { useGLTF } from '@react-three/drei';
 import { Layers3, RotateCcw } from 'lucide-react';
 import { SceneViewControls } from './SceneViewControls';
 import HouseScene from './scene/HouseScene';
+import { sceneReadinessKey } from './scene/scenePresentationAccess';
 import { QuickDeviceControls } from './QuickDeviceControls';
 import { DeviceControlSheet } from './DeviceControlSheet';
 import { useInlineInspectorVisibility } from './useInlineInspectorVisibility';
@@ -142,15 +143,19 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
   }, [inlineInspector, quickDeviceId, sheetDeviceId, onCloseFullControls]);
   // Immersive and exterior share one asset; device updates never reset loading.
   const displayView = showcase ? 'exterior' : view;
-  const modelId = displayView === 'ground' || displayView === 'upper' ? displayView : 'exterior';
-  const normalModelId = view === 'ground' || view === 'upper' ? view : 'exterior';
-  const readinessId = `${attempt}:${modelId}`;
+  const presentationKey = sceneReadinessKey(access, displayView, roomId);
+  const readinessId = `${attempt}:${presentationKey}`;
   const ready = readyModels.includes(readinessId);
-  const normalReady = readyModels.includes(`${attempt}:${normalModelId}`);
+  const normalReady = readyModels.includes(`${attempt}:${sceneReadinessKey(access, view, roomId)}`);
   const onReady = useCallback(() => {
+    // Canvas owns a separate React root: reject a previous presentation even
+    // if its pending frame finishes before that root commits a scope change.
+    const current = useHomeStore.getState();
+    const currentView = useCinematicStore.getState().showcase ? 'exterior' : current.view;
+    if (sceneReadinessKey(current.access, currentView, current.roomId) !== presentationKey) return;
     setReadyModels((previous) => previous.includes(readinessId) ? previous : [...previous, readinessId]);
     reportSceneStatus('ready');
-  }, [readinessId]);
+  }, [presentationKey, readinessId]);
   const onSceneError = useCallback(() => { setSceneFailed(true); setShowcase(false); }, [setShowcase]);
   useIdleCinematic({
     eligible: idleAllowed && idleEnabled && normalReady && !sceneFailed && !covered && !orientationPaused && !reducedMotion && !quickDeviceId && canViewPropertyOverview(access),

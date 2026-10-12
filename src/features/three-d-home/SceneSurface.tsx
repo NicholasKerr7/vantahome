@@ -104,7 +104,8 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
       const status = parseSceneStatus(event.nativeEvent.data);
       const navigation = parseRoutineNavigation(event.nativeEvent.data);
       if (status) {
-        documentReady.current = status === 'ready' && isCurrentSceneDocument(event.nativeEvent.url, uri);
+        if (!isCurrentSceneDocument(event.nativeEvent.url, uri)) return;
+        documentReady.current = status === 'ready';
         onStatus(status); publishPresentation();
       }
       else if (navigation) {

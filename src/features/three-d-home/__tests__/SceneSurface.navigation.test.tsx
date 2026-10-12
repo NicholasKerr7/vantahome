@@ -239,3 +239,15 @@ test.each(['native', 'web'] as const)('%s rejects late preference hydration afte
   expect(mockFrameWindow.postMessage).not.toHaveBeenCalled();
   screen.unmount();
 });
+
+
+test('native readiness ignores messages from a replaced document', async () => {
+  const onStatus = jest.fn();
+  render(<NativeSceneSurface onStatus={onStatus} />);
+  await act(async () => { await Promise.resolve(); });
+  const data = JSON.stringify({ channel: 'vantahome-scene', version: 1, status: 'ready' });
+  act(() => { mockNativeMessage({ nativeEvent: { data, url: 'file:///cache/old.html' } }); });
+  expect(onStatus).not.toHaveBeenCalled();
+  act(() => { mockNativeMessage({ nativeEvent: { data, url: 'file:///cache/index.html' } }); });
+  expect(onStatus).toHaveBeenCalledWith('ready');
+});

@@ -1,6 +1,7 @@
 import React from "react";
 import { AppState, Linking } from "react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import type { NavigationState, PartialState } from '@react-navigation/native';
 import type { Session } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -10,6 +11,7 @@ const mockExchangeCode = jest.fn();
 const mockSignOut = jest.fn();
 const mockMembership = jest.fn();
 const mockNavigationMount = jest.fn();
+let mockNavigationChanged: (state: PartialState<NavigationState>) => void;
 const mockModelHomeSyncMount = jest.fn();
 const mockModelHomeSyncUnmount = jest.fn();
 const mockFeedbackEnabled = jest.fn();
@@ -17,6 +19,8 @@ const mockArrivalMount = jest.fn();
 const mockPrewarmScene = jest.fn();
 const mockNeedsInvitationPasswordSetup = jest.fn();
 let mockSupabaseAvailable = true;
+let mockSceneReady = true;
+const mockOpenControls = jest.fn();
 let mockAuthChanged: (event: string, session: Session | null) => void;
 
 jest.mock("../services/supabaseClient", () => {
@@ -61,7 +65,8 @@ jest.mock("../services/cloudRegistry", () => ({
 }));
 jest.mock("@react-navigation/native", () => ({
   DefaultTheme: { colors: {} },
-  NavigationContainer: ({ children }: { children: React.ReactNode }) => {
+  NavigationContainer: ({ children, onStateChange }: { children: React.ReactNode; onStateChange: typeof mockNavigationChanged }) => {
+    mockNavigationChanged = onStateChange;
     require("react").useEffect(() => { mockNavigationMount(); }, []);
     return children;
   },
@@ -70,10 +75,14 @@ jest.mock("@react-navigation/native-stack", () => ({
   createNativeStackNavigator: () => ({
     Navigator: ({ children }: { children: React.ReactNode }) => children,
     /** Expose registration only; private screens stay unmounted in auth tests. */
-    Screen: ({ name }: { name: string }) =>
-      require("react").createElement(require("react-native").View, {
+    Screen: ({ name }: { name: string }) => {
+      // Exercise the root handoff without mounting the WebView or private routes.
+      const { useSceneArrival } = require('../features/arrival/ArrivalContext');
+      useSceneArrival(mockSceneReady ? 'ready' : 'loading', name, name === 'Main', mockOpenControls);
+      return require("react").createElement(require("react-native").View, {
         testID: `registered-route-${name}`,
-      }),
+      });
+    },
   }),
 }));
 jest.mock("@gorhom/bottom-sheet", () => ({
@@ -114,11 +123,13 @@ jest.mock("../screens/AuditLogScreen", () => () => null);
 jest.mock("../screens/CameraViewerScreen", () => () => null);
 jest.mock("../screens/PasswordRecoveryScreen", () => () => null);
 jest.mock("../features/home-access/HomeAccessScreen", () => () => null);
-jest.mock('../features/home-access/HomeVerificationScreen', () => ({
+jest.mock('../features/arrival/nativeLaunch', () => ({ hideNativeLaunch: jest.fn() }));
+jest.mock('../features/arrival/CinematicArrival', () => ({
   __esModule: true,
   /** Keep gate integration tests independent of decorative animation and responsive presentation. */
-  default: ({ status, statusMessage, onRetry, onSignOut, signingOut, signOutError, retrying }: {
-    status: 'preparing' | 'checking' | 'unavailable';
+  default: ({ status, statusMessage, onRetry, onSignOut, signingOut, signOutError, retrying, onCoveredChange }: {
+    status: 'preparing' | 'checking' | 'rendering' | 'ready' | 'inactive' | 'unavailable';
+    onCoveredChange: (covered: boolean) => void;
     statusMessage?: string;
     onRetry?: () => void;
     onSignOut?: () => void;
@@ -127,7 +138,10 @@ jest.mock('../features/home-access/HomeVerificationScreen', () => ({
     signOutError?: string | null;
   }) => {
     require('react').useEffect(() => { mockArrivalMount(); }, []);
+    require('react').useLayoutEffect(() => { onCoveredChange(status !== 'ready' && status !== 'inactive'); }, [status, onCoveredChange]);
+    if (status === 'ready' || status === 'inactive') return null;
     const { View, Text, Pressable } = require('react-native');
+    if (status === 'rendering') return <Text testID="cinematic-rendering">Opening VantaHome</Text>;
     return <View testID="home-verification-screen">
       <Text>{statusMessage ?? (status === 'checking' ? 'Verifying your home…' : status === 'preparing' ? 'Preparing your account…' : 'Unable to verify home access.')}</Text>
       {onRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry" disabled={signingOut || retrying} onPress={onRetry}><Text>Retry</Text></Pressable>}
@@ -138,7 +152,7 @@ jest.mock('../features/home-access/HomeVerificationScreen', () => ({
 }));
 
 import AppNavigator from "./AppNavigator";
-import HomeVerificationScreen from '../features/home-access/HomeVerificationScreen';
+import CinematicArrival from '../features/arrival/CinematicArrival';
 import {
   hydrateHomeAccount,
   invalidateHomeMembership,
@@ -229,6 +243,35 @@ describe("navigation session boundaries", () => {
     expect(mockArrivalMount).toHaveBeenCalledTimes(mounts);
     expect(mockPrewarmScene).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+  });
+
+  test('keeps the same arrival through verified rendering and reveals only the ready renderer', async () => {
+    mockSceneReady = false;
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('cinematic-rendering')).toBeTruthy());
+    const mounts = mockArrivalMount.mock.calls.length;
+    expect(screen.getByTestId('registered-route-Main', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true);
+    mockSceneReady = true;
+    screen.rerender(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(screen.queryByTestId('cinematic-rendering')).toBeNull();
+    expect(mockArrivalMount).toHaveBeenCalledTimes(mounts);
+  });
+
+  test('a new account starts its Home arrival even after the previous account left Home', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    act(() => mockNavigationChanged({ index: 0, routes: [{ name: 'Profile' }] }));
+    mockSceneReady = false;
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(screen.getByTestId('cinematic-rendering')).toBeTruthy());
+    expect(useHomeStore.getState().accountHomeId).toBe('bob-home');
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    mockSceneReady = true;
+    screen.rerender(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
   });
 
   test('a warm check retains hidden Home but immediately removes all shared control runtimes', async () => {
@@ -642,7 +685,7 @@ describe("navigation session boundaries", () => {
     const screen = render(<AppNavigator />);
     await waitFor(() => expect(screen.getByText('Unable to verify home access.')).toBeTruthy());
     // Invoke before React commits disabled buttons to exercise the synchronous tap guard.
-    const { onSignOut: signOut, onRetry: retry } = screen.UNSAFE_getByType(HomeVerificationScreen).props;
+    const { onSignOut: signOut, onRetry: retry } = screen.UNSAFE_getByType(CinematicArrival).props;
     act(() => { signOut(); signOut(); retry(); });
     await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1));
     expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });

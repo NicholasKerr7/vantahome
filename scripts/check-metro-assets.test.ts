@@ -42,16 +42,17 @@ describe("Expo's patched Metro asset pipeline", () => {
     expect(require("metro/package.json").dependencies["image-size"]).toBeUndefined();
   });
 
-  test.each<[string, number]>([
-    ["icon.png", 1024],
-    ["adaptive-icon.png", 1024],
-    ["splash-icon.png", 1024],
-    ["favicon.png", 48],
-  ])("preserves actual release asset dimensions for %s", async (filename, size) => {
-    const assetPath = path.join(repository, "assets/release", filename);
-    const expected = { width: size, height: size };
+  test.each<[string, number, number]>([
+    ["assets/release/icon.png", 1024, 1024],
+    ["assets/release/adaptive-icon.png", 1024, 1024],
+    ["assets/release/splash-icon.png", 1024, 1024],
+    ["assets/release/favicon.png", 48, 48],
+    ["assets/brand/motion/vantahome-arrival-poster.png", 1024, 768],
+  ])("preserves actual release asset dimensions for %s", async (filename, width, height) => {
+    const assetPath = path.join(repository, filename);
+    const expected = { width, height };
     expect(getAssetSize("png", fs.readFileSync(assetPath), assetPath)).toEqual(expected);
-    await expect(getAssetData(assetPath, `assets/release/${filename}`, [], "ios", "/assets"))
+    await expect(getAssetData(assetPath, filename, [], "ios", "/assets"))
       .resolves.toEqual(expect.objectContaining({
         ...expected, __packager_asset: true, scales: [1], type: "png",
       }));

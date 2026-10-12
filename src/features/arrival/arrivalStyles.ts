@@ -1,0 +1,45 @@
+import { StyleSheet } from 'react-native';
+import { theme } from '../../theme/theme';
+
+/** Match the baked film and native splash exactly, including letterboxed space. */
+export const ARRIVAL_BACKGROUND = '#050612';
+
+export const arrivalStyles = StyleSheet.create({
+  root: { ...StyleSheet.absoluteFillObject, zIndex: 1000, backgroundColor: ARRIVAL_BACKGROUND },
+  opaque: { opacity: 1 },
+  fill: { flex: 1 },
+  media: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  mediaHidden: { opacity: 0 },
+  mediaDimmed: { opacity: 0.32 },
+  safeArea: { flex: 1 },
+  content: { flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 28, paddingVertical: 28 },
+  contentCompact: { paddingHorizontal: 20, paddingVertical: 16 },
+  contentLargeText: { gap: 32 },
+  header: { alignItems: 'center', paddingTop: 6 },
+  wordmark: { color: theme.colors.text, fontSize: 15, lineHeight: 22, fontWeight: '500', letterSpacing: 6, textAlign: 'center' },
+  wordmarkAccent: { color: theme.colors.accentText, fontWeight: '300' },
+  signature: { color: '#B0A9C7', fontSize: 9, lineHeight: 15, letterSpacing: 3.2, marginTop: 7, textAlign: 'center' },
+  footer: { width: '100%', maxWidth: 540, alignSelf: 'center', gap: 18, marginTop: 28 },
+  footerCompact: { gap: 12 },
+  footerWide: { maxWidth: 600 },
+  quietStatus: { alignItems: 'center', gap: 9, paddingVertical: 16 },
+  quietStatusCompact: { paddingVertical: 4 },
+  statusAccent: { width: 22, height: 3, borderRadius: 2, backgroundColor: theme.colors.accent },
+  title: { color: '#F5F1FF', fontSize: 20, lineHeight: 28, fontWeight: '400', letterSpacing: -0.3, textAlign: 'center' },
+  titleCompact: { fontSize: 17, lineHeight: 24 },
+  subtitle: { color: '#BBB5CC', fontSize: 12, lineHeight: 19, textAlign: 'center', maxWidth: 410 },
+  recovery: { backgroundColor: '#0D0D20', borderColor: '#343047', borderWidth: 1, borderRadius: 24, padding: 23, gap: 12 },
+  recoveryCompact: { padding: 18, borderRadius: 20 },
+  statusLabel: { color: theme.colors.accentText, fontSize: 10, lineHeight: 16, fontWeight: '600', letterSpacing: 1.8, textAlign: 'center' },
+  description: { color: '#C1BDCF', fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 7 },
+  actionsLargeText: { flexDirection: 'column' },
+  button: { minHeight: 48, flexGrow: 1, flexBasis: 120, alignItems: 'center', justifyContent: 'center', paddingVertical: 13, paddingHorizontal: 18, borderRadius: 15, borderWidth: 1, borderColor: '#474057' },
+  buttonLargeText: { flexBasis: 'auto', width: '100%' },
+  buttonPrimary: { backgroundColor: '#D9C0FF', borderColor: '#D9C0FF' },
+  buttonSecondary: { backgroundColor: '#191627' },
+  buttonText: { color: '#F5F1FF', fontSize: 14, lineHeight: 20, fontWeight: '600', textAlign: 'center' },
+  buttonTextPrimary: { color: '#180D29' },
+  disabled: { opacity: 0.5 },
+  actionError: { color: theme.colors.alarmText, fontSize: 13, lineHeight: 20, textAlign: 'center' },
+});

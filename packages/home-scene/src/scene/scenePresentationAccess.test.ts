@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS } from '../sceneAccess';
 import { createDefaultState } from '../state';
-import { scopeSceneDeviceStates, requiresRoomIsolation } from './scenePresentationAccess';
+import { scopeSceneDeviceStates, requiresRoomIsolation, sceneReadinessKey } from './scenePresentationAccess';
 import { prepareExteriorOverview, disposeExteriorOverview } from './roomPrivacy';
 import { roomFillLights } from './roomLighting';
 import { getExteriorPrivacyDistance, getLandscapeCamera } from './siteGeometry';
@@ -10,6 +10,23 @@ import { getExteriorPrivacyDistance, getLandscapeCamera } from './siteGeometry';
 const overview = { ...EMPTY_SCENE_ACCESS, propertyOverview: true, roomIds: ['master'], deviceIds: ['master-light'] };
 
 describe('shared property presentation privacy', () => {
+  it('keeps model readiness separate for grant changes and isolated rooms', () => {
+    const master = sceneReadinessKey(overview, 'upper', 'master');
+    expect(sceneReadinessKey(overview, 'upper', 'family')).not.toBe(master);
+    expect(sceneReadinessKey({ ...overview, interiorLayout: true }, 'upper', 'master')).not.toBe(master);
+    expect(sceneReadinessKey({ ...overview, controllableDeviceIds: ['master-light'] }, 'upper', 'master')).not.toBe(master);
+    expect(sceneReadinessKey(FULL_SCENE_ACCESS, 'upper', 'master')).not.toBe(master);
+  });
+
+  it('reuses the same visible model across whole-home rooms and exterior/immersive navigation', () => {
+    expect(sceneReadinessKey(FULL_SCENE_ACCESS, 'ground', 'living'))
+      .toBe(sceneReadinessKey(FULL_SCENE_ACCESS, 'ground', 'kitchen'));
+    expect(sceneReadinessKey(FULL_SCENE_ACCESS, 'exterior', 'living'))
+      .toBe(sceneReadinessKey(FULL_SCENE_ACCESS, 'immersive', 'living'));
+    expect(sceneReadinessKey(overview, 'exterior', 'master'))
+      .not.toBe(sceneReadinessKey(overview, 'immersive', 'master'));
+  });
+
   it('isolates assigned interiors while allowing the exterior shell and explicitly shared floor layouts', () => {
     expect(requiresRoomIsolation(overview, 'exterior')).toBe(false);
     expect(requiresRoomIsolation(overview, 'upper')).toBe(true);

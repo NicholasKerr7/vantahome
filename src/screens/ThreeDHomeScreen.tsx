@@ -21,6 +21,7 @@ import { modelPresentationIdentity } from '../features/three-d-home/modelSceneAc
 import { useRetainedScene } from '../features/three-d-home/useRetainedScene';
 import ModelSimulationSetup from '../features/three-d-home/components/ModelSimulationSetup';
 import { canPrepareModelSimulation } from '../services/modelSimulationSetup';
+import { useSceneArrival } from '../features/arrival/ArrivalContext';
 
 const HomeVoicePanel = React.lazy(() => import('../features/home-voice/HomeVoicePanel'));
 const HomeDeviceLibrary = React.lazy(() => import('../features/home-shell/HomeDeviceLibrary'));
@@ -29,10 +30,11 @@ const AccountPreferences = React.lazy(() => import('../features/account/AccountP
 
 type SessionProps = Pick<SceneSurfaceProps, 'onChromeSnapshot' | 'chromeCommand' | 'allowChromePreferencesWhileSuspended'> & {
   onRetry: () => void; onDevices: () => void; covered: boolean; onSceneStatus: (status: SceneStatus | 'loading') => void;
+  unifiedArrival: boolean;
 };
 
 /** Bound loading time while the surrounding home navigation always remains available. */
-function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended }: SessionProps) {
+function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended, unifiedArrival }: SessionProps) {
   const workspaceCovered = useScenePresentationPaused();
   const openDeviceRoutines = useDeviceRoutines();
   const [status, setStatus] = useState<SceneStatus | 'loading'>('loading');
@@ -53,7 +55,7 @@ function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnap
         : 'Your app session changed. Reload the house to reconnect.'}</Text>
       {saveStatus === 'disconnected' && <Pressable onPress={onRetry} accessibilityLabel="Reconnect house controls" style={styles.retry}><Text style={styles.retryText}>Reconnect</Text></Pressable>}
     </View>}
-    {status === 'loading' && <PropertyArrival active={!covered && !workspaceCovered} />}
+    {status === 'loading' && !unifiedArrival && <PropertyArrival active={!covered && !workspaceCovered} />}
     {status === 'error' && <View style={styles.feedback} accessibilityRole="alert">
       <Ionicons name="cube-outline" size={32} color={theme.colors.accent} />
       <Text style={styles.feedbackTitle}>The 3D view couldn’t load</Text>
@@ -86,6 +88,14 @@ export default function ThreeDHomeScreen() {
   const sceneEnabled = isThreeDHomeEnabled();
   const sceneReady = rendererStatus?.key === sessionKey && rendererStatus.status === 'ready' && retained && sceneEnabled && accessCurrent && !needsModelSetup;
   const visibleChrome = accessCurrent && retained && chrome?.key === sessionKey && rendererStatus?.status !== 'error' ? chrome.snapshot : null;
+  /** The loading film may reveal verified controls while graphics are still preparing. */
+  const openControls = useCallback(() => setPanel('devices'), []);
+  const unifiedArrival = useSceneArrival(
+    needsModelSetup || !sceneEnabled ? 'available'
+      : rendererStatus?.key === sessionKey && rendererStatus.status === 'error' ? 'error'
+      : sceneReady ? 'ready' : 'loading',
+    sessionKey, focused, openControls,
+  );
   /** Scope late renderer updates to their originating home and renderer lifetime. */
   const updateChrome = useCallback((snapshot: HomeChromeSnapshot) => {
     if (currentSessionKey.current === sessionKey) setChrome({ key: sessionKey, snapshot });
@@ -117,7 +127,7 @@ export default function ThreeDHomeScreen() {
     <HomeWorkspace section="home">
     <UnifiedHomeHeader scene={visibleChrome} ready={sceneReady && Boolean(visibleChrome)}
       onEnvironment={() => sendChromeCommand({ type: 'open-environment' })} onVoice={() => setPanel('voice')} onAccount={() => setPanel('account')} />
-    {needsModelSetup ? (focused && active ? <ModelSimulationSetup /> : <View style={styles.scene} />) : retained && sceneEnabled ? <SceneSession key={sessionKey} covered={panel !== null || suspended || !accessCurrent} onRetry={() => setAttempt((value) => value + 1)} onDevices={() => setPanel('devices')}
+    {needsModelSetup ? (focused && active ? <ModelSimulationSetup /> : <View style={styles.scene} />) : retained && sceneEnabled ? <SceneSession key={sessionKey} unifiedArrival={unifiedArrival} covered={panel !== null || suspended || !accessCurrent} onRetry={() => setAttempt((value) => value + 1)} onDevices={openControls}
       onSceneStatus={updateRendererStatus} onChromeSnapshot={updateChrome} chromeCommand={command?.key === sessionKey ? command.request : undefined}
       allowChromePreferencesWhileSuspended={panel === 'preferences' && focused && !suspended && accessCurrent} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}

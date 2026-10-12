@@ -25,19 +25,23 @@ The mark is built around three ideas:
 - `assets/release/adaptive-icon.png`
 - `assets/release/splash-icon.png`
 - `assets/release/favicon.png`
+- `assets/brand/motion/vantahome-arrival-poster.png`
 
-Use the final icon artwork as the visual source for those PNG files.
+Use the approved icon artwork for release icons and the approved film’s opening
+frame for the arrival poster.
 
 Recommended sizes:
 
 - App icon: `1024x1024`
 - Adaptive icon foreground: `1024x1024`, centered with safe padding
-- Splash icon: `1024x1024`, centered with more padding for `contain`
+- Android system splash icon: `1024x1024`, centered with padding
+- iOS arrival poster: `1024x768`, the exact first frame of the bundled entrance
 - Favicon: `48x48` or `32x32`
 
 Keep `vantahome-icon-master.png` unchanged as the single source of truth. The
-app icon, adaptive icon, favicon, and padded splash derivative must all use this
-approved artwork.
+app icon, adaptive icon, favicon, and padded Android splash derivative must all
+use this approved artwork. The iOS arrival poster uses the approved cinematic
+interpretation and must remain aligned with the in-app player.
 
 ## Cinematic brand animation
 
@@ -45,10 +49,12 @@ approved artwork.
 standalone disassembly/reassembly film. Its reusable prompts, generation
 settings, source checksum and delivery evidence are recorded in
 [`motion/core-awakening.production.json`](motion/core-awakening.production.json).
-It does not replace the master artwork or add a loading delay to the app.
+It does not replace the master artwork. The app uses short, silent derivatives
+for its unified arrival and reveals the home when it is ready; the complete
+film is not a mandatory loading delay.
 The finished widescreen delivery is 1920×1080, 24 fps, about 12 seconds, with
 stereo audio. Large media stays in the work cache and Higgsfield media library;
-only production metadata is tracked here.
+the optimized arrival clips and their matching still frames are bundled here.
 
 To regenerate the compact UI mark on macOS:
 

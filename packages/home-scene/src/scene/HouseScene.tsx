@@ -19,6 +19,7 @@ import { WeatherEffects } from './WeatherEffects';
 import siteLayout from '../site-layout.json';
 import { readDevice, type HouseSceneProps } from './types';
 import { usePageMotion } from './usePageMotion';
+import { useSceneFrameReady } from './useSceneFrameReady';
 import { AdaptiveQuality } from './AdaptiveQuality';
 import { RENDER_QUALITY, type RenderQualityTier } from './renderQuality';
 import { bindSceneVisibilityScheduling } from './visibilityScheduling';
@@ -57,6 +58,7 @@ function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, re
     });
     return copy;
   }, [scene, model, exteriorOnly, privateRoomId]);
+  useSceneFrameReady(preparedScene, onReady);
 
   useLayoutEffect(() => {
     if (!cinematic) return;
@@ -71,9 +73,8 @@ function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, re
 
   useEffect(() => {
     drum.current = preparedScene.getObjectByName('washer-drum') ?? null;
-    onReady();
     return () => { drum.current = null; };
-  }, [onReady, preparedScene]);
+  }, [preparedScene]);
 
   useFrame((_, delta) => {
     if (!canAnimate.current || cinematic) return;

@@ -1,0 +1,174 @@
+{
+  "created": "2026-10-12",
+  "source": {
+    "filename": "vantahome-core-awakening-1080p.mp4",
+    "sha256": "d52d03bf84fb104ab9f4084c5001ddc1b1c955c3efdbc014ee364528c5148dde",
+    "productionRecord": "core-awakening.production.json"
+  },
+  "format": {
+    "width": 1024,
+    "height": 768,
+    "aspectRatio": "4:3",
+    "videoCodec": "h264",
+    "framesPerSecond": 24,
+    "audio": false,
+    "edgeBackground": "#050612",
+    "cropInSource": {
+      "x": 240,
+      "y": 0,
+      "width": 1440,
+      "height": 1080
+    }
+  },
+  "choreography": {
+    "enter": "Play once while actual startup work is pending; may exit early.",
+    "hold": "Loop a subtle forward/reverse suspension; first and last source poses match.",
+    "resolve": "Optional brief reassembly. Never delay a usable app to finish it.",
+    "poster": "First source frame, used for the launch handoff, reduced motion and playback failure.",
+    "fallback": "Retain the still if decoding fails; no remote asset is needed at runtime.",
+    "transition": "Keep one surface mounted across access and scene readiness. Crossfade any clip replacement."
+  },
+  "verification": {
+    "fullVideoDecode": "passed",
+    "devicePlayback": "not performed",
+    "boundaries": {
+      "openingPosterMatchesDecodedFirstFrame": true,
+      "holdPosterMatchesDecodedFirstFrame": true,
+      "loopFirstLastMeanAbsoluteRgbErrorOutOf255": 1.5532,
+      "loopPose": "Forward/reverse source segment; decoded boundary difference measured above."
+    },
+    "visualReview": "First, middle and last frames of each exported clip inspected in a 9-frame contact sheet. Full roof, chimney, V and backing remain inside frame. Physical device playback is still pending."
+  },
+  "assets": [
+    {
+      "filename": "vantahome-arrival-enter.mp4",
+      "bytes": 324491,
+      "sha256": "17b89c5dcd2b7bebf3d1db9c84575e0353ea9033136f927d6db61868f184d153",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1024,
+            "height": 768,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1"
+          }
+        ],
+        "format": {
+          "duration": "1.375000",
+          "size": "324491"
+        }
+      }
+    },
+    {
+      "filename": "vantahome-arrival-hold.mp4",
+      "bytes": 342829,
+      "sha256": "ad390369ceab01fa210a7e2ba1dbeb304c7c709927ddf11e6e0ce668ebdc109d",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1024,
+            "height": 768,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1"
+          }
+        ],
+        "format": {
+          "duration": "1.750000",
+          "size": "342829"
+        }
+      }
+    },
+    {
+      "filename": "vantahome-arrival-hold.png",
+      "bytes": 706609,
+      "sha256": "2cf9465a4181b62c295eb96eb5eac1bce70b428f8dc12f6a489b973f53b5080c",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "png",
+            "codec_type": "video",
+            "width": 1024,
+            "height": 768,
+            "pix_fmt": "rgb24",
+            "r_frame_rate": "25/1"
+          }
+        ],
+        "format": {
+          "size": "706609"
+        }
+      }
+    },
+    {
+      "filename": "vantahome-arrival-poster.png",
+      "bytes": 672077,
+      "sha256": "2c246d589cabce668db3bc9c0576c05eff568891b7d1dc608b8030edcb809db9",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "png",
+            "codec_type": "video",
+            "width": 1024,
+            "height": 768,
+            "pix_fmt": "rgb24",
+            "r_frame_rate": "25/1"
+          }
+        ],
+        "format": {
+          "size": "672077"
+        }
+      }
+    },
+    {
+      "filename": "vantahome-arrival-resolve.mp4",
+      "bytes": 238723,
+      "sha256": "db7f0ca8037783adc05c23f647fb66b21f97073b818637ce0cea8c2b0176f652",
+      "probe": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1024,
+            "height": 768,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1"
+          }
+        ],
+        "format": {
+          "duration": "1.000000",
+          "size": "238723"
+        }
+      }
+    }
+  ],
+  "libraryExports": [
+    {
+      "mediaId": "eca5d6d3-eee9-434c-9e42-193aae40a3c8",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/eca5d6d3-eee9-434c-9e42-193aae40a3c8.mp4"
+    },
+    {
+      "mediaId": "82470c7a-7cee-4373-9c95-65eef633d0c9",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/82470c7a-7cee-4373-9c95-65eef633d0c9.mp4"
+    },
+    {
+      "mediaId": "c28720db-2911-4724-b19a-4317f9cc549c",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/c28720db-2911-4724-b19a-4317f9cc549c.mp4"
+    },
+    {
+      "mediaId": "d6e54a12-822d-46a6-beb6-97a03569c8cb",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/d6e54a12-822d-46a6-beb6-97a03569c8cb.png"
+    },
+    {
+      "mediaId": "bfccef04-520d-4901-b66a-9a0df6d4cd00",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/bfccef04-520d-4901-b66a-9a0df6d4cd00.png"
+    }
+  ]
+}
