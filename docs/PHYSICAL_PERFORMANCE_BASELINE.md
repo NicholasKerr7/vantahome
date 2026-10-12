@@ -22,8 +22,8 @@ leave brightness unchanged and allow the automatic cinematic tour to run.
 | Whole-device reported-rate integral | 5.75 battery percentage points over observed intervals |
 | Power data coverage | 480.925 s / 99.78%; 481 valid intervals; no overlapping intervals |
 | Starting battery gauge | 34%, reported by the user before recording |
-| Follow-up battery gauge | 23%, reported by the user; time of reading unconfirmed |
-| Reported gauge difference | 11 percentage points; not yet assignable to the eight-minute window |
+| Follow-up battery gauge | 23%, read when the user sent the later reply, not at capture end |
+| Reported gauge difference | 11 percentage points across a longer interval; not an eight-minute drop |
 | Application continuity | Same native app PID before and after the capture |
 
 The thermal transition occurred at **7:24.992**. Fair is a device thermal
@@ -63,9 +63,10 @@ attributed by this attached-process export.
 - Ending battery percentage, perceived warmth, stutters and whether the tour
   actually ran were requested immediately after the recorder hit its time limit.
   The user subsequently reported **23%**, compared with **34%** before recording.
-  Clarification is pending on whether 23% was read at the capture endpoint or
-  later. Do not divide this 11-point difference by the recording duration or
-  treat it as a discrepancy with the profiler integral until timing is known.
+  The user confirmed 23% was read when sending the later reply, not at the capture
+  endpoint. The exact elapsed interval and capture-end gauge are unknown. Do not
+  divide this 11-point difference by the recording duration or compare it directly
+  with the profiler integral: they cover different time windows.
   Warmth, stutters, tour playback and off-charger confirmation remain pending.
 - The 5.75-point figure integrates the profiler's reported rates. It is not an
   observed battery-gauge drop or an app-only energy measurement. Do not extrapolate
@@ -82,9 +83,9 @@ attributed by this attached-process export.
 
 ## Next useful measurements
 
-1. Confirm when the reported 23% gauge was read and complete the user's workload
-   observations. Preserve self-report labels and timing; a delayed reading is
-   not an exact eight-minute endpoint.
+1. Complete the user's workload observations. The capture-end battery gauge was
+   not recorded; preserve that missing endpoint rather than substituting the
+   confirmed delayed 23% reading.
 2. Repeat a controlled baseline at a comfortable fixed brightness, then compare
    a static 3D view with the cinematic tour on the same phone and scene. Allow
    thermal recovery, keep charging off, and record conditions and endpoints.
