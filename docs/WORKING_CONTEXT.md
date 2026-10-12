@@ -40,6 +40,24 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Sustained physical iPhone baseline — October 12
+
+- Installed Preview 56 completed a lightweight **8 min 2 s** Power Profiler +
+  Thermal State capture. The native app retained the same PID afterward. No app
+  source changes or rebuild were needed; staging/simulation scope is unchanged.
+- Thermal state was **Nominal for 7 min 25 s**, then **Fair for 37 s**; no Serious
+  or Critical intervals. Reported brightness stayed **100%**. Whole-device power
+  averaged **43.07%/hr**, integrating to **5.75 battery percentage points** over
+  99.78% observed coverage. This is a profiler estimate, not an app-only battery
+  measurement or a prediction of everyday battery life.
+- User reported starting battery **34%**. Ending gauge, subjective warmth/stutters,
+  tour playback and explicit off-charger confirmation are pending. No full-scene
+  FPS measurement was collected. Do not mark sustained performance fully signed off.
+- See [Physical performance baseline](PHYSICAL_PERFORMANCE_BASELINE.md) for minute
+  trends, conditions, evidence paths and the next controlled comparisons. Source
+  review identified hidden hotspot layout work during tours as an unmeasured
+  optimization candidate; no quality reduction or speculative fix was applied.
+
 ## Remaining dependency remediation — October 12
 
 - User asked to finish the current pending work while keeping **hub-backed
@@ -94,8 +112,9 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   capture; this device-wide reading cannot establish app-specific causation.
   After the first second, full one-second intervals showed 53–60 display surface
   swaps; the initial one-second bucket recorded 28. These are compositor events,
-  **not validated Three.js render-loop FPS**. Sustained scene
-  FPS, GPU/energy and interactive stress measurements remain pending. Preview
+  **not validated Three.js render-loop FPS**. At that stage, sustained scene
+  FPS, GPU/energy and interactive stress measurements were pending; the newer
+  sustained power/thermal baseline above advances only that measured scope. Preview
   retained the same running PID through the profiler recovery.
 - Cached evidence: `work/pending-iphone-preview56-reconnected.trace`, matching
   recording log, `work/pending-iphone-preview56-toc.xml`, exported time-profile,
