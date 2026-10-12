@@ -50,9 +50,11 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   averaged **43.07%/hr**, integrating to **5.75 battery percentage points** over
   99.78% observed coverage. This is a profiler estimate, not an app-only battery
   measurement or a prediction of everyday battery life.
-- User reported starting battery **34%**. Ending gauge, subjective warmth/stutters,
-  tour playback and explicit off-charger confirmation are pending. No full-scene
-  FPS measurement was collected. Do not mark sustained performance fully signed off.
+- User reported battery **34% → 23%**, an **11-point** difference. The time of the
+  23% reading is unconfirmed; do not attribute the entire drop to the eight-minute
+  capture. Timing, subjective warmth/stutters, tour playback and explicit
+  off-charger confirmation are pending. No full-scene FPS measurement was
+  collected. Do not mark sustained performance fully signed off.
 - See [Physical performance baseline](PHYSICAL_PERFORMANCE_BASELINE.md) for minute
   trends, conditions, evidence paths and the next controlled comparisons. Source
   review identified hidden hotspot layout work during tours as an unmeasured
