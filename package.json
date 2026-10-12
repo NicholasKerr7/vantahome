@@ -132,6 +132,9 @@
     "@react-native-voice/voice": {
       "@expo/config-plugins": "54.0.5"
     },
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "4.3.2"
+    },
     "postcss": "8.5.26",
     "decode-uri-component": "0.5.0",
     "query-string": "7.1.3",

@@ -40,6 +40,54 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Remaining dependency remediation — October 12
+
+- User asked to finish the current pending work while keeping **hub-backed
+  automation and household sync deferred**. No hub or production services changed.
+- Removed the vulnerable `sprintf-js` coverage-tooling dependency through a
+  scoped `@istanbuljs/load-nyc-config` override to `js-yaml` **4.3.2**. This removes
+  the obsolete `argparse` chain without a formatter fork or new audit exemption.
+  The parser migration boundary is documented in [Dependency security](DEPENDENCY_SECURITY.md).
+- Seven installed-source regressions exercise real YAML loading/inheritance,
+  invalid configuration recovery, Babel branch instrumentation and CLI parsing.
+  Existing braces/node-forge source guards remain unchanged. The dependency gate
+  now **passes**; raw npm audit still lists those two source-remediated findings.
+  This resolves the sprintf-js blocker recorded in the prior milestone below.
+- Full `npm run verify`, tracked/history secret scanning, production web export
+  and diff review pass: **2,892 app tests / 200 suites**, **1,028 scene tests /
+  85 files**, **127 bridge tests**, **47 script tests**, plus dependency guard
+  regressions and app/edge TypeScript. Independent dependency review found no
+  actionable issues. Logs: `work/pending-final-verify.log`,
+  `work/pending-final-secrets.log`, `work/pending-web-export.log`.
+- Development tooling only: no app/native dependency or UI changes. Installed
+  **Preview 56** remains current; no reinstall is needed for this fix.
+
+## First valid physical iPhone profile — October 12
+
+- Reconnecting USB restored Instruments discovery after the installer had already
+  seen the phone. No pairing reset, security change or OS upgrade was needed.
+- Attached Time Profiler to the installed Preview 56 on iPhone 16 Pro Max,
+  iOS 26.6.2, using Xcode 27.0. A **31.55-second** trace saved successfully with
+  **2,181 CPU samples**. Sample weights total 2.181 CPU seconds (approximately
+  **6.9% of one CPU core** across the window for the native host process).
+  There were **zero reported potential hangs over 250 ms**, and the device's
+  thermal state was **Nominal** throughout this short capture.
+- Scope matters: this is the native host process, excluding separate WebContent
+  and GPU processes. It does not establish whole-scene CPU cost, FPS, battery
+  life, sustained thermal performance or interactive stress-test results. Attached
+  lifecycle state was unknown to Instruments; the user reported Preview open.
+- A separate 30-second Animation Hitches attempt failed during finalization with
+  Apple's `DTKTraceTapMessageHandler` assertion (exit 134). Its incomplete trace
+  cannot export; do not count it as a measurement. Preview retained the same
+  running PID afterward. Validated FPS/GPU/energy measurements remain pending.
+- Cached evidence: `work/pending-iphone-preview56-reconnected.trace`, matching
+  recording log, `work/pending-iphone-preview56-toc.xml`, exported time-profile,
+  potential-hangs, thermal-state and lifecycle XML, and
+  `work/pending-iphone-preview56-summary.json`. Failed animation log uses the
+  `work/pending-iphone-preview56-animation` prefix. Device Hub screen sharing
+  requires iOS 27, so it could not provide a view of this iOS 26 phone; that
+  limitation is separate from the successful CPU recording.
+
 ## Product clarity and reliable local activity — October 12
 
 - Implemented the no-hub product-review improvements while preserving the 3D-first

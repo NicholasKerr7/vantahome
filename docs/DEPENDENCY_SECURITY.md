@@ -1,6 +1,6 @@
 # Dependency Security Notes
 
-Last reviewed: 2026-10-03
+Last reviewed: 2026-10-12
 
 ## Current baseline
 
@@ -12,6 +12,9 @@ Last reviewed: 2026-10-03
   verified source remediation from an upstream-fixed dependency; see below.
 - The scene workspace now uses the official Vitest 4.1.11 security release,
   resolving the separate development dependency advisory described below.
+- The obsolete `sprintf-js` dependency is removed through a scoped coverage
+  configuration parser upgrade. No formatter fork or audit exception is used;
+  see the compatibility boundary and installed-source regressions below.
 - Patched overrides move PostCSS to 8.5.26 and the `xcode` build helper's UUID
   dependency to 11.1.1. Both versions clear their current advisories while the
   Expo SDK 54 dependency check, configuration, tests, and web export pass.
@@ -71,6 +74,48 @@ optional peers. A temporary npm 12.2.0 CLI generated the lockfile without
 is still validated with the repository's normal npm toolchain. The security gate
 now explicitly includes development dependencies so this class of finding cannot
 be excluded by an environment's production-only installation setting.
+
+## Removing sprintf-js from coverage tooling
+
+[GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c)
+still lists every published `sprintf-js` version through 1.1.3 as affected, with
+no patched release as of October 12. Its sole installed path was Jest's
+`babel-plugin-istanbul` → `@istanbuljs/load-nyc-config` 1.1.0 → `js-yaml` 3.15.2 →
+`argparse` 1.0.10 → `sprintf-js` 1.0.3. Updating the formatter alone cannot resolve
+the finding, and replacing a thrown `RangeError` with another thrown exception
+would not remove the reported process-termination behavior.
+
+Scope an override to **`@istanbuljs/load-nyc-config` → `js-yaml` 4.3.2** instead.
+The released [loader source](https://github.com/istanbuljs/load-nyc-config/blob/v1.1.0/index.js)
+uses only `js-yaml.load(string)`, which remains supported. The newer parser uses
+`argparse` 2.0.1 and no longer depends on `sprintf-js`; these exact parser and
+argument-parser versions were already installed for Expo's `xcpretty` helper.
+The lockfile deduplicates those copies and removes `sprintf-js`. No Expo, React
+Native, Jest, Babel, native module, or local source-patch version changes.
+
+This is a reviewed major-parser override limited to the NYC configuration loader,
+not a claim of complete YAML 3/4 equivalence. The official
+[migration guide](https://github.com/nodeca/js-yaml/blob/4.1.0/migrate_v3_to_v4.md)
+documents that JavaScript-specific tags are now rejected and some unquoted
+leading-zero numbers use YAML 1.2 semantics. The repository has no NYC YAML file
+depending on those behaviors. Future configuration must quote numeric-looking
+strings and use ordinary data rather than `!!js/function`, `!!js/regexp`, or
+`!!js/undefined` tags. JSON/CommonJS configuration and the loader's merge behavior
+remain unchanged; no unsafe schema extension is added.
+
+The security gate runs seven regressions in its existing time-bounded child
+process. They verify no installed or locked `sprintf-js` copy, ordinary YAML
+flags/numbers/lists/aliases, literal format-like strings, YAML/JSON/CommonJS
+`extends`, relative paths, malformed/circular configuration rejection and later
+recovery, real Babel branch coverage with include/exclude rules, and the YAML CLI.
+The existing exact braces/node-forge hash checks and advisory handling remain
+unchanged. **`security:dependencies` passes, while raw npm audit still reports
+the two existing source-remediated advisories.** No new advisory is exempted.
+
+Retire this override when the published loader adopts a parser without the
+obsolete formatter chain; review that upstream change and rerun configuration,
+instrumentation and full verification. Do not remove the absence regression or
+reintroduce `sprintf-js` merely to satisfy an older transitive range.
 
 ## Temporary braces and node-forge source backports
 
