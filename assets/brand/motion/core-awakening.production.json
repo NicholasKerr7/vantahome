@@ -1,0 +1,99 @@
+{
+  "title": "VantaHome — Core Awakening",
+  "createdOn": "2026-10-12",
+  "purpose": "Standalone cinematic brand animation; not installed as an app loading sequence.",
+  "status": "completed",
+  "source": {
+    "path": "assets/brand/vantahome-icon-master.png",
+    "revision": "c672b945a97c1db1412a5df4128706fca40834fb",
+    "preserveOriginal": true,
+    "sha256": "1c3533ce82c3fa7bb12c45ab7e0b1123a12561d9ec06326f41da9744e32b5f9d"
+  },
+  "provider": "Higgsfield",
+  "model": "seedance_2_5",
+  "jobId": "05214a7e-3f7a-4da3-b850-22b3db00195a",
+  "requestedSettings": {
+    "durationSeconds": 12,
+    "aspectRatio": "16:9",
+    "resolution": "1080p",
+    "bitrateMode": "high",
+    "generateAudio": true,
+    "count": 1
+  },
+  "estimatedCredits": {
+    "heroReference": 2.75,
+    "heroAnimation": 144,
+    "squareStudy": 72,
+    "total": 218.75
+  },
+  "prompt": "VANTAHOME — CORE AWAKENING. A 12-second premium cinematic 3D logo film, one continuous shot, no lettering. Animate the exact physical purple-glass VantaHome badge in the supplied start/end image. The image defines the real sculpture, materials, lighting, stage and geometry. This is a solid three-dimensional mechanical object levitating over polished black stone. Preserve the roof with right-side chimney, separate intact lower V, recessed house frame, four-node circuitry and concentric illuminated central hub.\n\n0–1 seconds: The assembled badge hovers in its established three-quarter pose. A warm violet heartbeat ignites its core; edge reflections glide across thick amethyst glass.\n1–4 seconds: An elegant magnetic EXPLODED VIEW. Roof and chimney lift together as one full-sized solid piece, the intact V glides FORWARD toward the camera, the house outline retreats behind, and the rounded-square glass backing separates into two full-sized parallel plates. All pieces remain present, fully visible and the same size, with large readable gaps in actual depth. No piece dissolves, disappears, shrinks or turns into particles. The camera slowly arcs 35 degrees around the hovering sculpture and pulls back enough to contain every piece.\n4–6 seconds: Spectacular suspended-time tableau. The separated pieces hang in a precise architectural constellation. The core rings unfold into a tiny three-axis gyroscope, rotating independently around the glowing heart. Exactly four nodes remain connected by fine violet light filaments. A single soft, transparent wave of violet refraction ripples outward through the suspended pieces, bending their reflections on the floor. Strong depth parallax, rich light through bevelled crystal, beautiful calm tension. This is the hero moment.\n6–9.5 seconds: The core draws the constellation back in. Solid components accelerate gently along distinct curved paths, then decelerate with satisfying mechanical precision. Backing plates reunite, house frame seats, V locks in, roof and chimney settle together. Core rings nest into their original concentric arrangement. One low luminous pulse travels around the reunited silhouette.\n9.5–12 seconds: Camera resolves to the supplied original three-quarter hero composition. Hold the complete recognizable VantaHome icon for two full seconds, suspended above its crisp violet reflection. Core breathes softly; highlight fades. Final frame matches the supplied end image.\n\nVisual language: high-budget photorealistic CGI, real optical refraction, machined purple titanium within crystal, polished obsidian, velvet blacks, restrained blue accents, shallow floor haze, rich but controlled glow, perfectly smooth camera, crisp geometry with cinematic motion blur. Dramatic spatial movement with elegant pacing. The silhouette and right-side chimney remain faithful to the reference.\n\nOriginal synchronized audio: soft sub-bass heartbeat, glass singing and precise magnetic ticks on separation, airy spatial swell during the gyroscope, satisfying deep assembly click, delicate resolving electronic chime. No speech, lyrics or recognizable music.\n\nNo added text or logos, no fragments or explosions, no duplicated symbols, no melted geometry, no generic zoom-only animation, no flat sticker or screen, no hard cuts, no objects cropped by frame, no harsh strobe.",
+  "heroReference": {
+    "jobId": "b44b4c21-6822-492e-8338-fc2e8ce65a8d",
+    "model": "gpt_image_2_5",
+    "settings": {
+      "quality": "high",
+      "resolution": "2k",
+      "aspectRatio": "16:9"
+    },
+    "prompt": "Create one photorealistic premium cinematic CGI keyframe of the EXACT supplied VantaHome icon transformed into a physical precision-made sculpture. This is a dimensional rendering of the user's existing icon, NOT a new logo design. Preserve its unmistakable peaked house roof with ONE right-side chimney, a large separate lower V, the recessed open-bottom house outline, glowing concentric hub and exactly four circuit branches/nodes in the original arrangement. Preserve the amethyst purple and restrained blue palette.\n\nCOMPOSITION: 16:9 widescreen. The complete rounded-square badge levitates upright roughly 20 centimeters above an immense polished black obsidian floor, centered, occupying only 42 percent of frame width and 75 percent of frame height, generous pure dark negative space left and right for an upcoming exploded-view animation. Camera is slightly below core height and 20 degrees to its LEFT, a tasteful three-quarter hero angle, full badge and all edges visible. An 80mm product-cinema lens; tack-sharp hero with gently receding background. The badge is substantially THICK, with a clearly visible smoked-glass sidewall; bevelled purple roof, V and hub visibly project several centimeters forward from its black backing as independent solid machined components. The mark is a 3D object, never a printed image on a tablet or screen. No device UI.\n\nMATERIALS / LIGHT: translucent amethyst crystal outer bevels with satin purple titanium interior surfaces; polished dark glass support; exquisite realistic reflections and light refraction through thick edges. A large soft lavender rim light from upper left, restrained cool-blue bounce along the lower right, magenta-white energy in the center, believable surface roughness and contact-free reflection on the floor. Slight near-floor atmospheric haze, almost black studio, extremely subtle single halo-like reflection beneath the hovering badge. Expensive architectural visualization and high-end technology launch-film quality. Sophisticated dynamic range, visible fine geometry, smooth gradients, no blown-out white borders.\n\nDeliver a fully assembled, exact recognizable icon ready to separate into existing rigid layers in animation. No floating shards yet. No text, typography, captions, watermark, new brand marks, extra circuitry, extra roof, extra chimney, extra limbs or sci-fi clutter. Do not turn it into a shield or alter the lower V.",
+    "sha256": "f0c48d07f15ab02f74c2213ad01c59bbc8502144540dc44147757cc3e668eb53"
+  },
+  "squareStudy": {
+    "jobId": "affba2fd-881f-4254-af0b-139c2032369a",
+    "model": "kling3_0",
+    "requestedSettings": {
+      "durationSeconds": 12,
+      "aspectRatio": "1:1",
+      "mode": "4k",
+      "sound": "on",
+      "count": 1
+    },
+    "export": {
+      "width": 2880,
+      "height": 2880,
+      "durationSeconds": 12.042,
+      "framesPerSecond": 24,
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "audioChannels": 2,
+      "bytes": 22967176,
+      "sha256": "bcb962ce858ec0646f5296ceb5ea79e5c02f50d797922626691c2c263c6d2579"
+    },
+    "prompt": "Create a spectacular premium cinematic 3D brand ident, titled internally \"VantaHome — Core Awakening\", but render NO text. 12 seconds, one continuous elegantly choreographed shot. The supplied first and last reference image is the approved exact icon and must anchor the identity. Reconstruct it as a tangible precision-made object: an obsidian rounded-square badge, translucent amethyst bevelled roof with its chimney on the RIGHT, the strong intact lower V, recessed house outline, a luminous concentric circular core and exactly FOUR connected circuit nodes. Preserve these shapes, proportions, arrangement, colors and final silhouette. Deep black-violet environment, polished smoked glass, iridescent purple titanium, restrained electric-blue edge reflections, realistic ray-traced reflections, beautiful visible bevels and optical depth. Luxury industrial design film, believable scale, refined optical bloom with readable material details.\n\nCHOREOGRAPHY:\n0.0–1.5s: Begin with the exact supplied frontal icon, motion already beginning as one soft light pulse collects in its central core. A grazing lavender highlight travels along the roof and down the V. Smoothly pull back just enough to give the badge breathing room.\n1.5–4.5s: The icon gracefully DISASSEMBLES into its existing major rigid components in a perfectly balanced exploded view. The roof and right chimney lift as ONE rigid assembly, the complete V advances slightly toward camera and lowers, the recessed house layer slides backward. The four circuit nodes hover in their original cardinal relationships. Components stay solid and recognizable; no shattering. The outer rounded-square casing opens slightly into two parallel depth layers. Camera makes only a smooth 15-degree lateral arc, revealing the depth between parts while keeping every part in frame.\n4.5–6.5s: The dramatic impossible-space moment: all parts hang weightlessly in near-stillness, while the existing concentric core rings tilt into a compact THREE-DIMENSIONAL gyroscope around the luminous center. A single thin violet wave passes through the floating architecture; refraction and delayed light reflections create a sophisticated fourth-dimensional feeling. Strong depth parallax, suspended time, extremely precise motion. The badge remains the sole hero.\n6.5–9.5s: The light wave contracts inward. The gyroscope settles into the original concentric circles, the circuit paths reconnect, and all original components follow controlled curved trajectories back into the EXACT approved icon. Smooth acceleration and magnetic deceleration, tiny elegant mechanical alignment at each junction. One restrained core pulse seals the completed assembly.\n9.5–12.0s: Return to the exact reference's straight-on symmetrical composition, fully reassembled with correct roof, right chimney, V and four nodes. Hold the finished mark clearly for at least two seconds as a final soft violet highlight fades. End frame matches the supplied icon.\n\nAUDIO: original cinematic sound design only. Warm sub-bass awakening, delicate glass resonance and soft precision-mechanism ticks during separation; an airy spectral sweep through the gyroscope; one deep satisfying magnetic lock sound on reconstruction; a short luminous resolving chime with a clean tail. Elegant, spacious, balanced, no speech, no sung vocals, no loud trailer explosions.\n\nAVOID: any text, captions, watermarks, extra logos, new symbols, extra windows or circuitry, duplicated roof or V, missing chimney, morphing logo silhouette, liquid melting, jagged shards, destructive explosion, excessive debris, busy starfields, harsh strobing, handheld shake, fast full camera spins, cropped components, unreadable blown-out glow. This is exact geometric deconstruction and reconstruction, not a generic floating-logo zoom.",
+    "review": "Opening, disassembly and reassembly inspected on a 12-frame contact sheet. Kept as a frontal square study; the widescreen version adds spatial depth."
+  },
+  "master": {
+    "resultUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/hf_20261012_043501_05214a7e-3f7a-4da3-b850-22b3db00195a.mp4",
+    "width": 1920,
+    "height": 1080,
+    "durationSeconds": 12.05,
+    "framesPerSecond": 24,
+    "videoCodec": "hevc",
+    "audioCodec": "aac",
+    "audioChannels": 2,
+    "bytes": 19993270,
+    "sha256": "caae6e1cc108be3120c87b9b1e4ed7b122b20f61cea90eec41a419f6776c6f80"
+  },
+  "delivery": {
+    "mediaId": "0de33613-1256-4e71-ad29-5c843c7e82d2",
+    "resultUrl": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/0de33613-1256-4e71-ad29-5c843c7e82d2.mp4",
+    "filename": "vantahome-core-awakening-1080p.mp4",
+    "width": 1920,
+    "height": 1080,
+    "durationSeconds": 12.05,
+    "framesPerSecond": 24,
+    "videoCodec": "h264",
+    "pixelFormat": "yuv420p",
+    "audioCodec": "aac",
+    "audioChannels": 2,
+    "fastStart": true,
+    "bytes": 6102846,
+    "sha256": "d52d03bf84fb104ab9f4084c5001ddc1b1c955c3efdbc014ee364528c5148dde"
+  },
+  "review": {
+    "method": "Visually inspected the hero reference and 12 sampled frames covering opening, separation, suspended components, reassembly and final hold; probed metadata and fully decoded the H.264 delivery without errors.",
+    "result": "The widescreen film visibly separates the roof and V from the backing and reassembles into the recognizable reference silhouette. Purple glass, dimensional parallax and floor reflections improve the frontal study.",
+    "limitations": "AI-generated dimensional interpretation, not an exact editable geometry model. Peak separation briefly crowds the top edge; fine circuitry and the requested gyroscope choreography are not frame-exact. Stereo audio presence verified, not a listening or physical-device playback test."
+  },
+  "localCacheDirectory": "/Users/nick007/Library/Caches/VantaHome/work/brand-motion/core-awakening"
+}

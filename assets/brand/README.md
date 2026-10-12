@@ -39,6 +39,17 @@ Keep `vantahome-icon-master.png` unchanged as the single source of truth. The
 app icon, adaptive icon, favicon, and padded splash derivative must all use this
 approved artwork.
 
+## Cinematic brand animation
+
+“Core Awakening” interprets the approved icon as a sculptural reference for a
+standalone disassembly/reassembly film. Its reusable prompts, generation
+settings, source checksum and delivery evidence are recorded in
+[`motion/core-awakening.production.json`](motion/core-awakening.production.json).
+It does not replace the master artwork or add a loading delay to the app.
+The finished widescreen delivery is 1920×1080, 24 fps, about 12 seconds, with
+stereo audio. Large media stays in the work cache and Higgsfield media library;
+only production metadata is tracked here.
+
 To regenerate the compact UI mark on macOS:
 
 ```sh

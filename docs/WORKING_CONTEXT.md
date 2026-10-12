@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-11**. Read this before rediscovering the project.
+Last maintained: **2026-10-12**. Read this before rediscovering the project.
 
 ## Locations and branch
 
@@ -39,6 +39,20 @@ Last maintained: **2026-10-11**. Read this before rediscovering the project.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Standalone brand animation — October 12
+
+- Created **Core Awakening** in Higgsfield from the approved VantaHome icon:
+  a dimensional purple-glass disassembly/reassembly film. Preferred delivery is
+  **12.05 seconds, 1920×1080, 24 fps, H.264/AAC stereo**, approximately 6.1 MB.
+- Reusable prompts, job/media IDs, source/output checksums, estimates and review
+  limits are in [production metadata](../assets/brand/motion/core-awakening.production.json).
+  Master, compatible MP4, hero reference and square study are cached under
+  `/Users/nick007/Library/Caches/VantaHome/work/brand-motion/core-awakening/`.
+- Reference and sampled motion frames inspected; portable output fully decoded
+  without errors. No physical-device playback test. AI motion is a dimensional
+  interpretation, not exact editable logo geometry. App runtime and original
+  approved icon remain unchanged; no loading sequence was installed.
 
 ## Verified branch audit and implementation priorities
 
