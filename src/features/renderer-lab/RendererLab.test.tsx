@@ -199,7 +199,7 @@ test('native controls keep device preferences while opening the shared routine c
   fireEvent.press(screen.getByLabelText('Gate full controls'));
   fireEvent.press(screen.getByRole('tab', { name: 'Modes' }));
   for (let page = 0; page < 8 && !screen.queryByLabelText('Auto-open preference'); page++) fireEvent.press(screen.getByLabelText('Next controls page'));
-  fireEvent(screen.getByLabelText('Auto-open preference'), 'valueChange', true);
+  fireEvent.press(screen.getByLabelText('Auto-open preference'));
   fireEvent.press(screen.getByRole('tab', { name: 'Routines' }));
   expect(screen.queryByLabelText('Save schedule preference')).toBeNull();
   fireEvent.press(screen.getByLabelText('View device routines'));

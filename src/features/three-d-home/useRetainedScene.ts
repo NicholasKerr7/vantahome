@@ -39,7 +39,9 @@ export function useRetainedScene(focused: boolean): { active: boolean; retained:
     const memory = AppState.addEventListener('memoryWarning', () => {
       if (!focusedRef.current || appStateRef.current === 'background') setRetained(false);
     });
-    return () => { subscription.remove(); memory.remove(); };
+    // React Native Web returns no subscription for unsupported memory warnings
+    // (or for all events when document visibility is unavailable).
+    return () => { subscription?.remove(); memory?.remove(); };
   }, []);
 
   return { active, retained, suspended: !focused || appState !== 'active' };

@@ -11,6 +11,8 @@ import { RoutineCard, SceneMoodCard } from './CollectionCards';
 import { describeFlow } from './collectionDescriptions';
 import { useCollectionDirectory } from './useCollectionDirectory';
 import { sceneScopeLabel } from '../../features/scenes/sceneScope';
+import { useHomeStore } from '../../store/useHomeStore';
+import { isModelHome } from '../../features/three-d-home/modelHomeScope';
 
 type Pagination = ReturnType<typeof useCollectionPagination>;
 
@@ -40,7 +42,7 @@ export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear
   const pagination = useCollectionPagination(scenes.length, compact ? 194 : 234, true);
   const directory = useCollectionDirectory();
   const pageScenes = scenes.slice(pagination.start, pagination.end);
-  const activeScene = scenes.find((scene) => scene.id === activeSceneId);
+  const modelHome = useHomeStore(isModelHome);
   return <View style={[styles.collection, compact && styles.collectionCompact]} testID="embedded-scenes-collection">
     <View style={styles.collectionHeader}>
       <View style={styles.headingCopy}>
@@ -51,12 +53,12 @@ export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear
       <Pressable accessibilityLabel="Create scene" style={styles.createButton} onPress={onCreate}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
     </View>
     <View style={styles.contextRow}>
-      <Text style={styles.contextText} numberOfLines={1}>{activeScene ? `Last used · ${activeScene.name}` : 'Your scenes · Saved on this device'}</Text>
+      <Text style={styles.contextText} numberOfLines={1}>Saved on this device · Review settings before running</Text>
       {activeSceneId ? <Pressable accessibilityLabel="Clear last-used scene" style={styles.clearButton} onPress={onClear}><Text style={styles.linkText}>Clear</Text></Pressable> : null}
     </View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="scene-page-area">
       {pageScenes.length ? collectionRows(pageScenes, pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`scene-row-${rowIndex}`} style={[styles.cardRow, !pagination.largeText && styles.sceneRowStandard]}>
-        {row.map((scene) => <SceneMoodCard key={scene.id} scene={scene} roomName={sceneScopeLabel(scene, rooms)} active={scene.id === activeSceneId} compact={compact || pagination.tight} directory={directory} onRun={onRun} onOpen={onOpen} />)}
+        {row.map((scene) => <SceneMoodCard key={scene.id} scene={scene} roomName={sceneScopeLabel(scene, rooms)} active={scene.id === activeSceneId} compact={compact || pagination.tight} directory={directory} modelHome={modelHome} onRun={onRun} onOpen={onOpen} />)}
         {row.length < pagination.columns && <View style={styles.emptyTileSpace} />}
       </View>) : <View style={styles.emptyState}><Ionicons name="sparkles-outline" size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>Make room for a mood.</Text><Text style={styles.emptyCopy}>Create your first scene to bring several devices together in one tap.</Text></View>}
     </View>
@@ -85,7 +87,7 @@ export function EmbeddedAutomations({ routines, deviceName, onClearFilter, canMa
       </View>
       <Pressable accessibilityLabel="New routine" accessibilityState={{ disabled: !canManage }} disabled={!canManage} style={[styles.createButton, !canManage && styles.disabled]} onPress={onCreate}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
     </View>
-    <View style={styles.runtimeStatus}><View style={styles.runtimeDot} /><Text style={styles.runtimeText} accessibilityRole={error ? "alert" : undefined}>{error ?? (canManage ? ROUTINE_EXECUTION.summary : "View only · Ask your household owner to make changes")}</Text>{onClearFilter && <Pressable accessibilityLabel="All routines" onPress={onClearFilter} style={styles.allRoutinesButton}><Text style={styles.linkText}>All routines</Text></Pressable>}</View>
+    <View style={styles.runtimeStatus}><View style={styles.runtimeDot} /><View style={styles.runtimeCopy}><Text style={styles.runtimeText}>{ROUTINE_EXECUTION.summary}</Text><Text style={styles.runtimeText} accessibilityRole={error ? "alert" : undefined}>{error ?? (canManage ? ROUTINE_EXECUTION.storage : "View only · Ask your household owner to make changes")}</Text></View>{onClearFilter && <Pressable accessibilityLabel="All routines" onPress={onClearFilter} style={styles.allRoutinesButton}><Text style={styles.linkText}>All routines</Text></Pressable>}</View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="routine-page-area">
       {collectionRows(items, pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`routine-card-row-${rowIndex}`} style={[styles.cardRow, !pagination.largeText && styles.routineRowStandard]}>
         {row.map((routine) => {
@@ -132,6 +134,7 @@ const styles = StyleSheet.create({
   emptyCopy: { color: theme.colors.subtext, fontSize: 13, lineHeight: 20 },
   runtimeStatus: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 40, paddingBottom: 6 },
   allRoutinesButton: { minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' },
+  runtimeCopy: { flex: 1, minWidth: 0 },
   runtimeDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.ember },
-  runtimeText: { flex: 1, color: theme.colors.muted, fontSize: 10, lineHeight: 15 },
+  runtimeText: { color: theme.colors.subtext, fontSize: 10, lineHeight: 15 },
 });

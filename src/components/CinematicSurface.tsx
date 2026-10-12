@@ -59,7 +59,7 @@ export default function CinematicSurface({ children, variant = 'quiet', active =
 
 const styles = StyleSheet.create({
   surface: { position: 'relative', overflow: 'hidden', backgroundColor: theme.colors.bg0 },
-  quiet: { opacity: 0.42 },
+  quiet: { opacity: 0.20 },
   atmosphere: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   light: { position: 'absolute', top: -40, bottom: -40, left: -40, right: -40 },
 });

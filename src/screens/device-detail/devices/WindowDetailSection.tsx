@@ -14,6 +14,7 @@ type WindowDetailSectionProps = {
   isLandscapeSplit: boolean;
   isWindowTabletPortrait: boolean;
   isOpen: boolean;
+  positionKnown: boolean;
   openDisplayValue: number;
   openPercent: number;
   openStatusText: string;
@@ -67,6 +68,7 @@ export default function WindowDetailSection({
   isLandscapeSplit,
   isWindowTabletPortrait,
   isOpen,
+  positionKnown,
   openDisplayValue,
   openPercent,
   windowFlowLabel,
@@ -128,7 +130,7 @@ export default function WindowDetailSection({
         </View>
         <View style={windowHeroPillStyle(openDisplayValue > 0)}>
           <Ionicons
-            name={openDisplayValue > 0 ? "leaf" : "lock-closed"}
+            name={!positionKnown ? "help-circle-outline" : openDisplayValue > 0 ? "leaf" : "remove"}
             size={14}
             color={openDisplayValue > 0 ? pillIconActiveColor : pillIconColor}
           />
@@ -157,7 +159,7 @@ export default function WindowDetailSection({
         <View style={windowHeroControlsStyle}>
           <View style={windowHeroMeterRowStyle}>
             <Text style={windowHeroMeterLabelStyle}>Ventilation</Text>
-            <Text style={windowHeroMeterValueStyle}>{openDisplayValue}%</Text>
+            <Text style={windowHeroMeterValueStyle}>{positionKnown ? `${openDisplayValue}%` : "--"}</Text>
           </View>
           <View style={windowHeroSliderWrapStyle}>
             <View style={windowHeroTrackStyle}>
@@ -190,7 +192,7 @@ export default function WindowDetailSection({
                   { label: "Vent", value: 25, icon: "leaf" },
                   { label: "Close", value: 0, icon: "lock-closed" },
                 ].map((preset) => {
-                  const active = openPercent === preset.value;
+                  const active = positionKnown && openPercent === preset.value;
                   return (
                     <Pressable
                       key={preset.label}
@@ -229,7 +231,7 @@ export default function WindowDetailSection({
             { label: "Vent", value: 25, icon: "leaf" },
             { label: "Close", value: 0, icon: "lock-closed" },
           ].map((preset) => {
-            const active = openPercent === preset.value;
+            const active = positionKnown && openPercent === preset.value;
             return (
               <Pressable
                 key={preset.label}

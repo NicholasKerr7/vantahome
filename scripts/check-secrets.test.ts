@@ -65,6 +65,22 @@ describe("secret scanner", () => {
     ]);
   });
 
+  test("only exempts the reviewed invalid preview fixtures in their historical path", () => {
+    const key = ["SUPABASE", "SERVICE_ROLE_KEY"].join("_");
+    const path = "scripts/build-ios-preview.test.mjs";
+    const source = `+ { "${key}": "synthetic-rejected-value" }`;
+    const patch = `diff --git a/${path} b/${path}\n${source}`;
+    expect(scanText(patch, "Git history")).toEqual([]);
+    expect(scanText(patch.replaceAll(path, "src/config.ts"), "Git history")).toHaveLength(1);
+    expect(scanText(source.slice(1), path)).toHaveLength(1);
+    expect(scanText(patch.replace("synthetic-rejected-value", "invented-real-value"), "Git history")).toHaveLength(1);
+    expect(scanText(patch + "\ndiff --git a/other.ts b/other.ts\n" + source, "Git history")).toHaveLength(1);
+    const token = ["ghp", "abcdefghijklmnopqrstuvwxyz123456"].join("_");
+    expect(scanText(patch + " " + token, "Git history")).toEqual([
+      expect.objectContaining({ type: "GitHub token" }),
+    ]);
+  });
+
   test("deduplicates identical findings", () => {
     const finding = { location: "fixture", line: 1, type: "JWT" };
     expect(uniqueFindings([finding, finding])).toEqual([finding]);

@@ -25,7 +25,7 @@ type StoveDetailSectionProps = {
   stoveModeOptions: Array<{ label: string; value: string }>;
   stoveMode: string;
   stoveTimer: number;
-  stoveLock: boolean;
+  stoveLock: boolean | undefined;
   onSetMode: (value: string) => void;
   onSetTimer: (value: number) => void;
   onToggleLock: () => void;
@@ -97,9 +97,9 @@ export default function StoveDetailSection({
     <View style={cardStyle}>
       <Text style={cardLabelStyle}>Safety</Text>
       <View style={controlCardRowTopStyle}>
-        <Pressable style={controlPillStyle(stoveLock)} onPress={onToggleLock}>
-          <Text style={controlPillTextStyle(stoveLock)}>
-            {stoveLock ? "Child Lock" : "Lock Off"}
+        <Pressable style={controlPillStyle(stoveLock === true)} onPress={onToggleLock}>
+          <Text style={controlPillTextStyle(stoveLock === true)}>
+            {stoveLock === undefined ? "Lock unknown" : stoveLock ? "Child Lock" : "Lock Off"}
           </Text>
         </Pressable>
       </View>

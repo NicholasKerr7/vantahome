@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import ScenesScreen from '../ScenesScreen';
 import ModalCard from '../../components/ModalCard';
+import ModalField from '../../components/ModalField';
 import ModalActionRow from '../../components/ModalActionRow';
 import Pressable from '../../components/Pressable';
 import { ScrollView, StyleSheet } from 'react-native';
@@ -176,4 +177,17 @@ test('keeps normal telemetry from discarding a draft and keeps save controls out
   expect(children.map((child) => child.type)).toEqual([ScrollView, ModalActionRow]);
   fireEvent.press(screen.getByText('Create'));
   expect(useHomeStore.getState().scenes.some((scene) => scene.name === 'Telemetry-safe draft')).toBe(true);
+});
+
+
+test('keeps an off scene child-lock change visible in the detailed action list', () => {
+  useHomeStore.setState({
+    devices: [{ id: 'stove', name: 'Kitchen stove', roomId: 'living', kind: 'stove', isOn: false }],
+    scenes: [{ id: 'stove-scene', name: 'Kitchen off', scope: 'home', roomId: '',
+      actions: [{ type: 'patch', deviceId: 'stove', patch: { isOn: false, stoveLock: false } }] }],
+  });
+  const screen = render(<ScenesScreen embedded />);
+  fireEvent.press(screen.getByLabelText('Details for Kitchen off'));
+  const actions = screen.UNSAFE_getAllByType(ModalField).find((field) => field.props.label === 'Actions')!;
+  expect(actions.findAllByProps({ children: 'Kitchen stove: off, child lock off' }).length).toBeGreaterThan(0);
 });

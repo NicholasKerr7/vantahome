@@ -1,4 +1,4 @@
-import type { AutomationFlow, Device, FlowAction, FlowCondition, FlowTrigger, HouseholdMember, Scene, SceneAction } from '../../store/useHomeStore';
+import type { AutomationFlow, Device, FlowAction, FlowCondition, FlowTrigger, HouseholdMember, Scene } from '../../store/useHomeStore';
 
 export type CollectionDirectory = {
   devices: readonly Device[];
@@ -6,6 +6,7 @@ export type CollectionDirectory = {
   household: readonly HouseholdMember[];
 };
 export type SceneIdentity = 'light' | 'rest' | 'off' | 'climate' | 'media' | 'security' | 'home';
+const PRESET_IDENTITIES: Record<NonNullable<Scene['modelPreset']>, SceneIdentity> = { morning: 'light', movie: 'media', night: 'rest', away: 'off' };
 
 /** Resolve only the visible data provided by the caller; never expose an inaccessible device ID. */
 function deviceName(id: string, directory: CollectionDirectory) {
@@ -64,6 +65,9 @@ export function describeFlow(flow: AutomationFlow, directory: CollectionDirector
 
 /** Derive the card's visual identity from its actual controlled devices, not guesses from its title. */
 export function sceneIdentity(scene: Scene, directory: CollectionDirectory): SceneIdentity {
+  // Unedited authored presets retain a stable visual identity; edits already remove this metadata.
+  const presetIdentity = scene.modelPreset ? PRESET_IDENTITIES[scene.modelPreset] : undefined;
+  if (presetIdentity) return presetIdentity;
   const entries = scene.actions.map((action) => ({ action, kind: directory.devices.find((device) => device.id === action.deviceId)?.kind }));
   if (entries.length && entries.every(({ action }) => action.type === 'toggle' ? action.on === false : action.patch.isOn === false)) return 'off';
   if (entries.some(({ action }) => action.type === 'patch' && action.patch.armed === true)) return 'security';
@@ -75,12 +79,4 @@ export function sceneIdentity(scene: Scene, directory: CollectionDirectory): Sce
   if (entries.some(({ kind }) => kind === 'ac' || kind === 'fan')) return 'climate';
   if (entries.some(({ kind }) => kind === 'gate' || kind === 'door' || kind === 'camera')) return 'security';
   return 'home';
-}
-
-/** Name unique affected devices, retaining an honest fallback for removed or restricted entries. */
-export function sceneDeviceSummary(actions: readonly SceneAction[], directory: CollectionDirectory) {
-  const ids = [...new Set(actions.map((action) => action.deviceId))];
-  if (!ids.length) return 'No device actions yet';
-  const names = ids.slice(0, 2).map((id) => deviceName(id, directory));
-  return `${names.join(' · ')}${ids.length > 2 ? ` + ${ids.length - 2} more` : ''}`;
 }

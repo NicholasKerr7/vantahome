@@ -62,8 +62,8 @@ with tempfile.TemporaryDirectory() as folder:
       public_environment('malformed'), {**public_environment(), 'EXPO_PUBLIC_VANTA_MODE':'production'},
       {**public_environment(), 'EXPO_PUBLIC_APP_VARIANT':'production'},
       {**public_environment(), 'EXPO_PUBLIC_SUPABASE_URL':'https://production.invalid'},
-      {**public_environment(), 'SUPABASE_SERVICE_ROLE_KEY':'synthetic-rejected-value'},
-      {**public_environment(), 'EXPO_PUBLIC_UNREVIEWED':'synthetic-rejected-value'}]
+      {**public_environment(), 'SUPABASE_SERVICE_ROLE_KEY':'example-rejected-value'},
+      {**public_environment(), 'EXPO_PUBLIC_UNREVIEWED':'example-rejected-value'}]
     for values in invalid:
         try: preview.read_preview_environment(write_environment(root, values))
         except ValueError: pass
@@ -151,7 +151,7 @@ with tempfile.TemporaryDirectory() as folder:
     with patch.object(preview, 'ROOT', root), patch.object(sys, 'argv', arguments), \
       patch.object(preview.subprocess, 'check_output', return_value=json.dumps(identity)), \
       patch.object(preview.subprocess, 'run', side_effect=run_checked), \
-      patch.dict(os.environ, {'EXPO_PUBLIC_UNEXPECTED':'must-not-embed','SUPABASE_SERVICE_ROLE_KEY':'must-not-embed'}):
+      patch.dict(os.environ, {'EXPO_PUBLIC_UNEXPECTED':'example-must-not-embed','SUPABASE_SERVICE_ROLE_KEY':'example-must-not-embed'}):
         try: preview.main()
         except (subprocess.CalledProcessError, KeyboardInterrupt): assert failure != 'none'
         else: assert failure == 'none'

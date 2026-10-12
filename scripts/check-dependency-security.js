@@ -38,6 +38,7 @@ function checkSecurityRegressions() {
   const result = spawnSync(process.execPath, ["--test",
     path.join(__dirname, "security-regressions/braces.test.cjs"),
     path.join(__dirname, "security-regressions/node-forge.test.cjs"),
+    path.join(__dirname, "security-regressions/upstream-fixes.test.cjs"),
   ], { encoding: "utf8", timeout: 45000, maxBuffer: 2 * 1024 * 1024, cwd: path.resolve(__dirname, "..") });
   if (result.error || result.signal || result.status !== 0) {
     throw new Error(`Installed security patch regressions failed.\n${result.stdout ?? ""}\n${result.stderr ?? ""}`);

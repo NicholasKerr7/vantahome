@@ -40,6 +40,65 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Product clarity and reliable local activity — October 12
+
+- Implemented the no-hub product-review improvements while preserving the 3D-first
+  purple design. Quieter plum control surfaces, brighter secondary text, larger
+  small dashboard labels, and fewer redundant selection glows. Motion, touch
+  behavior, layout grants and real-device authorization remain unchanged.
+- Notifications now contains a bounded **200-entry local inbox**, isolated by
+  account/home/member (plus a separate demo scope). It records admitted command
+  delivery and actual model changes, never fabricated sample notifications or
+  physical success. Read/dismiss revisions persist; scope changes hide old rows
+  immediately. No raw payloads, credentials or historical device names are stored.
+  Slider updates coalesce; cache failures remain visible and failed reads cannot
+  overwrite unknown disk history. Interrupted old deliveries show unknown outcomes.
+- Separate **Current reports** preserves the outage, water leak/pressure/budget
+  and open-entry overview. It reads permitted devices and canonical model values,
+  labels simulations, and uses physical `observedAt` only (unknown/older reports
+  remain explicit). Dismissing history cannot dismiss a continuing condition.
+  This is local app reporting, not a connected push or independent alarm service.
+- Scene cards summarize their actual desired actions. Details retain important
+  entry/camera/protection preferences, including child-lock and automatic shutoff
+  changes when power is OFF. Sequential virtual camera toggles use the reducer's
+  arming semantics. Routine screens explicitly state foreground-only execution,
+  device-local storage, and no household sync or connected always-on hub.
+- Air controls no longer invent readings, history, confidence, freshness, filter
+  life, environmental temperatures or reassuring advice. Per-device sample source
+  survives mixed physical/model homes. Missing smoke/water/entry/child-lock states
+  stay unknown; closed does not imply locked. Physical window state is not inferred
+  from an animation timer. Air aging pauses in background. These targeted fixes
+  are not certification of every legacy appliance/hardware path.
+- Fixed a browser unmount crash: RN Web may return no AppState subscription,
+  particularly for memory warnings. Retained-scene and air cleanup handle that
+  while preserving native lifecycle behavior.
+- Compatible dependency updates: compression **1.8.2**, shell-quote **1.11.0**,
+  source-map-js **1.2.2**, with installed attack regressions. Existing guarded
+  braces/node-forge backports remain. `security:dependencies` still fails on
+  **sprintf-js GHSA-hp3w-g68c-fv3c** in development tooling; no safe upstream fixed
+  version was available in the checked registry. Do not suppress or call CI green.
+  Secret scanning now recognizes only two reviewed invalid historical fixtures in
+  one exact test path; current files and actual token patterns remain scanned.
+- Browser QA: 320×568, 430×932, 768×1024, 1024×768; no document overflow. Light
+  off/on feedback, inbox persistence/dismissal across reload, scene safety details,
+  compact Current reports and idle-tour return checked. Screenshots/logs use the
+  `work/product-review-*` prefix. iPad hardware remains deferred.
+- Verification: **2,892 app tests / 200 suites**, **1,028 scene tests / 85 files**,
+  **127 bridge tests**, **47 script tests**, native/edge TypeScript, production web
+  export, scene build, release identity/assets/redirect guards, full tracked/history
+  secret scan and diff review pass. Dependency guard remains red only for sprintf-js.
+- **Preview 56 Release built, installed and launched**; device reports 1.0.0 (56).
+  Strict signature, preview identity/schemes, device profile and four arrival-media
+  hashes pass. Packaged scene **31,796,355 bytes**, SHA
+  `537af5f22636f9cb1bc45444f2f249337f65bc01c71ff48d5b5e343fa3911b0e`.
+  Final bundle contains Current reports. Production metadata was restored, and
+  production services remain unchanged. Receipts: `work/product-review-preview56-*`.
+- Physical profiling timed out twice while xctrace listed the phone Offline,
+  despite the installer seeing it. After Preview 56 installation xctrace listed
+  it online, but a third bounded Time Profiler recording still timed out waiting
+  for the device. No valid CPU/FPS/energy measurements were obtained. Installation
+  and launch are verified separately; do not describe performance as measured.
+
 ## Higgsfield amethyst arrival — October 12
 
 - User approved a quieter, seamless refinement and explicitly requested a new

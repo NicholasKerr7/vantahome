@@ -154,6 +154,7 @@ describe('Embedded feature collections', () => {
     expect(text).toContain('At 18:45');
     expect(text).toContain('Notify: Close the windows');
     expect(text).toContain('Runs while app is open · Hub not connected');
+    expect(text).toContain('Saved on this device · Not synced across your household');
     expect(button(tree!, 'Evening reminder enabled').props.accessibilityRole).toBe('switch');
   });
 
@@ -171,6 +172,7 @@ describe('Embedded feature collections', () => {
       expect(button(tree!, label).props.disabled).toBe(true);
     }
     expect(visibleIds(tree!, 'routine-row-')).toHaveLength(1);
+    expect(tree!.root.findAllByType(Text).some((node: TestNode) => node.props.children === 'Runs while app is open · Hub not connected')).toBe(true);
     expect(tree!.root.findAllByType(Text).some((node: TestNode) => node.props.children === 'View only · Ask your household owner to make changes')).toBe(true);
   });
 

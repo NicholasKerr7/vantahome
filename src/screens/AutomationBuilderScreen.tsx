@@ -247,6 +247,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
                     {enabled ? "Enabled" : "Paused"}
                   </Text>
                   <Text style={styles.helper}>{ROUTINE_EXECUTION.summary}</Text>
+                  <Text style={styles.helper}>{ROUTINE_EXECUTION.storage}</Text>
                 </View>
                 <ThemedSwitch
                   accessibilityLabel="Routine enabled"

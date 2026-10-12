@@ -35,7 +35,7 @@
 /* Navigation reads as floating instrument controls, without stealing model area. */
 .dashboard-shell .view-controls { border-color: rgb(var(--accent-text-rgb) / 20%); background: rgb(var(--surface-rgb) / 92.9%); box-shadow: inset 0 1px rgb(var(--text-rgb) / 3.9%), 0 12px 30px #0005; backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 18px; }
 .dashboard-shell .view-controls button { color: var(--text-soft); border-radius: 13px; }
-.dashboard-shell .view-controls button[aria-pressed='true'] { color: var(--accent-ink); background: var(--accent); box-shadow: 0 0 18px rgb(var(--accent-rgb) / 10.2%); }
+.dashboard-shell .view-controls button[aria-pressed='true'] { color: var(--accent-ink); background: var(--accent); box-shadow: none; }
 .dashboard-shell .dashboard-floor-switch { border-color: var(--line); background: rgb(var(--background-rgb) / 43.9%); border-radius: 14px; }
 .dashboard-floor-switch button { color: var(--text-soft); }
 .dashboard-floor-switch button[aria-pressed='true'] { color: var(--ice); background: rgb(var(--accent-text-rgb) / 7.8%); box-shadow: inset 0 0 0 1px rgb(var(--accent-text-rgb) / 12.5%); }
@@ -49,7 +49,7 @@
 .dashboard-room-list button svg { color: var(--muted); }
 .dashboard-room-list button:hover { background: var(--surface-raised); }
 .dashboard-room-list button[aria-current='true'] { color: var(--text); background: var(--accent-dark); border-color: rgb(var(--accent-rgb) / 19.6%); }
-.dashboard-selected-dot { box-shadow: 0 0 10px rgb(var(--accent-rgb) / 37.6%); }
+.dashboard-selected-dot { box-shadow: none; }
 .dashboard-pager button, .dashboard-browse { color: var(--text-soft); background: var(--surface); border-color: var(--line); }
 .dashboard-pager > span { color: var(--muted); }
 .dashboard-scenes { border-color: var(--line); gap: 10px; }
@@ -86,7 +86,7 @@
 .dashboard-device-copy > span { color: var(--text); }
 .dashboard-device-copy small { color: var(--text-soft); }
 .dashboard-device-indicator { background: var(--line); }
-.dashboard-device-indicator.is-on { background: var(--device-status-accent, var(--accent)); box-shadow: 0 0 7px rgb(var(--accent-rgb) / 26.7%); }
+.dashboard-device-indicator.is-on { background: var(--device-status-accent, var(--accent)); box-shadow: none; }
 .dashboard-page-button, .dashboard-browse-devices { color: var(--text-soft); border-color: var(--line); background: var(--surface-raised); border-radius: 12px; }
 .dashboard-page-button:hover:not(:disabled), .dashboard-browse-devices:hover { border-color: rgb(var(--accent-text-rgb) / 37.6%); color: var(--ice); background: rgb(var(--accent-text-rgb) / 4.7%); }
 .dashboard-empty h3 { color: var(--text); }

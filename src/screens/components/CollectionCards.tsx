@@ -4,9 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Pressable from '../../components/Pressable';
 import type { Scene } from '../../store/useHomeStore';
 import { theme } from '../../theme/theme';
-import { sceneDeviceSummary, sceneIdentity, type CollectionDirectory, type SceneIdentity } from './collectionDescriptions';
+import { sceneIdentity, type CollectionDirectory, type SceneIdentity } from './collectionDescriptions';
 import CinematicCardArtwork from '../../features/cinematic-artwork/CinematicCardArtwork';
 import { routineArtwork, sceneArtwork } from '../../features/cinematic-artwork/artwork';
+import { sceneOutcome } from '../../features/scenes/sceneOutcome';
 
 const IDENTITY_ICONS: Record<SceneIdentity, keyof typeof Ionicons.glyphMap> = {
   light: 'sunny-outline', rest: 'moon-outline', off: 'power-outline', climate: 'snow-outline', media: 'play-outline', security: 'shield-checkmark-outline', home: 'home-outline',
@@ -14,19 +15,20 @@ const IDENTITY_ICONS: Record<SceneIdentity, keyof typeof Ionicons.glyphMap> = {
 
 type SceneCardProps = {
   scene: Scene; roomName: string; active: boolean; compact: boolean;
-  directory: CollectionDirectory; onRun: (id: string) => void; onOpen: (id: string) => void;
+  directory: CollectionDirectory; modelHome?: boolean; onRun: (id: string) => void; onOpen: (id: string) => void;
 };
 
 /** Give each scene an action-led composition, with a separate and equally reachable details control. */
-export function SceneMoodCard({ scene, roomName, active, compact, directory, onRun, onOpen }: SceneCardProps) {
+export function SceneMoodCard({ scene, roomName, active, compact, directory, modelHome = false, onRun, onOpen }: SceneCardProps) {
   const identity = sceneIdentity(scene, directory);
+  const outcome = sceneOutcome(scene, directory.devices, modelHome);
   const warm = identity === 'light';
   const cool = identity === 'climate' || identity === 'media' || identity === 'rest';
   return <View testID={`scene-tile-${scene.id}`} style={[styles.sceneCard, active && styles.sceneActive, compact && styles.sceneCompact]}>
     <CinematicCardArtwork artwork={sceneArtwork(scene)} variant="scene-backdrop" testID={`scene-artwork-${scene.id}`} />
     <View style={styles.sceneHeader}>
       <View style={[styles.sceneBadge, styles.roomLabel]}><Ionicons name="location-outline" size={12} color={theme.colors.text} /><Text style={styles.roomText} numberOfLines={1}>{roomName}</Text></View>
-      <View style={[styles.sceneBadge, styles.sceneState]}><View style={[styles.stateDot, active && styles.stateDotOn]} /><Text style={[styles.sceneStateText, active && styles.sceneStateTextOn]}>{active ? 'Last used' : 'Saved'}</Text></View>
+      <View style={[styles.sceneBadge, styles.sceneState]}><View style={[styles.stateDot, active && styles.stateDotOn]} /><Text style={[styles.sceneStateText, active && styles.sceneStateTextOn]}>{active ? 'Last used' : outcome.simulationOnly ? 'Simulation' : 'Saved'}</Text></View>
     </View>
     <View style={styles.sceneMain}>
       <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.moodMark, warm && styles.moodWarm, cool && styles.moodCool, compact && styles.moodCompact]}>
@@ -35,12 +37,12 @@ export function SceneMoodCard({ scene, roomName, active, compact, directory, onR
       </View>
       <View style={styles.sceneCopy}>
         <Text accessibilityRole="header" style={[styles.sceneName, styles.sceneLabelShadow, compact && styles.sceneNameCompact]} numberOfLines={compact ? 1 : 2}>{scene.name}</Text>
-        <Text style={[styles.sceneDevices, styles.sceneLabelShadow]} numberOfLines={compact ? 1 : 2}>{sceneDeviceSummary(scene.actions, directory)}</Text>
-        {!compact && <Text style={[styles.sceneCount, styles.sceneLabelShadow]}>{scene.actions.length} {scene.actions.length === 1 ? 'action' : 'actions'} together</Text>}
+        <Text style={[styles.sceneDevices, styles.sceneLabelShadow]} numberOfLines={2}>{outcome.summary}</Text>
+        <Text style={[styles.sceneCount, styles.sceneLabelShadow]} numberOfLines={1}>{outcome.impact ?? `${outcome.deviceCount} ${outcome.deviceCount === 1 ? 'device' : 'devices'} · Review all settings`}</Text>
       </View>
     </View>
     <View style={styles.sceneActions}>
-      <Pressable accessibilityLabel={`Run ${scene.name}`} style={styles.runButton} onPress={() => onRun(scene.id)}>
+      <Pressable accessibilityLabel={`Run ${scene.name}`} accessibilityHint={`${outcome.simulationOnly ? 'Simulation. ' : ''}${outcome.summary}.${outcome.impact ? ` ${outcome.impact}. Review details before running.` : ''}`} style={styles.runButton} onPress={() => onRun(scene.id)}>
         <Ionicons name="play" size={15} color={theme.colors.bg0} /><Text style={styles.runText}>Run scene</Text>
       </Pressable>
       <Pressable accessibilityLabel={`Details for ${scene.name}`} style={styles.detailButton} onPress={() => onOpen(scene.id)}>
@@ -128,8 +130,8 @@ const styles = StyleSheet.create({
   sceneCopy: { flex: 1, minWidth: 0 },
   sceneName: { color: theme.colors.text, fontSize: 27, fontWeight: '500', letterSpacing: -0.8 },
   sceneNameCompact: { fontSize: 22, letterSpacing: -0.5 },
-  sceneDevices: { color: theme.colors.text, fontSize: 11, lineHeight: 16, marginTop: 7 },
-  sceneCount: { color: theme.colors.text, fontSize: 10, marginTop: 7 },
+  sceneDevices: { color: theme.colors.text, fontSize: 12, lineHeight: 17, marginTop: 5 },
+  sceneCount: { color: theme.colors.text, fontSize: 10, marginTop: 5 },
   sceneLabelShadow: { textShadowColor: 'rgba(20,18,26,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   sceneActions: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
   runButton: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: theme.colors.accent, borderRadius: 16, paddingHorizontal: 8 },

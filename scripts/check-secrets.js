@@ -46,11 +46,27 @@ function isPlaceholder(value) {
   );
 }
 
+/** Exempt only two reviewed invalid fixtures in this one historical test path.
+ * Current source uses conventional example placeholders. Token-pattern scanning
+ * still runs even on these lines; no file, key category, or history is skipped.
+ */
+function isReviewedHistoricalFixture(key, value, location, historyPath) {
+  return location === "Git history" &&
+    historyPath === "scripts/build-ios-preview.test.mjs" &&
+    key === "SUPABASE_SERVICE_ROLE_KEY" &&
+    ["synthetic-rejected-value", "must-not-embed"].includes(value);
+}
+
+/** Report redacted findings while retaining the source path through Git patches. */
 function scanText(text, location) {
   const findings = [];
   const lines = text.split(/\r?\n/);
+  let historyPath = null;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
+    if (location === "Git history" && line.startsWith("diff --git ")) {
+      historyPath = line.match(/^diff --git a\/(.+) b\/\1$/)?.[1] ?? null;
+    }
     for (const [type, pattern] of TOKEN_PATTERNS) {
       if (pattern.test(line)) {
         findings.push({ location, line: index + 1, type });
@@ -75,7 +91,8 @@ function scanText(text, location) {
     // An object member begins after a brace/comma or at the start of a source
     // line. A UI ternary such as "Hide password" : "Show password" is no key.
     for (const match of sourceLine.matchAll(JSON_ASSIGNMENT)) {
-      if (SENSITIVE_NAME.test(match[1]) && !isPlaceholder(match[2])) {
+      if (SENSITIVE_NAME.test(match[1]) && !isPlaceholder(match[2]) &&
+          !isReviewedHistoricalFixture(match[1], match[2], location, historyPath)) {
         findings.push({
           location,
           line: index + 1,

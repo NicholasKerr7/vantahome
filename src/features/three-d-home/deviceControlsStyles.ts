@@ -3,8 +3,8 @@ import { theme } from '../../theme/theme';
 
 /** Native inspectors share the home palette, including when launched from either renderer. */
 const colors = {
-  panel: theme.colors.bg0,
-  raised: theme.colors.card2,
+  panel: theme.colors.surface,
+  raised: theme.colors.surfaceRaised,
   stroke: theme.colors.stroke,
   text: theme.colors.text,
   muted: theme.colors.subtext,
@@ -58,5 +58,5 @@ export const controlStyles = StyleSheet.create({
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   page: { color: colors.muted, fontSize: 12, textAlign: 'center', flex: 1 },
   list: { flex: 1, minHeight: 0, justifyContent: 'center', gap: 4 },
-  item: { minHeight: 56, padding: 12, borderRadius: 16, backgroundColor: theme.colors.glass, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: colors.stroke },
+  item: { minHeight: 56, padding: 12, borderRadius: 16, backgroundColor: theme.colors.surfaceRaised, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: colors.stroke },
 });

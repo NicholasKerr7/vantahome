@@ -70,3 +70,14 @@ test('a scene that was never admitted or focused does not prepare hidden graphic
   rerender({ focused: true });
   expect(result.current.retained).toBe(true);
 });
+
+test.each([true, false])('web unmount tolerates unsupported events (visibility available: %s)', (visibilityAvailable) => {
+  // RN's native type requires a subscription, but RN Web may return undefined.
+  const missing = undefined as unknown as ReturnType<typeof AppState.addEventListener>;
+  jest.mocked(AppState.addEventListener).mockImplementation((type) =>
+    type === 'change' && visibilityAvailable ? { remove } : missing,
+  );
+  const { unmount } = renderHook(() => useRetainedScene(true));
+  expect(() => unmount()).not.toThrow();
+  expect(remove).toHaveBeenCalledTimes(visibilityAvailable ? 1 : 0);
+});

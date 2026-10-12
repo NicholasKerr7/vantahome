@@ -8,12 +8,15 @@ export const theme = {
   colors: {
     bg0: "#2B0A73",
     bg1: "#4B1AAE",
-    card: "rgba(255,255,255,0.14)",
-    card2: "rgba(255,255,255,0.10)",
+    /** Quiet plum surfaces separate controls from the signature purple stage. */
+    surface: "#20113F",
+    surfaceRaised: "#2D1B50",
+    card: "rgba(255,255,255,0.10)",
+    card2: "rgba(255,255,255,0.06)",
     stroke: "rgba(255,255,255,0.18)",
     text: "#FFFFFF",
     subtext: "rgba(255,255,255,0.80)",
-    muted: "rgba(255,255,255,0.72)",
+    muted: "rgba(255,255,255,0.78)",
     accent: "#B46BFF",
     accent2: "#7A5CFF",
     /** Lighter violet keeps small accent labels legible on translucent cards. */

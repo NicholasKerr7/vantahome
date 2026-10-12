@@ -53,6 +53,7 @@ let mockReplace: jest.Mock;
 let mockCanGoBack: jest.Mock;
 
 jest.mock("@react-navigation/native", () => ({
+  useIsFocused: () => true,
   CommonActions: { navigate: (payload: unknown) => ({ type: "NAVIGATE", payload }) },
   useNavigation: () => ({
     navigate: mockNavigate,

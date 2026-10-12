@@ -1,8 +1,9 @@
 import React from 'react';
 import renderer, { act, type ReactTestRenderer } from 'react-test-renderer';
-import { Platform, StyleSheet, type ViewProps } from 'react-native';
+import { Platform, StyleSheet, Text, type ViewProps } from 'react-native';
 import Pressable from '../../components/Pressable';
 import { theme } from '../../theme/theme';
+import type { Device, Scene } from '../../store/useHomeStore';
 import { RoutineCard, SceneMoodCard } from './CollectionCards';
 import CinematicCardArtwork from '../../features/cinematic-artwork/CinematicCardArtwork';
 import { routineArtwork, sceneArtwork } from '../../features/cinematic-artwork/artwork';
@@ -83,6 +84,18 @@ describe('RoutineCard toggle', () => {
     act(() => { tree.update(<RoutineCard {...props} enabled={false} />); });
     expect(tree.root.findByType(CinematicCardArtwork).props.artwork).toBe(artwork);
     expect(toggleNode(tree).props.accessibilityState?.checked).toBe(false);
+  });
+
+  it('keeps outcome, simulation and entry impact visible on compact scene cards', () => {
+    const device: Device = { id: 'gate', name: 'Entry gate', kind: 'gate', roomId: 'grounds', isOn: false, simulationOnly: true };
+    const scene: Scene = { id: 'arrival', name: 'Arrival', roomId: '', scope: 'home', actions: [{ type: 'patch', deviceId: 'gate', patch: { openPercent: 100 } }] };
+    act(() => { tree = renderer.create(<SceneMoodCard scene={scene} roomName="Whole home" compact active={false} directory={{ devices: [device], scenes: [scene], household: [] }} onRun={jest.fn()} onOpen={jest.fn()} />); });
+    const text = tree.root.findAllByType(Text).map((node: { props: { children: React.ReactNode } }) => node.props.children);
+    expect(text).toContain('Entry gate: open');
+    expect(text).toContain('Entry settings');
+    expect(text).toContain('Simulation');
+    const run = tree.root.findAllByType(Pressable).find((node: SceneActionNode) => node.props.accessibilityLabel === 'Run Arrival')!;
+    expect(run.props.accessibilityHint).toContain('Simulation. Entry gate: open. Entry settings.');
   });
 
   it('uses the scene atmosphere while preserving separate run and details actions', () => {

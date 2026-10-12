@@ -1,7 +1,8 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
-import { ScrollView, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
+import { ScrollView, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 import DeviceDetailScreen from "../DeviceDetailScreen";
+import AirDetailSection from "../device-detail/devices/AirDetailSection";
 import CameraDetailSection from "../device-detail/devices/CameraDetailSection";
 import LightDetailSection from "../device-detail/devices/LightDetailSection";
 import CinematicSurface from "../../components/CinematicSurface";
@@ -348,12 +349,14 @@ describe("DeviceDetailScreen device coverage", () => {
   afterEach(() => { Object.assign(mockLayout, defaultLayout); mockModelHome = false; });
 
   /** Mount the actual utility hero with synthetic data and no command dispatch. */
-  function renderUtilityHero(kind: DeviceKind, overrides: Partial<Device> = {}) {
+  function renderUtilityHero(kind: DeviceKind, overrides: Partial<Device> = {}, physical = false) {
     const device = { ...createDevice(kind), ...overrides };
     if (kind === "energy") device.name = "Energy Monitor";
     if (kind === "coffee") device.name = "Coffee Machine";
     if (kind === "camera") device.name = "Entry Camera";
     useHomeStore.setState({
+      accountUserId: physical ? "physical-reader" : seed.accountUserId,
+      membershipReady: physical ? true : seed.membershipReady,
       rooms: baseRooms,
       devices: [device],
       indoor: seed.indoor ?? { tempC: 22, label: "Indoor" },
@@ -389,6 +392,134 @@ describe("DeviceDetailScreen device coverage", () => {
     } finally {
       act(() => { tree.unmount(); });
     }
+  });
+
+  it.each([
+    ["phone", 390, 844, false, false],
+    ["tablet portrait", 834, 1194, true, false],
+    ["tablet landscape", 1194, 834, true, true],
+  ] as const)("shows missing air telemetry honestly on %s", (_label, width, height, isTablet, isLandscape) => {
+    Object.assign(mockLayout, { width, height, isTablet, isLandscape });
+    const tree = renderUtilityHero("air", { airQualityIndex: undefined, humidity: undefined });
+    try {
+      const air = tree.root.findByType(AirDetailSection);
+      expect(air.props).toMatchObject({ airQuality: null, humidity: null, airConfidence: null,
+        airLastUpdatedAt: null, airSeriesAqi: [], deviceTempC: null, airOutdoorTempC: null,
+        airFilterLife: null, airFilterDaysLeft: null, airPurifierMode: undefined,
+        airPurifierSpeed: null, airAlertsEnabled: undefined, airThresholdsReported: false });
+      const rendered = JSON.stringify(tree.toJSON());
+      expect(rendered).toContain("No AQI history in the last 24 hours.");
+      expect(rendered).not.toContain("just now");
+      expect(rendered).not.toContain("Air quality looks great");
+      expect(rendered).toContain("Alerts · Unknown");
+      expect(rendered).toContain("Current mode has not been reported.");
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it("keeps physical sensor provenance when a sample sensor is selected in an authenticated home", () => {
+    const tree = renderUtilityHero("air", { simulationOnly: true }, true);
+    try {
+      act(() => { useHomeStore.setState((state) => ({ devices: [...state.devices, {
+        id: "physical-air", name: "Physical sensor", kind: "air", roomId: baseRooms[0].id,
+        isOn: true, airQualityIndex: 24, airLastUpdatedAt: Date.now() - 60 * 60 * 1000,
+      }] })); });
+      const air = tree.root.findByType(AirDetailSection);
+      expect(air.props).toMatchObject({ readingStatus: "sample", demoReadings: false });
+      const row = tree.root.findByProps({ testID: "air-sensor-physical-air" });
+      const text = row.findAllByType(Text).flatMap((node: { props: { children?: React.ReactNode } }) => node.props.children).flat().join("");
+      expect(text).toContain("Last known");
+      expect(text).not.toContain("Sample");
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it("retains global sample labeling for unauthenticated demo sensor rows", () => {
+    const tree = renderUtilityHero("air");
+    try {
+      const air = tree.root.findByType(AirDetailSection);
+      expect(air.props.demoReadings).toBe(true);
+      const row = tree.root.findByProps({ testID: "air-sensor-test-air" });
+      const text = row.findAllByType(Text).flatMap((node: { props: { children?: React.ReactNode } }) => node.props.children).flat().join("");
+      expect(text).toContain("Sample");
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it("does not present missing smoke observations as safe or allow local status editing for hardware", () => {
+    const tree = renderUtilityHero("smoke", { smokeDetected: undefined }, true);
+    try {
+      const rendered = JSON.stringify(tree.toJSON());
+      expect(rendered).toContain("Alarm state not reported");
+      expect(rendered).toContain("Sensor health not reported");
+      expect(rendered).toContain("UNKNOWN");
+      expect(rendered).toContain("Remote testing and silencing are not connected");
+      expect(rendered).not.toContain("Smoke OK");
+      expect(rendered).not.toContain("Air quality clear");
+      expect(rendered).not.toContain("Test sample alarm");
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it("keeps a reported smoke alarm visible even when its age is unknown", () => {
+    const tree = renderUtilityHero("smoke", { smokeDetected: true }, true);
+    try {
+      const rendered = JSON.stringify(tree.toJSON());
+      expect(rendered).toContain("Alarm in last report");
+      expect(rendered).toContain("ALARM");
+      expect(rendered).toContain("Report time unavailable");
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it("retains clearly labeled sample detector actions for simulation", () => {
+    const tree = renderUtilityHero("smoke", { simulationOnly: true });
+    try {
+      const rendered = JSON.stringify(tree.toJSON());
+      expect(rendered).toContain("Sample detector · no live protection");
+      expect(rendered).toContain("Test sample alarm");
+      expect(rendered).toContain("Silence sample");
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it("shows unknown water readings and protection instead of normal or enabled defaults", () => {
+    const tree = renderUtilityHero("water", { waterLpm: undefined, waterTodayL: undefined,
+      waterPressurePsi: undefined, waterTempC: undefined, waterLeakDetected: undefined,
+      waterLeakAlerts: undefined, waterPressureAlerts: undefined, waterAutoShutoff: undefined }, true);
+    try {
+      const rendered = JSON.stringify(tree.toJSON());
+      expect(rendered).toContain("Leak status not reported");
+      expect(rendered).toContain("Leak alerts unknown");
+      expect(rendered).toContain("Shutoff unknown");
+      expect(rendered).toContain("Pressure alerts unknown");
+      expect(rendered).not.toContain("Flow steady");
+      expect(rendered).not.toContain("Budget OK");
+      expect(rendered).toContain("No usage history received");
+      expect(rendered).not.toContain("Illustrative week");
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it.each(["door", "gate", "garage", "window"] as const)("does not infer a %s position from its power state", (kind) => {
+    const tree = renderUtilityHero(kind, { openPercent: undefined, isOn: false }, true);
+    try {
+      const rendered = JSON.stringify(tree.toJSON());
+      expect(rendered).toMatch(/Position (unknown|has not been reported)/);
+      expect(rendered).not.toContain('"Locked"');
+      expect(rendered).not.toContain('"Unlocked"');
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it.each(["door", "gate"] as const)("does not claim a closed %s position proves its lock is engaged", (kind) => {
+    const tree = renderUtilityHero(kind, { openPercent: 0, isOn: false }, true);
+    try {
+      const rendered = JSON.stringify(tree.toJSON());
+      expect(rendered).toContain("Reported closed");
+      expect(rendered).not.toContain('"Locked"');
+    } finally { act(() => { tree.unmount(); }); }
+  });
+
+  it("does not invent an unreported stove child-lock state", () => {
+    const tree = renderUtilityHero("stove", { stoveLock: undefined }, true);
+    try {
+      const rendered = JSON.stringify(tree.toJSON());
+      expect(rendered).toContain("Lock unknown");
+      expect(rendered).not.toContain('"Unlocked"');
+    } finally { act(() => { tree.unmount(); }); }
   });
 
   it("keeps a white bulb preview legible without restoring a light app surface", () => {

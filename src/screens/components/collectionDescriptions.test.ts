@@ -1,5 +1,5 @@
 import type { AutomationFlow, Device, HouseholdMember, Scene } from '../../store/useHomeStore';
-import { collectionTime, describeAction, describeCondition, describeFlow, describeTrigger, sceneDeviceSummary, sceneIdentity, type CollectionDirectory } from './collectionDescriptions';
+import { collectionTime, describeAction, describeCondition, describeFlow, describeTrigger, sceneIdentity, type CollectionDirectory } from './collectionDescriptions';
 
 const light = { id: 'light', name: 'Bedside lamp', kind: 'light' } as Device;
 const ac = { id: 'ac', name: 'Bedroom AC', kind: 'ac' } as Device;
@@ -40,12 +40,10 @@ describe('collection descriptions', () => {
 
   it('derives scene identity from visible devices and avoids exposing hidden IDs', () => {
     expect(sceneIdentity(scene, directory)).toBe('rest');
+    expect(sceneIdentity({ ...scene, modelPreset: 'movie' }, directory)).toBe('media');
     expect(sceneIdentity({ ...scene, actions: [{ type: 'toggle', deviceId: 'light', on: false }] }, directory)).toBe('off');
     expect(sceneIdentity({ ...scene, actions: [{ type: 'patch', deviceId: 'light', patch: { brightness: 80 } }] }, directory)).toBe('light');
     expect(sceneIdentity({ ...scene, actions: [{ type: 'patch', deviceId: 'light', patch: { armed: true } }] }, directory)).toBe('security');
-    expect(sceneDeviceSummary([...scene.actions, ...scene.actions], directory)).toBe('Bedside lamp');
-    expect(sceneDeviceSummary([], directory)).toBe('No device actions yet');
-    expect(sceneDeviceSummary(scene.actions, { ...directory, devices: [] })).toBe('Unavailable device');
     expect(describeAction({ type: 'toggle', deviceId: 'secret-id', on: true }, directory)).toBe('Unavailable device on');
     expect(describeTrigger({ type: 'scene', sceneId: 'secret-scene' }, directory)).toBe('Unavailable scene runs');
   });

@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Pressable from "../Pressable";
+import ActivityInboxProvider from "../../features/activity/ActivityInboxProvider";
 import { theme } from "../../theme/theme";
 import { useResponsive } from "../../theme/layout";
 import { runtimePolicy } from "../../config/runtimeMode";
@@ -150,7 +151,9 @@ export default function CommandFeedbackProvider({
 
   return (
     <CommandActivityContext.Provider value={launcher}>
-      {children}
+      <ActivityInboxProvider enabled={enabled} commands={commands}>
+        {children}
+      </ActivityInboxProvider>
       {showNotice ? (
         <SafeAreaView
           pointerEvents="box-none"

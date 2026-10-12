@@ -51,6 +51,7 @@ import { SceneDeleteConfirmation } from '../features/scenes/SceneDeleteConfirmat
 import { canManageScenes } from '../features/scenes/sceneManagement';
 import { buildVirtualSceneAction, normalizeSceneOverride } from '../features/scenes/virtualSceneAction';
 import { isModelHome } from '../features/three-d-home/modelHomeScope';
+import { sceneOutcome, sceneSafetyEffects } from '../features/scenes/sceneOutcome';
 
 export type ScenesScreenProps = {
   /** The root feature wrapper provides the title, safe areas and back navigation. */
@@ -234,6 +235,8 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     () => scenes.find((scene) => scene.id === detailSceneId) ?? null,
     [detailSceneId, scenes],
   );
+  const modelHome = useHomeStore(isModelHome);
+  const detailOutcome = detailScene ? sceneOutcome(detailScene, devices, modelHome) : null;
   const detailActionLabels = useMemo(() => {
     if (!detailScene) return [];
     return detailScene.actions.map((action) => formatAction(action, deviceMap));
@@ -888,7 +891,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
             )}
           </ModalField>
                 <Text style={modalHintStyle}>
-                  Scenes capture the current device settings.
+                  Scenes capture the current device settings and are saved on this device.
                 </Text>
         </ScrollView>
         <ModalActionRow
@@ -953,7 +956,9 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
                     {detailScene?.id === activeSceneId ? "Last used" : "Saved scene"}
                   </Text>
                 </View>
-          <Text style={modalHintStyle}>A scene saves desired settings. Devices may have changed since it was last used.</Text>
+          <Text style={modalHintStyle}>{detailOutcome?.simulationOnly ? "Simulation only · No real devices are controlled. " : ""}Saved on this device. These are desired settings, not confirmed device states.</Text>
+          {detailOutcome && <ModalField label="What this scene requests" labelStyle={modalLabelStyle}><Text style={modalHintStyle}>{detailOutcome.effects.join(" · ")}</Text></ModalField>}
+          {Boolean(detailOutcome?.importantEffects.length) && <ModalField label="Entry, camera & safety settings" labelStyle={modalLabelStyle}><Text style={modalHintStyle}>{detailOutcome?.importantEffects.join("\n")}</Text></ModalField>}
           {canManage && <Pressable accessibilityLabel={`Delete ${detailScene?.name ?? 'scene'}`} onPress={beginDelete} style={styles.deleteSceneButton}><Ionicons name="trash-outline" size={17} color={theme.colors.subtext} /><Text style={styles.deleteSceneText}>Delete scene</Text></Pressable>}
 
           <ModalField label="Actions" labelStyle={modalLabelStyle}>
@@ -2122,6 +2127,7 @@ function labelForKind(kind: Device["kind"]) {
   }
 }
 
+/** Put explicit off commands ahead of stored setpoints and keep relative toggles truthful. */
 function formatAction(
   action: SceneAction,
   devices: Map<string, Device>,
@@ -2130,10 +2136,15 @@ function formatAction(
   if (!device) return "Device update";
 
   if (action.type === "toggle") {
-    return `${device.name} ${action.on === false ? "OFF" : "ON"}`;
+    return `${device.name} ${action.on === undefined ? "Toggle power" : action.on ? "ON" : "OFF"}`;
   }
 
   const patch = action.patch;
+  // Protection preferences remain visible even when OFF would otherwise end the label early.
+  if (sceneSafetyEffects(device, patch).length) {
+    return sceneOutcome({ actions: [action] }, [device]).importantEffects[0] ?? `${device.name} settings`;
+  }
+  if (patch.isOn === false && !["door", "gate", "garage", "window", "blinds"].includes(device.kind)) return `${device.name} OFF`;
   if (patch.tempC != null) return `${device.name} ${patch.tempC}°C`;
   if (patch.brightness != null) return `${device.name} ${patch.brightness}%`;
   if (patch.color) return `${device.name} Color`;

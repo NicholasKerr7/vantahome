@@ -10,7 +10,7 @@ export const deviceBrowserStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     borderRadius: 18,
-    backgroundColor: theme.colors.card2,
+    backgroundColor: theme.colors.surface,
     overflow: "hidden",
   },
   compactIdentity: {
@@ -49,7 +49,7 @@ export const deviceBrowserStyles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
-    backgroundColor: theme.colors.card2,
+    backgroundColor: theme.colors.surface,
   },
   searchInput: {
     flex: 1,
@@ -85,7 +85,7 @@ export const deviceBrowserStyles = StyleSheet.create({
     borderColor: "transparent",
   },
   selectedFilter: {
-    backgroundColor: theme.colors.card2,
+    backgroundColor: theme.colors.surface,
     borderColor: theme.colors.stroke,
   },
   backLabel: { color: theme.colors.accentText, fontSize: 12 },
@@ -117,7 +117,7 @@ export const deviceBrowserStyles = StyleSheet.create({
     minWidth: 0,
     padding: 14,
     borderRadius: 22,
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.surfaceRaised,
     borderWidth: 1,
     borderColor: theme.colors.stroke,
     justifyContent: "space-between",

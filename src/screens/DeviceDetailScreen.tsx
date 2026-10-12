@@ -48,6 +48,9 @@ import CameraDetailSection from "./device-detail/devices/CameraDetailSection";
 import { isModelHome } from "../features/three-d-home/modelHomeScope";
 import { getDevice as getModelDevice } from "../../packages/home-scene/src/data";
 import AirDetailSection from "./device-detail/devices/AirDetailSection";
+import { reportedMeasurement, airReadingRecommendations } from "./device-detail/airTelemetry";
+import { useAirTelemetry } from "./device-detail/useAirTelemetry";
+import { runtimePolicy } from "../config/runtimeMode";
 import SpeakerDetailSection from "./device-detail/devices/SpeakerDetailSection";
 import AcDetailSection from "./device-detail/devices/AcDetailSection";
 import LightDetailSection from "./device-detail/devices/LightDetailSection";
@@ -188,12 +191,10 @@ const AIR_QUALITY_BANDS = [
   },
 ];
 
-const resolveAirBand = (aqi: number) =>
-  AIR_QUALITY_BANDS.find((band) => aqi <= band.max) ?? AIR_QUALITY_BANDS[0];
-
-const AIR_CHART_WINDOW_HOURS = 24;
-const AIR_CHART_MAX_POINTS = 48;
-const AIR_CHART_MIN_POINTS = 12;
+/** Unknown readings use a neutral band; a reported zero remains a valid AQI. */
+const resolveAirBand = (aqi: number | null) =>
+  aqi === null ? { label: "Unavailable", color: theme.colors.subtext }
+    : AIR_QUALITY_BANDS.find((band) => aqi <= band.max) ?? AIR_QUALITY_BANDS[0];
 
 const formatTimeAgo = (ts: number) => {
   const diffMs = Date.now() - ts;
@@ -205,39 +206,6 @@ const formatTimeAgo = (ts: number) => {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDays = Math.round(diffHr / 24);
   return `${diffDays}d ago`;
-};
-
-const buildAirSeries = (
-  history: Array<{ ts: number; aqi?: number }>,
-  fallbackAqi: number,
-) => {
-  if (!history.length) return [];
-  const sorted = [...history].sort((a, b) => a.ts - b.ts);
-  const now = Date.now();
-  const windowMs = AIR_CHART_WINDOW_HOURS * 60 * 60 * 1000;
-  const windowed = sorted.filter((sample) => sample.ts >= now - windowMs);
-  if (windowed.length <= 1) return windowed;
-
-  const deltas = windowed
-    .slice(1)
-    .map((sample, idx) => sample.ts - windowed[idx].ts)
-    .filter((delta) => delta > 0);
-  const median = deltas.length
-    ? deltas.sort((a, b) => a - b)[Math.floor(deltas.length / 2)]
-    : 30 * 60 * 1000;
-  const targetPoints = Math.min(
-    AIR_CHART_MAX_POINTS,
-    Math.max(AIR_CHART_MIN_POINTS, Math.round(windowMs / median)),
-  );
-  const stride =
-    windowed.length > targetPoints
-      ? Math.ceil(windowed.length / targetPoints)
-      : 1;
-  const downsampled =
-    stride > 1 ? windowed.filter((_, idx) => idx % stride === 0) : windowed;
-  return downsampled.length
-    ? downsampled
-    : [{ ts: now, aqi: fallbackAqi }];
 };
 
 export default function DeviceDetailScreen({ route, navigation }: Props) {
@@ -966,7 +934,10 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     s.devices.find((d) => d.kind === "gate"),
   );
   const roomTemp = useHomeStore((s) => s.indoor.tempC);
-  const outdoor = useHomeStore((s) => s.outdoor);
+  const accountUserId = useHomeStore((s) => s.accountUserId);
+  const demoReadings = !accountUserId && runtimePolicy.allowUnauthenticatedDemo;
+  const isSampleDevice = device?.simulationOnly === true || demoReadings;
+  const airTelemetry = useAirTelemetry(device, isSampleDevice);
   const rooms = useHomeStore(useShallow(selectVisibleRooms));
   const devicesAll = useHomeStore(useShallow(selectVisibleDevices));
   const coffeeFill = useRef(
@@ -992,7 +963,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const lightAudioLastBrightness = useRef<number | null>(null);
   const lightAudioLastColor = useRef<string | null>(null);
 
-  if (!device) {
+  if (!device || !airTelemetry) {
     return (
       <CinematicSurface variant="quiet" style={styles.root}>
         <View style={styles.emptyWrap}>
@@ -1100,22 +1071,15 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     { label: "Turbo", value: 90, icon: "flash" as const },
   ];
   const isOpenable = ["garage", "gate", "door", "window"].includes(device.kind);
-  const openPercent = isOpenable
-    ? clamp(
-        typeof device.openPercent === "number"
-          ? device.openPercent
-          : device.isOn
-            ? 100
-            : 0,
-        0,
-        100,
-      )
-    : 0;
+  // An open/closed position never proves that a lock is engaged.
+  const reportedOpenPercent = reportedMeasurement(device.openPercent, 0, 100);
+  const openPositionKnown = isOpenable && (reportedOpenPercent !== null || isSampleDevice);
+  const openPercent = isOpenable ? reportedOpenPercent ?? (isSampleDevice && device.isOn ? 100 : 0) : 0;
   const gateAutoOpen = gateDevice?.autoOpenEnabled ?? false;
   const stoveLevel = clamp(device.burnerLevel ?? 0, 0, 10);
   const stoveMode = device.stoveMode ?? "simmer";
   const stoveTimer = clamp(device.stoveTimerMin ?? 0, 0, 120);
-  const stoveLock = device.stoveLock ?? false;
+  const stoveLock = device.stoveLock;
   const washerProgress = clamp(device.progress ?? 0, 0, 100);
   const washTemp = device.washTemp ?? "Warm";
   const spinSpeed = clamp(device.spinSpeedRpm ?? 1000, 600, 1400);
@@ -1581,122 +1545,79 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     device.gridTodayKwh ??
     Math.max(0, +Math.max(energyToday - solarToday, 0).toFixed(1));
   const powerOutage = !gridAvailable;
-  const waterFlow = device.waterLpm ?? 0;
-  const waterToday = device.waterTodayL ?? 0;
-  const waterPressure = device.waterPressurePsi ?? 0;
+  const waterFlow = reportedMeasurement(device.waterLpm);
+  const waterToday = reportedMeasurement(device.waterTodayL);
+  const waterPressure = reportedMeasurement(device.waterPressurePsi);
   const waterPressureLow = device.waterPressureLowPsi ?? 40;
   const waterPressureHigh = device.waterPressureHighPsi ?? 80;
-  const waterTemp = device.waterTempC ?? 0;
-  const waterLeakDetected = device.waterLeakDetected ?? false;
-  const waterLeakAlerts = device.waterLeakAlerts ?? true;
-  const waterPressureAlerts = device.waterPressureAlerts ?? true;
-  const waterAutoShutoff = device.waterAutoShutoff ?? false;
+  const waterTemp = reportedMeasurement(device.waterTempC, -100, 100);
+  const waterLeakDetected = device.waterLeakDetected;
+  const waterLeakAlerts = device.waterLeakAlerts;
+  const waterPressureAlerts = device.waterPressureAlerts;
+  const waterAutoShutoff = device.waterAutoShutoff;
   const waterBudget = device.waterBudgetL ?? 0;
   const waterBudgetProgress =
-    waterBudget > 0
+    waterBudget > 0 && waterToday !== null
       ? Math.min(Math.max(waterToday / waterBudget, 0), 1)
       : 0;
-  const waterBudgetExceeded = waterBudget > 0 && waterToday >= waterBudget;
+  const waterBudgetExceeded = waterBudget > 0 && waterToday !== null && waterToday >= waterBudget;
   const lowPressure =
-    waterPressureAlerts &&
-    waterPressure > 0 &&
+    waterPressureAlerts === true &&
+    waterPressure !== null && waterPressure > 0 &&
     waterPressure < waterPressureLow;
   const highPressure =
-    waterPressureAlerts &&
-    waterPressureHigh > 0 &&
+    waterPressureAlerts === true &&
+    waterPressure !== null && waterPressureHigh > 0 &&
     waterPressure > waterPressureHigh;
-  const smokeDetected = device.smokeDetected ?? false;
-  const coDetected = device.coDetected ?? false;
-  const coPpm = clamp(device.coPpm ?? 0, 0, 400);
-  const smokePpm = clamp(device.smokePpm ?? 0, 0, 200);
-  const smokeBattery = clamp(device.smokeBattery ?? 0, 0, 100);
-  const smokeSensorStatus = device.smokeSensorStatus ?? "ok";
+  const smokeDetected = device.smokeDetected;
+  const coDetected = device.coDetected;
+  const coPpm = reportedMeasurement(device.coPpm, 0, 400);
+  const smokePpm = reportedMeasurement(device.smokePpm, 0, 200);
+  const smokeBattery = reportedMeasurement(device.smokeBattery, 0, 100);
+  const smokeSensorStatus = device.smokeSensorStatus;
+  const smokeAlarmReported = smokeDetected === true || coDetected === true;
+  const smokeNoAlarmReported = smokeDetected === false && coDetected === false;
+  const deviceReportedAt = reportedMeasurement(device.observedAt, 1, Date.now());
   const smokeSilenced = device.smokeSilenced ?? false;
-  const smokeLastTestAt = device.smokeLastTestAt ?? null;
-  const smokeLastAlarmAt = device.smokeLastAlarmAt ?? null;
-  const airQuality = device.airQualityIndex ?? 0;
-  const humidity = device.humidity ?? 0;
-  const airPm25 = device.airPm25 ?? 0;
-  const airPm10 = device.airPm10 ?? 0;
-  const airCo2 = device.airCo2 ?? 0;
-  const airVoc = device.airVoc ?? 0;
-  const airFormaldehyde = device.airFormaldehyde ?? 0;
-  const airPollen = device.airPollen ?? 0;
-  const airConfidence = clamp(device.airQualityConfidence ?? 92, 0, 100);
-  const airPurifierMode = device.airPurifierMode ?? "auto";
-  const airPurifierSpeed = clamp(device.airPurifierSpeed ?? 40, 0, 100);
-  const airIonizerEnabled = device.airIonizerEnabled ?? false;
-  const airFilterLife = clamp(device.airFilterLife ?? 100, 0, 100);
-  const airFilterDaysLeft = clamp(device.airFilterDaysLeft ?? 0, 0, 365);
-  const airAutoVentilation = device.airAutoVentilation ?? false;
-  const airAlertsEnabled = device.airAlertsEnabled ?? true;
+  const smokeLastTestAt = reportedMeasurement(device.smokeLastTestAt, 1, Date.now());
+  const smokeLastAlarmAt = reportedMeasurement(device.smokeLastAlarmAt, 1, Date.now());
+  const airQuality = airTelemetry.aqi;
+  const humidity = airTelemetry.humidity;
+  const airPm25 = airTelemetry.pm25;
+  const airPm10 = airTelemetry.pm10;
+  const airCo2 = airTelemetry.co2;
+  const airVoc = airTelemetry.voc;
+  const airFormaldehyde = airTelemetry.formaldehyde;
+  const airPollen = airTelemetry.pollen;
+  const airConfidence = airTelemetry.confidence;
+  const airPurifierMode = device.airPurifierMode;
+  const airPurifierSpeed = reportedMeasurement(device.airPurifierSpeed, 0, 100);
+  const airIonizerEnabled = device.airIonizerEnabled;
+  const airFilterLife = airTelemetry.filterLife;
+  const airFilterDaysLeft = airTelemetry.filterDaysLeft;
+  const airAutoVentilation = device.airAutoVentilation;
+  const airAlertsEnabled = device.airAlertsEnabled;
+  const airThresholdsReported = [device.airAlertAqi, device.airAlertCo2, device.airAlertVoc,
+    device.airAlertPm25, device.airAlertPm10, device.airAlertPollen].every((value) => reportedMeasurement(value) !== null);
   const airAlertAqi = clamp(device.airAlertAqi ?? 100, 50, 200);
   const airAlertCo2 = clamp(device.airAlertCo2 ?? 1200, 600, 2000);
   const airAlertVoc = clamp(device.airAlertVoc ?? 300, 80, 800);
   const airAlertPm25 = clamp(device.airAlertPm25 ?? 35, 10, 120);
   const airAlertPm10 = clamp(device.airAlertPm10 ?? 50, 20, 160);
   const airAlertPollen = clamp(device.airAlertPollen ?? 3, 1, 5);
-  const airOutdoorAqi = device.airOutdoorAqi ?? 0;
-  const airOutdoorPm25 = device.airOutdoorPm25 ?? 0;
-  const airOutdoorCo2 = device.airOutdoorCo2 ?? 0;
-  const airOutdoorHumidity = device.airOutdoorHumidity ?? 0;
-  const airOutdoorTempC =
-    typeof device.airOutdoorTempC === "number"
-      ? device.airOutdoorTempC
-      : outdoor.tempC;
-  const airHistory = Array.isArray(device.airHistory) ? device.airHistory : [];
-  const airBand = resolveAirBand(airQuality);
-  const airSeries = useMemo(() => {
-    if (airHistory.length >= 2) {
-      return buildAirSeries(airHistory, airQuality);
-    }
-    const now = Date.now();
-    return Array.from({ length: AIR_CHART_MIN_POINTS }, (_, idx) => ({
-      ts: now - (AIR_CHART_MIN_POINTS - 1 - idx) * 30 * 60 * 1000,
-      aqi: airQuality,
-    }));
-  }, [airHistory, airQuality]);
-  const airSeriesAqi = airSeries.map(
-    (sample) => sample.aqi ?? airQuality ?? 0,
-  );
+  const airOutdoorAqi = airTelemetry.outdoorAqi;
+  const airOutdoorPm25 = airTelemetry.outdoorPm25;
+  const airOutdoorCo2 = airTelemetry.outdoorCo2;
+  const airOutdoorHumidity = airTelemetry.outdoorHumidity;
+  const airOutdoorTempC = airTelemetry.outdoorTempC;
+  const airBand = airTelemetry.status === "stale" || airTelemetry.status === "unknown"
+    ? { label: airTelemetry.status === "stale" ? "Last known" : "Unverified time", color: theme.colors.subtext }
+    : resolveAirBand(airQuality);
+  const airSeriesAqi = airTelemetry.series.map((sample) => sample.aqi);
   const airChartMax = Math.max(...airSeriesAqi, 1);
-  const airTrendDelta =
-    airSeriesAqi.length > 1
-      ? airSeriesAqi[airSeriesAqi.length - 1] -
-        airSeriesAqi[airSeriesAqi.length - 2]
-      : 0;
-  const airLastUpdatedAt =
-    device.airLastUpdatedAt ?? airSeries[airSeries.length - 1]?.ts ?? null;
-  const airRecommendations = useMemo(() => {
-    const items: string[] = [];
-    if (airQuality >= 120) {
-      items.push("Run purifier on Boost mode.");
-    } else if (airQuality >= 80) {
-      items.push("Keep purifier on Auto to stabilize AQI.");
-    }
-    if (airCo2 >= 1000) {
-      items.push("Increase ventilation to reduce CO2.");
-    }
-    if (airVoc >= 220) {
-      items.push("Avoid aerosols and enable exhaust fans.");
-    }
-    if (humidity >= 60) {
-      items.push("Humidity is high. Consider dehumidifying.");
-    }
-    if (humidity > 0 && humidity < 35) {
-      items.push("Air is dry. Consider humidifying.");
-    }
-    if (airPollen >= 3) {
-      items.push("High pollen: keep windows closed.");
-    }
-    if (airFilterLife <= 20) {
-      items.push("Filter life low. Replace soon.");
-    }
-    if (!items.length) {
-      items.push("Air quality looks great. Maintain Auto mode.");
-    }
-    return items.slice(0, 4);
-  }, [airQuality, airCo2, airVoc, airPollen, airFilterLife, humidity]);
+  const airTrendDelta = airTelemetry.trendDelta;
+  const airLastUpdatedAt = airTelemetry.lastUpdatedAt;
+  const airRecommendations = airReadingRecommendations(airTelemetry);
   const airSensors = useMemo(
     () => devicesAll.filter((item) => item.kind === "air"),
     [devicesAll],
@@ -1711,7 +1632,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     unit?: string,
     digits = 0,
   ) => {
-    if (value == null || Number.isNaN(value)) return "--";
+    if (value == null || !Number.isFinite(value)) return "--";
     const formatted = digits
       ? value.toFixed(digits)
       : Math.round(value).toString();
@@ -1720,10 +1641,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const airMetricWidth = isTablet ? "23%" : "31%";
   const airChartMaxHeight = isTablet ? 80 : 64;
   const airTrendIcon =
-    airTrendDelta > 2 ? "trending-up" : airTrendDelta < -2 ? "trending-down" : "remove";
-  const airTrendLabel = `${airTrendDelta >= 0 ? "+" : ""}${Math.round(
-    airTrendDelta,
-  )}`;
+    (airTrendDelta ?? 0) > 2 ? "trending-up" : (airTrendDelta ?? 0) < -2 ? "trending-down" : "remove";
+  const airTrendLabel = airTrendDelta === null ? "Not enough history"
+    : `${airTrendDelta >= 0 ? "+" : ""}${Math.round(airTrendDelta)} between readings`;
   const heaterTemp = clamp(device.tempC ?? 52, 40, 70);
   const heaterType = device.waterHeaterType ?? "electric-tank";
   const heaterMode = device.heaterMode ?? "eco";
@@ -2043,7 +1963,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     );
   };
   const openDisplayValue = clamp(openDisplayPercent, 0, 100);
-  const openStatusLabel =
+  const openStatusLabel = !openPositionKnown ? "Position unknown" :
     openMotion === "opening"
       ? "Opening..."
       : openMotion === "closing"
@@ -2053,7 +1973,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           : openDisplayValue === 100
             ? "Open"
             : "Open";
-  const openStatusText =
+  const openStatusText = !openPositionKnown ? "Position has not been reported" :
     openMotion
       ? `${openStatusLabel} ${openDisplayValue}%`
       : openDisplayValue === 0
@@ -2201,7 +2121,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           { label: "Vent", value: 25, icon: "leaf" },
           { label: "Close", value: 0, icon: "lock-closed" },
         ].map((preset) => {
-          const active = openPercent === preset.value;
+          const active = openPositionKnown && openPercent === preset.value;
           return (
             <Pressable
               key={preset.label}
@@ -2973,9 +2893,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     styles.mediaBtn,
     active && styles.mediaBtnActive,
   ];
-  const isOpen = isOpenable && openPercent > 0;
-  const isClosed = isOpenable && openPercent === 0;
-  const windowFlowLabel =
+  const isOpen = openPositionKnown && openPercent > 0;
+  const isClosed = openPositionKnown && openPercent === 0;
+  const windowFlowLabel = !openPositionKnown ? "Unknown" :
     openDisplayValue >= 80
       ? "Max Vent"
       : openDisplayValue >= 45
@@ -2983,14 +2903,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         : openDisplayValue > 0
           ? "Crack"
           : "Sealed";
-  const windowFlowHint =
+  const windowFlowHint = !openPositionKnown ? "Position has not been reported" :
     openDisplayValue >= 80
       ? "Maximum airflow"
       : openDisplayValue >= 45
         ? "Fresh breeze"
         : openDisplayValue > 0
           ? "Light airflow"
-          : "Window sealed";
+          : "Reported closed position";
   useEffect(() => {
     setDraftName(device.name);
     setDraftRoomId(device.roomId);
@@ -3036,6 +2956,17 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       return;
     }
 
+    // Physical snapshots show reported positions; a local timer is not evidence of motor movement.
+    if (!isSampleDevice || !openPositionKnown) {
+      openDeviceIdRef.current = device.id;
+      openPercentRef.current = openPercent;
+      setOpenDisplayPercent(Math.round(openPercent));
+      setOpenMotion(null);
+      setOpenLastActivityAt(deviceReportedAt);
+      if (openMotionTimeoutRef.current) clearTimeout(openMotionTimeoutRef.current);
+      openMotionTimeoutRef.current = null;
+      return;
+    }
     if (openDeviceIdRef.current !== device.id) {
       openDeviceIdRef.current = device.id;
       openPercentRef.current = openPercent;
@@ -3065,7 +2996,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       setOpenMotion(null);
       openMotionTimeoutRef.current = null;
     }, duration);
-  }, [device.id, isOpenable, openPercent]);
+  }, [device.id, isOpenable, openPercent, openPositionKnown, isSampleDevice, deviceReportedAt]);
 
   const logCameraEvent = (label: string, kind: "known" | "unknown") => {
     // Maintain a short, most-recent-first log for the UI preview.
@@ -5921,7 +5852,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={openStatusProgressFillStyle} />
       </View>
       <Text style={styles.statusMetaText}>
-        Last activity: {openLastActivityLabel}
+        {isSampleDevice ? "Last activity" : "Last device report"}: {openLastActivityLabel}
       </Text>
       <Text style={styles.statusMetaText}>
         Last activity by: {openLastActorLabel}
@@ -5968,7 +5899,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               color={isOpen ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(isOpen)}>
-              {isOpen ? "Open" : "Closed"}
+              {openPositionKnown ? (isOpen ? "Reported open" : "Reported closed") : "Position unknown"}
             </Text>
           </View>
         </View>
@@ -5978,7 +5909,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           {garageHeroOrb}
           <View style={openHeroInfoPortraitStyle}>
             <Text style={openPortraitMetaTextLeftStyle}>
-              Last activity: {openLastActivityLabel}
+              {isSampleDevice ? "Last activity" : "Last device report"}: {openLastActivityLabel}
             </Text>
             <View style={openPortraitMetaRowLeftStyle}>
               <View style={styles.metricCard}>
@@ -6080,7 +6011,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={openStatusProgressFillStyle} />
       </View>
       <Text style={styles.statusMetaText}>
-        Last activity: {openLastActivityLabel}
+        {isSampleDevice ? "Last activity" : "Last device report"}: {openLastActivityLabel}
       </Text>
       <Text style={styles.statusMetaText}>
         Last activity by: {openLastActorLabel}
@@ -6122,12 +6053,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={styles.utilityHeroPillRow}>
           <View style={utilityHeroPillStyle(isOpen)}>
             <Ionicons
-              name={isOpen ? "lock-open" : "lock-closed"}
+              name={!openPositionKnown ? "help-circle-outline" : isOpen ? "arrow-up" : "arrow-down"}
               size={14}
               color={isOpen ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(isOpen)}>
-              {isOpen ? "Unlocked" : "Locked"}
+              {openPositionKnown ? (isOpen ? "Reported open" : "Reported closed") : "Position unknown"}
             </Text>
           </View>
         </View>
@@ -6137,7 +6068,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           {doorHeroOrb}
           <View style={openHeroInfoPortraitStyle}>
             <Text style={openPortraitMetaTextLeftStyle}>
-              Last activity: {openLastActivityLabel}
+              {isSampleDevice ? "Last activity" : "Last device report"}: {openLastActivityLabel}
             </Text>
             <View style={openPortraitMetaRowLeftStyle}>
               <View style={styles.metricCard}>
@@ -6247,12 +6178,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={styles.utilityHeroPillRow}>
           <View style={utilityHeroPillStyle(isOpen)}>
             <Ionicons
-              name={isOpen ? "lock-open" : "lock-closed"}
+              name={!openPositionKnown ? "help-circle-outline" : isOpen ? "arrow-up" : "arrow-down"}
               size={14}
               color={isOpen ? theme.colors.accent : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(isOpen)}>
-              {isOpen ? "Unlocked" : "Locked"}
+              {openPositionKnown ? (isOpen ? "Reported open" : "Reported closed") : "Position unknown"}
             </Text>
           </View>
         </View>
@@ -6262,7 +6193,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           {gateHeroOrb}
           <View style={openHeroInfoPortraitStyle}>
             <Text style={openPortraitMetaTextLeftStyle}>
-              Last activity: {openLastActivityLabel}
+              {isSampleDevice ? "Last activity" : "Last device report"}: {openLastActivityLabel}
             </Text>
             <View style={openPortraitMetaRowLeftStyle}>
               <View style={styles.metricCard}>
@@ -6323,7 +6254,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={openStatusProgressFillStyle} />
       </View>
       <Text style={styles.statusMetaText}>
-        Last activity: {openLastActivityLabel}
+        {isSampleDevice ? "Last activity" : "Last device report"}: {openLastActivityLabel}
       </Text>
       <Text style={styles.statusMetaText}>
         Last activity by: {openLastActorLabel}
@@ -6340,20 +6271,20 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       }
     >
       <View style={styles.metricCard}>
-        <Text style={styles.metricValue}>{coPpm} ppm</Text>
+        <Text style={styles.metricValue}>{formatMetric(coPpm, "ppm")}</Text>
         <Text style={styles.metricLabel}>CO</Text>
       </View>
       <View style={styles.metricCard}>
-        <Text style={styles.metricValue}>{smokePpm} ppm</Text>
+        <Text style={styles.metricValue}>{formatMetric(smokePpm, "ppm")}</Text>
         <Text style={styles.metricLabel}>Smoke</Text>
       </View>
       <View style={styles.metricCard}>
-        <Text style={styles.metricValue}>{smokeBattery}%</Text>
+        <Text style={styles.metricValue}>{formatMetric(smokeBattery, "%")}</Text>
         <Text style={styles.metricLabel}>Battery</Text>
       </View>
     </View>
   );
-  const smokeActionRow = (
+  const smokeActionRow = isSampleDevice ? (
     <View
       style={
         isLandscapeSplit ? smokeHeroActionRowStyle : utilityHeroActionRowStyle
@@ -6371,7 +6302,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           })
         }
       >
-        <Text style={styles.controlPillText}>Test alarm</Text>
+        <Text style={styles.controlPillText}>Test sample alarm</Text>
       </Pressable>
       <Pressable
         style={styles.controlPill}
@@ -6383,9 +6314,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           })
         }
       >
-        <Text style={styles.controlPillText}>Silence</Text>
+        <Text style={styles.controlPillText}>Silence sample</Text>
       </Pressable>
     </View>
+  ) : (
+    <Text style={styles.budgetHint}>
+      Remote testing and silencing are not connected. Use the detector's physical controls.
+    </Text>
   );
   const smokeHeroCard = (
     <LinearGradient
@@ -6398,28 +6333,30 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={styles.utilityHeroTitleWrap}>
           <Text style={styles.utilityHeroTitle}>{device.name}</Text>
           <Text style={styles.utilityHeroSub}>
-            {smokeDetected || coDetected ? "Alert detected" : "Air quality clear"}
+            {isSampleDevice ? "Sample detector · no live protection"
+              : smokeAlarmReported ? "Alarm in last report"
+                : smokeNoAlarmReported ? "No alarm in last report" : "Alarm state not reported"}
           </Text>
         </View>
         <View style={styles.utilityHeroPillRow}>
-          <View style={utilityHeroPillStyle(smokeDetected)}>
+          <View style={utilityHeroPillStyle(smokeDetected === true)}>
             <Ionicons
               name="flame"
               size={14}
               color={smokeDetected ? "#D8465B" : stylesVars.subtext}
             />
-            <Text style={utilityHeroPillTextStyle(smokeDetected)}>
-              {smokeDetected ? "Smoke" : "Smoke OK"}
+            <Text style={utilityHeroPillTextStyle(smokeDetected === true)}>
+              {smokeDetected === undefined ? "Smoke unknown" : smokeDetected ? "Smoke reported" : "No smoke reported"}
             </Text>
           </View>
-          <View style={utilityHeroPillStyle(coDetected)}>
+          <View style={utilityHeroPillStyle(coDetected === true)}>
             <Ionicons
               name="cloud"
               size={14}
               color={coDetected ? "#D8465B" : stylesVars.subtext}
             />
-            <Text style={utilityHeroPillTextStyle(coDetected)}>
-              {coDetected ? "CO" : "CO OK"}
+            <Text style={utilityHeroPillTextStyle(coDetected === true)}>
+              {coDetected === undefined ? "CO unknown" : coDetected ? "CO reported" : "No CO reported"}
             </Text>
           </View>
         </View>
@@ -6438,12 +6375,12 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           />
           <View style={styles.utilityHeroOrbContent}>
             <Ionicons
-              name={smokeDetected || coDetected ? "alert-circle" : "checkmark-circle"}
+              name={smokeAlarmReported ? "alert-circle" : "help-circle-outline"}
               size={smokeHeroIconSize}
               color="#fff"
             />
             <Text style={styles.utilityHeroOrbValue}>
-              {smokeDetected || coDetected ? "ALERT" : "CLEAR"}
+              {smokeAlarmReported ? "ALARM" : smokeNoAlarmReported ? "REPORTED" : "UNKNOWN"}
             </Text>
             <Text style={styles.utilityHeroOrbSub}>{device.name}</Text>
           </View>
@@ -6460,7 +6397,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const smokeStatusCard = (
     <View style={controlCardStyle}>
       <Text style={styles.cardLabel}>Status</Text>
-      <OptionChips
+      {isSampleDevice ? <OptionChips
         options={["ok", "warning", "error"].map((status) => ({
           value: status,
           label:
@@ -6470,7 +6407,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 ? "Warning"
                 : "Error",
         }))}
-        value={smokeSensorStatus}
+        value={smokeSensorStatus ?? ""}
         onSelect={(status) =>
           sendPatch({
             smokeSensorStatus: status as Device["smokeSensorStatus"],
@@ -6479,14 +6416,19 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         rowStyle={styles.chipRow}
         chipStyle={chipStyle}
         chipTextStyle={chipTextStyle}
-      />
+      /> : <Text style={styles.budgetHint}>
+        {smokeSensorStatus ? `Sensor reported ${smokeSensorStatus.toUpperCase()}` : "Sensor health not reported"}
+      </Text>}
+      <Text style={styles.budgetHint}>
+        {isSampleDevice ? "Sample state" : deviceReportedAt ? `Last device report: ${formatTimeAgo(deviceReportedAt)}` : "Report time unavailable"}
+      </Text>
       <Text style={styles.budgetHint}>
         Last test:{" "}
-        {smokeLastTestAt ? formatTimeAgo(smokeLastTestAt) : "Not yet"}
+        {smokeLastTestAt ? formatTimeAgo(smokeLastTestAt) : "No test history received"}
       </Text>
       <Text style={styles.budgetHint}>
         Last alarm:{" "}
-        {smokeLastAlarmAt ? formatTimeAgo(smokeLastAlarmAt) : "None"}
+        {smokeLastAlarmAt ? formatTimeAgo(smokeLastAlarmAt) : "No alarm history received"}
       </Text>
     </View>
   );
@@ -6499,13 +6441,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   const microwaveTimeLabel = formatClock(microwaveSeconds);
   const sprinklerZoneLabel = device.zone ?? "Front Yard";
   const sprinklerScheduleCount = (device.schedule ?? []).length;
-  const waterStatusLabel = waterLeakDetected
-    ? "Leak detected"
+  const waterStatusLabel = waterLeakDetected === undefined
+    ? "Leak status not reported"
+    : waterLeakDetected ? "Leak in last report"
     : highPressure
-      ? "High pressure"
+      ? "High pressure in last report"
       : lowPressure
-        ? "Low pressure"
-        : "Flow steady";
+        ? "Low pressure in last report"
+        : "No leak in last report";
   const speakerStatusLabel = device.isOn ? speakerTrackTitle : "Speaker idle";
   const stovePresetOptions: Array<{
     label: string;
@@ -7098,14 +7041,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               {device.isOn ? "Heating" : "Off"}
             </Text>
           </View>
-          <View style={utilityHeroPillStyle(stoveLock)}>
+          <View style={utilityHeroPillStyle(stoveLock === true)}>
             <Ionicons
-              name={stoveLock ? "lock-closed" : "lock-open"}
+              name={stoveLock === undefined ? "help-circle-outline" : stoveLock ? "lock-closed" : "lock-open"}
               size={14}
               color={stoveLock ? "#C44C4C" : stylesVars.subtext}
             />
-            <Text style={utilityHeroPillTextStyle(stoveLock)}>
-              {stoveLock ? "Locked" : "Unlocked"}
+            <Text style={utilityHeroPillTextStyle(stoveLock === true)}>
+              {stoveLock === undefined ? "Lock unknown" : stoveLock ? "Locked" : "Unlocked"}
             </Text>
           </View>
         </View>
@@ -7159,7 +7102,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             </View>
             <View style={styles.metricCard}>
               <Text style={styles.metricValue}>
-                {stoveLock ? "On" : "Off"}
+                {stoveLock === undefined ? "Unknown" : stoveLock ? "On" : "Off"}
               </Text>
               <Text style={styles.metricLabel}>Lock</Text>
             </View>
@@ -7592,14 +7535,14 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
           <Text style={styles.utilityHeroSub}>{waterStatusLabel}</Text>
         </View>
         <View style={styles.utilityHeroPillRow}>
-          <View style={utilityHeroPillStyle(waterLeakDetected)}>
+          <View style={utilityHeroPillStyle(waterLeakDetected === true)}>
             <Ionicons
               name={waterLeakDetected ? "warning" : "water"}
               size={14}
               color={waterLeakDetected ? "#D8465B" : theme.colors.accent}
             />
-            <Text style={utilityHeroPillTextStyle(waterLeakDetected)}>
-              {waterLeakDetected ? "Leak" : "Normal"}
+            <Text style={utilityHeroPillTextStyle(waterLeakDetected === true)}>
+              {waterLeakDetected === undefined ? "Unknown" : waterLeakDetected ? "Leak reported" : "No leak reported"}
             </Text>
           </View>
           <View style={utilityHeroPillStyle(waterBudgetExceeded)}>
@@ -7609,7 +7552,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
               color={waterBudgetExceeded ? "#D8465B" : stylesVars.subtext}
             />
             <Text style={utilityHeroPillTextStyle(waterBudgetExceeded)}>
-              {waterBudgetExceeded ? "Over budget" : "Budget OK"}
+              {waterBudgetExceeded ? "Over budget" : waterToday === null ? "Usage unknown" : waterBudget <= 0 ? "No budget" : "Within budget"}
             </Text>
           </View>
         </View>
@@ -7625,13 +7568,13 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
             style={styles.deviceLottie}
           />
           <View style={waterOrbOverlayStyle}>
-            <Text style={waterOrbValueStyle}>{waterFlow} L/min</Text>
+            <Text style={waterOrbValueStyle}>{formatMetric(waterFlow, "L/min")}</Text>
             <Text style={waterOrbSubStyle}>
               {waterBudget > 0
-                ? `${waterToday} / ${waterBudget} L`
-                : `${waterToday} L today`}
+                ? `${formatMetric(waterToday)} / ${waterBudget} L`
+                : `${formatMetric(waterToday)} L today`}
             </Text>
-            {waterBudget > 0 && (
+            {waterBudget > 0 && waterToday !== null && (
               <Text style={waterOrbPercentStyle}>
                 {Math.round(waterBudgetProgress * 100)}% used
               </Text>
@@ -7641,15 +7584,15 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         <View style={waterHeroInfoStyle}>
           <View style={waterHeroMetricRowStyle}>
             <View style={styles.metricCard}>
-              <Text style={waterMetricValueStyle}>{waterFlow} L/min</Text>
+              <Text style={waterMetricValueStyle}>{formatMetric(waterFlow, "L/min")}</Text>
               <Text style={waterMetricLabelStyle}>Flow</Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={waterMetricValueStyle}>{waterPressure} psi</Text>
+              <Text style={waterMetricValueStyle}>{formatMetric(waterPressure, "psi")}</Text>
               <Text style={waterMetricLabelStyle}>Pressure</Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={waterMetricValueStyle}>{waterTemp}C</Text>
+              <Text style={waterMetricValueStyle}>{formatMetric(waterTemp, "C")}</Text>
               <Text style={waterMetricLabelStyle}>Temp</Text>
             </View>
           </View>
@@ -7673,8 +7616,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       />
       <Text style={styles.budgetHint}>
         {waterBudget
-          ? `${waterToday} / ${waterBudget} L used`
-          : `${waterToday} L today`}
+          ? `${formatMetric(waterToday)} / ${waterBudget} L used`
+          : `${formatMetric(waterToday)} L today`}
       </Text>
       {waterBudgetExceeded && (
         <View style={styles.alertRow}>
@@ -7707,19 +7650,19 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       <Text style={styles.cardLabel}>Safety</Text>
       <View style={controlCardRowTopStyle}>
         <Pressable
-          style={controlPillStyle(waterLeakAlerts)}
+          style={controlPillStyle(waterLeakAlerts === true)}
           onPress={() => sendPatch({ waterLeakAlerts: !waterLeakAlerts })}
         >
-          <Text style={controlPillTextStyle(waterLeakAlerts)}>
-            {waterLeakAlerts ? "Leak Alerts" : "Alerts Off"}
+          <Text style={controlPillTextStyle(waterLeakAlerts === true)}>
+            {waterLeakAlerts === undefined ? "Leak alerts unknown" : waterLeakAlerts ? "Leak Alerts" : "Alerts Off"}
           </Text>
         </Pressable>
         <Pressable
-          style={controlPillStyle(waterAutoShutoff)}
+          style={controlPillStyle(waterAutoShutoff === true)}
           onPress={() => sendPatch({ waterAutoShutoff: !waterAutoShutoff })}
         >
-          <Text style={controlPillTextStyle(waterAutoShutoff)}>
-            {waterAutoShutoff ? "Auto Shutoff" : "Shutoff Off"}
+          <Text style={controlPillTextStyle(waterAutoShutoff === true)}>
+            {waterAutoShutoff === undefined ? "Shutoff unknown" : waterAutoShutoff ? "Auto Shutoff" : "Shutoff Off"}
           </Text>
         </Pressable>
       </View>
@@ -7762,18 +7705,18 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       />
       <View style={controlCardRowTopStyle}>
         <Pressable
-          style={controlPillStyle(waterPressureAlerts)}
+          style={controlPillStyle(waterPressureAlerts === true)}
           onPress={() =>
             sendPatch({ waterPressureAlerts: !waterPressureAlerts })
           }
         >
-          <Text style={controlPillTextStyle(waterPressureAlerts)}>
-            {waterPressureAlerts ? "Pressure Alerts" : "Alerts Off"}
+          <Text style={controlPillTextStyle(waterPressureAlerts === true)}>
+            {waterPressureAlerts === undefined ? "Pressure alerts unknown" : waterPressureAlerts ? "Pressure Alerts" : "Alerts Off"}
           </Text>
         </Pressable>
       </View>
       <Text style={styles.budgetHint}>
-        {waterPressureAlerts
+        {waterPressureAlerts === undefined ? "Pressure alert setting has not been reported" : waterPressureAlerts
           ? `Alert below ${waterPressureLow} psi or above ${waterPressureHigh} psi`
           : "Pressure alerts disabled"}
       </Text>
@@ -7781,18 +7724,18 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const waterUsageCard = (
     <View style={waterControlCardStyle}>
-      <Text style={styles.cardLabel}>Usage history</Text>
+      <Text style={styles.cardLabel}>{isSampleDevice ? "Sample usage history" : "Usage history"}</Text>
       <Text style={styles.waterUsageHint}>
-        Last 7 days · {waterToday} L today
+        {isSampleDevice ? `Illustrative week · ${formatMetric(waterToday, "L")} today` : "No usage history received"}
       </Text>
-      <View style={styles.waterUsageBars}>
+      {isSampleDevice ? <View style={styles.waterUsageBars}>
         {[18, 28, 22, 36, 26, 30, 20].map((height, index) => (
           <View
             key={`water-usage-${index}`}
             style={[styles.waterUsageBar, { height }]}
           />
         ))}
-      </View>
+      </View> : null}
     </View>
   );
   const speakerNowCard = (
@@ -8691,6 +8634,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                         isLandscapeSplit={isLandscapeSplit}
                         isWindowTabletPortrait={isWindowTabletPortrait}
                         isOpen={isOpen}
+                      positionKnown={openPositionKnown}
                         openDisplayValue={openDisplayValue}
                         openPercent={openPercent}
                         openStatusText={openStatusText}
@@ -8962,8 +8906,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       airBand={airBand}
                       airQuality={airQuality}
                       humidity={humidity}
-                      deviceTempC={device.tempC}
-                      roomTemp={roomTemp}
+                      deviceTempC={airTelemetry.tempC}
+                      readingStatus={airTelemetry.status}
+                      demoReadings={demoReadings}
                       airConfidence={airConfidence}
                       airLastUpdatedAt={airLastUpdatedAt}
                       airTrendIcon={airTrendIcon as keyof typeof Ionicons.glyphMap}
@@ -8984,6 +8929,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                       airIonizerEnabled={airIonizerEnabled}
                       airAutoVentilation={airAutoVentilation}
                       airAlertsEnabled={airAlertsEnabled}
+                      airThresholdsReported={airThresholdsReported}
                       airAlertAqi={airAlertAqi}
                       airAlertCo2={airAlertCo2}
                       airAlertPm25={airAlertPm25}
@@ -9845,6 +9791,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   airHeroHeader: {
+    flexWrap: "wrap",
+    gap: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -9921,6 +9869,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   airHeroUpdated: {
+    maxWidth: 160,
+    textAlign: "center",
     marginTop: 10,
     color: stylesVars.subtext,
     fontWeight: "600",
@@ -10019,6 +9969,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
   },
   airTrendHeader: {
+    flexWrap: "wrap",
+    gap: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
