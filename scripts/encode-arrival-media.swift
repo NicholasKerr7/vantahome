@@ -1,14 +1,21 @@
 #!/usr/bin/env swift
-/// Encode deterministic Blender frames with Apple's built-in H.264 pipeline.
+/// Encode reviewed Higgsfield source frames with Apple's built-in H.264 pipeline.
 /// No app/runtime dependency is added. Compile with:
 /// swiftc scripts/encode-arrival-media.swift -o /path/to/work/encode-arrival-media
-/// Usage: encode-arrival-media FRAME_DIRECTORY ASSET_DIRECTORY EVIDENCE_JSON [--enter-only]
+/// Usage: encode-arrival-media FRAME_DIRECTORY ASSET_DIRECTORY EVIDENCE_JSON PLAN_JSON
 import AVFoundation
 import CoreImage
 import Foundation
 import ImageIO
 import CoreMedia
 import CoreText
+import CryptoKit
+
+struct EncodingPlan: Decodable {
+    let enterFrames: Int
+    let holdFrames: Int
+    let sourceSha256: String
+}
 
 let width = 1024
 let height = 768
@@ -38,7 +45,7 @@ func encode(frames: ClosedRange<Int>, input: URL, output: URL) throws {
     let writer = try AVAssetWriter(outputURL: output, fileType: .mp4)
     writer.shouldOptimizeForNetworkUse = true
     let compression: [String: Any] = [
-        AVVideoAverageBitRateKey: 1_600_000,
+        AVVideoAverageBitRateKey: 2_600_000,
         AVVideoExpectedSourceFrameRateKey: Int(fps),
         AVVideoMaxKeyFrameIntervalKey: Int(fps),
         AVVideoAllowFrameReorderingKey: false,
@@ -112,7 +119,7 @@ struct DecodedMovie {
 }
 
 /// Fully decode each movie and save its exact first displayed frame as the poster.
-func decode(_ url: URL, poster: URL) throws -> DecodedMovie {
+func decode(_ url: URL, poster: URL, expectedFrames: Int) throws -> DecodedMovie {
     let asset = AVURLAsset(url: url)
     guard let track = asset.tracks(withMediaType: .video).first,
           asset.tracks(withMediaType: .audio).isEmpty,
@@ -142,7 +149,9 @@ func decode(_ url: URL, poster: URL) throws -> DecodedMovie {
         last = rgba(image)
         count += 1
     }
-    guard reader.status == .completed, count == 60 else { throw MediaError.decoding("Expected 60 fully decoded frames") }
+    guard reader.status == .completed, count == expectedFrames else {
+        throw MediaError.decoding("Decoded frame count differs from the processing plan")
+    }
     guard rgba(try sourceImage(poster)) == first else { throw MediaError.decoding("Poster pixels differ from first video frame") }
     return DecodedMovie(first: first, last: last, count: count, duration: CMTimeGetSeconds(asset.duration))
 }
@@ -181,7 +190,7 @@ func backgroundEvidence(_ bytes: [UInt8]) -> [String: Any] {
 }
 
 /// Assemble nine unmodified source-frame thumbnails for the choreography review.
-func contactSheet(input: URL, output: URL) throws {
+func contactSheet(input: URL, output: URL, frameCount: Int) throws {
     guard let canvas = CGContext(data: nil, width: 960, height: 792, bitsPerComponent: 8,
                                 bytesPerRow: 960 * 4, space: colorSpace,
                                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
@@ -189,7 +198,8 @@ func contactSheet(input: URL, output: URL) throws {
     }
     canvas.setFillColor(CGColor(red: 5/255, green: 6/255, blue: 18/255, alpha: 1))
     canvas.fill(CGRect(x: 0, y: 0, width: 960, height: 792))
-    for (index, frame) in [1,9,16,22,27,34,40,47,60].enumerated() {
+    let samples = (0...8).map { 1 + Int((Double($0) * Double(frameCount-1) / 8).rounded()) }
+    for (index, frame) in samples.enumerated() {
         let file = input.appendingPathComponent(String(format: "frame-%04d.png", frame))
         let image = try sourceImage(file)
         guard let cgImage = context.createCGImage(image, from: image.extent) else {
@@ -217,30 +227,30 @@ func contactSheet(input: URL, output: URL) throws {
 
 /// Generate the two clips/posters and persist measured format and seam evidence.
 func run() throws {
-    guard CommandLine.arguments.count == 4 ||
-          (CommandLine.arguments.count == 5 && CommandLine.arguments[4] == "--enter-only") else {
-        throw MediaError.invalidArguments
-    }
+    guard CommandLine.arguments.count == 5 else { throw MediaError.invalidArguments }
     let input = URL(fileURLWithPath: CommandLine.arguments[1])
     let output = URL(fileURLWithPath: CommandLine.arguments[2])
     let evidence = URL(fileURLWithPath: CommandLine.arguments[3])
+    let planData = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[4]))
+    let plan = try JSONDecoder().decode(EncodingPlan.self, from: planData)
+    guard (60...90).contains(plan.enterFrames), (30...90).contains(plan.holdFrames) else {
+        throw MediaError.invalidArguments
+    }
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
     let enterURL = output.appendingPathComponent("vantahome-arrival-enter.mp4")
     let holdURL = output.appendingPathComponent("vantahome-arrival-hold.mp4")
-    try encode(frames: 1...60, input: input, output: enterURL)
-    if CommandLine.arguments.last == "--enter-only" {
-        let enter = try decode(enterURL, poster: output.appendingPathComponent("vantahome-arrival-poster.png"))
-        try contactSheet(input: input, output: evidence.deletingLastPathComponent().appendingPathComponent("assembly-contact.png"))
-        print("Entrance preview: \(enter.count) fully decoded frames, \(enter.duration) seconds")
-        return
-    }
-    // Both clips include master frame 60, guaranteeing the same seated pose.
-    try encode(frames: 60...119, input: input, output: holdURL)
-    let enter = try decode(enterURL, poster: output.appendingPathComponent("vantahome-arrival-poster.png"))
-    let hold = try decode(holdURL, poster: output.appendingPathComponent("vantahome-arrival-hold.png"))
-    try contactSheet(input: input, output: evidence.deletingLastPathComponent().appendingPathComponent("assembly-contact.png"))
+    try encode(frames: 1...plan.enterFrames, input: input, output: enterURL)
+    try encode(frames: (plan.enterFrames+1)...(plan.enterFrames+plan.holdFrames), input: input, output: holdURL)
+    let enter = try decode(enterURL, poster: output.appendingPathComponent("vantahome-arrival-poster.png"),
+                           expectedFrames: plan.enterFrames)
+    let hold = try decode(holdURL, poster: output.appendingPathComponent("vantahome-arrival-hold.png"),
+                          expectedFrames: plan.holdFrames)
+    try contactSheet(input: input, output: evidence.deletingLastPathComponent().appendingPathComponent("arrival-contact.png"),
+                     frameCount: plan.enterFrames)
     let report: [String: Any] = [
         "encoder": "Apple AVFoundation H.264 Main 3.1",
+        "sourceSha256": plan.sourceSha256,
+        "planSha256": SHA256.hash(data: planData).map { String(format: "%02x", $0) }.joined(),
         "width": width, "height": height, "framesPerSecond": Int(fps),
         "audio": false, "pixelFormat": "yuv420p", "fastStart": true,
         "enterFrames": enter.count, "holdFrames": hold.count,

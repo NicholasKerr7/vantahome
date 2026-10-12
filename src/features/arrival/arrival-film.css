@@ -15,12 +15,10 @@
 .arrival-film__poster,
 .arrival-film__video {
   object-fit: contain;
-}
-
-.arrival-film__video {
   opacity: 0;
 }
 
+.arrival-film__poster--visible,
 .arrival-film__video--visible {
   opacity: 1;
 }

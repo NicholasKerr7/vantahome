@@ -289,6 +289,21 @@ test('native first-frame can arrive before source replacement resolves without h
   expect(mockPlayers[0].play).toHaveBeenCalled();
 });
 
+test('preloads the completed still and shows it until the hold clip renders its own first frame', async () => {
+  const screen = render(<ArrivalFilm motionAllowed />);
+  await settle();
+  expect(screen.getByTestId('arrival-completed-poster', { includeHiddenElements: true })).toHaveStyle({ opacity: 0 });
+  fireEvent(screen.getByTestId('arrival-video', { includeHiddenElements: true }), 'firstFrameRender');
+  expect(screen.getByTestId('arrival-video', { includeHiddenElements: true })).not.toHaveStyle({ opacity: 0 });
+  act(() => mockPlayers[0].emit('playToEnd'));
+  await settle();
+  expect(mockPlayers[0].replaceAsync).toHaveBeenCalledTimes(2);
+  expect(screen.getByTestId('arrival-completed-poster', { includeHiddenElements: true })).not.toHaveStyle({ opacity: 0 });
+  expect(screen.getByTestId('arrival-video', { includeHiddenElements: true })).toHaveStyle({ opacity: 0 });
+  fireEvent(screen.getByTestId('arrival-video', { includeHiddenElements: true }), 'firstFrameRender');
+  expect(screen.getByTestId('arrival-video', { includeHiddenElements: true })).not.toHaveStyle({ opacity: 0 });
+});
+
 test.each([{ width: 320, height: 568, fontScale: 2 }, { width: 1180, height: 820, fontScale: 1 }])('keeps recovery reachable with layout %p', async (viewport) => {
   dimensions = { ...dimensions, ...viewport };
   const screen = render(<CinematicArrival status="unavailable" onRetry={jest.fn()} onSignOut={jest.fn()} />);

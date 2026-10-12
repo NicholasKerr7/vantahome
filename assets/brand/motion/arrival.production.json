@@ -1,26 +1,34 @@
 {
   "created": "2026-10-12",
   "source": {
-    "type": "deterministic-blender-geometry",
+    "type": "higgsfield-source-film",
+    "filename": "vantahome-assembly-master.mp4",
+    "sha256": "dbe092003a8fe75df85e6e70da37e5f329bfb86fd07a09effc7f1e125e83f3c8",
+    "provider": "Higgsfield",
+    "model": "seedance_2_5",
+    "jobId": "3e339a8d-f8bc-4d35-85f9-efec3c2d1e84",
+    "productionRecord": {
+      "filename": "higgsfield-assembly.production.json",
+      "sha256": "1606369b87af7b02b4332a6b7687a65a4a254a93dc8fb537694b8fee132633fc"
+    },
     "master": {
       "filename": "vantahome-icon-master.png",
       "sha256": "1c3533ce82c3fa7bb12c45ab7e0b1123a12561d9ec06326f41da9744e32b5f9d",
-      "use": "Unmodified reference; new geometry authored in Blender."
+      "use": "Original icon preserved; this pipeline processes the supplied Higgsfield film."
     },
-    "blenderVersion": "5.2.2 LTS",
-    "newGenerationCredits": 0,
+    "postprocessingGenerationCredits": 0,
     "scripts": [
       {
         "filename": "build-arrival-media.py",
-        "sha256": "2a1b08c5d29a346690d9123818a195460a3709356d09ceca1cecd00bd9ef9554"
+        "sha256": "892799ceacdfe2f42e200f8b46725e72335e72d52cc638d8f57ccbc139e3563d"
       },
       {
-        "filename": "render-arrival-assembly.py",
-        "sha256": "ee8e45dc077d563ba9008f8112f6e43319e1e83f590fa9ae29d72be27e40b767"
+        "filename": "prepare-arrival-frames.swift",
+        "sha256": "8ce1cdd8dd5d7cff4db64d3463753dedfd410abf749e543b8485eb8bc5e3f498"
       },
       {
         "filename": "encode-arrival-media.swift",
-        "sha256": "10b479903efb2cfbfed0d4dee1b347eebdeed4401c9b65ea38cec475ad812476"
+        "sha256": "6f2c4f0d453dec2e5c3026db1f707f55a97992d335105278405e236be247bf39"
       }
     ]
   },
@@ -32,14 +40,18 @@
     "framesPerSecond": 30,
     "audio": false,
     "edgeBackground": "#050612",
-    "totalBytes": 716525,
+    "totalBytes": 2135096,
     "budgetBytes": 3145728
   },
   "choreography": {
-    "shell": "Fixed roof, right chimney, U-frame and dark badge; V/core start off-canvas.",
-    "enter": "Frames 1-60, two seconds: V arrives 0.15-0.65s, core 0.75-1.15s, energy activates last.",
-    "hold": "Frames 60-119, two-second subtle assembled glow loop with matching authored endpoints.",
-    "transition": "Exit as soon as access and renderer are actually ready; never impose a two-second delay.",
+    "sourceIntervalsSeconds": {
+      "enterStart": 0,
+      "enterEnd": 3.5,
+      "holdEnd": 4.0
+    },
+    "enter": "Retimed reviewed source interval; preserves original CGI surfaces and camera.",
+    "hold": "Cosine-paced forward/reverse of the reviewed assembled tail, sharing exact source endpoints.",
+    "transition": "Exit as soon as access and renderer are actually ready; never impose the film duration.",
     "poster": "Exact decoded entrance frame zero, for native splash/video handoff.",
     "holdPoster": "Exact decoded hold frame zero, for source replacement and reduced motion.",
     "fallback": "Local stills; no network request, resolve clip or runtime 3D dependency."
@@ -47,9 +59,9 @@
   "verification": {
     "audio": false,
     "encoder": "Apple AVFoundation H.264 Main 3.1",
-    "enterFrames": 60,
-    "enterHoldMeanAbsoluteRgbErrorOutOf255": 1.90196779039171,
-    "enterSeconds": 2,
+    "enterFrames": 75,
+    "enterHoldMeanAbsoluteRgbErrorOutOf255": 2.236785888671875,
+    "enterSeconds": 2.5,
     "fastStart": true,
     "firstFramePostersMatchExactly": true,
     "framesPerSecond": 30,
@@ -58,9 +70,9 @@
     "holdBackground": {
       "cornerRgb": [
         [
-          7,
-          6,
-          20
+          8,
+          8,
+          21
         ],
         [
           6,
@@ -79,7 +91,7 @@
         ]
       ],
       "outerBorderMaximumChannelErrorOutOf255": 3,
-      "outerBorderMeanAbsoluteErrorOutOf255": 1.576951951951952,
+      "outerBorderMeanAbsoluteErrorOutOf255": 1.3152214714714714,
       "targetRgb": [
         5,
         6,
@@ -87,14 +99,14 @@
       ]
     },
     "holdFrames": 60,
-    "holdLoopMeanAbsoluteRgbErrorOutOf255": 1.8774714999728732,
+    "holdLoopMeanAbsoluteRgbErrorOutOf255": 2.2605908711751304,
     "holdSeconds": 2,
     "openingBackground": {
       "cornerRgb": [
         [
-          7,
-          6,
-          20
+          8,
+          8,
+          21
         ],
         [
           6,
@@ -113,7 +125,7 @@
         ]
       ],
       "outerBorderMaximumChannelErrorOutOf255": 3,
-      "outerBorderMeanAbsoluteErrorOutOf255": 1.4156343843843844,
+      "outerBorderMeanAbsoluteErrorOutOf255": 1.3204767267267268,
       "targetRgb": [
         5,
         6,
@@ -121,22 +133,127 @@
       ]
     },
     "pixelFormat": "yuv420p",
+    "planSha256": "3a162badb1248b4b1a0a727990ce24a9c7da239e2ed20b12397350832ad43964",
+    "sourceSha256": "dbe092003a8fe75df85e6e70da37e5f329bfb86fd07a09effc7f1e125e83f3c8",
     "width": 1024,
-    "devicePlayback": "Browser playback verified. Preview 53 package verified and installed on iPhone; automatic launch blocked by locked device, so physical playback remains unverified.",
+    "sourcePreparation": {
+      "edgeFeatherPixels": 64,
+      "holdMethod": "Cosine forward/reverse of reviewed assembled tail",
+      "logoReconstruction": false,
+      "method": "AVFoundation source sampling; Core Image center crop and edge feather",
+      "newGeneration": false,
+      "planSha256": "3a162badb1248b4b1a0a727990ce24a9c7da239e2ed20b12397350832ad43964",
+      "sampledSourceTimesSeconds": [
+        0,
+        0.041666666666666664,
+        0.08333333333333333,
+        0.125,
+        0.20833333333333334,
+        0.25,
+        0.2916666666666667,
+        0.3333333333333333,
+        0.375,
+        0.4166666666666667,
+        0.4583333333333333,
+        0.5,
+        0.5833333333333334,
+        0.625,
+        0.6666666666666666,
+        0.7083333333333334,
+        0.75,
+        0.7916666666666666,
+        0.8333333333333334,
+        0.9166666666666666,
+        0.9583333333333334,
+        1,
+        1.0416666666666667,
+        1.0416666666666667,
+        1.125,
+        1.1666666666666667,
+        1.25,
+        1.2916666666666667,
+        1.3333333333333333,
+        1.375,
+        1.4166666666666667,
+        1.4583333333333333,
+        1.5,
+        1.5416666666666667,
+        1.625,
+        1.6666666666666667,
+        1.7083333333333333,
+        1.75,
+        1.7916666666666667,
+        1.8333333333333333,
+        1.875,
+        1.9583333333333333,
+        2,
+        2,
+        2.0833333333333335,
+        2.125,
+        2.125,
+        2.2083333333333335,
+        2.25,
+        2.3333333333333335,
+        2.375,
+        2.4166666666666665,
+        2.4583333333333335,
+        2.5,
+        2.5416666666666665,
+        2.5833333333333335,
+        2.6666666666666665,
+        2.7083333333333335,
+        2.75,
+        2.7916666666666665,
+        2.8333333333333335,
+        2.875,
+        2.9166666666666665,
+        3,
+        3.0416666666666665,
+        3.0833333333333335,
+        3.125,
+        3.1666666666666665,
+        3.2083333333333335,
+        3.25,
+        3.2916666666666665,
+        3.375,
+        3.4166666666666665,
+        3.4583333333333335,
+        3.5,
+        3.5416666666666665,
+        3.5833333333333335,
+        3.625,
+        3.6666666666666665,
+        3.7083333333333335,
+        3.75,
+        3.7916666666666665,
+        3.8333333333333335,
+        3.875,
+        3.9166666666666665,
+        3.9583333333333335,
+        4
+      ],
+      "sourceBoundaryReuse": "Identical cached source image at entrance end, hold start and hold end",
+      "sourceFramesPerSecond": 24,
+      "sourceHeight": 1080,
+      "sourceSeconds": 4.042,
+      "sourceSha256": "dbe092003a8fe75df85e6e70da37e5f329bfb86fd07a09effc7f1e125e83f3c8",
+      "sourceWidth": 1920
+    },
+    "devicePlayback": "Browser playback verified. Preview 54 Release package verified and installed; iPhone reports 1.0.0 (54). Automatic launch was blocked by the locked device, so physical playback remains unverified.",
     "boundaries": {
       "openingPosterMatchesDecodedFirstFrame": true,
       "holdPosterMatchesDecodedFirstFrame": true,
-      "enterHoldMeanAbsoluteRgbErrorOutOf255": 1.90196779039171,
-      "loopFirstLastMeanAbsoluteRgbErrorOutOf255": 1.8774714999728732,
-      "authoredPose": "Enter ends and hold starts at master frame 60; hold ends at identical keyed state at 119."
+      "enterHoldMeanAbsoluteRgbErrorOutOf255": 2.236785888671875,
+      "loopFirstLastMeanAbsoluteRgbErrorOutOf255": 2.2605908711751304,
+      "sourcePose": "Entrance end and both hold endpoints reuse the identical sampled source image."
     },
-    "visualReview": "Inspected shell and assembled stills, nine-frame trajectory sheet, and responsive browser presentation/playback. Confirmed V precedes core, shell/camera stay fixed, then core/circuit/rim activation. Checked actual Home reveal and reachable full controls."
+    "visualReview": "Inspected original 16-frame sequence, final nine-frame edit and responsive playback at 320x568, 430x932, 768x1024 and 1024x768. V seats before core; illumination follows, final badge stays contained. Verified silent hold, no page overflow, reduced-motion still, early-ready release and retry path."
   },
   "assets": [
     {
       "filename": "vantahome-arrival-enter.mp4",
-      "bytes": 182901,
-      "sha256": "cc24d48c1281b98033ed2262a066e1bda3ce0c9ddb88ee2270805b2009c14221",
+      "bytes": 830960,
+      "sha256": "d7bbe3bae7f0ab460b046006cca80f9d09cf4d65ee6c3fa06160b933e7d38b4d",
       "probe": {
         "method": "AVFoundation full decode + binary media headers",
         "streams": [
@@ -150,8 +267,8 @@
           }
         ],
         "format": {
-          "size": "182901",
-          "duration": "2.000000"
+          "size": "830960",
+          "duration": "2.500000"
         }
       },
       "avcConfiguration": {
@@ -168,8 +285,8 @@
     },
     {
       "filename": "vantahome-arrival-hold.mp4",
-      "bytes": 96698,
-      "sha256": "4e54c48b569a82f5d6aed1ecb371a8ee418f814993feba251325d7453b7c4846",
+      "bytes": 350548,
+      "sha256": "106091be1d93f4089b35647e79f60aa16dc7da818ca03eb280b8f73e6c0d97ad",
       "probe": {
         "method": "AVFoundation full decode + binary media headers",
         "streams": [
@@ -183,7 +300,7 @@
           }
         ],
         "format": {
-          "size": "96698",
+          "size": "350548",
           "duration": "2.000000"
         }
       },
@@ -201,8 +318,8 @@
     },
     {
       "filename": "vantahome-arrival-hold.png",
-      "bytes": 269189,
-      "sha256": "7f3024e6beba947c062e8a1fedd9c8051c095121529858039b3f1041548b68dd",
+      "bytes": 528160,
+      "sha256": "aecec5fa67239bca48a6b1a16ff3736c15e0a8bb0f0661a10967b104c27fca41",
       "probe": {
         "method": "AVFoundation full decode + binary media headers",
         "streams": [
@@ -215,14 +332,14 @@
           }
         ],
         "format": {
-          "size": "269189"
+          "size": "528160"
         }
       }
     },
     {
       "filename": "vantahome-arrival-poster.png",
-      "bytes": 167737,
-      "sha256": "a537489ec11b7540daa4e110fdf7b7a823dfef690843a318becaa36221b9f5a4",
+      "bytes": 425428,
+      "sha256": "51e433826fc8773c1c11539d9c74ae3d69172ae0f8a68b01241a3a9c87281b8f",
       "probe": {
         "method": "AVFoundation full decode + binary media headers",
         "streams": [
@@ -235,7 +352,7 @@
           }
         ],
         "format": {
-          "size": "167737"
+          "size": "425428"
         }
       }
     }

@@ -55,8 +55,10 @@ export default function ArrivalFilm({ motionAllowed }: Props) {
     playCurrent();
   }, [playCurrent]);
 
+  const showCompletedPoster = segment === 'hold' || failed || !motionAllowed;
   return <div className="arrival-film" data-testid="arrival-film" aria-hidden="true">
-    {(segment === 'hold' || failed || !motionAllowed) && <img className="arrival-film__poster" src={HOLD_POSTER} alt="" draggable={false} />}
+    {/* Decode this while entrance plays so the still is ready before the video source changes. */}
+    <img className={`arrival-film__poster ${showCompletedPoster ? 'arrival-film__poster--visible' : ''}`} src={HOLD_POSTER} alt="" draggable={false} />
     <video
       ref={video}
       data-testid="arrival-video"

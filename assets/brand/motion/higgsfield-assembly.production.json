@@ -1,0 +1,77 @@
+{
+  "title": "VantaHome \u2014 Precision Arrival",
+  "provider": "Higgsfield",
+  "model": "seedance_2_5",
+  "jobId": "3e339a8d-f8bc-4d35-85f9-efec3c2d1e84",
+  "createdOn": "2026-10-12",
+  "estimatedCredits": {
+    "shellReference": 2.75,
+    "assemblyVideo": 48,
+    "total": 50.75
+  },
+  "requestedSettings": {
+    "model": "seedance_2_5",
+    "mode": "omni_reference",
+    "duration": 4,
+    "aspect_ratio": "16:9",
+    "resolution": "1080p",
+    "bitrate_mode": "high",
+    "generate_audio": false,
+    "count": 1,
+    "medias": [
+      {
+        "role": "start_image",
+        "value": "34aa48d7-5f9b-45f1-ba1f-caac3de2e9e1"
+      },
+      {
+        "role": "end_image",
+        "value": "b44b4c21-6822-492e-8338-fc2e8ce65a8d"
+      }
+    ],
+    "prompt": "VANTAHOME \u2014 PRECISION ARRIVAL. Exactly 4 seconds. One continuous locked-off high-budget photorealistic 3D product-animation shot. The supplied first and last frames define the exact sculpture, camera, geometry, stage and materials. Begin with the empty house shell shown in the first image; finish with the exact complete icon shown in the last image. The thick rounded-square purple-glass backing, roof with right chimney and recessed blue house outline STAY ABSOLUTELY STATIONARY FOR THE ENTIRE SHOT. No camera movement, no zoom, no breathing scale. Animate only TWO solid removable parts and then their lighting.\n\nCHOREOGRAPHY WITH STRICT ORDER:\n0.00\u20130.20: Empty shell rests perfectly still, its rich bevelled glass catches the violet studio light.\n0.20\u20131.15: The single intact solid amethyst V enters from below/foreground along a short decisive depth trajectory. It is rigid, full-sized and strongly three-dimensional, visibly projecting toward the viewer before driving backward into its precise socket inside the shell. It accelerates into a satisfying magnetic SLAM, then a very tiny 1-frame mechanical settle. No bounce of the shell. Camera and shell do not shake. Leave the center EMPTY while the V arrives. The V never appears by drawing, extrusion, materializing or morphing; it physically travels as one complete solid piece.\n1.15\u20132.05: AFTER the V is seated and stationary, the separate concentric circular core assembly glides rapidly from the foreground toward the exact central socket and locks flush. Real parallax, gorgeous glass refraction, realistic shallow motion blur. The central hub stays dark until it seats. The four thin circuit branches and four nodes connect precisely in their original arrangement.\n2.05\u20132.90: Assembly complete. One restrained magenta-white pulse ignites INSIDE the core, travels smoothly out through the four circuits, then around the roof and V bevels and exterior rim. Rich amethyst caustics and a low soft violet ripple travel across the polished obsidian reflection below. A delicate blue light kiss on the right edge. Impressive optical depth and lighting; NOT a screen-filling flash or explosion.\n2.90\u20134.00: Everything stays completely assembled and stationary in the exact final reference pose. Core light and floor haze settle to a very gentle luxurious breathing glow. No more movement of parts or camera. Final frame matches the supplied ending image.\n\nThe physical material quality is the PRIORITY: thick refractive amethyst crystal, precisely machined titanium interiors, clean bevel highlights, controlled bloom, polished obsidian floor reflection, fine near-floor haze, subtle cinematic motion blur during the TWO arrivals. Beautiful velvet blacks with refined violet and cool blue accents. Preserve the same camera, scale, background and silhouette throughout. Realistic tangible luxury studio CGI, not an illustration, HUD, flat sticker, cheap wireframe or cartoon.\n\nNo text. No sounds. No cuts. No dissolves. No disassembly. Roof NEVER lifts. Backing NEVER moves. No added geometry, fragments, extra cores, extra circuitry, duplicate V, logo distortion, liquid morphing, long introductory pause, harsh strobing, camera shake, cropped badge. This is a short purposeful ASSEMBLY into the existing stationary shell, followed by beautiful controlled light."
+  },
+  "openingReference": {
+    "jobId": "34aa48d7-5f9b-45f1-ba1f-caac3de2e9e1",
+    "settings": {
+      "model": "gpt_image_2_5",
+      "quality": "high",
+      "resolution": "2k",
+      "aspect_ratio": "16:9",
+      "count": 1,
+      "medias": [
+        {
+          "role": "image",
+          "value": "b44b4c21-6822-492e-8338-fc2e8ce65a8d"
+        }
+      ],
+      "prompt": "EDIT THIS EXACT CINEMATIC VANTAHOME HERO FRAME to make the starting frame for a mechanical assembly animation. Preserve pixel-identical camera, framing, perspective, badge size, stationary thick rounded-square amethyst glass backing, house roof with right-side chimney, recessed blue house outline, obsidian floor reflection, haze, amethyst crystal bevels, titanium inserts, purple-blue lighting and dark environment. This remains the same luxurious tangible three-dimensional sculpture. ONLY remove the entire large foreground lower V-shaped solid piece, the circular central hub and all four circuit lines/nodes, including their emitted illumination and corresponding floor reflections. Leave empty clean dark smoked glass where these removable components previously were. The peak roof and right chimney remain complete and in their exact original positions, as does the recessed open-bottom house outline. Do not move, resize, rotate, redesign or disassemble the shell, roof, backing or camera. No floating fragments, no V, no core, no circuitry, no text. Keep gorgeous physically based glass refraction, controlled reflections, visible thick sidewall and bevels. The complete shell is stationary, poised to receive the V and core in the next shot. SAME frame composition and exposure as reference, with just slightly quieter interior glow because the core is absent."
+    },
+    "sha256": "dd661dba665d448d623e6fdfb6c2f63a68937feb7c98a71817d3ef6940513ced"
+  },
+  "completedReference": {
+    "jobId": "b44b4c21-6822-492e-8338-fc2e8ce65a8d",
+    "sha256": "f0c48d07f15ab02f74c2213ad01c59bbc8502144540dc44147757cc3e668eb53"
+  },
+  "source": {
+    "resultUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/hf_20261012_162707_3e339a8d-f8bc-4d35-85f9-efec3c2d1e84.mp4",
+    "filename": "vantahome-assembly-master.mp4",
+    "sha256": "dbe092003a8fe75df85e6e70da37e5f329bfb86fd07a09effc7f1e125e83f3c8",
+    "bytes": 4549753,
+    "width": 1920,
+    "height": 1080,
+    "durationSeconds": 4.042,
+    "framesPerSecond": 24,
+    "audioTracks": 0
+  },
+  "review": {
+    "method": "Inspected 16 decoded quarter-second frames plus full source frames at 0, 3 and 3.75 seconds.",
+    "result": "V travels from the foreground and seats first; separate dark concentric core follows, then violet circuit/rim illumination. Glass backing, roof and camera remain visually stable. Final assembled tail is suitable for a quiet lighting loop.",
+    "limitations": "Generated spatial interpretation, not mathematically exact source geometry. The incoming V intentionally fills the foreground and extends beyond the frame before seating.",
+    "selectedSourceIntervalsSeconds": {
+      "enterStart": 0,
+      "enterEnd": 3.5,
+      "holdEnd": 4.0
+    },
+    "targetEntranceSeconds": 2.5
+  }
+}

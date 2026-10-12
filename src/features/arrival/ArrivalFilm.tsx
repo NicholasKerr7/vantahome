@@ -16,7 +16,7 @@ type Props = { motionAllowed: boolean };
 /** Play one local silent film across all loading phases; a media failure remains decorative. */
 export default function ArrivalFilm({ motionAllowed }: Props) {
   const [segment, setSegment] = useState<Segment>('enter');
-  const [firstFrame, setFirstFrame] = useState(false);
+  const [frameSegment, setFrameSegment] = useState<Segment | null>(null);
   const [failed, setFailed] = useState(false);
   const playback = useRef({ motionAllowed, segment });
   const loadedSegment = useRef<Segment | null>(null);
@@ -51,7 +51,6 @@ export default function ArrivalFilm({ motionAllowed }: Props) {
     if (failed) return;
     const revision = ++loadRevision.current;
     let current = true;
-    setFirstFrame(false);
     // Serialize native replacements and cancel stale continuations on unmount.
     // Readiness fades the current frame; it never loads a separate closing clip.
     loadQueue.current = loadQueue.current.then(async () => {
@@ -74,9 +73,11 @@ export default function ArrivalFilm({ motionAllowed }: Props) {
     else player.pause();
   }, [segment, failed, motionAllowed, player]);
 
-  const showVideo = firstFrame && motionAllowed && !failed;
+  const showVideo = frameSegment === segment && motionAllowed && !failed;
+  const showCompletedPoster = segment === 'hold' || failed || !motionAllowed;
   return <View style={styles.media} testID="arrival-film" pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-    {(segment === 'hold' || failed || !motionAllowed) && <Image testID="arrival-completed-poster" source={HOLD_POSTER} style={styles.media} resizeMode="contain" accessible={false} />}
+    {/* Decode the matching still during entrance so source replacement cannot reveal the opening pose. */}
+    <Image testID="arrival-completed-poster" source={HOLD_POSTER} style={[styles.media, !showCompletedPoster && styles.mediaHidden]} resizeMode="contain" accessible={false} />
     <VideoView
       testID="arrival-video"
       player={player}
@@ -93,7 +94,7 @@ export default function ArrivalFilm({ motionAllowed }: Props) {
       onFirstFrameRender={() => {
         // Native first-frame notification may precede replaceAsync's resolution.
         if (requestedSegment.current !== playback.current.segment) return;
-        setFirstFrame(true);
+        setFrameSegment(playback.current.segment);
         if (playback.current.motionAllowed && !playbackFailed.current) player.play();
       }}
     />

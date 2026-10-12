@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Render, encode and verify the local VantaHome assembly without AI credits.
+"""Prepare app arrival media from a reviewed Higgsfield film, preserving its CGI.
 
-Requires Blender 5.2+ and Apple's Swift/AVFoundation tools on macOS. These are
-production-only dependencies; the app ships four small local assets.
-Run: python3 scripts/build-arrival-media.py /path/to/work/brand-motion/assembly
-Use --reuse-frames after a reviewed render, or --reuse-encoding after encoding.
-The editable .blend, source frames and contact sheet stay in the work directory.
+Requires Apple's Swift/AVFoundation on macOS, with no app/runtime dependency.
+Run with --help for the source hash, provenance and reviewed timing arguments.
+This script never generates or reconstructs a logo. Center crop, edge feather,
+retiming and silent encoding preserve the supplied film's glass and reflections.
+Outputs default to WORK/delivery for review; --destination selects app assets.
+Use --reuse-frames or --reuse-encoding only with an unchanged processing plan.
 """
 import argparse
 import hashlib
@@ -72,8 +73,8 @@ def describe(path: Path, evidence: dict) -> dict[str, object]:
         configuration = video_configuration(path)
         kind = "enter" if "-enter." in path.name else "hold"
         duration = evidence[f"{kind}Seconds"]
-        if duration != 2 or evidence[f"{kind}Frames"] != 60:
-            raise ValueError(f"Expected sixty frames in two seconds: {path.name}")
+        if not 1 <= duration <= 3 or abs(duration * 30 - evidence[f"{kind}Frames"]) > 0.001:
+            raise ValueError(f"Unexpected clip duration/frame count: {path.name}")
         stream.update(codec_name="h264", pix_fmt="yuv420p", r_frame_rate="30/1")
         details["duration"] = f"{duration:.6f}"
     else:
@@ -91,7 +92,8 @@ def describe(path: Path, evidence: dict) -> dict[str, object]:
     return record
 
 
-def manifest_for(exports: Path, evidence: dict) -> dict[str, object]:
+def manifest_for(exports: Path, evidence: dict, preparation: dict, plan: dict,
+                 provenance_path: Path, provenance: dict) -> dict[str, object]:
     """Document production provenance, choreography and measured seams."""
     if not evidence["firstFramePostersMatchExactly"] or evidence["fullVideoDecode"] != "passed":
         raise ValueError("Exact poster/full decode validation did not pass.")
@@ -102,58 +104,87 @@ def manifest_for(exports: Path, evidence: dict) -> dict[str, object]:
     total = sum(record["bytes"] for record in records)
     if total > 3 * 1024 * 1024:
         raise ValueError("Arrival media exceeds the 3 MiB production budget.")
-    scripts = ["build-arrival-media.py", "render-arrival-assembly.py", "encode-arrival-media.swift"]
+    scripts = ["build-arrival-media.py", "prepare-arrival-frames.swift", "encode-arrival-media.swift"]
     return {
         "created": str(date.today()),
         "source": {
-            "type": "deterministic-blender-geometry",
+            "type": "higgsfield-source-film",
+            "filename": Path(plan["sourcePath"]).name, "sha256": plan["sourceSha256"],
+            "provider": "Higgsfield", "model": provenance.get("model"), "jobId": provenance.get("jobId"),
+            "productionRecord": {"filename": provenance_path.name, "sha256": sha256(provenance_path)},
             "master": {"filename": "vantahome-icon-master.png", "sha256": MASTER_SHA256,
-                       "use": "Unmodified reference; new geometry authored in Blender."},
-            "blenderVersion": "5.2.2 LTS", "newGenerationCredits": 0,
+                       "use": "Original icon preserved; this pipeline processes the supplied Higgsfield film."},
+            "postprocessingGenerationCredits": 0,
             "scripts": [{"filename": name, "sha256": sha256(ROOT / "scripts" / name)} for name in scripts],
         },
         "format": {"width": 1024, "height": 768, "aspectRatio": "4:3", "videoCodec": "h264",
                    "framesPerSecond": 30, "audio": False, "edgeBackground": "#050612",
                    "totalBytes": total, "budgetBytes": 3 * 1024 * 1024},
         "choreography": {
-            "shell": "Fixed roof, right chimney, U-frame and dark badge; V/core start off-canvas.",
-            "enter": "Frames 1-60, two seconds: V arrives 0.15-0.65s, core 0.75-1.15s, energy activates last.",
-            "hold": "Frames 60-119, two-second subtle assembled glow loop with matching authored endpoints.",
-            "transition": "Exit as soon as access and renderer are actually ready; never impose a two-second delay.",
+            "sourceIntervalsSeconds": {key: plan[key] for key in ("enterStart", "enterEnd", "holdEnd")},
+            "enter": "Retimed reviewed source interval; preserves original CGI surfaces and camera.",
+            "hold": "Cosine-paced forward/reverse of the reviewed assembled tail, sharing exact source endpoints.",
+            "transition": "Exit as soon as access and renderer are actually ready; never impose the film duration.",
             "poster": "Exact decoded entrance frame zero, for native splash/video handoff.",
             "holdPoster": "Exact decoded hold frame zero, for source replacement and reduced motion.",
             "fallback": "Local stills; no network request, resolve clip or runtime 3D dependency.",
         },
         "verification": {
-            **evidence, "devicePlayback": "Pending app integration and physical-device verification.",
+            **evidence, "sourcePreparation": preparation,
+            "devicePlayback": "Pending app integration and physical-device verification.",
             "boundaries": {
                 "openingPosterMatchesDecodedFirstFrame": True, "holdPosterMatchesDecodedFirstFrame": True,
                 "enterHoldMeanAbsoluteRgbErrorOutOf255": evidence["enterHoldMeanAbsoluteRgbErrorOutOf255"],
                 "loopFirstLastMeanAbsoluteRgbErrorOutOf255": evidence["holdLoopMeanAbsoluteRgbErrorOutOf255"],
-                "authoredPose": "Enter ends and hold starts at master frame 60; hold ends at identical keyed state at 119.",
+                "sourcePose": "Entrance end and both hold endpoints reuse the identical sampled source image.",
             },
-            "visualReview": "Review assembly-contact.png and both clips after regeneration; keep source frames outside app assets.",
+            "visualReview": "Review arrival-contact.png and both clips before packaging; source-frame inspection must confirm contained geometry and an assembled, quiet tail.",
         },
         "assets": records,
     }
 
 
-def build(work: Path, destination: Path, blender: str, reuse_frames: bool, reuse_encoding: bool) -> None:
-    """Run checked production stages, then publish only the bounded app assets."""
+def build(args: argparse.Namespace) -> None:
+    """Run source-bound postprocessing, then export only the four app assets."""
     if sha256(MASTER) != MASTER_SHA256:
         raise ValueError("The approved icon master changed.")
+    source, work = args.source.resolve(), args.work.resolve()
+    if sha256(source) != args.source_sha256:
+        raise ValueError("Source film checksum differs from the approved source.")
+    provenance_path = args.provenance.resolve()
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    if provenance.get("provider") != "Higgsfield" or not provenance.get("jobId"):
+        raise ValueError("A Higgsfield production record with its job ID is required.")
     work.mkdir(parents=True, exist_ok=True)
-    if not reuse_frames and not reuse_encoding:
-        execute([blender, "-b", "--factory-startup", "--python", "scripts/render-arrival-assembly.py",
-                 "--", "--output", str(work), "--render"])
+    plan = {"sourcePath": str(source), "sourceSha256": args.source_sha256,
+            "enterStart": args.enter_start, "enterEnd": args.enter_end, "holdEnd": args.hold_end,
+            "enterFrames": round(args.enter_seconds * 30), "holdFrames": round(args.hold_seconds * 30),
+            "edgeFeatherPixels": args.edge_feather,
+            "preparationScriptSha256": sha256(ROOT / "scripts/prepare-arrival-frames.swift"),
+            "encodingScriptSha256": sha256(ROOT / "scripts/encode-arrival-media.swift")}
+    if not 60 <= plan["enterFrames"] <= 90 or not 30 <= plan["holdFrames"] <= 90:
+        raise ValueError("Entrance must be 2-3 seconds; hold must be 1-3 seconds.")
+    plan_path = work / "processing-plan.json"
+    plan_path.write_text(json.dumps(plan, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    preparation_path = work / "frame-evidence.json"
+    if not args.reuse_frames and not args.reuse_encoding:
+        sampler = work / "prepare-arrival-frames"
+        execute(["swiftc", "scripts/prepare-arrival-frames.swift", "-o", str(sampler)])
+        execute([str(sampler), str(plan_path), str(work / "frames"), str(preparation_path)])
+    preparation = json.loads(preparation_path.read_text(encoding="utf-8"))
+    if preparation.get("planSha256") != sha256(plan_path) or preparation.get("sourceSha256") != sha256(source):
+        raise ValueError("Cached source frames belong to a different source or processing plan.")
     evidence_path = work / "encoding-evidence.json"
     exports = work / "exports"
-    if not reuse_encoding:
+    if not args.reuse_encoding:
         encoder = work / "encode-arrival-media"
         execute(["swiftc", "scripts/encode-arrival-media.swift", "-o", str(encoder)])
-        execute([str(encoder), str(work / "frames"), str(exports), str(evidence_path)])
+        execute([str(encoder), str(work / "frames"), str(exports), str(evidence_path), str(plan_path)])
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-    manifest = manifest_for(exports, evidence)
+    if evidence.get("planSha256") != sha256(plan_path) or evidence.get("sourceSha256") != sha256(source):
+        raise ValueError("Cached encoded assets belong to a different source or processing plan.")
+    manifest = manifest_for(exports, evidence, preparation, plan, provenance_path, provenance)
+    destination = args.destination.resolve() if args.destination else work / "delivery"
     destination.mkdir(parents=True, exist_ok=True)
     for filename in FILENAMES:
         shutil.copyfile(exports / filename, destination / filename)
@@ -164,10 +195,18 @@ def build(work: Path, destination: Path, blender: str, reuse_frames: bool, reuse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("source", type=Path)
     parser.add_argument("work", type=Path)
-    parser.add_argument("--destination", type=Path, default=ROOT / "assets/brand/motion")
-    parser.add_argument("--blender", default="/Applications/Blender.app/Contents/MacOS/Blender")
+    parser.add_argument("--source-sha256", required=True)
+    parser.add_argument("--provenance", type=Path, required=True)
+    parser.add_argument("--enter-start", type=float, default=0)
+    parser.add_argument("--enter-end", type=float, required=True)
+    parser.add_argument("--hold-end", type=float, required=True)
+    parser.add_argument("--enter-seconds", type=float, default=2.5)
+    parser.add_argument("--hold-seconds", type=float, default=2)
+    parser.add_argument("--edge-feather", type=float, default=48)
+    parser.add_argument("--destination", type=Path)
     parser.add_argument("--reuse-frames", action="store_true")
     parser.add_argument("--reuse-encoding", action="store_true")
     args = parser.parse_args()
-    build(args.work.resolve(), args.destination.resolve(), args.blender, args.reuse_frames, args.reuse_encoding)
+    build(args)
