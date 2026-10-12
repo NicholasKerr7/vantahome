@@ -1,6 +1,7 @@
 const {
   readPngMetadata,
   validateReleaseAssets,
+  validateArrivalMedia,
 } = require("./check-release-assets.js");
 
 /** Build only the PNG header needed by the asset metadata reader. */
@@ -126,5 +127,83 @@ describe("release asset check", () => {
     expect(validateReleaseAssets(fixture)).toContain(
       "Splash plugin must preserve full-view iOS arrival framing and the Android system icon.",
     );
+  });
+});
+
+/** Model a decoded two-clip delivery with distinct opening and completed stills. */
+function arrivalFixture() {
+  const packagedNames = [
+    "vantahome-arrival-enter.mp4", "vantahome-arrival-hold.mp4",
+    "vantahome-arrival-hold.png", "vantahome-arrival-poster.png",
+  ];
+  return {
+    masterDigest: "1c3533ce82c3fa7bb12c45ab7e0b1123a12561d9ec06326f41da9744e32b5f9d",
+    packagedNames,
+    files: Object.fromEntries(packagedNames.map((filename) => [filename, {
+      digest: filename, bytes: 200_000, width: 1024, height: 768,
+    }])),
+    manifest: {
+      assets: packagedNames.map((filename) => ({
+        filename, sha256: filename, bytes: 200_000,
+        probe: {
+          streams: [{ codec_type: "video", codec_name: "h264", pix_fmt: "yuv420p", width: 1024, height: 768 }],
+          format: { duration: "2.000000" },
+        },
+      })),
+    },
+  };
+}
+
+describe("bundled cinematic arrival", () => {
+  test("accepts a bounded silent delivery without changing the approved icon", () => {
+    expect(validateArrivalMedia(arrivalFixture())).toEqual([]);
+  });
+
+  test("rejects stale resolve clips even when the new manifest omits them", () => {
+    const fixture = arrivalFixture();
+    fixture.packagedNames.push("vantahome-arrival-resolve.mp4");
+    expect(validateArrivalMedia(fixture)).toContain(
+      "Arrival must package only the entrance, completed hold, and their two still frames; remove obsolete clips.",
+    );
+  });
+
+  test("rejects stale probe evidence when the media bytes change", () => {
+    const fixture = arrivalFixture();
+    fixture.files["vantahome-arrival-enter.mp4"].digest = "different-export";
+    expect(validateArrivalMedia(fixture)).toContain(
+      "Arrival build record does not match packaged bytes: vantahome-arrival-enter.mp4.",
+    );
+  });
+
+  test("rejects soundtrack-bearing or overly long startup clips", () => {
+    const fixture = arrivalFixture();
+    fixture.manifest.assets[0].probe.streams.push({
+      codec_type: "audio", codec_name: "aac", pix_fmt: "", width: 0, height: 0,
+    });
+    fixture.manifest.assets[1].probe.format.duration = "12";
+    expect(validateArrivalMedia(fixture)).toEqual(expect.arrayContaining([
+      "Arrival clip must be silent 1024x768 H.264/yuv420p, up to 3 seconds: vantahome-arrival-enter.mp4.",
+      "Arrival clip must be silent 1024x768 H.264/yuv420p, up to 3 seconds: vantahome-arrival-hold.mp4.",
+    ]));
+  });
+
+  test("bounds download size and protects distinct static fallback poses", () => {
+    const fixture = arrivalFixture();
+    fixture.files["vantahome-arrival-enter.mp4"].bytes = 4 * 1024 * 1024;
+    fixture.files["vantahome-arrival-hold.png"].digest = fixture.files["vantahome-arrival-poster.png"].digest;
+    expect(validateArrivalMedia(fixture)).toEqual(expect.arrayContaining([
+      "The four bundled arrival assets must total no more than 3 MiB.",
+      "Opening and completed arrival stills must represent distinct poses.",
+    ]));
+  });
+
+  test("rejects master replacement and a wrongly framed completed still", () => {
+    const fixture = arrivalFixture();
+    fixture.masterDigest = "replaced-master";
+    fixture.files["vantahome-arrival-hold.png"].height = 1024;
+    expect(validateArrivalMedia(fixture)).toEqual(expect.arrayContaining([
+      "Approved VantaHome icon master must remain unchanged.",
+      "Arrival still must be 1024x768: vantahome-arrival-hold.png.",
+    ]));
   });
 });

@@ -20,6 +20,8 @@ type MockPlayer = {
   audioMixingMode: string;
 };
 const mockPlayers: MockPlayer[] = [];
+const OPENING_POSTER = require('../../../assets/brand/motion/vantahome-arrival-poster.png');
+const COMPLETED_POSTER = require('../../../assets/brand/motion/vantahome-arrival-hold.png');
 const mockRevealCallbacks: Array<(finished: boolean) => void> = [];
 const mockTiming = jest.fn((value: number, _config: unknown, complete?: (finished: boolean) => void) => {
   if (complete) mockRevealCallbacks.push(complete);
@@ -124,12 +126,20 @@ test('keeps one silent player across account, access, and rendering, then loops 
   expect(player.replaceAsync).toHaveBeenCalledTimes(2);
 });
 
-test('readiness starts an immediate short reveal without waiting for a video ending', async () => {
+test.each(['enter', 'hold'] as const)('readiness fades the current %s without switching clips or waiting for its ending', async (segment) => {
   const covered = jest.fn();
   const screen = render(<CinematicArrival status="rendering" onCoveredChange={covered} />);
   await settle();
+  const player = mockPlayers[0];
+  if (segment === 'hold') {
+    act(() => player.emit('playToEnd'));
+    await settle();
+  }
+  const replacements = player.replaceAsync.mock.calls.length;
   screen.rerender(<CinematicArrival status="ready" onCoveredChange={covered} />);
   expect(mockTiming).toHaveBeenLastCalledWith(0, expect.objectContaining({ duration: ARRIVAL_FADE_MS }), expect.any(Function));
+  await settle();
+  expect(player.replaceAsync).toHaveBeenCalledTimes(replacements);
   expect(screen.getByTestId('cinematic-arrival')).toBeTruthy();
   expect(covered).toHaveBeenLastCalledWith(true);
   act(() => mockRevealCallbacks.at(-1)?.(true));
@@ -154,6 +164,7 @@ test('warm returns use a static poster and never replay or delay the introductio
   const screen = render(<CinematicArrival status="checking" returning onCoveredChange={covered} />);
   await settle();
   expect(screen.getByText('Welcome back.')).toBeTruthy();
+  expect(screen.getByTestId('arrival-poster', { includeHiddenElements: true }).props.source).toEqual(COMPLETED_POSTER);
   expect(mockPlayers).toHaveLength(0);
   screen.rerender(<CinematicArrival status="ready" onCoveredChange={covered} />);
   expect(screen.queryByTestId('cinematic-arrival')).toBeNull();
@@ -182,9 +193,23 @@ test('initial reduced motion keeps the film still and never imposes a reveal del
   const screen = render(<CinematicArrival status="checking" />);
   await settle();
   expect(mockPlayers).toHaveLength(0);
+  expect(screen.getByTestId('arrival-poster', { includeHiddenElements: true }).props.source).toEqual(COMPLETED_POSTER);
   screen.rerender(<CinematicArrival status="ready" />);
   expect(screen.queryByTestId('cinematic-arrival')).toBeNull();
   expect(mockTiming).not.toHaveBeenCalled();
+});
+
+test('keeps the shell while motion policy is unknown, then honors a newer reduced-motion preference', async () => {
+  let resolveInitialPreference: ((reduced: boolean) => void) | undefined;
+  jest.mocked(AccessibilityInfo.isReduceMotionEnabled).mockImplementation(() => new Promise<boolean>((resolve) => { resolveInitialPreference = resolve; }));
+  const screen = render(<CinematicArrival status="checking" />);
+  expect(screen.getByTestId('arrival-poster', { includeHiddenElements: true }).props.source).toEqual(OPENING_POSTER);
+  expect(mockPlayers).toHaveLength(0);
+  act(() => onMotionChange(true));
+  expect(screen.getByTestId('arrival-poster', { includeHiddenElements: true }).props.source).toEqual(COMPLETED_POSTER);
+  await act(async () => { resolveInitialPreference?.(false); });
+  expect(screen.getByTestId('arrival-poster', { includeHiddenElements: true }).props.source).toEqual(COMPLETED_POSTER);
+  expect(mockPlayers).toHaveLength(0);
 });
 
 test('slow context spans loading phases and never offers controls before verified rendering', async () => {
@@ -226,6 +251,7 @@ test('a video error falls back to still artwork and cannot trap a ready app', as
   act(() => player.emit('statusChange', { status: 'error' }));
   expect(player.pause).toHaveBeenCalled();
   expect(screen.getByTestId('arrival-poster', { includeHiddenElements: true })).toBeTruthy();
+  expect(screen.getByTestId('arrival-completed-poster', { includeHiddenElements: true }).props.source).toEqual(COMPLETED_POSTER);
   screen.rerender(<CinematicArrival status="ready" />);
   act(() => mockRevealCallbacks.at(-1)?.(true));
   expect(screen.queryByTestId('cinematic-arrival')).toBeNull();
@@ -252,7 +278,7 @@ test('poster load, error, inactive fast-path and timeout all release the native 
 });
 
 test('native first-frame can arrive before source replacement resolves without hiding the film forever', async () => {
-  const screen = render(<ArrivalFilm motionAllowed resolving={false} />);
+  const screen = render(<ArrivalFilm motionAllowed />);
   let completeReplacement: (() => void) | undefined;
   mockPlayers[0].replaceAsync.mockImplementation(() => new Promise<void>((resolve) => { completeReplacement = resolve; }));
   await settle();

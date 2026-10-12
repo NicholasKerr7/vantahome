@@ -40,7 +40,51 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Unified cinematic arrival (Preview 52) — October 12
+## Precision assembly arrival (Preview 53) — October 12
+
+- Replaced the disassembly concept with a deterministic Blender assembly of the
+  recognizable roof/right chimney, lower V and four-node central core. The house
+  shell, backing and camera remain stationary; the V seats first, the core follows,
+  and a restrained lighting pulse completes the approximately two-second entrance.
+- Runtime now plays **entrance → completed glow hold**. Actual readiness fades the
+  current frame in 300 ms; it does not swap to a separate resolve clip or wait for
+  the film to finish. Warm returns, reduced motion, playback failure, and static
+  property fallbacks use the completed mark. Initial unresolved motion preference
+  retains the shell so normal launch does not flash a completed icon first.
+- No new app dependency or AI generation credits. The original approved raster
+  icon is unchanged. The new geometry and timing are editable in the renderer
+  script; intermediate frames and the Blender scene stay in
+  `work/brand-motion/assembly/`.
+- **92 focused arrival/navigation/shared-motion/asset tests**, native TypeScript,
+  and diff checks pass. Shared motion hook keeps its old boolean API, exposing
+  the detailed preference only where the two static poses require it.
+- Four silent local assets total **716,525 bytes (0.68 MiB)**, approximately 69%
+  smaller than Preview 52. Two 2-second/60-frame H.264 Main 3.1 clips at 1024×768,
+  30 fps, plus exact decoded opening/completed posters. Full decode, 8-bit 4:2:0
+  configuration, fast start, hashes, and native poster matching pass. Native iOS
+  splash copies use the shell-only opening. No resolve movie remains.
+- Reproduce with `python3 scripts/build-arrival-media.py WORK_DIRECTORY`;
+  geometry/timing live in `scripts/render-arrival-assembly.py`, with the built-in
+  macOS AVFoundation encoder in `scripts/encode-arrival-media.swift`. No Blender
+  or encoder runs in the app. Source media provenance and checksums are in
+  `assets/brand/motion/arrival.production.json`.
+- Browser review covers 320×568, 430×932, 768×1024 and 1024×768: artwork contained,
+  no page overflow, silent completed hold, no decoder under reduced motion,
+  recovery, early readiness, and actual Home/full-controls reachability. Landscape
+  uses concise copy outside the glowing border. Chrome extension message-channel
+  noise appeared in the test browser; no arrival/player error was observed.
+- **Preview 53 Release built and installed**; the phone reports 1.0.0 (53).
+  Exact preview identity/schemes, strict signature, device profile coverage,
+  all four shipped media hashes, and unchanged native scene hash/size pass.
+  Production metadata restored; signing expires October 19 as recorded below.
+  Automatic launch was blocked because the phone is locked. No physical motion
+  or Android playback claim; iPad physical testing remains deferred. The user
+  was told to open VantaHome Preview manually, without another installation request.
+- Evidence: `work/assembly-*`, plus cached `brand-motion/assembly/`.
+  Temporary visual entry/server removed; real browser Home and full controls
+  verified after reveal. Earlier full-suite/dependency limitations below remain unchanged.
+
+## Previous unified cinematic arrival (Preview 52) — October 12
 
 - Created **Core Awakening** in Higgsfield from the approved VantaHome icon:
   a dimensional purple-glass disassembly/reassembly film. Preferred delivery is

@@ -3,11 +3,12 @@ import { Image, ScrollView, Text, View, useWindowDimensions } from 'react-native
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { cancelAnimation, Easing, ReduceMotion, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Pressable from '../../components/Pressable';
-import { useDecorativeMotion } from '../../components/useDecorativeMotion';
+import { useDecorativeMotionState } from '../../components/useDecorativeMotion';
 import ArrivalFilm from './ArrivalFilm';
 import { arrivalStyles as styles } from './arrivalStyles';
 
 const POSTER = require('../../../assets/brand/motion/vantahome-arrival-poster.png');
+const COMPLETED_POSTER = require('../../../assets/brand/motion/vantahome-arrival-hold.png');
 export const ARRIVAL_SLOW_MS = 8_000;
 export const ARRIVAL_FADE_MS = 300;
 const POSTER_FALLBACK_MS = 1_500;
@@ -51,7 +52,11 @@ export default function CinematicArrival({
   const previouslyBlocking = useRef(blocking);
   const staticArrival = returning || stillArrival;
   const visible = status !== 'inactive' && (blocking || retained);
-  const motionAllowed = useDecorativeMotion(visible && status !== 'unavailable' && !signingOut);
+  const motion = useDecorativeMotionState(visible && status !== 'unavailable' && !signingOut);
+  const motionAllowed = motion.allowed;
+  // Initial launch matches the stationary shell. A known still presentation
+  // shows the completed mark without briefly reversing the assembly first.
+  const poster = staticArrival || unavailable || motion.reducedMotion === true ? COMPLETED_POSTER : POSTER;
   const opacity = useSharedValue(1);
   const revealRevision = useRef(0);
   const coveredCallback = useRef(onCoveredChange);
@@ -136,14 +141,14 @@ export default function CinematicArrival({
     importantForAccessibility="yes"
   >
     <View style={[styles.media, detailed && styles.mediaDimmed]} pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Image testID="arrival-poster" source={POSTER} style={styles.media} resizeMode="contain" accessible={false} onLoad={acknowledgePoster} onError={acknowledgePoster} />
-      {!staticArrival && (motionAllowed || filmStarted) && <ArrivalFilm motionAllowed={motionAllowed} resolving={status === 'ready'} />}
+      <Image testID="arrival-poster" source={poster} style={styles.media} resizeMode="contain" accessible={false} onLoad={acknowledgePoster} onError={acknowledgePoster} />
+      {!staticArrival && (motionAllowed || filmStarted) && <ArrivalFilm motionAllowed={motionAllowed} />}
     </View>
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.fill} contentContainerStyle={[styles.content, compact && styles.contentCompact, largeText && styles.contentLargeText]} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never" decelerationRate="normal">
-        <View style={styles.header}>
+      <ScrollView style={styles.fill} contentContainerStyle={[styles.content, compact && styles.contentCompact, wide && styles.contentWide, largeText && styles.contentLargeText]} showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never" decelerationRate="normal">
+        <View style={[styles.header, wide && styles.headerWide]}>
           <Text accessibilityRole="header" accessibilityLabel="VantaHome" style={styles.wordmark}>VANTA<Text style={styles.wordmarkAccent}>HOME</Text></Text>
-          {!largeText && <Text style={styles.signature}>YOUR WORLD. CONNECTED.</Text>}
+          {!largeText && !wide && <Text style={styles.signature}>YOUR WORLD. CONNECTED.</Text>}
         </View>
         <View style={[styles.footer, compact && styles.footerCompact, wide && styles.footerWide]}>
           {detailed ? <View style={[styles.recovery, compact && styles.recoveryCompact]}>
@@ -164,10 +169,10 @@ export default function CinematicArrival({
               </Pressable>}
             </View>}
             {signOutError && <Text accessibilityRole="alert" style={styles.actionError}>{signOutError}</Text>}
-          </View> : <View style={[styles.quietStatus, compact && styles.quietStatusCompact]} accessibilityLiveRegion="polite">
-            <View style={styles.statusAccent} accessible={false} />
+          </View> : <View style={[styles.quietStatus, compact && styles.quietStatusCompact, wide && styles.quietStatusWide]} accessibilityLiveRegion="polite">
+            {!wide && <View style={styles.statusAccent} accessible={false} />}
             <Text style={[styles.title, compact && styles.titleCompact]}>{staticArrival ? 'Welcome back.' : copy.quiet}</Text>
-            {!largeText && <Text style={styles.subtitle}>{staticArrival ? 'A moment to reconnect with your home.' : 'Every detail, coming together.'}</Text>}
+            {!largeText && !wide && <Text style={styles.subtitle}>{staticArrival ? 'A moment to reconnect with your home.' : 'Every detail, coming together.'}</Text>}
           </View>}
         </View>
       </ScrollView>

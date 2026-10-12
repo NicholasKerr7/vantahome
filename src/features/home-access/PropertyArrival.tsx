@@ -4,7 +4,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 /** Keep a quiet local fallback when the property is mounted outside the root arrival coordinator. */
 export default function PropertyArrival({ active = true }: { active?: boolean }) {
   return <View style={styles.root} testID="property-arrival" accessibilityElementsHidden={!active}>
-    <Image source={require('../../../assets/brand/motion/vantahome-arrival-poster.png')} style={styles.poster} resizeMode="contain" accessible={false} />
+    <Image source={require('../../../assets/brand/motion/vantahome-arrival-hold.png')} style={styles.poster} resizeMode="contain" accessible={false} />
     <View style={styles.copy} accessibilityLiveRegion="polite">
       <Text style={styles.title}>Opening your property…</Text>
       <Text style={styles.description}>Your controls are ready while the view opens.</Text>

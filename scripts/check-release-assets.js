@@ -7,6 +7,14 @@ const PNG_SIGNATURE = "89504e470d0a1a0a";
 const ARRIVAL_POSTER = "./assets/brand/motion/vantahome-arrival-poster.png";
 const ANDROID_SPLASH = "./assets/release/splash-icon.png";
 const BRAND_NAVY = "#050612";
+const APPROVED_MASTER_SHA256 = "1c3533ce82c3fa7bb12c45ab7e0b1123a12561d9ec06326f41da9744e32b5f9d";
+const ARRIVAL_ASSETS = [
+  "vantahome-arrival-enter.mp4",
+  "vantahome-arrival-hold.mp4",
+  "vantahome-arrival-hold.png",
+  "vantahome-arrival-poster.png",
+];
+const ARRIVAL_BYTE_LIMIT = 3 * 1024 * 1024;
 
 /** Read dimensions and channel metadata without decoding a release image. */
 function readPngMetadata(buffer) {
@@ -129,6 +137,66 @@ function validateReleaseAssets({ expoConfig, assets, native }) {
   return errors;
 }
 
+/** Verify packaged media against its decoded build record without requiring FFmpeg in CI. */
+function validateArrivalMedia({ manifest, files, packagedNames, masterDigest }) {
+  const errors = [];
+  if (masterDigest !== APPROVED_MASTER_SHA256) {
+    errors.push("Approved VantaHome icon master must remain unchanged.");
+  }
+  const records = Array.isArray(manifest?.assets) ? manifest.assets : [];
+  const expectedNames = [...ARRIVAL_ASSETS].sort().join("\n");
+  if (
+    [...packagedNames].sort().join("\n") !== expectedNames ||
+    records.map((record) => record.filename).sort().join("\n") !== expectedNames
+  ) {
+    errors.push("Arrival must package only the entrance, completed hold, and their two still frames; remove obsolete clips.");
+  }
+  let totalBytes = 0;
+  for (const filename of ARRIVAL_ASSETS) {
+    const file = files[filename];
+    const record = records.find((candidate) => candidate.filename === filename);
+    if (!file || !record) {
+      errors.push(`Arrival media is missing: ${filename}.`);
+      continue;
+    }
+    totalBytes += file.bytes;
+    if (file.bytes !== record.bytes || file.digest !== record.sha256) {
+      errors.push(`Arrival build record does not match packaged bytes: ${filename}.`);
+    }
+    if (filename.endsWith(".png")) {
+      if (file.width !== 1024 || file.height !== 768) {
+        errors.push(`Arrival still must be 1024x768: ${filename}.`);
+      }
+      continue;
+    }
+    // Hash agreement above binds the recorded format/decode results to the shipped file.
+    // This guard does not substitute for the build script's full video decode.
+    const streams = record.probe?.streams ?? [];
+    const stream = streams[0];
+    const duration = Number(record.probe?.format?.duration);
+    if (
+      streams.length !== 1 ||
+      stream?.codec_type !== "video" ||
+      stream?.codec_name !== "h264" ||
+      stream?.pix_fmt !== "yuv420p" ||
+      stream?.width !== 1024 || stream?.height !== 768 ||
+      !Number.isFinite(duration) || duration <= 0 || duration > 3
+    ) {
+      errors.push(`Arrival clip must be silent 1024x768 H.264/yuv420p, up to 3 seconds: ${filename}.`);
+    }
+  }
+  if (totalBytes > ARRIVAL_BYTE_LIMIT) {
+    errors.push("The four bundled arrival assets must total no more than 3 MiB.");
+  }
+  if (
+    files["vantahome-arrival-hold.png"] && files["vantahome-arrival-poster.png"] &&
+    files["vantahome-arrival-hold.png"].digest === files["vantahome-arrival-poster.png"].digest
+  ) {
+    errors.push("Opening and completed arrival stills must represent distinct poses.");
+  }
+  return errors;
+}
+
 /** Convert Expo's relative asset paths to paths accepted by the filesystem. */
 function configuredPath(value) {
   return value.replace(/^\.\//, "");
@@ -138,6 +206,29 @@ function configuredPath(value) {
 function loadPng(path) {
   const buffer = fs.readFileSync(path);
   return { ...readPngMetadata(buffer), digest: digest(buffer) };
+}
+
+/** Load only the bounded runtime arrival inventory; original production films stay outside the bundle. */
+function loadArrivalMedia() {
+  const directory = "assets/brand/motion";
+  const packagedNames = fs.readdirSync(directory).filter((name) => /^vantahome-arrival-.*\.(?:mp4|png)$/.test(name));
+  const files = {};
+  for (const filename of ARRIVAL_ASSETS) {
+    const path = `${directory}/${filename}`;
+    if (!fs.existsSync(path)) continue;
+    const buffer = fs.readFileSync(path);
+    files[filename] = {
+      bytes: buffer.length,
+      digest: digest(buffer),
+      ...(filename.endsWith(".png") ? readPngMetadata(buffer) : {}),
+    };
+  }
+  return {
+    manifest: JSON.parse(fs.readFileSync(`${directory}/arrival.production.json`, "utf8")),
+    files,
+    packagedNames,
+    masterDigest: digest(fs.readFileSync("assets/brand/vantahome-icon-master.png")),
+  };
 }
 
 /** Inspect checked-in storyboard geometry and the actual named background color. */
@@ -208,6 +299,7 @@ function main() {
       ),
     },
   });
+  errors.push(...validateArrivalMedia(loadArrivalMedia()));
   if (errors.length) {
     errors.forEach((error) => console.error(`- ${error}`));
     process.exitCode = 1;
@@ -218,4 +310,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { readPngMetadata, validateReleaseAssets };
+module.exports = { readPngMetadata, validateReleaseAssets, validateArrivalMedia };

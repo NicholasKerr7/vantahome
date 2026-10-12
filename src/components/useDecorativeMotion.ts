@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, AppState } from "react-native";
 
-/** Run decorative animation only on an active screen while system motion is allowed. */
-export function useDecorativeMotion(active: boolean): boolean {
+export type DecorativeMotionState = {
+  allowed: boolean;
+  /** Null keeps the opening artwork stable while the system preference is unknown. */
+  reducedMotion: boolean | null;
+};
+
+/** Share one lifecycle subscription while exposing whether a still is an explicit motion preference. */
+export function useDecorativeMotionState(active: boolean): DecorativeMotionState {
   const [appActive, setAppActive] = useState(AppState.currentState === "active");
   const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
 
@@ -33,5 +39,10 @@ export function useDecorativeMotion(active: boolean): boolean {
     };
   }, []);
 
-  return active && appActive && reducedMotion === false;
+  return { allowed: active && appActive && reducedMotion === false, reducedMotion };
+}
+
+/** Run decorative animation only on an active screen while system motion is allowed. */
+export function useDecorativeMotion(active: boolean): boolean {
+  return useDecorativeMotionState(active).allowed;
 }

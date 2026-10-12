@@ -5,20 +5,18 @@ import './arrival-film.css';
 const SOURCES = {
   enter: Asset.fromModule(require('../../../assets/brand/motion/vantahome-arrival-enter.mp4')).uri,
   hold: Asset.fromModule(require('../../../assets/brand/motion/vantahome-arrival-hold.mp4')).uri,
-  resolve: Asset.fromModule(require('../../../assets/brand/motion/vantahome-arrival-resolve.mp4')).uri,
 } as const;
 const HOLD_POSTER = Asset.fromModule(require('../../../assets/brand/motion/vantahome-arrival-hold.png')).uri;
 type Segment = keyof typeof SOURCES;
-type Props = { motionAllowed: boolean; resolving: boolean };
+type Props = { motionAllowed: boolean };
 
 /** Use the browser's media lifecycle directly so source changes cannot replay stale pause events. */
-export default function ArrivalFilm({ motionAllowed, resolving }: Props) {
+export default function ArrivalFilm({ motionAllowed }: Props) {
   const [segment, setSegment] = useState<Segment>('enter');
   const [frameSource, setFrameSource] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
-  const desiredSegment = resolving ? 'resolve' : segment;
-  const source = SOURCES[desiredSegment];
+  const source = SOURCES[segment];
   const playback = useRef({ motionAllowed, source });
   const playbackFailed = useRef(false);
   const mounted = useRef(true);
@@ -58,7 +56,7 @@ export default function ArrivalFilm({ motionAllowed, resolving }: Props) {
   }, [playCurrent]);
 
   return <div className="arrival-film" data-testid="arrival-film" aria-hidden="true">
-    {desiredSegment !== 'enter' && <img className="arrival-film__poster" src={HOLD_POSTER} alt="" draggable={false} />}
+    {(segment === 'hold' || failed || !motionAllowed) && <img className="arrival-film__poster" src={HOLD_POSTER} alt="" draggable={false} />}
     <video
       ref={video}
       data-testid="arrival-video"
@@ -67,14 +65,14 @@ export default function ArrivalFilm({ motionAllowed, resolving }: Props) {
       muted
       playsInline
       preload="auto"
-      loop={desiredSegment === 'hold'}
+      loop={segment === 'hold'}
       controls={false}
       disablePictureInPicture
       disableRemotePlayback
       tabIndex={-1}
       onLoadedData={showFrame}
       onCanPlay={playCurrent}
-      onEnded={() => { if (desiredSegment === 'enter') setSegment('hold'); }}
+      onEnded={() => { if (segment === 'enter') setSegment('hold'); }}
       onError={() => { playbackFailed.current = true; setFailed(true); }}
     />
   </div>;

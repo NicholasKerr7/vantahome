@@ -1,174 +1,243 @@
 {
   "created": "2026-10-12",
   "source": {
-    "filename": "vantahome-core-awakening-1080p.mp4",
-    "sha256": "d52d03bf84fb104ab9f4084c5001ddc1b1c955c3efdbc014ee364528c5148dde",
-    "productionRecord": "core-awakening.production.json"
+    "type": "deterministic-blender-geometry",
+    "master": {
+      "filename": "vantahome-icon-master.png",
+      "sha256": "1c3533ce82c3fa7bb12c45ab7e0b1123a12561d9ec06326f41da9744e32b5f9d",
+      "use": "Unmodified reference; new geometry authored in Blender."
+    },
+    "blenderVersion": "5.2.2 LTS",
+    "newGenerationCredits": 0,
+    "scripts": [
+      {
+        "filename": "build-arrival-media.py",
+        "sha256": "2a1b08c5d29a346690d9123818a195460a3709356d09ceca1cecd00bd9ef9554"
+      },
+      {
+        "filename": "render-arrival-assembly.py",
+        "sha256": "ee8e45dc077d563ba9008f8112f6e43319e1e83f590fa9ae29d72be27e40b767"
+      },
+      {
+        "filename": "encode-arrival-media.swift",
+        "sha256": "10b479903efb2cfbfed0d4dee1b347eebdeed4401c9b65ea38cec475ad812476"
+      }
+    ]
   },
   "format": {
     "width": 1024,
     "height": 768,
     "aspectRatio": "4:3",
     "videoCodec": "h264",
-    "framesPerSecond": 24,
+    "framesPerSecond": 30,
     "audio": false,
     "edgeBackground": "#050612",
-    "cropInSource": {
-      "x": 240,
-      "y": 0,
-      "width": 1440,
-      "height": 1080
-    }
+    "totalBytes": 716525,
+    "budgetBytes": 3145728
   },
   "choreography": {
-    "enter": "Play once while actual startup work is pending; may exit early.",
-    "hold": "Loop a subtle forward/reverse suspension; first and last source poses match.",
-    "resolve": "Optional brief reassembly. Never delay a usable app to finish it.",
-    "poster": "First source frame, used for the launch handoff, reduced motion and playback failure.",
-    "fallback": "Retain the still if decoding fails; no remote asset is needed at runtime.",
-    "transition": "Keep one surface mounted across access and scene readiness. Crossfade any clip replacement."
+    "shell": "Fixed roof, right chimney, U-frame and dark badge; V/core start off-canvas.",
+    "enter": "Frames 1-60, two seconds: V arrives 0.15-0.65s, core 0.75-1.15s, energy activates last.",
+    "hold": "Frames 60-119, two-second subtle assembled glow loop with matching authored endpoints.",
+    "transition": "Exit as soon as access and renderer are actually ready; never impose a two-second delay.",
+    "poster": "Exact decoded entrance frame zero, for native splash/video handoff.",
+    "holdPoster": "Exact decoded hold frame zero, for source replacement and reduced motion.",
+    "fallback": "Local stills; no network request, resolve clip or runtime 3D dependency."
   },
   "verification": {
+    "audio": false,
+    "encoder": "Apple AVFoundation H.264 Main 3.1",
+    "enterFrames": 60,
+    "enterHoldMeanAbsoluteRgbErrorOutOf255": 1.90196779039171,
+    "enterSeconds": 2,
+    "fastStart": true,
+    "firstFramePostersMatchExactly": true,
+    "framesPerSecond": 30,
     "fullVideoDecode": "passed",
-    "devicePlayback": "not performed",
+    "height": 768,
+    "holdBackground": {
+      "cornerRgb": [
+        [
+          7,
+          6,
+          20
+        ],
+        [
+          6,
+          5,
+          15
+        ],
+        [
+          6,
+          5,
+          15
+        ],
+        [
+          4,
+          5,
+          18
+        ]
+      ],
+      "outerBorderMaximumChannelErrorOutOf255": 3,
+      "outerBorderMeanAbsoluteErrorOutOf255": 1.576951951951952,
+      "targetRgb": [
+        5,
+        6,
+        18
+      ]
+    },
+    "holdFrames": 60,
+    "holdLoopMeanAbsoluteRgbErrorOutOf255": 1.8774714999728732,
+    "holdSeconds": 2,
+    "openingBackground": {
+      "cornerRgb": [
+        [
+          7,
+          6,
+          20
+        ],
+        [
+          6,
+          5,
+          15
+        ],
+        [
+          6,
+          5,
+          15
+        ],
+        [
+          4,
+          5,
+          18
+        ]
+      ],
+      "outerBorderMaximumChannelErrorOutOf255": 3,
+      "outerBorderMeanAbsoluteErrorOutOf255": 1.4156343843843844,
+      "targetRgb": [
+        5,
+        6,
+        18
+      ]
+    },
+    "pixelFormat": "yuv420p",
+    "width": 1024,
+    "devicePlayback": "Browser playback verified. Preview 53 package verified and installed on iPhone; automatic launch blocked by locked device, so physical playback remains unverified.",
     "boundaries": {
       "openingPosterMatchesDecodedFirstFrame": true,
       "holdPosterMatchesDecodedFirstFrame": true,
-      "loopFirstLastMeanAbsoluteRgbErrorOutOf255": 1.5532,
-      "loopPose": "Forward/reverse source segment; decoded boundary difference measured above."
+      "enterHoldMeanAbsoluteRgbErrorOutOf255": 1.90196779039171,
+      "loopFirstLastMeanAbsoluteRgbErrorOutOf255": 1.8774714999728732,
+      "authoredPose": "Enter ends and hold starts at master frame 60; hold ends at identical keyed state at 119."
     },
-    "visualReview": "First, middle and last frames of each exported clip inspected in a 9-frame contact sheet. Full roof, chimney, V and backing remain inside frame. Physical device playback is still pending."
+    "visualReview": "Inspected shell and assembled stills, nine-frame trajectory sheet, and responsive browser presentation/playback. Confirmed V precedes core, shell/camera stay fixed, then core/circuit/rim activation. Checked actual Home reveal and reachable full controls."
   },
   "assets": [
     {
       "filename": "vantahome-arrival-enter.mp4",
-      "bytes": 324491,
-      "sha256": "17b89c5dcd2b7bebf3d1db9c84575e0353ea9033136f927d6db61868f184d153",
+      "bytes": 182901,
+      "sha256": "cc24d48c1281b98033ed2262a066e1bda3ce0c9ddb88ee2270805b2009c14221",
       "probe": {
-        "programs": [],
+        "method": "AVFoundation full decode + binary media headers",
         "streams": [
           {
-            "codec_name": "h264",
             "codec_type": "video",
             "width": 1024,
             "height": 768,
+            "codec_name": "h264",
             "pix_fmt": "yuv420p",
-            "r_frame_rate": "24/1"
+            "r_frame_rate": "30/1"
           }
         ],
         "format": {
-          "duration": "1.375000",
-          "size": "324491"
+          "size": "182901",
+          "duration": "2.000000"
         }
+      },
+      "avcConfiguration": {
+        "profile": "Main",
+        "profileIdc": 77,
+        "levelIdc": 31,
+        "chromaFormatIdc": 1,
+        "bitDepthLuma": 8,
+        "bitDepthChroma": 8,
+        "spsHex": "274d001fab4020030d3501010102",
+        "fastStart": true,
+        "verificationMethod": "Read avcC and SPS; Main profile fixes 8-bit 4:2:0."
       }
     },
     {
       "filename": "vantahome-arrival-hold.mp4",
-      "bytes": 342829,
-      "sha256": "ad390369ceab01fa210a7e2ba1dbeb304c7c709927ddf11e6e0ce668ebdc109d",
+      "bytes": 96698,
+      "sha256": "4e54c48b569a82f5d6aed1ecb371a8ee418f814993feba251325d7453b7c4846",
       "probe": {
-        "programs": [],
+        "method": "AVFoundation full decode + binary media headers",
         "streams": [
           {
-            "codec_name": "h264",
             "codec_type": "video",
             "width": 1024,
             "height": 768,
+            "codec_name": "h264",
             "pix_fmt": "yuv420p",
-            "r_frame_rate": "24/1"
+            "r_frame_rate": "30/1"
           }
         ],
         "format": {
-          "duration": "1.750000",
-          "size": "342829"
+          "size": "96698",
+          "duration": "2.000000"
         }
+      },
+      "avcConfiguration": {
+        "profile": "Main",
+        "profileIdc": 77,
+        "levelIdc": 31,
+        "chromaFormatIdc": 1,
+        "bitDepthLuma": 8,
+        "bitDepthChroma": 8,
+        "spsHex": "274d001fab4020030d3501010102",
+        "fastStart": true,
+        "verificationMethod": "Read avcC and SPS; Main profile fixes 8-bit 4:2:0."
       }
     },
     {
       "filename": "vantahome-arrival-hold.png",
-      "bytes": 706609,
-      "sha256": "2cf9465a4181b62c295eb96eb5eac1bce70b428f8dc12f6a489b973f53b5080c",
+      "bytes": 269189,
+      "sha256": "7f3024e6beba947c062e8a1fedd9c8051c095121529858039b3f1041548b68dd",
       "probe": {
-        "programs": [],
+        "method": "AVFoundation full decode + binary media headers",
         "streams": [
           {
-            "codec_name": "png",
             "codec_type": "video",
             "width": 1024,
             "height": 768,
-            "pix_fmt": "rgb24",
-            "r_frame_rate": "25/1"
+            "codec_name": "png",
+            "pix_fmt": "rgb24"
           }
         ],
         "format": {
-          "size": "706609"
+          "size": "269189"
         }
       }
     },
     {
       "filename": "vantahome-arrival-poster.png",
-      "bytes": 672077,
-      "sha256": "2c246d589cabce668db3bc9c0576c05eff568891b7d1dc608b8030edcb809db9",
+      "bytes": 167737,
+      "sha256": "a537489ec11b7540daa4e110fdf7b7a823dfef690843a318becaa36221b9f5a4",
       "probe": {
-        "programs": [],
+        "method": "AVFoundation full decode + binary media headers",
         "streams": [
           {
+            "codec_type": "video",
+            "width": 1024,
+            "height": 768,
             "codec_name": "png",
-            "codec_type": "video",
-            "width": 1024,
-            "height": 768,
-            "pix_fmt": "rgb24",
-            "r_frame_rate": "25/1"
+            "pix_fmt": "rgb24"
           }
         ],
         "format": {
-          "size": "672077"
+          "size": "167737"
         }
       }
-    },
-    {
-      "filename": "vantahome-arrival-resolve.mp4",
-      "bytes": 238723,
-      "sha256": "db7f0ca8037783adc05c23f647fb66b21f97073b818637ce0cea8c2b0176f652",
-      "probe": {
-        "programs": [],
-        "streams": [
-          {
-            "codec_name": "h264",
-            "codec_type": "video",
-            "width": 1024,
-            "height": 768,
-            "pix_fmt": "yuv420p",
-            "r_frame_rate": "24/1"
-          }
-        ],
-        "format": {
-          "duration": "1.000000",
-          "size": "238723"
-        }
-      }
-    }
-  ],
-  "libraryExports": [
-    {
-      "mediaId": "eca5d6d3-eee9-434c-9e42-193aae40a3c8",
-      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/eca5d6d3-eee9-434c-9e42-193aae40a3c8.mp4"
-    },
-    {
-      "mediaId": "82470c7a-7cee-4373-9c95-65eef633d0c9",
-      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/82470c7a-7cee-4373-9c95-65eef633d0c9.mp4"
-    },
-    {
-      "mediaId": "c28720db-2911-4724-b19a-4317f9cc549c",
-      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/c28720db-2911-4724-b19a-4317f9cc549c.mp4"
-    },
-    {
-      "mediaId": "d6e54a12-822d-46a6-beb6-97a03569c8cb",
-      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/d6e54a12-822d-46a6-beb6-97a03569c8cb.png"
-    },
-    {
-      "mediaId": "bfccef04-520d-4901-b66a-9a0df6d4cd00",
-      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/bfccef04-520d-4901-b66a-9a0df6d4cd00.png"
     }
   ]
 }
