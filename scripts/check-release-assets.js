@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const crypto = require("node:crypto");
 
 const PNG_SIGNATURE = "89504e470d0a1a0a";
-const ARRIVAL_POSTER = "./assets/brand/motion/vantahome-arrival-poster.png";
+const NATIVE_ARRIVAL_POSTER = "./assets/release/arrival-native-poster.png";
 const ANDROID_SPLASH = "./assets/release/splash-icon.png";
 const BRAND_NAVY = "#050612";
 const APPROVED_MASTER_SHA256 = "1c3533ce82c3fa7bb12c45ab7e0b1123a12561d9ec06326f41da9744e32b5f9d";
@@ -63,7 +63,7 @@ function validateReleaseAssets({ expoConfig, assets, native }) {
     );
   }
   if (splash.width !== 1024 || splash.height !== 768) {
-    errors.push("Arrival poster must be a 1024x768 PNG matching the film frame.");
+    errors.push("Native arrival composite must be a 1024x768 PNG matching the runtime frame.");
   }
   if (
     androidSplash?.width !== 1024 ||
@@ -90,7 +90,7 @@ function validateReleaseAssets({ expoConfig, assets, native }) {
     expoConfig.android?.adaptiveIcon?.foregroundImage !==
       "./assets/release/adaptive-icon.png" ||
     expoConfig.web?.favicon !== "./assets/release/favicon.png" ||
-    expoConfig.splash?.image !== ARRIVAL_POSTER ||
+    expoConfig.splash?.image !== NATIVE_ARRIVAL_POSTER ||
     expoConfig.android?.splash?.image !== ANDROID_SPLASH
   ) {
     errors.push("Expo release asset paths are inconsistent.");
@@ -104,7 +104,7 @@ function validateReleaseAssets({ expoConfig, assets, native }) {
   }
   if (
     expoConfig.splash?.resizeMode !== "contain" ||
-    splashPlugin?.image !== ARRIVAL_POSTER ||
+    splashPlugin?.image !== NATIVE_ARRIVAL_POSTER ||
     splashPlugin?.backgroundColor !== BRAND_NAVY ||
     splashPlugin?.resizeMode !== "contain" ||
     splashPlugin?.ios?.enableFullScreenImage_legacy !== true ||
@@ -123,7 +123,7 @@ function validateReleaseAssets({ expoConfig, assets, native }) {
     native.splashDigests.length !== 3 ||
     native.splashDigests.some((value) => value !== assets.splashDigest)
   ) {
-    errors.push("Native iOS splash images must match the arrival poster.");
+    errors.push("Native iOS splash images must match the composited native arrival poster.");
   }
   if (
     native.splashContentMode !== "scaleAspectFit" ||
@@ -138,7 +138,7 @@ function validateReleaseAssets({ expoConfig, assets, native }) {
 }
 
 /** Verify packaged media against its decoded build record without requiring FFmpeg in CI. */
-function validateArrivalMedia({ manifest, files, packagedNames, masterDigest }) {
+function validateArrivalMedia({ manifest, files, packagedNames, masterDigest, nativePoster }) {
   const errors = [];
   if (masterDigest !== APPROVED_MASTER_SHA256) {
     errors.push("Approved VantaHome icon master must remain unchanged.");
@@ -194,6 +194,19 @@ function validateArrivalMedia({ manifest, files, packagedNames, masterDigest }) 
   ) {
     errors.push("Opening and completed arrival stills must represent distinct poses.");
   }
+  // Storyboards cannot apply the runtime SVG veil. Bind their baked composite
+  // to the exact decoded opening still without adding a fifth runtime asset.
+  const composite = manifest?.nativeSplashComposite;
+  if (
+    !nativePoster || !composite ||
+    composite.filename !== configuredPath(NATIVE_ARRIVAL_POSTER) ||
+    composite.sha256 !== nativePoster.digest || composite.bytes !== nativePoster.bytes ||
+    composite.width !== 1024 || composite.height !== 768 ||
+    nativePoster.width !== composite.width || nativePoster.height !== composite.height ||
+    composite.sourcePosterSha256 !== files["vantahome-arrival-poster.png"]?.digest
+  ) {
+    errors.push("Native splash composite must match its recorded 1024x768 asset and decoded opening-poster source.");
+  }
   return errors;
 }
 
@@ -205,7 +218,7 @@ function configuredPath(value) {
 /** Read metadata and checksum from the same image bytes. */
 function loadPng(path) {
   const buffer = fs.readFileSync(path);
-  return { ...readPngMetadata(buffer), digest: digest(buffer) };
+  return { ...readPngMetadata(buffer), digest: digest(buffer), bytes: buffer.length };
 }
 
 /** Load only the bounded runtime arrival inventory; original production films stay outside the bundle. */
@@ -299,13 +312,13 @@ function main() {
       ),
     },
   });
-  errors.push(...validateArrivalMedia(loadArrivalMedia()));
+  errors.push(...validateArrivalMedia({ ...loadArrivalMedia(), nativePoster: splash }));
   if (errors.length) {
     errors.forEach((error) => console.error(`- ${error}`));
     process.exitCode = 1;
     return;
   }
-  console.log("Release icons, arrival poster, native iOS framing, and Android system splash are valid.");
+  console.log("Release icons, four arrival assets, native splash composite, and platform framing are valid.");
 }
 
 if (require.main === module) main();

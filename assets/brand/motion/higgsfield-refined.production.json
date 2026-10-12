@@ -1,0 +1,92 @@
+{
+  "title": "VantaHome \u2014 Amethyst Arrival",
+  "provider": "Higgsfield",
+  "model": "seedance_2_5",
+  "jobId": "b565d056-e1d6-4770-a683-ffedc7a7d6b3",
+  "createdOn": "2026-10-12",
+  "estimatedCredits": {
+    "completedReference": 2.75,
+    "openingReference": 2.75,
+    "assemblyVideo": 48,
+    "total": 53.5
+  },
+  "requestedSettings": {
+    "model": "seedance_2_5",
+    "mode": "omni_reference",
+    "aspect_ratio": "4:3",
+    "duration": 4,
+    "resolution": "1080p",
+    "bitrate_mode": "high",
+    "generate_audio": false,
+    "count": 1,
+    "medias": [
+      {
+        "role": "start_image",
+        "value": "285669b5-8a7f-4650-b265-91660eda3f25"
+      },
+      {
+        "role": "end_image",
+        "value": "80560327-ed21-428b-9a71-ff1373fdcd9b"
+      }
+    ],
+    "prompt": "Create a premium, beautifully controlled CGI brand assembly between the supplied exact start and end frames. One continuous LOCKED CAMERA shot, fixed badge scale and framing, seamless midnight-navy atmosphere. The glass house shell, roof, right chimney and rounded-square backing remain completely stationary throughout. Preserve the exact shapes, crystal facets and jewel-like violet materials. The first frame is the starting image: V gently suspended below its socket and the small violet core suspended just left of center. Move only these two parts.\n\nTIMING across 4 seconds:\n0.00\u20130.25: A tiny anticipatory hover, quiet and confident. No camera movement.\n0.25\u20131.10: The complete intact V travels UP and slightly BACK over its short existing gap into its precise socket beneath the roof. A decisive magnetic seating movement: smooth acceleration, a quick firm last few millimeters, microscopic single settling motion, then absolutely still. The V does NOT scale up, rotate, split, melt or come towards camera. It never crosses or obscures the roof. Keep the motion short, substantial and elegant.\n1.10\u20131.95: AFTER the V has fully seated, the SAME SMALL AMETHYST CRYSTAL CORE travels a short smooth sideways arc from the LEFT into the center circular socket. Preserve the same visible concentric violet crystal rings and magenta faceted jewel through the WHOLE move. The core is glass and glows faint purple even before seating, never gray/silver, black, a camera lens, mechanical iris or a cylinder. One gentle precise docking movement, no extra pieces.\n1.95\u20132.70: AFTER both parts are seated, a restrained violet activation travels outward through the circuitry toward the nodes. A delicate specular ribbon traces the V and roof edge, and the central amethyst jewel softly illuminates. Beautiful optical depth, glass refraction, controlled caustic detail. ONE tasteful activation, not flashing. No fireworks, particles, smoke jets, lightning, lens-flare streak or whiteout.\n2.70\u20134.00: Settle into the exact supplied ending composition and HOLD STILL. All geometry remains completely stationary and fully assembled; only a very faint slow breathing of violet light. Keep the last full second visually stable for a quiet seamless loading hold.\n\nThe shell and background do not jump or drift between frames. All pieces stay fully contained inside the frame at the same projected size. Preserve realistic restrained floor reflection that fades into midnight navy, with no visible stage rectangle, horizon, floor edge or spotlight cone. Muted cinematic violet and amethyst lighting, delicate blue edge accent, deep navy negative space. Silent. No text, subtitles, logos beyond the supplied badge, camera orbit, zoom, pan, transition, additional objects or loop back to disassembled state. This is a short luxury app arrival, not a trailer."
+  },
+  "openingReference": {
+    "jobId": "285669b5-8a7f-4650-b265-91660eda3f25",
+    "settings": {
+      "model": "gpt_image_2_5",
+      "quality": "high",
+      "resolution": "2k",
+      "aspect_ratio": "4:3",
+      "count": 1,
+      "medias": [
+        {
+          "role": "image",
+          "value": "80560327-ed21-428b-9a71-ff1373fdcd9b"
+        }
+      ],
+      "prompt": "EDIT the supplied finished VantaHome keyframe into a precise TWO-PART PRE-ASSEMBLY starting pose. Preserve the identical camera, 4:3 framing, background, scale, location, materials, purple lighting, glass rounded-square backing, blue recessed house outline, roof and RIGHT chimney. These fixed parts must be pixel-aligned to the reference. Do not change the badge itself. Keep its beautiful dimensional amethyst crystal, refraction and soft local reflection.\n\nOnly reposition TWO existing solid parts, keeping each at its SAME projected size and orientation:\n1. The entire intact lower V is detached from its socket and held a SMALL DISTANCE in front of the shell. Move it downward by only about 7 percent of the full image height. Its top arms now have a clear small gap below the roof ends; its lower tip remains safely inside the canvas, above the reflection. This remains ONE complete rigid V, identical shape and size, never split. A slight realistic depth gap/contact-free shadow shows it ready to slide UP and BACK into its socket. It must NOT cover the roof or grow in size.\n2. Remove the circular center core from the house center and place the SAME SMALL CORE hovering just LEFT of its socket, centered at roughly x35%, y49% of the image. Keep the core at its original size, well inside the frame and near the house. It must be recognizable AMETHYST CRYSTAL: concentric translucent violet glass rings surrounding a faintly glowing magenta-purple faceted jewel. NO silver/gray/black face, no black hole, no camera lens, shutter, iris or metal cylinder. The core is already visibly violet glass before assembly.\nThe four thin circuitry branches/nodes stay etched faintly on the backing in their reference positions, unlit, with the central socket empty. Do not add another core in that socket. Keep roof/backing light quieter than the final image; no bright circuit pulse yet.\n\nIt should look like a beautifully controlled premium product exploded view just one small motion away from assembly. All parts fully contained, restrained separation, no huge foreground object, no extreme perspective, no camera change, no extra objects, no text. Preserve the midnight-navy seamless environment with faint violet atmosphere and the same local reflection."
+    },
+    "sha256": "246bbbca1d6a7a38599935e26a5c2716c8ce8b005fb07a9323f346b399f9d563"
+  },
+  "completedReference": {
+    "jobId": "80560327-ed21-428b-9a71-ff1373fdcd9b",
+    "settings": {
+      "model": "gpt_image_2_5",
+      "quality": "high",
+      "resolution": "2k",
+      "aspect_ratio": "4:3",
+      "count": 1,
+      "medias": [
+        {
+          "role": "image",
+          "value": "b44b4c21-6822-492e-8338-fc2e8ce65a8d"
+        }
+      ],
+      "prompt": "Refine this exact VantaHome crystal icon into the final hero keyframe for a luxury app entrance. Preserve the exact recognizable symbol: peaked roof with RIGHT chimney, one separate lower V, recessed house outline, concentric circular hub and exactly FOUR connected circuit nodes. Preserve the beautiful thick amethyst crystal, precision purple titanium interior, violet caustics and cool-blue bevel accents. This is the same icon and same tasteful slight left three-quarter camera angle.\n\nNew composition is 4:3. Full badge centered at x50%, y47%, occupying approximately60% of canvas height. Keep generous uninterrupted dark margins in every direction. No cropped part. A restrained short soft reflection lies below, its entire reflection contained above y88%. The badge floats silently in an INFINITE midnight-navy atmosphere, color #050612 at the OUTER QUARTER of the image. No rectangular backdrop, display panel behind the badge, studio wall, stage platform, hard horizon or visible image border. The dark rounded-square glass backing IS part of the icon and remains. Outside that backing there is only seamless atmospheric negative space, not another rectangle. Very faint broad violet haze around the sculpture blends smoothly to midnight navy before the frame edges. Polished reflection is delicate and local under the badge, fading smoothly into midnight navy, not a detailed floor filling the screen.\n\nCORE: unmistakably a small glowing AMETHYST GLASS jewel with concentric violet-crystal rings, tinted translucent purple throughout, tiny warm violet light within. No silver metal, black center, camera lens, iris, shutter, speaker or mechanical cylinder. Exactly the existing core identity, luxurious and luminous but not overexposed.\nLight: exquisite restrained ray-traced refraction, realistic thickness, crisp lavender highlights along roof and V, soft blue lower-right edge, quiet magenta-violet core glow. No starburst flare. Highlight detail stays readable. Gentle atmosphere, no particles or sci-fi clutter.\nNo text, letters, captions, added graphics, extra objects or duplicated geometry. A fully assembled precise final pose, ready for a controlled assembly animation."
+    },
+    "sha256": "8120990441e181b1cabf90ea647359f275683482d41778f57f4d2f5514e370a7"
+  },
+  "source": {
+    "resultUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3HIcXgBJhCgDqDgrrkyPh9sl4nC/hf_20261012_171010_b565d056-e1d6-4770-a683-ffedc7a7d6b3.mp4",
+    "filename": "vantahome-refined-master.mp4",
+    "sha256": "dfa17e3b12c3e5533bdbcae8521bb7c9c2ccb4f03575dbb5866b2a39f36b44d3",
+    "bytes": 3892092,
+    "width": 1664,
+    "height": 1248,
+    "durationSeconds": 4.042,
+    "framesPerSecond": 24,
+    "audioTracks": 0
+  },
+  "review": {
+    "method": "Inspected 16 decoded quarter-second frames in a 4:3 contact sheet.",
+    "result": "V rises a short distance and seats first; small violet crystal core follows from the left; circuit illumination settles into a quiet assembled tail. Entire sculpture remains contained with stable shell and camera.",
+    "limitations": "Generated dimensional interpretation, not mathematically exact source geometry. Physical-device motion review remains pending.",
+    "selectedSourceIntervalsSeconds": {
+      "enterStart": 0.25,
+      "enterEnd": 3.5,
+      "holdEnd": 4.0
+    },
+    "targetEntranceSeconds": 2.0
+  }
+}

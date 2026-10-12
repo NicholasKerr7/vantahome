@@ -163,13 +163,74 @@ test('warm returns use a static poster and never replay or delay the introductio
   const covered = jest.fn();
   const screen = render(<CinematicArrival status="checking" returning onCoveredChange={covered} />);
   await settle();
-  expect(screen.getByText('Welcome back.')).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'VantaHome. Verifying home access…' })).toBeTruthy();
+  expect(screen.getByTestId('arrival-accessible-status')).toHaveTextContent('Verifying home access…');
   expect(screen.getByTestId('arrival-poster', { includeHiddenElements: true }).props.source).toEqual(COMPLETED_POSTER);
   expect(mockPlayers).toHaveLength(0);
   screen.rerender(<CinematicArrival status="ready" onCoveredChange={covered} />);
   expect(screen.queryByTestId('cinematic-arrival')).toBeNull();
   expect(mockTiming).not.toHaveBeenCalled();
   expect(covered).toHaveBeenLastCalledWith(false);
+});
+
+test('normal launch shows only the wordmark beside artwork while retaining truthful screen-reader status', async () => {
+  const screen = render(<CinematicArrival status="preparing" />);
+  await settle();
+  expect(screen.getAllByRole('header', { name: 'VantaHome. Preparing your account…' })).toHaveLength(1);
+  expect(screen.queryByText('YOUR WORLD. CONNECTED.')).toBeNull();
+  expect(screen.queryByText('Every detail, coming together.')).toBeNull();
+  expect(screen.queryByText('A moment from home.')).toBeNull();
+  expect(screen.getByTestId('arrival-accessible-status')).toHaveTextContent('Preparing your account…');
+  expect(screen.getByTestId('arrival-accessible-status')).toHaveStyle({ position: 'absolute', width: 1, height: 1, overflow: 'hidden' });
+  expect(screen.getByTestId('arrival-accessible-status').props.accessibilityLiveRegion).toBe('polite');
+  screen.rerender(<CinematicArrival status="rendering" />);
+  expect(screen.getByRole('header', { name: 'VantaHome. The 3D view is still preparing.' })).toBeTruthy();
+  expect(screen.getByTestId('arrival-accessible-status')).toHaveTextContent('The 3D view is still preparing.');
+  expect(screen.queryByRole('button')).toBeNull();
+  act(() => jest.advanceTimersByTime(ARRIVAL_SLOW_MS));
+  expect(screen.queryByRole('header')).toBeNull();
+  expect(screen.queryByTestId('arrival-accessible-status')).toBeNull();
+  expect(screen.getByText('The 3D view is still preparing.')).toHaveStyle({ fontSize: 20 });
+});
+
+test('the readiness glow shares the existing fade and disappears immediately on a renewed access check', async () => {
+  const screen = render(<CinematicArrival status="rendering" />);
+  await settle();
+  expect(screen.queryByTestId('arrival-reveal-glow', { includeHiddenElements: true })).toBeNull();
+  screen.rerender(<CinematicArrival status="ready" />);
+  expect(screen.getByTestId('arrival-reveal-glow', { includeHiddenElements: true })).toBeTruthy();
+  expect(mockTiming).toHaveBeenCalledTimes(1);
+  expect(mockTiming).toHaveBeenLastCalledWith(0, expect.objectContaining({ duration: ARRIVAL_FADE_MS }), expect.any(Function));
+  screen.rerender(<CinematicArrival status="checking" />);
+  expect(screen.queryByTestId('arrival-reveal-glow', { includeHiddenElements: true })).toBeNull();
+  expect(screen.getByTestId('cinematic-arrival')).toHaveStyle({ opacity: 1 });
+});
+
+test.each([
+  { width: 430, height: 932, heightConstrained: false },
+  { width: 768, height: 1024, heightConstrained: false },
+  { width: 1180, height: 820, heightConstrained: true },
+])('anchors the wordmark to the same 4:3 contain frame at $width × $height', async ({ width, height, heightConstrained }) => {
+  dimensions = { ...dimensions, width, height };
+  const screen = render(<CinematicArrival status="checking" />);
+  await settle();
+  expect(screen.getByTestId('arrival-artwork-frame')).toHaveStyle(heightConstrained
+    ? { height: '100%', aspectRatio: 4 / 3 }
+    : { width: '100%', aspectRatio: 4 / 3 });
+  expect(screen.getByTestId('arrival-poster', { includeHiddenElements: true }).props.resizeMode).toBe('contain');
+});
+
+test.each(['animated', 'returning', 'reduced motion'] as const)('blends the media stage as hidden decoration during %s arrival', async (presentation) => {
+  jest.mocked(AccessibilityInfo.isReduceMotionEnabled).mockResolvedValue(presentation === 'reduced motion');
+  const screen = render(<CinematicArrival status="checking" returning={presentation === 'returning'} />);
+  await settle();
+  const blend = screen.getByTestId('arrival-stage-blend', { includeHiddenElements: true });
+  expect(blend.props).toMatchObject({
+    accessible: false, accessibilityElementsHidden: true,
+    importantForAccessibility: 'no-hide-descendants', pointerEvents: 'none',
+  });
+  expect(blend).toHaveStyle({ width: '100%', height: '100%' });
+  expect(mockPlayers).toHaveLength(presentation === 'animated' ? 1 : 0);
 });
 
 test('pauses in background and for reduced motion, without restarting the asset', async () => {

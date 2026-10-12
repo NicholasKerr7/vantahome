@@ -19,7 +19,7 @@ function pngHeader(width: number, height: number, colorType: number) {
 
 /** Keep each mutation isolated so checks cannot pass because another test changed the fixture. */
 function releaseFixture() {
-  const poster = "./assets/brand/motion/vantahome-arrival-poster.png";
+  const poster = "./assets/release/arrival-native-poster.png";
   const systemIcon = "./assets/release/splash-icon.png";
   const pluginOptions = {
     image: poster,
@@ -95,7 +95,7 @@ describe("release asset check", () => {
         "App icon must be an opaque 1024x1024 PNG.",
         "Adaptive foreground must be an opaque 1024x1024 PNG matching the app icon.",
         "Native iOS icon must match the release icon.",
-        "Native iOS splash images must match the arrival poster.",
+        "Native iOS splash images must match the composited native arrival poster.",
       ]),
     );
   });
@@ -106,7 +106,7 @@ describe("release asset check", () => {
     fixture.native.splashContentMode = "scaleAspectFill";
     fixture.native.splashBackgroundColor = "#ffffff";
     expect(validateReleaseAssets(fixture)).toEqual(expect.arrayContaining([
-      "Arrival poster must be a 1024x768 PNG matching the film frame.",
+      "Native arrival composite must be a 1024x768 PNG matching the runtime frame.",
       "Native iOS splash must contain the poster across the full view on brand navy.",
     ]));
   });
@@ -116,7 +116,7 @@ describe("release asset check", () => {
     fixture.native.splashDigests = [];
     fixture.native.splashEdges = ["top", "leading"];
     expect(validateReleaseAssets(fixture)).toEqual(expect.arrayContaining([
-      "Native iOS splash images must match the arrival poster.",
+      "Native iOS splash images must match the composited native arrival poster.",
       "Native iOS splash must contain the poster across the full view on brand navy.",
     ]));
   });
@@ -127,6 +127,12 @@ describe("release asset check", () => {
     expect(validateReleaseAssets(fixture)).toContain(
       "Splash plugin must preserve full-view iOS arrival framing and the Android system icon.",
     );
+  });
+
+  test("rejects the uncomposited runtime poster as the operating-system splash", () => {
+    const fixture = releaseFixture();
+    fixture.expoConfig.splash.image = "./assets/brand/motion/vantahome-arrival-poster.png";
+    expect(validateReleaseAssets(fixture)).toContain("Expo release asset paths are inconsistent.");
   });
 });
 
@@ -142,7 +148,13 @@ function arrivalFixture() {
     files: Object.fromEntries(packagedNames.map((filename) => [filename, {
       digest: filename, bytes: 200_000, width: 1024, height: 768,
     }])),
+    nativePoster: { digest: "native-composite", bytes: 180_000, width: 1024, height: 768 },
     manifest: {
+      nativeSplashComposite: {
+        filename: "assets/release/arrival-native-poster.png", sha256: "native-composite",
+        bytes: 180_000, width: 1024, height: 768,
+        sourcePosterSha256: "vantahome-arrival-poster.png",
+      },
       assets: packagedNames.map((filename) => ({
         filename, sha256: filename, bytes: 200_000,
         probe: {
@@ -205,5 +217,22 @@ describe("bundled cinematic arrival", () => {
       "Approved VantaHome icon master must remain unchanged.",
       "Arrival still must be 1024x768: vantahome-arrival-hold.png.",
     ]));
+  });
+
+  test("binds the native composite to the exact decoded opening rather than the hold still", () => {
+    const fixture = arrivalFixture();
+    fixture.manifest.nativeSplashComposite.sourcePosterSha256 = fixture.files["vantahome-arrival-hold.png"].digest;
+    expect(validateArrivalMedia(fixture)).toContain(
+      "Native splash composite must match its recorded 1024x768 asset and decoded opening-poster source.",
+    );
+  });
+
+  test("rejects an out-of-date or wrongly framed native composite", () => {
+    const fixture = arrivalFixture();
+    fixture.nativePoster.digest = "previous-generation";
+    fixture.nativePoster.height = 1024;
+    expect(validateArrivalMedia(fixture)).toContain(
+      "Native splash composite must match its recorded 1024x768 asset and decoded opening-poster source.",
+    );
   });
 });

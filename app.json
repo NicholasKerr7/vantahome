@@ -8,7 +8,7 @@
     "icon": "./assets/release/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/brand/motion/vantahome-arrival-poster.png",
+      "image": "./assets/release/arrival-native-poster.png",
       "resizeMode": "contain",
       "backgroundColor": "#050612"
     },
@@ -66,7 +66,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/brand/motion/vantahome-arrival-poster.png",
+          "image": "./assets/release/arrival-native-poster.png",
           "backgroundColor": "#050612",
           "resizeMode": "contain",
           "ios": {

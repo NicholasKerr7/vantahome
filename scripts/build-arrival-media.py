@@ -3,9 +3,11 @@
 
 Requires Apple's Swift/AVFoundation on macOS, with no app/runtime dependency.
 Run with --help for the source hash, provenance and reviewed timing arguments.
-This script never generates or reconstructs a logo. Center crop, edge feather,
+This script never generates or reconstructs a logo. Center crop, stage blending,
 retiming and silent encoding preserve the supplied film's glass and reflections.
 Outputs default to WORK/delivery for review; --destination selects app assets.
+The OS splash is composited separately to match the runtime SVG stage blend;
+--native-poster-destination explicitly publishes that native-only PNG.
 Use --reuse-frames or --reuse-encoding only with an unchanged processing plan.
 """
 import argparse
@@ -92,6 +94,25 @@ def describe(path: Path, evidence: dict) -> dict[str, object]:
     return record
 
 
+def compose_native_poster(exports: Path, work: Path) -> tuple[Path, dict]:
+    """Bake the runtime SVG blend for the OS without changing decoded posters.
+
+    The helper independently checks every pixel against the SVG's documented
+    sRGB/linear-alpha formula. Review runs keep this extra output in the cache;
+    publishing to native assets requires --native-poster-destination.
+    """
+    helper = work / "compose-arrival-native-poster"
+    output = work / "native/arrival-native-poster.png"
+    evidence_path = work / "native-composite-evidence.json"
+    execute(["swiftc", "scripts/compose-arrival-native-poster.swift", "-o", str(helper)])
+    source = exports / "vantahome-arrival-poster.png"
+    execute([str(helper), str(source), str(output), str(evidence_path)])
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    if evidence["sha256"] != sha256(output) or evidence["sourcePosterSha256"] != sha256(source):
+        raise ValueError("Native composite evidence does not match its source/output bytes.")
+    return output, evidence
+
+
 def manifest_for(exports: Path, evidence: dict, preparation: dict, plan: dict,
                  provenance_path: Path, provenance: dict) -> dict[str, object]:
     """Document production provenance, choreography and measured seams."""
@@ -104,7 +125,8 @@ def manifest_for(exports: Path, evidence: dict, preparation: dict, plan: dict,
     total = sum(record["bytes"] for record in records)
     if total > 3 * 1024 * 1024:
         raise ValueError("Arrival media exceeds the 3 MiB production budget.")
-    scripts = ["build-arrival-media.py", "prepare-arrival-frames.swift", "encode-arrival-media.swift"]
+    scripts = ["build-arrival-media.py", "prepare-arrival-frames.swift", "encode-arrival-media.swift",
+               "compose-arrival-native-poster.swift"]
     return {
         "created": str(date.today()),
         "source": {
@@ -125,7 +147,7 @@ def manifest_for(exports: Path, evidence: dict, preparation: dict, plan: dict,
             "enter": "Retimed reviewed source interval; preserves original CGI surfaces and camera.",
             "hold": "Cosine-paced forward/reverse of the reviewed assembled tail, sharing exact source endpoints.",
             "transition": "Exit as soon as access and renderer are actually ready; never impose the film duration.",
-            "poster": "Exact decoded entrance frame zero, for native splash/video handoff.",
+            "poster": "Exact decoded entrance frame zero; the runtime SVG blend is separately baked into the native-only OS splash.",
             "holdPoster": "Exact decoded hold frame zero, for source replacement and reduced motion.",
             "fallback": "Local stills; no network request, resolve clip or runtime 3D dependency.",
         },
@@ -145,7 +167,7 @@ def manifest_for(exports: Path, evidence: dict, preparation: dict, plan: dict,
 
 
 def build(args: argparse.Namespace) -> None:
-    """Run source-bound postprocessing, then export only the four app assets."""
+    """Export four runtime assets and explicitly publish an optional OS composite."""
     if sha256(MASTER) != MASTER_SHA256:
         raise ValueError("The approved icon master changed.")
     source, work = args.source.resolve(), args.work.resolve()
@@ -159,7 +181,8 @@ def build(args: argparse.Namespace) -> None:
     plan = {"sourcePath": str(source), "sourceSha256": args.source_sha256,
             "enterStart": args.enter_start, "enterEnd": args.enter_end, "holdEnd": args.hold_end,
             "enterFrames": round(args.enter_seconds * 30), "holdFrames": round(args.hold_seconds * 30),
-            "edgeFeatherPixels": args.edge_feather,
+            "stageBlendInnerRadius": args.stage_inner_radius,
+            "stageBlendExponent": args.stage_exponent,
             "preparationScriptSha256": sha256(ROOT / "scripts/prepare-arrival-frames.swift"),
             "encodingScriptSha256": sha256(ROOT / "scripts/encode-arrival-media.swift")}
     if not 60 <= plan["enterFrames"] <= 90 or not 30 <= plan["holdFrames"] <= 90:
@@ -184,10 +207,16 @@ def build(args: argparse.Namespace) -> None:
     if evidence.get("planSha256") != sha256(plan_path) or evidence.get("sourceSha256") != sha256(source):
         raise ValueError("Cached encoded assets belong to a different source or processing plan.")
     manifest = manifest_for(exports, evidence, preparation, plan, provenance_path, provenance)
+    native_poster, native_evidence = compose_native_poster(exports, work)
+    manifest["nativeSplashComposite"] = native_evidence
     destination = args.destination.resolve() if args.destination else work / "delivery"
     destination.mkdir(parents=True, exist_ok=True)
     for filename in FILENAMES:
         shutil.copyfile(exports / filename, destination / filename)
+    if args.native_poster_destination:
+        native_destination = args.native_poster_destination.resolve()
+        native_destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(native_poster, native_destination)
     (destination / "vantahome-arrival-resolve.mp4").unlink(missing_ok=True)
     (destination / "arrival.production.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"assets": list(FILENAMES), "totalBytes": manifest["format"]["totalBytes"]}, indent=2))
@@ -204,8 +233,13 @@ if __name__ == "__main__":
     parser.add_argument("--hold-end", type=float, required=True)
     parser.add_argument("--enter-seconds", type=float, default=2.5)
     parser.add_argument("--hold-seconds", type=float, default=2)
-    parser.add_argument("--edge-feather", type=float, default=48)
+    parser.add_argument("--stage-inner-radius", type=float, default=0.82,
+                        help="Source stays untouched inside this normalized superellipse radius.")
+    parser.add_argument("--stage-exponent", type=float, default=2.6,
+                        help="2 is elliptical; higher values broaden the protected central stage.")
     parser.add_argument("--destination", type=Path)
+    parser.add_argument("--native-poster-destination", type=Path,
+                        help="Explicitly publish the separate SVG-composited OS splash PNG.")
     parser.add_argument("--reuse-frames", action="store_true")
     parser.add_argument("--reuse-encoding", action="store_true")
     args = parser.parse_args()

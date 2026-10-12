@@ -2,14 +2,14 @@
   "created": "2026-10-12",
   "source": {
     "type": "higgsfield-source-film",
-    "filename": "vantahome-assembly-master.mp4",
-    "sha256": "dbe092003a8fe75df85e6e70da37e5f329bfb86fd07a09effc7f1e125e83f3c8",
+    "filename": "vantahome-refined-master.mp4",
+    "sha256": "dfa17e3b12c3e5533bdbcae8521bb7c9c2ccb4f03575dbb5866b2a39f36b44d3",
     "provider": "Higgsfield",
     "model": "seedance_2_5",
-    "jobId": "3e339a8d-f8bc-4d35-85f9-efec3c2d1e84",
+    "jobId": "b565d056-e1d6-4770-a683-ffedc7a7d6b3",
     "productionRecord": {
-      "filename": "higgsfield-assembly.production.json",
-      "sha256": "1606369b87af7b02b4332a6b7687a65a4a254a93dc8fb537694b8fee132633fc"
+      "filename": "higgsfield-refined.production.json",
+      "sha256": "7cd6c85f050e84bcc0433f7f3169fdc6633845b7ed127142eeb887f69e005027"
     },
     "master": {
       "filename": "vantahome-icon-master.png",
@@ -20,15 +20,19 @@
     "scripts": [
       {
         "filename": "build-arrival-media.py",
-        "sha256": "892799ceacdfe2f42e200f8b46725e72335e72d52cc638d8f57ccbc139e3563d"
+        "sha256": "27efbf1a1962cd9a08be69aa4b379a5d6f2c907435d042acf0c72fd21e062545"
       },
       {
         "filename": "prepare-arrival-frames.swift",
-        "sha256": "8ce1cdd8dd5d7cff4db64d3463753dedfd410abf749e543b8485eb8bc5e3f498"
+        "sha256": "0d33e30fbf45a49a66d2b98c90fffd040ea9d7e15b5ccad52624040bdf41a9b2"
       },
       {
         "filename": "encode-arrival-media.swift",
         "sha256": "6f2c4f0d453dec2e5c3026db1f707f55a97992d335105278405e236be247bf39"
+      },
+      {
+        "filename": "compose-arrival-native-poster.swift",
+        "sha256": "bf8a05bec080d6de274a2fb76cf33835d2af75b4fe9fed950eb2339134ea9ad3"
       }
     ]
   },
@@ -40,28 +44,28 @@
     "framesPerSecond": 30,
     "audio": false,
     "edgeBackground": "#050612",
-    "totalBytes": 2135096,
+    "totalBytes": 1360293,
     "budgetBytes": 3145728
   },
   "choreography": {
     "sourceIntervalsSeconds": {
-      "enterStart": 0,
+      "enterStart": 0.25,
       "enterEnd": 3.5,
       "holdEnd": 4.0
     },
     "enter": "Retimed reviewed source interval; preserves original CGI surfaces and camera.",
     "hold": "Cosine-paced forward/reverse of the reviewed assembled tail, sharing exact source endpoints.",
     "transition": "Exit as soon as access and renderer are actually ready; never impose the film duration.",
-    "poster": "Exact decoded entrance frame zero, for native splash/video handoff.",
+    "poster": "Exact decoded entrance frame zero; the runtime SVG blend is separately baked into the native-only OS splash.",
     "holdPoster": "Exact decoded hold frame zero, for source replacement and reduced motion.",
     "fallback": "Local stills; no network request, resolve clip or runtime 3D dependency."
   },
   "verification": {
     "audio": false,
     "encoder": "Apple AVFoundation H.264 Main 3.1",
-    "enterFrames": 75,
-    "enterHoldMeanAbsoluteRgbErrorOutOf255": 2.236785888671875,
-    "enterSeconds": 2.5,
+    "enterFrames": 60,
+    "enterHoldMeanAbsoluteRgbErrorOutOf255": 1.846755133734809,
+    "enterSeconds": 2,
     "fastStart": true,
     "firstFramePostersMatchExactly": true,
     "framesPerSecond": 30,
@@ -91,7 +95,7 @@
         ]
       ],
       "outerBorderMaximumChannelErrorOutOf255": 3,
-      "outerBorderMeanAbsoluteErrorOutOf255": 1.3152214714714714,
+      "outerBorderMeanAbsoluteErrorOutOf255": 1.1936936936936937,
       "targetRgb": [
         5,
         6,
@@ -99,7 +103,7 @@
       ]
     },
     "holdFrames": 60,
-    "holdLoopMeanAbsoluteRgbErrorOutOf255": 2.2605908711751304,
+    "holdLoopMeanAbsoluteRgbErrorOutOf255": 1.8510636223687067,
     "holdSeconds": 2,
     "openingBackground": {
       "cornerRgb": [
@@ -125,7 +129,7 @@
         ]
       ],
       "outerBorderMaximumChannelErrorOutOf255": 3,
-      "outerBorderMeanAbsoluteErrorOutOf255": 1.3204767267267268,
+      "outerBorderMeanAbsoluteErrorOutOf255": 1.2384572072072073,
       "targetRgb": [
         5,
         6,
@@ -133,39 +137,30 @@
       ]
     },
     "pixelFormat": "yuv420p",
-    "planSha256": "3a162badb1248b4b1a0a727990ce24a9c7da239e2ed20b12397350832ad43964",
-    "sourceSha256": "dbe092003a8fe75df85e6e70da37e5f329bfb86fd07a09effc7f1e125e83f3c8",
+    "planSha256": "2b8e547adfd360f9efe65bd340fdfea3e8cd5366941a640546e69570d3adfeb9",
+    "sourceSha256": "dfa17e3b12c3e5533bdbcae8521bb7c9c2ccb4f03575dbb5866b2a39f36b44d3",
     "width": 1024,
     "sourcePreparation": {
-      "edgeFeatherPixels": 64,
       "holdMethod": "Cosine forward/reverse of reviewed assembled tail",
       "logoReconstruction": false,
-      "method": "AVFoundation source sampling; Core Image center crop and edge feather",
+      "method": "AVFoundation source sampling; Core Image center crop and protected superellipse stage blend",
       "newGeneration": false,
-      "planSha256": "3a162badb1248b4b1a0a727990ce24a9c7da239e2ed20b12397350832ad43964",
+      "planSha256": "2b8e547adfd360f9efe65bd340fdfea3e8cd5366941a640546e69570d3adfeb9",
       "sampledSourceTimesSeconds": [
-        0,
-        0.041666666666666664,
-        0.08333333333333333,
-        0.125,
-        0.20833333333333334,
         0.25,
         0.2916666666666667,
-        0.3333333333333333,
         0.375,
         0.4166666666666667,
         0.4583333333333333,
         0.5,
         0.5833333333333334,
         0.625,
-        0.6666666666666666,
         0.7083333333333334,
         0.75,
         0.7916666666666666,
-        0.8333333333333334,
+        0.875,
         0.9166666666666666,
         0.9583333333333334,
-        1,
         1.0416666666666667,
         1.0416666666666667,
         1.125,
@@ -173,50 +168,43 @@
         1.25,
         1.2916666666666667,
         1.3333333333333333,
-        1.375,
         1.4166666666666667,
         1.4583333333333333,
         1.5,
-        1.5416666666666667,
+        1.5833333333333333,
         1.625,
         1.6666666666666667,
-        1.7083333333333333,
         1.75,
         1.7916666666666667,
         1.8333333333333333,
-        1.875,
+        1.9166666666666667,
         1.9583333333333333,
-        2,
         2,
         2.0833333333333335,
         2.125,
         2.125,
-        2.2083333333333335,
         2.25,
+        2.2916666666666665,
         2.3333333333333335,
-        2.375,
         2.4166666666666665,
         2.4583333333333335,
         2.5,
-        2.5416666666666665,
         2.5833333333333335,
+        2.625,
         2.6666666666666665,
         2.7083333333333335,
-        2.75,
         2.7916666666666665,
         2.8333333333333335,
         2.875,
-        2.9166666666666665,
+        2.9583333333333335,
         3,
         3.0416666666666665,
-        3.0833333333333335,
         3.125,
         3.1666666666666665,
         3.2083333333333335,
-        3.25,
         3.2916666666666665,
+        3.3333333333333335,
         3.375,
-        3.4166666666666665,
         3.4583333333333335,
         3.5,
         3.5416666666666665,
@@ -234,26 +222,33 @@
       ],
       "sourceBoundaryReuse": "Identical cached source image at entrance end, hold start and hold end",
       "sourceFramesPerSecond": 24,
-      "sourceHeight": 1080,
+      "sourceHeight": 1248,
       "sourceSeconds": 4.042,
-      "sourceSha256": "dbe092003a8fe75df85e6e70da37e5f329bfb86fd07a09effc7f1e125e83f3c8",
-      "sourceWidth": 1920
+      "sourceSha256": "dfa17e3b12c3e5533bdbcae8521bb7c9c2ccb4f03575dbb5866b2a39f36b44d3",
+      "sourceWidth": 1664,
+      "stageBlend": {
+        "centralSourceOpacity": 1,
+        "exponent": 2.6,
+        "innerRadius": 0.82,
+        "shape": "superellipse",
+        "solidNavyRimPixels": 16
+      }
     },
-    "devicePlayback": "Browser playback verified. Preview 54 Release package verified and installed; iPhone reports 1.0.0 (54). Automatic launch was blocked by the locked device, so physical playback remains unverified.",
+    "devicePlayback": "Pending app integration and physical-device verification.",
     "boundaries": {
       "openingPosterMatchesDecodedFirstFrame": true,
       "holdPosterMatchesDecodedFirstFrame": true,
-      "enterHoldMeanAbsoluteRgbErrorOutOf255": 2.236785888671875,
-      "loopFirstLastMeanAbsoluteRgbErrorOutOf255": 2.2605908711751304,
+      "enterHoldMeanAbsoluteRgbErrorOutOf255": 1.846755133734809,
+      "loopFirstLastMeanAbsoluteRgbErrorOutOf255": 1.8510636223687067,
       "sourcePose": "Entrance end and both hold endpoints reuse the identical sampled source image."
     },
-    "visualReview": "Inspected original 16-frame sequence, final nine-frame edit and responsive playback at 320x568, 430x932, 768x1024 and 1024x768. V seats before core; illumination follows, final badge stays contained. Verified silent hold, no page overflow, reduced-motion still, early-ready release and retry path."
+    "visualReview": "Review arrival-contact.png and both clips before packaging; source-frame inspection must confirm contained geometry and an assembled, quiet tail."
   },
   "assets": [
     {
       "filename": "vantahome-arrival-enter.mp4",
-      "bytes": 830960,
-      "sha256": "d7bbe3bae7f0ab460b046006cca80f9d09cf4d65ee6c3fa06160b933e7d38b4d",
+      "bytes": 389698,
+      "sha256": "0d864e98445c334912eb003d2c740a7bb9eba2b3382462f0024512296391acf2",
       "probe": {
         "method": "AVFoundation full decode + binary media headers",
         "streams": [
@@ -267,8 +262,8 @@
           }
         ],
         "format": {
-          "size": "830960",
-          "duration": "2.500000"
+          "size": "389698",
+          "duration": "2.000000"
         }
       },
       "avcConfiguration": {
@@ -285,8 +280,8 @@
     },
     {
       "filename": "vantahome-arrival-hold.mp4",
-      "bytes": 350548,
-      "sha256": "106091be1d93f4089b35647e79f60aa16dc7da818ca03eb280b8f73e6c0d97ad",
+      "bytes": 222312,
+      "sha256": "916643be99fae0ae103367fe71c2ddc4fb12cb2c11fc3d1c2afc3a3a2a62da13",
       "probe": {
         "method": "AVFoundation full decode + binary media headers",
         "streams": [
@@ -300,7 +295,7 @@
           }
         ],
         "format": {
-          "size": "350548",
+          "size": "222312",
           "duration": "2.000000"
         }
       },
@@ -318,8 +313,8 @@
     },
     {
       "filename": "vantahome-arrival-hold.png",
-      "bytes": 528160,
-      "sha256": "aecec5fa67239bca48a6b1a16ff3736c15e0a8bb0f0661a10967b104c27fca41",
+      "bytes": 372168,
+      "sha256": "d174de8fd8f07ce6184c80f1121270d9b700ecadffa4c2a91d7720a4c8ab68ad",
       "probe": {
         "method": "AVFoundation full decode + binary media headers",
         "streams": [
@@ -332,14 +327,14 @@
           }
         ],
         "format": {
-          "size": "528160"
+          "size": "372168"
         }
       }
     },
     {
       "filename": "vantahome-arrival-poster.png",
-      "bytes": 425428,
-      "sha256": "51e433826fc8773c1c11539d9c74ae3d69172ae0f8a68b01241a3a9c87281b8f",
+      "bytes": 376115,
+      "sha256": "f363d3346b39cd1979d31547fffec55ee2ceb2652eda3a439132a3406b4ae202",
       "probe": {
         "method": "AVFoundation full decode + binary media headers",
         "streams": [
@@ -352,9 +347,51 @@
           }
         ],
         "format": {
-          "size": "425428"
+          "size": "376115"
         }
       }
     }
-  ]
+  ],
+  "nativeSplashComposite": {
+    "bytes": 464962,
+    "filename": "assets/release/arrival-native-poster.png",
+    "gradient": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "color": "#050612",
+      "coordinateSystem": "objectBoundingBox",
+      "interpolation": "sRGB components, linear alpha",
+      "radius": 0.48,
+      "stops": [
+        {
+          "offset": 0.83,
+          "opacity": 0
+        },
+        {
+          "offset": 0.88,
+          "opacity": 0.28
+        },
+        {
+          "offset": 0.95,
+          "opacity": 0.85
+        },
+        {
+          "offset": 0.98,
+          "opacity": 1
+        }
+      ]
+    },
+    "height": 768,
+    "sha256": "43700b43db775b8f27475971704c50abd07220ab9af97b892bbfe04d91f667a1",
+    "sourcePosterSha256": "f363d3346b39cd1979d31547fffec55ee2ceb2652eda3a439132a3406b4ae202",
+    "verification": {
+      "formulaMaximumChannelErrorOutOf255": 1,
+      "method": "Every pixel checked against the SVG's sRGB component / linear alpha formula",
+      "opaqueOuterPixelDifferenceFromNavy": 0,
+      "protectedCenterPixelDifference": 0
+    },
+    "width": 1024
+  }
 }

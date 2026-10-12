@@ -15,7 +15,8 @@ struct FramePlan: Codable {
     let holdEnd: Double
     let enterFrames: Int
     let holdFrames: Int
-    let edgeFeatherPixels: Double
+    let stageBlendInnerRadius: Double
+    let stageBlendExponent: Double
 }
 
 enum PreparationError: Error {
@@ -30,24 +31,25 @@ let height = 768
 let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
 let context = CIContext(options: [.workingColorSpace: colorSpace, .outputColorSpace: colorSpace])
 
-/// Feather only the outer stage into app navy; do not soften the central logo.
-func featherKernel() throws -> CIColorKernel {
+/// Fade the surrounding stage organically while preserving the central sculpture.
+func stageBlendKernel() throws -> CIColorKernel {
     let source = """
-    kernel vec4 feather(__sample pixel, __color navy, vec2 size, float feather) {
-        vec2 position = destCoord();
-        float edge = min(min(position.x, size.x - position.x), min(position.y, size.y - position.y));
-        float weight = smoothstep(16.0, feather, edge);
+    kernel vec4 blendStage(__sample pixel, __color navy, vec2 size, float innerRadius, float exponent) {
+        vec2 radii = size * 0.5 - vec2(16.0);
+        vec2 normalized = abs(destCoord() - size * 0.5) / radii;
+        float radius = pow(pow(normalized.x, exponent) + pow(normalized.y, exponent), 1.0 / exponent);
+        float weight = 1.0 - smoothstep(innerRadius, 1.0, radius);
         return mix(navy, pixel, weight);
     }
     """
     guard let kernel = CIColorKernel(source: source) else {
-        throw PreparationError.imageProcessing("Could not compile stage-edge feather")
+        throw PreparationError.imageProcessing("Could not compile superellipse stage blend")
     }
     return kernel
 }
 
 /// Center-crop a source frame to 4:3, retaining the reviewed central sculpture.
-func framed(_ image: CGImage, feather: Double, kernel: CIColorKernel) throws -> CIImage {
+func framed(_ image: CGImage, innerRadius: Double, exponent: Double, kernel: CIColorKernel) throws -> CIImage {
     let input = CIImage(cgImage: image, options: [.colorSpace: colorSpace])
     let ratio = CGFloat(width) / CGFloat(height)
     let cropWidth = min(input.extent.width, input.extent.height * ratio)
@@ -61,8 +63,8 @@ func framed(_ image: CGImage, feather: Double, kernel: CIColorKernel) throws -> 
     let extent = CGRect(x: 0, y: 0, width: width, height: height)
     let navy = CIColor(red: 5/255, green: 6/255, blue: 18/255, alpha: 1, colorSpace: colorSpace)!
     guard let result = kernel.apply(extent: extent, arguments: [cropped, navy,
-                                      CIVector(x: CGFloat(width), y: CGFloat(height)), feather]) else {
-        throw PreparationError.imageProcessing("Could not composite stage-edge feather")
+                                      CIVector(x: CGFloat(width), y: CGFloat(height)), innerRadius, exponent]) else {
+        throw PreparationError.imageProcessing("Could not composite superellipse stage blend")
     }
     return result.cropped(to: extent)
 }
@@ -85,15 +87,16 @@ func prepare(plan: FramePlan, planDigest: String, output: URL, evidence: URL) th
           plan.enterStart >= 0, plan.enterStart < plan.enterEnd,
           plan.enterEnd <= plan.holdEnd, plan.holdEnd < duration,
           (60...90).contains(plan.enterFrames), (30...90).contains(plan.holdFrames),
-          (32...96).contains(plan.edgeFeatherPixels) else {
-        throw PreparationError.invalidPlan("Intervals, durations or feather are outside supported bounds")
+          (0.65...0.88).contains(plan.stageBlendInnerRadius),
+          (2.0...4.0).contains(plan.stageBlendExponent) else {
+        throw PreparationError.invalidPlan("Intervals, durations or stage blend are outside supported bounds")
     }
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
     let generator = AVAssetImageGenerator(asset: asset)
     generator.appliesPreferredTrackTransform = true
     generator.requestedTimeToleranceBefore = .zero
     generator.requestedTimeToleranceAfter = .zero
-    let kernel = try featherKernel()
+    let kernel = try stageBlendKernel()
     var actualTimes = [Double]()
     var images = [Int: CIImage]()
 
@@ -104,7 +107,8 @@ func prepare(plan: FramePlan, planDigest: String, output: URL, evidence: URL) th
         if let cached = images[frame] { return cached }
         var actual = CMTime.zero
         let image = try generator.copyCGImage(at: time, actualTime: &actual)
-        let result = try framed(image, feather: plan.edgeFeatherPixels, kernel: kernel)
+        let result = try framed(image, innerRadius: plan.stageBlendInnerRadius,
+                                 exponent: plan.stageBlendExponent, kernel: kernel)
         images[frame] = result
         actualTimes.append(CMTimeGetSeconds(actual))
         return result
@@ -130,7 +134,7 @@ func prepare(plan: FramePlan, planDigest: String, output: URL, evidence: URL) th
         try writeFrame(imageAt(seconds), index: plan.enterFrames+index+1)
     }
     let report: [String: Any] = [
-        "method": "AVFoundation source sampling; Core Image center crop and edge feather",
+        "method": "AVFoundation source sampling; Core Image center crop and protected superellipse stage blend",
         "sourceSha256": plan.sourceSha256,
         "planSha256": planDigest,
         "sourceSeconds": duration, "sourceFramesPerSecond": fps,
@@ -138,7 +142,9 @@ func prepare(plan: FramePlan, planDigest: String, output: URL, evidence: URL) th
         "sampledSourceTimesSeconds": actualTimes.sorted(),
         "sourceBoundaryReuse": "Identical cached source image at entrance end, hold start and hold end",
         "holdMethod": "Cosine forward/reverse of reviewed assembled tail",
-        "edgeFeatherPixels": plan.edgeFeatherPixels,
+        "stageBlend": ["shape": "superellipse", "innerRadius": plan.stageBlendInnerRadius,
+                        "exponent": plan.stageBlendExponent, "solidNavyRimPixels": 16,
+                        "centralSourceOpacity": 1.0],
         "logoReconstruction": false, "newGeneration": false
     ]
     try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: evidence)

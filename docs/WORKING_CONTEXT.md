@@ -40,50 +40,73 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Higgsfield precision arrival — October 12
+## Higgsfield amethyst arrival — October 12
 
-- User clarified that the loader must use a newly generated **Higgsfield film**
-  with the original crystal/reflection quality, not the Preview 53 Blender study.
-  Original icon master remains unchanged; no new runtime dependency.
-- Created a matching shell-only reference with GPT Image 2.5, then a new silent
-  four-second Seedance 2.5 film. Fixed shell/roof, foreground V arrival first,
-  separate core second, violet circuit/rim illumination last. Generation record:
-  `assets/brand/motion/higgsfield-assembly.production.json` (prompts, job IDs,
-  reference/source checksums). Estimated generation cost: 50.75 credits.
-- Source cache: `work/brand-motion/higgsfield-assembly/`; approved source SHA
-  `dbe092003a8fe75df85e6e70da37e5f329bfb86fd07a09effc7f1e125e83f3c8`.
-  Source interval 0–3.5s becomes a 2.5s entrance; 3.5–4.0s produces a two-second
-  cosine-paced assembled glow loop. Center crop and stage-edge feather preserve
-  the source CGI. Incoming V intentionally fills the foreground before seating.
-- `scripts/build-arrival-media.py SOURCE WORK --source-sha256 SHA --provenance
-  RECORD --enter-end 3.5 --hold-end 4 --enter-seconds 2.5 --edge-feather 64`
-  samples and encodes locally with AVFoundation. Default outputs stay in
-  WORK/delivery for visual review. `--destination` installs the reviewed assets.
-  Source/timing/script hashes reject stale frame/encoding cache reuse.
-- Completed poster now preloads invisibly during entrance; native visibility
-  requires the current segment's first frame. This prevents the empty shell from
-  flashing during hold replacement. Existing actual-readiness 300ms fade stays
-  immediate; no required film duration, resolve clip, or network playback.
-- Reduced motion/returns/failures retain completed stills. Access restrictions,
-  native splash release, background pause and quiet recovery remain unchanged.
-- Four final assets total **2,135,096 bytes (2.04 MiB)**: silent 1024×768 H.264
-  Main 3.1, 30 fps at 2.6 Mbps, plus exact decoded opening/completed PNGs. Full decode,
-  fast start, source/script/asset checksums, native poster matching and release
-  guards pass. Source pose is identical across the entrance/hold junction and
-  loop endpoints; decoded seam differences are about 2.24/2.26 RGB levels.
-- **93 focused tests** and native TypeScript pass. Browser review covers 320×568,
-  430×932, 768×1024, 1024×768 with no overflow, silent hold, reduced-motion still,
-  early readiness and retry. Actual Home releases its shield/player; full device
-  controls open correctly. Temporary visual harness/server removed.
-- **Preview 54 Release built and installed**; phone reports 1.0.0 (54).
-  Strict signature, preview identity/schemes, device profile coverage, all four
-  shipped media hashes and unchanged 31,796,443-byte native scene pass. Build
-  restored production metadata. Automatic launch was blocked by the locked
-  phone; open VantaHome Preview manually. Physical motion remains unverified;
-  iPad testing is deferred and Android playback has not been verified.
-- Production is unchanged. Earlier full-suite/dependency limitations below
-  remain unchanged; this turn did not claim a new full release certification.
-- Evidence: `work/higgsfield-arrival-*` and the source cache's `app-edit/` folder.
+- User approved a quieter, seamless refinement and explicitly requested a new
+  **Higgsfield film**. New matched 4:3 keyframes and a silent Seedance 2.5 film:
+  contained V seats first, small violet crystal core follows from the left,
+  circuit illumination settles last. Original icon master remains unchanged.
+- Production record: `assets/brand/motion/higgsfield-refined.production.json`;
+  job `b565d056-e1d6-4770-a683-ffedc7a7d6b3`, estimated 53.5 credits including
+  both references. Source cache: `work/brand-motion/higgsfield-refined/`;
+  SHA `dfa17e3b12c3e5533bdbcae8521bb7c9c2ccb4f03575dbb5866b2a39f36b44d3`.
+  Source 1664×1248, 24 fps, 4.042s, no audio; 16 sampled frames reviewed.
+- Source 0.25–3.5s becomes a **2s entrance**; 3.5–4.0s supplies a 2s quiet
+  cosine-paced hold. Four runtime assets total **1,360,293 bytes (1.30 MiB)**,
+  silent 1024×768 H.264 Main 3.1/30fps plus exact decoded opening/hold PNGs.
+  Full decode, fast start and source endpoint reuse pass; decoded entrance/hold
+  and loop boundary differences are about 1.85 RGB levels out of 255.
+- Normal presentation has one small VANTAHOME wordmark at 92% of the centered
+  4:3 contain frame. Status stays accessible; delayed/error recovery retains
+  retry/sign-out and verified controls. No normal checklist, slogan or subtitle.
+- A subtle violet glow uses the existing **300ms readiness fade**. Never wait
+  for the film to finish. Reduced motion and returning sessions use completed
+  stills; background pause, access checks and immediate privacy coverage remain.
+- Source stage uses a protected superellipse blend (inner radius 0.82,
+  exponent 2.6). Chrome exposed a decoder color-level seam despite passing
+  AVFoundation edge checks. A static SVG overlay now composites exact app navy
+  after decoding: ellipse radius 48%, alpha stops 0.83/0, 0.88/0.28, 0.95/0.85,
+  0.98/1. Badge geometry stays clear; reflection fades gently. A native-only
+  launch composite carries the identical treatment before React is available.
+  `assets/release/arrival-native-poster.png` is 464,962 bytes. Its every-pixel
+  formula check is within 1/255; center pixels stay unchanged and the opaque
+  perimeter is exactly navy. All three OS images match this composite, while
+  the four runtime assets retain exact decoded posters.
+- Processing: `scripts/build-arrival-media.py SOURCE WORK --source-sha256 SHA
+  --provenance RECORD --enter-start 0.25 --enter-end 3.5 --hold-end 4
+  --enter-seconds 2 --stage-inner-radius 0.82 --stage-exponent 2.6`.
+  Default outputs remain in WORK/delivery until visual approval. Publish the
+  OS image with `--native-poster-destination assets/release/arrival-native-poster.png`;
+  copy it to all three iOS splash scales. Source,
+  timing and script hashes reject stale cache reuse. No runtime dependency added.
+- Browser review passes at 320×568, 430×932, 768×1024 and 1024×768 with no
+  overflow, silent 2s hold and seamless edges. Reduced motion starts no video;
+  early readiness at 1.2s removes the player/shield and permits controls.
+  Retry and static returns pass. Actual 3D Home opens full device controls and
+  retains no loading overlay/player/inert wrapper. Temporary QA harness removed.
+- **104 focused tests**, native TypeScript, media decode, production-script/
+  provenance hashes, release asset guards and diff review pass.
+- **Preview 55 Release built, installed and launched successfully on iPhone**;
+  device reports 1.0.0 (55). Strict signature, preview identity/schemes, device
+  profile coverage and all four packaged media hashes pass. The scene remains
+  31,796,443 bytes, SHA `1ba87a3896687f44771b2400939daafc20be4017b1e9fc5b081e96929418f3ab`.
+  Build restored production metadata; release version/asset guards pass.
+  Physical motion review remains pending; iPad tests remain deferred and Android
+  playback is unverified. Production remains unchanged.
+- Evidence: `work/refined-arrival-*`, `work/verify-refined-preview55.py`, and
+  the source cache's `app-edit/` folder. Existing full-suite/dependency limits
+  below remain; this work is not a new full release certification.
+
+### Superseded Preview 54 precision arrival
+
+- Previous Higgsfield job `3e339a8d-f8bc-4d35-85f9-efec3c2d1e84` used a large
+  foreground V and dark core, 2.5s entrance, 2.04 MiB runtime assets. Its record
+  remains `assets/brand/motion/higgsfield-assembly.production.json`; cached
+  source and processing evidence remain in `work/brand-motion/higgsfield-assembly/`.
+- Preview 54 was built/installed and device-reported as 1.0.0 (54), with exact
+  media/scene/signature checks. Launch was blocked by the locked phone.
+- Retained the current-segment first-frame guard and preloaded completed poster,
+  preventing an empty-shell flash during enter-to-hold source replacement.
 
 ### Superseded Preview 53 study
 
