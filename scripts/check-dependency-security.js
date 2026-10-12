@@ -4,6 +4,7 @@ const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 const { ensureSecurityPatches } = require("./patch-security-dependencies");
 const { assessRemediations } = require("./dependency-audit-remediation");
+const { verifyUpstreamAvailability } = require("./dependency-upstream-review");
 
 /** Reject unavailable or malformed audits instead of mistaking them for a pass. */
 function readAuditResult(result) {
@@ -57,7 +58,8 @@ function main() {
       cwd: path.resolve(__dirname, ".."),
     });
     const audit = readAuditResult(result);
-    const { remediated, unresolved } = assessRemediations(audit, verified);
+    const upstreamVersions = verifyUpstreamAvailability(audit, verified);
+    const { remediated, unresolved } = assessRemediations(audit, verified, upstreamVersions);
     if (unresolved.length || (result.status !== 0 && !Object.keys(audit.vulnerabilities).length)) {
       console.error("Unremediated dependency findings (including development tooling):");
       unresolved.forEach((finding) => console.error(`- ${finding}`));
@@ -68,7 +70,14 @@ function main() {
     if (remediated.length) {
       console.log("Dependency source verification passed; all reported defects have verified local patches.");
       console.log("Registry audit still reports these versions. They are locally remediated, not upstream-fixed:");
-      remediated.forEach(({ dependency, url }) => console.log(`- ${dependency}: installed hashes and attack regressions verified (${url}).`));
+      remediated.forEach(({ dependency, url, reviewedSuggestion }) => {
+        console.log(`- ${dependency}: installed hashes and attack regressions verified (${url}).`);
+        if (reviewedSuggestion === true) {
+          console.log("  npm suggests a dependency-tree fix without a target; published package releases are unchanged. Retaining the verified source backport.");
+        } else if (reviewedSuggestion) {
+          console.log(`  Reviewed alternative: ${reviewedSuggestion.name}@${reviewedSuggestion.version} (major stack change). Retaining the verified source backport; published package releases are unchanged.`);
+        }
+      });
     } else console.log("Dependency audit passed; no vulnerabilities found, including development tooling.");
   } catch (error) {
     console.error(error.message);

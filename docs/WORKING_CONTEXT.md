@@ -61,6 +61,15 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   `work/pending-final-secrets.log`, `work/pending-web-export.log`.
 - Development tooling only: no app/native dependency or UI changes. Installed
   **Preview 56** remains current; no reinstall is needed for this fix.
+- Hosted verification then exposed cache-dependent npm resolver proposals for
+  the two existing backports: Jest 30.5.2 and an Expo 44.0.6 downgrade. The gate
+  now distinguishes these exact reviewed stack alternatives from patched leaf
+  releases, preserving source hashes, attack regressions and advisory matching.
+  Fresh official release catalogs are checked even when npm reports no fix;
+  unavailable evidence, new releases or unknown proposals fail closed. No new
+  advisory exemption or application dependency change was made. **63 focused
+  guard tests**, live dependency verification, captured cold-cache audit replay,
+  TypeScript and independent review pass; see Dependency security for the scope.
 
 ## First valid physical iPhone profile — October 12
 
@@ -77,14 +86,25 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   life, sustained thermal performance or interactive stress-test results. Attached
   lifecycle state was unknown to Instruments; the user reported Preview open.
 - A separate 30-second Animation Hitches attempt failed during finalization with
-  Apple's `DTKTraceTapMessageHandler` assertion (exit 134). Its incomplete trace
-  cannot export; do not count it as a measurement. Preview retained the same
-  running PID afterward. Validated FPS/GPU/energy measurements remain pending.
+  Apple's `DTKTraceTapMessageHandler` assertion (exit 134), around a host disk-space
+  shortage. Its incomplete trace cannot export. After space recovered, a shorter
+  **16.35-second** capture saved and exported successfully: **one 16.67 ms hitch**
+  attributed to Preview, 895 frame-lifetime rows and **zero reported potential
+  hangs over 33 ms**. Device thermal state was **Fair** throughout that later
+  capture; this device-wide reading cannot establish app-specific causation.
+  After the first second, full one-second intervals showed 53–60 display surface
+  swaps; the initial one-second bucket recorded 28. These are compositor events,
+  **not validated Three.js render-loop FPS**. Sustained scene
+  FPS, GPU/energy and interactive stress measurements remain pending. Preview
+  retained the same running PID through the profiler recovery.
 - Cached evidence: `work/pending-iphone-preview56-reconnected.trace`, matching
   recording log, `work/pending-iphone-preview56-toc.xml`, exported time-profile,
   potential-hangs, thermal-state and lifecycle XML, and
-  `work/pending-iphone-preview56-summary.json`. Failed animation log uses the
-  `work/pending-iphone-preview56-animation` prefix. Device Hub screen sharing
+  `work/pending-iphone-preview56-summary.json`. Successful animation trace/TOC use
+  `work/pending-iphone-preview56-animation-retry`; exported data and summary use
+  `work/pending-iphone-preview56-animation-metrics.xml` and `-animation-summary.json`.
+  Failed animation log uses the `work/pending-iphone-preview56-animation` prefix.
+  Device Hub screen sharing
   requires iOS 27, so it could not provide a view of this iOS 26 phone; that
   limitation is separate from the successful CPU recording.
 

@@ -4,10 +4,12 @@ const {
 } = require("./check-dependency-security.js");
 const { spawnSync } = require("node:child_process");
 const { ensureSecurityPatches } = require("./patch-security-dependencies");
-const { assessRemediations, REVIEWED_ADVISORIES } = require("./dependency-audit-remediation");
+const { assessRemediations, REVIEWED_ADVISORIES, REVIEWED_ANCESTOR_FIXES } = require("./dependency-audit-remediation");
+const { verifyUpstreamAvailability } = require('./dependency-upstream-review');
 
 jest.mock("node:child_process", () => ({ spawnSync: jest.fn() }));
 jest.mock("./patch-security-dependencies", () => ({ ensureSecurityPatches: jest.fn(() => []) }));
+jest.mock('./dependency-upstream-review', () => ({ verifyUpstreamAvailability: jest.fn(() => new Map()) }));
 
 /** Exercise the CLI gate without network calls or leaking exit state into Jest. */
 function auditExitCode(report: unknown, status = 0): number {
@@ -27,6 +29,7 @@ function auditExitCode(report: unknown, status = 0): number {
     error.mockRestore();
     spawnSync.mockReset();
     ensureSecurityPatches.mockReset().mockReturnValue([]);
+    verifyUpstreamAvailability.mockReset().mockReturnValue(new Map());
   }
 }
 
@@ -168,6 +171,45 @@ describe('verified local source remediation', () => {
     const { audit, verified } = patchedAudit();
     audit.vulnerabilities.braces.fixAvailable = fixAvailable;
     expect(assessRemediations(audit, verified).unresolved).not.toHaveLength(0);
+  });
+
+  test('accepts only the exact reviewed cold-cache alternatives with fresh complete registry evidence', () => {
+    for (const booleanOnly of [false, true]) {
+      const { audit, verified } = patchedAudit();
+      for (const [name, vulnerability] of Object.entries(audit.vulnerabilities)) {
+        vulnerability.fixAvailable = booleanOnly ? true : REVIEWED_ANCESTOR_FIXES[name];
+      }
+      const evidence = new Map(verified.map((patch: { name: string; version: string }) => [patch.name, patch.version]));
+      expect(assessRemediations(audit, verified).unresolved).not.toHaveLength(0);
+      expect(assessRemediations(audit, verified, evidence).unresolved).toEqual([]);
+      ensureSecurityPatches.mockReturnValue(verified);
+      verifyUpstreamAvailability.mockReturnValue(evidence);
+      expect(auditExitCode(audit, 1)).toBe(0);
+    }
+  });
+
+  test('rejects new ancestor proposals, direct package upgrades and missing source proofs even with registry evidence', () => {
+    for (const proposal of [
+      { name: 'jest', version: '30.5.3', isSemVerMajor: true },
+      { name: 'other-parent', version: '1.0.0', isSemVerMajor: true },
+      { name: 'braces', version: '3.0.4', isSemVerMajor: false },
+      { ...REVIEWED_ANCESTOR_FIXES.braces, extra: true }, null, 'true', undefined,
+    ]) {
+      const { audit, verified } = patchedAudit();
+      audit.vulnerabilities.braces.fixAvailable = proposal;
+      const evidence = new Map([['braces', '3.0.3']]);
+      expect(assessRemediations(audit, verified, evidence).unresolved).not.toHaveLength(0);
+    }
+    const { audit, verified } = patchedAudit();
+    audit.vulnerabilities.braces.fixAvailable = true;
+    expect(assessRemediations(audit, [], new Map([['braces', '3.0.3']])).unresolved).not.toHaveLength(0);
+    Object.assign(audit.vulnerabilities.braces.via[0] as object, { title: 'new defect' });
+    expect(assessRemediations(audit, verified, new Map([['braces', '3.0.3']])).unresolved).not.toHaveLength(0);
+  });
+
+  test('fails the CLI when independent upstream verification is unavailable', () => {
+    verifyUpstreamAvailability.mockImplementationOnce(() => { throw new Error('registry unavailable'); });
+    expect(auditExitCode(patchedAudit().audit, 1)).toBe(1);
   });
 
   test('handles cyclic npm propagation only when all findings have known concrete origins', () => {

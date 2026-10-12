@@ -119,6 +119,34 @@ reintroduce `sprintf-js` merely to satisfy an older transitive range.
 
 ## Temporary braces and node-forge source backports
 
+### Reviewing npm resolver proposals consistently
+
+The October 12 hosted run exposed an npm cache-dependent result: the same locked
+tree reports `fixAvailable: false` with a warm metadata cache, but a fresh cache
+proposes `jest@30.5.2` for braces and `expo@44.0.6` for node-forge. npm's flag
+describes resolver alternatives, including ancestor changes, rather than proving
+that the affected package has a fixed release. These are explicitly reviewed
+stack alternatives: Jest 30 changes the Expo 54 test stack, while Expo 44 would
+downgrade the application from SDK 54. We retain the tested source backports
+instead. This does not claim that all ancestor upgrades are invalid or unavailable.
+
+The gate accepts only those exact ancestor identities/versions/major flags, or
+npm's targetless boolean suggestion, after existing source hashes, attack
+regressions and exact advisory fingerprints pass. A proposed direct package fix,
+unknown ancestor/version, or malformed suggestion still fails. The output names
+the reviewed alternative; it never calls the raw registry audit clean.
+
+Whenever either patched package appears in the audit, the gate also retrieves
+its complete published-version catalog from the official npm registry, even when
+`fixAvailable` is false. The checked latest version and sorted catalog SHA-256
+must match the October 12 review: **37 braces releases** and **134 node-forge
+releases**, currently ending at 3.0.3 and 1.4.0. Any catalog change, including a
+prerelease or older-line backport, requires review; hashes must not be refreshed
+blindly. Each request uses a new empty temporary npm cache, explicit online flags,
+no retries and a bounded timeout, with cleanup afterward. Thus npm cannot return
+an old cached catalog after a failed network revalidation. Missing, malformed or
+unavailable registry evidence fails closed. No new advisory exemption is added.
+
 As of October 3, 2026, the registry's newest releases are still `braces` 3.0.3
 and `node-forge` 1.4.0. Neither advisory identifies a published fixed version.
 The pending upstream fixes are **open pull requests**, not official security
