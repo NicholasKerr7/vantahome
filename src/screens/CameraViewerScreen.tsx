@@ -1,3 +1,5 @@
+import { cameraStatus } from "../features/cameras/cameraStatus";
+import { useCameraClock } from "../features/cameras/useCameraClock";
 import React, { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { View, Text, StyleSheet } from "react-native";
@@ -57,9 +59,11 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
   const roomName =
     device?.roomId && rooms.find((room) => room.id === device.roomId)?.name;
 
-  const isOnline = Boolean(device?.isOn);
-  const streamUrl = isOnline ? device?.streamUrl : undefined;
-  const lastSeen = formatCameraLastSeen(device?.lastSeenAt);
+  const now = useCameraClock(canViewCamera && protectedAccess.state === "granted");
+  const status = cameraStatus(device, now);
+  const isPowered = status.powered;
+  const streamUrl = isPowered ? device?.streamUrl : undefined;
+  const lastSeen = formatCameraLastSeen(device?.lastSeenAt, now);
   const accessGranted = canViewCamera && protectedAccess.state === "granted";
 
   return (
@@ -68,7 +72,7 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
       eyebrow="PRIVATE VIEW"
       subtitle={
         accessGranted
-          ? `${roomName || "Home"} · ${streamUrl ? "Live view" : isOnline ? "Awaiting live feed" : "Offline"}`
+          ? `${roomName || "Home"} · ${status.label}`
           : "Protected household camera"
       }
       onBack={() => navigation.goBack()}
@@ -108,6 +112,7 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
           <View style={styles.viewer}>
             {streamUrl ? (
               <LiveVideoPlayer
+                key={streamUrl}
                 sourceUri={streamUrl}
                 contentFit="contain"
                 enableFullscreen={false}
@@ -115,10 +120,10 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
             ) : (
               <CameraThumbnail
                 uri={device.thumbnailUrl ?? device.lastThumbnailUrl}
-                title={isOnline ? "Live unavailable" : "Camera offline"}
+                title={isPowered ? "Live unavailable" : "Last reported off"}
                 subtitle={
-                  isOnline
-                    ? "Try again soon"
+                  isPowered
+                    ? "Live feed is not configured"
                     : lastSeen
                       ? `Last seen ${lastSeen}`
                       : "No signal detected"
@@ -140,7 +145,7 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
               <View style={styles.statusText}>
                 <Text style={styles.label}>Protection</Text>
                 <Text style={styles.value}>
-                  {device.armed ? "Armed" : "Disarmed"}
+                  {status.fresh ? device.armed ? "Armed" : "Disarmed" : "Unverified"}
                 </Text>
               </View>
             </View>
@@ -158,7 +163,7 @@ export default function CameraViewerScreen({ route, navigation }: Props) {
               <View style={styles.statusText}>
                 <Text style={styles.label}>Recording</Text>
                 <Text style={styles.value}>
-                  {device.recording ? "Recording" : "Standby"}
+                  {status.fresh ? !isPowered ? "Reported stopped" : device.recording ? "Reported recording" : "Standby" : "Unverified"}
                 </Text>
               </View>
             </View>

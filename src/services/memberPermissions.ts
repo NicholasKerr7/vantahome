@@ -1,3 +1,4 @@
+import { withMembershipMutation } from "./membershipRevision";
 import { ACTION_PERMISSIONS, type ActionPermission } from "../security/permissions";
 import { supabase } from "./supabaseClient";
 
@@ -31,26 +32,14 @@ export async function setMemberPermissionOverrideRemote(
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || userData.user?.id !== expectedUserId) throw new Error("Your account changed. Sign in again to continue.");
 
-  if (allowed === null) {
-    const { error } = await supabase
-      .from("member_permission_overrides")
-      .delete()
-      .eq("home_id", homeId)
-      .eq("user_id", userId)
-      .eq("permission", permission);
-    if (error) throw new Error(error.message);
-    return;
-  }
-
-  const { error } = await supabase.from("member_permission_overrides").upsert(
-    {
-      home_id: homeId,
-      user_id: userId,
-      permission,
-      allowed,
-      updated_by: userData.user.id,
-    },
-    { onConflict: "home_id,user_id,permission" },
-  );
+  const { data, error } = await withMembershipMutation(async () => supabase!.rpc('set_member_permission_override', {
+    target_home_id: homeId,
+    target_user_id: userId,
+    requested_permission: permission,
+    requested_allowed: allowed,
+  }));
   if (error) throw new Error(error.message);
+  // SQL NULL means an authorized reset, including an already-absent override.
+  // A filtered DELETE cannot establish that outcome; only the checked RPC can.
+  if (data !== allowed) throw new Error('The server did not confirm this permission. Refresh home access.');
 }

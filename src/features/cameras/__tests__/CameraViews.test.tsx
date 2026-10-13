@@ -69,6 +69,7 @@ function camera(id: string): Device {
     isOn: true,
     streamUrl: "https://example.com/camera.m3u8",
     armed: true,
+    lastSeenAt: Date.now(),
   } as Device;
 }
 
@@ -144,4 +145,28 @@ test("an online camera without a stream is not labelled live", () => {
   expect(screen.queryByText("Private live feed")).toBeNull();
   expect(screen.getByText("Private snapshot")).toBeTruthy();
   expect(screen.queryByText(/· Live view/)).toBeNull();
+});
+
+test('an old cached power flag never claims online or verified recording', () => {
+  mockState.devices = [{ ...camera('Front'), recording: true, lastSeenAt: Date.now() - 30 * 86_400_000 }];
+  const screen = monitor();
+  expect(screen.getByText('Status unverified')).toBeTruthy();
+  expect(screen.queryByText('Online')).toBeNull();
+  expect(screen.getByText('Recording unverified')).toBeTruthy();
+  expect(screen.queryByLabelText('Go live')).toBeNull();
+  expect(screen.getByLabelText('Try live')).toBeTruthy();
+});
+
+test('powering off releases a playing camera and power restoration needs a fresh request', () => {
+  const screen = monitor();
+  fireEvent.press(screen.getByLabelText('Go live'));
+  expect(screen.getByText('Private live feed')).toBeTruthy();
+  mockState.devices = mockState.devices.map((item) => ({ ...item, isOn: false }));
+  const element = <CamerasScreen navigation={mockNavigation as unknown as NativeStackScreenProps<RootStackParamList, 'Cameras'>['navigation']} route={{ key: 'Cameras', name: 'Cameras' }} />;
+  screen.rerender(React.cloneElement(element));
+  expect(screen.queryByText('Private live feed')).toBeNull();
+  mockState.devices = mockState.devices.map((item) => ({ ...item, isOn: true }));
+  screen.rerender(React.cloneElement(element));
+  expect(screen.queryByText('Private live feed')).toBeNull();
+  expect(screen.getByLabelText('Go live')).toBeTruthy();
 });

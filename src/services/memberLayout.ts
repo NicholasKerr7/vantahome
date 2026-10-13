@@ -1,3 +1,4 @@
+import { withMembershipMutation } from "./membershipRevision";
 import { useHomeStore, type HomeState } from '../store/useHomeStore';
 import { confirmProtectedAccess } from '../security/biometricConfirmation';
 import { supabase } from './supabaseClient';
@@ -55,11 +56,11 @@ export async function saveMemberInteriorLayout(memberId: string, shareInteriorLa
   if (identityError) throw new Error(identityError.message);
   if (data.user?.id !== scope.authenticatedUserId) throw new Error('Your account changed. Sign in again.');
   requireUnchangedScope(scope, memberId, shareInteriorLayout);
-  const { error } = await supabase.rpc('set_member_interior_layout', {
+  const { error } = await withMembershipMutation(async () => supabase!.rpc('set_member_interior_layout', {
     target_home_id: scope.activeHomeId,
     target_user_id: memberId,
     share_layout: shareInteriorLayout,
-  });
+  }));
   if (error) throw new Error(error.message);
   requireUnchangedScope(scope, memberId, shareInteriorLayout);
   const result = await syncMembershipFromSupabase(scope.authenticatedUserId, scope.activeHomeId);

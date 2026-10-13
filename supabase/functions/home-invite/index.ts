@@ -127,6 +127,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Check every role-default action before sending an Auth invitation email.
+    // The recording RPC repeats this check while holding household authority stable.
+    const { data: canDelegate, error: delegationError } = await supabase.rpc("can_delegate_home_role", {
+      target_home_id: membership.home_id,
+      requested_role: role,
+    });
+    if (delegationError || canDelegate !== true) {
+      return new Response(JSON.stringify({ error: "Ask the home owner to invite this role with its protected permissions." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Validate every selected room before sending an email or recording an invitation.
     const admin = getSupabaseAdmin();
     if (roomIds.length) {
@@ -180,17 +193,15 @@ Deno.serve(async (req) => {
     const hasExistingAccess = existingMember && (existingMember.role !== "guest" ||
       !existingMember.access_expires_at || Date.parse(existingMember.access_expires_at) > Date.now());
     if (!hasExistingAccess) {
-      const { error: inviteRecordError } = await admin
-        .from("home_invites")
-        .upsert({
-          home_id: membership.home_id,
-          email,
-          invited_user_id: invitedUserId || null,
-          role,
-          room_ids: roomIds,
-          access_expires_at: accessExpiresAt,
-          status: "pending",
-        });
+      // Record with the caller's checked authority; the service role only resolves Auth recipients.
+      const { error: inviteRecordError } = await supabase.rpc("record_home_invitation", {
+        target_home_id: membership.home_id,
+        target_user_id: invitedUserId,
+        recipient_email: email,
+        requested_role: role,
+        requested_room_ids: roomIds,
+        requested_expires_at: accessExpiresAt,
+      });
       if (inviteRecordError) {
         return new Response(
           JSON.stringify({ error: inviteRecordError.message }),

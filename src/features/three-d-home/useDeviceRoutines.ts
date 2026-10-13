@@ -1,5 +1,5 @@
+import { AppFeedback as Alert } from "../../services/appFeedback";
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { openHomeFeature } from '../../app/homeNavigation';
 import { runtimePolicy } from '../../config/runtimeMode';

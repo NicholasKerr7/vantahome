@@ -57,7 +57,7 @@ test("does not overwrite saved favorites while they are still loading", async ()
 });
 
 test.each(["not json", '{"version":2,"ids":[]}', '{"version":1,"ids":[12]}'])(
-  "recovers malformed storage %s with a usable empty session",
+  "preserves malformed storage %s and blocks edits until its baseline can be recovered",
   async (raw) => {
     const storage = {
       getItem: jest.fn(async () => raw),
@@ -65,13 +65,12 @@ test.each(["not json", '{"version":2,"ids":[]}', '{"version":1,"ids":[12]}'])(
     };
     const favorites = new ModelDeviceFavorites(storage);
     await favorites.load();
-    expect(favorites.getSnapshot()).toEqual({ ids: [], status: "error" });
+    expect(favorites.getSnapshot()).toEqual({ ids: [], status: "error", error: "load" });
     favorites.toggle("living-light");
-    await waitFor(() => expect(storage.setItem).toHaveBeenCalledTimes(1));
-    expect(favorites.getSnapshot()).toEqual({
-      ids: ["living-light"],
-      status: "saved",
-    });
+    await favorites.retry();
+    expect(storage.setItem).not.toHaveBeenCalled();
+    expect(storage.getItem).toHaveBeenCalledTimes(2);
+    expect(favorites.getSnapshot()).toEqual({ ids: [], status: "error", error: "load" });
   },
 );
 
@@ -87,4 +86,33 @@ test("keeps accepted favorites in the session after storage fails", async () => 
   await waitFor(() => expect(favorites.getSnapshot().status).toBe("error"));
   expect(favorites.getSnapshot().ids).toEqual(["living-light"]);
   expect(parseDeviceFavorites(null)).toEqual([]);
+});
+
+test("a transient failed read retries and preserves saved favorites before permitting edits", async () => {
+  let cache = JSON.stringify({ version: 1, ids: ["living-light"] });
+  const storage = { getItem: jest.fn(async () => cache), setItem: jest.fn(async (_key: string, value: string) => { cache = value; }) };
+  storage.getItem.mockRejectedValueOnce(new Error("Unavailable"));
+  const favorites = new ModelDeviceFavorites(storage);
+  await favorites.load();
+  favorites.toggle("living-fan");
+  expect(storage.setItem).not.toHaveBeenCalled();
+  expect(JSON.parse(cache).ids).toEqual(["living-light"]);
+  await favorites.load();
+  favorites.toggle("living-fan");
+  await waitFor(() => expect(storage.setItem).toHaveBeenCalledTimes(1));
+  expect(JSON.parse(cache).ids).toEqual(["living-light", "living-fan"]);
+});
+
+test("save retry retains local edits without reloading an older disk baseline", async () => {
+  let cache: string | null = null;
+  const storage = { getItem: jest.fn(async () => cache), setItem: jest.fn(async (_key: string, value: string) => { cache = value; }) };
+  storage.setItem.mockRejectedValueOnce(new Error("Unavailable"));
+  const favorites = new ModelDeviceFavorites(storage);
+  await favorites.load();
+  favorites.toggle("living-light");
+  await waitFor(() => expect(favorites.getSnapshot().error).toBe("save"));
+  await favorites.retry();
+  expect(favorites.getSnapshot()).toEqual({ ids: ["living-light"], status: "saved" });
+  expect(storage.getItem).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(cache!).ids).toEqual(["living-light"]);
 });

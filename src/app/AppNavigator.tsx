@@ -1,3 +1,4 @@
+import { captureMembershipRead, isMembershipReadCurrent } from "../services/membershipRevision";
 import React, { useEffect, useRef, useState } from "react";
 import { AppState, Linking, View, StyleSheet, Platform, useWindowDimensions } from "react-native";
 import {
@@ -400,8 +401,9 @@ export default function AppNavigator() {
     let active = true;
     const sessionEpoch = useHomeStore.getState().sessionEpoch;
     const generation = lifecycleGeneration.current;
+    const read = captureMembershipRead();
     const isCurrent = () =>
-      active && appActive.current && lifecycleGeneration.current === generation &&
+      active && isMembershipReadCurrent(read) && appActive.current && lifecycleGeneration.current === generation &&
       useHomeStore.getState().sessionEpoch === sessionEpoch &&
       useHomeStore.getState().authenticatedUserId === session.user.id;
     const ensureMembership = async () => {

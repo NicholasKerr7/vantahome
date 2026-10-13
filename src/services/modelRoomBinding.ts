@@ -1,3 +1,4 @@
+import { withMembershipMutation } from "./membershipRevision";
 import { getDevice, ROOMS } from '../../packages/home-scene/src/data';
 import { useHomeStore, type HomeState } from '../store/useHomeStore';
 import { confirmProtectedAccess } from '../security/biometricConfirmation';
@@ -36,9 +37,9 @@ export async function saveModelRoomBinding(roomId: string, modelRoomId: string |
   if (current.sessionEpoch !== scope.sessionEpoch || current.activeHomeId !== scope.activeHomeId
     || current.authenticatedUserId !== scope.authenticatedUserId) throw new Error('Your home changed. Reopen room connections.');
   validateModelRoomBinding(current, roomId, modelRoomId, bindings);
-  const { error } = await supabase.rpc('set_model_room_binding', {
+  const { error } = await withMembershipMutation(async () => supabase!.rpc('set_model_room_binding', {
     target_room_id: roomId, target_model_room_id: modelRoomId, device_bindings: bindings,
-  });
+  }));
   if (error) throw new Error(error.message);
   const result = await syncMembershipFromSupabase(scope.authenticatedUserId, scope.activeHomeId);
   if (!result || !applyMembershipSnapshot(result, scope.sessionEpoch)) {

@@ -10,6 +10,7 @@ type Storage = {
 export type FavoriteSnapshot = {
   ids: readonly string[];
   status: "loading" | "saved" | "error";
+  error?: "load" | "save";
 };
 const canonicalIds = new Set(DEVICES.map((device) => device.id));
 
@@ -44,6 +45,7 @@ export class ModelDeviceFavorites {
   private writes: Promise<void> = Promise.resolve();
   private listeners = new Set<() => void>();
   private revision = 0;
+  private hydrated = false;
 
   /** Inject storage for deterministic reload, corruption, and write-race tests. */
   constructor(private readonly storage: Storage = AsyncStorage) {}
@@ -57,24 +59,38 @@ export class ModelDeviceFavorites {
     return () => this.listeners.delete(listener);
   };
 
-  /** Hydrate once; a failed cache becomes an empty, usable session with a visible error status. */
+  /** Preserve unread bytes and block edits until a successful, explicitly retryable baseline read. */
   load = (): Promise<void> => {
-    if (!this.loading)
+    if (this.hydrated) return Promise.resolve();
+    if (!this.loading) {
+      this.publish({ ...this.snapshot, status: "loading", error: undefined });
       this.loading = this.storage
         .getItem(MODEL_FAVORITES_STORAGE_KEY)
         .then((raw) => {
-          this.publish({ ids: parseDeviceFavorites(raw), status: "saved" });
+          const ids = parseDeviceFavorites(raw);
+          this.hydrated = true;
+          this.publish({ ids, status: "saved" });
         })
-        .catch(() => this.publish({ ids: [], status: "error" }));
+        .catch(() => this.publish({ ids: [], status: "error", error: "load" }))
+        .finally(() => { this.loading = null; });
+    }
     return this.loading;
   };
 
+  /** Retry a failed load or save the current validated baseline without discarding local edits. */
+  retry = (): Promise<void> => this.hydrated ? this.save(this.snapshot.ids) : this.load();
+
   /** Serialize accepted local edits so a slower write can never restore an older favorite list. */
   toggle(id: string): void {
-    if (this.snapshot.status === "loading" || !canonicalIds.has(id)) return;
+    if (!this.hydrated || !canonicalIds.has(id)) return;
     const ids = this.snapshot.ids.includes(id)
       ? this.snapshot.ids.filter((candidate) => candidate !== id)
       : [...this.snapshot.ids, id];
+    void this.save(ids);
+  }
+
+  /** Serialize retries and edits together so only the latest write may update its status. */
+  private save(ids: readonly string[]): Promise<void> {
     const revision = ++this.revision;
     this.publish({ ids, status: "saved" });
     this.writes = this.writes.then(async () => {
@@ -85,9 +101,10 @@ export class ModelDeviceFavorites {
         );
         if (revision === this.revision) this.publish({ ids, status: "saved" });
       } catch {
-        if (revision === this.revision) this.publish({ ids, status: "error" });
+        if (revision === this.revision) this.publish({ ids, status: "error", error: "save" });
       }
     });
+    return this.writes;
   }
 
   /** Notify only subscribers to this small preference record. */

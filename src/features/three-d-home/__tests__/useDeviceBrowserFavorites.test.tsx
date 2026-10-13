@@ -49,16 +49,20 @@ test("hides cached offline favorites immediately when account scope changes", as
   const toggle = jest
     .spyOn(modelDeviceFavorites, "toggle")
     .mockImplementation(() => undefined);
+  const retry = jest.spyOn(modelDeviceFavorites, "retry").mockResolvedValue();
   const { result } = renderHook(() => useDeviceBrowserFavorites());
   expect(result.current.ids).toEqual(["living-light"]);
   const staleToggle = result.current.toggle;
+  const staleRetry = result.current.retry;
   act(() => {
     useHomeStore.setState({ authenticatedUserId: "account-a" });
   });
   expect(result.current.enabled).toBe(false);
   expect(result.current.ids).toEqual([]);
   act(() => staleToggle("living-light"));
+  act(() => staleRetry());
   expect(toggle).not.toHaveBeenCalled();
+  expect(retry).not.toHaveBeenCalled();
 });
 
 test("requires the authored offline owner scope and current device visibility", async () => {

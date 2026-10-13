@@ -4,6 +4,8 @@ import NotificationsScreen from '../NotificationsScreen';
 import type { CurrentReport } from '../../features/activity/currentReports';
 
 const mockAcknowledge = jest.fn();
+const mockRetry = jest.fn(async () => undefined);
+let mockStorageError = false;
 const mockReports: CurrentReport[] = [{ id: 'condition:water:leak', deviceName: 'Water meter', title: 'Leak flagged in last report',
   detail: 'Current physical condition is not confirmed.', simulated: false, age: 'unknown', timeLabel: 'Device report time unknown', warning: true }];
 const mockItems = [{ id: 'command', revision: 'revision', title: 'Light', body: 'No physical state confirmed.', status: 'Submitted',
@@ -12,7 +14,7 @@ const mockItems = [{ id: 'command', revision: 'revision', title: 'Light', body: 
 jest.mock('@react-navigation/native', () => ({ useIsFocused: () => true, useNavigation: () => ({ canGoBack: () => false, dispatch: jest.fn() }) }));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../features/activity/useCurrentReports', () => ({ useCurrentReports: () => ({ reports: mockReports, loading: false }) }));
-jest.mock('../../features/activity/ActivityInboxProvider', () => ({ useActivityInbox: () => ({ items: mockItems, ready: true, storageError: false, acknowledge: mockAcknowledge }) }));
+jest.mock('../../features/activity/ActivityInboxProvider', () => ({ useActivityInbox: () => ({ items: mockItems, ready: true, storageError: mockStorageError, acknowledge: mockAcknowledge, retry: mockRetry }) }));
 jest.mock('../../components/deep/DeepScreen', () => {
   const React = require('react');
   const { View, Text, Pressable } = require('react-native');
@@ -23,6 +25,17 @@ jest.mock('../../components/deep/DeepScreen', () => {
     DeepTabs: ({ items, onSelect }: { items: Array<{ id: string; label: string }>; onSelect: (id: string) => void }) =>
       <View>{items.map((item) => <Pressable key={item.id} accessibilityLabel={item.label} onPress={() => onSelect(item.id)}><Text>{item.label}</Text></Pressable>)}</View>,
   };
+});
+
+test('exposes a rendered retry when activity could not be saved or restored', () => {
+  mockStorageError = true;
+  try {
+    const screen = render(<NotificationsScreen />);
+    fireEvent.press(screen.getByLabelText('Retry activity storage'));
+    expect(mockRetry).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByLabelText('Current reports'));
+    expect(screen.queryByLabelText('Retry activity storage')).toBeNull();
+  } finally { mockStorageError = false; }
 });
 
 /** Continuing reports have no dismissal/read action and survive dismissal of unrelated historical activity. */

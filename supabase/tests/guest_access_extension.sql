@@ -49,9 +49,9 @@ select ok(not has_function_privilege('service_role','public.extend_guest_access(
 
 select ok(not has_column_privilege('authenticated','public.home_members','access_expires_at','update'),'authenticated direct deadline update denied');
 
-select ok(has_column_privilege('authenticated','public.home_members','role','update'),'ordinary role update grant remains');
+select ok(not has_column_privilege('authenticated','public.home_members','role','update'),'role changes require checked management');
 
-select ok(has_column_privilege('authenticated','public.home_members','access_expires_at','insert'),'initial membership inserts retain deadline column');
+select ok(not has_column_privilege('authenticated','public.home_members','access_expires_at','insert'),'initial membership deadlines require invitation admission');
 
 set local role authenticated;
 

@@ -1,3 +1,4 @@
+import { AppFeedback as Alert } from "../services/appFeedback";
 import React, { useMemo, useRef, useState } from "react";
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -7,7 +8,6 @@ import {
   FlatList,
   TextInput,
   ScrollView,
-  Alert,
   useWindowDimensions,
   type StyleProp,
   type TextStyle,

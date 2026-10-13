@@ -178,11 +178,11 @@ describe('smart gas sample controls', () => {
     const meter = initial.deviceStates[meterId];
     const detector = initial.deviceStates[detectorId];
     for (const settings of [{ gasRemainingKg: -1 }, { gasRemainingKg: 13 }, { gasRemainingKg: 1.234 }, { gasFlowKgH: Infinity }, { gasCapacityKg: 20 }, { gasRemainingPercent: 40 }, { gasLastEvent: 'hardware-success' }]) {
-      expect(parseSimulationRequest({ channel: SIMULATION_CHANNEL, version: 1, type: 'patch', requestId: 1, changes: { deviceStates: { [meterId]: { ...meter, settings } } } })).toBeNull();
+      expect(parseSimulationRequest({ channel: SIMULATION_CHANNEL, version: 1, type: 'patch', requestId: 1, base: { deviceStates: { [meterId]: meter } }, changes: { deviceStates: { [meterId]: { ...meter, settings } } } })).toBeNull();
     }
     for (const id of [meterId, detectorId]) {
       const current = initial.deviceStates[id];
-      expect(parseSimulationRequest({ channel: SIMULATION_CHANNEL, version: 1, type: 'patch', requestId: 2, changes: { deviceStates: { [id]: { ...current, on: false } } } })).toBeNull();
+      expect(parseSimulationRequest({ channel: SIMULATION_CHANNEL, version: 1, type: 'patch', requestId: 2, base: { deviceStates: { [id]: current } }, changes: { deviceStates: { [id]: { ...current, on: false } } } })).toBeNull();
       expect(setDeviceLevelState(id, current, 0)).toBe(current);
     }
     expect(readDeviceSetting(getDevice(detectorId)!, detector, 'isOn')).toBe(true);

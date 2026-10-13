@@ -112,10 +112,12 @@ test('shared interior tour denies forged or stale actions, masks hidden state, a
   await settle();
   expect(deliver.mock.lastCall?.[0].state.deviceStates['family-tv']).toEqual({ on: false, level: 0 });
   session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: 1,
+    base: { deviceStates: { 'master-light': createDefaultSimulationSnapshot().deviceStates['master-light'], 'family-tv': { on: false, level: 0 } } },
     changes: { deviceStates: { 'master-light': { on: true, level: 40 }, 'family-tv': { on: true, level: 50 } } } });
   await settle();
   expect(storage.setItem).not.toHaveBeenCalled();
   session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: 2,
+    base: { deviceStates: { 'master-light': createDefaultSimulationSnapshot().deviceStates['master-light'] } },
     changes: { deviceStates: { 'master-light': { on: true, level: 40 } } } });
   await settle();
   expect(deliver.mock.lastCall?.[0].state.deviceStates['master-light']).toMatchObject({ on: true, level: 40 });
@@ -123,6 +125,7 @@ test('shared interior tour denies forged or stale actions, masks hidden state, a
   store.setState({ roomMembers: [] });
   expect(deliver.mock.lastCall?.[0].access.roomIds).toEqual([]);
   session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: 3,
+    base: { deviceStates: { 'master-light': { on: true, level: 40 } } },
     changes: { deviceStates: { 'master-light': { on: true, level: 99 } } } });
   await settle();
   expect(deliver.mock.lastCall?.[0].state.deviceStates['master-light']).toEqual({ on: false, level: 0 });
@@ -161,5 +164,22 @@ test('an open scene receives layout sharing and revocation without broadening it
   expect(deliver.mock.lastCall?.[0].state.deviceStates['family-tv']).toEqual({ on: false, level: 0 });
   store.setState({ household: [{ ...state.household[0], shareInteriorLayout: false }] });
   expect(deliver.mock.lastCall?.[0].access).toEqual(initialAccess);
+  session.dispose();
+});
+
+
+test('a restricted member cannot pause a gate outside their current control grant', async () => {
+  const store = createStore<HomeState>(() => account());
+  const persistence = new SimulationPersistence({ getItem: async () => null, setItem: async () => undefined });
+  const session = new SimulationSession(jest.fn(), jest.fn(), { store, persistence, mode: 'production' });
+  const scope = modelSimulationScope(store.getState(), false);
+  await settle();
+  const moving = createDefaultSimulationSnapshot();
+  moving.deviceStates['entry-gate'] = { on: true, level: 75, settings: { gatePhase: 'closing', gateCloseTargetPercent: 0 } };
+  persistence.save(scope, moving);
+  session.pauseSafety();
+  store.setState({ membershipReady: false });
+  await settle();
+  expect(await persistence.load(scope)).toEqual(moving);
   session.dispose();
 });

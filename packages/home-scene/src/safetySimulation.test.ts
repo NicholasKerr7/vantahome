@@ -12,7 +12,7 @@ const smokeId = DEVICES.find((device) => device.kind === 'smoke')!.id;
 
 /** Exercise the real validated transaction boundary, including canonical reapplication. */
 function change(state: SimulationSnapshot, id: string, value: DeviceState): SimulationSnapshot {
-  const request = parseSimulationRequest({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: 1, changes: { deviceStates: { [id]: value } } });
+  const request = parseSimulationRequest({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: 1, base: { deviceStates: { [id]: state.deviceStates[id] } }, changes: { deviceStates: { [id]: value } } });
   if (request?.type !== 'patch') throw new Error('Safety state must pass bridge validation');
   const optimistic = mergeSimulationChanges(state, request.changes);
   const canonical = mergeSimulationChanges(state, { deviceStates: optimistic.deviceStates });

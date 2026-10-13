@@ -113,6 +113,46 @@ afterEach(() => {
 const flushPromises = () => Promise.resolve();
 
 describe("flowRuntime", () => {
+  it('forces periodic timezone verification despite response latency and runs a due minute exactly once', async () => {
+    jest.setSystemTime(new Date('2026-01-01T00:00:55Z'));
+    useHomeStore.setState({ accountUserId: 'owner', authenticatedUserId: 'owner', activeHomeId: 'home', accountHomeId: 'home',
+      activeMemberId: 'owner', membershipReady: true, household: [{ id: 'owner', role: 'Owner', name: 'Owner', status: 'home' }],
+      flows: [{ id: 'latency', name: 'Latency', enabled: true, triggers: [{ type: 'time', hour: 0, minute: 2 }],
+        conditions: [], actions: [{ type: 'notify', message: 'Due' }] }] });
+    const settings = { location: { name: 'UTC', latitude: 0, longitude: 0, timeZone: 'UTC' }, updatedAt: '2026-01-01T00:00:00Z' };
+    jest.mocked(readHomeWeatherSettings).mockReset()
+      .mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(settings), 1000)))
+      .mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(settings), 10_000)));
+    const stop = startRuntime();
+    try {
+      await jest.advanceTimersByTimeAsync(60_000);
+      expect(readHomeWeatherSettings).toHaveBeenCalledTimes(2);
+      await jest.advanceTimersByTimeAsync(70_000);
+      expect(readHomeWeatherSettings).toHaveBeenCalledTimes(3);
+      expect(sendLocalNotification).toHaveBeenCalledTimes(1);
+    } finally { stop(); }
+  });
+
+  it('does not catch up a minute lost to unavailable verification or replay a later verified current minute', async () => {
+    jest.setSystemTime(new Date('2026-01-01T00:00:55Z'));
+    useHomeStore.setState({ accountUserId: 'owner', authenticatedUserId: 'owner', activeHomeId: 'home', accountHomeId: 'home',
+      activeMemberId: 'owner', membershipReady: true, household: [{ id: 'owner', role: 'Owner', name: 'Owner', status: 'home' }],
+      flows: [{ id: 'unavailable', name: 'Unavailable', enabled: true, triggers: [{ type: 'time', hour: 0, minute: 2 }],
+        conditions: [], actions: [{ type: 'notify', message: 'Missed' }] },
+        { id: 'recovered', name: 'Recovered', enabled: true, triggers: [{ type: 'time', hour: 0, minute: 3 }],
+          conditions: [], actions: [{ type: 'notify', message: 'Recovered' }] }] });
+    const settings = { location: { name: 'UTC', latitude: 0, longitude: 0, timeZone: 'UTC' }, updatedAt: '2026-01-01T00:00:00Z' };
+    jest.mocked(readHomeWeatherSettings).mockReset().mockResolvedValueOnce(settings)
+      .mockRejectedValueOnce(new Error('Unavailable'))
+      .mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(settings), 10_000)));
+    const stop = startRuntime();
+    try {
+      await jest.advanceTimersByTimeAsync(170_000);
+      expect(sendLocalNotification).toHaveBeenCalledTimes(1);
+      expect(sendLocalNotification).toHaveBeenCalledWith('VantaHome routine', 'Recovered', expect.anything(), expect.anything());
+    } finally { stop(); }
+  });
+
   it('waits for one shared verified property read before executing time-based routines', async () => {
     useHomeStore.setState({ accountUserId: 'owner', authenticatedUserId: 'owner', activeHomeId: 'home', accountHomeId: 'home',
       activeMemberId: 'owner', membershipReady: true, household: [{ id: 'owner', role: 'Owner', name: 'Owner', status: 'home' }],

@@ -16,6 +16,7 @@ const mockGetSession = jest.fn();
 const mockDeleteResult = jest.fn();
 const mockEq = jest.fn();
 const mockFrom = jest.fn();
+const mockRpc = jest.fn();
 const mockRespondInvite = jest.fn();
 const mockSyncMembership = jest.fn();
 const mockApplyMembership = jest.fn();
@@ -27,6 +28,7 @@ jest.mock("../../services/supabaseClient", () => ({
   supabase: {
     auth: { getSession: (...args: unknown[]) => mockGetSession(...args) },
     from: (...args: unknown[]) => mockFrom(...args),
+    rpc: (...args: unknown[]) => mockRpc(...args),
   },
 }));
 jest.mock("../../services/cloudRegistry", () => ({
@@ -125,7 +127,8 @@ describe("Profile household authorization and account isolation", () => {
     });
     mockSetPermission.mockReset().mockResolvedValue(undefined);
     mockGetSession.mockReset().mockResolvedValue({ data: { session: { access_token: "fixture-session" } } });
-    mockDeleteResult.mockReset().mockResolvedValue({ data: { user_id: member.userId }, error: null });
+    mockDeleteResult.mockReset().mockResolvedValue({ data: member.userId, error: null });
+    mockRpc.mockImplementation((...args: unknown[]) => mockDeleteResult(...args));
     const query: DeleteQuery = {
       delete: jest.fn(() => query),
       eq: mockEq.mockImplementation(() => query),
@@ -560,16 +563,16 @@ describe("Profile household authorization and account isolation", () => {
   });
 
   it("waits for an authoritative deleted row before removing a cloud member", async () => {
-    const deletion = deferred<{ data: { user_id: string | undefined }; error: null }>();
+    const deletion = deferred<{ data: string | undefined; error: null }>();
     mockDeleteResult.mockReturnValueOnce(deletion.promise);
     await mount(administrator);
     await selectMember(member);
     await press(button(`Remove ${member.name}`));
-    expect(mockFrom).toHaveBeenCalledWith("home_members");
-    expect(mockEq).toHaveBeenCalledWith("home_id", homeId);
-    expect(mockEq).toHaveBeenCalledWith("user_id", member.userId);
+    expect(mockRpc).toHaveBeenCalledWith("remove_home_member", {
+      target_home_id: homeId, target_user_id: member.userId,
+    });
     expect(useHomeStore.getState().household).toContainEqual(member);
-    await act(async () => { deletion.resolve({ data: { user_id: member.userId }, error: null }); });
+    await act(async () => { deletion.resolve({ data: member.userId, error: null }); });
     expect(useHomeStore.getState().household.some((item) => item.id === member.id)).toBe(false);
   });
 
@@ -586,14 +589,14 @@ describe("Profile household authorization and account isolation", () => {
   });
 
   it("ignores a completed deletion after changing account and home", async () => {
-    const deletion = deferred<{ data: { user_id: string | undefined }; error: null }>();
+    const deletion = deferred<{ data: string | undefined; error: null }>();
     mockDeleteResult.mockReturnValueOnce(deletion.promise);
     await mount();
     await selectMember(member);
     await press(button(`Remove ${member.name}`));
     let nextMembers: HouseholdMember[] = [];
     await act(async () => { nextMembers = switchHousehold(); });
-    await act(async () => { deletion.resolve({ data: { user_id: member.userId }, error: null }); });
+    await act(async () => { deletion.resolve({ data: member.userId, error: null }); });
     expect(useHomeStore.getState().household).toEqual(nextMembers);
     expect(alert).not.toHaveBeenCalled();
   });

@@ -1,9 +1,51 @@
 # Deep reliability rescan
 
 Reviewed **October 13, 2026**, against application commit **d6e3cd4** (Preview 58).
-This is a source and isolated-runtime audit. It records **11 additional finding
-groups**; it does not implement their fixes or certify every possible state.
-No hosted database, production service, device command, or installed app changed.
+The original source and isolated-runtime audit recorded **11 additional finding
+groups** without changing a hosted database or installed app. **All 11 are now
+addressed in the October 13 remediation below.** Neither review certifies every
+possible state or authorizes production/physical-device operation.
+
+
+## Resolution — October 13 / Preview 59
+
+| Finding | Implemented correction | Regression evidence |
+| --- | --- | --- |
+| 1 | Migration 022 revokes direct table/column writes; checked invitation, role, removal, permission and room-grant operations serialize household authority. Denials survive expired-Guest replacement. | 46 new mutation checks, 576 total SQL assertions over all 22 migrations; independent source review. |
+| 2 | Shared membership read/mutation revision plus home/session/policy snapshots rejects superseded results. An old login's completion cannot invalidate the current login's verification. | Real App home-change success/null/error races and membership installer/service tests; three late-completion regressions reproduced before the final fix. |
+| 3 | Checked permission RPC returns exact confirmed value, including authorized NULL resets. | Denied reset versus already-absent override; unexpected response rejection. |
+| 4 | Both sender implementations attach validated baselines; host and pending overlays rebase changed fields. | Real renderer/client/session/persistence delay and concurrent-edit tests. |
+| 5 | Authorized gate interruption persists synchronously before lifecycle/access teardown. | Direct background/resume in both App listener orders; queued tick rejection; explicit close still works. |
+| 6 | Nested flow/rule/action/scene/device-patch validation rejects malformed fields and Unicode identifiers before hydration. | Real hydration preserves corrupt bytes; retry and valid Unicode tests. |
+| 7 | Periodic timezone verification forces a fresh shared read and ticks on response. | Delayed-response boundary and no duplicate/current-minute replay tests. |
+| 8 | Camera report freshness and playback are separate; off/access/background unmount players; real mount ordering, first-frame, timeout and Retry states. | Camera power-off/restart, stale reports, player/error/background tests. |
+| 9 | Shared rendered web feedback replaces silent Alert usage; native behavior retained with scoped confirmations. | Browser dialog/confirm/cancel/account-change/deadline tests and local-only browser flow. |
+| 10 | Favorites require successful baseline hydration and retry load/save without replacing unread history. | Failed read/write/retry serialization tests; browser fault injection. |
+| 11 | Inbox retains the latest dirty snapshot after failed persistence; scoped Retry flushes without another event. | Failed dismissal/concurrent-write tests; browser fault injection. |
+
+The independent review also closed direct room-assignment delegation, rejected
+NULL/duplicate invitation arguments, matched initial invitation deadlines to the
+existing 30-day policy, and checked stale Guest confirmations at click time.
+
+Verification: 3,126 app tests, 1,037 scene tests, 127 bridge tests, 47 script tests,
+576 SQL assertions, app/edge TypeScript, web/scene/Preview 59 builds and release
+package checks. The SQL suite used an isolated disposable PostgreSQL instance;
+no exploit was attempted against the live household. Staging received checked
+`home-invite` version 20 before migration 022, keeping the transition fail-closed.
+Read-only catalog checks confirmed closure and anonymous invitation returned 401.
+Preview 59 was installed/launched and its running process verified. Production
+is unchanged; real-hub execution, physical camera playback, native interaction
+signoff and independent release security review remain separate work.
+
+The last login-completion correction passed 99 focused tests, TypeScript and
+independent review. Browser fault injection covered 21 cases at phone portrait
+and both tablet orientations, including saved-data recovery, keyboard-accessible
+feedback and unavailable-camera states. All 12 layout checks stayed within the
+viewport; fresh uninstrumented reloads had zero browser errors. These checks used
+disposable local simulation profiles and did not exercise an actual camera feed.
+
+See [working context](WORKING_CONTEXT.md#deep-rescan-fixes--october-13--preview-59)
+for exact receipts, checksums, current deployment and native-package evidence.
 
 ## Fix first
 

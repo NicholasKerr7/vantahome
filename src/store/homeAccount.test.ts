@@ -269,7 +269,7 @@ test("legacy cache migration removes camera URLs without losing unowned automati
       version: 4,
       state: {
         devices: snapshot("alice").devices,
-        flows: [{ id: "old-flow", name: "Saved locally" }],
+        flows: [{ id: "old-flow", name: "Saved locally", enabled: false, triggers: [], conditions: [], actions: [] }],
       },
     }),
   );

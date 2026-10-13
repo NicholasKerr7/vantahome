@@ -29,6 +29,7 @@ type InboxContextValue = Readonly<{
   ready: boolean;
   storageError: boolean;
   acknowledge: (items: readonly InboxItem[], dismiss: boolean) => void;
+  retry: () => Promise<void>;
 }>;
 const EMPTY: InboxSnapshot = { events: [], ready: false, storageError: false };
 const ActivityInboxContext = createContext<InboxContextValue | null>(null);
@@ -177,8 +178,14 @@ export default function ActivityInboxProvider({ enabled, commands, children }: P
     const revisions = new Map(rows.flatMap((item) => permitted.get(item.id) === item.revision ? [[item.id, item.revision]] : []));
     void activityInboxJournal.acknowledge(scope, revisions, dismiss);
   }, [enabled, scope, identity, snapshot.events]);
-  const value = useMemo(() => ({ items, ready: snapshot.ready, storageError: snapshot.storageError, acknowledge }),
-    [items, snapshot.ready, snapshot.storageError, acknowledge]);
+  /** A stale retry button cannot read or write another account's journal. */
+  const retry = useCallback(async (): Promise<void> => {
+    const current = useHomeStore.getState();
+    if (!enabled || !scope || getActivityInboxScope(current) !== scope || getCommandActivityScope(current) !== identity) return;
+    await activityInboxJournal.retry(scope);
+  }, [enabled, scope, identity]);
+  const value = useMemo(() => ({ items, ready: snapshot.ready, storageError: snapshot.storageError, acknowledge, retry }),
+    [items, snapshot.ready, snapshot.storageError, acknowledge, retry]);
   return <ActivityInboxContext.Provider value={enabled && scope ? value : null}>{children}</ActivityInboxContext.Provider>;
 }
 

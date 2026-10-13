@@ -1,6 +1,8 @@
+import { removeHomeMember } from "../../services/memberManagement";
+import { AppFeedback as Alert } from "../../services/appFeedback";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Alert, Platform } from "react-native";
+import { Platform } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -405,16 +407,8 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     try {
       if (!scope.activeHomeId || !member.userId)
         throw new Error("Verify home access again.");
-      const { data, error } = await supabase
-        .from("home_members")
-        .delete()
-        .eq("home_id", scope.activeHomeId)
-        .eq("user_id", member.userId)
-        .select("user_id")
-        .maybeSingle();
+      await removeHomeMember(scope.activeHomeId, member.userId);
       if (!scopeIsCurrent(scope)) return;
-      if (error || !data)
-        throw new Error("You do not have permission to remove this member.");
       removeHouseholdMember(memberId);
     } catch (error) {
       if (scopeIsCurrent(scope))

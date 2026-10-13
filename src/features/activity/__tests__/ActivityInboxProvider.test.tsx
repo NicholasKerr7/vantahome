@@ -1,12 +1,12 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { act, render, waitFor } from '@testing-library/react-native';
+import { act, render, renderHook, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHomeStore, type HomeState } from '../../../store/useHomeStore';
 import { createDefaultSimulationSnapshot, type SimulationSnapshot } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
 import type { CommandActivityProgress } from '../../../components/command-feedback/useCommandActivity';
 import ActivityInboxProvider, { getActivityInboxScope, hasMeaningfulSimulationChange, presentInboxEvents, useActivityInbox } from '../ActivityInboxProvider';
-import { inboxRevision, type InboxEvent } from '../activityInboxJournal';
+import { activityInboxJournal, inboxRevision, type InboxEvent } from '../activityInboxJournal';
 import { simulationPersistence } from '../../three-d-home/simulationPersistence';
 
 const mockSimulationListeners = new Set<(state: SimulationSnapshot) => void>();
@@ -46,6 +46,26 @@ function command(deviceId = 'light'): CommandActivityProgress {
 }
 
 beforeEach(async () => { await AsyncStorage.clear(); mockSimulationListeners.clear(); });
+
+test('retry rechecks account identity and session before touching stored activity', async () => {
+  useHomeStore.setState(home('retry-scope'));
+  const retry = jest.spyOn(activityInboxJournal, 'retry').mockResolvedValue();
+  const { result } = renderHook(() => useActivityInbox(), {
+    wrapper: ({ children }) => <ActivityInboxProvider enabled commands={[]}>{children}</ActivityInboxProvider>,
+  });
+  try {
+    const staleRetry = result.current!.retry;
+    await act(async () => { await staleRetry(); });
+    expect(retry).toHaveBeenCalledWith(getActivityInboxScope(useHomeStore.getState()));
+    retry.mockClear();
+    act(() => { useHomeStore.setState({ sessionEpoch: 2 }); });
+    await act(async () => { await staleRetry(); });
+    expect(retry).not.toHaveBeenCalled();
+    act(() => { useHomeStore.setState(home('retry-other')); });
+    await act(async () => { await staleRetry(); });
+    expect(retry).not.toHaveBeenCalled();
+  } finally { retry.mockRestore(); }
+});
 
 test('scope rejects an unverified or switched account/home', () => {
   const state = home('scope');

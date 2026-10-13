@@ -1,5 +1,6 @@
+import { AppFeedback as Alert } from "../../services/appFeedback";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Linking } from "react-native";
+import { Linking } from "react-native";
 import Constants from "expo-constants";
 import { runtimePolicy } from "../../config/runtimeMode";
 import { useCommandActivityLauncher } from "../../components/command-feedback/CommandActivityContext";

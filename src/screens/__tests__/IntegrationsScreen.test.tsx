@@ -181,7 +181,7 @@ describe("Integrations screen", () => {
 
   it("runs configured authorization only for an authenticated household", async () => {
     mockConfiguration.mockReturnValue({});
-    useHomeStore.setState({ authenticatedUserId: "owner", activeHomeId: "home", activeMemberId: "member", membershipReady: true });
+    useHomeStore.setState({ authenticatedUserId: "owner", activeHomeId: "home", activeMemberId: "member", household: [{ id: "member", role: "Owner", name: "Owner", status: "home" }], membershipReady: true });
     tree = renderScreen();
     expect(control(tree, "Authorize Amazon Alexa").props.disabled).toBe(false);
     await act(async () => { await control(tree!, "Authorize Amazon Alexa").props.onPress(); });
@@ -190,7 +190,7 @@ describe("Integrations screen", () => {
   });
 
   it("does not clear another session’s authorization from an old confirmation dialog", () => {
-    useHomeStore.setState({ authenticatedUserId: "owner", activeHomeId: "home", activeMemberId: "member", membershipReady: true, integrations: { ...seed.integrations, alexa: { status: "linked" } } });
+    useHomeStore.setState({ authenticatedUserId: "owner", activeHomeId: "home", activeMemberId: "member", household: [{ id: "member", role: "Owner", name: "Owner", status: "home" }], membershipReady: true, integrations: { ...seed.integrations, alexa: { status: "linked" } } });
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
     tree = renderScreen();
     act(() => control(tree!, "Remove Amazon Alexa authorization").props.onPress());

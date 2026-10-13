@@ -1,3 +1,4 @@
+import { captureMembershipRead, isMembershipReadCurrent, type MembershipRead } from "./membershipRevision";
 import { supabase } from "./supabaseClient";
 import type {
   Device,
@@ -61,6 +62,8 @@ export type MembershipSyncResult = {
   activeMemberId: string;
 };
 
+const snapshotReads = new WeakMap<MembershipSyncResult, MembershipRead>();
+
 /** Translate server roles into the presentation and local authorization vocabulary. */
 function mapRole(role: string): HouseholdMember["role"] {
   switch (role) {
@@ -93,6 +96,7 @@ export async function syncMembershipFromSupabase(
   expectedUserId?: string,
   preferredHomeId?: string,
 ): Promise<MembershipSyncResult | null> {
+  const read = captureMembershipRead();
   const client = supabase;
   if (!client) return null;
   const { data: userData, error: userError } = await client.auth.getUser();
@@ -214,7 +218,7 @@ export async function syncMembershipFromSupabase(
         allowed: row.allowed,
       })) ?? [];
 
-  return {
+  const result: MembershipSyncResult = {
     homeId: membership.home_id,
     rooms: ((roomsData ?? []) as RoomRow[]).map((room) => ({ id: room.id, name: room.name, modelRoomId: room.model_room_id })),
     devices,
@@ -223,10 +227,14 @@ export async function syncMembershipFromSupabase(
     permissionOverrides,
     activeMemberId: userId,
   };
+  snapshotReads.set(result, read);
+  return result;
 }
 
 /** Install registry and policy atomically, and reject an old account's late response. */
 export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSessionEpoch?: number) {
+  const read = snapshotReads.get(result);
+  if (read && !isMembershipReadCurrent(read)) return false;
   const current = useHomeStore.getState();
   if (expectedSessionEpoch !== undefined && current.sessionEpoch !== expectedSessionEpoch) return false;
   if (current.authenticatedUserId !== result.activeMemberId) return false;

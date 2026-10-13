@@ -89,7 +89,8 @@ export const deviceBrowserStyles = StyleSheet.create({
     borderColor: theme.colors.stroke,
   },
   backLabel: { color: theme.colors.accentText, fontSize: 12 },
-  saveWarning: { color: theme.colors.subtext, fontSize: 11, lineHeight: 16 },
+  favoriteRecovery: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  saveWarning: { flex: 1, color: theme.colors.subtext, fontSize: 11, lineHeight: 16 },
   empty: {
     flex: 1,
     minHeight: 0,

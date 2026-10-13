@@ -13,7 +13,9 @@ const mockFavorites = {
   enabled: true,
   ids: [] as string[],
   status: "saved",
+  error: undefined as "load" | "save" | undefined,
   toggle: jest.fn(),
+  retry: jest.fn(),
 };
 jest.mock("../useDeviceBrowserFavorites", () => ({
   useDeviceBrowserFavorites: () => mockFavorites,
@@ -28,7 +30,9 @@ beforeEach(() => {
   mockFavorites.enabled = true;
   mockFavorites.ids = [];
   mockFavorites.status = "saved";
+  mockFavorites.error = undefined;
   mockFavorites.toggle.mockClear();
+  mockFavorites.retry.mockClear();
 });
 afterEach(() => jest.restoreAllMocks());
 const client = new SimulationControlClient();
@@ -184,6 +188,7 @@ test("explains empty favorites, guards hydration, and hides favorites outside it
   fireEvent.press(screen.getByLabelText("Browse favorite devices"));
   expect(screen.getByText("Loading favorites…")).toBeTruthy();
   mockFavorites.status = "error";
+  mockFavorites.error = "load";
   screen.rerender(
     <DeviceBrowser
       snapshot={snapshot}
@@ -192,10 +197,16 @@ test("explains empty favorites, guards hydration, and hides favorites outside it
       allowedDeviceIds={["living-light"]}
     />,
   );
-  expect(screen.getByText("Your favorites start here")).toBeTruthy();
+  expect(screen.getByText("Saved favorites unavailable")).toBeTruthy();
   expect(
-    screen.getByText(/Favorites could not be saved or loaded/),
+    screen.getByText(/Saved favorites could not be loaded/),
   ).toBeTruthy();
+  fireEvent.press(screen.getByLabelText("Retry favorites"));
+  expect(mockFavorites.retry).toHaveBeenCalledTimes(1);
+  fireEvent.press(screen.getByLabelText("Clear filters and browse rooms"));
+  fireEvent.press(screen.getByLabelText("Living room, 1 devices"));
+  expect(screen.getByLabelText(/Add .* to favorites/).props.accessibilityState.disabled).toBe(true);
+  fireEvent.press(screen.getByLabelText("Browse all rooms"));
   mockFavorites.enabled = false;
   screen.rerender(
     <DeviceBrowser

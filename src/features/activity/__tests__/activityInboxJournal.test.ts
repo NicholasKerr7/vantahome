@@ -103,6 +103,52 @@ test('reports persistence failures while retaining current local activity', asyn
   expect(result.events).toEqual([event()]);
 });
 
+test.each(['same receipt', 'explicit retry'])('retries a failed dismissal with %s and preserves it across restart', async (method) => {
+  const { storage } = storageFixture();
+  const journal = new ActivityInboxJournal(storage);
+  const row = event();
+  const revisions = new Map([[row.id, inboxRevision(row)]]);
+  await journal.upsert('home', [row]);
+  storage.setItem.mockRejectedValueOnce(new Error('Unavailable'));
+  await journal.acknowledge('home', revisions, true);
+  expect((await read(journal, 'home')).storageError).toBe(true);
+  if (method === 'same receipt') await journal.acknowledge('home', revisions, true);
+  else await journal.retry('home');
+  expect(storage.setItem).toHaveBeenCalledTimes(3);
+  expect((await read(journal, 'home')).storageError).toBe(false);
+  expect((await read(new ActivityInboxJournal(storage), 'home')).events[0].dismissedRevision).toBe(inboxRevision(row));
+});
+
+test('retains newer changes during a failed write and retries only the latest bytes', async () => {
+  const { storage } = storageFixture();
+  let reject!: (error: Error) => void;
+  storage.setItem.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+  const journal = new ActivityInboxJournal(storage);
+  const first = journal.upsert('home', [event({ status: 'sending' })]);
+  await read(journal, 'home');
+  const second = journal.upsert('home', [event({ status: 'failed', updatedAt: 120 })]);
+  await Promise.resolve();
+  reject(new Error('Unavailable'));
+  await Promise.all([first, second]);
+  expect(storage.setItem).toHaveBeenCalledTimes(1);
+  await journal.retry('home');
+  expect(storage.setItem).toHaveBeenCalledTimes(2);
+  expect((await read(new ActivityInboxJournal(storage), 'home')).events[0].status).toBe('failed');
+});
+
+test('explicit retry restores unread history without inventing a new event or crossing scopes', async () => {
+  const { storage, values } = storageFixture();
+  const saved = JSON.stringify({ version: 1, events: [event()] });
+  values.set('vantahome-activity:v1:home', saved);
+  storage.getItem.mockRejectedValueOnce(new Error('Unavailable'));
+  const journal = new ActivityInboxJournal(storage);
+  expect((await read(journal, 'home')).storageError).toBe(true);
+  await journal.retry('home');
+  expect((await read(journal, 'home')).events).toEqual([event()]);
+  expect((await read(journal, 'other')).events).toEqual([]);
+  expect(storage.setItem).not.toHaveBeenCalled();
+});
+
 test('coalesces a rapid simulated slider gesture without overwriting a later separate change', async () => {
   const { storage } = storageFixture();
   const journal = new ActivityInboxJournal(storage);

@@ -52,9 +52,9 @@ export function CameraAccessState({
 }
 
 /** Format the last reported camera presence without implying a live connection. */
-export function formatCameraLastSeen(timestamp?: number) {
-  if (!timestamp) return "";
-  const minutes = Math.floor(Math.max(0, Date.now() - timestamp) / 60_000);
+export function formatCameraLastSeen(timestamp?: number, now = Date.now()) {
+  if (!timestamp || !Number.isFinite(timestamp) || timestamp < 0 || timestamp > now) return "";
+  const minutes = Math.floor((now - timestamp) / 60_000);
   if (minutes < 1) return "Just now";
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);

@@ -68,6 +68,9 @@ jest.mock("expo-video", () => {
     useVideoPlayer: jest.fn(() => ({
       play: jest.fn(),
       pause: jest.fn(),
+      status: "loading",
+      playing: false,
+      addListener: jest.fn(() => ({ remove: jest.fn() })),
       loop: false,
       muted: false,
     })),

@@ -40,24 +40,80 @@ Last maintained: **2026-10-13**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Follow-up deep audit — October 13
+## Deep rescan fixes — October 13 / Preview 59
 
-After Preview 58, the user requested another deep scan. Read
-[Deep reliability rescan](DEEP_RELIABILITY_RESCAN.md) before implementing more work.
-It records **11 additional confirmed finding groups** at app source **d6e3cd4**:
-a P1 restricted-Admin membership-write policy bypass; stale membership refreshes;
-false-success permission reset; delayed renderer edits overwriting newer state;
-direct background/resume gate behavior; nested routine cache validation; timezone
-refresh gaps; camera status/player cleanup; remaining browser Alert no-ops; offline
-favorite recovery; and failed inbox-write retries. **These findings are unresolved.**
+The **11 finding groups** in [Deep reliability rescan](DEEP_RELIABILITY_RESCAN.md)
+are addressed. The original evidence remains in that report; its new resolution
+section records the implementation and limits. Preserve these boundaries:
 
-The server-policy proof used an isolated PostgreSQL 17 database with all 21
-migrations, then removed it; no live household or deployed policy was exercised.
-Focused reproductions and baseline tests are recorded in the report and work cache.
-Temporary tests are removed. Refreshed branches retain the same 17 divergent
-`ios-build-cleanup` commits; no newer implementation was found. The hosted Verify
-run for d6e3cd4 passed. Preview 58 and all services remain unchanged by this audit.
-Fix authorization first, then state/lifecycle/recovery, before optional features.
+- Migration **022** replaces direct membership, room-membership and permission
+  writes with checked operations. Admin delegation cannot exceed its effective
+  actions; expired-Guest replacement preserves explicit denials. Invitation
+  creation is checked before email delivery and again under a household lock.
+  Initial finite Guest invitations remain capped at 30 days; renewal allows 365.
+- A shared read/mutation fence prevents old membership responses (including null
+  and errors) from undoing a home change or confirmed policy update. Permission
+  reset/removal requires an exact authoritative RPC result. Completion of an old
+  login's request cannot invalidate a newer login's verification; this orders local
+  reads, without pretending to cancel an already-sent server operation.
+- Renderer/native patches include their actual sender baseline. Field rebasing
+  preserves newer independent edits; background/access teardown synchronously
+  pauses gate simulation in the captured scope. Queued ticks cannot resume it.
+- Nested routine/scene/device-patch cache validation includes malformed Unicode
+  identifiers. Corrupt bytes remain preserved for recovery. Routine timezone
+  refresh bypasses a still-warm cache at its verification interval; it does not
+  replay missed minutes or create background/hub execution.
+- Cameras distinguish saved power, recent telemetry and actual video playback;
+  feeds release on power-off, lost access and background. Playback begins after
+  the media view mounts, waits for a first frame, and exposes errors/timeouts and
+  Retry without showing private URLs. Missing/stale telemetry stays unverified.
+- Web feedback uses a rendered, bounded dialog instead of RN Web's silent Alert.
+  Pending confirmations recheck the account/home/policy and Guest deadline.
+- Unread favorites cannot be overwritten; failed favorites/activity writes retain
+  pending data and have explicit, scoped Retry controls.
+
+Verification: **3,126 app tests / 221 suites**, **1,037 scene tests / 86 suites**,
+**127 bridge tests**, **47 script tests**, and **576 SQL assertions / 12 suites**
+after all **22 migrations** in an isolated PostgreSQL 17 database. A later focused
+15-test lifecycle run additionally covers stale success/null/error responses.
+The final old-login completion correction reproduced three failures before the
+fix; **99 focused tests / five suites**, TypeScript and independent review passed.
+App/edge TypeScript, scene/web builds, release metadata/assets/redirects and local
+security patch checks passed. npm's advisory endpoint failed once, then the
+full dependency check passed on retry; braces and node-forge remain verified local
+backports, not a clean upstream-version audit. Independent cross-review found and
+fixed browser playback ordering, expired-confirmation and Unicode-cache edges.
+
+Browser verification recorded **21 cases** across **390×844**, **768×1024** and
+**1024×768**: corrupt favorites remain intact, temporary failures recover without
+losing saved choices, activity Retry persists dismissals, feedback is keyboard
+accessible, and missing camera reports remain unverified. All 12 layout checks
+stayed within the viewport; fresh uninstrumented reloads reported zero browser
+errors. Fault injection used disposable local profiles, with no cloud writes.
+
+**Staging only deployed:** `home-invite` version **20**, JWT verification enabled,
+then migration **022**. Catalog checks confirm table/column write grants are closed
+and checked RPCs remain available; unauthenticated invitation returns **401**.
+No household exploit test, real invitation email, production change or hardware
+command was used. Migration SHA256:
+`c9b241d73a16e7c3e06aabf5836222172da8993afe9706d2e1470f7fb1086f38`.
+
+**Preview 59 installed and launched** on the connected iPhone; device inventory
+confirms **1.0.0 (59)** and its process was present after launch. Strict signing,
+preview identity/schemes, device coverage, arrival media and bundled scene verified;
+production metadata restored. Provisioning expires **2026-10-19 05:19:39 UTC**.
+Scene: **31,801,189 bytes**, SHA256
+`0f328c6ecfded4e3359ea426f3484e9abf36fdbd79277c7e7a562aa4576dd035`.
+Native installation is not physical interaction or camera-hardware signoff.
+
+Evidence: `work/secure-rescan-*`, `work/deep-access-fixes-postgres{,-summary}.log`,
+`work/deep-access-final-lifecycle-tests.log`, `work/deep-fixes-simulation-*`,
+`work/deep-access-late-completion-{repro,fix,types}.log`,
+`work/deep-reliability-recovery-tests.log`, `work/deep-fixes-unicode-recovery*`,
+`work/secure-rescan-browser-evidence.json` and its 12 screenshots.
+Review the browser report alongside these logs; do not treat test fixtures as
+production data. Production/hub rollout still needs its existing independent
+security review, real-device/provisioning tests and durable household execution.
 
 ## Deep reliability fixes — October 13
 
@@ -482,9 +538,10 @@ in-app flows. Generic peer names belong to the deferred profile sync.
 
 ## Environment and confirmed milestones
 
-- Staging Supabase: `dcevusczjtmdpzrxpdou`. Migrations **001–021** applied only here.
+- Staging Supabase: `dcevusczjtmdpzrxpdou`. Migrations **001–022** applied only here.
   019 adds owner-only interior consent; 020 adds checked Guest deadline changes.
   021 adds Owner-managed, consented property weather configuration.
+  022 enforces checked membership, permission and room-delegation mutations.
 - Use configured CLI/Keychain credentials in memory; never print/store privileged
   keys or put them in `EXPO_PUBLIC_*`. Do not read account credentials into chat.
 - Preview bundle: `com.anonymous.vantahome.preview`; scheme `vantahome-preview`.
@@ -1103,11 +1160,12 @@ Previous property-sharing evidence (no scene source changed for Preview 39):
 Use the [audited delivery order](BRANCH_IMPLEMENTATION_AUDIT.md#delivery-order)
 for implementation priorities; the physical follow-ups below are a separate list.
 
-1. Review the latest installed Preview listed above, including idle tour entry,
-   touch return and the cinematic reference cards. Next permission check remains
-   Owner shared-interior consent and Guest layout/revocation.
-   Guest renewal and offline/reconnect with retained door restrictions already
-   passed by the user's report; do not repeat them.
+1. Review Preview 59's changed native paths: household permission edits/removal,
+   account switching during a pending request, backgrounding a moving simulated
+   gate, and recovery feedback. Browser/automated coverage is recorded above;
+   these interactions have not been physically reviewed on this build.
+   Earlier Guest renewal and offline/reconnect with retained door restrictions
+   passed by the user's report; do not repeat them without a changed-path reason.
 2. Other physical checks: online background/resume, warm recovery,
    explicit invitation-link routing, and observed Guest deadline expiry.
    Do not represent automated/browser results as physical-device results.

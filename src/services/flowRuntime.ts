@@ -116,15 +116,17 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
     }
   };
   /** One runtime read serves every routine; scene reads share the same scoped cache. */
-  const refreshTimeZone = () => {
+  const refreshTimeZone = (fresh = false) => {
     if (options.getTimeZone || isLocalWeatherDemo(useHomeStore.getState()) || !scopeIsCurrent(scope, lifetime.signal)) return;
-    void readSharedHomeWeatherSettings().then(tick, () => {
+    void readSharedHomeWeatherSettings(fresh).then(tick, () => {
       // The shared source publishes unavailable; time-based work waits for the next verified read.
     });
   };
   const unsubscribeClock = subscribeSharedHomeWeatherSettings(tick);
   const unsubscribeSettings = subscribeHomeWeatherSettings(refreshTimeZone);
-  const refreshTimer = setInterval(refreshTimeZone, 60_000);
+  // Response latency extends cache freshness beyond this interval; periodic reads must bypass it.
+  // Verification ticks only the current minute, never catching up missed or already claimed minutes.
+  const refreshTimer = setInterval(() => refreshTimeZone(true), 60_000);
   refreshTimeZone();
   const timer = setInterval(tick, options.timeTickMs ?? 15_000);
   tick();

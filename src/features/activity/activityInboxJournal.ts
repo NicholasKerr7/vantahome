@@ -135,14 +135,22 @@ export class ActivityInboxJournal {
     }));
   }
 
+  /** Restore unread history or retry the latest dirty snapshot without requiring another mutation. */
+  async retry(scope: string): Promise<void> {
+    const record = this.record(scope);
+    await record.loaded;
+    if (!record.writing && (record.restoreFailed || record.pending !== null)) record.writes = this.flush(scope, record);
+    await record.writes;
+  }
+
   /** Await hydration, then enqueue disk writes in mutation order without blocking local feedback. */
   private async change(scope: string, reduce: (events: readonly InboxEvent[]) => readonly InboxEvent[]): Promise<void> {
     const record = this.record(scope);
     await record.loaded;
     const events = reduce(record.snapshot.events);
     if (JSON.stringify(events) === JSON.stringify(record.snapshot.events)) {
-      // An unchanged live admission may still retry a previously failed cache restore.
-      if (record.restoreFailed && !record.writing) record.writes = this.flush(scope, record);
+      // An unchanged receipt also retries failed persistence of that same revision.
+      if ((record.restoreFailed || record.pending !== null) && !record.writing) record.writes = this.flush(scope, record);
       await record.writes;
       return;
     }
@@ -175,11 +183,16 @@ export class ActivityInboxJournal {
       }
       while (record.pending !== null) {
         const serialized = record.pending;
-        record.pending = null;
         try {
           await this.storage.setItem(this.key(scope), serialized);
+          if (record.pending === serialized) record.pending = null;
           record.snapshot = { ...record.snapshot, storageError: false };
-        } catch { record.snapshot = { ...record.snapshot, storageError: true }; }
+        } catch {
+          // Keep the newest pending bytes, including edits received during this write.
+          record.snapshot = { ...record.snapshot, storageError: true };
+          this.notify(record);
+          return;
+        }
         this.notify(record);
       }
     } finally { record.writing = false; }

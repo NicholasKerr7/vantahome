@@ -11,7 +11,7 @@ const mockCreateClient = jest.fn();
 const mockFetchVoiceData = jest.fn();
 const mockEnqueueDeviceCommand = jest.fn();
 const mockVerifyClientSecret = jest.fn();
-const mockInviteUpsert = jest.fn();
+const mockRecordInvitation = jest.fn();
 const mockEnforceRateLimit = jest.fn();
 
 jest.mock("./supabaseAdmin.ts", () => ({ getSupabaseAdmin: () => mockAdmin }));
@@ -84,7 +84,8 @@ beforeEach(() => {
   mockCaller.from.mockImplementation((table: string) => queryResult(
     table === "homes" ? { id: homeId } : { home_id: homeId, role: "owner" },
   ));
-  mockCaller.rpc.mockResolvedValue({ data: true, error: null });
+  mockCaller.rpc.mockImplementation((name: string, args: unknown) => name === 'record_home_invitation'
+    ? mockRecordInvitation(args) : Promise.resolve({ data: true, error: null }));
   mockGetVoiceClient.mockResolvedValue({
     id: "voice-test", name: "Test Voice", provider: "google",
     redirect_uris: ["https://voice.example.test/callback"],
@@ -102,9 +103,8 @@ beforeEach(() => {
   mockAdmin.auth.admin.inviteUserByEmail.mockResolvedValue({
     data: { user: { id: recipientId, email: "intended@example.test" } }, error: null,
   });
-  mockInviteUpsert.mockResolvedValue({ error: null });
+  mockRecordInvitation.mockResolvedValue({ error: null });
   mockAdmin.from.mockImplementation((table: string) => {
-    if (table === "home_invites") return { upsert: mockInviteUpsert };
     return queryResult(table === "rooms" ? [] : null);
   });
   mockCreateClient.mockReturnValue({ auth: { signInWithPassword: jest.fn(async () => ({
@@ -159,8 +159,8 @@ describe("invitation recipient binding", () => {
       expect.objectContaining({ redirectTo: "vantahome://join-home" }),
     );
     expect(await response.json()).toEqual(expect.objectContaining({ delivery: "email_code" }));
-    expect(mockInviteUpsert).toHaveBeenCalledWith(expect.objectContaining({
-      invited_user_id: recipientId, email: "intended@example.test",
+    expect(mockRecordInvitation).toHaveBeenCalledWith(expect.objectContaining({
+      target_user_id: recipientId, recipient_email: "intended@example.test",
     }));
     expect(mockAdmin.rpc).not.toHaveBeenCalled();
   });
@@ -171,7 +171,7 @@ describe("invitation recipient binding", () => {
     expect(response.status).toBe(200);
     expect(mockAdmin.rpc).toHaveBeenCalledWith("find_auth_user_id_by_email", { target_email: "intended@example.test" });
     expect(mockAdmin.auth.admin.listUsers).not.toHaveBeenCalled();
-    expect(mockInviteUpsert).toHaveBeenCalledWith(expect.objectContaining({ invited_user_id: recipientId }));
+    expect(mockRecordInvitation).toHaveBeenCalledWith(expect.objectContaining({ target_user_id: recipientId }));
     expect(await response.json()).toEqual(expect.objectContaining({
       member: expect.objectContaining({ name: "intended@example.test", userId: recipientId }),
       delivery: "in_app",
@@ -229,7 +229,7 @@ describe("invitation recipient binding", () => {
     mockAdmin.auth.admin.inviteUserByEmail.mockResolvedValue({ data: null, error: { code: "email_exists" } });
     mockAdmin.rpc.mockResolvedValue(result);
     expect((await handlers["home-invite"](inviteRequest())).status).toBe(400);
-    expect(mockInviteUpsert).not.toHaveBeenCalled();
+    expect(mockRecordInvitation).not.toHaveBeenCalled();
   });
 
   test("only the canonical home owner can invite administrators", async () => {
@@ -246,7 +246,7 @@ describe("invitation recipient binding", () => {
     mockCaller.rpc.mockResolvedValue({ data: true, error: null });
     expect((await handlers["home-invite"](inviteRequest())).status).toBe(403);
     expect(mockAdmin.auth.admin.inviteUserByEmail).not.toHaveBeenCalled();
-    expect(mockInviteUpsert).not.toHaveBeenCalled();
+    expect(mockRecordInvitation).not.toHaveBeenCalled();
   });
 
   test("checks the complete room scope before sending a guest invitation", async () => {
@@ -256,20 +256,45 @@ describe("invitation recipient binding", () => {
     expect((await handlers["home-invite"](request())).status).toBe(400);
     expect(mockAdmin.auth.admin.inviteUserByEmail).not.toHaveBeenCalled();
     mockAdmin.from.mockImplementation((table: string) => {
-      if (table === "home_invites") return { upsert: mockInviteUpsert };
-      return queryResult(table === "rooms" ? [{ id: deviceId }] : null);
+        return queryResult(table === "rooms" ? [{ id: deviceId }] : null);
     });
     const accessExpiresAt = new Date(Date.now() + 3600000).toISOString();
     const response = await handlers["home-invite"](new Request("https://edge.example.test/home-invite", {
       method: "POST", body: JSON.stringify({ email: "intended@example.test", role: "guest", roomIds: [deviceId], accessExpiresAt }),
     }));
     expect(response.status).toBe(200);
-    expect(mockInviteUpsert).toHaveBeenCalledWith(expect.objectContaining({ room_ids: [deviceId], access_expires_at: accessExpiresAt }));
+    expect(mockRecordInvitation).toHaveBeenCalledWith(expect.objectContaining({ requested_room_ids: [deviceId], requested_expires_at: accessExpiresAt }));
+  });
+
+  test.each([
+    { data: false, error: null },
+    { data: null, error: { message: 'unavailable' } },
+  ])('rejects delegation before Auth email delivery or recipient lookup (%#)', async result => {
+    mockCaller.from.mockImplementation(() => queryResult({ home_id: homeId, role: 'admin' }));
+    mockCaller.rpc.mockImplementation((name: string) => Promise.resolve(
+      name === 'can_delegate_home_role' ? result : { data: true, error: null },
+    ));
+    expect((await handlers['home-invite'](inviteRequest('member'))).status).toBe(403);
+    expect(mockCaller.rpc).toHaveBeenCalledWith('can_delegate_home_role', {
+      target_home_id: homeId, requested_role: 'member',
+    });
+    expect(mockAdmin.auth.admin.inviteUserByEmail).not.toHaveBeenCalled();
+    expect(mockAdmin.rpc).not.toHaveBeenCalled();
+    expect(mockRecordInvitation).not.toHaveBeenCalled();
+  });
+
+  test('reports a checked invitation rejection if authority changes after preflight', async () => {
+    mockRecordInvitation.mockResolvedValue({ error: { message: 'Cannot delegate protected permissions' } });
+    const response = await handlers['home-invite'](inviteRequest());
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Cannot delegate protected permissions' });
+    expect(mockCaller.rpc).toHaveBeenCalledWith('record_home_invitation', expect.objectContaining({ target_home_id: homeId }));
+    expect(mockAdmin.from).not.toHaveBeenCalledWith('home_invites');
   });
 
   test("allows the canonical owner to invite administrators", async () => {
     expect((await handlers["home-invite"](inviteRequest("admin"))).status).toBe(200);
-    expect(mockInviteUpsert).toHaveBeenCalledWith(expect.objectContaining({ role: "admin" }));
+    expect(mockRecordInvitation).toHaveBeenCalledWith(expect.objectContaining({ requested_role: "admin" }));
   });
 });
 

@@ -1,3 +1,4 @@
+import { withMembershipMutation } from "./membershipRevision";
 import { useHomeStore, type HomeState } from '../store/useHomeStore';
 import { confirmProtectedAccess } from '../security/biometricConfirmation';
 import { ACTION_PERMISSIONS, canAdministerMember, roleHasPermission } from '../security/permissions';
@@ -75,13 +76,13 @@ export async function saveGuestAccessExtension(memberId: string, change: GuestAc
   if (identityError) throw new Error(identityError.message);
   if (identity.user?.id !== scope.authenticatedUserId) throw new Error('Your account changed. Sign in again.');
   requireUnchangedGrant(scope, memberId, change);
-  const { data: deadline, error } = await supabase.rpc('extend_guest_access', {
+  const { data: deadline, error } = await withMembershipMutation(async () => supabase!.rpc('extend_guest_access', {
     target_home_id: scope.activeHomeId,
     target_user_id: memberId,
     expected_expires_at: change.expectedExpiresAt,
     duration_hours: change.durationHours ?? null,
     new_expires_at: change.expiresAt ?? null,
-  });
+  }));
   if (error) throw new Error(error.message);
 
   // Once the RPC succeeds, every later failure must distinguish a saved grant

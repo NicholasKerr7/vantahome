@@ -1,60 +1,41 @@
 const mockGetUser = jest.fn();
-const mockFrom = jest.fn();
-const mockUpsert = jest.fn();
-const mockDelete = jest.fn();
-const mockEq = jest.fn();
-let mockWriteError: { message: string } | null = null;
+const mockRpc = jest.fn();
 jest.mock('./supabaseClient', () => ({ supabase: {
-  auth: { getUser: () => mockGetUser() }, from: (...args: unknown[]) => mockFrom(...args),
+  auth: { getUser: () => mockGetUser() }, rpc: (...args: unknown[]) => mockRpc(...args),
 } }));
 
 import { setMemberPermissionOverrideRemote } from './memberPermissions';
-
 const homeId = '20000000-0000-4000-8000-000000000002';
 const userId = '10000000-0000-4000-8000-000000000002';
 const actorId = '10000000-0000-4000-8000-000000000001';
-
 beforeEach(() => {
   jest.clearAllMocks();
-  mockWriteError = null;
   mockGetUser.mockResolvedValue({ data: { user: { id: actorId } }, error: null });
-  const query = {
-    delete: mockDelete.mockImplementation(() => query),
-    eq: mockEq.mockImplementation(() => query),
-    upsert: mockUpsert.mockImplementation(() => query),
-    then: (resolve: (result: unknown) => unknown) => Promise.resolve({ error: mockWriteError }).then(resolve),
-  };
-  mockFrom.mockReturnValue(query);
+  mockRpc.mockImplementation((_name, args) => Promise.resolve({ data: args.requested_allowed, error: null }));
 });
 
-test.each([true, false])('writes %s only to the reviewed active home without guessing a membership', async (allowed) => {
+test.each([true, false, null])('publishes only checked authoritative permission %s', async allowed => {
   await setMemberPermissionOverrideRemote(homeId, userId, 'light.control', allowed, actorId);
-  expect(mockFrom).toHaveBeenCalledTimes(1);
-  expect(mockFrom).toHaveBeenCalledWith('member_permission_overrides');
-  expect(mockUpsert).toHaveBeenCalledWith({ home_id: homeId, user_id: userId, permission: 'light.control', allowed, updated_by: actorId },
-    { onConflict: 'home_id,user_id,permission' });
+  expect(mockRpc).toHaveBeenCalledWith('set_member_permission_override', {
+    target_home_id: homeId, target_user_id: userId, requested_permission: 'light.control', requested_allowed: allowed,
+  });
 });
-
-test('removes only the selected home, person and action override', async () => {
-  await setMemberPermissionOverrideRemote(homeId, userId, 'light.control', null, actorId);
-  expect(mockEq.mock.calls).toEqual([['home_id', homeId], ['user_id', userId], ['permission', 'light.control']]);
-  expect(mockDelete).toHaveBeenCalledTimes(1);
-  expect(mockUpsert).not.toHaveBeenCalled();
+test('distinguishes a denied reset from an already-absent override', async () => {
+  mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'Permission change forbidden' } });
+  await expect(setMemberPermissionOverrideRemote(homeId, userId, 'light.control', null, actorId)).rejects.toThrow('Permission change forbidden');
+  await expect(setMemberPermissionOverrideRemote(homeId, userId, 'light.control', null, actorId)).resolves.toBeUndefined();
 });
-
+test.each([undefined, false, true])('rejects unconfirmed reset result %s', async data => {
+  mockRpc.mockResolvedValue({ data, error: null });
+  await expect(setMemberPermissionOverrideRemote(homeId, userId, 'light.control', null, actorId)).rejects.toThrow('did not confirm');
+});
 test('rejects a changed actor before sending a household write', async () => {
   mockGetUser.mockResolvedValue({ data: { user: { id: userId } }, error: null });
   await expect(setMemberPermissionOverrideRemote(homeId, userId, 'light.control', true, actorId)).rejects.toThrow('Your account changed');
-  expect(mockFrom).not.toHaveBeenCalled();
+  expect(mockRpc).not.toHaveBeenCalled();
 });
-
-test('surfaces database authorization failure', async () => {
-  mockWriteError = { message: 'Permission denied' };
-  await expect(setMemberPermissionOverrideRemote(homeId, userId, 'light.control', true, actorId)).rejects.toThrow('Permission denied');
-});
-
 test('rejects a local home identifier without looking up another household', async () => {
   await expect(setMemberPermissionOverrideRemote('local-home', userId, 'light.control', true, actorId)).rejects.toThrow('Home is invalid');
   expect(mockGetUser).not.toHaveBeenCalled();
-  expect(mockFrom).not.toHaveBeenCalled();
+  expect(mockRpc).not.toHaveBeenCalled();
 });

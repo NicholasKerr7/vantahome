@@ -1,11 +1,13 @@
+import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
+import { pauseSafetySimulation } from '../../../packages/home-scene/src/safetySimulation';
 import { projectFireSimulationToDemo } from './fireDemoMapping';
 import { resolveDemoDeviceMapping } from './demoDeviceMapping';
 import type { StoreApi } from 'zustand';
 import { runtimePolicy, type RuntimeMode } from '../../config/runtimeMode';
 import { useHomeStore, type HomeState } from '../../store/useHomeStore';
 import {
-  diffSimulationSnapshots, mergeSimulationChanges, parseSimulationRequest,
-  type SimulationChanges, type SimulationSnapshot, type SimulationSnapshotMessage,
+  diffSimulationSnapshots, parseSimulationRequest, rebaseSimulationChanges,
+  type SimulationSnapshot, type SimulationSnapshotMessage,
 } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { overlayDemoDevices, projectSimulationToDemo } from './demoDeviceMapping';
 import { simulationPersistence, type SimulationPersistence, type SimulationSaveStatus } from './simulationPersistence';
@@ -46,7 +48,6 @@ export class SimulationSession {
   private unsubscribeStore: () => void;
   private unsubscribePersistence: () => void;
   private unsubscribeState: () => void;
-  private pendingPatches = new Map<number, { base: SimulationSnapshot; changes: SimulationChanges }>();
 
   /** Capture the current scope before asynchronous hydration can race an account change. */
   constructor(
@@ -74,6 +75,8 @@ export class SimulationSession {
     });
     this.unsubscribeStore = this.store.subscribe((state, previous) => {
       if (modelSimulationIdentity(state) !== this.identity) {
+        // Preserve an interruption within the previous verified scope before teardown.
+        this.pauseAuthorizedSafety(previous);
         this.revokeAccess();
         this.dispose();
         onSaveStatus('disconnected');
@@ -89,6 +92,7 @@ export class SimulationSession {
         || state.household !== previous.household || state.rooms !== previous.rooms || state.membershipReady !== previous.membershipReady
         || registryChanged;
       if (accessChanged) {
+        if (!resolveModelSceneAccess(state, this.mode).controllableDeviceIds.includes(GATE_DEVICE_ID)) this.pauseAuthorizedSafety(previous);
         this.scheduleExpiry();
         if (this.requested) this.sendSnapshot();
       }
@@ -146,13 +150,6 @@ export class SimulationSession {
     if (message.type === 'request') this.requested = true;
     // No renderer may queue edits against defaults before receiving a restored baseline.
     if (message.type === 'patch' && !this.state) return true;
-    // Capture the sender's baseline before another surface commits. Rebase independent
-    // fields later, retaining rapid queued edits from this sender in their original order.
-    if (message.type === 'patch' && this.state && this.requested && message.requestId > this.lastRequestId && !this.pendingPatches.has(message.requestId)) {
-      let base = this.state;
-      for (const pending of this.pendingPatches.values()) base = rebaseChanges(base, pending.base, pending.changes);
-      this.pendingPatches.set(message.requestId, { base, changes: message.changes });
-    }
     this.ready = this.ready.then(() => {
       if (this.disposed || !this.state) return;
       if (message.type === 'request') {
@@ -160,11 +157,9 @@ export class SimulationSession {
         this.sendSnapshot();
         return;
       }
-      if (!this.requested || message.requestId <= this.lastRequestId) { this.pendingPatches.delete(message.requestId); return; }
+      if (!this.requested || message.requestId <= this.lastRequestId) return;
       this.lastRequestId = message.requestId;
       const previous = this.state;
-      const pending = this.pendingPatches.get(message.requestId);
-      this.pendingPatches.delete(message.requestId);
       const access = resolveModelSceneAccess(this.store.getState(), this.mode);
       // Reject an entire mixed transaction, so a permitted light cannot smuggle a gate or camera edit.
       const allowed = new Set(access.controllableDeviceIds);
@@ -173,7 +168,7 @@ export class SimulationSession {
         this.sendSnapshot(message.requestId);
         return;
       }
-      const next = pending ? rebaseChanges(previous, pending.base, pending.changes) : mergeSimulationChanges(previous, message.changes);
+      const next = rebaseSimulationChanges(previous, message.base, message.changes);
       // Safety simulations may span several devices. Do not let their derived effects widen a partial grant.
       if (Object.keys(diffSimulationSnapshots(previous, next).deviceStates ?? {}).some((id) => !allowed.has(id))) {
         this.sendSnapshot(message.requestId);
@@ -235,6 +230,22 @@ export class SimulationSession {
     } catch { this.dispose(); this.onSaveStatus('disconnected'); }
   }
 
+  /** Commit a foreground interruption synchronously, before membership or renderer teardown. */
+  pauseSafety(): void {
+    this.pauseAuthorizedSafety(this.store.getState());
+  }
+
+  /** Pause only this already-hydrated, authorized simulation scope; never load or touch another home. */
+  private pauseAuthorizedSafety(home: HomeState): void {
+    if (this.disposed || !this.state || modelSimulationIdentity(home) !== this.identity
+      || !resolveModelSceneAccess(home, this.mode).controllableDeviceIds.includes(GATE_DEVICE_ID)) return;
+    const deviceStates = pauseSafetySimulation(this.state.deviceStates);
+    if (deviceStates === this.state.deviceStates) return;
+    this.state = { ...this.state, deviceStates };
+    this.persistence.save(this.scope, this.state);
+    if (this.requested) this.sendSnapshot();
+  }
+
   /** Stop all cross-view updates when the frame closes, while accepted disk writes finish. */
   dispose(): void {
     if (this.disposed) return;
@@ -242,7 +253,6 @@ export class SimulationSession {
     this.unsubscribeStore();
     this.unsubscribePersistence();
     this.unsubscribeState();
-    this.pendingPatches.clear();
     if (this.expiryTimer) clearTimeout(this.expiryTimer);
   }
 
@@ -255,7 +265,8 @@ export class SimulationSession {
   private sendSnapshot(acknowledgedRequestId?: number): void {
     if (!this.state || this.disposed) return;
     try {
-      const access = resolveModelSceneAccess(this.store.getState(), this.mode);
+      const home = this.store.getState();
+      const access = modelSimulationIdentity(home) === this.identity ? resolveModelSceneAccess(home, this.mode) : EMPTY_SCENE_ACCESS;
       this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: scopeSimulationSnapshot(this.state, access), access,
         ...(acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId }) });
     } catch {
@@ -295,30 +306,4 @@ export class SimulationSession {
 export function nativeSimulationSnapshotScript(message: SimulationSnapshotMessage): string {
   const payload = JSON.stringify(message).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   return `window.dispatchEvent(new CustomEvent('vantahome-simulation',{detail:${payload}}));true;`;
-}
-
-/** Rebase only changed fields so concurrent voice and scene edits do not undo one another. */
-function rebaseChanges(current: SimulationSnapshot, base: SimulationSnapshot, changes: SimulationChanges): SimulationSnapshot {
-  const rebased: SimulationChanges = { ...changes };
-  if (changes.deviceStates) {
-    rebased.deviceStates = {};
-    for (const [id, submitted] of Object.entries(changes.deviceStates)) {
-      const before = base.deviceStates[id];
-      const latest = current.deviceStates[id];
-      if (!before || !latest) continue;
-      const next = { ...latest };
-      if (submitted.on !== before.on) next.on = submitted.on;
-      if (submitted.level !== before.level) next.level = submitted.level;
-      const settings = { ...latest.settings };
-      for (const key of new Set([...Object.keys(before.settings ?? {}), ...Object.keys(submitted.settings ?? {})])) {
-        if (submitted.settings?.[key] === before.settings?.[key]) continue;
-        if (submitted.settings?.[key] === undefined) delete settings[key];
-        else settings[key] = submitted.settings[key];
-      }
-      if (Object.keys(settings).length) next.settings = settings;
-      else delete next.settings;
-      rebased.deviceStates[id] = next;
-    }
-  }
-  return mergeSimulationChanges(current, rebased);
 }

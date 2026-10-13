@@ -1,3 +1,4 @@
+import { withMembershipMutation } from "./membershipRevision";
 import type { Device } from "../store/useHomeStore";
 import { supabase } from "./supabaseClient";
 
@@ -53,12 +54,12 @@ async function callEdge<T>(
 }
 
 export async function bootstrapHome(name: string, expectedUserId?: string) {
-  return callEdge<{ home: { id: string; name: string } }>(
+  return withMembershipMutation(() => callEdge<{ home: { id: string; name: string } }>(
     "home-bootstrap",
     { name },
     "POST",
     expectedUserId,
-  );
+  ));
 }
 
 export type InviteMemberPayload = {
@@ -131,12 +132,12 @@ export async function respondHomeInvite(
   action: "accept" | "decline",
   expectedUserId?: string,
 ) {
-  return callEdge<{ status: "accepted" | "declined"; inviteId: string }>(
+  return withMembershipMutation(() => callEdge<{ status: "accepted" | "declined"; inviteId: string }>(
     "home-invite-respond",
     { inviteId, action },
     "POST",
     expectedUserId,
-  );
+  ));
 }
 
 export async function logDeviceAuditEvent(payload: {

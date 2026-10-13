@@ -49,6 +49,7 @@ jest.mock('./supabaseClient', () => ({ supabase: {
 
 import { applyMembershipSnapshot, syncMembershipFromSupabase, type MembershipSyncResult } from './membership';
 import { hydrateHomeAccount, useHomeStore } from '../store/useHomeStore';
+import { beginMembershipMutation } from './membershipRevision';
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -153,7 +154,8 @@ test('maps authoritative guest expiry and UUID model bindings without inferring 
   expect(result.devices[0]).toEqual(expect.objectContaining({ id: 'device-uuid', roomId: 'room-uuid', modelDeviceId: 'bedroom-1-light', simulationOnly: true }));
   expect(applyMembershipSnapshot(result)).toBe(true);
   useHomeStore.setState({ devices: [{ ...result.devices[0], observedAt: Date.parse('2099-01-01T00:00:00Z'), modelDeviceId: 'old-binding', simulationOnly: false, isOn: false }] });
-  expect(applyMembershipSnapshot(result)).toBe(true);
+  const refreshed = await syncMembershipFromSupabase('alice') as MembershipSyncResult;
+  expect(applyMembershipSnapshot(refreshed)).toBe(true);
   expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ modelDeviceId: 'bedroom-1-light', simulationOnly: true, isOn: false }));
 });
 
@@ -260,4 +262,33 @@ test('an empty room registry skips room grants without skipping permission overr
   expect(mockReadStarts).not.toHaveBeenCalledWith('room_members');
   expect(result?.roomMembers).toEqual([]);
   expect(result?.permissionOverrides).toEqual([{ memberId: 'alice', permission: 'light.control', allowed: false }]);
+});
+
+test('the snapshot installer rejects an old home read after invitation admission selects another home', async () => {
+  useHomeStore.setState({ accountHomeId: 'oldest-home', activeHomeId: 'oldest-home' });
+  const old = await syncMembershipFromSupabase('alice') as MembershipSyncResult;
+  const selected = await syncMembershipFromSupabase('alice', 'active-home') as MembershipSyncResult;
+  expect(applyMembershipSnapshot(selected)).toBe(true);
+  expect(applyMembershipSnapshot(old)).toBe(false);
+  expect(useHomeStore.getState().activeHomeId).toBe('active-home');
+});
+
+test('the snapshot installer rejects a policy response predating a confirmed denial', async () => {
+  const old = await syncMembershipFromSupabase('alice') as MembershipSyncResult;
+  useHomeStore.setState({ memberPermissionOverrides: [{ memberId: 'guest', permission: 'light.control', allowed: false }] });
+  expect(applyMembershipSnapshot(old)).toBe(false);
+  expect(useHomeStore.getState().memberPermissionOverrides).toEqual([{ memberId: 'guest', permission: 'light.control', allowed: false }]);
+});
+
+test('a previous account mutation completing cannot discard the new account membership snapshot', async () => {
+  const finishPreviousWrite = beginMembershipMutation();
+  await hydrateHomeAccount(null);
+  await hydrateHomeAccount('bob');
+  mockGetUser.mockResolvedValue({ data: { user: { id: 'bob', email: 'bob@example.test' } }, error: null });
+  mockMemberRows = [{ user_id: 'bob', role: 'member' }];
+  const currentSnapshot = await syncMembershipFromSupabase('bob') as MembershipSyncResult;
+  finishPreviousWrite();
+  expect(applyMembershipSnapshot(currentSnapshot)).toBe(true);
+  expect(useHomeStore.getState().membershipReady).toBe(true);
+  expect(useHomeStore.getState().activeMemberId).toBe('bob');
 });

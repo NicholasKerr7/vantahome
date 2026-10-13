@@ -1,3 +1,4 @@
+import { GATE_DEVICE_ID } from './gateSafetySimulation';
 import { restoreSafetySimulation, synchronizeSafetySimulation } from './safetySimulation';
 import { DEVICES, getDevice, isPositionDevice } from './data';
 import { validateStoredSetting } from './deviceCapabilities';
@@ -20,7 +21,7 @@ export type SimulationChanges = Partial<SimulationSnapshot>;
 interface SimulationEnvelope { channel: typeof SIMULATION_CHANNEL; version: 1 }
 export type SimulationRequest = SimulationEnvelope & (
   | { type: 'request' }
-  | { type: 'patch'; requestId: number; changes: SimulationChanges }
+  | { type: 'patch'; requestId: number; base: SimulationChanges; changes: SimulationChanges }
 );
 export interface SimulationSnapshotMessage extends SimulationEnvelope {
   type: 'snapshot';
@@ -106,10 +107,14 @@ export function parseSimulationRequest(input: unknown): SimulationRequest | null
   const message = readEnvelope(input);
   if (!message) return null;
   if (message.type === 'request' && hasKeys(message, ['channel', 'version', 'type'])) return { channel: SIMULATION_CHANNEL, version: 1, type: 'request' };
-  if (message.type !== 'patch' || !hasKeys(message, ['channel', 'version', 'type', 'requestId', 'changes']) || !isRequestId(message.requestId)) return null;
+  if (message.type !== 'patch' || !hasKeys(message, ['channel', 'version', 'type', 'requestId', 'base', 'changes']) || !isRequestId(message.requestId)) return null;
   const changes = readChanges(message.changes, false);
-  if (!changes || !Object.keys(changes).length) return null;
-  return { channel: SIMULATION_CHANNEL, version: 1, type: 'patch', requestId: message.requestId, changes };
+  const base = readChanges(message.base, false);
+  if (!changes || !base || !Object.keys(changes).length) return null;
+  // A baseline contains precisely the edited fields/devices, never a second hidden payload.
+  if (!hasKeys(base as Record<string, unknown>, Object.keys(changes))
+    || !hasKeys(base.deviceStates ?? {}, Object.keys(changes.deviceStates ?? {}))) return null;
+  return { channel: SIMULATION_CHANNEL, version: 1, type: 'patch', requestId: message.requestId, base, changes };
 }
 
 /** Parse only complete host snapshots, preventing partial hydration or an arbitrary host payload. */
@@ -172,4 +177,43 @@ export function diffSimulationSnapshots(previous: SimulationSnapshot, next: Simu
     if (previous[field] !== next[field]) Object.assign(changes, { [field]: next[field] });
   }
   return changes;
+}
+
+/** Capture only the sender values needed to distinguish intentional edits from stale fields. */
+export function simulationChangeBaseline(state: SimulationSnapshot, changes: SimulationChanges): SimulationChanges {
+  const base: SimulationChanges = {};
+  if (changes.deviceStates) base.deviceStates = Object.fromEntries(Object.keys(changes.deviceStates).map((id) => [id, state.deviceStates[id]]));
+  for (const field of ['lightingMode', 'night', 'motionDisabled'] as const) {
+    if (Object.hasOwn(changes, field)) Object.assign(base, { [field]: state[field] });
+  }
+  return base;
+}
+
+/** Reapply only fields changed by this sender, preserving independent newer host or renderer edits. */
+export function rebaseSimulationChanges(current: SimulationSnapshot, base: SimulationChanges, changes: SimulationChanges): SimulationSnapshot {
+  const rebased: SimulationChanges = { ...changes };
+  if (changes.deviceStates) {
+    rebased.deviceStates = {};
+    for (const [id, submitted] of Object.entries(changes.deviceStates)) {
+      const before = base.deviceStates?.[id];
+      const latest = current.deviceStates[id];
+      if (!before || !latest) continue;
+      // An in-flight tick or command cannot resume movement interrupted after its baseline.
+      if (id === GATE_DEVICE_ID && latest.settings?.gatePhase === 'paused' && before.settings?.gatePhase !== 'paused') continue;
+      const next = { ...latest };
+      if (submitted.on !== before.on) next.on = submitted.on;
+      if (submitted.level !== before.level) next.level = submitted.level;
+      if (isPositionDevice(getDevice(id)!)) next.on = next.level > 0;
+      const settings = { ...latest.settings };
+      for (const key of new Set([...Object.keys(before.settings ?? {}), ...Object.keys(submitted.settings ?? {})])) {
+        if (submitted.settings?.[key] === before.settings?.[key]) continue;
+        if (submitted.settings?.[key] === undefined) delete settings[key];
+        else settings[key] = submitted.settings[key];
+      }
+      if (Object.keys(settings).length) next.settings = settings;
+      else delete next.settings;
+      rebased.deviceStates[id] = next;
+    }
+  }
+  return mergeSimulationChanges(current, rebased);
 }

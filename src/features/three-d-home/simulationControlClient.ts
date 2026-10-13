@@ -1,15 +1,14 @@
 import { getDevice } from '../../../packages/home-scene/src/data';
 import { applyDeviceSetting, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from '../../../packages/home-scene/src/deviceControlActions';
-import { createDefaultSimulationSnapshot, diffSimulationSnapshots, mergeSimulationChanges, type SimulationChanges, type SimulationSnapshot, type SimulationSnapshotMessage } from '../../../packages/home-scene/src/simulationBridgeProtocol';
-import { advanceSafetySimulation, pauseSafetySimulation } from '../../../packages/home-scene/src/safetySimulation';
+import { createDefaultSimulationSnapshot, diffSimulationSnapshots, mergeSimulationChanges, rebaseSimulationChanges, simulationChangeBaseline, type SimulationChanges, type SimulationSnapshot, type SimulationSnapshotMessage } from '../../../packages/home-scene/src/simulationBridgeProtocol';
+import { advanceSafetySimulation } from '../../../packages/home-scene/src/safetySimulation';
 import { acknowledgeFireIncident, clearSimulatedFireSources, resetFireIncident } from '../../../packages/home-scene/src/fireSafetySimulation';
-import type { DeviceStates } from '../../../packages/home-scene/src/simulationTypes';
-import type { DeviceState, SettingValue } from '../../../packages/home-scene/src/simulationTypes';
+import type { DeviceStates, DeviceState, SettingValue } from '../../../packages/home-scene/src/simulationTypes';
 import { EMPTY_SCENE_ACCESS, type SceneAccess } from '../../../packages/home-scene/src/sceneAccess';
 import { SimulationSession } from './simulationSession';
 import type { SimulationSaveStatus } from './simulationPersistence';
 
-type Session = Pick<SimulationSession, 'handleMessage' | 'dispose'>;
+type Session = Pick<SimulationSession, 'handleMessage' | 'dispose' | 'pauseSafety'>;
 type SessionFactory = (deliver: (message: SimulationSnapshotMessage) => void, status: (status: SimulationSaveStatus) => void) => Session;
 export type ControlSnapshot = { state: SimulationSnapshot; ready: boolean; status: SimulationSaveStatus; access?: SceneAccess };
 
@@ -20,7 +19,8 @@ export class SimulationControlClient {
   private session: Session | null = null;
   private nextRequest = 0;
   private closed = false;
-  private pending = new Map<number, SimulationChanges>();
+  private pending = new Map<number, { base: SimulationChanges; changes: SimulationChanges }>();
+  private lastAcknowledgedId = 0;
   private listeners = new Set<() => void>();
 
   /** Allow deterministic transport tests without importing or calling a hardware service. */
@@ -72,7 +72,7 @@ export class SimulationControlClient {
   advanceSafety = (seconds: number): void => { this.updateSafety((states) => advanceSafetySimulation(states, seconds)); };
 
   /** Interrupt motion/countdowns on background without using wall-clock catch-up. */
-  pauseSafety = (): void => { this.updateSafety(pauseSafetySimulation); };
+  pauseSafety = (): void => { if (!this.closed) this.session?.pauseSafety(); };
 
   /** Acknowledge a preview while preserving its alarm and emergency hold. */
   acknowledgeFire = (): void => { this.updateSafety(acknowledgeFireIncident); };
@@ -101,6 +101,11 @@ export class SimulationControlClient {
 
   /** Rebase later slider edits over older acknowledgements instead of visibly rolling them back. */
   private receive = (message: SimulationSnapshotMessage): void => {
+    const acknowledgedId = message.acknowledgedRequestId;
+    if (acknowledgedId !== undefined) {
+      if (acknowledgedId <= this.lastAcknowledgedId || acknowledgedId > this.nextRequest) return;
+      this.lastAcknowledgedId = acknowledgedId;
+    }
     this.canonical = message.state;
     const access = message.access ?? EMPTY_SCENE_ACCESS;
     if (JSON.stringify(access) !== JSON.stringify(this.value.access)) this.pending.clear();
@@ -108,7 +113,7 @@ export class SimulationControlClient {
       for (const id of this.pending.keys()) if (id <= message.acknowledgedRequestId) this.pending.delete(id);
     }
     let state = this.canonical;
-    for (const changes of this.pending.values()) state = mergeSimulationChanges(state, changes);
+    for (const { base, changes } of this.pending.values()) state = rebaseSimulationChanges(state, base, changes);
     this.publish({ ...this.value, state, access, ready: true });
     if (this.closed && !this.pending.size) { this.session?.dispose(); this.session = null; }
   };
@@ -135,12 +140,13 @@ export class SimulationControlClient {
     if (Object.keys(diffSimulationSnapshots(this.value.state, next).deviceStates ?? {})
       .some((id) => !this.value.access?.controllableDeviceIds.includes(id))) return;
     const requestId = ++this.nextRequest;
-    this.pending.set(requestId, changes);
+    const base = simulationChangeBaseline(this.value.state, changes);
+    this.pending.set(requestId, { base, changes });
     this.publish({ ...this.value, state: next });
-    if (!this.session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId, changes })) {
+    if (!this.session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId, base, changes })) {
       this.pending.delete(requestId);
       let state = this.canonical;
-      for (const pending of this.pending.values()) state = mergeSimulationChanges(state, pending);
+      for (const pending of this.pending.values()) state = rebaseSimulationChanges(state, pending.base, pending.changes);
       this.publish({ ...this.value, state, status: 'error' });
     }
   }

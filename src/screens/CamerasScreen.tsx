@@ -1,4 +1,6 @@
-import React, { useCallback, useMemo, useState } from "react";
+import { cameraStatus } from "../features/cameras/cameraStatus";
+import { useCameraClock } from "../features/cameras/useCameraClock";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -35,7 +37,7 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, "Cameras">;
 const FILTERS = [
   { id: "all", label: "All cameras" },
-  { id: "online", label: "Online" },
+  { id: "online", label: "Powered on" },
   { id: "armed", label: "Armed" },
 ] as const;
 
@@ -77,6 +79,7 @@ export default function CamerasScreen({ navigation }: Props) {
     "Confirm access to household cameras",
     canViewCamera,
   );
+  const now = useCameraClock(canViewCamera && protectedAccess.state === "granted");
   const roomMap = useMemo(
     () => new Map(rooms.map((room) => [room.id, room.name])),
     [rooms],
@@ -101,8 +104,17 @@ export default function CamerasScreen({ navigation }: Props) {
   );
   const onlineCount = cameraDevices.filter((camera) => camera.isOn).length;
   const recordingCount = cameraDevices.filter(
-    (camera) => camera.recording,
+    (camera) => camera.recording && camera.isOn && cameraStatus(camera, now).fresh,
   ).length;
+
+  // Power-off or authorization loss ends the request, so restoring power cannot silently restart it.
+  useEffect(() => {
+    setLiveStreams((current) => {
+      const next = canViewCamera && protectedAccess.state === "granted"
+        ? current.filter((id) => cameraDevices.some((camera) => camera.id === id && camera.isOn && camera.streamUrl)) : [];
+      return next.length === current.length ? current : next;
+    });
+  }, [cameraDevices, canViewCamera, protectedAccess.state]);
 
   /** Release live players when moving between monitor pages. */
   const changePage = (nextPage: number) => {
@@ -167,7 +179,7 @@ export default function CamerasScreen({ navigation }: Props) {
                 {onlineCount}
                 <Text style={styles.summaryLabel}>
                   {" "}
-                  / {cameraDevices.length} online
+                  / {cameraDevices.length} powered on
                 </Text>
               </Text>
               <View style={styles.recording}>
@@ -181,7 +193,7 @@ export default function CamerasScreen({ navigation }: Props) {
                   }
                 />
                 <Text style={styles.summaryLabel}>
-                  {recordingCount} recording
+                  {recordingCount} reported recording
                 </Text>
               </View>
             </View>
@@ -197,23 +209,24 @@ export default function CamerasScreen({ navigation }: Props) {
             ) : null}
             <View style={[styles.grid, isTablet && styles.gridTablet]}>
               {shownCameras.map((camera) => {
-                const isOnline = Boolean(camera.isOn);
-                const isLive = liveStreams.includes(camera.id);
+                const status = cameraStatus(camera, now);
+                const isPowered = status.powered;
+                const isLive = isPowered && Boolean(camera.streamUrl) && liveStreams.includes(camera.id);
                 const hasStream = Boolean(camera.streamUrl);
                 const canStart =
-                  isOnline &&
+                  isPowered &&
                   hasStream &&
                   (isLive || liveStreams.length < maxLiveStreams);
-                const lastSeen = formatCameraLastSeen(camera.lastSeenAt);
+                const lastSeen = formatCameraLastSeen(camera.lastSeenAt, now);
                 const playLabel = isLive
                   ? "Stop live"
-                  : !isOnline
-                    ? "Offline"
+                  : !isPowered
+                    ? "Last reported off"
                     : !hasStream
                       ? "No live feed"
                       : !canStart
                         ? "Limit reached"
-                        : "Go live";
+                        : status.fresh ? "Go live" : "Try live";
                 return (
                   <DeepCard key={camera.id} style={styles.cameraCard}>
                     <View style={styles.cardHeading}>
@@ -245,6 +258,7 @@ export default function CamerasScreen({ navigation }: Props) {
                     <View style={styles.preview}>
                       {isLive && camera.streamUrl ? (
                         <LiveVideoPlayer
+                          key={camera.streamUrl}
                           sourceUri={camera.streamUrl}
                           enableFullscreen={false}
                           onFullscreen={() =>
@@ -257,16 +271,16 @@ export default function CamerasScreen({ navigation }: Props) {
                         <CameraThumbnail
                           uri={camera.thumbnailUrl ?? camera.lastThumbnailUrl}
                           title={
-                            !isOnline
-                              ? "Camera offline"
+                            !isPowered
+                              ? "Last reported off"
                               : camera.thumbnailUrl || camera.lastThumbnailUrl
                                 ? "Last snapshot"
                                 : "No snapshot yet"
                           }
                           subtitle={
-                            isOnline
+                            isPowered
                               ? hasStream
-                                ? "Start a live view below"
+                                ? status.fresh ? "Start a live view below" : lastSeen ? `Last report ${lastSeen} · Try live to connect` : "Status unknown · Try live to connect"
                                 : "Live feed is not configured"
                               : lastSeen
                                 ? `Last seen ${lastSeen}`
@@ -282,18 +296,18 @@ export default function CamerasScreen({ navigation }: Props) {
                         <View
                           style={[
                             styles.statusDot,
-                            isOnline && styles.statusDotOnline,
+                            status.fresh && isPowered && styles.statusDotOnline,
                           ]}
                         />
                         <Text style={styles.statusText}>
-                          {isOnline ? "Online" : "Offline"}
+                          {status.label}
                         </Text>
                       </View>
                       <Text style={styles.metadataText}>
-                        {camera.armed ? "Armed" : "Disarmed"}
+                        {status.fresh ? camera.armed ? "Armed" : "Disarmed" : "Protection unverified"}
                       </Text>
                       <Text style={styles.metadataText}>
-                        {camera.recording ? "Recording" : "Standby"}
+                        {status.fresh ? !isPowered ? "Reported stopped" : camera.recording ? "Reported recording" : "Standby" : "Recording unverified"}
                       </Text>
                     </View>
                     <View style={styles.actions}>

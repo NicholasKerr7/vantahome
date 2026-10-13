@@ -47,5 +47,10 @@ export function useDeviceBrowserFavorites() {
     modelDeviceFavorites.toggle(id);
   }
 
-  return { ...(enabled ? snapshot : hiddenSnapshot), enabled, toggle };
+  /** Retry only while this surface still owns the explicit offline demonstration scope. */
+  function retry(): void {
+    if (canUseModelFavorites(useHomeStore.getState())) void modelDeviceFavorites.retry();
+  }
+
+  return { ...(enabled ? snapshot : hiddenSnapshot), enabled, toggle, retry };
 }

@@ -1,6 +1,6 @@
 import { EMPTY_SCENE_ACCESS, canControlSceneDevice, type SceneAccess } from './sceneAccess';
 import {
-  diffSimulationSnapshots, mergeSimulationChanges, parseSimulationSnapshotMessage, SIMULATION_CHANNEL,
+  diffSimulationSnapshots, rebaseSimulationChanges, simulationChangeBaseline, parseSimulationSnapshotMessage, SIMULATION_CHANNEL,
   type SimulationChanges, type SimulationRequest, type SimulationSnapshot,
 } from './simulationBridgeProtocol';
 
@@ -18,13 +18,6 @@ export const SIMULATION_HYDRATION_TIMEOUT_MS = 12_000;
 const HANDSHAKE_RETRY_DELAYS_MS = [2_000, 5_000] as const;
 let nextRequestId = 0;
 
-/** Combine sparse edits without making an omitted device overwrite another device's update. */
-function combineChanges(previous: SimulationChanges, next: SimulationChanges): SimulationChanges {
-  const combined = { ...previous, ...next };
-  if (previous.deviceStates || next.deviceStates) combined.deviceStates = { ...previous.deviceStates, ...next.deviceStates };
-  return combined;
-}
-
 /**
  * Synchronize optimistic simulation edits with an isolated host. Every edit is sent immediately;
  * acknowledged host echoes are rebased under newer edits, so rapid sliders cannot jump backwards.
@@ -36,8 +29,8 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
   let disposed = false;
   let lastAcknowledgedId = 0;
   let lastSentId = 0;
-  let beforeHydration: SimulationChanges = {};
-  const pending = new Map<number, SimulationChanges>();
+  let beforeHydration: { base: SimulationChanges; changes: SimulationChanges }[] = [];
+  const pending = new Map<number, { base: SimulationChanges; changes: SimulationChanges }>();
   const hydrationTimers: ReturnType<typeof setTimeout>[] = [];
 
   /** Stop bounded handshake retries and their timeout as soon as the session is restored. */
@@ -65,12 +58,12 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
     return Object.keys(allowed).length ? { ...preferences, deviceStates: allowed } : preferences;
   }
 
-  /** Send complete per-device replacements immediately, including the final edit before navigation. */
-  function publish(changes: SimulationChanges): void {
+  /** Send each edit with the exact values its sender saw, including final edits before navigation. */
+  function publish(base: SimulationChanges, changes: SimulationChanges): void {
     const requestId = ++nextRequestId;
     lastSentId = requestId;
-    pending.set(requestId, changes);
-    sendSafely({ channel: SIMULATION_CHANNEL, version: 1, type: 'patch', requestId, changes });
+    pending.set(requestId, { base, changes });
+    sendSafely({ channel: SIMULATION_CHANNEL, version: 1, type: 'patch', requestId, base, changes });
   }
 
   const unsubscribe = store.subscribe((next, previous) => {
@@ -78,8 +71,9 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
     const differences = diffSimulationSnapshots(previous, next);
     const changes = hydrated ? restrictChanges(differences) : differences;
     if (!Object.keys(changes).length) return;
-    if (hydrated) publish(changes);
-    else beforeHydration = combineChanges(beforeHydration, changes);
+    const base = simulationChangeBaseline(previous, changes);
+    if (hydrated) publish(base, changes);
+    else beforeHydration.push({ base, changes });
   });
 
   /** Accept only current acknowledgements, preserving local edits the host has not processed yet. */
@@ -94,12 +88,12 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
       for (const id of pending.keys()) if (id <= acknowledgedId) pending.delete(id);
     }
     access = message.access ?? EMPTY_SCENE_ACCESS;
-    for (const [id, changes] of pending) pending.set(id, restrictChanges(changes));
-    beforeHydration = restrictChanges(beforeHydration);
+    for (const [id, edit] of pending) pending.set(id, { base: restrictChanges(edit.base), changes: restrictChanges(edit.changes) });
+    beforeHydration = beforeHydration.map((edit) => ({ base: restrictChanges(edit.base), changes: restrictChanges(edit.changes) }));
     let state = message.state;
-    for (const changes of pending.values()) state = mergeSimulationChanges(state, changes);
+    for (const { base, changes } of pending.values()) state = rebaseSimulationChanges(state, base, changes);
     const firstSnapshot = !hydrated;
-    if (firstSnapshot) state = mergeSimulationChanges(state, beforeHydration);
+    if (firstSnapshot) for (const { base, changes } of beforeHydration) state = rebaseSimulationChanges(state, base, changes);
     hydrated = true;
     applyingHost = true;
     try { store.applySnapshot(state, access); }
@@ -107,8 +101,8 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
     if (firstSnapshot) {
       clearHydrationTimers();
       onHydrated();
-      if (Object.keys(beforeHydration).length) publish(beforeHydration);
-      beforeHydration = {};
+      for (const { base, changes } of beforeHydration) if (Object.keys(changes).length) publish(base, changes);
+      beforeHydration = [];
     }
   }
 

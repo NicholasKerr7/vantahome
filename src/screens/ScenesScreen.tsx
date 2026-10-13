@@ -1,3 +1,4 @@
+import { AppFeedback as Alert } from "../services/appFeedback";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
@@ -7,7 +8,6 @@ import {
   ScrollView,
   TextInput,
   Animated,
-  Alert,
 } from "react-native";
 import type { StyleProp, TextStyle, ViewStyle } from "react-native";
 import Pressable from "../components/Pressable";

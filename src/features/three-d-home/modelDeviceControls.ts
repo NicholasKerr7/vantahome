@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { AppFeedback as Alert } from "../../services/appFeedback";
 import { useHomeStore } from '../../store/useHomeStore';
 import { resolveModelSceneAccess, selectModelLibraryDeviceIds } from './modelSceneAccess';
 import type { SimulationControlClient } from './simulationControlClient';

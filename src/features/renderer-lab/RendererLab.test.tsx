@@ -51,7 +51,7 @@ beforeEach(() => {
     state.deviceStates['master-blinds'] = { on: false, level: 0 };
     state.deviceStates['entry-gate'] = { on: false, level: 0 };
     for (const id of ['master-light', 'master-bedside-left', 'master-bedside-right']) state.deviceStates[id] = { on: true, level: 65 };
-    return { dispose: jest.fn(), handleMessage: (input) => {
+    return { dispose: jest.fn(), pauseSafety: jest.fn(), handleMessage: (input) => {
       const message = parseSimulationRequest(input);
       if (!message) return false;
       if (message.type === 'patch') state = mergeSimulationChanges(state, message.changes);

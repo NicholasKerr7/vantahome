@@ -76,6 +76,11 @@ export default function NotificationsScreen() {
           ? "Activity could not be saved or restored. Recent updates remain visible while this app is open."
           : "Up to 200 recent updates. Delivery progress does not confirm physical device state."}
       </Text>
+      {!showingReports && inbox?.storageError && (
+        <Pressable accessibilityRole="button" accessibilityLabel="Retry activity storage" onPress={() => { void inbox.retry(); }} style={styles.retry}>
+          <Text style={styles.dismissText}>Retry saving or loading activity</Text>
+        </Pressable>
+      )}
       {deliveryError && <Text accessibilityRole="alert" style={styles.context}>{deliveryError}</Text>}
       <DeepTabs items={FILTERS} selectedId={filter} onSelect={(id) => { setFilter(id); pages.setPage(0); }} />
       <View style={styles.list} onLayout={pages.onLayout}>
@@ -133,6 +138,8 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
+  retry: { minHeight: 44, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 12,
+    borderRadius: 12, backgroundColor: theme.colors.surfaceRaised },
   // Compact phones keep the full heading and the same labelled 44px action target.
   dismissText: { color: theme.colors.text, fontSize: 12, fontWeight: "500" },
   dismissAll: { minHeight: 44, minWidth: 44, paddingHorizontal: 12, borderRadius: 16,

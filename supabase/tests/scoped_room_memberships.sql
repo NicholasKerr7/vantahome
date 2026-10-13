@@ -50,7 +50,7 @@ select ok(not can_access_room('f3000000-0000-4000-8000-000000000002'),'rejected 
 select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000004","role":"authenticated"}',true);
 select throws_ok($$select set_home_room_memberships('f2000000-0000-4000-8000-000000000001','f1000000-0000-4000-8000-000000000003',array[]::uuid[])$$,'42501','Household administration required','outsider cannot revoke assignments');
 select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-update home_members set role='tenant' where home_id='f2000000-0000-4000-8000-000000000001' and user_id='f1000000-0000-4000-8000-000000000003';
+select set_home_member_role('f2000000-0000-4000-8000-000000000001','f1000000-0000-4000-8000-000000000003','tenant');
 select lives_ok($$select set_home_room_memberships('f2000000-0000-4000-8000-000000000001','f1000000-0000-4000-8000-000000000003',array['f3000000-0000-4000-8000-000000000001']::uuid[])$$,'replacement accepts authoritative role change');
 select is((select role from room_members where room_id='f3000000-0000-4000-8000-000000000001'),'tenant','room membership role refreshes from server');
 reset role;

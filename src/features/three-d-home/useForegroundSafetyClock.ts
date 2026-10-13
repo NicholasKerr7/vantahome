@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 
 interface SafetyClockClient {
   advanceSafety: (seconds: number) => void;
+  /** Commit the captured simulation pause synchronously before another lifecycle listener tears it down. */
   pauseSafety: () => void;
 }
 

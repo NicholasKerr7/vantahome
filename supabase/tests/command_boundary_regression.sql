@@ -109,31 +109,33 @@ select throws_ok($$select pg_temp.queue_checked_command('invalid-null',2,'set-pr
 select throws_ok($$select pg_temp.queue_checked_command('invalid-schedule',22,'set-properties','{"changes":{"schedule":[{"id":"x","hour":24,"minute":0,"days":["Mon"],"enabled":true}]}}')$$,'23514',null,'schedule hours are bounded');
 select throws_ok($$select pg_temp.queue_checked_command('invalid-action-fields',3,'nav','{"action":"home","changes":{"isOn":true}}')$$,'23514',null,'operations reject unrelated fields');
 
-insert into member_permission_overrides(home_id,user_id,permission,allowed,updated_by) values
-  ('b2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000002','lock.unlock',false,auth.uid());
+select set_member_permission_override('b2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000002','lock.unlock',false);
 select set_config('request.jwt.claims','{"sub":"b1000000-0000-0000-0000-000000000002","role":"authenticated","email":"admin@boundary.test"}',true);
 select is((select count(*) from home_invites),1::bigint,'administrator reads only their household invitations');
 select is((select count(*) from device_audit_logs),1::bigint,'administrator reads only their household audit');
-select is_empty($$delete from member_permission_overrides where user_id = auth.uid() returning user_id$$,'administrator cannot remove own owner-imposed restriction');
+select throws_ok($$delete from member_permission_overrides where user_id = auth.uid() returning user_id$$,'42501',null,'administrator cannot remove own owner-imposed restriction');
 select throws_ok($$insert into member_permission_overrides(home_id,user_id,permission,allowed,updated_by)
   values('b2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000003','lock.unlock',true,auth.uid())$$,
   '42501',null,'administrator cannot delegate a permission the owner denied them');
-select is_empty($$update home_members set role='member' where user_id = auth.uid() returning user_id$$,'administrator cannot demote self to bypass restrictions');
-select is_empty($$delete from home_members where user_id = auth.uid() returning user_id$$,'administrator cannot delete and re-create own authority');
+select throws_ok($$update home_members set role='member' where user_id = auth.uid() returning user_id$$,'42501',null,'administrator cannot demote self to bypass restrictions');
+select throws_ok($$delete from home_members where user_id = auth.uid() returning user_id$$,'42501',null,'administrator cannot delete and re-create own authority');
 select throws_ok($$update home_members set role='admin' where user_id='b1000000-0000-0000-0000-000000000003'$$,'42501',null,'only owner may promote administrators');
-select lives_ok($$update home_members set role='tenant' where user_id='b1000000-0000-0000-0000-000000000003'$$,'administrator still manages ordinary member roles');
+select lives_ok($$select set_home_member_role('b2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000003','tenant')$$,'administrator still manages ordinary member roles');
 select ok(not can_perform_device_action('b4000000-0000-0000-0000-000000000009','lock.unlock'),'owner-imposed administrator denial remains effective');
 
 select set_config('request.jwt.claims','{"sub":"b1000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
-update home_members set role='member' where user_id='b1000000-0000-0000-0000-000000000003';
-delete from home_members where user_id='b1000000-0000-0000-0000-000000000004';
+select set_home_member_role('b2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000003','member');
+select remove_home_member('b2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000004');
 select set_config('request.jwt.claims','{"sub":"b1000000-0000-0000-0000-000000000004","role":"authenticated"}',true);
 select is((select count(*) from rooms),0::bigint,'removed guest has no room metadata access');
 select is((select count(*) from room_members),0::bigint,'removed guest has no surviving room assignment');
 select set_config('request.jwt.claims','{"sub":"b1000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
+-- Privileged fixture isolates departed-room cleanup from invitation admission.
+reset role;
 insert into home_members(home_id,user_id,role) values('b2000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000004','guest');
+set local role authenticated;
 select is((select count(*) from room_members where user_id='b1000000-0000-0000-0000-000000000004'),0::bigint,'re-invitation does not restore old room grants');
-select throws_ok($$insert into room_members(room_id,user_id,role) values('b3000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000005','guest')$$,'23514',null,'room assignment requires membership in the same household');
+select throws_ok($$insert into room_members(room_id,user_id,role) values('b3000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000005','guest')$$,'42501',null,'direct room assignments cannot bypass checked membership authority');
 
 select set_config('request.jwt.claims','{"sub":"b1000000-0000-0000-0000-000000000003","role":"authenticated"}',true);
 select throws_ok($$select pg_temp.queue_checked_command('door-power',9,'set-properties','{"changes":{"isOn":true}}')$$,'42501',null,'opening by power requires unlocking permission');

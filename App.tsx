@@ -1,4 +1,6 @@
 import "react-native-gesture-handler";
+import { AppFeedbackHost } from "./src/components/AppFeedback";
+import { captureMembershipRead, isMembershipReadCurrent } from "./src/services/membershipRevision";
 import React, { useEffect } from "react";
 import { AppState, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -106,10 +108,11 @@ function App() {
         useHomeStore.getState();
       if (!supabase || !userId || currentAppState !== "active") return;
       const version = ++refreshVersion;
+      const read = captureMembershipRead();
       try {
         const result = await syncMembershipFromSupabase(userId);
         if (
-          disposed ||
+          disposed || !isMembershipReadCurrent(read) ||
           version !== refreshVersion ||
           currentAppState !== "active" ||
           useHomeStore.getState().authenticatedUserId !== userId ||
@@ -120,7 +123,7 @@ function App() {
         else if (!applyMembershipSnapshot(result)) invalidateHomeMembership('failed');
       } catch {
         if (
-          !disposed &&
+          !disposed && isMembershipReadCurrent(read) &&
           version === refreshVersion &&
           useHomeStore.getState().authenticatedUserId === userId &&
           useHomeStore.getState().sessionEpoch === sessionEpoch
@@ -168,6 +171,7 @@ function App() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar style="light" />
+        <AppFeedbackHost />
         <AppNavigator />
       </SafeAreaProvider>
     </GestureHandlerRootView>

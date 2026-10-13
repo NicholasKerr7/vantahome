@@ -31,7 +31,7 @@ async function settle(): Promise<void> { for (let index = 0; index < 16; index +
 
 /** Create a valid sparse update without exposing dashboard IDs in the protocol. */
 function patch(requestId: number, on: boolean, level = 35) {
-  return { ...request, type: 'patch', requestId, changes: { deviceStates: { 'living-light': { on, level } } } };
+  return { ...request, type: 'patch', requestId, base: { deviceStates: { 'living-light': createDefaultSimulationSnapshot().deviceStates['living-light'] } }, changes: { deviceStates: { 'living-light': { on, level } } } };
 }
 
 test('hydrates from the demo dashboard and propagates scene edits back without commands', async () => {
@@ -107,7 +107,7 @@ test('dashboard updates reach an open scene and survive leaving and reopening', 
   await settle();
   store.setState({ devices: [{ ...store.getState().devices[0], isOn: false, brightness: 22 }] });
   expect(deliver.mock.lastCall?.[0].state.deviceStates['living-light']).toMatchObject({ on: false, level: 22 });
-  session.handleMessage({ ...request, type: 'patch', requestId: 1, changes: { deviceStates: { 'master-blinds': { on: true, level: 64 } }, motionDisabled: true } });
+  session.handleMessage({ ...request, type: 'patch', requestId: 1, base: { deviceStates: { 'master-blinds': createDefaultSimulationSnapshot().deviceStates['master-blinds'] }, motionDisabled: false }, changes: { deviceStates: { 'master-blinds': { on: true, level: 64 } }, motionDisabled: true } });
   await settle();
   session.dispose();
   const reopenedDeliver = jest.fn();
@@ -133,7 +133,7 @@ test.each(['master-blinds', 'entry-gate', 'entry-door'])('native power routines 
     expect(store.getState().devices[0]).toMatchObject({ isOn: true, openPercent: 100 });
     for (let second = 0; second < 4; second += 1) {
       const states = deliver.mock.lastCall![0].state.deviceStates;
-      session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: second + 1, changes: { deviceStates: advanceSafetySimulation(states, 1) } });
+      session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: second + 1, base: { deviceStates: states }, changes: { deviceStates: advanceSafetySimulation(states, 1) } });
       await settle();
     }
   }
@@ -231,10 +231,10 @@ test('shares every scene device across open native and WebView sessions without 
   voice.handleMessage(request);
   await settle();
   const initial = deliver.mock.lastCall![0].state;
-  session.handleMessage({ ...request, type: 'patch', requestId: 1, changes: { deviceStates: {
+  session.handleMessage({ ...request, type: 'patch', requestId: 1, base: { deviceStates: { 'bedroom-4-bedside-right': initial.deviceStates['bedroom-4-bedside-right'] } }, changes: { deviceStates: {
     'bedroom-4-bedside-right': { ...initial.deviceStates['bedroom-4-bedside-right'], level: 31 },
   } } });
-  voice.handleMessage({ ...request, type: 'patch', requestId: 1, changes: { deviceStates: {
+  voice.handleMessage({ ...request, type: 'patch', requestId: 1, base: { deviceStates: { 'bedroom-4-bedside-right': initial.deviceStates['bedroom-4-bedside-right'], 'bath-7-fan': initial.deviceStates['bath-7-fan'] } }, changes: { deviceStates: {
     'bedroom-4-bedside-right': { ...initial.deviceStates['bedroom-4-bedside-right'], settings: { color: '#A0E9FF' } },
     'bath-7-fan': { ...initial.deviceStates['bath-7-fan'], on: false },
   } } });

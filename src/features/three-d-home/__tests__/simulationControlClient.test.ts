@@ -12,7 +12,7 @@ async function settle(): Promise<void> { for (let index = 0; index < 24; index++
 
 test('rebases rapid edits over older acknowledgements and rejects pre-hydration input', () => {
   let deliver!: (message: SimulationSnapshotMessage) => void;
-  const transport = { handleMessage: jest.fn((_input: unknown) => true), dispose: jest.fn() };
+  const transport = { handleMessage: jest.fn((_input: unknown) => true), dispose: jest.fn(), pauseSafety: jest.fn() };
   const client = new SimulationControlClient((receive) => { deliver = receive; return transport; });
   client.connect();
   client.setLevel('master-blinds', 33);
@@ -155,7 +155,7 @@ test.each([
   { deviceId: 'kitchen-gas-leak', roomIds: ['kitchen'], actionId: 'gas-leak-simulate-leak' },
 ])('rejects $deviceId collateral safety effects before publishing or sending a partial grant', ({ deviceId, roomIds, actionId }) => {
   let deliver!: (message: SimulationSnapshotMessage) => void;
-  const transport = { handleMessage: jest.fn((_input: unknown) => true), dispose: jest.fn() };
+  const transport = { handleMessage: jest.fn((_input: unknown) => true), dispose: jest.fn(), pauseSafety: jest.fn() };
   const client = new SimulationControlClient((receive) => { deliver = receive; return transport; });
   client.connect();
   deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: createDefaultSimulationSnapshot(),
@@ -173,4 +173,28 @@ test.each([
   unsubscribe();
   client.dispose();
   expect(transport.dispose).toHaveBeenCalledTimes(1);
+});
+
+
+test('a queued foreground tick cannot undo a synchronous pause before its host microtask runs', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const persistence = new SimulationPersistence({ getItem: async () => null, setItem: async () => undefined });
+  const factory = (deliver: (message: SimulationSnapshotMessage) => void, status: ConstructorParameters<typeof SimulationSession>[1]) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' });
+  const clock = new SimulationControlClient(factory);
+  const controls = new SimulationControlClient(factory);
+  clock.connect(); controls.connect(); await settle();
+  controls.setLevel('entry-gate', 100); await settle();
+  controls.setLevel('entry-gate', 0); await settle();
+  clock.advanceSafety(1); await settle();
+  expect((await persistence.load('demo')).deviceStates['entry-gate'].level).toBe(75);
+  clock.advanceSafety(1);
+  controls.pauseSafety();
+  await settle();
+  expect((await persistence.load('demo')).deviceStates['entry-gate']).toMatchObject({ level: 75, settings: { gatePhase: 'paused' } });
+  expect(clock.getSnapshot().state.deviceStates['entry-gate']).toMatchObject({ level: 75, settings: { gatePhase: 'paused' } });
+  // A fresh explicit close after observing the pause remains usable.
+  controls.setLevel('entry-gate', 0); await settle();
+  clock.advanceSafety(1); await settle();
+  expect((await persistence.load('demo')).deviceStates['entry-gate']).toMatchObject({ level: 50, settings: { gatePhase: 'closing' } });
+  clock.dispose(); controls.dispose();
 });

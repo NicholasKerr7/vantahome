@@ -1,3 +1,4 @@
+import { withMembershipMutation } from "./membershipRevision";
 import { DEVICES, ROOMS } from '../../packages/home-scene/src/data';
 import { useHomeStore, type HomeState } from '../store/useHomeStore';
 import { applyMembershipSnapshot, syncMembershipFromSupabase } from './membership';
@@ -52,7 +53,7 @@ export async function prepareModelSimulation(): Promise<void> {
   if (!isCurrentOwner(scope) || !canPrepareModelSimulation(useHomeStore.getState())) {
     throw new Error('Your home changed. Reopen it before preparing the model.');
   }
-  const { data, error } = await supabase.rpc('create_model_simulation', { target_home_id: scope.activeHomeId });
+  const { data, error } = await withMembershipMutation(async () => supabase!.rpc('create_model_simulation', { target_home_id: scope.activeHomeId }));
   if (error) throw new Error(error.message);
   if (!isCurrentOwner(scope)) throw new Error('Your home changed. Reopen it to see its model.');
   if (!isSetupResult(data, scope.activeHomeId)) throw new Error('Model setup was not confirmed. Retry to check its status.');

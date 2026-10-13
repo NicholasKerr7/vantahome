@@ -227,11 +227,8 @@ select throws_ok(
 );
 
 -- Per-member decisions override role defaults, but never canonical ownership.
-insert into member_permission_overrides
-  (home_id, user_id, permission, allowed, updated_by)
-values
-  ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003', 'garage.open', false, '10000000-0000-0000-0000-000000000001'),
-  ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000004', 'camera.live', true, '10000000-0000-0000-0000-000000000001');
+select set_member_permission_override('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000003','garage.open',false);
+select set_member_permission_override('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000004','camera.live',true);
 
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-0000-0000-000000000003","role":"authenticated"}', true);
 select ok(

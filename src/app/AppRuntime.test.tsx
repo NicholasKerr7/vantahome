@@ -227,3 +227,37 @@ test("guest expiry stops transports and flows without waiting for the next cloud
   expect(syncMembershipFromSupabase).not.toHaveBeenCalled();
   screen.unmount();
 });
+
+/** Preserve a successful new household admission while an earlier periodic read is pending. */
+test.each(['success', 'missing', 'failure'] as const)("an older periodic %s cannot undo invitation admission", async outcome => {
+  const oldRead = pendingMembership();
+  const screen = render(<App />);
+  await act(async () => { jest.advanceTimersByTime(60_000); });
+  const { applyMembershipSnapshot } = jest.requireActual('../services/membership');
+  const epoch = useHomeStore.getState().sessionEpoch;
+  act(() => { applyMembershipSnapshot({ ...ownerSnapshot(), homeId: 'new-home', rooms: [{ id: 'new-bedroom', name: 'New bedroom' }] }, epoch); });
+  expect(useHomeStore.getState().activeHomeId).toBe('new-home');
+  expect(useHomeStore.getState().sessionEpoch).toBe(epoch);
+  await act(async () => {
+    if (outcome === 'failure') oldRead.reject(new Error('Old household failed'));
+    else oldRead.resolve(outcome === 'missing' ? null : ownerSnapshot());
+  });
+  expect(useHomeStore.getState().activeHomeId).toBe('new-home');
+  expect(selectVisibleRooms(useHomeStore.getState()).map(room => room.id)).toEqual(['new-bedroom']);
+  screen.unmount();
+});
+
+/** Reject delayed policy data after a newer confirmed local denial. */
+test("an older periodic snapshot cannot remove a newly confirmed permission denial", async () => {
+  const guest = { id: 'guest', userId: 'guest', name: 'Guest', role: 'Guest' as const, status: 'home' as const };
+  useHomeStore.setState({ household: [...useHomeStore.getState().household, guest] });
+  const oldRead = pendingMembership();
+  const screen = render(<App />);
+  await act(async () => { jest.advanceTimersByTime(60_000); });
+  // This is the store publication performed after setMemberPermissionOverrideRemote succeeds.
+  act(() => { useHomeStore.getState().setMemberPermissionOverride('guest', 'light.control', false); });
+  expect(useHomeStore.getState().memberPermissionOverrides).toEqual([{ memberId: 'guest', permission: 'light.control', allowed: false }]);
+  await act(async () => { oldRead.resolve({ ...ownerSnapshot(), household: [...ownerSnapshot().household, guest] }); });
+  expect(useHomeStore.getState().memberPermissionOverrides).toEqual([{ memberId: 'guest', permission: 'light.control', allowed: false }]);
+  screen.unmount();
+});

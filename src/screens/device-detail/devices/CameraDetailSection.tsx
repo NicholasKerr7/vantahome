@@ -1,3 +1,5 @@
+import { cameraStatus } from "../../../features/cameras/cameraStatus";
+import { useCameraClock } from "../../../features/cameras/useCameraClock";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -96,10 +98,12 @@ export default function CameraDetailSection({
     roleHasPermission(activeMember.role, "device.control", overrides),
   );
   const access = useProtectedAccess("Confirm access to this camera", canView);
+  const now = useCameraClock(canView && access.state === "granted");
+  const status = cameraStatus(device, now);
   const streamUrl = device.isOn ? device.streamUrl : undefined;
   const thumbnailUrl = device.thumbnailUrl ?? device.lastThumbnailUrl;
   const sensitivity = Math.max(1, Math.min(10, device.motionSensitivity ?? 6));
-  const lastSeen = formatCameraLastSeen(device.lastSeenAt);
+  const lastSeen = formatCameraLastSeen(device.lastSeenAt, now);
   const tabs = gate
     ? [...TABS, { id: "entry", label: "Entry", icon: "key-outline" } as const]
     : TABS;
@@ -127,13 +131,9 @@ export default function CameraDetailSection({
           <DeepCard style={styles.feedCard}>
             <View style={styles.feedHeading}>
               <View style={styles.feedStatus}>
-                <View style={[styles.dot, streamUrl && styles.dotLive]} />
+                <View style={[styles.dot, status.fresh && status.powered && styles.dotLive]} />
                 <Text style={styles.statusLabel}>
-                  {streamUrl
-                    ? "Live view"
-                    : device.isOn
-                      ? "Camera online"
-                      : "Camera offline"}
+                  {status.label}
                 </Text>
               </View>
               <Pressable
@@ -151,6 +151,7 @@ export default function CameraDetailSection({
             <View style={styles.feed}>
               {streamUrl ? (
                 <LiveVideoPlayer
+                  key={streamUrl}
                   sourceUri={streamUrl}
                   enableFullscreen={false}
                   onFullscreen={onExpand}
@@ -161,7 +162,7 @@ export default function CameraDetailSection({
                   uri={thumbnailUrl}
                   title={
                     !device.isOn
-                      ? "Camera offline"
+                      ? "Last reported off"
                       : thumbnailUrl
                         ? "Last snapshot"
                         : "No snapshot yet"

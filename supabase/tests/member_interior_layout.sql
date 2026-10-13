@@ -95,10 +95,10 @@ select lives_ok($$select set_member_interior_layout('a2900000-0000-4000-8000-000
 select is((select share_interior_layout from home_members where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003'),false,'revocation is visible in the next membership snapshot');
 select is((select count(*) from room_members),1::bigint,'layout revocation preserves room assignments');
 select set_member_interior_layout('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000003',true);
-update home_members set role='tenant' where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003';
+select set_home_member_role('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000003','tenant');
 select is((select share_interior_layout from home_members where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003'),false,'changed role clears old consent');
 select set_member_interior_layout('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000003',true);
-update home_members set role='member' where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003';
+select set_home_member_role('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000003','member');
 select is((select share_interior_layout from home_members where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003'),false,'whole-home role never retains a latent scoped grant');
 -- Initial finite deadline is a privileged fixture; authenticated edits now use migration 020 RPC.
 reset role;
@@ -108,10 +108,16 @@ select set_member_interior_layout('a2900000-0000-4000-8000-000000000001','a19000
 select extend_guest_access('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000003',now()+interval '1 day',24,null);
 select is((select share_interior_layout from home_members where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000003'),false,'extended access requires renewed layout consent');
 select set_member_interior_layout('a2900000-0000-4000-8000-000000000001','a1900000-0000-4000-8000-000000000004',true);
+-- Privileged maintenance fixture; client membership identity writes are revoked.
+reset role;
 update home_members set home_id='a2900000-0000-4000-8000-000000000003' where home_id='a2900000-0000-4000-8000-000000000001' and user_id='a1900000-0000-4000-8000-000000000004';
+set local role authenticated;
 select is((select share_interior_layout from home_members where home_id='a2900000-0000-4000-8000-000000000003' and user_id='a1900000-0000-4000-8000-000000000004'),false,'moving membership cannot carry consent across homes');
 select set_member_interior_layout('a2900000-0000-4000-8000-000000000003','a1900000-0000-4000-8000-000000000004',true);
+-- Privileged maintenance fixture; client membership identity writes are revoked.
+reset role;
 update home_members set user_id='a1900000-0000-4000-8000-000000000006' where home_id='a2900000-0000-4000-8000-000000000003' and user_id='a1900000-0000-4000-8000-000000000004';
+set local role authenticated;
 select is((select share_interior_layout from home_members where home_id='a2900000-0000-4000-8000-000000000003' and user_id='a1900000-0000-4000-8000-000000000006'),false,'changing membership identity clears consent');
 select is((select count(*) from member_permission_overrides),0::bigint,'layout operations never create action overrides');
 

@@ -252,9 +252,15 @@ export default function DeviceBrowser({
         </View>
       )}
       {favorites.enabled && favorites.status === "error" && (
-        <Text accessibilityRole="alert" style={styles.saveWarning}>
-          Favorites could not be saved or loaded. Changes stay in this session.
-        </Text>
+        <View style={styles.favoriteRecovery}>
+          <Text accessibilityRole="alert" style={styles.saveWarning}>
+            {favorites.error === "load" ? "Saved favorites could not be loaded. Retry before changing favorites."
+              : "Favorites could not be saved. Your changes remain here; retry to save them."}
+          </Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Retry favorites" onPress={favorites.retry} style={styles.filter}>
+            <Text style={styles.backLabel}>Retry</Text>
+          </Pressable>
+        </View>
       )}
       <View
         testID="device-browser-card-area"
@@ -272,12 +278,13 @@ export default function DeviceBrowser({
               {showingFavorites
                 ? favorites.status === "loading"
                   ? "Loading favorites…"
-                  : "Your favorites start here"
+                  : favorites.error === "load" ? "Saved favorites unavailable" : "Your favorites start here"
                 : "No matching devices"}
             </Text>
             <Text style={styles.emptyDetail}>
               {showingFavorites
-                ? "Tap the star on a device card to keep it close."
+                ? favorites.error === "load" ? "Use Retry to restore your saved favorites before making changes."
+                  : "Tap the star on a device card to keep it close."
                 : searching
                   ? "Try a device or room name, or clear the search."
                   : "No devices are available in this home view."}
@@ -310,7 +317,7 @@ export default function DeviceBrowser({
                   onSelect={openDevice}
                   compact={compactSearch}
                   favorite={favoriteIds.includes(choice.id)}
-                  favoriteDisabled={favorites.status === "loading"}
+                  favoriteDisabled={favorites.status === "loading" || favorites.error === "load"}
                   onToggleFavorite={
                     favorites.enabled
                       ? () => favorites.toggle(choice.id)

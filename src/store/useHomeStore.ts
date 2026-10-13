@@ -20,6 +20,7 @@ import { sceneEditChangesBehavior } from '../features/scenes/sceneEdits';
 import { assertSceneWriteAccess, canManageScenes, removeSceneState } from '../features/scenes/sceneManagement';
 import { runSimulationScene } from '../features/scenes/simulationSceneExecution';
 import { homeEditorScope } from '../features/home-shell/homeEditorScope';
+import { validCachedRoutineCollections } from './cachedRoutineValidation';
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -1774,6 +1775,7 @@ function sanitizeCachedState(raw: string | null) {
         throw new HomeCacheLoadError('corrupt');
       }
     }
+    if (!validCachedRoutineCollections(cached.state)) throw new HomeCacheLoadError('corrupt');
     for (const field of ['profile', 'preferences', 'integrations', 'realtime']) {
       const value: unknown = cached.state[field];
       if (value !== undefined && (!value || typeof value !== 'object' || Array.isArray(value))) throw new HomeCacheLoadError('corrupt');
