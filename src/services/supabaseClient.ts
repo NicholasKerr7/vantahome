@@ -17,3 +17,15 @@ export const supabase =
         },
       })
     : null;
+
+/** Verify captured tokens without letting an obsolete Auth error clear the app's current login. */
+export const accountAuthVerifier = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storageKey: 'vantahome-token-verifier',
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+  : null;

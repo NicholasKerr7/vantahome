@@ -2,6 +2,11 @@
 
 Last maintained: **2026-10-13**. Read this before rediscovering the project.
 
+Track remaining work and deeper implementation opportunities in the maintained
+[implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
+milestones; preserve explicit hub/sync/iPad deferrals and distinguish verified
+defects from ideas or untested risks.
+
 ## Locations and branch
 
 - Active checkout: `/Users/nick007/Library/Caches/VantaHome/native-device-test`
@@ -39,6 +44,67 @@ Last maintained: **2026-10-13**. Read this before rediscovering the project.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Account security and sent invitations — October 13 / Preview 60
+
+- **Account → Security & sessions** (Profile → Security) lists only this account's
+  stored sign-ins, identifies the current session, and offers deliberate
+  other-session sign-out plus the existing current-session sign-out. Device names
+  are sanitized hints, never live presence. Times distinguish sign-in, token
+  refresh and last inventory check. Up to 50 sessions; no inventory stored on disk.
+- **Household → Sent** shows authorized pending/expired invitations, real home/room
+  scope and deadlines, with a reviewed Revoke action. A monotonic server revision
+  prevents cancelling a reissued invitation with a reused ID. Acceptance winning
+  the household lock preserves membership; expiry is checked after lock waits.
+  Revocation does not delete an account or invalidate its email sign-in code.
+- Both paths recheck scope and authority around asynchronous work, reject malformed
+  responses and recover explicitly after uncertain results. Background/unmount
+  invalidates unsent confirmations; iOS biometric `inactive` preserves them.
+  Already-dispatched operations cannot be cancelled; resume rechecks their outcome.
+- Session logout targets the captured caller JWT through the public Auth endpoint
+  and requires a strict acknowledgement and refreshed inventory. A separate,
+  non-persisting verifier prevents an obsolete token error clearing a newer login.
+  Existing access tokens can remain usable until expiry; the UI states this.
+  Account lifecycle changes and app-wide session-aware enforcement remain backlog.
+- The user requested lasting continuity and deeper adjacent investigation.
+  `AGENTS.md` now routes future work through the prioritized
+  [implementation backlog](IMPLEMENTATION_BACKLOG.md), with evidence and explicit
+  deferrals. This is a work practice, not unattended monitoring or exhaustive audit.
+
+Verification: **3,251 app tests / 226 suites**, app/edge TypeScript, release
+metadata/assets/auth redirects and local security patch checks passed. All **24
+migrations** passed **654 SQL assertions / 14 suites** in isolated PostgreSQL.
+Three additional two-connection lock tests covered cancellation, acceptance and
+expiry while waiting. Independent service/migration/lifecycle review found and
+fixed stale confirmation, biometric foreground and token-verifier isolation edges.
+
+**Staging only:** migrations **023–024** deployed to `dcevusczjtmdpzrxpdou`.
+Catalog confirms checked RPCs, private Auth tables and closed invitation writes.
+Hosted tests passed **28 checks** using five disposable accounts and one household;
+all fixtures were deleted and verified absent. No invitation emails were sent and
+no real household/session was mutated. Production and edge functions unchanged.
+
+Browser QA: **37 cases / 27 bounded layouts** at **390×844**, **768×1024** and
+**1024×768**, zero browser errors. Covered pagination, long names, expiry, keyboard
+confirmation/cancellation, account changes, failed reads/mutations and explicit
+refresh. Normal demo routes and isolated fixtures used exact components/services;
+mock browser responses are separate from the hosted API checks above.
+
+**Preview 60 installed and launched** on the connected iPhone. Device inventory
+confirms **1.0.0 (60)**; process presence checked after launch. Package verification:
+strict signature, preview identity/schemes,
+device coverage, current UI markers, arrival media and bundled scene. Production
+metadata restored. Provisioning expires **2026-10-19 05:19:39 UTC**. Physical
+interaction and native biometric review of the new controls remain pending;
+installation is not behavioral signoff. Scene **31,801,189 bytes**, SHA256
+`0f328c6ecfded4e3359ea426f3484e9abf36fdbd79277c7e7a562aa4576dd035`.
+
+Evidence: `work/account-security-full-tests-final.log`, `*-types-final.log`,
+`*-sql-summary.log`, `*-invitation-races.log`, `*-staging-deployment.json`,
+`*-hosted-invitations.json`, `*-session-smoke.json`, `*-browser-evidence.json`,
+browser screenshots and `*-preview60-{build-status.log,package.json,install.json,
+launch.json,apps.json,process.json}`. Temporary QA browser profiles and Metro 5190
+closed; existing user Metro 5188 retained.
 
 ## Deep rescan fixes — October 13 / Preview 59
 
@@ -538,10 +604,11 @@ in-app flows. Generic peer names belong to the deferred profile sync.
 
 ## Environment and confirmed milestones
 
-- Staging Supabase: `dcevusczjtmdpzrxpdou`. Migrations **001–022** applied only here.
+- Staging Supabase: `dcevusczjtmdpzrxpdou`. Migrations **001–024** applied only here.
   019 adds owner-only interior consent; 020 adds checked Guest deadline changes.
   021 adds Owner-managed, consented property weather configuration.
   022 enforces checked membership, permission and room-delegation mutations.
+  023 adds revision-checked sent invitation management; 024 adds private own-session inventory.
 - Use configured CLI/Keychain credentials in memory; never print/store privileged
   keys or put them in `EXPO_PUBLIC_*`. Do not read account credentials into chat.
 - Preview bundle: `com.anonymous.vantahome.preview`; scheme `vantahome-preview`.

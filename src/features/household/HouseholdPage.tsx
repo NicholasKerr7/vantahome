@@ -25,10 +25,12 @@ import { GuestAccessDeadline, GuestAccessExtension } from "./GuestAccessExtensio
 import { canManageGuestAccessExtension } from "../../services/guestAccessExtension";
 import { useHomeStore } from "../../store/useHomeStore";
 import { supabase } from "../../services/supabaseClient";
+import { SentInvitationsPage } from "./SentInvitationsPage";
 
 const HOUSEHOLD_TABS = [
   { id: "people", label: "Members" },
   { id: "invite", label: "Invite" },
+  { id: "sent", label: "Sent" },
   { id: "inbox", label: "Inbox" },
 ] as const;
 
@@ -485,7 +487,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
 
 /** Separate membership, invitations, and inbox navigation within the household workspace. */
 export function HouseholdPage({ model }: { model: ProfileWorkspaceModel }) {
-  const [page, setPage] = useState<"people" | "invite" | "inbox">("people");
+  const [page, setPage] = useState<"people" | "invite" | "sent" | "inbox">("people");
   return (
     <View style={styles.body}>
       <DeepTabs items={HOUSEHOLD_TABS} selectedId={page} onSelect={setPage} />
@@ -494,6 +496,8 @@ export function HouseholdPage({ model }: { model: ProfileWorkspaceModel }) {
           <HouseholdMembers model={model} />
         ) : page === "invite" ? (
           <InvitePerson model={model} />
+        ) : page === "sent" ? (
+          <SentInvitationsPage />
         ) : (
           <InvitationInbox model={model} />
         )}

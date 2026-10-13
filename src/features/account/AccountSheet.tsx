@@ -34,7 +34,7 @@ export default function AccountSheet({ onClose, onPreferences }: { onClose: () =
   const demo = identity.mode === 'demo';
 
   /** Close the sheet before routing to an existing focused profile section. */
-  function openProfile(section: 'identity' | 'household' | 'preferences') {
+  function openProfile(section: 'identity' | 'household' | 'preferences' | 'security') {
     onClose();
     navigation.navigate('Profile', { section });
   }
@@ -91,6 +91,7 @@ export default function AccountSheet({ onClose, onPreferences }: { onClose: () =
               <AccountAction title="Preferences" detail="Motion, cinematic tour and personal comfort" icon="options-outline" onPress={openPreferences} />
               <AccountAction title={demo ? 'Demo profile' : 'Profile'} detail="Your name, portrait and personal details" icon="person-circle-outline" onPress={() => openProfile('identity')} />
               {!demo && identity.homeId && <AccountAction title="Household" detail="People and permissions in this home" icon="people-outline" onPress={() => openProfile('household')} />}
+              {!demo && identity.homeId && <AccountAction title="Security & sessions" detail="Review sign-ins and sign out other sessions" icon="shield-checkmark-outline" onPress={() => openProfile('security')} />}
               {demo && <AccountAction title="Preview account access" detail="Explore sign-in, invitations and owner setup" icon="key-outline" onPress={previewAccountEntry} />}
             </View>}
             {identity.mode === 'account' && <AccountSignOut onComplete={onClose} />}

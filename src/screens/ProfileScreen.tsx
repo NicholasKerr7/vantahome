@@ -15,13 +15,15 @@ import {
 import { HouseholdPage } from "../features/household/HouseholdPage";
 import { householdStyles as styles } from "../features/household/householdStyles";
 import { useProfileWorkspace } from "../features/household/useProfileWorkspace";
+import { AccountSecurityPage } from "../features/account/AccountSecurityPage";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
-type ProfileSection = "identity" | "household" | "preferences" | "access";
+type ProfileSection = "identity" | "household" | "preferences" | "access" | "security";
 const SECTIONS = [
   { id: "identity", label: "Identity", icon: "person-outline" },
   { id: "household", label: "People", icon: "people-outline" },
   { id: "preferences", label: "Feel", icon: "options-outline" },
+  { id: "security", label: "Security", icon: "shield-checkmark-outline" },
   { id: "access", label: "Access", icon: "key-outline" },
 ] as const;
 
@@ -49,6 +51,7 @@ export default function ProfileScreen({ navigation, route }: Props) {
         {section === "identity" && <IdentityPage model={model} />}
         {section === "household" && <HouseholdPage model={model} />}
         {section === "preferences" && <PreferencesPage model={model} />}
+        {section === "security" && <AccountSecurityPage />}
         {section === "access" && (
           <AccessPage
             model={model}
