@@ -40,6 +40,25 @@ Last maintained: **2026-10-13**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Follow-up deep audit — October 13
+
+After Preview 58, the user requested another deep scan. Read
+[Deep reliability rescan](DEEP_RELIABILITY_RESCAN.md) before implementing more work.
+It records **11 additional confirmed finding groups** at app source **d6e3cd4**:
+a P1 restricted-Admin membership-write policy bypass; stale membership refreshes;
+false-success permission reset; delayed renderer edits overwriting newer state;
+direct background/resume gate behavior; nested routine cache validation; timezone
+refresh gaps; camera status/player cleanup; remaining browser Alert no-ops; offline
+favorite recovery; and failed inbox-write retries. **These findings are unresolved.**
+
+The server-policy proof used an isolated PostgreSQL 17 database with all 21
+migrations, then removed it; no live household or deployed policy was exercised.
+Focused reproductions and baseline tests are recorded in the report and work cache.
+Temporary tests are removed. Refreshed branches retain the same 17 divergent
+`ios-build-cleanup` commits; no newer implementation was found. The hosted Verify
+run for d6e3cd4 passed. Preview 58 and all services remain unchanged by this audit.
+Fix authorization first, then state/lifecycle/recovery, before optional features.
+
 ## Deep reliability fixes — October 13
 
 The seven findings from the audit of **7600c47** are now addressed in source:
