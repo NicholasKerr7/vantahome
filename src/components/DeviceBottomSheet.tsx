@@ -16,7 +16,7 @@ import {
 } from "@gorhom/bottom-sheet";
 import { BlurView } from "expo-blur";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import * as Haptics from "expo-haptics";
+import { selectionHaptic } from "../services/haptics";
 import { theme } from "../theme/theme";
 import { type Device } from "../store/useHomeStore";
 import DeviceCapabilityControls from "./DeviceCapabilityControls";
@@ -208,7 +208,6 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
       backgroundColor: "transparent",
     };
 
-    const haptic = () => Haptics.selectionAsync().catch(() => {});
     // Arming, cover, and reading shortcuts need their own state rather than the device's power state.
     const hasQuickActionOverride = quickActionLabel !== undefined;
     const actionActive = hasQuickActionOverride
@@ -319,7 +318,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                         disabled={!canCreateRoutines}
                         style={[chipStyle, !canCreateRoutines && styles.routineDisabled]}
                         onPress={() => {
-                          haptic();
+                          void selectionHaptic();
                           onQuickSchedule({ hour: 21, minute: 0 });
                         }}
                       >
@@ -334,7 +333,7 @@ const DeviceBottomSheet = forwardRef<BottomSheetModal, Props>(
                         disabled={!canCreateRoutines}
                         style={[chipStyle, !canCreateRoutines && styles.routineDisabled]}
                         onPress={() => {
-                          haptic();
+                          void selectionHaptic();
                           onQuickSchedule({ hour: 7, minute: 0 });
                         }}
                       >

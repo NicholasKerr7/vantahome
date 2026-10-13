@@ -274,6 +274,126 @@ describe("navigation session boundaries", () => {
     await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
   });
 
+  test('restoring the same account keeps its saved display name and profile preferences', async () => {
+    const initial = render(<AppNavigator />);
+    await waitFor(() => expect(initial.getByTestId('registered-route-Main')).toBeTruthy());
+    act(() => { useHomeStore.getState().setProfile({
+      name: 'Alice at home', email: 'outdated@example.test', avatarUri: 'file:///profile/alice.jpg', tempUnit: 'F',
+    }); });
+    initial.unmount();
+    const restoredSession = sessionFor('alice');
+    restoredSession.user.user_metadata = { full_name: 'Old metadata name' };
+    mockGetSession.mockResolvedValue({ data: { session: restoredSession } });
+
+    const restored = render(<AppNavigator />);
+    await waitFor(() => expect(restored.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(useHomeStore.getState().profile).toMatchObject({
+      name: 'Alice at home', email: 'alice@example.test', avatarUri: 'file:///profile/alice.jpg', tempUnit: 'F',
+    });
+    expect(useHomeStore.getState().userName).toBe('Alice at home');
+  });
+
+  test('account switches initialize a new name without carrying another account profile and restore each local name', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    act(() => { useHomeStore.getState().setProfile({ name: 'Alice at home', avatarUri: 'file:///profile/alice.jpg' }); });
+    const bob = sessionFor('bob');
+    bob.user.user_metadata = { full_name: { invalid: true }, name: '  Bobby  ' };
+    await act(async () => mockAuthChanged('SIGNED_IN', bob));
+    await waitFor(() => expect(useHomeStore.getState().activeMemberId).toBe('bob'));
+    expect(useHomeStore.getState().profile).toMatchObject({ name: 'Bobby', email: 'bob@example.test' });
+    expect(useHomeStore.getState().profile.avatarUri).toBeUndefined();
+
+    await act(async () => mockAuthChanged('SIGNED_IN', sessionFor('alice')));
+    await waitFor(() => expect(useHomeStore.getState().activeMemberId).toBe('alice'));
+    expect(useHomeStore.getState().profile).toMatchObject({ name: 'Alice at home', avatarUri: 'file:///profile/alice.jpg' });
+  });
+
+  test('same-account auth updates refresh the confirmed login email without replacing the local display name', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    act(() => { useHomeStore.getState().setProfile({ name: 'Alice at home' }); });
+    const updated = sessionFor('alice');
+    updated.user.email = 'alice-new@example.test';
+    updated.user.user_metadata = { full_name: 'Old metadata name' };
+    await act(async () => mockAuthChanged('USER_UPDATED', updated));
+    expect(useHomeStore.getState().profile).toMatchObject({ name: 'Alice at home', email: 'alice-new@example.test' });
+    expect(deviceClient.resetSession).toHaveBeenCalledTimes(1);
+  });
+
+  test('auth updates received during startup supply the latest email after account preparation finishes', async () => {
+    let finishPreparation: (value: boolean) => void = () => {};
+    mockNeedsInvitationPasswordSetup.mockImplementationOnce(() => new Promise((resolve) => { finishPreparation = resolve; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(mockNeedsInvitationPasswordSetup).toHaveBeenCalledWith('alice'));
+    const updated = sessionFor('alice');
+    updated.user.email = 'alice-new@example.test';
+    updated.user.user_metadata = { full_name: 'Alice New' };
+    await act(async () => mockAuthChanged('USER_UPDATED', updated));
+    await act(async () => finishPreparation(false));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(useHomeStore.getState().profile).toMatchObject({ name: 'Alice New', email: 'alice-new@example.test' });
+  });
+
+  test('unchanged token refreshes do not rewrite the account cache', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    const writes = (AsyncStorage.setItem as jest.Mock).mock.calls.length;
+    await act(async () => mockAuthChanged('TOKEN_REFRESHED', sessionFor('alice')));
+    expect(AsyncStorage.setItem).toHaveBeenCalledTimes(writes);
+  });
+
+  test('failed profile persistence keeps startup gated and can be retried', async () => {
+    jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('Storage unavailable'));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Unable to save your account on this device.')).toBeTruthy());
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(mockMembership).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(useHomeStore.getState().profile.email).toBe('alice@example.test');
+  });
+
+  test('a delayed failed profile write cannot gate or replace a newer account', async () => {
+    let failWrite: (reason: Error) => void = () => {};
+    jest.spyOn(AsyncStorage, 'setItem').mockImplementationOnce(() => new Promise((_, reject) => { failWrite = reject; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(useHomeStore.getState().profile.email).toBe('alice@example.test'));
+    await act(async () => mockAuthChanged('SIGNED_IN', sessionFor('bob')));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    await act(async () => failWrite(new Error('Earlier storage failure')));
+    expect(screen.queryByText('Unable to save your account on this device.')).toBeNull();
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+    expect(useHomeStore.getState().profile).toMatchObject({ name: 'bob', email: 'bob@example.test' });
+  });
+
+  test('a newer same-account email update supersedes an earlier failed profile write', async () => {
+    let failWrite: (reason: Error) => void = () => {};
+    jest.spyOn(AsyncStorage, 'setItem').mockImplementationOnce(() => new Promise((_, reject) => { failWrite = reject; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(useHomeStore.getState().profile.email).toBe('alice@example.test'));
+    const updated = sessionFor('alice');
+    updated.user.email = 'alice-new@example.test';
+    await act(async () => mockAuthChanged('USER_UPDATED', updated));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    await act(async () => failWrite(new Error('Superseded storage failure')));
+    expect(screen.queryByText('Unable to save your account on this device.')).toBeNull();
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+    expect(useHomeStore.getState().profile.email).toBe('alice-new@example.test');
+  });
+
+  test('an unchanged token event still waits for an in-flight profile save before opening Home', async () => {
+    let failWrite: (reason: Error) => void = () => {};
+    jest.spyOn(AsyncStorage, 'setItem').mockImplementationOnce(() => new Promise((_, reject) => { failWrite = reject; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(useHomeStore.getState().profile.email).toBe('alice@example.test'));
+    await act(async () => mockAuthChanged('TOKEN_REFRESHED', sessionFor('alice')));
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    await act(async () => failWrite(new Error('Storage unavailable')));
+    await waitFor(() => expect(screen.getByText('Unable to save your account on this device.')).toBeTruthy());
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+  });
+
   test('a warm check retains hidden Home but immediately removes all shared control runtimes', async () => {
     const screen = render(<AppNavigator />);
     await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());

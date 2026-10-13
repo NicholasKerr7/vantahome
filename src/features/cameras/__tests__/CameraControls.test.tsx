@@ -6,6 +6,9 @@ import type { Device, HouseholdMember } from "../../../store/useHomeStore";
 
 let mockAccess = "granted";
 const mockState = {
+  authenticatedUserId: null, accountUserId: null, activeHomeId: null, accountHomeId: null,
+  sessionEpoch: 0, membershipReady: false, household: [],
+  profile: { name: '', email: '', homeName: '' },
   member: { id: "owner", role: "Owner" },
   memberPermissionOverrides: [],
 };

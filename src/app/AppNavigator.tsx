@@ -48,6 +48,7 @@ import ArrivalInteractionShield from '../features/arrival/ArrivalInteractionShie
 import { isHomeInvitationUrl } from '../config/authRedirects';
 import { signOutAccount } from '../features/account/accountSession';
 import { isAccountScopeCurrent } from '../features/account/accountIdentity';
+import { resolveSessionProfile } from '../features/account/sessionProfile';
 import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
 import { useWarmHomeRetention } from './useWarmHomeRetention';
 
@@ -223,14 +224,64 @@ export default function AppNavigator() {
     const authClient = supabase;
     let mounted = true;
     let currentUserId: string | null | undefined;
+    let latestSession: Session | null = null;
+    let profilePrepared = false;
+    let profileRevision = 0;
+    let pendingProfileSave: { version: number; name: string; email: string | undefined; completion: Promise<void> } | null = null;
     let transition = 0;
     let receivedAuthEvent = false;
+    /** Persist only changed identity text and keep a failed or stale save outside startup completion. */
+    const prepareSessionProfile = async (currentSession: Session, version: number) => {
+      const revision = ++profileRevision;
+      const state = useHomeStore.getState();
+      if (state.authenticatedUserId !== currentSession.user.id) return;
+      // Profile persistence follows account identity; a same-account membership
+      // refresh must not silently discard its success or storage failure.
+      const isCurrent = () => mounted && version === transition && revision === profileRevision
+        && state.authenticatedUserId === useHomeStore.getState().authenticatedUserId
+        && state.sessionEpoch === useHomeStore.getState().sessionEpoch;
+      const profile = resolveSessionProfile(state.profile.name, currentSession.user);
+      let pending = pendingProfileSave;
+      try {
+        if (state.profile.name !== profile.name || state.profile.email !== profile.email) {
+          pending = { ...profile, version, completion: Promise.resolve(state.setProfile(profile)) };
+          pendingProfileSave = pending;
+        }
+        // A repeated token event must wait for an identical in-flight save,
+        // rather than mistake its already-updated memory state for durable data.
+        if (pending?.version === version && pending.name === profile.name && pending.email === profile.email) {
+          await pending.completion;
+        }
+      } catch {
+        if (!isCurrent()) return;
+        profilePrepared = false;
+        setAuthReady(false);
+        setStartupRetrying(false);
+        setStartupError('Unable to save your account on this device.');
+        retryStartup.current = () => {
+          if (isCurrent()) void receiveSession(latestSession, true);
+        };
+        return;
+      } finally {
+        if (pendingProfileSave === pending) pendingProfileSave = null;
+      }
+      if (!isCurrent()) return;
+      setStartupError(null);
+      setStartupRetrying(false);
+      setAuthReady(true);
+    };
     /** Hydrate one identity at a time; storage failures stay outside private navigation. */
     const receiveSession = async (nextSession: Session | null, retry = false) => {
       if (!mounted) return;
       const userId = nextSession?.user.id ?? null;
+      latestSession = nextSession;
       if (currentUserId === userId && !retry) {
         setSession(nextSession);
+        // Token/user updates may confirm a new login email without rehydrating
+        // storage or replacing a display name edited on this device.
+        if (profilePrepared && nextSession) {
+          await prepareSessionProfile(nextSession, transition);
+        }
         return;
       }
       if (currentUserId && currentUserId !== userId) {
@@ -239,6 +290,7 @@ export default function AppNavigator() {
         setInvitationEnrollment(false);
       }
       currentUserId = userId;
+      profilePrepared = false;
       const version = ++transition;
       retryStartup.current = null;
       setStartupError(null);
@@ -279,16 +331,13 @@ export default function AppNavigator() {
           setInvitationEnrollment(true);
           setPasswordRecovery(true);
         }
-        const meta = nextSession.user.user_metadata ?? {};
-        useHomeStore.getState().setProfile({
-          name:
-            meta.full_name ||
-            meta.name ||
-            nextSession.user.email?.split("@")[0] ||
-            "Home",
-          email: nextSession.user.email,
-        });
+        // Hydration restores only this account's cache. Metadata supplies a
+        // first-login fallback; it must not undo a saved local display name.
+        profilePrepared = true;
+        await prepareSessionProfile(latestSession ?? nextSession, version);
+        return;
       }
+      profilePrepared = true;
       setStartupRetrying(false);
       setAuthReady(true);
     };

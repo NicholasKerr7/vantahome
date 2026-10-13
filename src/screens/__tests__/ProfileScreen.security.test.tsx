@@ -155,7 +155,7 @@ describe("Profile household authorization and account isolation", () => {
 
   /** Mount an authenticated profile and optionally use the menu's direct section target. */
   async function mount(actor = owner, section?: "household" | "preferences") {
-    useHomeStore.setState({ authenticatedUserId: actor.userId, accountUserId: actor.userId, activeMemberId: actor.id });
+    useHomeStore.setState((state) => ({ authenticatedUserId: actor.userId, accountUserId: actor.userId, activeMemberId: actor.id, profile: { ...state.profile, name: actor.name } }));
     await act(async () => {
       tree = renderer.create(<ProfileScreen navigation={{ navigate: jest.fn(), goBack: jest.fn() } as never} route={{ key: "Profile", name: "Profile", params: section ? { section } : undefined }} />);
     });
@@ -263,6 +263,29 @@ describe("Profile household authorization and account isolation", () => {
     expect(button("Save profile")).toBeUndefined();
     expect(useHomeStore.getState()).toBe(before);
     expect(mockConfirm).not.toHaveBeenCalled();
+  });
+
+  it("keeps account email read-only and explains the local scope of personal details", async () => {
+    await mount(owner);
+    await press(button("Identity"));
+    const inputs = tree!.root.findAllByType(TextInput);
+    const accountEmail = inputs.find((node: { props: React.ComponentProps<typeof TextInput> }) => node.props.accessibilityLabel === "Account email");
+    expect(accountEmail).toBeDefined();
+    expect(accountEmail!.props.editable).toBe(false);
+    expect(inputs.some((node: { props: React.ComponentProps<typeof TextInput> }) => node.props.accessibilityLabel === "Home name")).toBe(false);
+    const copy = screenRoot().findAllByType(Text).map((node) => String(node.props.children)).join(" ");
+    expect(copy).toContain("Saving this profile does not change your login");
+    expect(copy).toContain("not shared with other household members or devices");
+    await press(button("Feel"));
+    expect(tree!.root.findAllByType(TextInput).some((node: { props: React.ComponentProps<typeof TextInput> }) => node.props.accessibilityLabel === "Timezone")).toBe(false);
+    expect(screenRoot().findAllByType(Text).map((node) => String(node.props.children)).join(" ")).toContain("weather location and time zone");
+  });
+
+  it("does not offer a photo upload that cloud invitations cannot save", async () => {
+    await mount(owner, "household");
+    await press(button("Invite"));
+    expect(button("Add photo")).toBeUndefined();
+    expect(button("Review invitation access")).toBeDefined();
   });
 
   it("retains real saved haptics and notification controls in Comfort", async () => {

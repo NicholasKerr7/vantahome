@@ -7,14 +7,14 @@ import { useHomeStore } from "../../store/useHomeStore";
 
 const mockNavigate = jest.fn();
 const mockActivity = jest.fn();
-const mockBootstrap = jest.fn(async (_home: string): Promise<void> => undefined);
+const mockBootstrap = jest.fn(async (_home: string, _expectedUserId?: string): Promise<void> => undefined);
 const mockUnsubscribe = jest.fn();
 let mockDevelopmentTools = true;
 
 jest.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: mockNavigate }) }));
 jest.mock("@expo/vector-icons/Ionicons", () => require("react-native").View);
 jest.mock("../../services/supabaseClient", () => ({ supabase: null }));
-jest.mock("../../services/cloudRegistry", () => ({ bootstrapHome: (home: string) => mockBootstrap(home) }));
+jest.mock("../../services/cloudRegistry", () => ({ bootstrapHome: (home: string, expectedUserId?: string) => mockBootstrap(home, expectedUserId) }));
 jest.mock("../../services/deviceClient", () => ({ deviceClient: {
   subscribeConnection: () => mockUnsubscribe,
   subscribeRetry: () => mockUnsubscribe,
@@ -66,6 +66,28 @@ describe("architectural settings workspace", () => {
     act(() => { switches.find((node: TestNode) => node.props.accessibilityLabel === "Notifications")!.props.onValueChange(false); });
     expect(useHomeStore.getState().preferences).toEqual({ haptics: false, notifications: false });
     expect(tree.root.findAllByType(ScrollView)).toHaveLength(0);
+  });
+
+  it('rejects retained preference and connection callbacks after the account scope changes', () => {
+    tree = renderWorkspace();
+    act(() => { action(tree!, 'Feel settings').props.onPress(); });
+    const retainedPreference = tree.root.findAllByType(Switch).find((node: TestNode) => node.props.accessibilityLabel === 'Haptics')!.props.onValueChange;
+    act(() => { action(tree!, 'Tools settings').props.onPress(); });
+    const retainedConnection = tree.root.findByType(TextInput).props.onChangeText;
+    act(() => { useHomeStore.setState({ sessionEpoch: seed.sessionEpoch + 1 }); });
+    act(() => { retainedPreference(false); retainedConnection('ws://old-session'); });
+    expect(useHomeStore.getState().preferences.haptics).toBe(true);
+    expect(useHomeStore.getState().realtime.wsUrl).toBe('');
+  });
+
+  it('rejects a retained settings callback after the workspace closes', () => {
+    tree = renderWorkspace();
+    act(() => { action(tree!, 'Feel settings').props.onPress(); });
+    const retainedPreference = tree.root.findAllByType(Switch).find((node: TestNode) => node.props.accessibilityLabel === 'Notifications')!.props.onValueChange;
+    act(() => { tree!.unmount(); });
+    tree = undefined;
+    act(() => { retainedPreference(false); });
+    expect(useHomeStore.getState().preferences.notifications).toBe(true);
   });
 
   it("preserves profile, integrations and both activity destinations", () => {
@@ -147,9 +169,17 @@ describe("architectural settings workspace", () => {
     const start = action(tree, "Initialize cloud home").props.onPress;
     act(() => { start(); start(); });
     expect(mockBootstrap).toHaveBeenCalledTimes(1);
-    expect(mockBootstrap).toHaveBeenCalledWith("Test home");
+    expect(mockBootstrap).toHaveBeenCalledWith("Test home", undefined);
     await act(async () => { finish(); });
     expect(alert).toHaveBeenCalledWith("Cloud home ready", expect.any(String));
+  });
+
+  it('binds cloud setup to the current authenticated account during token lookup', async () => {
+    useHomeStore.setState({ authenticatedUserId: 'owner', accountUserId: 'owner', activeHomeId: 'home', accountHomeId: 'home', membershipReady: true,
+      activeMemberId: 'owner', household: [{ id: 'owner', userId: 'owner', name: 'Owner', role: 'Owner', status: 'home' }] });
+    tree = renderWorkspace();
+    await act(async () => { action(tree!, 'Initialize cloud home').props.onPress(); });
+    expect(mockBootstrap).toHaveBeenCalledWith('Test home', 'owner');
   });
 
   it("ignores cloud feedback after the account session changes", async () => {

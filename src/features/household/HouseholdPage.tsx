@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Text, View, useWindowDimensions } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AvatarChip from "../../components/AvatarChip";
+import { useAccountIdentity } from "../account/useAccountIdentity";
+import { resolveMemberPresentation } from "../account/accountIdentity";
 import Pressable from "../../components/Pressable";
 import ModalCard from "../../components/ModalCard";
 import ModalForm, { useModalViewportStyle } from "../../components/ModalForm";
@@ -90,7 +92,7 @@ function InvitePerson({ model }: { model: ProfileWorkspaceModel }) {
             ))}
         </View>
       </View>
-      <View style={styles.actions}>
+      {!supabase && <View style={styles.actions}>
         <DeepAction
           label={model.newMemberAvatar ? "Change photo" : "Add photo"}
           icon="image-outline"
@@ -104,7 +106,7 @@ function InvitePerson({ model }: { model: ProfileWorkspaceModel }) {
             onPress={() => model.setNewMemberAvatar("")}
           />
         )}
-      </View>
+      </View>}
       <DeepAction
         label={limitedRooms ? "Choose room access" : "Review access"}
         accessibilityLabel="Review invitation access"
@@ -263,6 +265,7 @@ function InvitationInbox({ model }: { model: ProfileWorkspaceModel }) {
 
 /** Use one member card at a time; reveal detailed permissions only when requested. */
 function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
+  const { scope } = useAccountIdentity();
   const { height, fontScale } = useWindowDimensions();
   // Landscape tablets need the same room for fixed actions as smaller phones.
   const compact = height < 850 || fontScale > 1.2;
@@ -283,6 +286,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
         <Text style={styles.rowText}>No household members to show.</Text>
       </View>
     );
+  const presentation = resolveMemberPresentation(scope, member);
   const roomIds =
     model.roomMembers.find((entry) => entry.memberId === member.id)?.roomIds ??
     [];
@@ -292,10 +296,10 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
       <View style={[styles.memberIdentity, compact && styles.memberIdentityCompact]}>
         <View style={[styles.memberIdentityHeader, compact && styles.memberIdentityHeaderCompact]}>
           <View style={[styles.avatarRing, compact && styles.avatarRingCompact]}>
-            <AvatarChip name={member.name} size={compact ? 44 : 68} color={member.avatarColor} uri={member.avatarUri} />
+            <AvatarChip name={presentation.name} size={compact ? 44 : 68} color={presentation.avatarColor} uri={presentation.avatarUri} decorative />
           </View>
           <View style={[styles.memberIdentityCopy, compact && styles.memberIdentityCopyCompact]}>
-            <Text numberOfLines={1} style={[styles.memberName, compact && styles.memberNameCompact]}>{member.name}</Text>
+            <Text numberOfLines={1} style={[styles.memberName, compact && styles.memberNameCompact]}>{presentation.name}</Text>
             <Text style={styles.memberMeta}>
               {member.role} · {member.status === "home" ? "Home" : "Away"}
             </Text>
@@ -306,7 +310,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
       <View style={styles.memberActions}>
         {limitedRooms && (
           <Pressable
-            accessibilityLabel={`Room access for ${member.name}`}
+            accessibilityLabel={`Room access for ${presentation.name}`}
             accessibilityHint="Review assigned rooms and interior layout sharing."
             style={styles.memberAction}
             onPress={() => {
@@ -332,7 +336,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
         )}
         {model.canManageHousehold && (
           <Pressable
-            accessibilityLabel={`Permissions for ${member.name}`}
+            accessibilityLabel={`Permissions for ${presentation.name}`}
             style={styles.memberAction}
             onPress={() => setSheet("permissions")}
           >
@@ -357,7 +361,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
           </Pressable>
         )}
         <Pressable
-          accessibilityLabel={`Remove ${member.name}`}
+          accessibilityLabel={`Remove ${presentation.name}`}
           accessibilityState={{ disabled: !model.canEditMember(member) }}
           disabled={!model.canEditMember(member)}
           style={[
@@ -403,7 +407,7 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
                   <Text style={styles.eyebrow}>
                     {sheet === "permissions" ? "ACTION PERMISSIONS" : "HOME VISIBILITY"}
                   </Text>
-                  <Text style={styles.title}>{member.name}</Text>
+                  <Text style={styles.title}>{presentation.name}</Text>
                 </View>
               </View>
               {sheet !== "permissions" && <DeepTabs items={MEMBER_ACCESS_TABS} selectedId={sheet} onSelect={setSheet} />}

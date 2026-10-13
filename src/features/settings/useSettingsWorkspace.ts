@@ -8,6 +8,7 @@ import { deviceClient, type ConnectionStatus } from "../../services/deviceClient
 import { selectVisibleDevices, selectVisibleRooms, useHomeStore } from "../../store/useHomeStore";
 import type { HomeState } from "../../store/useHomeStore";
 import { selectHomeNavigationAccess } from "../home-shell/homeNavigationAccess";
+import { useAccountPreferences } from "../account/useAccountPreferences";
 
 /** Subscribe to existing settings and delivery state without introducing another transport. */
 export function useSettingsWorkspace() {
@@ -15,8 +16,7 @@ export function useSettingsWorkspace() {
   const userName = useHomeStore((state) => state.userName);
   const roomCount = useHomeStore((state) => selectVisibleRooms(state).length);
   const deviceCount = useHomeStore((state) => selectVisibleDevices(state).length);
-  const preferences = useHomeStore((state) => state.preferences);
-  const setPreferences = useHomeStore((state) => state.setPreferences);
+  const { preferences, preferenceError, setComfortPreferences: setPreferences, canUpdate } = useAccountPreferences();
   const realtime = useHomeStore((state) => state.realtime);
   const commandActivity = useCommandActivityLauncher();
   const [connection, setConnection] = useState<ConnectionStatus>("disconnected");
@@ -42,19 +42,15 @@ export function useSettingsWorkspace() {
 
   /** Keep completion feedback inside the account that requested setup. */
   async function initializeCloudHome() {
-    if (cloudRequest.current || !selectHomeNavigationAccess(useHomeStore.getState()).admin) return;
+    if (cloudRequest.current || !canUpdate() || !selectHomeNavigationAccess(useHomeStore.getState()).admin) return;
     cloudRequest.current = true;
     setCloudBusy(true);
-    const scope = useHomeStore.getState();
-    const isCurrent = () => {
-      const current = useHomeStore.getState();
-      return scope.authenticatedUserId === current.authenticatedUserId && scope.sessionEpoch === current.sessionEpoch;
-    };
+    const userId = useHomeStore.getState().authenticatedUserId;
     try {
-      await bootstrapHome(homeTitle);
-      if (isCurrent()) Alert.alert("Cloud home ready", "Your home is ready. Device connections still need setup.");
+      await bootstrapHome(homeTitle, userId ?? undefined);
+      if (canUpdate()) Alert.alert("Cloud home ready", "Your home is ready. Device connections still need setup.");
     } catch {
-      if (isCurrent()) Alert.alert("Cloud setup unavailable", "Your home could not be initialized. Check your connection and sign-in, then try again.");
+      if (canUpdate()) Alert.alert("Cloud setup unavailable", "Your home could not be initialized. Check your connection and sign-in, then try again.");
     } finally {
       cloudRequest.current = false;
       setCloudBusy(false);
@@ -64,7 +60,7 @@ export function useSettingsWorkspace() {
   /** Recheck administrator access when a retained connection form callback is used. */
   function setRealtime(patch: Partial<HomeState['realtime']>): void {
     const current = useHomeStore.getState();
-    if (selectHomeNavigationAccess(current).admin) current.setRealtime(patch);
+    if (canUpdate() && selectHomeNavigationAccess(current).admin) current.setRealtime(patch);
   }
 
   /** Open the configured support address only after an explicit feedback action. */
@@ -89,7 +85,7 @@ export function useSettingsWorkspace() {
   if (retry.pending && retry.nextAttemptAt) retryLabel += ` · next ${new Date(retry.nextAttemptAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
   return {
-    homeTitle, roomCount, deviceCount, preferences, setPreferences, realtime, setRealtime,
+    homeTitle, roomCount, deviceCount, preferences, preferenceError, setPreferences, realtime, setRealtime,
     commandActivity, cloudBusy, initializeCloudHome, version, supportEmail, sendFeedback,
     mqtt, connectionLabel, retryLabel, developmentTools: runtimePolicy.allowDirectMqtt,
     runtimeLabel: runtimePolicy.mode === "demo" ? "Demo · local simulation" : runtimePolicy.mode,

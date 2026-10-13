@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
-import { theme } from "../../theme/theme";
 import {
   selectActiveMember,
   selectVisibleDevices,
@@ -35,12 +34,17 @@ import { cancelAuthFlow, waitForAuthExchange } from "../../services/authFlow";
 import { buildInvitationAccess, type GuestAccessHours } from "./invitationAccess";
 import { isInvitationExpired } from "../home-access/invitationExpiry";
 import { useInteriorLayoutSharing } from "./useInteriorLayoutSharing";
+import { useProfileDraft } from "./useProfileDraft";
+import { useAccountPreferences } from "../account/useAccountPreferences";
+import { useAccountIdentity } from "../account/useAccountIdentity";
+import { isAccountScopeCurrent, type AccountScope } from "../account/accountIdentity";
+import { discardPreparedPortrait, prepareProfilePortrait } from "./profilePortrait";
 
 /** Reject delayed household mutations after changing home, account, or session. */
 function scopeIsCurrent(previous: ReturnType<typeof useHomeStore.getState>) {
   const state = useHomeStore.getState();
   return (
-    state.authenticatedUserId === previous.authenticatedUserId &&
+    isAccountScopeCurrent(previous, state) &&
     state.sessionEpoch === previous.sessionEpoch &&
     state.activeHomeId === previous.activeHomeId &&
     state.activeMemberId === previous.activeMemberId &&
@@ -60,10 +64,14 @@ function canInviteFromState(state: ReturnType<typeof useHomeStore.getState>, req
 /** Keep profile edits and protected household actions separate from their paged presentation. */
 export function useProfileWorkspace(navigation: { goBack: () => void }) {
   const interiorLayoutSharing = useInteriorLayoutSharing();
-  const profile = useHomeStore((s) => s.profile);
-  const setProfile = useHomeStore((s) => s.setProfile);
-  const prefs = useHomeStore((s) => s.preferences);
-  const setPreferences = useHomeStore((s) => s.setPreferences);
+  const draft = useProfileDraft(navigation.goBack);
+  const { scope: accountScope } = useAccountIdentity();
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const { preferences: prefs, setComfortPreferences: setPreferences, preferenceError } = useAccountPreferences();
   const integrations = useHomeStore((s) => s.integrations);
   const roomsCount = useHomeStore((s) => selectVisibleRooms(s).length);
   const devicesCount = useHomeStore((s) => selectVisibleDevices(s).length);
@@ -82,17 +90,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   const addHouseholdMember = useHomeStore((s) => s.addHouseholdMember);
   const removeHouseholdMember = useHomeStore((s) => s.removeHouseholdMember);
 
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email ?? "");
-  const [phone, setPhone] = useState(profile.phone ?? "");
-  const [homeName, setHomeName] = useState(profile.homeName ?? "");
-  const [avatarColor, setAvatarColor] = useState(
-    profile.avatarColor ?? theme.colors.accent2,
-  );
-  const [avatarUri, setAvatarUri] = useState(profile.avatarUri ?? "");
-  const [timeFormat, setTimeFormat] = useState(profile.timeFormat ?? "12h");
-  const [tempUnit, setTempUnit] = useState(profile.tempUnit ?? "C");
-  const [timezone, setTimezone] = useState(profile.timezone ?? "Auto");
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<
@@ -100,7 +97,11 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   >("Guest");
   const [newMemberRoomIds, setNewMemberRoomIds] = useState<string[]>([]);
   const [guestAccessHours, setGuestAccessHours] = useState<GuestAccessHours>(0);
-  const [newMemberAvatar, setNewMemberAvatar] = useState("");
+  const [memberPortrait, setMemberPortrait] = useState<{ scope: AccountScope; asset: ImagePicker.ImagePickerAsset } | null>(null);
+  const portraitCurrent = memberPortrait && isAccountScopeCurrent(memberPortrait.scope, accountScope);
+  const newMemberAvatar = portraitCurrent ? memberPortrait.asset.uri : "";
+  const memberPhotoPending = useRef(false);
+  const invitationPending = useRef(false);
   const [pendingInvites, setPendingInvites] = useState<HomeInvite[]>([]);
   const [invitesRefreshing, setInvitesRefreshing] = useState(false);
   const [inviteInboxError, setInviteInboxError] = useState<string | null>(null);
@@ -293,69 +294,39 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     },
   ];
 
-  /** Persist the edited profile fields and return to the previous workspace. */
-  const onSave = () => {
-    setProfile({
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      homeName: homeName.trim(),
-      avatarColor,
-      avatarUri,
-      timeFormat,
-      tempUnit,
-      timezone: timezone.trim() || "Auto",
-    });
-    navigation.goBack();
-  };
-
-  /** Request photo access only when changing the profile avatar. */
-  const pickAvatar = async () => {
-    // Request library access at runtime to avoid startup permission prompts.
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
-        "Enable photo access to upload a profile avatar.",
-      );
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.9,
-    });
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      setAvatarUri(result.assets[0].uri);
-    }
-  };
-
-  /** Pick an optional invitation avatar without startup permission prompts. */
+  /** Keep a scoped demo selection in memory; copy it only when the local member is saved. */
   const pickHouseholdAvatar = async () => {
-    // Reuse the image picker for household members to keep uploads consistent.
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission needed",
-        "Enable photo access to add a household member.",
-      );
-      return;
+    const scope = useHomeStore.getState();
+    if (supabase || !runtimePolicy.allowUnauthenticatedDemo || memberPhotoPending.current || invitationPending.current
+      || !mounted.current || !isAccountScopeCurrent(accountScope, scope) || !canInviteFromState(scope, newMemberRole)) return;
+    memberPhotoPending.current = true;
+    try {
+      if (Platform.OS !== "web") {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!mounted.current || !scopeIsCurrent(scope)) return;
+        if (status !== "granted") throw new Error("Enable photo access to add a household member.");
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.65,
+      });
+      if (!mounted.current || !scopeIsCurrent(scope) || !canInviteFromState(useHomeStore.getState(), newMemberRole)) return;
+      if (!result.canceled && result.assets?.[0]?.uri) setMemberPortrait({ scope: accountScope, asset: result.assets[0] });
+    } catch (error) {
+      if (mounted.current && scopeIsCurrent(scope)) Alert.alert("Photo unavailable", error instanceof Error ? error.message : "Please choose the photo again.");
+    } finally {
+      memberPhotoPending.current = false;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.9,
-    });
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      setNewMemberAvatar(result.assets[0].uri);
-    }
+  };
+
+  /** Removing a draft selection never touches another person's saved photo. */
+  const setNewMemberAvatar = (_uri: string) => {
+    if (mounted.current && !invitationPending.current && isAccountScopeCurrent(accountScope, useHomeStore.getState())) setMemberPortrait(null);
   };
 
   /** Invite members using authoritative cloud membership or the explicit demo path. */
-  const handleAddMember = async () => {
+  const submitMember = async () => {
     const scope = useHomeStore.getState();
+    if (!mounted.current || !isAccountScopeCurrent(accountScope, scope)) return;
     const trimmed = newMemberName.trim();
     const email = newMemberEmail.trim().toLowerCase();
     if (!trimmed || !canInviteFromState(scope, newMemberRole)) return;
@@ -373,38 +344,41 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     }
     if (!(await confirmHouseholdAdminChange())) return;
     if (!scopeIsCurrent(scope) || !canInviteFromState(useHomeStore.getState(), newMemberRole)) return;
-    /** Create a local demo person with the same initial room scope as an invite. */
-    const addMemberLocally = () => {
-      const localId = `m${Date.now()}`;
-      const initialRoomIds = access.roomIds;
-      addHouseholdMember({
-        id: localId,
-        userId: localId,
-        name: trimmed,
-        role: newMemberRole,
-        status: "away",
-        avatarUri: newMemberAvatar,
-        avatarColor: avatarColor,
-        accessExpiresAt: access.accessExpiresAt,
-      });
-      if (initialRoomIds.length) {
-        setRoomMembership(localId, initialRoomIds);
-      }
-      setNewMemberName("");
-      setNewMemberEmail("");
-      setNewMemberRole("Guest");
-      setNewMemberAvatar("");
-      setNewMemberRoomIds([]);
-      setGuestAccessHours(0);
-    };
     if (!supabase) {
       if (!runtimePolicy.allowUnauthenticatedDemo) return;
-      addMemberLocally();
-      Alert.alert(
-        "Invite added locally",
-        "Sign in to send real invites from the cloud.",
-      );
-      return true;
+      let prepared: string | null = null;
+      let applied = false;
+      const localId = `m${Date.now()}`;
+      setInviteLoading(true);
+      try {
+        if (portraitCurrent) prepared = await prepareProfilePortrait(memberPortrait.asset);
+        if (!mounted.current || !scopeIsCurrent(scope) || !canInviteFromState(useHomeStore.getState(), newMemberRole)) {
+          if (prepared) await discardPreparedPortrait(prepared);
+          return;
+        }
+        applied = true;
+        await addHouseholdMember({
+          id: localId, userId: localId, name: trimmed, role: newMemberRole, status: "away",
+          avatarUri: prepared ?? "", avatarColor: draft.avatarColor, accessExpiresAt: access.accessExpiresAt,
+        });
+        if (!scopeIsCurrent(scope)) return;
+        if (access.roomIds.length) await setRoomMembership(localId, access.roomIds);
+        if (!mounted.current || !scopeIsCurrent(scope)) return;
+        setNewMemberName(""); setNewMemberEmail(""); setNewMemberRole("Guest");
+        setMemberPortrait(null); setNewMemberRoomIds([]); setGuestAccessHours(0);
+        Alert.alert("Invite added locally", "Sign in to send real invites from the cloud.");
+        return true;
+      } catch (error) {
+        let removable = !applied;
+        if (applied && scopeIsCurrent(scope)) {
+          try { await removeHouseholdMember(localId); removable = true; } catch { /* Keep the file if a persisted member might still reference it. */ }
+        }
+        if (prepared && removable) {
+          try { await discardPreparedPortrait(prepared); } catch { /* Keep the original save failure visible. */ }
+        }
+        if (mounted.current && scopeIsCurrent(scope)) Alert.alert("Invitation not saved", error instanceof Error ? error.message : "Please try again.");
+      }
+      return;
     }
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -455,7 +429,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
       setNewMemberName("");
       setNewMemberEmail("");
       setNewMemberRole("Guest");
-      setNewMemberAvatar("");
+      setMemberPortrait(null);
       setNewMemberRoomIds([]);
       setGuestAccessHours(0);
       await refreshInvites();
@@ -464,8 +438,17 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
       if (!scopeIsCurrent(scope)) return;
       const message = (err as Error).message ?? "Unable to invite member.";
       Alert.alert("Invitation not sent", message);
-    } finally {
-      if (scopeIsCurrent(scope)) setInviteLoading(false);
+    }
+  };
+
+  /** Latch confirmation and persistence so rapid taps cannot create duplicate invitations. */
+  const handleAddMember = async () => {
+    if (invitationPending.current || memberPhotoPending.current) return;
+    invitationPending.current = true;
+    try { return await submitMember(); }
+    finally {
+      invitationPending.current = false;
+      if (mounted.current) setInviteLoading(false);
     }
   };
 
@@ -575,8 +558,9 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   };
 
   return {
-    profile,
+    ...draft,
     prefs,
+    preferenceError,
     setPreferences,
     integrations,
     roomsCount,
@@ -587,24 +571,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     activeMemberId,
     roomMembers,
     memberPermissionOverrides,
-    name,
-    setName,
-    email,
-    setEmail,
-    phone,
-    setPhone,
-    homeName,
-    setHomeName,
-    avatarColor,
-    setAvatarColor,
-    avatarUri,
-    setAvatarUri,
-    timeFormat,
-    setTimeFormat,
-    tempUnit,
-    setTempUnit,
-    timezone,
-    setTimezone,
     newMemberName,
     setNewMemberName,
     newMemberEmail,
@@ -633,8 +599,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     interiorLayoutSharing,
     updatePermissionOverride,
     serviceItems,
-    onSave,
-    pickAvatar,
     pickHouseholdAvatar,
     handleAddMember,
     handleRemoveMember,

@@ -134,6 +134,7 @@ export default function SettingsWorkspace() {
           <SettingToggle label="Haptics" value={model.preferences.haptics} onChange={(haptics) => model.setPreferences({ haptics })} />
           <SettingToggle label="Notifications" value={model.preferences.notifications} onChange={(notifications) => model.setPreferences({ notifications })} />
           <SettingValue label="Appearance" value="Vanta violet" />
+          {model.preferenceError && <Text accessibilityRole="alert" style={styles.detail}>{model.preferenceError}</Text>}
         </View>}
         {category === "weather" && <HomeWeatherSettings key={weatherScope} onEditingChange={setEditing} />}
         {category === "voice" && <>

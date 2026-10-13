@@ -1,4 +1,5 @@
 import React from 'react';
+import { Image } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { useHomeStore } from '../../../store/useHomeStore';
 import AccountSheet from '../AccountSheet';
@@ -23,7 +24,7 @@ const initial = useHomeStore.getState();
 beforeEach(() => {
   jest.clearAllMocks();
   useHomeStore.setState(scope);
-  mockIdentity = { mode: 'account', name: 'Alice Smith', firstName: 'Alice', initials: 'AS', role: 'Guest', homeId: 'home-a' };
+  mockIdentity = { avatarUri: null, avatarColor: null, mode: 'account', name: 'Alice Smith', firstName: 'Alice', initials: 'AS', role: 'Guest', homeId: 'home-a' };
   mockDimensions = { width: 393, height: 852, fontScale: 1, scale: 1 };
   mockSignOut.mockResolvedValue(true);
 });
@@ -40,7 +41,7 @@ test('keeps mobile identity compact and reveals first name and role on tablet', 
 });
 
 test('demo has a visible label and preview routes without account or owner claims', () => {
-  mockIdentity = { mode: 'demo', name: 'Demo profile', firstName: 'Demo', initials: 'VH', role: null, homeId: null };
+  mockIdentity = { avatarUri: null, avatarColor: null, mode: 'demo', name: 'Demo profile', firstName: 'Demo', initials: 'VH', role: null, homeId: null };
   const close = jest.fn();
   const screen = render(<><DashboardAccountButton onPress={jest.fn()} /><AccountSheet onClose={close} /></>);
   expect(screen.getByText('Demo')).toBeTruthy();
@@ -93,4 +94,21 @@ test('requires confirmation before sign-out and reports failure without closing'
   expect(close).not.toHaveBeenCalled();
   await act(async () => fireEvent.press(screen.getByLabelText('Confirm sign out on this device')));
   await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+});
+
+
+test('dashboard and account sheet show saved portraits and immediately reflect replacement or removal', () => {
+  mockIdentity = { ...mockIdentity, avatarUri: 'file:///profiles/alice.jpg', avatarColor: '#A0E9FF' };
+  const content = () => <><DashboardAccountButton onPress={jest.fn()} /><AccountSheet onClose={jest.fn()} /></>;
+  const screen = render(content());
+  expect(screen.UNSAFE_getAllByType(Image).map((image) => image.props.source.uri)).toEqual([
+    'file:///profiles/alice.jpg', 'file:///profiles/alice.jpg',
+  ]);
+  mockIdentity = { ...mockIdentity, avatarUri: 'file:///profiles/alice-new.jpg' };
+  screen.rerender(content());
+  expect(screen.UNSAFE_getAllByType(Image).every((image) => image.props.source.uri === mockIdentity.avatarUri)).toBe(true);
+  mockIdentity = { ...mockIdentity, avatarUri: null };
+  screen.rerender(content());
+  expect(screen.UNSAFE_queryAllByType(Image)).toHaveLength(0);
+  expect(screen.getAllByText('AS', { includeHiddenElements: true })).toHaveLength(2);
 });

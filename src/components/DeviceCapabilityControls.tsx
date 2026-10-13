@@ -8,7 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import Slider from "@react-native-community/slider";
-import * as Haptics from "expo-haptics";
+import { selectionHaptic } from "../services/haptics";
 import Pressable from "./Pressable";
 import RadialDial from "./RadialDial";
 import { theme } from "../theme/theme";
@@ -273,11 +273,6 @@ function DeviceCapabilityControls({
     (cap): cap is StatCapability => cap.type === "stat",
   );
 
-  const haptic = () => {
-    if (enableHaptics) {
-      Haptics.selectionAsync().catch(() => {});
-    }
-  };
   const sliderStyle: StyleProp<ViewStyle> = { flex: 1, height: 40 };
   const toggleGroupStyle: StyleProp<ViewStyle> = { marginTop: 8 };
   const pillButtonStyle = (active: boolean): StyleProp<ViewStyle> => [
@@ -372,7 +367,7 @@ function DeviceCapabilityControls({
           maximumTrackTintColor={palette.sliderMax}
           thumbTintColor={palette.sliderThumb}
           onValueChange={(value) => {
-            haptic();
+            if (enableHaptics) void selectionHaptic();
             applyRangeValue(cap, value);
           }}
         />

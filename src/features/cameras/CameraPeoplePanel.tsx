@@ -8,6 +8,8 @@ import {
   DeepTabs,
 } from "../../components/deep/DeepScreen";
 import AvatarChip from "../../components/AvatarChip";
+import { useAccountIdentity } from "../account/useAccountIdentity";
+import { resolveMemberPresentation } from "../account/accountIdentity";
 import { useActivityPages } from "../activity/useActivityPages";
 import type { HouseholdMember } from "../../store/useHomeStore";
 import { theme } from "../../theme/theme";
@@ -40,6 +42,7 @@ export default function CameraPeoplePanel({
   onUnknownFace,
   onPresence,
 }: Props) {
+  const { scope } = useAccountIdentity();
   const [tab, setTab] = useState<"members" | "events">("members");
   const membersPage = useActivityPages(household.length, 138);
   const eventsPage = useActivityPages(events.length, 100);
@@ -51,47 +54,51 @@ export default function CameraPeoplePanel({
         {tab === "members"
           ? household
               .slice(pages.start, pages.start + pages.pageSize)
-              .map((member) => (
-                <DeepCard key={member.id} style={styles.memberCard}>
-                  <View style={styles.memberHeading}>
-                    <AvatarChip
-                      name={member.name}
-                      size={38}
-                      color={member.avatarColor}
-                      uri={member.avatarUri}
-                    />
-                    <View style={styles.identity}>
-                      <Text style={styles.title} numberOfLines={1}>
-                        {member.name}
-                      </Text>
-                      <Text style={styles.caption}>
-                        {member.status === "home" ? "At home" : "Away"}
-                      </Text>
+              .map((member) => {
+                const presentation = resolveMemberPresentation(scope, member);
+                return (
+                  <DeepCard key={member.id} style={styles.memberCard}>
+                    <View style={styles.memberHeading}>
+                      <AvatarChip
+                        name={presentation.name}
+                        size={38}
+                        color={presentation.avatarColor}
+                        uri={presentation.avatarUri}
+                        decorative
+                      />
+                      <View style={styles.identity}>
+                        <Text style={styles.title} numberOfLines={1}>
+                          {presentation.name}
+                        </Text>
+                        <Text style={styles.caption}>
+                          {member.status === "home" ? "At home" : "Away"}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.actions}>
-                    <DeepAction
-                      label="Recognize"
-                      accessibilityLabel={`Recognize ${member.name}`}
-                      icon="scan-outline"
-                      onPress={() => onKnownFace(member.id, member.name)}
-                      disabled={disabled}
-                    />
-                    <DeepAction
-                      label={
-                        member.status === "home" ? "Mark away" : "Mark home"
-                      }
-                      onPress={() =>
-                        onPresence(
-                          member.id,
-                          member.status === "home" ? "away" : "home",
-                        )
-                      }
-                      disabled={disabled}
-                    />
-                  </View>
-                </DeepCard>
-              ))
+                    <View style={styles.actions}>
+                      <DeepAction
+                        label="Recognize"
+                        accessibilityLabel={`Recognize ${presentation.name}`}
+                        icon="scan-outline"
+                        onPress={() => onKnownFace(member.id, member.name)}
+                        disabled={disabled}
+                      />
+                      <DeepAction
+                        label={
+                          member.status === "home" ? "Mark away" : "Mark home"
+                        }
+                        onPress={() =>
+                          onPresence(
+                            member.id,
+                            member.status === "home" ? "away" : "home",
+                          )
+                        }
+                        disabled={disabled}
+                      />
+                    </View>
+                  </DeepCard>
+                );
+              })
           : events
               .slice(pages.start, pages.start + pages.pageSize)
               .map((event) => (

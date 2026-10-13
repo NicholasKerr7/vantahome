@@ -2,6 +2,8 @@ import React from "react";
 import { Text } from "react-native";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
 import RadialDial from "../RadialDial";
+import * as Haptics from 'expo-haptics';
+import { useHomeStore } from '../../store/useHomeStore';
 
 const panGestures: any[] = [];
 const tapGestures: any[] = [];
@@ -177,5 +179,23 @@ describe("RadialDial", () => {
 
     expect(onChange).toHaveBeenCalled();
     expect(onChange).toHaveBeenCalledWith(18);
+  });
+
+  it('keeps the dial responsive while the saved haptics preference is off', () => {
+    const preferences = useHomeStore.getState().preferences;
+    useHomeStore.getState().setPreferences({ haptics: false });
+    jest.mocked(Haptics.selectionAsync).mockClear();
+    const onChange = jest.fn();
+    let tree!: ReactTestRenderer;
+    try {
+      act(() => { tree = renderer.create(<RadialDial value={12} min={10} max={30} size={200} onChange={onChange} />); });
+      const tap = tapGestures[tapGestures.length - 1];
+      act(() => { tap.__handlers.onStart?.(dialPointForValue(18, 10, 30, 200)); });
+      expect(onChange).toHaveBeenCalledWith(18);
+      expect(Haptics.selectionAsync).not.toHaveBeenCalled();
+    } finally {
+      act(() => { tree?.unmount(); });
+      useHomeStore.setState({ preferences });
+    }
   });
 });

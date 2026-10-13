@@ -498,19 +498,21 @@ export type HomeState = {
   renameRoom: (roomId: string, name: string) => void;
   moveRoom: (roomId: string, direction: -1 | 1) => void;
   removeRoom: (roomId: string) => void;
-  setProfile: (patch: Partial<Profile>) => void;
+  /** Returns the storage write when persistence is enabled so editors can confirm durable saves. */
+  setProfile: (patch: Partial<Profile>) => void | Promise<void>;
   setOutdoor: (patch: Partial<AmbientReading>) => void;
   setIndoor: (patch: Partial<AmbientReading>) => void;
-  setPreferences: (patch: Partial<Preferences>) => void;
+  setPreferences: (patch: Partial<Preferences>) => void | Promise<void>;
   setRealtime: (patch: Partial<RealtimeSettings>) => void;
   setDevice: (deviceId: string, patch: Partial<Device>) => void;
   setAC: (deviceId: string, patch: Partial<Device>) => void;
   toggleDevice: (deviceId: string) => void;
   addDevice: (device: Omit<Device, "id"> & { id?: string }) => void;
   removeDevice: (deviceId: string) => void;
+  /** Let local invitations wait for the member and portrait reference to persist. */
   addHouseholdMember: (
     member: Omit<HouseholdMember, "id"> & { id?: string },
-  ) => void;
+  ) => void | Promise<void>;
   updateHouseholdMember: (
     memberId: string,
     patch: Partial<HouseholdMember>,
@@ -1860,14 +1862,15 @@ export const useHomeStore = create<HomeState>()(
         });
       },
 
-      setProfile: (patch) =>
-        set((state) => {
+      setProfile: async (patch) => {
+        await set((state) => {
           const next = { ...state.profile, ...patch };
           return {
             profile: next,
             userName: next.name || state.userName,
           };
-        }),
+        });
+      },
 
       setOutdoor: (patch) =>
         set((state) => ({
@@ -1887,10 +1890,11 @@ export const useHomeStore = create<HomeState>()(
           },
         })),
 
-      setPreferences: (patch) =>
-        set((state) => ({
+      setPreferences: async (patch) => {
+        await set((state) => ({
           preferences: { ...state.preferences, ...patch },
-        })),
+        }));
+      },
 
       setRealtime: (patch) =>
         set((state) => ({
@@ -1928,9 +1932,9 @@ export const useHomeStore = create<HomeState>()(
           devices: state.devices.filter((d) => d.id !== deviceId),
         })),
 
-      addHouseholdMember: (member) => {
+      addHouseholdMember: async (member) => {
         const id = member.id ?? `m${Date.now()}`;
-        set((state) => {
+        await set((state) => {
           const nextMember = { ...member, id };
           const shouldAssignRooms = !roleHasFullAccess(nextMember.role);
           const firstRoomId = state.rooms[0]?.id;

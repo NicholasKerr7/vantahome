@@ -58,10 +58,10 @@ export default function ProfileScreen({ navigation, route }: Props) {
         {section === "identity" && (
           <View style={styles.footer}>
             <DeepAction
-              label="Save profile"
+              label={model.profileBusy ? "Preparing profile…" : "Save profile"}
               primary
-              disabled={!model.name.trim()}
-              onPress={model.onSave}
+              disabled={!model.name.trim() || model.profileBusy || !model.canEditProfile}
+              onPress={() => void model.onSave()}
             />
           </View>
         )}

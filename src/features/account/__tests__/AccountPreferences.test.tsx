@@ -23,7 +23,7 @@ const scene: HomeChromeSnapshot = {
 };
 beforeEach(() => {
   useHomeStore.setState({ ...scope, profile: { name: 'Alice', tempUnit: 'C', timeFormat: '12h' }, preferences: { haptics: true, notifications: true } });
-  mockIdentity = { mode: 'account', name: 'Alice', firstName: 'Alice', initials: 'A', role: 'Guest', homeId: 'home-a' };
+  mockIdentity = { avatarUri: null, avatarColor: null, mode: 'account', name: 'Alice', firstName: 'Alice', initials: 'A', role: 'Guest', homeId: 'home-a' };
 });
 afterEach(() => useHomeStore.setState(initial, true));
 
@@ -70,6 +70,9 @@ test('keeps local preferences available while the property is not ready', () => 
 test('updates units and time through existing profile patches without overwriting changed identity', () => {
   const screen = render(<AccountPreferences onClose={jest.fn()} scene={scene} onSceneCommand={jest.fn()} />);
   fireEvent.press(screen.getByLabelText('Display'));
+  expect(screen.getByText('Dashboard temperature')).toBeTruthy();
+  expect(screen.getByText('Dashboard clock')).toBeTruthy();
+  expect(screen.getByText('Property time and weather follow your home’s configured location. Device controls keep their labeled units.')).toBeTruthy();
   act(() => { useHomeStore.getState().setProfile({ name: 'Updated name', timezone: 'America/New_York' }); });
   fireEvent.press(screen.getByLabelText('Fahrenheit'));
   fireEvent.press(screen.getByLabelText('24-hour'));
@@ -107,10 +110,24 @@ test('closes native preferences before opening existing help and keeps account n
 });
 
 test('unavailable identity cannot alter personal preferences', () => {
-  mockIdentity = { mode: 'unavailable', name: 'Account unavailable', firstName: 'Account', initials: '?', role: null, homeId: null };
+  mockIdentity = { avatarUri: null, avatarColor: null, mode: 'unavailable', name: 'Account unavailable', firstName: 'Account', initials: '?', role: null, homeId: null };
   const screen = render(<AccountPreferences onClose={jest.fn()} scene={scene} onSceneCommand={jest.fn()} />);
   expect(screen.getByText('Reopen your account to change preferences.')).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Display'));
   fireEvent.press(screen.getByLabelText('Fahrenheit'));
   expect(useHomeStore.getState().profile.tempUnit).toBe('C');
+});
+
+test('shows a storage failure and restores the displayed selection instead of claiming it saved', async () => {
+  const original = useHomeStore.getState().setProfile;
+  useHomeStore.setState({ setProfile: jest.fn(original).mockImplementationOnce(async patch => {
+    await original(patch);
+    throw new Error('Storage unavailable');
+  }) });
+  const screen = render(<AccountPreferences onClose={jest.fn()} scene={scene} onSceneCommand={jest.fn()} />);
+  fireEvent.press(screen.getByLabelText('Display'));
+  await act(async () => { fireEvent.press(screen.getByLabelText('Fahrenheit')); });
+  expect(screen.getByText('This personal preference could not be saved. Please try again.')).toBeTruthy();
+  expect(screen.getByLabelText('Celsius').props.accessibilityState.selected).toBe(true);
+  expect(screen.getByLabelText('Fahrenheit').props.accessibilityState.selected).toBe(false);
 });

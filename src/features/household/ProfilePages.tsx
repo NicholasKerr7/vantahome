@@ -63,7 +63,7 @@ export function IdentityPage({ model }: { model: ProfileWorkspaceModel }) {
                   uri={model.avatarUri}
                 />
                 <View style={styles.heading}>
-                  <Text style={styles.eyebrow}>YOUR HOME, YOUR DETAILS</Text>
+                  <Text style={styles.eyebrow}>YOUR PERSONAL PROFILE</Text>
                   <Text style={styles.subtitle}>
                     {model.activeMember?.role ?? "Household member"} ·{" "}
                     {model.roomsCount} rooms · {model.devicesCount} devices
@@ -74,32 +74,36 @@ export function IdentityPage({ model }: { model: ProfileWorkspaceModel }) {
                 label="Name"
                 value={model.name}
                 onChangeText={model.setName}
+                editable={!model.profileBusy && model.canEditProfile}
                 placeholder="Your name"
                 autoComplete="name"
               />
               <ProfileField
-                label="Email"
+                label={model.emailEditable ? "Contact email" : "Account email"}
                 value={model.email}
                 onChangeText={model.setEmail}
+                editable={model.emailEditable && !model.profileBusy && model.canEditProfile}
                 placeholder="you@example.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
               />
+              {!model.emailEditable && <Text style={styles.detail}>
+                Your verified sign-in email. Saving this profile does not change your login.
+              </Text>}
               <ProfileField
                 label="Phone"
                 value={model.phone}
                 onChangeText={model.setPhone}
+                editable={!model.profileBusy && model.canEditProfile}
                 placeholder="+1 (555) 000-0000"
                 keyboardType="phone-pad"
                 autoComplete="tel"
               />
-              <ProfileField
-                label="Home name"
-                value={model.homeName}
-                onChangeText={model.setHomeName}
-                placeholder="Vanta Home"
-              />
+              <Text style={styles.detail}>
+                Your name, phone and portrait are saved for this account on this device.
+                They are not shared with other household members or devices.
+              </Text>
             </>
           ) : (
             <>
@@ -116,19 +120,21 @@ export function IdentityPage({ model }: { model: ProfileWorkspaceModel }) {
                   {model.name || "Your portrait"}
                 </Text>
                 <Text style={styles.subtitle}>
-                  A familiar face for your home.
+                  Your portrait throughout VantaHome on this device.
                 </Text>
               </View>
               <View style={styles.actions}>
                 <DeepAction
-                  label="Upload photo"
+                  label="Choose photo"
                   icon="image-outline"
+                  disabled={model.profileBusy || !model.canEditProfile}
                   onPress={() => void model.pickAvatar()}
                 />
                 {Boolean(model.avatarUri) && (
                   <DeepAction
                     label="Remove photo"
                     icon="close-outline"
+                    disabled={model.profileBusy}
                     onPress={() => model.setAvatarUri("")}
                   />
                 )}
@@ -141,7 +147,9 @@ export function IdentityPage({ model }: { model: ProfileWorkspaceModel }) {
                     accessibilityLabel={`${swatch.label} avatar color`}
                     accessibilityState={{
                       selected: model.avatarColor === swatch.color,
+                      disabled: model.profileBusy,
                     }}
+                    disabled={model.profileBusy}
                     onPress={() => model.setAvatarColor(swatch.color)}
                     style={[
                       styles.swatch,
@@ -180,40 +188,41 @@ export function PreferencesPage({ model }: { model: ProfileWorkspaceModel }) {
         <ProfileForm>
           {page === "comfort" ? (
             <>
+              {model.preferenceError && <Text accessibilityRole="alert" style={styles.detail}>{model.preferenceError}</Text>}
               <View style={styles.section}>
                 <Text style={styles.title}>Make it feel right.</Text>
-                <Text style={styles.label}>Temperature unit</Text>
+                <Text style={styles.label}>Dashboard temperature</Text>
+                <Text style={styles.detail}>Device controls retain their displayed units.</Text>
                 <View style={styles.choices}>
                   {(["C", "F"] as const).map((unit) => (
                     <ProfileChoice
                       key={unit}
                       label={unit === "C" ? "Celsius" : "Fahrenheit"}
                       selected={model.tempUnit === unit}
+                      disabled={model.profileBusy || !model.canEditProfile}
                       onPress={() => model.setTempUnit(unit)}
                     />
                   ))}
                 </View>
               </View>
               <View style={styles.section}>
-                <Text style={styles.label}>Time format</Text>
+                <Text style={styles.label}>Dashboard clock</Text>
                 <View style={styles.choices}>
                   {(["12h", "24h"] as const).map((format) => (
                     <ProfileChoice
                       key={format}
                       label={format === "12h" ? "12-hour" : "24-hour"}
                       selected={model.timeFormat === format}
+                      disabled={model.profileBusy || !model.canEditProfile}
                       onPress={() => model.setTimeFormat(format)}
                     />
                   ))}
                 </View>
               </View>
-              <ProfileField
-                label="Timezone"
-                value={model.timezone}
-                onChangeText={model.setTimezone}
-                placeholder="Auto"
-                autoCapitalize="none"
-              />
+              <Text style={styles.detail}>
+                The home clock follows your property's weather location and time zone.
+                Review them from the dashboard time and weather button.
+              </Text>
               <ProfileToggle
                 label="Haptics"
                 value={model.prefs.haptics}
@@ -221,6 +230,7 @@ export function PreferencesPage({ model }: { model: ProfileWorkspaceModel }) {
               />
               <ProfileToggle
                 label="Notifications"
+                detail="Local phone notifications, subject to system permission. In-app reports remain visible."
                 value={model.prefs.notifications}
                 onChange={(notifications) =>
                   model.setPreferences({ notifications })
@@ -247,10 +257,10 @@ export function PreferencesPage({ model }: { model: ProfileWorkspaceModel }) {
       {page === "comfort" && (
         <View style={styles.footer}>
           <DeepAction
-            label="Save profile"
+            label={model.profileBusy ? "Saving profile…" : "Save profile"}
             primary
-            disabled={!model.name.trim()}
-            onPress={model.onSave}
+            disabled={!model.name.trim() || model.profileBusy || !model.canEditProfile}
+            onPress={() => void model.onSave()}
           />
         </View>
       )}

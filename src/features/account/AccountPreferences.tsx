@@ -94,6 +94,7 @@ export default function AccountPreferences({ onClose, onBack, scene, onSceneComm
           </View>
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} bounces={false} overScrollMode="never" showsVerticalScrollIndicator={false}>
             {!model.available && <View style={styles.notice}><Text accessibilityRole="alert" style={styles.detail}>Reopen your account to change preferences.</Text></View>}
+            {model.preferenceError && <View style={styles.notice}><Text accessibilityRole="alert" style={styles.detail}>{model.preferenceError}</Text></View>}
             {tab === 'experience' && <>
               <View style={styles.section}><Text style={styles.sectionTitle}>Your pace. Your atmosphere.</Text></View>
               <PreferenceToggle title="Scene motion" value={Boolean(scene) && !motionReduced} disabled={sceneUnavailable || scene?.systemReducedMotion}
@@ -115,22 +116,22 @@ export default function AccountPreferences({ onClose, onBack, scene, onSceneComm
               <PreferenceToggle title="Haptics" value={model.preferences.haptics} disabled={!model.available}
                 detail="Touch feedback on supported devices." onChange={(haptics) => model.setComfortPreferences({ haptics })} />
               <PreferenceToggle title="Notifications" value={model.preferences.notifications} disabled={!model.available}
-                detail="Your app preference. Device permission still applies." onChange={(notifications) => model.setComfortPreferences({ notifications })} />
+                detail="System notices on this device. In-app reports stay visible; device permission still applies." onChange={(notifications) => model.setComfortPreferences({ notifications })} />
             </>}
             {tab === 'display' && <>
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Temperature</Text>
+                <Text style={styles.sectionTitle}>Dashboard temperature</Text>
                 <View style={styles.choices}>{(['C', 'F'] as const).map((unit) => <PreferenceChoice key={unit}
                   label={unit === 'C' ? 'Celsius' : 'Fahrenheit'} selected={model.tempUnit === unit} disabled={!model.available}
                   onPress={() => model.setDisplayPreferences({ tempUnit: unit })} />)}</View>
               </View>
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Time format</Text>
+                <Text style={styles.sectionTitle}>Dashboard clock</Text>
                 <View style={styles.choices}>{(['12h', '24h'] as const).map((format) => <PreferenceChoice key={format}
                   label={format === '12h' ? '12-hour' : '24-hour'} selected={model.timeFormat === format} disabled={!model.available}
                   onPress={() => model.setDisplayPreferences({ timeFormat: format })} />)}</View>
               </View>
-              <Text style={styles.detail}>Property time and weather follow your home’s configured location.</Text>
+              <Text style={styles.detail}>Property time and weather follow your home’s configured location. Device controls keep their labeled units.</Text>
             </>}
           </ScrollView>
           <View style={styles.footer}><Ionicons name="phone-portrait-outline" size={13} color={theme.colors.subtext} /><Text style={styles.footerText}>Personal to this device</Text></View>

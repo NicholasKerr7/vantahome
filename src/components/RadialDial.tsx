@@ -23,7 +23,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Haptics from "expo-haptics";
+import { selectionHaptic } from "../services/haptics";
 import { theme } from "../theme/theme";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -202,11 +202,6 @@ export default function RadialDial({
     [cx, cy, r, start, end],
   );
 
-  const haptic = () => {
-    if (typeof Haptics?.selectionAsync !== "function") return;
-    Haptics.selectionAsync().catch(() => {});
-  };
-
   const updateFromPoint = (x: number, y: number) => {
     if (!Number.isFinite(x) || !Number.isFinite(y) || range <= 0) return;
     const dx = x - cx;
@@ -227,7 +222,7 @@ export default function RadialDial({
     if (next !== lastSent.value) {
       lastSent.value = next;
       onChange(next);
-      haptic();
+      void selectionHaptic();
     }
   };
 

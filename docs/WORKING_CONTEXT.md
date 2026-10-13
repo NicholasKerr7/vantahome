@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-12**. Read this before rediscovering the project.
+Last maintained: **2026-10-13**. Read this before rediscovering the project.
 
 ## Locations and branch
 
@@ -39,6 +39,48 @@ Last maintained: **2026-10-12**. Read this before rediscovering the project.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Account portraits and working personal settings — October 13
+
+- Shared portraits now appear in the dashboard account button, account sheet,
+  profile, and verified self rows in Household and camera access. Authoritative
+  roles/grants and other members remain unchanged; stale/mismatched identities
+  never borrow the preceding account's portrait. Missing images use initials.
+- New native selections are copied into app documents using sandbox-relative
+  references; web selections become bounded cropped JPEGs. Saving waits for
+  storage, surfaces failure, and preserves newer settings. Portraits, display
+  names and phone remain account-local on this device; cross-device/member
+  profile sync is deferred. Expired legacy temporary photos need reselecting.
+- Session restoration preserves the saved local name and portrait; verified
+  sign-in email remains authoritative/read-only. Removed ineffective home-name
+  and timezone fields from the personal editor. Property timezone belongs to
+  its weather location. Temperature/clock settings clearly describe their
+  dashboard scope; individual device controls keep their labeled units.
+- Haptics now respects its preference at each interaction. Local OS notices
+  respect the notification toggle and current system permission, including
+  changes while async work is pending. Old-account foreground notices are
+  suppressed; in-app reports remain visible. This is not hub-backed push.
+- Browser verification used a separate local demo at port 5188 and a bundled
+  logo as its disposable test portrait: choose/save/reload/account surfaces,
+  removal/reload, haptic/notification persistence, and dashboard Fahrenheit/
+  24-hour behavior passed. Phone (320/430), tablet portrait (768), and tablet
+  landscape (1024) checks retained bounded layouts. No browser console errors.
+  Evidence: `work/account-portrait-phone.jpg`. Test browser data was restored.
+- Validation passes: **3,000 app tests / 209 suites**, app and edge TypeScript,
+  production-mode web export, release asset/redirect/version checks, and diff
+  review. Independent review also covered save failures after closing/reopening
+  editors, newer field choices, scope changes and safe portrait cleanup.
+  Logs: `work/account-settings-full-tests-final.log`,
+  `work/account-settings-web-export.log`, `work/account-settings-types-final.log`.
+- **Preview 57 is built, installed and launched on the connected iPhone**;
+  live device app inventory confirms `1.0.0 (57)`. Strict signing, provisioning,
+  preview redirect schemes, arrival media, scene checksum and updated bundled
+  account code are verified. Production metadata was restored and release guards
+  still pass; tracked/history secret scan passes. No new native dependencies.
+  Evidence: `work/account-settings-preview57-{build.log,package.json,install.json,
+  launch.json,apps.json}`. Physical photo selection/restart and disabled-haptic
+  confirmation remain user checks; browser/unit success is not native UI signoff.
+  Production and staging services were not changed.
 
 ## Sustained physical iPhone baseline — October 12
 

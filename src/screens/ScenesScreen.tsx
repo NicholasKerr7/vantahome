@@ -14,7 +14,7 @@ import Pressable from "../components/Pressable";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import LabSlider from '../features/renderer-lab/LabSlider';
-import * as Haptics from "expo-haptics";
+import { impactHaptic } from "../services/haptics";
 import { theme } from "../theme/theme";
 import BackgroundLines from "../components/BackgroundLines";
 import ScreenFrame from "../components/ScreenFrame";
@@ -1990,7 +1990,7 @@ function SceneCard({
   ];
 
   const handleOpen = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    void impactHaptic();
     Animated.sequence([
       Animated.timing(pressScale, {
         toValue: 0.97,
@@ -2008,7 +2008,7 @@ function SceneCard({
 
   const handleRun = (event?: { stopPropagation?: () => void }) => {
     event?.stopPropagation?.();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    void impactHaptic();
     onRun();
   };
 

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { RootStackParamList } from '../../app/AppNavigator';
 import CinematicSurface from '../../components/CinematicSurface';
 import Pressable from '../../components/Pressable';
+import AvatarChip from '../../components/AvatarChip';
 import { theme } from '../../theme/theme';
 import { useAccountIdentity } from './useAccountIdentity';
 import { useAccountDetails } from './useAccountDetails';
@@ -87,7 +88,9 @@ export default function AccountSheet({ onClose, onPreferences }: { onClose: () =
           </View>
           <ScrollView bounces={false} overScrollMode="never" showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
             <View style={styles.identity}>
-              <View style={styles.portrait}>{demo ? <Ionicons name="person-outline" size={27} color={theme.colors.accentText} /> : <Text style={styles.portraitInitials}>{identity.initials}</Text>}</View>
+              <AvatarChip name={identity.name} initials={identity.initials} size={60} decorative
+                uri={identity.avatarUri ?? undefined} color={identity.avatarColor ?? undefined}
+                fallback={demo ? 'person' : 'initials'} />
               <View style={styles.flexCopy}>
                 <Text style={styles.person}>{identity.name}</Text>
                 <Text style={styles.subtitle}>{demo ? 'Local preview · no account signed in' : identity.mode === 'account' ? 'Signed-in account' : 'No verified account is available'}</Text>
@@ -149,8 +152,6 @@ const styles = StyleSheet.create({
   close: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: theme.colors.stroke, alignItems: 'center', justifyContent: 'center' },
   body: { padding: 20, gap: 18 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  portrait: { width: 60, height: 60, borderRadius: 22, borderWidth: 1, borderColor: theme.colors.accent, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.card2 },
-  portraitInitials: { fontSize: 22, fontWeight: '600', color: theme.colors.accentText },
   person: { fontSize: 22, fontWeight: '500', color: theme.colors.text, letterSpacing: -0.5 },
   subtitle: { color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
   notice: { gap: 6, padding: 14, borderRadius: 16, backgroundColor: theme.colors.card2 },

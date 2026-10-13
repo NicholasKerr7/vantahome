@@ -7,6 +7,8 @@ export type AccountIdentity = {
   name: string;
   firstName: string;
   initials: string;
+  avatarUri: string | null;
+  avatarColor: string | null;
   role: HouseholdMember['role'] | null;
   homeId: string | null;
 };
@@ -19,6 +21,8 @@ export function resolveAccountIdentity(state: AccountIdentityState, demoAvailabl
     return {
       mode: demo ? 'demo' : 'unavailable', name: demo ? 'Demo profile' : 'Account unavailable',
       firstName: demo ? 'Demo' : 'Account', initials: demo ? 'VH' : '?', role: null, homeId: null,
+      avatarUri: demo ? state.profile.avatarUri?.trim() || null : null,
+      avatarColor: demo ? state.profile.avatarColor?.trim() || null : null,
     };
   }
   const homeReady = state.membershipReady && Boolean(state.activeHomeId) && state.accountHomeId === state.activeHomeId;
@@ -29,6 +33,8 @@ export function resolveAccountIdentity(state: AccountIdentityState, demoAvailabl
     mode: 'account', name, firstName: words[0],
     initials: words.slice(0, 2).map((word) => Array.from(word)[0]).join('').toUpperCase(),
     role: member?.role ?? null, homeId: member ? state.activeHomeId : null,
+    avatarUri: state.profile.avatarUri?.trim() || null,
+    avatarColor: state.profile.avatarColor?.trim() || null,
   };
 }
 
@@ -40,4 +46,15 @@ export function isAccountScopeCurrent(scope: AccountScope, current: AccountScope
     && scope.accountHomeId === current.accountHomeId
     && scope.sessionEpoch === current.sessionEpoch
     && scope.membershipReady === current.membershipReady;
+}
+
+/** Overlay local self presentation only; membership permissions and other people stay authoritative. */
+export function resolveMemberPresentation(state: AccountIdentityState, member: HouseholdMember) {
+  const identity = resolveAccountIdentity(state, false);
+  const verifiedSelf = identity.mode === 'account' && identity.homeId
+    && member.userId === state.authenticatedUserId
+    && state.household.some((current) => current.id === member.id && current.userId === member.userId);
+  return verifiedSelf
+    ? { name: identity.name, avatarUri: identity.avatarUri ?? undefined, avatarColor: identity.avatarColor ?? undefined }
+    : { name: member.name, avatarUri: member.avatarUri, avatarColor: member.avatarColor };
 }
