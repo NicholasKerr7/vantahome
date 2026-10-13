@@ -7,6 +7,7 @@ import { createDefaultSimulationSnapshot, type SimulationSnapshot } from '../../
 import type { CommandActivityProgress } from '../../../components/command-feedback/useCommandActivity';
 import ActivityInboxProvider, { getActivityInboxScope, hasMeaningfulSimulationChange, presentInboxEvents, useActivityInbox } from '../ActivityInboxProvider';
 import { inboxRevision, type InboxEvent } from '../activityInboxJournal';
+import { simulationPersistence } from '../../three-d-home/simulationPersistence';
 
 const mockSimulationListeners = new Set<(state: SimulationSnapshot) => void>();
 jest.mock('../../three-d-home/simulationPersistence', () => ({ simulationPersistence: {
@@ -93,6 +94,21 @@ test('captures actual simulation changes without hydration events or private-roo
   expect(screen.getByTestId('rows').props.children).not.toContain('Private television');
   act(() => { useHomeStore.setState({ roomMembers: [] }); });
   expect(screen.getByTestId('rows').props.children).toBe('[]');
+});
+
+test('recovers a failed simulation baseline without inventing an event or losing later updates', async () => {
+  jest.mocked(simulationPersistence.load).mockRejectedValueOnce(new Error('Storage unavailable'));
+  useHomeStore.setState(home('simulation-recovery'));
+  const screen = render(<ActivityInboxProvider enabled commands={[]}><Reader /></ActivityInboxProvider>);
+  await act(async () => { for (let turn = 0; turn < 12; turn += 1) await Promise.resolve(); });
+  const recovered = createDefaultSimulationSnapshot();
+  recovered.deviceStates['living-light'] = { ...recovered.deviceStates['living-light'], on: false };
+  act(() => { for (const listener of mockSimulationListeners) listener(recovered); });
+  expect(screen.getByTestId('rows').props.children).toBe('[]');
+  const edited = { ...recovered, deviceStates: { ...recovered.deviceStates, 'living-light': { ...recovered.deviceStates['living-light'], on: true } } };
+  act(() => { for (const listener of mockSimulationListeners) listener(edited); });
+  await waitFor(() => expect(screen.getByTestId('rows').props.children).toContain('Living light'));
+  screen.unmount();
 });
 
 

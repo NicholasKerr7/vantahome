@@ -15,6 +15,7 @@ let mockDimensions = { width: 393, height: 852, fontScale: 1, scale: 1 };
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: mockNavigate }) }));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({ __esModule: true, default: () => mockDimensions }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
+jest.mock('@expo/vector-icons/Ionicons', () => require('react-native').View);
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
 jest.mock('../useAccountIdentity', () => ({ useAccountIdentity: () => ({ identity: mockIdentity, scope }) }));
 jest.mock('../useAccountDetails', () => ({ useAccountDetails: () => mockDetails }));

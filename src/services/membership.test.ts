@@ -129,12 +129,13 @@ test('a prior session snapshot cannot be installed after the same user signs in 
 });
 
 test('an authorized home switch retains account identity while replacing household data', async () => {
-  useHomeStore.setState({ accountHomeId: 'oldest-home', profile: { name: 'Alice Kerr', email: 'alice@example.test', timeFormat: '12h', tempUnit: 'C', timezone: 'Auto' }, userName: 'Alice' });
+  useHomeStore.setState({ accountHomeId: 'oldest-home', profile: { name: 'Alice Kerr', email: 'alice@example.test', timeFormat: '12h', tempUnit: 'C', timezone: 'Auto' }, userName: 'Alice', preferences: { haptics: false, notifications: false } });
   const result = await syncMembershipFromSupabase('alice', 'active-home') as MembershipSyncResult;
   expect(applyMembershipSnapshot(result, useHomeStore.getState().sessionEpoch)).toBe(true);
   expect(useHomeStore.getState().profile.name).toBe('Alice Kerr');
   expect(useHomeStore.getState().userName).toBe('Alice');
   expect(useHomeStore.getState().accountHomeId).toBe('active-home');
+  expect(useHomeStore.getState().preferences).toEqual({ haptics: false, notifications: false });
 });
 
 

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
+import type { SimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import type { CommandActivityProgress } from '../../components/command-feedback/useCommandActivity';
 import { getCommandActivityScope } from '../../components/command-feedback/useCommandActivity';
 import { runtimePolicy } from '../../config/runtimeMode';
@@ -133,28 +134,32 @@ export default function ActivityInboxProvider({ enabled, commands, children }: P
     if (!simulationReady) return;
     const modelScope = modelSimulationScope(initial, canShareDemoDevices(initial, runtimePolicy.mode));
     let disposed = false;
-    let stop = () => {};
+    let previous: SimulationSnapshot | null = null;
     let sequence = 0;
     const admission = Date.now();
-    // Hydration is a baseline, never a notification or inferred user action.
-    void simulationPersistence.load(modelScope).then((previous) => {
-      if (disposed) return;
-      stop = simulationPersistence.subscribeState(modelScope, (next) => {
-        const current = useHomeStore.getState();
-        if (disposed || getActivityInboxScope(current) !== scope || getCommandActivityScope(current) !== identity
-          || modelSimulationIdentity(current) !== simulationIdentity) return;
-        const now = Date.now();
-        const events: InboxEvent[] = Object.entries(selectSimulationDeviceBindings(current)).flatMap(([deviceId, modelId]) => {
-          const before = previous.deviceStates[modelId];
-          const after = next.deviceStates[modelId];
-          if (!before || !after || !hasMeaningfulSimulationChange(before, after)) return [];
-          sequence += 1;
-          return [{ id: `simulation:${current.sessionEpoch}:${admission}:${sequence}:${deviceId}`,
-            deviceId, source: 'simulation', status: 'updated', createdAt: now, updatedAt: now, attempts: 0, simulated: true, power: after.on, level: after.level }];
-        });
-        previous = next;
-        void activityInboxJournal.upsert(scope, events);
+    // Hydration/recovery establishes a baseline, never a notification or inferred action.
+    const stop = simulationPersistence.subscribeState(modelScope, (next) => {
+      const current = useHomeStore.getState();
+      if (disposed || getActivityInboxScope(current) !== scope || getCommandActivityScope(current) !== identity
+        || modelSimulationIdentity(current) !== simulationIdentity) return;
+      if (!previous) { previous = next; return; }
+      const baseline = previous;
+      const now = Date.now();
+      const events: InboxEvent[] = Object.entries(selectSimulationDeviceBindings(current)).flatMap(([deviceId, modelId]) => {
+        const before = baseline.deviceStates[modelId];
+        const after = next.deviceStates[modelId];
+        if (!before || !after || !hasMeaningfulSimulationChange(before, after)) return [];
+        sequence += 1;
+        return [{ id: `simulation:${current.sessionEpoch}:${admission}:${sequence}:${deviceId}`,
+          deviceId, source: 'simulation', status: 'updated', createdAt: now, updatedAt: now, attempts: 0, simulated: true, power: after.on, level: after.level }];
       });
+      previous = next;
+      void activityInboxJournal.upsert(scope, events);
+    });
+    void simulationPersistence.load(modelScope).then((saved) => {
+      if (!disposed && !previous) previous = saved;
+    }).catch(() => {
+      // Keep the state subscription so a successful controls retry supplies the baseline.
     });
     return () => { disposed = true; stop(); };
   }, [enabled, scope, identity, simulationIdentity, simulationReady]);

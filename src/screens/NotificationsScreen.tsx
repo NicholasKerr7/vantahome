@@ -8,6 +8,7 @@ import type { RootStackParamList } from "../app/AppNavigator";
 import { openHomeFeature } from "../app/homeNavigation";
 import { DeepScreen, DeepTabs, DeepCard, DeepPager } from "../components/deep/DeepScreen";
 import { useActivityPages } from "../features/activity/useActivityPages";
+import { useConditionNotificationError } from "../features/activity/useConditionNotifications";
 import { useCurrentReports } from "../features/activity/useCurrentReports";
 import { useActivityInbox, type InboxItem } from "../features/activity/ActivityInboxProvider";
 
@@ -31,6 +32,7 @@ export default function NotificationsScreen() {
   const { width } = useWindowDimensions();
   const focused = useIsFocused();
   const current = useCurrentReports(focused);
+  const deliveryError = useConditionNotificationError();
   const notifications = inbox?.items ?? EMPTY_ITEMS;
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const visibleNotifications = useMemo(() => filter === "reports" ? EMPTY_ITEMS : filter === "all" ? notifications
@@ -70,10 +72,11 @@ export default function NotificationsScreen() {
         <Text style={styles.summaryCaption}>{showingReports ? "Latest available" : "This device only"}</Text>
       </View>
       <Text style={styles.context}>
-        {showingReports ? "Latest reports are not live alarm confirmation. Conditions remain until their source changes." : inbox?.storageError
+        {showingReports ? "Reports persist until their source changes. Phone notices cover new conditions while this app is active; they are not a background alarm service." : inbox?.storageError
           ? "Activity could not be saved or restored. Recent updates remain visible while this app is open."
           : "Up to 200 recent updates. Delivery progress does not confirm physical device state."}
       </Text>
+      {deliveryError && <Text accessibilityRole="alert" style={styles.context}>{deliveryError}</Text>}
       <DeepTabs items={FILTERS} selectedId={filter} onSelect={(id) => { setFilter(id); pages.setPage(0); }} />
       <View style={styles.list} onLayout={pages.onLayout}>
         {showingReports && current.reports.slice(pages.start, pages.start + pages.pageSize).map((report) => (

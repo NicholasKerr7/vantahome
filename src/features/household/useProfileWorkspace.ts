@@ -23,14 +23,12 @@ import {
 } from "../../services/membership";
 import { supabase } from "../../services/supabaseClient";
 import { confirmProtectedAccess } from "../../security/biometricConfirmation";
-import { setMemberPermissionOverrideRemote } from "../../services/memberPermissions";
+import { canEditMemberPermission, useMemberPermissionUpdate } from "./useMemberPermissionUpdate";
 import {
   canAdministerMember,
   roleHasPermission,
-  type ActionPermission,
 } from "../../security/permissions";
 import { runtimePolicy } from "../../config/runtimeMode";
-import { cancelAuthFlow, waitForAuthExchange } from "../../services/authFlow";
 import { buildInvitationAccess, type GuestAccessHours } from "./invitationAccess";
 import { isInvitationExpired } from "../home-access/invitationExpiry";
 import { useInteriorLayoutSharing } from "./useInteriorLayoutSharing";
@@ -64,6 +62,7 @@ function canInviteFromState(state: ReturnType<typeof useHomeStore.getState>, req
 /** Keep profile edits and protected household actions separate from their paged presentation. */
 export function useProfileWorkspace(navigation: { goBack: () => void }) {
   const interiorLayoutSharing = useInteriorLayoutSharing();
+  const permissionUpdates = useMemberPermissionUpdate();
   const draft = useProfileDraft(navigation.goBack);
   const { scope: accountScope } = useAccountIdentity();
   const mounted = useRef(true);
@@ -82,9 +81,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   const roomMembers = useHomeStore((s) => s.roomMembers);
   const memberPermissionOverrides = useHomeStore(
     (s) => s.memberPermissionOverrides,
-  );
-  const setMemberPermissionOverride = useHomeStore(
-    (s) => s.setMemberPermissionOverride,
   );
   const setRoomMembership = useHomeStore((s) => s.setRoomMembership);
   const addHouseholdMember = useHomeStore((s) => s.addHouseholdMember);
@@ -119,27 +115,7 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
   /** Resolve administration rights against the current actor. */
   const canEditMember = (member: (typeof household)[number]) =>
     canAdministerMember(selectActiveMember(useHomeStore.getState()), member);
-  /** An administrator may only delegate permissions they currently hold. */
-  const canEditPermission = (
-    member: (typeof household)[number],
-    permission: ActionPermission,
-  ) => {
-    const state = useHomeStore.getState();
-    const actor = selectActiveMember(state);
-    return (
-      canAdministerMember(actor, member) &&
-      Boolean(
-        actor &&
-        roleHasPermission(
-          actor.role,
-          permission,
-          state.memberPermissionOverrides.filter(
-            (item) => item.memberId === actor.id,
-          ),
-        ),
-      )
-    );
-  };
+  const canEditPermission = canEditMemberPermission;
   const activePermissionOverrides = memberPermissionOverrides.filter(
     (item) => item.memberId === activeMember?.id,
   );
@@ -204,44 +180,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     } finally {
       roomAccessPending.current = false;
       if (scopeIsCurrent(scope)) setRoomAccessBusy(false);
-    }
-  };
-  /** Save a permission override without allowing stale-account mutations. */
-  const updatePermissionOverride = async (
-    member: (typeof household)[number],
-    permission: ActionPermission,
-    allowed: boolean | null,
-  ) => {
-    const scope = useHomeStore.getState();
-    if (!canEditPermission(member, permission)) return;
-    if (!(await confirmHouseholdAdminChange())) return;
-    if (!scopeIsCurrent(scope) || !canEditPermission(member, permission))
-      return;
-    const previous = memberPermissionOverrides.find(
-      (item) => item.memberId === member.id && item.permission === permission,
-    );
-    setMemberPermissionOverride(member.id, permission, allowed);
-    if (!member.userId || !isUuid(member.userId)) return;
-    try {
-      if (!scope.activeHomeId || !scope.authenticatedUserId) throw new Error("Refresh your home before changing permissions.");
-      await setMemberPermissionOverrideRemote(
-        scope.activeHomeId,
-        member.userId,
-        permission,
-        allowed,
-        scope.authenticatedUserId,
-      );
-    } catch (err) {
-      if (!scopeIsCurrent(scope)) return;
-      setMemberPermissionOverride(
-        member.id,
-        permission,
-        previous?.allowed ?? null,
-      );
-      Alert.alert(
-        "Permission update failed",
-        (err as Error).message ?? "Unable to update this permission.",
-      );
     }
   };
   /** Fetch invitations only for the account and home that requested them. */
@@ -534,28 +472,6 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     }
   };
 
-  /** Confirm sign-out before ending the current local authentication session. */
-  const handleSignOut = () => {
-    Alert.alert(
-      "Sign out",
-      "You will need to sign in again to access the home.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign out",
-          style: "destructive",
-          onPress: async () => {
-            if (supabase) {
-              await cancelAuthFlow();
-              await waitForAuthExchange();
-              const { error } = await supabase.auth.signOut({ scope: "local" });
-              if (error) Alert.alert("Sign-out failed", "Please try again.");
-            }
-          },
-        },
-      ],
-    );
-  };
 
   return {
     ...draft,
@@ -597,13 +513,12 @@ export function useProfileWorkspace(navigation: { goBack: () => void }) {
     canEditPermission,
     updateRoomAccess, roomAccessBusy,
     interiorLayoutSharing,
-    updatePermissionOverride,
+    ...permissionUpdates,
     serviceItems,
     pickHouseholdAvatar,
     handleAddMember,
     handleRemoveMember,
     handleRespondInvite,
-    handleSignOut,
   };
 }
 

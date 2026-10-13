@@ -7,6 +7,7 @@ import { readDeviceSetting } from '../deviceCapabilities';
 import { irrigationJetPoint } from './weatherGeometry';
 import { advanceTelevisionDisplay, createTelevisionUniforms } from './televisionDisplay';
 import { speakerPlaybackVisible } from './deviceEffectState';
+import { acAirflowPosition, readAcAirflowPreview } from '../devicePreviewBehavior';
 
 interface EffectProps {
   device: DeviceDefinition;
@@ -56,6 +57,7 @@ function OperatingEffect({ device, state, canAnimate }: EffectProps) {
     kind,
     dimensions: [, height, depth],
   } = device;
+  const airflow = kind === 'ac' ? readAcAirflowPreview(device, state) : null;
   useFrame((_, delta) => {
     if (!effect.current || !state.on || !canAnimate.current) return;
     time.current += Math.min(delta, 0.06);
@@ -75,15 +77,12 @@ function OperatingEffect({ device, state, canAnimate }: EffectProps) {
         child.scale.set(scale, scale, 1);
         child.position.z = depth / 2 + 0.02 + phase * 0.25;
       }
-      if (kind === 'ac') {
-        child.position.z = depth / 2 + 0.08 + phase * 0.9;
-        child.position.y = 0.03 - phase * 0.4;
-      }
+      if (airflow) child.position.set(...acAirflowPosition(airflow, time.current, index, depth));
       if (kind === 'dryer')
         child.rotation.z = time.current * (1 + state.level * 0.04);
     });
   });
-  if (!state.on) return null;
+  if (!state.on || airflow?.strength === 0) return null;
   if (kind === 'coffee')
     return (
       <group ref={effect}>
@@ -127,7 +126,7 @@ function OperatingEffect({ device, state, canAnimate }: EffectProps) {
         ))}
       </group>
     );
-  if (kind === 'ac')
+  if (airflow)
     return (
       <group ref={effect}>
         {[-1, 0, 1].map((index) => (
@@ -135,12 +134,13 @@ function OperatingEffect({ device, state, canAnimate }: EffectProps) {
             key={index}
             position={[index * 0.22, -0.12, depth / 2 + 0.32]}
             rotation={[Math.PI / 3, 0, 0]}
+            scale={0.65 + airflow.strength * 0.65}
           >
             <cylinderGeometry args={[0.005, 0.012, 0.19, 6]} />
             <meshBasicMaterial
-              color="#b6e0d7"
+              color={airflow.color}
               transparent
-              opacity={0.4}
+              opacity={0.18 + airflow.strength * 0.3}
               depthWrite={false}
             />
           </mesh>

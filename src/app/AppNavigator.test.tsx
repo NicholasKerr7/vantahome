@@ -463,19 +463,19 @@ describe("navigation session boundaries", () => {
     mockSupabaseAvailable = false;
     jest.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('Storage unavailable'));
     const screen = render(<AppNavigator />);
-    await waitFor(() => expect(screen.getByText('Unable to prepare your home on this device.')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Saved home data is unavailable.')).toBeTruthy());
     expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
     expect(mockNavigationMount).not.toHaveBeenCalled();
     expect(screen.queryByText('Sign out')).toBeNull();
     fireEvent.press(screen.getByText('Retry'));
     await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
-    expect(screen.queryByText('Unable to prepare your home on this device.')).toBeNull();
+    expect(screen.queryByText('Saved home data is unavailable.')).toBeNull();
   });
 
   test('authenticated hydration failure keeps household routes closed until retry succeeds', async () => {
     jest.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('Storage unavailable'));
     const screen = render(<AppNavigator />);
-    await waitFor(() => expect(screen.getByText('Unable to prepare your account on this device.')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Saved account data is unavailable.')).toBeTruthy());
     expect(screen.getByText('Sign out')).toBeTruthy();
     expect(mockNavigationMount).not.toHaveBeenCalled();
     expect(mockMembership).not.toHaveBeenCalled();
@@ -493,7 +493,7 @@ describe("navigation session boundaries", () => {
     await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
     await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
     await act(async () => { fail(new Error('Old account storage failed')); });
-    expect(screen.queryByText('Unable to prepare your account on this device.')).toBeNull();
+    expect(screen.queryByText('Saved account data is unavailable.')).toBeNull();
     expect(useHomeStore.getState().activeMemberId).toBe('bob');
   });
 

@@ -11,7 +11,7 @@ export function createTelevisionUniforms(on: boolean) {
   };
 }
 
-/** Fade power independently of volume/legacy level; reduced motion also freezes the picture. */
+/** Power stays lit while playback is paused/stopped; reduced motion and hidden views also freeze the picture. */
 export function advanceTelevisionDisplay(
   uniforms: ReturnType<typeof createTelevisionUniforms>,
   state: DeviceState,
@@ -20,7 +20,7 @@ export function advanceTelevisionDisplay(
   canAnimate: boolean,
 ) {
   const dt = Math.min(Math.max(delta, 0), 0.08);
-  if (canAnimate && !reducedMotion && state.on) uniforms.time.value += dt * 0.23;
+  if (canAnimate && !reducedMotion && state.on && state.settings?.playbackState === 'playing') uniforms.time.value += dt * 0.23;
   const target = state.on ? 1 : 0;
   uniforms.power.value = reducedMotion ? target : MathUtils.damp(uniforms.power.value, target, 6, dt);
 }

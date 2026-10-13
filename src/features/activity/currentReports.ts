@@ -7,6 +7,16 @@ import { selectHomeNavigationAccess } from '../home-shell/homeNavigationAccess';
 import { selectSimulationDeviceBindings } from '../three-d-home/simulationDeviceBindings';
 import { canShareDemoDevices } from '../three-d-home/simulationSession';
 
+/** Configured comparisons are device reports, not clinical or life-safety judgements. */
+const AIR_THRESHOLDS = [
+  { id: 'aqi', reading: 'airQualityIndex', limit: 'airAlertAqi', label: 'AQI', unit: 'AQI' },
+  { id: 'co2', reading: 'airCo2', limit: 'airAlertCo2', label: 'CO₂', unit: 'ppm' },
+  { id: 'pm25', reading: 'airPm25', limit: 'airAlertPm25', label: 'PM2.5', unit: 'µg/m³' },
+  { id: 'pm10', reading: 'airPm10', limit: 'airAlertPm10', label: 'PM10', unit: 'µg/m³' },
+  { id: 'voc', reading: 'airVoc', limit: 'airAlertVoc', label: 'VOC', unit: 'ppb' },
+  { id: 'pollen', reading: 'airPollen', limit: 'airAlertPollen', label: 'pollen', unit: 'index' },
+] as const;
+
 /** Display threshold only: integrations do not yet supply a dependable reporting cadence. */
 export const CONDITION_REPORT_FRESHNESS_MS = 15 * 60 * 1000;
 export type CurrentReport = Readonly<{
@@ -18,6 +28,8 @@ export type CurrentReport = Readonly<{
   timeLabel: string;
   age: 'simulation' | 'unknown' | 'stale' | 'recent';
   warning: boolean;
+  /** Local notices are optional; disabling them never hides a continuing condition. */
+  notify?: boolean;
 }>;
 
 /** Preserve missing and invalid measurements as unknown instead of defaulting them to a safe value. */
@@ -60,34 +72,45 @@ export function selectCurrentReports(
     const value = (field: keyof Device): unknown => model && modelState
       ? readDeviceSetting(model, modelState, field) : device[field];
     /** Stable current-condition identities are deliberately absent from the persistent activity journal. */
-    const add = (key: string, title: string, detail: string, warning = true) => {
+    const add = (key: string, title: string, detail: string, warning = true, notify = false) => {
       reports.push({ id: `condition:${device.id}:${key}`, deviceName: device.name, title, detail, warning,
-        simulated, ...sourceTime });
+        simulated, notify, ...sourceTime });
     };
     if (device.kind === 'energy' && value('gridAvailable') === false) {
       add('grid', simulated ? 'Simulated grid outage' : 'Grid unavailable in last report',
-        'Backup supply is not confirmed by this report.');
+        'Backup supply is not confirmed by this report.', true, value('gridOutageAlerts') === true);
     }
     if (device.kind === 'water') {
       if (value('waterLeakDetected') === true) {
         add('leak', simulated ? 'Simulated water leak' : 'Leak flagged in last report',
-          'Shutoff and the current physical condition are not confirmed.');
+          'Shutoff and the current physical condition are not confirmed.', true, value('waterLeakAlerts') === true);
       }
       const pressure = measurement(value('waterPressurePsi'));
       const low = measurement(value('waterPressureLowPsi'));
       const high = measurement(value('waterPressureHighPsi'));
       if (pressure !== null && high !== null && pressure > high) {
         add('pressure-high', simulated ? 'Simulated high pressure' : 'High pressure in last report',
-          `${Math.round(pressure)} PSI · configured upper limit ${Math.round(high)} PSI`);
+          `${Math.round(pressure)} PSI · configured upper limit ${Math.round(high)} PSI`, true, value('waterPressureAlerts') === true);
       } else if (pressure !== null && low !== null && pressure < low) {
         add('pressure-low', simulated ? 'Simulated low pressure' : 'Low pressure in last report',
-          `${Math.round(pressure)} PSI · configured lower limit ${Math.round(low)} PSI`);
+          `${Math.round(pressure)} PSI · configured lower limit ${Math.round(low)} PSI`, true, value('waterPressureAlerts') === true);
       }
       const used = measurement(value('waterTodayL'));
       const budget = measurement(value('waterBudgetL'));
       if (used !== null && budget !== null && budget > 0 && used > budget) {
         add('water-budget', simulated ? 'Simulated water budget exceeded' : 'Budget exceeded in last report',
-          `${Math.round(used)} L reported · configured budget ${Math.round(budget)} L`);
+          `${Math.round(used)} L reported · configured budget ${Math.round(budget)} L`, true, true);
+      }
+    }
+    if (device.kind === 'air') {
+      for (const metric of AIR_THRESHOLDS) {
+        const current = measurement(value(metric.reading));
+        const limit = measurement(value(metric.limit));
+        if (current !== null && limit !== null && limit > 0 && current > limit) {
+          add(`air-${metric.id}`, `${simulated ? 'Simulated' : 'Reported'} ${metric.label} above limit`,
+            `${current} ${metric.unit} · configured limit ${limit} ${metric.unit}`.trim(),
+            true, value('airAlertsEnabled') === true);
+        }
       }
     }
     if (['door', 'window', 'garage', 'gate'].includes(device.kind)) {

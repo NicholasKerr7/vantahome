@@ -4,13 +4,16 @@ import { PROPERTY_LOCATION } from '../../../../packages/home-scene/src/environme
 import { runtimePolicy } from '../../../config/runtimeMode';
 import { useHomeStore, type HomeState } from '../../../store/useHomeStore';
 import type { HomeWeatherSettings } from '../../../services/homeWeather';
+import { invalidateSharedHomeWeatherSettings } from '../../../services/sharedHomeWeatherSettings';
 import { useHomeWeatherSettings } from '../useHomeWeatherSettings';
 
 const mockRead = jest.fn();
+let mockSettingsRevision = 0;
 const mockSettingsListeners = new Set<() => void>();
 jest.mock('../../../services/homeWeather', () => ({
   ...jest.requireActual('../../../services/homeWeather'),
   readHomeWeatherSettings: () => mockRead(),
+  getHomeWeatherSettingsRevision: () => mockSettingsRevision,
   subscribeHomeWeatherSettings: (listener: () => void) => {
     mockSettingsListeners.add(listener);
     return () => { mockSettingsListeners.delete(listener); };
@@ -56,6 +59,8 @@ function verifiedScope(patch: Partial<HomeState> = {}): Partial<HomeState> {
 
 beforeEach(() => {
   jest.useFakeTimers(); jest.setSystemTime(NOW); jest.clearAllMocks();
+  invalidateSharedHomeWeatherSettings();
+  mockSettingsRevision = 0;
   mockSettingsListeners.clear(); mockRead.mockReset().mockResolvedValue(SETTINGS);
   Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: undefined });
@@ -232,7 +237,7 @@ test('waits while the browser page is hidden and refreshes on visibility, focus 
   act(() => browser.dispatchEvent(new Event('focus')));
   const changed = { ...SETTINGS, location: { ...SETTINGS.location, latitude: 18.46 } };
   mockRead.mockResolvedValueOnce(changed);
-  act(() => mockSettingsListeners.forEach((listener) => listener()));
+  act(() => { mockSettingsRevision += 1; mockSettingsListeners.forEach((listener) => listener()); });
   await settle();
   expect(result.current.location).toEqual(changed.location);
   await act(async () => oldRead.resolve(SETTINGS));

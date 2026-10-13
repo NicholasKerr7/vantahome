@@ -5,6 +5,7 @@ import { gasActionFeedback, gasDeviceStatus, isGasDevice, readGasSetting, type G
 import { supplementalCapabilities, supplementalDefaults, simulatedStatusFields, scheduleCapabilities } from './deviceControlCatalog';
 import type { DeviceDefinition } from './data';
 import type { DeviceState, SettingValue } from './simulationTypes';
+import { configurationPageNote, describeCapabilitySupport } from './deviceCapabilitySupport';
 export type { SettingValue } from './simulationTypes';
 
 export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar', 'gas-meter', 'gas-leak'] as const;
@@ -16,7 +17,7 @@ export type DeviceActionOperation =
   | { type: 'gas'; command: GasCommand }
   | { type: 'fire'; command: FireCommand }
   | { type: 'navigate'; direction: 'up' | 'down' | 'left' | 'right' | 'select' | 'home' };
-interface CapabilityBase { id: string; label: string; group?: ControlGroup }
+interface CapabilityBase { id: string; label: string; group?: ControlGroup; configurationOnly?: boolean }
 export type DeviceCapability = CapabilityBase & (
   | { type: 'range'; field: string; min: number; max: number; step?: number; unit?: string }
   | { type: 'enum'; field: string; options: { label: string; value: string | number }[] }
@@ -30,7 +31,7 @@ const profiles = Object.fromEntries(DEVICE_KINDS.map((kind) => {
   const controls = new Map((originalProfiles[kind] ?? []).map((capability) => [capability.id, capability]));
   for (const capability of supplementalCapabilities[kind] ?? []) controls.set(capability.id, capability);
   for (const capability of scheduleCapabilities(kind)) controls.set(capability.id, capability);
-  return [kind, [...controls.values()]];
+  return [kind, [...controls.values()].map((capability) => describeCapabilitySupport(kind, capability))];
 })) as Record<DeviceKind, DeviceCapability[]>;
 const defaults: Partial<Record<DeviceKind, Record<string, SettingValue>>> = inventory.defaults;
 export const LEGACY_DEVICE_IDS = ['living-light', 'living-fan', 'family-tv', 'laundry-washer', 'master-ac', 'master-blinds', 'entry-gate'] as const;
@@ -44,6 +45,7 @@ export interface DeviceControlPage {
   group: ControlGroup;
   capabilities: readonly DeviceCapability[];
   compact: boolean;
+  note?: string;
 }
 
 /** Classify existing exported fields without changing their stable control identifiers. */
@@ -67,10 +69,10 @@ export function getControlPages(kindOrDevice: DeviceKind | Pick<DeviceDefinition
       const last = batches[batches.length - 1];
       const compact = capability.type === 'action';
       const limit = compact ? options.maxActionsPerPage ?? 6 : options.maxControlsPerPage ?? 3;
-      if (!last || (last[0].type === 'action') !== compact || last.length >= limit) batches.push([capability]);
+      if (!last || (last[0].type === 'action') !== compact || Boolean(last[0].configurationOnly) !== Boolean(capability.configurationOnly) || last.length >= limit) batches.push([capability]);
       else last.push(capability);
     }
-    batches.forEach((capabilities, index) => pages.push({ id: `${group}-${index + 1}`, label: `${labels[group]}${batches.length > 1 ? ` ${index + 1}` : ''}`, group, capabilities, compact: capabilities[0].type === 'action' }));
+    batches.forEach((capabilities, index) => pages.push({ id: `${group}-${index + 1}`, label: `${labels[group]}${batches.length > 1 ? ` ${index + 1}` : ''}`, group, capabilities, compact: capabilities[0].type === 'action', note: configurationPageNote(kind, capabilities) }));
   }
   return pages;
 }

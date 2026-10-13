@@ -5,7 +5,23 @@ import {
   type SimulationSnapshot,
 } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 
-export type SimulationSaveStatus = 'saving' | 'saved' | 'error' | 'disconnected';
+export type SimulationSaveStatus = 'loading' | 'load-error' | 'corrupt' | 'saving' | 'saved' | 'error' | 'disconnected';
+
+/** Keep a failed read distinct from an empty cache and from an unsaved edit. */
+export class SimulationLoadError extends Error {
+  constructor(readonly reason: 'unavailable' | 'corrupt' | 'loading') {
+    super(reason === 'corrupt' ? 'Saved controls could not be read. The original data has been kept.'
+      : reason === 'loading' ? 'Saved controls are still loading.' : 'Saved controls are temporarily unavailable. Retry loading them.');
+    this.name = 'SimulationLoadError';
+  }
+}
+
+/** Explain why input is paused without implying the original saved state was reset. */
+export function simulationLoadFailureMessage(status: SimulationSaveStatus): string | null {
+  if (status === 'corrupt') return 'Saved controls could not be read. Your original data is preserved. Retry loading it.';
+  if (status === 'load-error') return 'Saved controls are temporarily unavailable. Retry to restore them.';
+  return null;
+}
 type Storage = {
   getItem: (key: string) => Promise<string | null>;
   setItem: (key: string, value: string) => Promise<void>;
@@ -13,7 +29,9 @@ type Storage = {
 type StoredSimulation = {
   state: SimulationSnapshot;
   status: SimulationSaveStatus;
-  loading: Promise<void>;
+  loading: Promise<SimulationLoadError | null>;
+  loaded: boolean;
+  loadError: SimulationLoadError | null;
   pending: string | null;
   writing: boolean;
   listeners: Set<(status: SimulationSaveStatus) => void>;
@@ -30,14 +48,17 @@ export class SimulationPersistence {
   /** Share one hydrated record across fast screen exits and reopens. */
   async load(scope: string): Promise<SimulationSnapshot> {
     const record = this.record(scope);
-    await record.loading;
+    // A new screen or an explicit retry re-reads failures, never accepted in-memory edits.
+    if (record.loadError) this.hydrate(scope, record);
+    const error = await record.loading;
+    if (error) throw error;
     return record.state;
   }
 
   /** Reduce the latest hydrated state in one turn so concurrent scenes retain unrelated changes. */
   async update(scope: string, reduce: (state: SimulationSnapshot) => SimulationSnapshot): Promise<void> {
+    await this.load(scope);
     const record = this.record(scope);
-    await record.loading;
     const next = reduce(record.state);
     if (next !== record.state) this.save(scope, next);
   }
@@ -60,6 +81,8 @@ export class SimulationPersistence {
   /** Update memory immediately and coalesce rapid edits behind the current disk write. */
   save(scope: string, state: SimulationSnapshot): void {
     const record = this.record(scope);
+    // Do not let defaults or early renderer patches overwrite unread account data.
+    if (!record.loaded) throw record.loadError ?? new SimulationLoadError('loading');
     record.state = state;
     record.pending = JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state });
     for (const listener of record.stateListeners) listener(state);
@@ -72,18 +95,32 @@ export class SimulationPersistence {
     const cached = this.records.get(scope);
     if (cached) return cached;
     const record: StoredSimulation = {
-      state: createDefaultSimulationSnapshot(), status: 'saving', loading: Promise.resolve(),
+      state: createDefaultSimulationSnapshot(), status: 'loading', loading: Promise.resolve(null), loaded: false, loadError: null,
       pending: null, writing: false, listeners: new Set(), stateListeners: new Set(),
     };
     this.records.set(scope, record);
-    record.loading = this.storage.getItem(this.key(scope)).then((raw) => {
-      const message = raw === null ? null : parseStoredSimulationSnapshotMessage(raw);
-      if (raw !== null && !message) throw new Error('Invalid simulation cache');
-      // An accepted edit before hydration finishes takes precedence over the old disk snapshot.
-      if (message && record.pending === null) record.state = message.state;
-      this.notify(record, record.pending === null ? 'saved' : 'saving');
-    }).catch(() => this.notify(record, 'error'));
+    this.hydrate(scope, record);
     return record;
+  }
+
+  /** Resolve internal reads safely for subscribers; only explicit load callers receive errors. */
+  private hydrate(scope: string, record: StoredSimulation): void {
+    record.loadError = null;
+    this.notify(record, 'loading');
+    record.loading = Promise.resolve().then(() => this.storage.getItem(this.key(scope))).then((raw) => {
+      const message = raw === null ? null : parseStoredSimulationSnapshotMessage(raw);
+      if (raw !== null && !message) throw new SimulationLoadError('corrupt');
+      record.state = message?.state ?? createDefaultSimulationSnapshot();
+      record.loaded = true;
+      this.notify(record, 'saved');
+      for (const listener of record.stateListeners) listener(record.state);
+      return null;
+    }).catch((error: unknown) => {
+      const failure = error instanceof SimulationLoadError ? error : new SimulationLoadError('unavailable');
+      record.loadError = failure;
+      this.notify(record, failure.reason === 'corrupt' ? 'corrupt' : 'load-error');
+      return failure;
+    });
   }
 
   /** Namespacing prevents simulated state from entering the original household store. */

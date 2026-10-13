@@ -66,6 +66,13 @@ export function applyDeviceSetting(id: DeviceId, current: DeviceState, field: st
   if (field === 'armed') next.on = Boolean(value);
   if (isGasDevice(device.kind)) { next.on = true; next.settings.gasLastEvent = 'ready'; }
   if (device.kind === 'ac' && field === 'tempC') next.level = clampLevel((26 - Number(value)) / 0.08);
+  // Airflow presets are alternatives, not three conflicting promises about one fan.
+  if (device.kind === 'ac' && value === true && ['acEcoMode', 'acTurboMode', 'acQuietMode'].includes(field)) {
+    for (const mode of ['acEcoMode', 'acTurboMode', 'acQuietMode']) next.settings[mode] = mode === field;
+  }
+  if (device.kind === 'ac' && field === 'acFanSpeed') {
+    for (const mode of ['acEcoMode', 'acTurboMode', 'acQuietMode']) next.settings[mode] = false;
+  }
   if (device.kind === 'light' && (field === 'color' || field === 'colorTempK')) {
     next.settings.lightColorMode = field === 'color' ? 'color' : 'temperature';
     next.settings.lightEffect = 'none';

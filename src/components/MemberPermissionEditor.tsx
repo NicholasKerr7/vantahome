@@ -34,6 +34,7 @@ type Props = {
   role: HouseholdRole;
   overrides: readonly PermissionOverride[];
   disabled?: boolean;
+  pending?: (permission: ActionPermission) => boolean;
   canChange?: (permission: ActionPermission) => boolean;
   onChange: (permission: ActionPermission, allowed: boolean | null) => void;
 };
@@ -44,6 +45,7 @@ export default function MemberPermissionEditor({
   overrides,
   disabled = false,
   canChange,
+  pending,
   onChange,
 }: Props) {
   const [page, setPage] = useState(0);
@@ -69,13 +71,14 @@ export default function MemberPermissionEditor({
         );
         const roleAllows = roleHasPermission(role, permission);
         const requiresAdministrator = permission === "member.invite" && role !== "Admin";
-        const readOnly = disabled || requiresAdministrator || canChange?.(permission) === false;
+        const saving = pending?.(permission) === true;
+        const readOnly = saving || disabled || requiresAdministrator || canChange?.(permission) === false;
         return (
           <View key={permission} style={styles.row}>
             <View style={styles.labelWrap}>
               <Text style={styles.label}>{PERMISSION_LABELS[permission]}</Text>
               <Text style={styles.defaultText}>
-                {requiresAdministrator ? "Requires an Owner or Admin role" : `Role default: ${roleAllows ? "allow" : "deny"}`}
+                {saving ? "Saving permission…" : requiresAdministrator ? "Requires an Owner or Admin role" : `Role default: ${roleAllows ? "allow" : "deny"}`}
               </Text>
             </View>
             <View style={styles.options}>
@@ -95,7 +98,7 @@ export default function MemberPermissionEditor({
                     key={label}
                     accessibilityRole="button"
                     accessibilityLabel={`${PERMISSION_LABELS[permission]}: ${label}`}
-                    accessibilityState={{ selected, disabled: readOnly }}
+                    accessibilityState={{ selected, disabled: readOnly, busy: saving }}
                     style={[styles.option, selected && styles.optionSelected]}
                     onPress={() => { if (!readOnly) onChange(permission, value); }}
                     disabled={readOnly}

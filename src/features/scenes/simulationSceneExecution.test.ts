@@ -43,10 +43,14 @@ test('rejects mixed devices, forbidden fields and invalid grants before any part
 
 test.each(['identity', 'permission', 'deletion'] as const)('rejects %s changes while storage hydrates', async (change) => {
   let release!: (value: string | null) => void;
-  const store = persistence(() => new Promise((resolve) => { release = resolve; }));
+  const hydration = new Promise<string | null>((resolve) => { release = resolve; });
+  const read = jest.fn(() => hydration);
+  const store = persistence(read);
   const home = virtualSceneHome(); const scene: Scene = { ...availableStarterScenes(home)[1].draft, id: 'movie' }; home.scenes = [scene];
   let current = home;
   const operation = runSimulationScene(home, scene, () => current, undefined, store);
+  await Promise.resolve();
+  expect(read).toHaveBeenCalledTimes(1);
   current = change === 'identity' ? { ...home, sessionEpoch: 53 } : change === 'deletion' ? { ...home, scenes: [] } : { ...home, membershipReady: false };
   release(null);
   await expect(operation).rejects.toThrow();

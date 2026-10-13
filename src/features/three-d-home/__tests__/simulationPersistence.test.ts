@@ -26,13 +26,39 @@ test('adds gas devices on upgrade without resetting the previous 90-device simul
   expect(status).toHaveBeenLastCalledWith('saved');
 });
 
-test('validates stored snapshots and exposes corrupt or unavailable storage', async () => {
+test('preserves a malformed cache and rejects defaults and writes until a valid retry', async () => {
   const storage = { getItem: jest.fn().mockResolvedValue('{"token":"private"}'), setItem: jest.fn() };
   const persistence = new SimulationPersistence(storage);
   const statuses = jest.fn();
   persistence.subscribe('demo', statuses);
-  expect(await persistence.load('demo')).toEqual(createDefaultSimulationSnapshot());
-  expect(statuses).toHaveBeenLastCalledWith('error');
+  await expect(persistence.load('demo')).rejects.toMatchObject({ reason: 'corrupt' });
+  expect(() => persistence.save('demo', createDefaultSimulationSnapshot())).toThrow('original data has been kept');
+  const reduce = jest.fn((state) => state);
+  await expect(persistence.update('demo', reduce)).rejects.toMatchObject({ reason: 'corrupt' });
+  expect(reduce).not.toHaveBeenCalled();
+  expect(statuses).toHaveBeenLastCalledWith('corrupt');
+  expect(storage.setItem).not.toHaveBeenCalled();
+  const original = { ...createDefaultSimulationSnapshot(), motionDisabled: true };
+  storage.getItem.mockResolvedValue(JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: original }));
+  expect(await persistence.load('demo')).toEqual(original);
+  expect(statuses).toHaveBeenLastCalledWith('saved');
+  expect(storage.setItem).not.toHaveBeenCalled();
+});
+
+test('coalesces concurrent reads and retries a transient failure when controls reopen', async () => {
+  const original = { ...createDefaultSimulationSnapshot(), night: true, lightingMode: 'night' as const };
+  const storage = { getItem: jest.fn().mockRejectedValueOnce(new Error('Storage unavailable'))
+    .mockResolvedValue(JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: original })), setItem: jest.fn() };
+  const persistence = new SimulationPersistence(storage);
+  const attempts = [persistence.load('demo'), persistence.load('demo')];
+  for (const attempt of attempts) await expect(attempt).rejects.toMatchObject({ reason: 'unavailable' });
+  expect(storage.getItem).toHaveBeenCalledTimes(1);
+  expect(() => persistence.save('demo', createDefaultSimulationSnapshot())).toThrow('temporarily unavailable');
+  const reopened = jest.fn();
+  persistence.subscribe('demo', reopened);
+  expect(await persistence.load('demo')).toEqual(original);
+  expect(storage.getItem).toHaveBeenCalledTimes(2);
+  expect(reopened.mock.calls.map(([status]) => status)).toEqual(['load-error', 'loading', 'saved']);
   expect(storage.setItem).not.toHaveBeenCalled();
 });
 
@@ -103,12 +129,15 @@ test('broadcasts local changes only within their scope and detaches closed surfa
   expect(sameScope).toHaveBeenCalledTimes(1);
 });
 
-test('a late disk read cannot overwrite a newly accepted in-memory edit', async () => {
+test('blocks edits during hydration and restores the existing cache without overwriting it', async () => {
   let hydrate!: (value: string) => void;
-  const persistence = new SimulationPersistence({ getItem: () => new Promise((resolve) => { hydrate = resolve; }), setItem: async () => undefined });
-  const state = createDefaultSimulationSnapshot();
+  const write = jest.fn();
+  const persistence = new SimulationPersistence({ getItem: () => new Promise((resolve) => { hydrate = resolve; }), setItem: write });
+  const state = { ...createDefaultSimulationSnapshot(), motionDisabled: true };
   const loaded = persistence.load('demo');
-  persistence.save('demo', { ...state, motionDisabled: true });
+  expect(() => persistence.save('demo', createDefaultSimulationSnapshot())).toThrow('still loading');
+  await settle();
   hydrate(JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state }));
   expect((await loaded).motionDisabled).toBe(true);
+  expect(write).not.toHaveBeenCalled();
 });

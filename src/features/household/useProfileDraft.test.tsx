@@ -65,7 +65,7 @@ test('a failed portrait copy keeps the saved photo and the editor open with feed
   await act(async () => { await result.current.pickAvatar(); });
   await act(async () => { await result.current.onSave(); });
   expect(useHomeStore.getState().profile.avatarUri).toBe('file:///old.jpg');
-  expect(Alert.alert).toHaveBeenCalledWith('Profile not saved', 'Storage full');
+  expect(result.current.profileFeedback).toBe('Profile not saved. Storage full');
   expect(onSaved).not.toHaveBeenCalled();
 });
 
@@ -125,7 +125,7 @@ test('denied photo access keeps the current portrait and reports recovery', asyn
   await act(async () => { await result.current.pickAvatar(); });
   expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
   expect(result.current.avatarUri).toBe('file:///old.jpg');
-  expect(Alert.alert).toHaveBeenCalledWith('Photo unavailable', expect.stringContaining('Settings'));
+  expect(result.current.profileFeedback).toContain('Settings');
 });
 
 test('waits for durable storage and keeps the editor open with its draft after a write failure', async () => {
@@ -147,7 +147,7 @@ test('waits for durable storage and keeps the editor open with its draft after a
   expect(useHomeStore.getState().profile.name).toBe('Alice');
   expect(result.current.name).toBe('New draft name');
   expect(onSaved).not.toHaveBeenCalled();
-  expect(Alert.alert).toHaveBeenCalledWith('Profile not saved', 'Device storage unavailable');
+  expect(result.current.profileFeedback).toBe('Profile not saved. Device storage unavailable');
 });
 
 test('an account switch while storage completes cannot navigate the new session away', async () => {
@@ -258,4 +258,31 @@ test('a delayed successful photo save never deletes a portrait another current h
   await act(async () => { await result.current.onSave(); });
   expect(discardPreparedPortrait).not.toHaveBeenCalled();
   expect(useHomeStore.getState().profile.avatarUri).toBe(savedPhoto);
+});
+
+test('a cleanup warning rebases the saved draft so retry does not recopy or overwrite newer fields', async () => {
+  jest.mocked(discardPreparedPortrait).mockRejectedValueOnce(new Error('Old photo locked'));
+  const onSaved = jest.fn();
+  const { result } = renderHook(() => useProfileDraft(onSaved));
+  await act(async () => { await result.current.pickAvatar(); });
+  act(() => { result.current.setName('Saved name'); });
+  await act(async () => { await result.current.onSave(); });
+  expect(result.current.profileFeedback).toContain('Profile saved.');
+  expect(onSaved).not.toHaveBeenCalled();
+  await act(async () => { await useHomeStore.getState().setProfile({ name: 'Newer name' }); });
+  await act(async () => { await result.current.onSave(); });
+  expect(prepareProfilePortrait).toHaveBeenCalledTimes(1);
+  expect(useHomeStore.getState().profile.name).toBe('Newer name');
+  expect(onSaved).toHaveBeenCalledTimes(1);
+});
+
+test('web picker failures expose rendered feedback and a new account never sees it', async () => {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce(new Error('Photo selection failed'));
+  const { result } = renderHook(() => useProfileDraft(jest.fn()));
+  await act(async () => { await result.current.pickAvatar(); });
+  expect(result.current.profileFeedback).toBe('Photo unavailable. Photo selection failed');
+  expect(Alert.alert).not.toHaveBeenCalled();
+  act(() => { useHomeStore.setState({ sessionEpoch: 2 }); });
+  expect(result.current.profileFeedback).toBeNull();
 });

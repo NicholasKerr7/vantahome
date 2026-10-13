@@ -81,3 +81,37 @@ test('uses canonical simulation state only for explicitly bound virtual devices 
   state.devices[0].gridOutageAlerts = false;
   expect(selectCurrentReports(state, simulation, 'production', NOW).some((report) => report.id.endsWith(':grid'))).toBe(true);
 });
+
+test('air readings use each configured threshold and keep alerts distinct from report visibility', () => {
+  const state = home();
+  state.devices = [{ id: 'air', name: 'Bedroom air', kind: 'air', roomId: 'public', isOn: true, observedAt: NOW,
+    airQualityIndex: 101, airAlertAqi: 100, airCo2: 620, airAlertCo2: 600,
+    airPm25: 36, airAlertPm25: 35, airPm10: 51, airAlertPm10: 50, airVoc: 301, airAlertVoc: 300,
+    airPollen: 4, airAlertPollen: 3, airAlertsEnabled: true }];
+  const reports = selectCurrentReports(state, null, 'production', NOW);
+  expect(reports).toHaveLength(6);
+  expect(reports.every(report => report.notify && report.age === 'recent' && !report.simulated)).toBe(true);
+  expect(reports.find(report => report.id.endsWith('co2'))?.detail).toContain('620 ppm');
+  state.devices[0].airAlertsEnabled = false;
+  expect(selectCurrentReports(state, null, 'production', NOW).every(report => !report.notify)).toBe(true);
+  state.devices[0].airCo2 = 600;
+  state.devices[0].airPm25 = NaN;
+  state.devices[0].airAlertPm10 = undefined;
+  state.devices[0].airVoc = -5;
+  state.devices[0].airAlertPollen = Infinity;
+  expect(selectCurrentReports(state, null, 'production', NOW).map(report => report.id)).toEqual(['condition:air:air-aqi']);
+});
+
+test('lowering a model air threshold evaluates the canonical sample without inventing physical telemetry', () => {
+  const state = home();
+  const definition = DEVICES.find(device => device.kind === 'air')!;
+  state.rooms[0].modelRoomId = definition.roomId;
+  state.devices = [{ id: 'air', name: 'Model air', kind: 'air', roomId: 'public', isOn: true,
+    simulationOnly: true, modelDeviceId: definition.id }];
+  const simulation = createDefaultSimulationSnapshot();
+  simulation.deviceStates[definition.id] = { on: true, level: 0, settings: { airCo2: 620, airAlertCo2: 600, airAlertsEnabled: true } };
+  expect(selectCurrentReports(state, simulation, 'production', NOW)).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: 'condition:air:air-co2', simulated: true, notify: true, title: 'Simulated CO₂ above limit' }),
+  ]));
+  expect(selectCurrentReports(state, null, 'production', NOW)).toEqual([]);
+});

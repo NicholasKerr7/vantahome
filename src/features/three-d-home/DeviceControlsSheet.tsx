@@ -4,10 +4,12 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View, useWindow
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { deviceActionFeedback, deviceStatus, quickActionLabel, readDeviceSetting } from '../../../packages/home-scene/src/deviceCapabilities';
+import { configurationPageNote } from '../../../packages/home-scene/src/deviceCapabilitySupport';
 import { getInspectorPages } from '../../../packages/home-scene/src/deviceRoutinePages';
 import { hotspotPresentation } from '../../../packages/home-scene/src/hotspotPresentation';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
 import type { ControlSnapshot } from './simulationControlClient';
+import { simulationLoadFailureMessage } from './simulationPersistence';
 import { NativeCapabilityControl, type EnumCapability } from './NativeCapabilityControl';
 import { ControlPagination } from './ControlPagination';
 import CinematicSurface from '../../components/CinematicSurface';
@@ -26,10 +28,11 @@ interface SheetProps {
   deviceId: string | null; client: SimulationDeviceControls; snapshot: ControlSnapshot;
   allowedDeviceIds?: readonly string[];
   motionAllowed: boolean; onClose: () => void; onSelect: (id: string) => void;
+  onRetry?: () => void;
 }
 
 /** Present a full native inspector or paged room browser above either renderer. */
-export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed, onClose, onSelect, allowedDeviceIds }: SheetProps) {
+export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed, onClose, onSelect, allowedDeviceIds, onRetry }: SheetProps) {
   const openDeviceRoutines = useDeviceRoutines(onClose);
   const { width, height, fontScale } = useWindowDimensions();
   const landscape = width >= 760 && width > height;
@@ -40,9 +43,10 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   // Release the native modal so the global incident and its persistent banner stay reachable.
   useEffect(() => { if (emergencyVisible) onClose(); }, [emergencyVisible, onClose]);
   const device = allowedDeviceIds && deviceId && !allowedDeviceIds.includes(deviceId) ? undefined : getDevice(deviceId);
-  const status = snapshot.status === 'disconnected' ? 'Session changed. Close and reopen controls.'
+  const loadFailure = simulationLoadFailureMessage(snapshot.status);
+  const status = loadFailure ?? (snapshot.status === 'disconnected' ? 'Session changed. Close and reopen controls.'
     : snapshot.status === 'error' ? 'Could not save locally. Your changes are still in this session.'
-      : !snapshot.ready ? 'Loading saved controls…' : snapshot.status === 'saving' ? 'Saving simulation…' : 'Simulation · Saved on this device';
+      : !snapshot.ready ? 'Loading saved controls…' : snapshot.status === 'saving' ? 'Saving simulation…' : 'Simulation · Saved on this device');
   if (emergencyVisible) return null;
   return <Modal transparent visible animationType={motionAllowed ? 'fade' : 'none'} onRequestClose={onClose}>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.overlay, landscape && styles.overlayLandscape]}>
@@ -55,10 +59,12 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
               <Text accessibilityRole="header" accessibilityLabel={browsing ? 'Device library' : device?.name} numberOfLines={compact ? 1 : 2} style={[styles.title, compact && styles.compactTitle]}>{browsing ? 'Device library' : device?.name}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close device controls" onPress={onClose} style={styles.button}><Text style={styles.label}>Done</Text></Pressable>
           </View>
-          {browsing || !device ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={allowedDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
+          {!snapshot.ready ? <View style={styles.content}><Text style={styles.detail}>{loadFailure ? 'Controls will stay paused until your saved settings can be restored.' : 'Preparing your saved controls…'}</Text></View>
+            : browsing || !device ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={allowedDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
+          {(loadFailure || snapshot.status === 'disconnected') && onRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry loading saved controls" onPress={onRetry} style={styles.button}><Text style={styles.label}>Retry loading</Text></Pressable>}
           </View>
         </CinematicSurface>
       </SafeAreaView>
@@ -108,6 +114,7 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     {option ? <>
       <View style={styles.row}><Text style={[styles.label, styles.grow]}>{option.label}</Text>
         <Pressable accessibilityRole="button" onPress={() => setOption(null)} style={styles.button}><Text style={styles.label}>Back</Text></Pressable></View>
+      {option.configurationOnly && <Text style={styles.detail}>{configurationPageNote(device.kind, [option])}</Text>}
       <View testID="device-option-page" style={styles.content} onLayout={(event) => measureSpace(event, true)}>{options?.map((choice) => <Pressable key={String(choice.value)} accessibilityRole="radio"
         accessibilityState={{ checked: readDeviceSetting(device, state, option.field) === choice.value, disabled }} disabled={disabled}
         aria-checked={readDeviceSetting(device, state, option.field) === choice.value}
@@ -126,9 +133,9 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
           <Text style={[styles.tabText, group === item && styles.selectedTabText]}>{GROUP_LABELS[item]}</Text>
         </Pressable>;
       })}</View>
-      <Text accessibilityLiveRegion="polite" style={[styles.detail, tone === 'alarm' && styles.alarm, (tone === 'warning' || tone === 'closed') && styles.warning]}>{group === 'schedule' ? current?.id === 'shared-routines' ? 'Preview routines require a linked device.' : 'Device timer preferences · Simulation only'
+      <Text accessibilityLiveRegion="polite" style={[styles.detail, tone === 'alarm' && styles.alarm, (tone === 'warning' || tone === 'closed') && styles.warning]}>{current?.note ?? (group === 'schedule' ? current?.id === 'shared-routines' ? 'Preview routines require a linked device.' : 'Device timer preferences · Simulation only'
         : group === 'status' ? `${deviceStatus(device, state)} · Simulated readings`
-          : deviceActionFeedback(device, state) ?? deviceStatus(device, state)}</Text>
+          : deviceActionFeedback(device, state) ?? deviceStatus(device, state))}</Text>
       <View testID="device-control-page" style={[styles.content, current?.compact && !capacity.singleColumn && styles.grid]} onLayout={measureSpace}>
         {current?.id === 'shared-routines' && <>
           {space.height >= 220 * Math.max(1, fontScale) && <><Text style={styles.label}>One place for every routine</Text>

@@ -53,6 +53,15 @@ afterEach(() => {
 });
 
 describe('full-control focus during resizing', () => {
+  it('explains saved-only fan settings and clears that explanation when the working direction control is shown', () => {
+    renderControls('living-fan');
+    act(() => container.querySelector<HTMLButtonElement>('[data-control-group="modes"]')!.click());
+    expect(container.querySelector('[role="note"]')?.textContent).toContain('this fixed fan has no oscillation or lamp');
+    act(() => container.querySelector<HTMLButtonElement>('[aria-label="Next controls page"]')!.click());
+    expect(container.querySelector('[role="note"]')).toBeNull();
+    expect(container.textContent).toContain('Direction');
+  });
+
   it('keeps a focused later field mounted as the page shrinks and expands', () => {
     renderControls('living-light');
     const temperature = container.querySelector<HTMLInputElement>('#sheet-living-light-light-colorTempK')!;

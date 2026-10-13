@@ -1,28 +1,38 @@
 import { deviceClient } from "./deviceClient";
 import { sendLocalNotification } from "./notifications";
-import { useHomeStore, type FlowCondition, type HomeState, type Weekday } from "../store/useHomeStore";
+import { useHomeStore, type FlowCondition, type HomeState } from "../store/useHomeStore";
 import { runtimePolicy } from "../config/runtimeMode";
 import { roleHasPermission } from "../security/permissions";
 import { selectVisibleRoutines, type Routine } from "../store/routines";
 
+import { readRoutineClock, type RoutineClock } from './routineClock';
+import { RoutineMinuteLedger } from './routineMinuteLedger';
+import { getRoutineTimeZone, readSharedHomeWeatherSettings, subscribeSharedHomeWeatherSettings } from './sharedHomeWeatherSettings';
+import { subscribeHomeWeatherSettings } from './homeWeather';
+import { isLocalWeatherDemo } from './homeWeatherScope';
+
+const scheduledMinutes = new RoutineMinuteLedger();
+
 type FlowRuntimeOptions = {
   flowCooldownMs?: number;
   timeTickMs?: number;
+  /** Inject a verified clock in focused tests; production uses shared property settings. */
+  getTimeZone?: () => string | null;
 };
 
-type RuntimeScope = Pick<HomeState, "authenticatedUserId" | "activeHomeId" | "sessionEpoch" | "activeMemberId">;
-const WEEKDAYS: Weekday[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+type RuntimeScope = Pick<HomeState, "authenticatedUserId" | "accountUserId" | "activeHomeId" | "sessionEpoch" | "activeMemberId">;
 
 /** Start the foreground preview executor; a hub remains necessary for always-on operation. */
 export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
   const cooldownMs = options.flowCooldownMs ?? 10_000;
   const lastRun = new Map<string, number>();
-  const lastTimeTrigger = new Map<string, string>();
+  const getTimeZone = options.getTimeZone ?? getRoutineTimeZone;
   const running = new Map<string, AbortController>();
   const lifetime = new AbortController();
   const initial = useHomeStore.getState();
   const scope: RuntimeScope = {
     authenticatedUserId: initial.authenticatedUserId,
+    accountUserId: initial.accountUserId,
     activeHomeId: initial.activeHomeId,
     sessionEpoch: initial.sessionEpoch,
     activeMemberId: initial.activeMemberId,
@@ -36,7 +46,7 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
     const now = Date.now();
     const previousRun = lastRun.get(routine.id);
     if (previousRun !== undefined && now - previousRun < cooldownMs) return;
-    if (!conditionsPass(routine.conditions, new Date(), useHomeStore.getState())) return;
+    if (!conditionsPass(routine.conditions, readRoutineClock(new Date(), getTimeZone()), useHomeStore.getState())) return;
     const execution = new AbortController();
     const cancel = () => execution.abort();
     lifetime.signal.addEventListener("abort", cancel, { once: true });
@@ -92,23 +102,38 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
   const tick = () => {
     if (!scopeIsCurrent(scope, lifetime.signal)) return;
     const now = new Date();
-    const minuteKey = timeKey(now);
+    const clock = readRoutineClock(now, getTimeZone());
+    if (!clock) return;
     const state = useHomeStore.getState();
     for (const routine of selectVisibleRoutines(state)) {
-      if (!routine.enabled || lastTimeTrigger.get(routine.id) === minuteKey) continue;
+      if (!routine.enabled) continue;
       const matches = routine.triggers.some((trigger) => trigger.type === "time" &&
-        trigger.hour === now.getHours() && trigger.minute === now.getMinutes(),
+        trigger.hour === clock.hour && trigger.minute === clock.minute,
       );
-      if (!matches || !conditionsPass(routine.conditions, now, state)) continue;
-      lastTimeTrigger.set(routine.id, minuteKey);
+      if (!matches || !conditionsPass(routine.conditions, clock, state)) continue;
+      if (!scheduledMinutes.claim(scope, routine.id, clock.minuteKey, now.getTime())) continue;
       run(routine);
     }
   };
+  /** One runtime read serves every routine; scene reads share the same scoped cache. */
+  const refreshTimeZone = () => {
+    if (options.getTimeZone || isLocalWeatherDemo(useHomeStore.getState()) || !scopeIsCurrent(scope, lifetime.signal)) return;
+    void readSharedHomeWeatherSettings().then(tick, () => {
+      // The shared source publishes unavailable; time-based work waits for the next verified read.
+    });
+  };
+  const unsubscribeClock = subscribeSharedHomeWeatherSettings(tick);
+  const unsubscribeSettings = subscribeHomeWeatherSettings(refreshTimeZone);
+  const refreshTimer = setInterval(refreshTimeZone, 60_000);
+  refreshTimeZone();
   const timer = setInterval(tick, options.timeTickMs ?? 15_000);
   tick();
   return () => {
     lifetime.abort();
     clearInterval(timer);
+    clearInterval(refreshTimer);
+    unsubscribeClock();
+    unsubscribeSettings();
     stateUnsub();
   };
 }
@@ -116,7 +141,7 @@ export function startFlowRuntime(options: FlowRuntimeOptions = {}) {
 /** Fence delayed work to the account, home and actor that started this runtime. */
 function scopeIsCurrent(scope: RuntimeScope, signal: AbortSignal): boolean {
   const state = useHomeStore.getState();
-  if (signal.aborted || scope.authenticatedUserId !== state.authenticatedUserId ||
+  if (signal.aborted || scope.authenticatedUserId !== state.authenticatedUserId || scope.accountUserId !== state.accountUserId ||
     scope.activeHomeId !== state.activeHomeId || scope.sessionEpoch !== state.sessionEpoch ||
     scope.activeMemberId !== state.activeMemberId) return false;
   const localDemo = runtimePolicy.allowUnauthenticatedDemo && !state.accountUserId &&
@@ -132,13 +157,13 @@ function scopeIsCurrent(scope: RuntimeScope, signal: AbortSignal): boolean {
 }
 
 /** Conditions are ANDed; overnight ranges intentionally wrap across midnight. */
-function conditionsPass(conditions: FlowCondition[], now: Date, state: HomeState): boolean {
+function conditionsPass(conditions: FlowCondition[], clock: RoutineClock | null, state: HomeState): boolean {
   const devices = new Map(state.devices.map((device) => [device.id, device]));
-  const day = WEEKDAYS[now.getDay()];
-  const minutes = now.getHours() * 60 + now.getMinutes();
+  const minutes = clock ? clock.hour * 60 + clock.minute : null;
   return conditions.every((condition) => {
     switch (condition.type) {
       case "time-range": {
+        if (minutes === null) return false;
         const start = condition.startHour * 60 + condition.startMinute;
         const end = condition.endHour * 60 + condition.endMinute;
         return start <= end ? minutes >= start && minutes <= end : minutes >= start || minutes <= end;
@@ -147,7 +172,7 @@ function conditionsPass(conditions: FlowCondition[], now: Date, state: HomeState
         const device = devices.get(condition.deviceId);
         return Boolean(device && device.isOn === (condition.state === "on"));
       }
-      case "day": return condition.days.includes(day);
+      case "day": return clock !== null && condition.days.includes(clock.day);
     }
   });
 }
@@ -183,11 +208,6 @@ async function executeActions(routine: Routine, scope: RuntimeScope, signal: Abo
         break;
     }
   }
-}
-
-/** Local date keys preserve existing wall-clock schedule semantics. */
-function timeKey(now: Date): string {
-  return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}:${now.getMinutes()}`;
 }
 
 /** Abortable delays stop immediately when the foreground session ends. */

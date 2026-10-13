@@ -7,7 +7,7 @@ import Pressable from '../components/Pressable';
 import SceneSurface from '../features/three-d-home/SceneSurface';
 import PropertyArrival from '../features/home-access/PropertyArrival';
 import type { SceneStatus, SceneSurfaceProps } from '../features/three-d-home/protocol';
-import type { SimulationSaveStatus } from '../features/three-d-home/simulationPersistence';
+import { simulationLoadFailureMessage, type SimulationSaveStatus } from '../features/three-d-home/simulationPersistence';
 import HomeWorkspace from '../features/home-shell/HomeWorkspace';
 import HomePanelBoundary from '../features/home-shell/HomePanelBoundary';
 import { theme } from '../theme/theme';
@@ -39,23 +39,27 @@ function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnap
   const openDeviceRoutines = useDeviceRoutines();
   const [status, setStatus] = useState<SceneStatus | 'loading'>('loading');
   const [saveStatus, setSaveStatus] = useState<SimulationSaveStatus>('saving');
+  const loadFailure = simulationLoadFailureMessage(saveStatus);
   /** Notify the native header without replacing the renderer's stable load callback. */
-  const updateStatus = useCallback((next: SceneStatus) => { setStatus(next); onSceneStatus(next); }, [onSceneStatus]);
+  const updateStatus = useCallback((next: SceneStatus) => { setStatus(next); }, []);
+  // Release the unified arrival shield so cache recovery stays reachable. Keep the
+  // renderer mounted: another surface may restore the same validated baseline.
+  useEffect(() => { onSceneStatus(loadFailure ? 'error' : status); }, [loadFailure, status, onSceneStatus]);
   useEffect(() => {
-    if (status !== 'loading') return;
+    if (status !== 'loading' || loadFailure) return;
     const timeout = setTimeout(() => updateStatus('error'), 90_000);
     return () => clearTimeout(timeout);
-  }, [status, updateStatus]);
+  }, [status, updateStatus, loadFailure]);
   return <View style={styles.scene}>
     {status !== 'error' && <SceneSurface suspended={covered || workspaceCovered} onStatus={updateStatus} onSaveStatus={setSaveStatus} onDeviceRoutines={openDeviceRoutines}
       onChromeSnapshot={onChromeSnapshot} chromeCommand={chromeCommand} allowChromePreferencesWhileSuspended={allowChromePreferencesWhileSuspended && !workspaceCovered} />}
-    {status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected') && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
-      <Text style={styles.saveNoticeText}>{saveStatus === 'error'
+    {(loadFailure || (status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected'))) && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
+      <Text style={styles.saveNoticeText}>{loadFailure ?? (saveStatus === 'error'
         ? 'A change couldn’t be completed or saved. Review your controls and try again.'
-        : 'Your app session changed. Reload the house to reconnect.'}</Text>
-      {saveStatus === 'disconnected' && <Pressable onPress={onRetry} accessibilityLabel="Reconnect house controls" style={styles.retry}><Text style={styles.retryText}>Reconnect</Text></Pressable>}
+        : 'Your app session changed. Reload the house to reconnect.')}</Text>
+      {(loadFailure || saveStatus === 'disconnected') && <Pressable accessibilityRole="button" onPress={onRetry} accessibilityLabel="Reconnect house controls" style={styles.retry}><Text style={styles.retryText}>{loadFailure ? 'Retry loading' : 'Reconnect'}</Text></Pressable>}
     </View>}
-    {status === 'loading' && !unifiedArrival && <PropertyArrival active={!covered && !workspaceCovered} />}
+    {status === 'loading' && !unifiedArrival && !loadFailure && <PropertyArrival active={!covered && !workspaceCovered} />}
     {status === 'error' && <View style={styles.feedback} accessibilityRole="alert">
       <Ionicons name="cube-outline" size={32} color={theme.colors.accent} />
       <Text style={styles.feedbackTitle}>The 3D view couldn’t load</Text>

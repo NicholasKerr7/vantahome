@@ -72,13 +72,13 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
   ac: [
     range('ac', 'acFanSpeed', 'Fan speed', 0, 100, '%'),
     choice('ac', 'acSwingMode', 'Swing', [['Off', 'off'], ['Vertical', 'vertical'], ['Horizontal', 'horizontal'], ['Both', 'both']]),
-    toggle('ac', 'acEcoMode', 'Eco mode'), toggle('ac', 'acTurboMode', 'Turbo mode'), toggle('ac', 'acQuietMode', 'Quiet mode'),
+    toggle('ac', 'acEcoMode', 'Eco airflow preview'), toggle('ac', 'acTurboMode', 'Turbo airflow preview'), toggle('ac', 'acQuietMode', 'Quiet airflow preview'),
     range('ac', 'acTargetHumidity', 'Target humidity', 30, 60, '%'), stat('ac', 'acFilterLife', 'Filter life', '%'),
   ],
   fan: [
     action('fan', 'breeze', 'Breeze', { isOn: true, speed: 35 }), action('fan', 'standard', 'Standard', { isOn: true, speed: 60 }), action('fan', 'turbo', 'Turbo', { isOn: true, speed: 90 }),
     toggle('fan', 'fanOscillation', 'Oscillation'), choice('fan', 'fanDirection', 'Direction', [['Forward', 'forward'], ['Reverse', 'reverse']]),
-    toggle('fan', 'fanLightOn', 'Integrated light'), toggle('fan', 'fanAutoMode', 'Auto mode'), toggle('fan', 'fanSleepMode', 'Sleep mode'),
+    toggle('fan', 'fanLightOn', 'Integrated light'), toggle('fan', 'fanAutoMode', 'Auto mode'), toggle('fan', 'fanSleepMode', 'Sleep speed preview'),
     range('fan', 'fanTimerMin', 'Timer preference', 0, 240, 'min', 'schedule'),
   ],
   fridge: [

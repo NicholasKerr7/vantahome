@@ -14,6 +14,7 @@ import Pressable from "../components/Pressable";
 import ThemedSwitch from '../components/ThemedSwitch';
 import { DeepAction, DeepPager, DeepScreen, DeepTabs } from '../components/deep/DeepScreen';
 import { theme } from "../theme/theme";
+import { useRoutineTimeZone } from '../features/routines/useRoutineTimeZone';
 import { ROUTINE_EXECUTION } from "../features/routines/executionAvailability";
 import {
   useHomeStore,
@@ -54,6 +55,7 @@ type EditorSection = typeof EDITOR_SECTIONS[number]['id'];
 /** One editor serves existing flows, legacy time rules and device schedule shortcuts. */
 export default function AutomationBuilderScreen({ navigation, route }: Props) {
   const guard = useRoutineEditorGuard();
+  const timeZoneLabel = useRoutineTimeZone();
   const routines = useHomeStore(useShallow(selectVisibleRoutines));
   const addRoutine = useHomeStore((state) => state.addRoutine);
   const updateRoutine = useHomeStore((state) => state.updateRoutine);
@@ -210,6 +212,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
   return (
     <DeepScreen title={existing ? 'Edit routine' : 'New routine'} eyebrow="YOUR HOME / ROUTINES"
       onBack={() => navigation.goBack()} actions={<DeepAction label="Save" accessibilityLabel="Save routine" primary disabled={!canSave} onPress={saveRoutine} />}>
+      <Text style={styles.timeZone}>{timeZoneLabel}</Text>
       <DeepTabs items={EDITOR_SECTIONS} selectedId={selectedSection} onSelect={selectSection} />
       <ScrollView
         key={selectedSection}
@@ -372,6 +375,7 @@ export default function AutomationBuilderScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
+  timeZone: { color: theme.colors.subtext, fontSize: 11, lineHeight: 16, paddingHorizontal: 18, paddingBottom: 6 },
   scroll: { flex: 1, minHeight: 0 },
   content: {
     width: "100%",

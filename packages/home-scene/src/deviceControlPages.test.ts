@@ -71,4 +71,27 @@ describe('shared original-device control pages', () => {
     expect(validateStoredSetting('light', '__proto__', 'x')).toBeUndefined();
     expect(validateStoredSetting('gate', 'scheduleDays', 'weekdays')).toBe('weekdays');
   });
+
+  it('never mixes working controls with saved-only configuration, keeping the limitation visible at every page size', () => {
+    for (const kind of DEVICE_KINDS) {
+      for (const maxControlsPerPage of [1, 2, 3] as const) {
+        for (const page of getControlPages(kind, { maxControlsPerPage })) {
+          const saved = page.capabilities.filter((capability) => capability.configurationOnly);
+          if (saved.length) {
+            expect(saved.length, `${kind}/${page.id}`).toBe(page.capabilities.length);
+            expect(page.note, `${kind}/${page.id}`).toMatch(/Saved/i);
+          } else expect(page.note).toBeUndefined();
+        }
+      }
+    }
+    for (const field of ['fanOscillation', 'fanLightOn', 'fanAutoMode']) {
+      expect(getCapabilities('fan').find((capability) => 'field' in capability && capability.field === field)).toMatchObject({ configurationOnly: true });
+      expect(validateStoredSetting('fan', field, true)).toBe(true);
+    }
+    for (const [kind, field] of [['light', 'nightShift'], ['camera', 'twoWayAudio'], ['stove', 'stoveLock'], ['water', 'waterAutoShutoff'], ['speaker', 'voiceAssistantEnabled']] as const) {
+      expect(getCapabilities(kind).find((capability) => 'field' in capability && capability.field === field)).toMatchObject({ configurationOnly: true });
+    }
+    expect(getCapabilities('fan').find((capability) => capability.id === 'fan-fanDirection')?.configurationOnly).toBeUndefined();
+    expect(getCapabilities('air').find((capability) => capability.id === 'air-airAlertCo2')?.configurationOnly).toBeUndefined();
+  });
 });

@@ -15,7 +15,7 @@ export type ControlSnapshot = { state: SimulationSnapshot; ready: boolean; statu
 
 /** A renderer-independent, optimistic client for the existing local simulation bridge. */
 export class SimulationControlClient {
-  private value: ControlSnapshot = { state: createDefaultSimulationSnapshot(), ready: false, status: 'saving', access: EMPTY_SCENE_ACCESS };
+  private value: ControlSnapshot = { state: createDefaultSimulationSnapshot(), ready: false, status: 'loading', access: EMPTY_SCENE_ACCESS };
   private canonical = this.value.state;
   private session: Session | null = null;
   private nextRequest = 0;
@@ -41,7 +41,8 @@ export class SimulationControlClient {
     if (this.session) return;
     this.publish({ ...this.value, ready: false });
     this.session = this.createSession(this.receive, (status) => {
-      this.publish({ ...this.value, status, ready: status !== 'disconnected' && this.value.ready });
+      const unavailable = status === 'disconnected' || status === 'loading' || status === 'load-error' || status === 'corrupt';
+      this.publish({ ...this.value, status, ready: !unavailable && this.value.ready });
     });
     this.session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'request' });
   }

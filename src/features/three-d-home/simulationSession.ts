@@ -65,9 +65,12 @@ export class SimulationSession {
     this.scope = modelSimulationScope(home, this.sharedDemo);
     this.unsubscribePersistence = this.persistence.subscribe(this.scope, onSaveStatus);
     this.unsubscribeState = this.persistence.subscribeState(this.scope, (next) => {
-      if (this.disposed || !this.state || next === this.state) return;
-      this.state = next;
+      if (this.disposed || next === this.state) return;
+      const restoring = this.state === null;
+      if (!this.state) this.restoreState(next);
+      else this.state = next;
       if (this.requested) this.sendSnapshot();
+      if (restoring && this.catalogRequested) this.sendSceneCatalog();
     });
     this.unsubscribeStore = this.store.subscribe((state, previous) => {
       if (modelSimulationIdentity(state) !== this.identity) {
@@ -109,20 +112,28 @@ export class SimulationSession {
     this.scheduleExpiry();
     this.ready = this.persistence.load(this.scope).then((saved) => {
       if (this.disposed) return;
-      this.state = this.sharedDemo ? overlayDemoDevices(saved, this.store.getState().devices) : saved;
-      if (this.sharedDemo) {
-        // Persisted simulation alarms are authoritative; default host flags must not erase them.
-        const current = this.store.getState().devices;
-        const devices = current.map((device) => {
-          const mapping = resolveDemoDeviceMapping(device);
-          const simulated = mapping && this.state?.deviceStates[mapping.sceneId];
-          return simulated ? projectFireSimulationToDemo(device, simulated) : device;
-        });
-        this.projecting = true;
-        try { if (devices.some((device, index) => device !== current[index])) this.store.setState({ devices }); }
-        finally { this.projecting = false; }
-      }
+      if (!this.state) this.restoreState(saved);
+    }).catch(() => {
+      // Persistence already reports an actionable read failure. Keep authority closed;
+      // reopening/retrying can re-read the original cache without resetting it.
     });
+  }
+
+  /** Install a validated baseline once, including recovery initiated by another open surface. */
+  private restoreState(saved: SimulationSnapshot): void {
+    this.state = this.sharedDemo ? overlayDemoDevices(saved, this.store.getState().devices) : saved;
+    if (this.sharedDemo) {
+      // Persisted simulation alarms are authoritative; default host flags must not erase them.
+      const current = this.store.getState().devices;
+      const devices = current.map((device) => {
+        const mapping = resolveDemoDeviceMapping(device);
+        const simulated = mapping && this.state?.deviceStates[mapping.sceneId];
+        return simulated ? projectFireSimulationToDemo(device, simulated) : device;
+      });
+      this.projecting = true;
+      try { if (devices.some((device, index) => device !== current[index])) this.store.setState({ devices }); }
+      finally { this.projecting = false; }
+    }
   }
 
   /** Process ordered patches only after hydration and an explicit handshake. */
@@ -132,6 +143,9 @@ export class SimulationSession {
     const message = parseSimulationRequest(input);
     if (!message) return false;
     if (this.disposed) return true;
+    if (message.type === 'request') this.requested = true;
+    // No renderer may queue edits against defaults before receiving a restored baseline.
+    if (message.type === 'patch' && !this.state) return true;
     // Capture the sender's baseline before another surface commits. Rebase independent
     // fields later, retaining rapid queued edits from this sender in their original order.
     if (message.type === 'patch' && this.state && this.requested && message.requestId > this.lastRequestId && !this.pendingPatches.has(message.requestId)) {
@@ -190,8 +204,10 @@ export class SimulationSession {
   /** Execute only a currently visible, known local scene; never accept actions or physical commands from a frame. */
   private handleSceneRequest(message: SceneCatalogRequest): boolean {
     if (this.disposed || !this.deliverCatalog) return true;
+    if (message.type === 'request') this.catalogRequested = true;
+    if (message.type !== 'request' && !this.state) return true;
     this.ready = this.ready.then(async () => {
-      if (this.disposed) return;
+      if (this.disposed || !this.state) return;
       if (message.type === 'request') {
         this.catalogRequested = true;
         this.sendSceneCatalog();
@@ -232,7 +248,7 @@ export class SimulationSession {
 
   /** Reject queued host navigation immediately when this scene loses its current permission scope. */
   canNavigate(): boolean {
-    return !this.disposed && resolveModelSceneAccess(this.store.getState(), this.mode).propertyOverview === true;
+    return !this.disposed && this.state !== null && resolveModelSceneAccess(this.store.getState(), this.mode).propertyOverview === true;
   }
 
   /** Send the complete canonical snapshot so either renderer can recover after reopening. */

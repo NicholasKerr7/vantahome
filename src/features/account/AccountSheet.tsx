@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -11,9 +11,7 @@ import AvatarChip from '../../components/AvatarChip';
 import { theme } from '../../theme/theme';
 import { useAccountIdentity } from './useAccountIdentity';
 import { useAccountDetails } from './useAccountDetails';
-import { isAccountScopeCurrent } from './accountIdentity';
-import { signOutAccount } from './accountSession';
-import { useHomeStore } from '../../store/useHomeStore';
+import AccountSignOut from './AccountSignOut';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -33,13 +31,7 @@ export default function AccountSheet({ onClose, onPreferences }: { onClose: () =
   const tablet = Math.min(width, height) >= 600;
   const { identity, scope } = useAccountIdentity();
   const details = useAccountDetails(scope, identity.homeId);
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
-  const [signOutError, setSignOutError] = useState<string | null>(null);
-  const signingOutRef = useRef(false);
-  const mounted = useRef(true);
   const demo = identity.mode === 'demo';
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   /** Close the sheet before routing to an existing focused profile section. */
   function openProfile(section: 'identity' | 'household' | 'preferences') {
@@ -57,25 +49,6 @@ export default function AccountSheet({ onClose, onPreferences }: { onClose: () =
   function previewAccountEntry() {
     onClose();
     navigation.navigate('AccountEntry');
-  }
-
-  /** Require an explicit second tap and reject late actions after an account changes. */
-  async function signOut() {
-    if (signingOutRef.current) return;
-    signingOutRef.current = true;
-    setSigningOut(true);
-    setSignOutError(null);
-    try {
-      const complete = await signOutAccount(scope);
-      if (!mounted.current) return;
-      if (complete) onClose();
-      else if (isAccountScopeCurrent(scope, useHomeStore.getState())) setSignOutError('Your session changed. Reopen your account and try again.');
-    } catch {
-      if (mounted.current && isAccountScopeCurrent(scope, useHomeStore.getState())) setSignOutError('Sign-out could not finish. Please try again.');
-    } finally {
-      signingOutRef.current = false;
-      if (mounted.current) setSigningOut(false);
-    }
   }
 
   return <Modal transparent visible animationType="none" onRequestClose={onClose}>
@@ -120,18 +93,7 @@ export default function AccountSheet({ onClose, onPreferences }: { onClose: () =
               {!demo && identity.homeId && <AccountAction title="Household" detail="People and permissions in this home" icon="people-outline" onPress={() => openProfile('household')} />}
               {demo && <AccountAction title="Preview account access" detail="Explore sign-in, invitations and owner setup" icon="key-outline" onPress={previewAccountEntry} />}
             </View>}
-            {identity.mode === 'account' && <View style={styles.signOutSection}>
-              {confirmSignOut && <Text style={styles.noticeText}>Sign out on this device? You’ll need to sign in again to access your home.</Text>}
-              {signOutError && <Text accessibilityRole="alert" style={styles.noticeText}>{signOutError}</Text>}
-              <View style={styles.signOutActions}>
-                {confirmSignOut && <Pressable style={styles.secondaryButton} disabled={signingOut} onPress={() => { setConfirmSignOut(false); setSignOutError(null); }}><Text style={styles.buttonText}>Cancel</Text></Pressable>}
-                <Pressable style={[styles.signOutButton, signingOut && styles.disabled]} accessibilityState={{ busy: signingOut, disabled: signingOut }} disabled={signingOut}
-                  onPress={confirmSignOut ? signOut : () => setConfirmSignOut(true)} accessibilityLabel={confirmSignOut ? 'Confirm sign out on this device' : 'Sign out'}>
-                  <Ionicons name="log-out-outline" size={18} color={theme.colors.accentText} />
-                  <Text style={styles.buttonText}>{signingOut ? 'Signing out…' : confirmSignOut ? 'Sign out this device' : 'Sign out'}</Text>
-                </Pressable>
-              </View>
-            </View>}
+            {identity.mode === 'account' && <AccountSignOut onComplete={onClose} />}
           </ScrollView>
         </View>
       </CinematicSurface>
@@ -170,10 +132,4 @@ const styles = StyleSheet.create({
   actionDetail: { color: theme.colors.subtext, fontSize: 11, lineHeight: 16 },
   retry: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
   retryText: { color: theme.colors.accentText, fontSize: 12, fontWeight: '600' },
-  signOutSection: { gap: 12 },
-  signOutActions: { flexDirection: 'row', gap: 10 },
-  secondaryButton: { minHeight: 46, flex: 1, borderRadius: 15, borderWidth: 1, borderColor: theme.colors.stroke, justifyContent: 'center', alignItems: 'center', padding: 10 },
-  signOutButton: { minHeight: 46, flex: 2, borderRadius: 15, backgroundColor: theme.colors.card2, flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center', padding: 10 },
-  buttonText: { color: theme.colors.accentText, fontSize: 12, fontWeight: '600', textAlign: 'center' },
-  disabled: { opacity: 0.6 },
 });

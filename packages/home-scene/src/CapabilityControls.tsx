@@ -10,19 +10,21 @@ function controlId(device: DeviceDefinition, capability: DeviceCapability, prefi
 }
 
 /** Render schema-backed controls with native labels, bounds and keyboard behavior. */
-export function CapabilityControls({ device, current, capabilities, prefix }: { device: DeviceDefinition; current: DeviceState; capabilities: readonly DeviceCapability[]; prefix: string }) {
+export function CapabilityControls({ device, current, capabilities, prefix, configurationExplained = false }: { device: DeviceDefinition; current: DeviceState; capabilities: readonly DeviceCapability[]; prefix: string; configurationExplained?: boolean }) {
   const setSetting = useHomeStore((state) => state.setDeviceSetting);
   const runAction = useHomeStore((state) => state.runDeviceAction);
   return <div className="capability-controls">{capabilities.map((capability) => {
     const id = controlId(device, capability, prefix);
+    // Unpaged legacy cards have no shared context row, so keep the limitation in each label.
+    const label = capability.configurationOnly && !configurationExplained ? `${capability.label} · saved only` : capability.label;
     if (capability.type === 'action') return <button key={capability.id} data-capability-id={capability.id} type="button" className="capability-action" onClick={() => runAction(device.id, capability.id)}>{capability.label}</button>;
     const value = readDeviceSetting(device, current, capability.field);
     if (capability.type === 'stat') return <div key={capability.id} data-capability-id={capability.id} className="capability-reading"><span>{capability.label}</span><output>{formatCapabilityValue(capability, value)}</output></div>;
-    if (capability.type === 'toggle') return <div key={capability.id} data-capability-id={capability.id} className="capability-toggle"><label htmlFor={id}>{capability.label}</label><button id={id} type="button" role="switch" aria-checked={Boolean(value)} className="power-switch" onClick={() => setSetting(device.id, capability.field, !value)}><span /></button></div>;
-    if (capability.type === 'enum') return <div key={capability.id} data-capability-id={capability.id} className="capability-select"><label htmlFor={id}>{capability.label}</label><select id={id} value={String(value)} onChange={(event) => {
+    if (capability.type === 'toggle') return <div key={capability.id} data-capability-id={capability.id} className="capability-toggle"><label htmlFor={id}>{label}</label><button id={id} type="button" role="switch" aria-checked={Boolean(value)} className="power-switch" onClick={() => setSetting(device.id, capability.field, !value)}><span /></button></div>;
+    if (capability.type === 'enum') return <div key={capability.id} data-capability-id={capability.id} className="capability-select"><label htmlFor={id}>{label}</label><select id={id} value={String(value)} onChange={(event) => {
       const option = capability.options.find((item) => String(item.value) === event.currentTarget.value);
       if (option) setSetting(device.id, capability.field, option.value);
     }}>{capability.options.map((option) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}</select></div>;
-    return <div key={capability.id} data-capability-id={capability.id} className="level-control"><div className="level-heading"><label htmlFor={id}>{capability.label}</label><output htmlFor={id}>{formatCapabilityValue(capability, value)}</output></div><input id={id} type="range" min={capability.min} max={capability.max} step={capability.step ?? 1} value={Number(value)} aria-valuetext={formatCapabilityValue(capability, value)} onChange={(event) => setSetting(device.id, capability.field, Number(event.currentTarget.value))} /></div>;
+    return <div key={capability.id} data-capability-id={capability.id} className="level-control"><div className="level-heading"><label htmlFor={id}>{label}</label><output htmlFor={id}>{formatCapabilityValue(capability, value)}</output></div><input id={id} type="range" min={capability.min} max={capability.max} step={capability.step ?? 1} value={Number(value)} aria-valuetext={formatCapabilityValue(capability, value)} onChange={(event) => setSetting(device.id, capability.field, Number(event.currentTarget.value))} /></div>;
   })}</div>;
 }

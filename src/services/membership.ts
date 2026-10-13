@@ -233,7 +233,7 @@ export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSe
   if (!result.household.some((member) => member.id === result.activeMemberId))
     return false;
   if (current.accountHomeId && current.accountHomeId !== result.homeId) {
-    clearHomeAccountState(result.activeMemberId);
+    clearHomeAccountState(result.activeMemberId, true);
   }
   const previousDevices =
     current.accountHomeId === result.homeId
@@ -263,6 +263,7 @@ export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSe
     // Identity belongs to this verified account even when its household changes.
     profile: current.profile,
     userName: current.userName,
+    preferences: current.preferences,
     accountHomeId: result.homeId,
     activeHomeId: result.homeId,
     membershipReady: true,

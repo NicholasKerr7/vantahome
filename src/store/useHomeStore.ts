@@ -1742,16 +1742,59 @@ const flowsSeed: AutomationFlow[] = [
 
 let storageWritesEnabled = true;
 let accountGeneration = 0;
+const hydrationErrors = new Map<number, HomeCacheLoadError>();
+
+/** An unread cache must remain intact until retry successfully validates it. */
+export class HomeCacheLoadError extends Error {
+  constructor(readonly reason: 'corrupt' | 'unavailable') {
+    super(reason === 'corrupt' ? 'Saved account data could not be read. The original data has been kept.'
+      : 'Saved account data is temporarily unavailable. Retry loading it.');
+    this.name = 'HomeCacheLoadError';
+  }
+}
 
 function withoutCameraUrls<T extends Partial<Device>>(device: T) {
   const { streamUrl, thumbnailUrl, lastThumbnailUrl, ...safe } = device;
   return safe;
 }
 
+/** Validate the cache envelope before removing reusable camera credentials. */
 function sanitizeCachedState(raw: string | null) {
-  if (!raw) return raw;
+  if (raw === null) return null;
   try {
     const cached = JSON.parse(raw);
+    if (!cached || typeof cached !== 'object' || Array.isArray(cached)
+      || !cached.state || typeof cached.state !== 'object' || Array.isArray(cached.state)
+      || (cached.version !== undefined && (!Number.isInteger(cached.version) || cached.version < 0 || cached.version > 6))) {
+      throw new HomeCacheLoadError('corrupt');
+    }
+    for (const field of ['devices', 'rooms', 'scenes', 'rules', 'flows', 'household', 'roomMembers', 'memberPermissionOverrides']) {
+      const entries: unknown = cached.state[field];
+      if (entries !== undefined && (!Array.isArray(entries) || entries.some((entry) => !entry || typeof entry !== 'object' || Array.isArray(entry)))) {
+        throw new HomeCacheLoadError('corrupt');
+      }
+    }
+    for (const field of ['profile', 'preferences', 'integrations', 'realtime']) {
+      const value: unknown = cached.state[field];
+      if (value !== undefined && (!value || typeof value !== 'object' || Array.isArray(value))) throw new HomeCacheLoadError('corrupt');
+    }
+    for (const field of ['accountUserId', 'accountHomeId']) {
+      const value: unknown = cached.state[field];
+      if (value !== undefined && value !== null && typeof value !== 'string') throw new HomeCacheLoadError('corrupt');
+    }
+    if (cached.state.userName !== undefined && typeof cached.state.userName !== 'string') throw new HomeCacheLoadError('corrupt');
+    const profile = cached.state.profile;
+    if (profile) {
+      for (const field of ['name', 'email', 'phone', 'homeName', 'avatarColor', 'avatarUri', 'timezone']) {
+        if (profile[field] !== undefined && typeof profile[field] !== 'string') throw new HomeCacheLoadError('corrupt');
+      }
+      if ((profile.timeFormat !== undefined && !['12h', '24h'].includes(profile.timeFormat))
+        || (profile.tempUnit !== undefined && !['C', 'F'].includes(profile.tempUnit))) throw new HomeCacheLoadError('corrupt');
+    }
+    for (const field of ['haptics', 'notifications']) {
+      const value: unknown = cached.state.preferences?.[field];
+      if (value !== undefined && typeof value !== 'boolean') throw new HomeCacheLoadError('corrupt');
+    }
     if (Array.isArray(cached.state?.devices)) {
       cached.state.devices = cached.state.devices.map(withoutCameraUrls);
     }
@@ -1763,12 +1806,17 @@ function sanitizeCachedState(raw: string | null) {
       }));
     }
     return JSON.stringify(cached);
-  } catch { return null; }
+  } catch { throw new HomeCacheLoadError('corrupt'); }
 }
 
-async function sanitizeLegacyCache() {
-  const raw = await AsyncStorage.getItem("vantahome-store");
-  const safe = sanitizeCachedState(raw);
+/** Sanitize a valid legacy demo without resetting unrelated malformed legacy data. */
+async function sanitizeLegacyCache(generation: number) {
+  let raw: string | null;
+  try { raw = await AsyncStorage.getItem("vantahome-store"); }
+  catch { throw new HomeCacheLoadError('unavailable'); }
+  if (generation !== accountGeneration) return;
+  let safe: string | null;
+  try { safe = sanitizeCachedState(raw); } catch { return; }
   // Retain unowned local automations; only remove reusable camera URLs.
   if (raw && safe && raw !== safe) await AsyncStorage.setItem("vantahome-store", safe);
 }
@@ -1776,7 +1824,9 @@ async function sanitizeLegacyCache() {
 const scopedStorage = {
   getItem: async (key: string) => {
     const generation = accountGeneration;
-    const raw = await AsyncStorage.getItem(key);
+    let raw: string | null;
+    try { raw = await AsyncStorage.getItem(key); }
+    catch { throw new HomeCacheLoadError('unavailable'); }
     if (generation !== accountGeneration) return null;
     return sanitizeCachedState(raw);
   },
@@ -2335,14 +2385,22 @@ export const useHomeStore = create<HomeState>()(
       version: 6,
       skipHydration: true,
       storage: createJSONStorage(() => scopedStorage),
+      onRehydrateStorage: () => {
+        const generation = accountGeneration;
+        // Zustand reports read/migration failures here but resolves rehydrate().
+        return (_state, error) => {
+          if (error) hydrationErrors.set(generation, error instanceof HomeCacheLoadError ? error : new HomeCacheLoadError('corrupt'));
+        };
+      },
       merge: (persisted, current) => {
         const cached = persisted as Partial<HomeState> | undefined;
-        if (!cached || (cached.accountUserId ?? null) !== current.accountUserId) {
-          return current;
-        }
+        if (!cached) return current;
+        if ((cached.accountUserId ?? null) !== current.accountUserId) throw new HomeCacheLoadError('corrupt');
         return {
           ...current,
           ...cached,
+          profile: { ...current.profile, ...cached.profile },
+          preferences: { ...current.preferences, ...cached.preferences },
           // Cached roles and sessions are never proof of current membership.
           authenticatedUserId: current.authenticatedUserId,
           activeHomeId: null,
@@ -2419,7 +2477,11 @@ export const useHomeStore = create<HomeState>()(
 
 const demoState = useHomeStore.getState();
 
-export function clearHomeAccountState(userId: string | null) {
+/** Clear household data; a verified same-account home switch can retain personal preferences atomically. */
+export function clearHomeAccountState(userId: string | null, retainPersonalSettings = false) {
+  const previous = useHomeStore.getState();
+  const personal = retainPersonalSettings && userId !== null && previous.accountUserId === userId && previous.authenticatedUserId === userId
+    ? { profile: previous.profile, userName: previous.userName, preferences: previous.preferences } : {};
   useHomeStore.setState({
     modelCatalogVersion: undefined,
     modelSceneCatalogVersion: undefined,
@@ -2440,6 +2502,7 @@ export function clearHomeAccountState(userId: string | null) {
     preferences: { haptics: true, notifications: true },
     realtime: { enabled: true, wsUrl: "", useMqtt: false },
     household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "",
+    ...personal,
   });
 }
 
@@ -2454,9 +2517,12 @@ export async function hydrateHomeAccount(userId: string | null, demo = false) {
   useHomeStore.setState({ sessionEpoch: generation });
   if (demo) useHomeStore.setState({ ...demoState, sessionEpoch: generation });
   try {
-    await sanitizeLegacyCache();
+    await sanitizeLegacyCache(generation);
     if (generation !== accountGeneration) return false;
     if (userId || demo) await useHomeStore.persist.rehydrate();
+    if (generation !== accountGeneration) return false;
+    const hydrationError = hydrationErrors.get(generation);
+    if (hydrationError) throw hydrationError;
     if (generation === accountGeneration && demo && !userId && runtimePolicy.allowUnauthenticatedDemo) {
       const saved = await simulationPersistence.load('demo');
       if (generation !== accountGeneration) return false;
@@ -2466,13 +2532,17 @@ export async function hydrateHomeAccount(userId: string | null, demo = false) {
       const snapshot = overlayDemoDevices(saved, current.devices);
       const catalog = upgradeModelHomeCatalog(current, snapshot);
       if (catalog.modelCatalogVersion) {
-        storageWritesEnabled = true;
         useHomeStore.setState({ ...catalog, ...upgradeModelSceneCatalog({ ...current, ...catalog }) });
         if (snapshot !== saved) simulationPersistence.save('demo', snapshot);
       }
     }
+    if (generation === accountGeneration) {
+      storageWritesEnabled = Boolean(userId || demo);
+      // Persist validated migrations/catalog upgrades only after every required read succeeded.
+      if (demo) await useHomeStore.setState({});
+    }
   } finally {
-    if (generation === accountGeneration) storageWritesEnabled = Boolean(userId || demo);
+    hydrationErrors.delete(generation);
   }
   return generation === accountGeneration;
 }

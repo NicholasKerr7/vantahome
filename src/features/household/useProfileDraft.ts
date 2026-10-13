@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { theme } from '../../theme/theme';
 import { useHomeStore, type HomeState } from '../../store/useHomeStore';
@@ -33,6 +33,7 @@ export function useProfileDraft(onSaved: () => void) {
     const initial = profileDraft(profile);
     return { key, initial, values: initial, asset: null };
   });
+  const [feedback, setFeedback] = useState<{ key: string; message: string } | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const pending = useRef(false);
   const mounted = useRef(true);
@@ -67,6 +68,7 @@ export function useProfileDraft(onSaved: () => void) {
     if (!canEdit() || pending.current) return;
     pending.current = true;
     setBusyKey(key);
+    setFeedback(null);
     try {
       if (Platform.OS !== 'web') {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -81,7 +83,7 @@ export function useProfileDraft(onSaved: () => void) {
       setDraft(previous => previous.key === key
         ? { ...previous, asset, values: { ...previous.values, avatarUri: asset.uri } } : previous);
     } catch (error) {
-      if (canEdit()) Alert.alert('Photo unavailable', error instanceof Error ? error.message : 'Please choose the photo again.');
+      if (canEdit()) setFeedback({ key, message: `Photo unavailable. ${error instanceof Error ? error.message : 'Please choose the photo again.'}` });
     } finally {
       pending.current = false;
       if (mounted.current) setBusyKey(null);
@@ -93,6 +95,7 @@ export function useProfileDraft(onSaved: () => void) {
     if (!canEdit() || pending.current || !current.values.name.trim()) return;
     pending.current = true;
     setBusyKey(key);
+    setFeedback(null);
     let prepared: string | null = null;
     let before: HomeState['profile'] | null = null;
     let writeScope: LocalSettingsWrite | null = null;
@@ -116,6 +119,12 @@ export function useProfileDraft(onSaved: () => void) {
       writeScope = beginLocalSettingsWrite(localSettingsScopeKey(scope), 'profile', Object.keys(patch));
       await useHomeStore.getState().setProfile(patch);
       if (!isLocalSettingsScopeCurrent(scope, useHomeStore.getState())) return;
+      // A durable save becomes the next baseline even if retiring an old photo fails.
+      // Retrying must not copy the same asset again or republish already-saved fields.
+      if (canEdit()) {
+        const saved = profileDraft(useHomeStore.getState().profile);
+        setDraft({ key, initial: saved, values: saved, asset: null });
+      }
       // Retire only our old file after the replacement is durably saved, and never another member's photo.
       const oldUri = before.avatarUri;
       if (oldUri && patch.avatarUri !== undefined && oldUri !== patch.avatarUri
@@ -124,7 +133,8 @@ export function useProfileDraft(onSaved: () => void) {
         try {
           await discardPreparedPortrait(oldUri);
         } catch {
-          if (canEdit()) Alert.alert('Profile saved', 'Some old photo data could not be removed from this device.');
+          if (canEdit()) setFeedback({ key, message: 'Profile saved. Some old photo data could not be removed from this device.' });
+          return;
         }
       }
       if (canEdit()) onSaved();
@@ -149,7 +159,7 @@ export function useProfileDraft(onSaved: () => void) {
         && !useHomeStore.getState().household.some(member => member.avatarUri === prepared)) {
         try { await discardPreparedPortrait(prepared); } catch { /* Do not replace the original save error with optional file cleanup. */ }
       }
-      if (canEdit()) Alert.alert('Profile not saved', error instanceof Error ? error.message : 'Please try saving again.');
+      if (canEdit()) setFeedback({ key, message: `Profile not saved. ${error instanceof Error ? error.message : 'Please try saving again.'}` });
     } finally {
       writeScope?.finish();
       pending.current = false;
@@ -159,6 +169,7 @@ export function useProfileDraft(onSaved: () => void) {
 
   return {
     ...current.values, email: identity.mode === 'account' ? profile.email ?? '' : current.values.email,
+    profileFeedback: feedback?.key === key ? feedback.message : null,
     profile, profileBusy: busyKey === key, canEditProfile: identity.mode !== 'unavailable',
     emailEditable: identity.mode === 'demo',
     setName: (value: string) => update('name', value),

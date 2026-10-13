@@ -411,9 +411,11 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
                 </View>
               </View>
               {sheet !== "permissions" && <DeepTabs items={MEMBER_ACCESS_TABS} selectedId={sheet} onSelect={setSheet} />}
+              {sheet === "permissions" && model.permissionError && <Text accessibilityRole="alert" style={styles.detail}>{model.permissionError}</Text>}
               {sheet === "permissions" ? (
                 <MemberPermissionEditor
                   role={member.role}
+                  pending={(permission) => model.permissionPending(member.id, permission)}
                   disabled={!model.canEditMember(member)}
                   canChange={(permission) =>
                     model.canEditPermission(member, permission)

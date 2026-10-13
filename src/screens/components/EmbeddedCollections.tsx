@@ -5,6 +5,7 @@ import Pressable from '../../components/Pressable';
 import type { Room, Scene } from '../../store/useHomeStore';
 import type { Routine } from '../../store/routines';
 import { theme } from '../../theme/theme';
+import { useRoutineTimeZone } from '../../features/routines/useRoutineTimeZone';
 import { ROUTINE_EXECUTION } from '../../features/routines/executionAvailability';
 import { collectionRows, useCollectionPagination } from './collectionPagination';
 import { RoutineCard, SceneMoodCard } from './CollectionCards';
@@ -75,6 +76,7 @@ type AutomationCollectionProps = {
 export function EmbeddedAutomations({ routines, deviceName, onClearFilter, canManage = true, error, onCreate, onOpen, onToggle }: AutomationCollectionProps) {
   const { height, fontScale } = useWindowDimensions();
   const compact = height < 740 || fontScale > 1.15;
+  const timeZoneLabel = useRoutineTimeZone();
   const enabled = routines.filter((routine) => routine.enabled).length;
   const pagination = useCollectionPagination(routines.length, compact ? 174 : 208, true);
   const directory = useCollectionDirectory();
@@ -87,7 +89,7 @@ export function EmbeddedAutomations({ routines, deviceName, onClearFilter, canMa
       </View>
       <Pressable accessibilityLabel="New routine" accessibilityState={{ disabled: !canManage }} disabled={!canManage} style={[styles.createButton, !canManage && styles.disabled]} onPress={onCreate}><Ionicons name="add" size={20} color={theme.colors.accent} />{!compact && <Text style={styles.createText}>New</Text>}</Pressable>
     </View>
-    <View style={styles.runtimeStatus}><View style={styles.runtimeDot} /><View style={styles.runtimeCopy}><Text style={styles.runtimeText}>{ROUTINE_EXECUTION.summary}</Text><Text style={styles.runtimeText} accessibilityRole={error ? "alert" : undefined}>{error ?? (canManage ? ROUTINE_EXECUTION.storage : "View only · Ask your household owner to make changes")}</Text></View>{onClearFilter && <Pressable accessibilityLabel="All routines" onPress={onClearFilter} style={styles.allRoutinesButton}><Text style={styles.linkText}>All routines</Text></Pressable>}</View>
+    <View style={styles.runtimeStatus}><View style={styles.runtimeDot} /><View style={styles.runtimeCopy}><Text style={styles.runtimeText}>{ROUTINE_EXECUTION.summary}</Text><Text style={styles.runtimeText}>{timeZoneLabel}</Text><Text style={styles.runtimeText} accessibilityRole={error ? "alert" : undefined}>{error ?? (canManage ? ROUTINE_EXECUTION.storage : "View only · Ask your household owner to make changes")}</Text></View>{onClearFilter && <Pressable accessibilityLabel="All routines" onPress={onClearFilter} style={styles.allRoutinesButton}><Text style={styles.linkText}>All routines</Text></Pressable>}</View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="routine-page-area">
       {collectionRows(items, pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`routine-card-row-${rowIndex}`} style={[styles.cardRow, !pagination.largeText && styles.routineRowStandard]}>
         {row.map((routine) => {

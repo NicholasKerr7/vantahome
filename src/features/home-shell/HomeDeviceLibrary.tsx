@@ -52,6 +52,7 @@ export default function HomeDeviceLibrary({
       deviceId={deviceId}
       client={client}
       snapshot={snapshot}
+      onRetry={snapshot.reconnect}
       allowedDeviceIds={allowedDeviceIds}
       motionAllowed={motionAllowed}
       onClose={onClose}

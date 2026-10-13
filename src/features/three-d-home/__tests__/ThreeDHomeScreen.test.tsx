@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrivalContext } from '../../arrival/ArrivalContext';
 import { AppState } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import ThreeDHomeScreen from '../../../screens/ThreeDHomeScreen';
@@ -182,4 +183,22 @@ test('a same-account recheck retains paused graphics and closes the native menu 
   expect(screen.queryByText('Opening your property…')).toBeNull();
   screen.unmount();
   useHomeStore.setState(original, true);
+});
+
+
+test('cache failure releases arrival for retry without unmounting or timing out the paused renderer', () => {
+  const publish = jest.fn();
+  const context = { register: () => ({ publish, release: jest.fn() }) };
+  const screen = render(<ArrivalContext.Provider value={context}><ThreeDHomeScreen /></ArrivalContext.Provider>);
+  const surface = screen.getByTestId('scene-surface');
+  act(() => { mockSceneProps.onSaveStatus?.('load-error'); });
+  expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'error' }));
+  expect(screen.getByText('Saved controls are temporarily unavailable. Retry to restore them.')).toBeTruthy();
+  expect(screen.getByLabelText('Reconnect house controls')).toBeTruthy();
+  act(() => jest.advanceTimersByTime(90_000));
+  expect(screen.getByTestId('scene-surface')).toBe(surface);
+  expect(screen.queryByText('The 3D view couldn’t load')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Reconnect house controls'));
+  expect(screen.queryByText('Saved controls are temporarily unavailable. Retry to restore them.')).toBeNull();
+  expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'loading' }));
 });

@@ -43,7 +43,7 @@ function ModeledDeviceDetail({ navigation, modelId, allowedDeviceIds }: Props & 
     if (candidate) navigation.setParams({ deviceId: candidate[0] });
   }
   return <View style={styles.root}><DeviceControlsSheet deviceId={modelId} client={controls} snapshot={snapshot} allowedDeviceIds={allowedDeviceIds}
-    motionAllowed={motionAllowed} onClose={() => navigation.goBack()} onSelect={selectDevice} /></View>;
+    motionAllowed={motionAllowed} onRetry={snapshot.reconnect} onClose={() => navigation.goBack()} onSelect={selectDevice} /></View>;
 }
 
 const styles = StyleSheet.create({

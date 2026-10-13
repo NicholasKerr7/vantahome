@@ -29,7 +29,7 @@ import {
   applyMembershipSnapshot,
   syncMembershipFromSupabase,
 } from "../services/membership";
-import { hydrateHomeAccount, invalidateHomeMembership, useHomeStore } from "../store/useHomeStore";
+import { HomeCacheLoadError, hydrateHomeAccount, invalidateHomeMembership, useHomeStore } from "../store/useHomeStore";
 import { resolveAuthExperience, runtimePolicy } from "../config/runtimeMode";
 import {
   cancelAuthFlow,
@@ -40,6 +40,7 @@ import { deviceClient } from "../services/deviceClient";
 import PasswordRecoveryScreen from "../screens/PasswordRecoveryScreen";
 import CommandFeedbackProvider from "../components/command-feedback/CommandFeedbackProvider";
 import ModelHomeSync from '../features/three-d-home/ModelHomeSync';
+import { SimulationLoadError } from '../features/three-d-home/simulationPersistence';
 import HomeAccessScreen from '../features/home-access/HomeAccessScreen';
 import CinematicArrival from '../features/arrival/CinematicArrival';
 import { ArrivalContext, useArrivalCoordinator } from '../features/arrival/ArrivalContext';
@@ -157,6 +158,7 @@ export default function AppNavigator() {
   const [invitationEnrollment, setInvitationEnrollment] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [startupError, setStartupError] = useState<string | null>(null);
+  const [startupDescription, setStartupDescription] = useState('Retry to prepare your account on this device.');
   const [startupRetrying, setStartupRetrying] = useState(false);
   const retryStartup = useRef<(() => void) | null>(null);
   const [membershipRetry, setMembershipRetry] = useState(0);
@@ -201,6 +203,7 @@ export default function AppNavigator() {
         const version = ++attempt;
         retryStartup.current = null;
         setStartupError(null);
+        setStartupDescription('Retry to prepare your account on this device.');
         setStartupRetrying(retry);
         try {
           await hydrateHomeAccount(null, runtimePolicy.allowUnauthenticatedDemo);
@@ -208,10 +211,12 @@ export default function AppNavigator() {
             setStartupRetrying(false);
             setAuthReady(true);
           }
-        } catch {
+        } catch (error) {
           if (!mounted || version !== attempt) return;
           setStartupRetrying(false);
-          setStartupError('Unable to prepare your home on this device.');
+          const cacheFailure = error instanceof HomeCacheLoadError || error instanceof SimulationLoadError;
+          setStartupError(cacheFailure ? 'Saved home data is unavailable.' : 'Unable to prepare your home on this device.');
+          if (cacheFailure) setStartupDescription(error.message);
           retryStartup.current = () => { if (mounted && version === attempt) void prepareDemo(true); };
         }
       };
@@ -267,6 +272,7 @@ export default function AppNavigator() {
       }
       if (!isCurrent()) return;
       setStartupError(null);
+      setStartupDescription('Retry to prepare your account on this device.');
       setStartupRetrying(false);
       setAuthReady(true);
     };
@@ -294,6 +300,7 @@ export default function AppNavigator() {
       const version = ++transition;
       retryStartup.current = null;
       setStartupError(null);
+      setStartupDescription('Retry to prepare your account on this device.');
       setStartupRetrying(retry);
       deviceClient.resetSession();
       // Clearing is synchronous, before React can render the new identity.
@@ -306,10 +313,12 @@ export default function AppNavigator() {
       }
       try {
         await hydration;
-      } catch {
+      } catch (error) {
         if (!mounted || version !== transition) return;
         setStartupRetrying(false);
-        setStartupError('Unable to prepare your account on this device.');
+        const cacheFailure = error instanceof HomeCacheLoadError;
+        setStartupError(cacheFailure ? 'Saved account data is unavailable.' : 'Unable to prepare your account on this device.');
+        if (cacheFailure) setStartupDescription(error.message);
         retryStartup.current = () => {
           if (mounted && version === transition && currentUserId === userId) void receiveSession(nextSession, true);
         };
@@ -549,7 +558,7 @@ export default function AppNavigator() {
           onCoveredChange={setArrivalCovered}
           onShowControls={homeReady && awaitingScene && arrival.scene ? arrival.showControls : undefined}
           statusMessage={!authReady && startupError && !startupRetrying ? startupError : undefined}
-          statusDescription={!authReady && startupError && !startupRetrying ? 'Retry to prepare your account on this device.' : undefined}
+          statusDescription={!authReady && startupError && !startupRetrying ? startupDescription : undefined}
           returning={retainHome}
           busy={startupRetrying}
           canSignOut={Boolean(session) && (checkingMembership || Boolean(startupError))}

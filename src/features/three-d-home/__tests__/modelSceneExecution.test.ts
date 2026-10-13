@@ -27,6 +27,7 @@ import { SimulationSession } from "../simulationSession";
 /** Hydrate an independent canonical local home before exercising the real store actions. */
 beforeEach(async () => {
   await AsyncStorage.clear();
+  await simulationPersistence.load("demo");
   simulationPersistence.save("demo", createDefaultSimulationSnapshot());
   await hydrateHomeAccount(null, true);
   const current = useHomeStore.getState();

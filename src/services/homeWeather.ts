@@ -9,6 +9,10 @@ const OWNER_REQUIRED = 'Sign in as the home owner to change the weather location
 const MEMBER_REQUIRED = 'Refresh your home access before loading its weather location.';
 const LOCATION_COLUMNS = 'home_id,name,latitude,longitude,time_zone,updated_at,provider_consent_at';
 const settingsListeners = new Set<() => void>();
+let settingsRevision = 0;
+
+/** Invalidate shared in-flight reads when a verified property edit supersedes them. */
+export function getHomeWeatherSettingsRevision(): number { return settingsRevision; }
 
 /** Let the trusted host refresh after a verified local edit without storing private coordinates twice. */
 export function subscribeHomeWeatherSettings(listener: () => void): () => void {
@@ -18,6 +22,7 @@ export function subscribeHomeWeatherSettings(listener: () => void): () => void {
 
 /** Publish only after a successful write still belongs to the current verified account and home. */
 function publishSettingsChange(): void {
+  settingsRevision += 1;
   settingsListeners.forEach((listener) => listener());
 }
 

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { PROPERTY_LOCATION, type WeatherLocation } from '../../../packages/home-scene/src/environment/types';
-import { runtimePolicy } from '../../config/runtimeMode';
-import { hasCurrentMembershipAccess } from '../../security/guestAccess';
-import { canManageHomeWeather, readHomeWeatherSettings, subscribeHomeWeatherSettings } from '../../services/homeWeather';
-import { useHomeStore, type HomeState } from '../../store/useHomeStore';
+import { canManageHomeWeather, subscribeHomeWeatherSettings } from '../../services/homeWeather';
+import { useHomeStore } from '../../store/useHomeStore';
+
+import { canReadWeatherSettings, isLocalWeatherDemo, weatherScopeKey } from '../../services/homeWeatherScope';
+import { readSharedHomeWeatherSettings } from '../../services/sharedHomeWeatherSettings';
 
 const ACCESS_REQUIRED = 'Refresh your home access to load property weather.';
 const LOAD_FAILED = 'Property weather settings could not be loaded. Try again.';
@@ -21,28 +22,6 @@ interface SettingsSnapshot {
 export interface HomeWeatherSettingsState extends Omit<SettingsSnapshot, 'scopeKey'> {
   canManage: boolean;
   reload: () => void;
-}
-
-/** Coordinates belong to a verified account, home and session, including membership role/expiry changes. */
-function weatherScopeKey(state: HomeState): string {
-  const member = state.household.find((candidate) => candidate.id === state.activeMemberId);
-  return JSON.stringify([state.authenticatedUserId, state.accountUserId, state.activeHomeId,
-    state.accountHomeId, state.sessionEpoch, state.membershipReady, state.activeMemberId,
-    member?.id, member?.role, member?.accessExpiresAt, state.realtime.enabled, state.realtime.useMqtt]);
-}
-
-/** Only the explicit unauthenticated demo may choose town weather without checking shared settings. */
-function isLocalWeatherDemo(state: HomeState): boolean {
-  return runtimePolicy.allowUnauthenticatedDemo && !state.authenticatedUserId && !state.accountUserId
-    && !state.activeHomeId && !state.accountHomeId && !state.realtime.enabled && !state.realtime.useMqtt;
-}
-
-/** Apply current membership rules without borrowing room/device grants or stale account identities. */
-function canReadWeatherSettings(state: HomeState): boolean {
-  const member = state.household.find((candidate) => candidate.id === state.activeMemberId);
-  return state.membershipReady && Boolean(state.authenticatedUserId && state.activeHomeId)
-    && state.authenticatedUserId === state.accountUserId && state.activeHomeId === state.accountHomeId
-    && member?.id === state.authenticatedUserId && hasCurrentMembershipAccess(member);
 }
 
 /** Resolve shared property coordinates independently of home verification and fail closed across identity changes. */
@@ -107,7 +86,7 @@ export function useHomeWeatherSettings(): HomeWeatherSettingsState {
       setSnapshot((previous) => previous?.scopeKey === scopeKey && previous.location && !previous.error
         ? previous : { scopeKey, location: null, configured: false, loading: true, error: null });
       try {
-        const settings = await readHomeWeatherSettings();
+        const settings = await readSharedHomeWeatherSettings(true);
         if (!scopeIsCurrent() || !isVisible() || generation !== requestGeneration) return;
         const location = settings?.location ?? PROPERTY_LOCATION;
         const configured = settings !== null;

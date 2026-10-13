@@ -39,6 +39,74 @@ beforeEach(async () => {
   await hydrateHomeAccount(null);
 });
 
+test.each(['{broken', '{"state":null}', '{"state":{"profile":null},"version":6}', '{"state":{"devices":{}},"version":6}',
+  '{"state":{"profile":{"name":7}},"version":6}', '{"state":{"preferences":{"notifications":"false"}},"version":6}',
+  '{"state":{"accountUserId":"bob"},"version":6}'])(
+  'keeps malformed account cache intact and blocks writes until validated retry: %s', async (raw) => {
+    const key = 'vantahome-store:user:alice';
+    await AsyncStorage.setItem(key, raw);
+    await expect(hydrateHomeAccount('alice')).rejects.toMatchObject({ reason: 'corrupt' });
+    expect(useHomeStore.getState().membershipReady).toBe(false);
+    await useHomeStore.setState({ userName: 'Do not overwrite unread data' });
+    expect(await AsyncStorage.getItem(key)).toBe(raw);
+    const original = JSON.stringify({ version: 6, state: { accountUserId: 'alice', userName: 'Restored Alice', preferences: { haptics: false, notifications: false } } });
+    await AsyncStorage.setItem(key, original);
+    expect(await hydrateHomeAccount('alice')).toBe(true);
+    expect(useHomeStore.getState().userName).toBe('Restored Alice');
+    expect(useHomeStore.getState().preferences).toEqual({ haptics: false, notifications: false });
+    await useHomeStore.setState({ userName: 'Saved after recovery' });
+    expect(await AsyncStorage.getItem(key)).toContain('Saved after recovery');
+  },
+);
+
+test('surfaces transient account storage errors instead of treating unread data as missing', async () => {
+  const key = 'vantahome-store:user:alice';
+  const original = JSON.stringify({ version: 6, state: { accountUserId: 'alice', userName: 'Original Alice' } });
+  await AsyncStorage.setItem(key, original);
+  const read = (AsyncStorage.getItem as jest.Mock).getMockImplementation()!;
+  const failure = jest.spyOn(AsyncStorage, 'getItem').mockImplementation((name) => name === key ? Promise.reject(new Error('temporarily locked')) : read(name));
+  try {
+    await expect(hydrateHomeAccount('alice')).rejects.toMatchObject({ reason: 'unavailable' });
+    await useHomeStore.setState({ userName: 'Unsaved defaults' });
+    expect(await read(key)).toBe(original);
+  } finally { failure.mockImplementation(read); }
+  expect(await hydrateHomeAccount('alice')).toBe(true);
+  expect(useHomeStore.getState().userName).toBe('Original Alice');
+});
+
+test('a confirmed missing account cache allows a first save and keeps a different account at defaults', async () => {
+  await hydrateHomeAccount('alice');
+  applyMembershipSnapshot(snapshot('alice'));
+  await useHomeStore.getState().setProfile({ name: 'First Alice' });
+  await useHomeStore.setState({ preferences: { haptics: false, notifications: false } });
+  expect(await AsyncStorage.getItem('vantahome-store:user:alice')).toContain('First Alice');
+  await hydrateHomeAccount('bob');
+  expect(useHomeStore.getState().preferences).toEqual({ haptics: true, notifications: true });
+});
+
+test('a delayed legacy cleanup cannot overwrite a newer demo session', async () => {
+  const key = 'vantahome-store';
+  const legacy = JSON.stringify({ version: 6, state: { accountUserId: null, userName: 'Old demo', devices: [snapshot('demo').devices[0]] } });
+  await AsyncStorage.setItem(key, legacy);
+  const read = (AsyncStorage.getItem as jest.Mock).getMockImplementation()!;
+  let release!: (value: string | null) => void;
+  let delayed = false;
+  const mock = jest.spyOn(AsyncStorage, 'getItem').mockImplementation((name) => {
+    if (name === key && !delayed) { delayed = true; return new Promise((resolve) => { release = resolve; }); }
+    return read(name);
+  });
+  try {
+    const earlier = hydrateHomeAccount('alice');
+    await hydrateHomeAccount(null, true);
+    await useHomeStore.setState({ userName: 'Newer demo edits' });
+    const latest = await read(key);
+    release(legacy);
+    expect(await earlier).toBe(false);
+    expect(await read(key)).toBe(latest);
+    expect(useHomeStore.getState().userName).toBe('Newer demo edits');
+  } finally { mock.mockImplementation(read); }
+});
+
 test("logout clears private data synchronously; another account cannot restore it", async () => {
   await hydrateHomeAccount("alice");
   applyMembershipSnapshot(snapshot("alice"));
@@ -228,7 +296,8 @@ test("an old hydration cannot overwrite a newer session, even when returning to 
     return originalGet(key);
   });
   const first = hydrateHomeAccount("alice");
-  while (!pendingRead) await Promise.resolve();
+  for (let turn = 0; turn < 20 && !pendingRead; turn += 1) await Promise.resolve();
+  expect(pendingRead).toBe(true);
   await hydrateHomeAccount("bob");
   await hydrateHomeAccount("alice");
   applyMembershipSnapshot(snapshot("alice"));
@@ -242,7 +311,7 @@ test("an old hydration cannot overwrite a newer session, even when returning to 
   await first;
   expect(useHomeStore.getState().profile.name).toBe("Current Alice");
   expect(useHomeStore.getState().membershipReady).toBe(true);
-  spy.mockRestore();
+  spy.mockImplementation(originalGet);
 });
 
 

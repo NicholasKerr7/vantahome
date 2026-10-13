@@ -3,6 +3,7 @@ import { selectHomeNavigationAccess } from "../home-shell/homeNavigationAccess";
 import React, { useState } from "react";
 import { Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import AccountSignOut from "../account/AccountSignOut";
 import AvatarChip from "../../components/AvatarChip";
 import Pressable from "../../components/Pressable";
 import {
@@ -53,6 +54,7 @@ export function IdentityPage({ model }: { model: ProfileWorkspaceModel }) {
       <DeepTabs items={IDENTITY_TABS} selectedId={page} onSelect={setPage} />
       <DeepCard style={styles.fill}>
         <ProfileForm>
+          {model.profileFeedback && <Text accessibilityRole="alert" style={styles.detail}>{model.profileFeedback}</Text>}
           {page === "details" ? (
             <>
               <View style={styles.header}>
@@ -186,6 +188,7 @@ export function PreferencesPage({ model }: { model: ProfileWorkspaceModel }) {
       <DeepTabs items={PREFERENCE_TABS} selectedId={page} onSelect={setPage} />
       <DeepCard style={styles.fill}>
         <ProfileForm>
+          {model.profileFeedback && <Text accessibilityRole="alert" style={styles.detail}>{model.profileFeedback}</Text>}
           {page === "comfort" ? (
             <>
               {model.preferenceError && <Text accessibilityRole="alert" style={styles.detail}>{model.preferenceError}</Text>}
@@ -319,11 +322,7 @@ export function AccessPage({
         ))}
         <View style={styles.section}>
           <Text style={styles.label}>Account</Text>
-          <DeepAction
-            label="Sign out"
-            icon="log-out-outline"
-            onPress={model.handleSignOut}
-          />
+          <AccountSignOut />
         </View>
       </ProfileForm>
     </DeepCard>

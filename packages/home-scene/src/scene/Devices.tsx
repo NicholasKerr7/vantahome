@@ -25,6 +25,7 @@ import { openingFraction, shutterPose } from './deviceMotion';
 import { BLINDS_GEOMETRY, getBlindsPose } from '../blinds';
 import { readLabLightState } from '../lightAppearance';
 import type { LabLightState } from '../renderer-lab/lightStates';
+import { fanPreviewVelocity } from '../devicePreviewBehavior';
 
 type DeviceProps = Pick<
   HouseSceneProps,
@@ -201,6 +202,7 @@ function MovingAssembly({
   const light = device.kind === 'light' ? readLabLightState(device, state) : undefined;
   const gasTone = gasStatusTone(device.kind, state);
   const indicatorColor = gasTone === 'alarm' ? '#ff7465' : gasTone === 'warning' || gasTone === 'closed' ? '#efd391' : undefined;
+  const rotorVelocity = device.kind === 'fan' ? fanPreviewVelocity(device, state) : state.on ? state.level * 0.13 : 0;
   useFrame((_, delta) => {
     if (document.hidden) return;
     const dt = Math.min(delta, 0.07);
@@ -245,7 +247,7 @@ function MovingAssembly({
     if (canAnimate.current) {
       speed.current = MathUtils.damp(
         speed.current,
-        state.on ? state.level * 0.13 : 0,
+        rotorVelocity,
         2,
         dt,
       );

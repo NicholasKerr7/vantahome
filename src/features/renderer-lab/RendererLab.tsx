@@ -180,10 +180,10 @@ export default function RendererLab({ active }: RendererLabProps) {
         onFullControls={openControls} controlsReady={controls.ready} saveError={controls.status === 'error'}
         weatherChoice={weatherChoice} weather={weather} onWeatherChange={setWeatherChoice} />
     </View>
-    {controls.status === 'disconnected' && <Pressable accessibilityRole="button" onPress={controls.reconnect} style={styles.button}>
+    {(controls.status === 'disconnected' || controls.status === 'load-error' || controls.status === 'corrupt') && <Pressable accessibilityRole="button" onPress={controls.reconnect} style={styles.button}>
       <Text style={styles.buttonText}>Reconnect simulation controls</Text>
     </Pressable>}
     {controlsOpen && <DeviceControlsSheet deviceId={controlDeviceId} client={controls.client} snapshot={controls}
-      motionAllowed={motionAllowed} onClose={() => setControlsOpen(false)} onSelect={setControlDeviceId} />}
+      motionAllowed={motionAllowed} onRetry={controls.reconnect} onClose={() => setControlsOpen(false)} onSelect={setControlDeviceId} />}
   </View>;
 }

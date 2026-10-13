@@ -1,4 +1,4 @@
-import { startFlowRuntime } from "../flowRuntime";
+import { startFlowRuntime as startRuntime } from "../flowRuntime";
 import {
   useHomeStore,
   type AutomationFlow,
@@ -10,6 +10,13 @@ import {
 import { canManageRoutines, routineId } from "../../store/routines";
 import { deviceClient } from "../deviceClient";
 import { sendLocalNotification } from "../notifications";
+import { readHomeWeatherSettings } from '../homeWeather';
+import { invalidateSharedHomeWeatherSettings } from '../sharedHomeWeatherSettings';
+
+jest.mock('../homeWeather', () => ({
+  ...jest.requireActual('../homeWeather'),
+  readHomeWeatherSettings: jest.fn(),
+}));
 
 jest.mock("../deviceClient", () => ({
   deviceClient: {
@@ -58,18 +65,25 @@ function cloneScenes(scenes: Scene[]) {
 }
 
 const seed = useHomeStore.getState();
+let testSession = 0;
+
+/** Pin schedule fixtures to UTC independently of the test machine timezone. */
+function startFlowRuntime(options: Parameters<typeof startRuntime>[0] = {}) {
+  return startRuntime({ getTimeZone: () => 'UTC', ...options });
+}
 
 beforeEach(() => {
   jest.useFakeTimers();
-  jest.setSystemTime(new Date(2025, 0, 1, 6, 30, 0));
+  jest.setSystemTime(new Date('2025-01-01T06:30:00Z'));
   jest.clearAllMocks();
+  invalidateSharedHomeWeatherSettings();
 
   useHomeStore.setState({
     accountUserId: seed.accountUserId,
     authenticatedUserId: seed.authenticatedUserId,
     activeHomeId: seed.activeHomeId,
     membershipReady: seed.membershipReady,
-    sessionEpoch: seed.sessionEpoch,
+    sessionEpoch: ++testSession,
     memberPermissionOverrides: [],
     userName: seed.userName,
     profile: { ...seed.profile },
@@ -99,6 +113,87 @@ afterEach(() => {
 const flushPromises = () => Promise.resolve();
 
 describe("flowRuntime", () => {
+  it('waits for one shared verified property read before executing time-based routines', async () => {
+    useHomeStore.setState({ accountUserId: 'owner', authenticatedUserId: 'owner', activeHomeId: 'home', accountHomeId: 'home',
+      activeMemberId: 'owner', membershipReady: true, household: [{ id: 'owner', role: 'Owner', name: 'Owner', status: 'home' }],
+      flows: [{ id: 'property-read', name: 'Property read', enabled: true, triggers: [{ type: 'time', hour: 1, minute: 30 }],
+        conditions: [], actions: [{ type: 'notify', message: 'Property time' }] }] });
+    let resolve!: (value: null) => void;
+    jest.mocked(readHomeWeatherSettings).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    const stop = startRuntime();
+    expect(sendLocalNotification).not.toHaveBeenCalled();
+    resolve(null);
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(sendLocalNotification).toHaveBeenCalledTimes(1);
+    expect(readHomeWeatherSettings).toHaveBeenCalledTimes(1);
+    stop();
+    const stopAgain = startRuntime();
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(sendLocalNotification).toHaveBeenCalledTimes(1);
+    expect(readHomeWeatherSettings).toHaveBeenCalledTimes(1);
+    stopAgain();
+  });
+
+  it("does not replay the scheduled minute after foreground restart, editing or re-enabling", async () => {
+    useHomeStore.setState({ flows: [{ id: "resume", name: "Resume", enabled: true,
+      triggers: [{ type: "time", hour: 6, minute: 30 }], conditions: [],
+      actions: [{ type: "notify", message: "Once" }] }] });
+    let stop = startFlowRuntime();
+    await flushPromises(); stop();
+    useHomeStore.getState().updateRoutine(routineId("flow", "resume"), { name: "Renamed" });
+    useHomeStore.getState().toggleRoutine(routineId("flow", "resume"));
+    useHomeStore.getState().toggleRoutine(routineId("flow", "resume"));
+    jest.setSystemTime(new Date('2025-01-01T06:30:30Z'));
+    stop = startFlowRuntime();
+    await flushPromises();
+    expect(sendLocalNotification).toHaveBeenCalledTimes(1);
+    stop();
+    jest.setSystemTime(new Date('2025-01-02T06:30:00Z'));
+    stop = startFlowRuntime();
+    await flushPromises();
+    expect(sendLocalNotification).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("keeps each home's minute history while isolating a new account session", async () => {
+    const scope = { accountUserId: 'owner', authenticatedUserId: 'owner', membershipReady: true };
+    useHomeStore.setState({ ...scope, activeHomeId: 'home-a', flows: [{ id: "shared-time", name: "Shared", enabled: true,
+      triggers: [{ type: "time", hour: 6, minute: 30 }], conditions: [], actions: [{ type: "notify", message: "Once" }] }] });
+    let stop = startFlowRuntime(); await flushPromises(); stop();
+    useHomeStore.setState({ activeHomeId: 'home-b' });
+    stop = startFlowRuntime(); await flushPromises(); stop();
+    useHomeStore.setState({ activeHomeId: 'home-a' });
+    stop = startFlowRuntime(); await flushPromises(); stop();
+    expect(sendLocalNotification).toHaveBeenCalledTimes(2);
+    useHomeStore.setState({ accountUserId: 'next', authenticatedUserId: 'next', sessionEpoch: 1000 });
+    stop = startFlowRuntime(); await flushPromises(); stop();
+    expect(sendLocalNotification).toHaveBeenCalledTimes(3);
+  });
+
+  it("uses the property weekday and overnight conditions with a phone in another timezone", async () => {
+    jest.setSystemTime(new Date('2025-01-02T01:30:00Z'));
+    useHomeStore.setState({ flows: [{ id: "property", name: "Property", enabled: true,
+      triggers: [{ type: "time", hour: 20, minute: 30 }],
+      conditions: [{ type: "day", days: ['Wed'] }, { type: "time-range", startHour: 20, startMinute: 0, endHour: 6, endMinute: 0 }],
+      actions: [{ type: "notify", message: "Property evening" }] }] });
+    const stop = startFlowRuntime({ getTimeZone: () => 'America/Jamaica' });
+    await flushPromises();
+    expect(sendLocalNotification).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it("waits for a verified timezone and does not catch up schedules missed while unavailable", async () => {
+    let timeZone: string | null = null;
+    useHomeStore.setState({ flows: [{ id: "timezone", name: "Timezone", enabled: true,
+      triggers: [{ type: "time", hour: 6, minute: 30 }], conditions: [], actions: [{ type: "notify", message: "Ready" }] }] });
+    const stop = startFlowRuntime({ getTimeZone: () => timeZone, timeTickMs: 1000 });
+    await jest.advanceTimersByTimeAsync(60_000);
+    timeZone = 'UTC';
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(sendLocalNotification).not.toHaveBeenCalled();
+    stop();
+  });
+
   it("executes visible routines for a read-only member without evaluating hidden-room references", async () => {
     const visible = seed.devices.find((device) => device.id === "d2")!;
     const hidden = seed.devices.find((device) => device.roomId !== visible.roomId)!;
@@ -201,7 +296,7 @@ describe("flowRuntime", () => {
     await jest.advanceTimersByTimeAsync(20_000);
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(1);
     expect(sendLocalNotification).not.toHaveBeenCalled();
-    jest.setSystemTime(new Date(2025, 0, 2, 6, 30, 0));
+    jest.setSystemTime(new Date('2025-01-02T06:30:00Z'));
     await jest.advanceTimersByTimeAsync(1_000);
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(2);
     expect(sendLocalNotification).toHaveBeenCalledTimes(1);
@@ -215,7 +310,7 @@ describe("flowRuntime", () => {
     const stop = startFlowRuntime({ timeTickMs: 1_000 });
     await flushPromises();
     expect(deviceClient.sendCommand).not.toHaveBeenCalled();
-    jest.setSystemTime(new Date(2025, 0, 2, 6, 30, 0));
+    jest.setSystemTime(new Date('2025-01-02T06:30:00Z'));
     await jest.advanceTimersByTimeAsync(1_000);
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(1);
     stop();
@@ -310,7 +405,7 @@ describe("flowRuntime", () => {
     await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(1);
 
-    jest.setSystemTime(new Date(2025, 0, 1, 6, 30, 11));
+    jest.setSystemTime(new Date('2025-01-01T06:30:11Z'));
     useHomeStore.getState().setDevice("d1", { isOn: false });
     useHomeStore.getState().setDevice("d1", { isOn: true });
     await flushPromises();
@@ -339,7 +434,7 @@ describe("flowRuntime", () => {
     await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(1);
 
-    jest.setSystemTime(new Date(2025, 0, 2, 6, 30, 0));
+    jest.setSystemTime(new Date('2025-01-02T06:30:00Z'));
     jest.advanceTimersByTime(1_000);
     await flushPromises();
     expect(deviceClient.sendCommand).toHaveBeenCalledTimes(2);

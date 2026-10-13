@@ -10,6 +10,7 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Pressable from "../../components/Pressable";
+import { useRoutineTimeZone } from '../../features/routines/useRoutineTimeZone';
 import { theme } from "../../theme/theme";
 import type { CollectionDirectory } from "../components/collectionDescriptions";
 import {
@@ -128,6 +129,7 @@ export function RoutineStepEditor({
   onSave,
   onClose,
 }: Props) {
+  const timeZoneLabel = useRoutineTimeZone();
   const [draft, setDraft] = useState(() =>
     createStepDraft(section, item, deviceId),
   );
@@ -272,8 +274,7 @@ export function RoutineStepEditor({
                   onMinute={(value) => change("minute", value)}
                 />
                 <Text style={styles.helper}>
-                  Repeats daily in the device’s local time. Add an Only if
-                  condition to choose days.
+                  {timeZoneLabel}. Repeats daily; add an Only if condition to choose days.
                 </Text>
               </>
             )}
@@ -294,7 +295,7 @@ export function RoutineStepEditor({
                   onMinute={(value) => change("endMinute", value)}
                 />
                 <Text style={styles.helper}>
-                  A window can continue past midnight.
+                  {timeZoneLabel}. A window can continue past midnight.
                 </Text>
               </>
             )}

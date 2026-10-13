@@ -41,6 +41,18 @@ function measure(screen: ReturnType<typeof render>, height: number, width = 278,
   });
 }
 
+test('an unread cache shows recovery without presenting editable default controls', () => {
+  const client = new SimulationControlClient();
+  const onRetry = jest.fn();
+  const screen = render(<DeviceControlsSheet deviceId="family-tv" client={client}
+    snapshot={{ ...client.getSnapshot(), status: 'corrupt', ready: false }} motionAllowed={false}
+    onClose={jest.fn()} onSelect={jest.fn()} onRetry={onRetry} />);
+  expect(screen.getByText('Controls will stay paused until your saved settings can be restored.')).toBeTruthy();
+  expect(screen.queryByTestId('device-control-page')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Retry loading saved controls'));
+  expect(onRetry).toHaveBeenCalledTimes(1);
+});
+
 test('keeps every dense TV control reachable with one large-text control per page and no scrolling', () => {
   const { screen, runAction } = renderControls('family-tv');
   measure(screen, 130);
@@ -170,4 +182,16 @@ test('native device toggles provide one large accessible target and wait for con
   screen.rerender(<NativeCapabilityControl {...props} disabled />);
   fireEvent.press(screen.getByRole('switch', { name: capability.label }));
   expect(setSetting).toHaveBeenCalledTimes(1);
+});
+
+test('native controls identify saved-only fan configuration while the working direction page stays distinct', () => {
+  const { screen } = renderControls('living-fan');
+  measure(screen, 130);
+  fireEvent.press(screen.getByLabelText('Modes'));
+  expect(screen.getByText('Saved only · this fixed fan has no oscillation or lamp.')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Next controls page'));
+  expect(screen.queryByText('Saved only · this fixed fan has no oscillation or lamp.')).toBeNull();
+  expect(screen.getByLabelText(/^Direction:.*Choose option$/)).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Next controls page'));
+  expect(screen.getByText('Saved only · this fixed fan has no oscillation or lamp.')).toBeTruthy();
 });

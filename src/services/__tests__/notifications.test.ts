@@ -82,7 +82,7 @@ it("schedules once when permission and the originating session remain valid", as
   await service.sendLocalNotification("Routine", "Evening ready", { kind: "automation" }, { shouldSend: () => true });
   expect(platform.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
   expect(platform.scheduleNotificationAsync).toHaveBeenCalledWith({
-    content: { title: "Routine", body: "Evening ready", sound: "default", data: { kind: "automation", vantahomeNotificationSession: expect.any(String) } },
+    content: { title: "Routine", body: "Evening ready", sound: "default", data: { kind: "automation", vantahomeNotificationSession: expect.any(String), vantahomeNotificationDelivery: expect.any(String) } },
     trigger: null,
   });
 });
@@ -157,4 +157,56 @@ it('does not repeatedly prompt after refusal but recognizes a later OS grant', a
   expect(platform.requestPermissionsAsync).toHaveBeenCalledTimes(1);
   platform.getPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: true } as NotificationPermissionsStatus);
   await expect(service.ensureNotificationsReady()).resolves.toBe(true);
+});
+
+it('rechecks device grants at foreground presentation after OS scheduling has accepted a notice', async () => {
+  const { service, platform } = loadNotifications();
+  let roomVisible = true;
+  await service.sendLocalNotification('Reported CO₂ above limit', 'Private room', { kind: 'condition' }, { shouldSend: () => roomVisible });
+  const handler = platform.setNotificationHandler.mock.calls[0][0];
+  const notification = { request: { content: platform.scheduleNotificationAsync.mock.calls[0][0].content } } as
+    Parameters<NonNullable<typeof handler>['handleNotification']>[0];
+  roomVisible = false;
+  expect(await handler?.handleNotification(notification)).toMatchObject({ shouldShowBanner: false, shouldPlaySound: false });
+  roomVisible = true;
+  expect(await handler?.handleNotification(notification)).toMatchObject({ shouldShowBanner: false, shouldPlaySound: false });
+});
+
+it('consumes a permitted delivery guard once and never puts grant data in the OS payload', async () => {
+  const { service, platform } = loadNotifications();
+  const allowed = jest.fn(() => true);
+  await service.sendLocalNotification('Simulated condition', 'Example', { kind: 'condition' }, { shouldSend: allowed });
+  const handler = platform.setNotificationHandler.mock.calls[0][0];
+  const content = platform.scheduleNotificationAsync.mock.calls[0][0].content;
+  expect(content?.data).toEqual({ kind: 'condition', vantahomeNotificationSession: expect.any(String), vantahomeNotificationDelivery: expect.any(String) });
+  const notification = { request: { content } } as Parameters<NonNullable<typeof handler>['handleNotification']>[0];
+  expect(await handler?.handleNotification(notification)).toMatchObject({ shouldShowBanner: true, shouldPlaySound: true });
+  expect(await handler?.handleNotification(notification)).toMatchObject({ shouldShowBanner: false, shouldPlaySound: false });
+});
+
+it('fails closed when a foreground delivery guard expires or throws', async () => {
+  const { service, platform } = loadNotifications();
+  const allowed = jest.fn(() => true);
+  await service.sendLocalNotification('Condition', 'Example', undefined, { shouldSend: allowed });
+  const handler = platform.setNotificationHandler.mock.calls[0][0];
+  const first = { request: { content: platform.scheduleNotificationAsync.mock.calls[0][0].content } } as
+    Parameters<NonNullable<typeof handler>['handleNotification']>[0];
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.now() + 60_001);
+  expect(await handler?.handleNotification(first)).toMatchObject({ shouldShowBanner: false, shouldPlaySound: false });
+  clock.mockRestore();
+  await service.sendLocalNotification('Condition', 'Next example', undefined, { shouldSend: allowed });
+  allowed.mockImplementation(() => { throw new Error('Grant lookup unavailable'); });
+  const second = { request: { content: platform.scheduleNotificationAsync.mock.calls[1][0].content } } as
+    Parameters<NonNullable<typeof handler>['handleNotification']>[0];
+  expect(await handler?.handleNotification(second)).toMatchObject({ shouldShowBanner: false, shouldPlaySound: false });
+});
+
+it('removes a retained delivery guard when OS scheduling fails', async () => {
+  const { service, platform } = loadNotifications();
+  platform.scheduleNotificationAsync.mockRejectedValueOnce(new Error('OS unavailable'));
+  await expect(service.sendLocalNotification('Condition', 'Example', undefined, { shouldSend: () => true })).rejects.toThrow('OS unavailable');
+  const handler = platform.setNotificationHandler.mock.calls[0][0];
+  const notification = { request: { content: platform.scheduleNotificationAsync.mock.calls[0][0].content } } as
+    Parameters<NonNullable<typeof handler>['handleNotification']>[0];
+  expect(await handler?.handleNotification(notification)).toMatchObject({ shouldShowBanner: false, shouldPlaySound: false });
 });

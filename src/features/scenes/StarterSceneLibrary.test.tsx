@@ -94,6 +94,7 @@ test('an edited demo movie scene preserves TV Off in both the saved commands and
   const initial = { ...useHomeStore.getState(), accountUserId: null, authenticatedUserId: null, accountHomeId: null, activeHomeId: null,
     realtime: { enabled: false, useMqtt: false, wsUrl: '' }, modelCatalogVersion: undefined, scenes: [] };
   useHomeStore.setState({ ...initial, ...upgradeModelHomeCatalog(initial, snapshot) });
+  await simulationPersistence.load('demo');
   simulationPersistence.save('demo', snapshot);
   const session = new SimulationSession(jest.fn(), jest.fn());
   session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'request' });

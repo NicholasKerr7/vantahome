@@ -40,6 +40,69 @@ Last maintained: **2026-10-13**. Read this before rediscovering the project.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Deep reliability fixes — October 13
+
+The seven findings from the audit of **7600c47** are now addressed in source:
+
+- **Saved-data recovery:** unread/corrupt account and simulation caches remain
+  intact, writes/controls wait for validated hydration, and Retry restores the
+  original state. Invalid profile/preference values and wrong-account payloads
+  fail closed. Recovery also restores scene shortcuts and activity tracking;
+  its notice releases the arrival shield so Retry remains reachable.
+- **Permissions:** one pending write per home/member/permission across reopened
+  editors; authenticated grants publish only after server acceptance. Stale
+  roles/sessions are rechecked; failures are visible inline, with no older
+  optimistic rollback able to erase a newer choice.
+- **Personal preferences:** verified same-account home switching preserves
+  profile, haptics and notifications atomically.
+- **Routines:** foreground execution uses verified property timezone, visibly
+  labeled in the editor/list. Unavailable timezone pauses time-based work.
+  Account/session/home/member-scoped minute markers survive foreground restarts,
+  edits and DST repeats. These are process-local markers, not durable hub jobs.
+  Scene/runtime settings reads share one bounded verified cache.
+- **Device behavior:** paused TV artwork freezes; fan Reverse/Sleep affect the
+  rotor; AC speed/swing/mode/Eco/Turbo/Quiet affect airflow preview. Settings with
+  no modeled effect remain compatible, separately labeled saved-only on native
+  and web pages. Fixed ceiling/extractor fans do not claim oscillation or lamps.
+- **Reports/alerts:** all six air thresholds now evaluate available readings.
+  New power/water/air conditions can produce native foreground notices; restored
+  conditions and resume establish a silent baseline. Dedupe, current grants,
+  preferences, observation age, background changes and delayed OS presentation
+  are checked. Simulation stays labeled; current reports remain visible when
+  notices are disabled. No background alarm delivery or physical safety claim.
+- **Deep account paths:** one rendered sign-out confirmation uses the shared
+  scoped service on web/native. Profile picker/save/cleanup failures are visible
+  in-page; successful saves rebase the draft before optional old-photo cleanup.
+
+Validation: **3,062 app tests / 215 suites**, **1,034 scene tests / 86 suites**,
+app/edge/scene TypeScript, production-mode web export, release asset/version/
+redirect checks and secret scan passed. Independent reviews covered storage,
+permission/sign-out ordering, routine clocks and delayed notification delivery.
+Browser demo at port 5188 verified lowering CO₂ to 600 against sample 620 produces
+its labeled current report; original 1200 restored afterward. Phone 320/430 and
+tablet 768/1024 layouts remain bounded; no browser console errors. Verified
+routine timezone copy, saved-only control copy and account navigation. Evidence:
+`work/deep-fixes-air-report-phone.jpg`, `work/deep-fixes-full-tests-final.log`,
+`work/deep-fixes-web-export.log`, `work/deep-fixes-scene-build.log`.
+
+**Preview 58 is built, installed and launched on the connected iPhone.** Live
+device inventory confirms `1.0.0 (58)`. Strict signing, provisioning, preview
+redirect schemes, four arrival assets and updated bundled code are verified.
+The bundled scene is 31,800,175 bytes (under 32 MiB), SHA-256
+`af2ec6e710a16e4fdd29b572702e0ebba239436fadc28b3a865e06bc789a7549`.
+Production metadata was restored and release guards still pass; no new native
+dependencies. Evidence: `work/deep-fixes-preview58-{build.log,package.json,
+install.json,launch.json,apps.json,process.json}`. Source remains staging/
+simulation-only; production and backend services unchanged. Physical OS notice
+delivery and the updated controls still need a user smoke test; iPad testing
+remains deferred.
+
+Known product work remains separate: hub-backed execution and household/profile
+sync are deferred; biometric app lock, location presence and weekly digests are
+explicitly unavailable. Sent-invitation management, account email change,
+account deletion, session management and ownership transfer have no complete
+in-app flows. Generic peer names belong to the deferred profile sync.
+
 ## Account portraits and working personal settings — October 13
 
 - Shared portraits now appear in the dashboard account button, account sheet,
@@ -81,55 +144,6 @@ Last maintained: **2026-10-13**. Read this before rediscovering the project.
   launch.json,apps.json}`. Physical photo selection/restart and disabled-haptic
   confirmation remain user checks; browser/unit success is not native UI signoff.
   Production and staging services were not changed.
-
-## Remaining implementation audit — October 13
-
-Read-only source audit against **7600c47**, after Preview 57. The items below are
-**unresolved findings**, not fixes or a production-readiness signoff. No cloud
-state, device commands, or app code changed during this audit.
-
-1. **Cache recovery first:** `useHomeStore.ts` silently converts malformed cache
-   data to null, and `hydrateHomeAccount` treats Zustand's swallowed read failure
-   as successful hydration. A subsequent write can overwrite unread profile/
-   preference data. Two temporary Jest diagnostics reproduced a rejected account
-   read followed by overwrite, and a malformed scene dropping the whole cache.
-   Evidence: `work/remaining-cache-audit.log`; temporary test file removed.
-   `simulationPersistence.ts` has a parallel gap: initial read errors resolve to
-   defaults, controls become ready, and later writes can replace unknown saved
-   state. Recovery must distinguish missing, corrupt and temporarily unreadable
-   data, retry safely, and prevent implicit overwrite.
-2. **Permission write ordering:** `useProfileWorkspace.updatePermissionOverride`
-   unconditionally rolls back an older failed write. In-memory execution of the
-   actual handler reproduced a newer successful Deny disappearing after an older
-   Allow failed. Serialize per member/permission or use revision-aware settlement.
-3. **Home-switch preferences:** `membership.applyMembershipSnapshot` resets the
-   account when changing homes, then restores profile/name but omits preferences.
-   Executing the actual functions reproduced false/false haptics/notifications
-   becoming true/true for the same account.
-4. **Routine execution:** `flowRuntime` recreates minute deduplication at each
-   foreground start and ticks immediately, allowing same-minute replay after
-   background/resume. It also schedules in phone-local time while the dashboard
-   uses property time; define and display one clear timezone policy.
-5. **Device behavior:** TV picture animation ignores paused playback; fan reverse
-   does not change rotor direction. Several adaptive-light, AC and fan settings
-   are persisted without modeled behavior. Wire meaningful simulated behavior
-   or explicitly describe unsupported configuration rather than implying effect.
-6. **Alert wiring:** air-quality thresholds/Alerts have no active evaluator or
-   current-report path. `notifyAirAlert`, `notifyWaterAlert`, `notifyPowerStatus`
-   have no callers; only routine notify actions reach OS delivery. In-app fire
-   simulation is separate. This is not background/remote alarm delivery.
-7. **Deep account paths:** Profile > Access sign-out still uses native Alert
-   (a no-op on web) and bypasses the newer scoped sign-out service. Profile photo/
-   save failures also rely on native Alert, hiding explanations on web. Use
-   rendered confirmation/error UI and the shared account service.
-
-Known product work remains separate: hub-backed execution and household/profile
-sync are deferred; biometric app lock, location presence and weekly digests are
-explicitly unavailable. Sent-invitation management, account email change,
-account deletion, session management and ownership transfer have no complete
-in-app flows. Generic peer names currently belong to the deferred profile sync.
-Prioritize recovery/permission correctness, then routine timing and truthful
-local device/alert behavior. Physical Preview 57 checks remain as noted above.
 
 ## Sustained physical iPhone baseline — October 12
 

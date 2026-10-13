@@ -5,11 +5,14 @@ import { useHomeStore } from "../store/useHomeStore";
 import { isAccountScopeCurrent, type AccountScope } from "../features/account/accountIdentity";
 
 const SESSION_DATA_KEY = 'vantahomeNotificationSession';
+const DELIVERY_DATA_KEY = 'vantahomeNotificationDelivery';
+const deliveryGuards = new Map<string, { expires: number; shouldSend: () => boolean }>();
 let foregroundSession: { token: string; scope: AccountScope } | null = null;
 
 /** Keep account identifiers in memory while tagging OS delivery with an opaque, session-only token. */
 function notificationSessionToken(scope: AccountScope): string {
   if (!foregroundSession || !isAccountScopeCurrent(foregroundSession.scope, scope)) {
+    deliveryGuards.clear();
     const { authenticatedUserId, accountUserId, activeHomeId, accountHomeId, sessionEpoch, membershipReady } = scope;
     foregroundSession = { token: randomUUID(), scope: {
       authenticatedUserId, accountUserId, activeHomeId, accountHomeId, sessionEpoch, membershipReady,
@@ -24,7 +27,8 @@ Notifications.setNotificationHandler({
     // The OS may call back after scheduling or an account switch; queued details must stay with their sender.
     const enabled = state.preferences.notifications && foregroundSession !== null
       && notification.request.content.data?.[SESSION_DATA_KEY] === foregroundSession.token
-      && isAccountScopeCurrent(foregroundSession.scope, state);
+      && isAccountScopeCurrent(foregroundSession.scope, state)
+      && deliveryStillAllowed(notification.request.content.data?.[DELIVERY_DATA_KEY]);
     return {
       shouldPlaySound: enabled,
       shouldSetBadge: false,
@@ -33,6 +37,16 @@ Notifications.setNotificationHandler({
     };
   },
 });
+
+/** Recheck dynamic room grants and foreground state at presentation, not just queue acceptance. */
+function deliveryStillAllowed(id: unknown): boolean {
+  if (id === undefined) return true;
+  if (typeof id !== 'string') return false;
+  const guard = deliveryGuards.get(id);
+  deliveryGuards.delete(id);
+  try { return Boolean(guard && guard.expires > Date.now() && guard.shouldSend()); }
+  catch { return false; }
+}
 
 let permissionReady: Promise<boolean> | null = null;
 let permissionRequested = false;
@@ -98,126 +112,22 @@ export async function sendLocalNotification(
   if (!shouldSend()) return;
   const allowed = await ensureNotificationsReady();
   if (!allowed || !shouldSend()) return;
-  await Notifications.scheduleNotificationAsync({
+  const sessionToken = notificationSessionToken(scope);
+  const deliveryToken = options ? randomUUID() : undefined;
+  // Bound callbacks retained for delayed OS presentation; expired notices fail closed.
+  for (const [id, guard] of deliveryGuards) if (guard.expires <= Date.now()) deliveryGuards.delete(id);
+  if (deliveryGuards.size >= 256) deliveryGuards.delete(deliveryGuards.keys().next().value!);
+  if (deliveryToken) deliveryGuards.set(deliveryToken, { expires: Date.now() + 60_000, shouldSend });
+  try { await Notifications.scheduleNotificationAsync({
     content: {
       title,
       body,
       sound: "default",
-      data: { ...data, [SESSION_DATA_KEY]: notificationSessionToken(scope) },
+      data: { ...data, [SESSION_DATA_KEY]: sessionToken, ...(deliveryToken ? { [DELIVERY_DATA_KEY]: deliveryToken } : {}) },
     },
     trigger: null,
-  });
-}
-
-/** Describe reported power status using the shared notification preference and permission checks. */
-export async function notifyPowerStatus({
-  isOutage,
-  solarActive,
-}: {
-  isOutage: boolean;
-  solarActive: boolean;
-}) {
-  if (isOutage) {
-    const body = solarActive
-      ? "Main power offline. Solar is supplying the home."
-      : "Main power offline. Switch to backup if available.";
-    await sendLocalNotification("Power outage", body, { kind: "power-outage" });
-    return;
+  }); } catch (error) {
+    if (deliveryToken) deliveryGuards.delete(deliveryToken);
+    throw error;
   }
-  await sendLocalNotification("Power restored", "Main power is back online.", {
-    kind: "power-restored",
-  });
-}
-
-/** Send a reported water threshold alert without replacing the application's visible reports. */
-export async function notifyWaterAlert({
-  kind,
-  current,
-  limit,
-}: {
-  kind: "budget" | "pressure-low" | "pressure-high";
-  current: number;
-  limit: number;
-}) {
-  if (kind === "budget") {
-    await sendLocalNotification(
-      "Water budget exceeded",
-      `Today: ${current} L (budget ${limit} L).`,
-      { kind: "water-budget" },
-    );
-    return;
-  }
-  if (kind === "pressure-high") {
-    await sendLocalNotification(
-      "Water pressure high",
-      `Current: ${current} psi (limit ${limit} psi).`,
-      { kind: "water-pressure-high" },
-    );
-    return;
-  }
-  await sendLocalNotification(
-    "Water pressure low",
-    `Current: ${current} psi (limit ${limit} psi).`,
-    { kind: "water-pressure-low" },
-  );
-}
-
-/** Send a reported air-quality threshold alert through the shared notification policy. */
-export async function notifyAirAlert({
-  deviceName,
-  kind,
-  current,
-  limit,
-}: {
-  deviceName?: string;
-  kind: "aqi" | "co2" | "voc" | "pm25" | "pm10" | "pollen";
-  current: number;
-  limit: number;
-}) {
-  const prefix = deviceName ? `${deviceName} • ` : "";
-  if (kind === "aqi") {
-    await sendLocalNotification(
-      `${prefix}Air quality`,
-      `AQI ${current} (limit ${limit}).`,
-      { kind: "air-aqi" },
-    );
-    return;
-  }
-  if (kind === "co2") {
-    await sendLocalNotification(
-      `${prefix}CO2 high`,
-      `CO2 ${current} ppm (limit ${limit} ppm).`,
-      { kind: "air-co2" },
-    );
-    return;
-  }
-  if (kind === "voc") {
-    await sendLocalNotification(
-      `${prefix}VOC high`,
-      `VOC ${current} ppb (limit ${limit} ppb).`,
-      { kind: "air-voc" },
-    );
-    return;
-  }
-  if (kind === "pm25") {
-    await sendLocalNotification(
-      `${prefix}PM2.5 high`,
-      `PM2.5 ${current} ug/m3 (limit ${limit} ug/m3).`,
-      { kind: "air-pm25" },
-    );
-    return;
-  }
-  if (kind === "pm10") {
-    await sendLocalNotification(
-      `${prefix}PM10 high`,
-      `PM10 ${current} ug/m3 (limit ${limit} ug/m3).`,
-      { kind: "air-pm10" },
-    );
-    return;
-  }
-  await sendLocalNotification(
-    `${prefix}Pollen alert`,
-    `Pollen index ${current} (limit ${limit}).`,
-    { kind: "air-pollen" },
-  );
 }

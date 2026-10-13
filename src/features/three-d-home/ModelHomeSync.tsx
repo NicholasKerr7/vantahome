@@ -1,4 +1,5 @@
 import React from "react";
+import { useConditionNotifications } from "../activity/useConditionNotifications";
 import { runtimePolicy } from "../../config/runtimeMode";
 import { useHomeStore } from "../../store/useHomeStore";
 import { getFireIncident } from "../../../packages/home-scene/src/fireSafetySimulation";
@@ -15,10 +16,17 @@ import { FireEmergencySimulation } from "./FireEmergencySimulation";
 function ModelHomeSafetySession() {
   const { client, ready, state } = useSimulationControls(true);
   useForegroundSafetyClock(client, ready);
+  useConditionNotifications(ready ? state : null, ready);
   if (!ready) return null;
   const gate = state.deviceStates[GATE_DEVICE_ID];
   return <FireEmergencySimulation incident={getFireIncident(state.deviceStates)} actions={client}
     supportSummary={`Preview lights stay on. Gate: ${gate ? gateSafetySummary(gate) : 'preview state unavailable'}.`} />;
+}
+
+/** Observe physical reports when this home has no bound simulation to own the observer. */
+function PhysicalConditionObserver() {
+  useConditionNotifications(null);
+  return null;
 }
 
 /** Own the only embedded safety clock across native controls, voice, and the 3D view. */
@@ -28,5 +36,5 @@ export default function ModelHomeSync() {
       || Object.keys(selectSimulationDeviceBindings(state)).length > 0,
   );
   const scope = useHomeStore(modelSimulationIdentity);
-  return enabled ? <ModelHomeSafetySession key={scope} /> : null;
+  return enabled ? <ModelHomeSafetySession key={scope} /> : <PhysicalConditionObserver key={scope} />;
 }

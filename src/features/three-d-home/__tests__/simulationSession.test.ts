@@ -47,6 +47,60 @@ test('hydrates from the demo dashboard and propagates scene edits back without c
   session.dispose();
 });
 
+test('never queues pre-hydration edits against the default simulation', async () => {
+  const { session, storage, store } = setup();
+  session.handleMessage(request);
+  session.handleMessage(patch(1, false));
+  await settle();
+  expect(storage.setItem).not.toHaveBeenCalled();
+  expect(store.getState().devices[0].isOn).toBe(true);
+  session.dispose();
+});
+
+test.each(['remount', 'another surface'])('recovers an unread saved simulation through %s without accepting default edits', async (recovery) => {
+  const { session, deliver, status, storage, persistence, store } = setup();
+  storage.getItem.mockRejectedValueOnce(new Error('Temporarily unavailable'));
+  session.handleMessage(request);
+  await settle();
+  expect(status).toHaveBeenLastCalledWith('load-error');
+  expect(session.canNavigate()).toBe(false);
+  expect(deliver).not.toHaveBeenCalled();
+  session.handleMessage(patch(1, false));
+  await settle();
+  expect(storage.setItem).not.toHaveBeenCalled();
+  const saved = createDefaultSimulationSnapshot();
+  saved.deviceStates['master-blinds'] = { on: true, level: 73 };
+  storage.getItem.mockResolvedValue(JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: saved }));
+  if (recovery === 'remount') session.dispose();
+  const reopenedDeliver = jest.fn();
+  const reopened = new SimulationSession(reopenedDeliver, jest.fn(), { store, persistence, mode: 'demo' });
+  reopened.handleMessage(request);
+  await settle();
+  expect(reopened.canNavigate()).toBe(true);
+  expect(reopenedDeliver.mock.lastCall?.[0].state.deviceStates['master-blinds'].level).toBe(73);
+  if (recovery === 'another surface') {
+    expect(session.canNavigate()).toBe(true);
+    expect(deliver.mock.lastCall?.[0].state.deviceStates['master-blinds'].level).toBe(73);
+  }
+  expect(storage.setItem).not.toHaveBeenCalled();
+  session.dispose();
+  reopened.dispose();
+});
+
+test('a recovered baseline also restores a scene catalog requested before the read failed', async () => {
+  const { session, store, persistence, storage } = setup();
+  session.dispose();
+  storage.getItem.mockRejectedValueOnce(new Error('Temporarily unavailable'));
+  const deliverCatalog = jest.fn();
+  const waiting = new SimulationSession(jest.fn(), jest.fn(), { store, persistence, mode: 'demo', onSceneCatalog: deliverCatalog });
+  waiting.handleMessage({ channel: 'vantahome-scene-catalog', version: 1, type: 'request' });
+  await settle();
+  expect(deliverCatalog).not.toHaveBeenCalled();
+  await persistence.load('demo');
+  expect(deliverCatalog).toHaveBeenCalled();
+  waiting.dispose();
+});
+
 test('dashboard updates reach an open scene and survive leaving and reopening', async () => {
   const { session, deliver, store, persistence } = setup();
   session.handleMessage(request);
