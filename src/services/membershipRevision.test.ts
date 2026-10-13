@@ -1,7 +1,15 @@
-import { hydrateHomeAccount, useHomeStore } from '../store/useHomeStore';
+import { hydrateHomeAccount, setAuthTaskBlockingHome, useHomeStore } from '../store/useHomeStore';
 import { beginMembershipMutation, captureMembershipRead, isMembershipReadCurrent } from './membershipRevision';
 
 beforeEach(async () => { await hydrateHomeAccount('revision-user'); });
+
+test('a completed credential task still invalidates a read from before the task', () => {
+  const before = captureMembershipRead();
+  setAuthTaskBlockingHome(true);
+  setAuthTaskBlockingHome(false);
+  expect(isMembershipReadCurrent(before)).toBe(false);
+  expect(isMembershipReadCurrent(captureMembershipRead())).toBe(true);
+});
 
 test('rejects reads captured before or during a mutation even if policy has not published yet', () => {
   const before = captureMembershipRead();

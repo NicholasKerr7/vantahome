@@ -79,7 +79,8 @@ test('shows bounded sanitized session evidence without calling it live device ac
   fireEvent.press(screen.getByLabelText('Next Sign-in'));
   expect(screen.getByText('Android')).toBeTruthy();
   expect(screen.getByText('Other sign-in')).toBeTruthy();
-  expect(screen.UNSAFE_getByType(ScrollView).props).toMatchObject({ bounces: false, overScrollMode: 'never' });
+  const form = screen.UNSAFE_getAllByType(ScrollView).find((view) => !view.props.horizontal);
+  expect(form?.props).toMatchObject({ bounces: false, overScrollMode: 'never' });
 });
 
 test('requires explicit confirmation and retains truthful access-token expiry wording', async () => {
@@ -141,6 +142,15 @@ test('background clears private details and confirmation; foreground requires a 
   await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
   await waitFor(() => expect(screen.result.current.snapshot).toBeTruthy());
   expect(screen.result.current.confirming).toBe(false);
+});
+
+test('a batched background and foreground transition refreshes the cleared session inventory', async () => {
+  const screen = renderHook(useSessionModel);
+  await waitFor(() => expect(screen.result.current.snapshot).toBeTruthy());
+  act(() => { lifecycle('background'); lifecycle('active'); });
+  await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.result.current.snapshot).toBeTruthy());
+  expect(screen.result.current.loading).toBe(false);
 });
 
 test.each(['review', 'biometric'] as const)('inactive system UI preserves a deliberate %s confirmation without refreshing it away', async phase => {

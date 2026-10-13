@@ -3,6 +3,7 @@ import {
   hydrateHomeAccount,
   invalidateHomeMembership,
   selectVisibleDevices,
+  setAuthTaskBlockingHome,
   useHomeStore,
 } from "./useHomeStore";
 import {
@@ -37,6 +38,33 @@ const snapshot = (
 beforeEach(async () => {
   await AsyncStorage.clear();
   await hydrateHomeAccount(null);
+});
+
+test('credential setup rejects household admission and commands without persisting the transient gate', async () => {
+  await hydrateHomeAccount('alice');
+  expect(applyMembershipSnapshot(snapshot('alice'))).toBe(true);
+  setAuthTaskBlockingHome(true);
+  expect(applyMembershipSnapshot(snapshot('alice'))).toBe(false);
+  expect(selectVisibleDevices(useHomeStore.getState())).toEqual([]);
+  expect(authorizeLocalDeviceCommand({ op: 'toggle', deviceId: 'alice-camera', on: true }).allowed).toBe(false);
+  await useHomeStore.setState({ userName: 'Alice' });
+  const persisted = JSON.parse((await AsyncStorage.getItem('vantahome-store:user:alice'))!);
+  expect(persisted.state).not.toHaveProperty('authTaskBlockingHome');
+  expect(persisted.state).not.toHaveProperty('authTaskVersion');
+  setAuthTaskBlockingHome(false);
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  expect(applyMembershipSnapshot(snapshot('alice'))).toBe(true);
+});
+
+test('credential gates never write the cache and preserve failure handling for the next profile save', async () => {
+  await hydrateHomeAccount('alice');
+  const writesBefore = jest.mocked(AsyncStorage.setItem).mock.calls.length;
+  jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error('Profile storage unavailable'));
+  setAuthTaskBlockingHome(true);
+  setAuthTaskBlockingHome(false);
+  expect(AsyncStorage.setItem).toHaveBeenCalledTimes(writesBefore);
+  await expect(useHomeStore.getState().setProfile({ name: 'Unsaved' })).rejects.toThrow('Profile storage unavailable');
+  await expect(useHomeStore.getState().setProfile({ name: 'Retry' })).resolves.toBeUndefined();
 });
 
 test.each(['{broken', '{"state":null}', '{"state":{"profile":null},"version":6}', '{"state":{"devices":{}},"version":6}',

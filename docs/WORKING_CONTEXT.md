@@ -45,6 +45,64 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Account recovery and independent security — October 13 / Preview 61
+
+- **Security & sessions** is available from the no-home/expired-access screen and
+  failed or stalled home verification. It opens an account-only route, without
+  mounting Profile's household data, the model or private home navigation.
+- Security has **Sessions / Password recovery**. The destination comes from the
+  server-verified current account; an explicit review is required before requesting
+  mail. No editable recipient, profile fallback or claim that requested mail was
+  delivered. Duplicate requests are limited and ambiguous results retain continuity.
+- A verified recovery callback persists only account/email/request completion
+  intent in secure auth storage. Restart resumes unfinished setup. Callback-started intent
+  cannot silently expire, including after a binding storage failure; cleanup removes only the reviewed request. Competing
+  invitation/recovery tasks must all finish before fresh home verification.
+- Password updates use the exact captured JWT and the configured public Auth
+  endpoint, with separate token verification. They never use a delayed mutable
+  SDK session. Account replacement, stale sign-out callbacks and backgrounding
+  cannot release another account's screen; acknowledged background saves require
+  deliberate continuation. Uncertain outcomes never assert the password is unchanged.
+- A shared non-persisted credential gate closes home authority, runtime, selectors
+  and command dispatch. Membership reads carry a version fence; old results stay
+  invalid after the gate clears. A fast background/resume session-loader race was
+  also fixed. The gate does not grant server permissions or change JWT revocation.
+
+Verification: **3,399 app tests / 232 suites**, app/edge TypeScript, release
+metadata/assets/auth redirects, dependency patch checks and secret/history scanning
+passed. Service, navigation, UI and shared-runtime reviews covered account changes,
+foreground transitions, failed storage, stale callbacks and uncertain responses.
+Browser QA passed **45 cases / 33 bounded layouts** at **390×844**, **768×1024** and
+**1024×768**, with zero browser errors. Actual App/routes/hooks/authFlow/storage
+were used with fake Auth/RPC responses and a stub password mutation boundary.
+Cold restart, failed sign-out, verified recipient, confirmation/cancellation,
+completion cleanup and fresh membership were checked. Browser tests sent no mail
+and do not prove hosted callback delivery or physical interaction.
+
+**Staging only:** the exact password service passed **12 hosted checks** using two
+disposable accounts. Its captured token remained tied to the original account
+across a replacement login; the new password worked, the old password failed,
+and the unrelated account was unchanged. Invalid/revoked tokens were rejected.
+Both fixtures were deleted and verified absent. No emails, real-user changes,
+migrations or edge deployments. Database remains at **024**; production unchanged.
+
+**Preview 61 installed and launched** on the connected iPhone. Device inventory
+confirms **1.0.0 (61)**, with process presence checked after launch. Package
+verification passed strict signature, preview identity/schemes, device coverage,
+updated UI markers, all arrival media and the unchanged scene. Production metadata
+was restored. Provisioning expires **2026-10-19 05:19:39 UTC**. Scene remains
+**31,801,189 bytes**, SHA256
+`0f328c6ecfded4e3359ea426f3484e9abf36fdbd79277c7e7a562aa4576dd035`.
+The task-owned browser server on 5191 was stopped; existing user servers were left
+in place. Installation and process presence do not establish physical behavior.
+
+Artifacts: `work/account-recovery-{all-tests-final,browser-check,password-smoke}.log`,
+`account-recovery-browser-evidence.json`, `account-recovery-password-smoke.json`,
+`account-recovery-preview61-*`. Recovery-email receipt/deep-link behavior on a real
+phone and physical review of new controls remain pending. Email change, ownership
+transfer/deletion, whole-app lock and session-wide revocation are tracked separately
+in the implementation backlog; hub/sync/iPad deferrals remain in force.
+
 ## Account security and sent invitations — October 13 / Preview 60
 
 - **Account → Security & sessions** (Profile → Security) lists only this account's

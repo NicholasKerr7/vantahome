@@ -473,6 +473,9 @@ export type HomeState = {
   authenticatedUserId: string | null;
   activeHomeId: string | null;
   membershipReady: boolean;
+  /** Credential setup is account-only; it must not admit household reads or commands. */
+  authTaskBlockingHome: boolean;
+  authTaskVersion: number;
   /** Ephemeral verification reason; never persisted or usable as an access grant. */
   membershipVerification: 'idle' | 'checking' | 'failed' | 'missing' | 'blocked';
   sessionEpoch: number;
@@ -611,14 +614,14 @@ export const selectActiveMember = (state: HomeState) =>
   state.household.find((m) => m.id === state.activeMemberId);
 
 export const selectVisibleRooms = (state: HomeState) => {
-  if (state.accountUserId && !state.membershipReady) return [];
+  if (state.authTaskBlockingHome || (state.accountUserId && !state.membershipReady)) return [];
   const scope = getAccessScope(state);
   if (scope.fullAccess) return state.rooms;
   return state.rooms.filter((room) => scope.roomIds.has(room.id));
 };
 
 export const selectVisibleDevices = (state: HomeState) => {
-  if (state.accountUserId && !state.membershipReady) return [];
+  if (state.authTaskBlockingHome || (state.accountUserId && !state.membershipReady)) return [];
   const scope = getAccessScope(state);
   if (!scope.member) return [];
   const overrides = state.memberPermissionOverrides.filter(
@@ -1845,6 +1848,8 @@ export const useHomeStore = create<HomeState>()(
       authenticatedUserId: null,
       activeHomeId: null,
       membershipReady: false,
+      authTaskBlockingHome: false,
+      authTaskVersion: 0,
       membershipVerification: 'idle',
       sessionEpoch: 0,
       userName: "Nick",
@@ -2407,6 +2412,8 @@ export const useHomeStore = create<HomeState>()(
           authenticatedUserId: current.authenticatedUserId,
           activeHomeId: null,
           membershipReady: false,
+          authTaskBlockingHome: current.authTaskBlockingHome,
+          authTaskVersion: current.authTaskVersion,
           membershipVerification: 'idle',
           sessionEpoch: current.sessionEpoch,
           ...(current.accountUserId
@@ -2493,6 +2500,8 @@ export function clearHomeAccountState(userId: string | null, retainPersonalSetti
     authenticatedUserId: userId,
     activeHomeId: null,
     membershipReady: false,
+    authTaskBlockingHome: false,
+    authTaskVersion: previous.authTaskVersion + 1,
     membershipVerification: 'idle',
     userName: "",
     profile: { name: "", timeFormat: "12h", tempUnit: "C", timezone: "Auto" },
@@ -2556,4 +2565,29 @@ export function invalidateHomeMembership(reason: HomeState['membershipVerificati
     membershipVerification: reason,
     household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: "",
   });
+}
+
+/** Close home authority synchronously during credential setup; completion requires fresh admission. */
+export function setAuthTaskBlockingHome(blocked: boolean) {
+  const current = useHomeStore.getState();
+  if (current.authTaskBlockingHome === blocked) return;
+  // Persist middleware writes even when only excluded fields changed. Authority
+  // changes must not write a cache or consume an unrelated profile-save failure.
+  // This synchronous block contains no await; account hydration owns any later
+  // change to the write policy if a subscriber switches the account immediately.
+  const writesWereEnabled = storageWritesEnabled;
+  const generation = accountGeneration;
+  storageWritesEnabled = false;
+  try {
+    useHomeStore.setState({
+      authTaskBlockingHome: blocked,
+      authTaskVersion: current.authTaskVersion + 1,
+      ...(blocked ? {
+        activeHomeId: null, membershipReady: false, membershipVerification: 'checking' as const,
+        household: [], roomMembers: [], memberPermissionOverrides: [], activeMemberId: '',
+      } : {}),
+    });
+  } finally {
+    if (generation === accountGeneration) storageWritesEnabled = writesWereEnabled;
+  }
 }

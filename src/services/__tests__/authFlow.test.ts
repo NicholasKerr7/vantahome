@@ -4,6 +4,8 @@ import {
   completeAuthCallback,
   waitForAuthExchange,
   verifyInvitationCode,
+  isAuthFlowCurrent,
+  sendPasswordRecoveryEmail,
 } from "../authFlow";
 import { secureSessionStorage } from "../secureSessionStorage";
 import { supabase } from "../supabaseClient";
@@ -30,6 +32,7 @@ jest.mock("../supabaseClient", () => ({
       setSession: jest.fn(),
       verifyOtp: jest.fn(),
       signOut: jest.fn(),
+      resetPasswordForEmail: jest.fn(),
     },
   },
 }));
@@ -38,6 +41,8 @@ const auth = supabase!.auth;
 beforeEach(async () => {
   jest.clearAllMocks();
   await cancelAuthFlow();
+  await secureSessionStorage.removeItem('vantahome.auth.password-recovery.pending');
+  await secureSessionStorage.removeItem('vantahome.auth.password-recovery.user.alice');
   (auth.getSession as jest.Mock).mockResolvedValue({
     data: { session: null },
     error: null,
@@ -54,6 +59,7 @@ beforeEach(async () => {
     error: null,
   });
   (auth.signOut as jest.Mock).mockResolvedValue({ error: null });
+  (auth.resetPasswordForEmail as jest.Mock).mockResolvedValue({ data: {}, error: null });
 });
 
 describe("explicit invitation code verification", () => {
@@ -301,6 +307,85 @@ test("a persisted recovery flow supports cold start and chooses recovery before 
       )
     )?.user.id,
   ).toBe("alice");
+});
+
+test('a recovery email request alone does not create a credential-completion gate', async () => {
+  const flow = await beginAuthFlow('recovery', { email: 'alice@example.test' });
+  await sendPasswordRecoveryEmail(flow, 'alice@example.test');
+  expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('alice@example.test', { redirectTo: 'vantahome://auth-callback' });
+  expect(await secureSessionStorage.getItem('vantahome.auth.password-recovery.pending')).toBeNull();
+  expect(await secureSessionStorage.getItem('vantahome.auth.password-recovery.user.alice')).toBeNull();
+});
+
+test('an email-bound verified callback persists password completion across restart', async () => {
+  await beginAuthFlow('recovery', { email: 'alice@example.test' });
+  const onRecovery = jest.fn();
+  (auth.exchangeCodeForSession as jest.Mock).mockImplementationOnce(async () => {
+    expect(onRecovery).toHaveBeenCalledTimes(1);
+    expect(JSON.parse((await secureSessionStorage.getItem('vantahome.auth.password-recovery.pending'))!).email).toBe('alice@example.test');
+    return { data: { session: { user: { id: 'alice', email: 'alice@example.test' } } }, error: null };
+  });
+  expect((await completeAuthCallback('vantahome://auth-callback?code=recovery-persist', onRecovery))?.user.id).toBe('alice');
+  expect(await secureSessionStorage.getItem('vantahome.auth.password-recovery.pending')).toBeNull();
+  expect(JSON.parse((await secureSessionStorage.getItem('vantahome.auth.password-recovery.user.alice'))!).userId).toBe('alice');
+});
+
+test('a failed recovery exchange removes its pending completion intent', async () => {
+  await beginAuthFlow('recovery', { email: 'alice@example.test' });
+  (auth.exchangeCodeForSession as jest.Mock).mockResolvedValueOnce({ data: { session: null }, error: new Error('expired') });
+  expect(await completeAuthCallback('vantahome://auth-callback?code=failed-recovery')).toBeNull();
+  expect(await secureSessionStorage.getItem('vantahome.auth.password-recovery.pending')).toBeNull();
+});
+
+test('binding storage failure keeps the verified recovery screen and resumable pending record', async () => {
+  await beginAuthFlow('recovery', { email: 'alice@example.test' });
+  const originalWrite = secureSessionStorage.setItem;
+  (auth.exchangeCodeForSession as jest.Mock).mockImplementationOnce(async () => {
+    jest.spyOn(secureSessionStorage, 'setItem').mockRejectedValueOnce(new Error('Secure store unavailable'));
+    return { data: { session: { user: { id: 'alice', email: 'alice@example.test' } } }, error: null };
+  });
+  expect((await completeAuthCallback('vantahome://auth-callback?code=bind-storage-failure'))?.user.id).toBe('alice');
+  expect(await secureSessionStorage.getItem('vantahome.auth.password-recovery.pending')).not.toBeNull();
+  secureSessionStorage.setItem = originalWrite;
+});
+
+test('a recovery callback for another email cannot bind or return its session', async () => {
+  await beginAuthFlow('recovery', { email: 'alice@example.test' });
+  (auth.exchangeCodeForSession as jest.Mock).mockResolvedValueOnce({
+    data: { session: { user: { id: 'bob', email: 'bob@example.test' } } }, error: null,
+  });
+  expect(await completeAuthCallback('vantahome://auth-callback?code=wrong-recipient')).toBeNull();
+  expect(await secureSessionStorage.getItem('vantahome.auth.password-recovery.pending')).toBeNull();
+  expect(await secureSessionStorage.getItem('vantahome.auth.password-recovery.user.alice')).toBeNull();
+});
+
+test('an old recovery cleanup cannot cancel the newer local flow', async () => {
+  const first = await beginAuthFlow('recovery', { email: 'alice@example.test' });
+  const next = await beginAuthFlow('oauth');
+  await cancelAuthFlow(first);
+  expect(isAuthFlowCurrent(next)).toBe(true);
+  expect((await completeAuthCallback('vantahome://auth-callback?code=current-oauth'))?.user.id).toBe('alice');
+});
+
+test('reset email PKCE writes cannot race a new flow, invitation entry, or password entry', async () => {
+  const flow = await beginAuthFlow('recovery', { email: 'alice@example.test' });
+  let finish!: (value: unknown) => void;
+  (auth.resetPasswordForEmail as jest.Mock).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  const sending = sendPasswordRecoveryEmail(flow, 'alice@example.test');
+  await expect(beginAuthFlow('oauth')).rejects.toThrow('finishing');
+  await expect(verifyInvitationCode('guest@example.test', '123456')).rejects.toThrow('finishing');
+  let entryReady = false;
+  const entry = waitForAuthExchange().then(() => { entryReady = true; });
+  await Promise.resolve(); expect(entryReady).toBe(false);
+  finish({ data: {}, error: null }); await sending; await entry;
+  expect(entryReady).toBe(true);
+});
+
+test('a stale recovery handle cannot send an email or replace the current verifier', async () => {
+  const first = await beginAuthFlow('recovery', { email: 'alice@example.test' });
+  await beginAuthFlow('oauth');
+  await expect(sendPasswordRecoveryEmail(first, 'alice@example.test')).rejects.toThrow('cancelled');
+  expect(auth.resetPasswordForEmail).not.toHaveBeenCalled();
 });
 
 test("a failed PKCE exchange cannot fall back to the existing session", async () => {

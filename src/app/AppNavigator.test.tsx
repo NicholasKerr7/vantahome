@@ -18,6 +18,7 @@ const mockFeedbackEnabled = jest.fn();
 const mockArrivalMount = jest.fn();
 const mockPrewarmScene = jest.fn();
 const mockNeedsInvitationPasswordSetup = jest.fn();
+const mockNeedsPasswordRecoverySetup = jest.fn();
 let mockSupabaseAvailable = true;
 let mockSceneReady = true;
 const mockOpenControls = jest.fn();
@@ -49,6 +50,7 @@ jest.mock('../services/authFlow', () => ({
   ...jest.requireActual('../services/authFlow'),
   needsInvitationPasswordSetup: (...args: unknown[]) => mockNeedsInvitationPasswordSetup(...args),
 }));
+jest.mock('../services/passwordRecoverySetup', () => ({ needsPasswordRecoverySetup: (...args: unknown[]) => mockNeedsPasswordRecoverySetup(...args) }));
 jest.mock("../services/secureSessionStorage", () => ({
   secureSessionStorage: {
     getItem: jest.fn(async () => null),
@@ -75,13 +77,14 @@ jest.mock("@react-navigation/native-stack", () => ({
   createNativeStackNavigator: () => ({
     Navigator: ({ children }: { children: React.ReactNode }) => children,
     /** Expose registration only; private screens stay unmounted in auth tests. */
-    Screen: ({ name }: { name: string }) => {
+    Screen: ({ name, children }: { name: string; children?: () => React.ReactNode }) => {
       // Exercise the root handoff without mounting the WebView or private routes.
       const { useSceneArrival } = require('../features/arrival/ArrivalContext');
       useSceneArrival(mockSceneReady ? 'ready' : 'loading', name, name === 'Main', mockOpenControls);
+      const accountContent = name === 'HomeAccess' || name === 'AccountSecurity' || name === 'PasswordRecovery' ? children?.() : null;
       return require("react").createElement(require("react-native").View, {
         testID: `registered-route-${name}`,
-      });
+      }, accountContent);
     },
   }),
 }));
@@ -116,23 +119,46 @@ jest.mock("../screens/DeviceDetailScreen", () => () => null);
 jest.mock("../screens/RoomScreen", () => () => null);
 jest.mock("../screens/NotificationsScreen", () => () => null);
 jest.mock("../screens/ProfileScreen", () => () => null);
+jest.mock('../screens/AccountSecurityScreen', () => ({
+  __esModule: true,
+  /** Exercise route exit without coupling navigation privacy tests to session RPC fixtures. */
+  default: ({ onBack }: { onBack: () => void }) => {
+    const { View, Text, Pressable } = require('react-native');
+    return <View><Text>Account-only security</Text><Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={onBack}><Text>Back</Text></Pressable></View>;
+  },
+}));
 jest.mock("../screens/ManageRoomsScreen", () => () => null);
 jest.mock("../screens/AutomationBuilderScreen", () => () => null);
 jest.mock("../screens/CamerasScreen", () => () => null);
 jest.mock("../screens/AuditLogScreen", () => () => null);
 jest.mock("../screens/CameraViewerScreen", () => () => null);
-jest.mock("../screens/PasswordRecoveryScreen", () => () => null);
-jest.mock("../features/home-access/HomeAccessScreen", () => () => null);
+jest.mock('../screens/PasswordRecoveryScreen', () => ({
+  __esModule: true,
+  /** Expose successful completion so admission must perform a fresh policy read. */
+  default: ({ onComplete, purpose }: { onComplete: () => void; purpose: string }) => {
+    const { Pressable, Text, View } = require('react-native');
+    return <View><Text>{`Credential purpose: ${purpose}`}</Text><Pressable accessibilityRole="button" onPress={onComplete}><Text>Finish credential setup</Text></Pressable></View>;
+  },
+}));
+jest.mock('../features/home-access/HomeAccessScreen', () => ({
+  __esModule: true,
+  /** Expose only the safe account shortcut; home invitation behavior has its own integration tests. */
+  default: ({ onOpenSecurity }: { onOpenSecurity?: () => void }) => {
+    const { Pressable, Text } = require('react-native');
+    return onOpenSecurity ? <Pressable accessibilityRole="button" onPress={onOpenSecurity}><Text>Security &amp; sessions</Text></Pressable> : null;
+  },
+}));
 jest.mock('../features/arrival/nativeLaunch', () => ({ hideNativeLaunch: jest.fn() }));
 jest.mock('../features/arrival/CinematicArrival', () => ({
   __esModule: true,
   /** Keep gate integration tests independent of decorative animation and responsive presentation. */
-  default: ({ status, statusMessage, onRetry, onSignOut, signingOut, signOutError, retrying, onCoveredChange }: {
+  default: ({ status, statusMessage, onRetry, onSignOut, onOpenSecurity, signingOut, signOutError, retrying, onCoveredChange }: {
     status: 'preparing' | 'checking' | 'rendering' | 'ready' | 'inactive' | 'unavailable';
     onCoveredChange: (covered: boolean) => void;
     statusMessage?: string;
     onRetry?: () => void;
     onSignOut?: () => void;
+    onOpenSecurity?: () => void;
     retrying?: boolean;
     signingOut?: boolean;
     signOutError?: string | null;
@@ -146,12 +172,14 @@ jest.mock('../features/arrival/CinematicArrival', () => ({
       <Text>{statusMessage ?? (status === 'checking' ? 'Verifying your home…' : status === 'preparing' ? 'Preparing your account…' : 'Unable to verify home access.')}</Text>
       {onRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry" disabled={signingOut || retrying} onPress={onRetry}><Text>Retry</Text></Pressable>}
       {onSignOut && <Pressable accessibilityRole="button" accessibilityLabel="Sign out" disabled={signingOut || retrying} onPress={onSignOut}><Text>{signingOut ? 'Signing out…' : 'Sign out'}</Text></Pressable>}
+      {onOpenSecurity && <Pressable accessibilityRole="button" disabled={signingOut || retrying} onPress={onOpenSecurity}><Text>Security &amp; sessions</Text></Pressable>}
       {signOutError && <Text>{signOutError}</Text>}
     </View>;
   },
 }));
 
 import AppNavigator from "./AppNavigator";
+import PasswordRecoveryScreen from '../screens/PasswordRecoveryScreen';
 import CinematicArrival from '../features/arrival/CinematicArrival';
 import {
   hydrateHomeAccount,
@@ -209,6 +237,7 @@ describe("navigation session boundaries", () => {
     mockSignOut.mockResolvedValue({ error: null });
     mockMembership.mockImplementation(async (id: string) => membershipFor(id));
     mockNeedsInvitationPasswordSetup.mockResolvedValue(false);
+    mockNeedsPasswordRecoverySetup.mockResolvedValue(false);
     jest.spyOn(Linking, "getInitialURL").mockResolvedValue(null);
     jest
       .spyOn(Linking, "addEventListener")
@@ -568,6 +597,82 @@ describe("navigation session boundaries", () => {
     expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
   });
 
+  test('an account without a home can open Security and return without mounting private routes', async () => {
+    mockMembership.mockResolvedValueOnce(null);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy());
+    fireEvent.press(screen.getByText('Security & sessions'));
+    expect(screen.getByText('Account-only security')).toBeTruthy();
+    expect(screen.getByTestId('registered-route-AccountSecurity')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Profile', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId('registered-route-Main', { includeHiddenElements: true })).toBeNull();
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    fireEvent.press(screen.getByRole('button', { name: 'Go back' }));
+    expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy();
+    expect(screen.queryByText('Account-only security')).toBeNull();
+    expect(bootstrapHome).not.toHaveBeenCalled();
+  });
+
+  test.each(['missing', 'failed', 'blocked'] as const)('lost %s home access retains an isolated account recovery path', async (reason) => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    act(() => { invalidateHomeMembership(reason); });
+    fireEvent.press(screen.getByText('Security & sessions'));
+    expect(screen.getByText('Account-only security')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId('registered-route-Profile', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByTestId('home-verification-screen')).toBeNull();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    expect(mockModelHomeSyncUnmount).toHaveBeenCalledTimes(1);
+    expect(selectVisibleDevices(useHomeStore.getState())).toEqual([]);
+    fireEvent.press(screen.getByRole('button', { name: 'Go back' }));
+    expect(screen.queryByText('Account-only security')).toBeNull();
+    expect(reason === 'missing' ? screen.getByTestId('registered-route-HomeAccess') : screen.getByTestId('home-verification-screen')).toBeTruthy();
+  });
+
+  test('a late successful home check cannot replace an opened account screen or enable its runtimes', async () => {
+    let finishMembership: (value: MembershipSyncResult) => void = () => {};
+    mockMembership.mockImplementationOnce(() => new Promise((resolve) => { finishMembership = resolve; }));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Verifying your home…')).toBeTruthy());
+    fireEvent.press(screen.getByText('Security & sessions'));
+    await act(async () => { finishMembership(membershipFor('alice')); });
+    expect(screen.getByText('Account-only security')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main', { includeHiddenElements: true })).toBeNull();
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    fireEvent.press(screen.getByRole('button', { name: 'Go back' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(mockModelHomeSyncMount).toHaveBeenCalledTimes(1);
+  });
+
+  test('switching accounts closes the old standalone screen and restores the new account gate', async () => {
+    mockMembership.mockResolvedValue(null);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy());
+    fireEvent.press(screen.getByText('Security & sessions'));
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(mockMembership).toHaveBeenCalledWith('bob'));
+    expect(screen.queryByText('Account-only security')).toBeNull();
+    expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy();
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('alice')); });
+    await waitFor(() => expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy());
+    expect(screen.queryByTestId('registered-route-AccountSecurity')).toBeNull();
+  });
+
+  test('credential recovery replaces account security and does not leave a return path around setup', async () => {
+    mockMembership.mockResolvedValue(null);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy());
+    fireEvent.press(screen.getByText('Security & sessions'));
+    await act(async () => { mockAuthChanged('PASSWORD_RECOVERY', sessionFor('alice')); });
+    expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-AccountSecurity')).toBeNull();
+    expect(screen.queryByText('Security & sessions')).toBeNull();
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+  });
+
   test('a verified renewal refresh releases the earlier missing-membership gate', async () => {
     mockMembership.mockResolvedValueOnce(null);
     const screen = render(<AppNavigator />);
@@ -652,7 +757,9 @@ describe("navigation session boundaries", () => {
     await waitFor(() => expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(true));
     const mounts = mockNavigationMount.mock.calls.length;
     await act(async () => { mockAuthChanged("PASSWORD_RECOVERY", sessionFor("alice")); });
-    expect(useHomeStore.getState().membershipReady).toBe(true);
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(true);
+    expect(useHomeStore.getState().membershipReady).toBe(false);
+    expect(selectVisibleDevices(useHomeStore.getState())).toEqual([]);
     expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
     expect(mockNavigationMount).toHaveBeenCalledTimes(mounts);
     expect(mockModelHomeSyncUnmount).toHaveBeenCalledTimes(1);
@@ -669,12 +776,141 @@ describe("navigation session boundaries", () => {
     expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
   });
 
-  test('an unreadable invitation marker exposes credential setup rather than leaving startup blank', async () => {
+  test('an unreadable invitation marker keeps home blocked behind a truthful setup retry', async () => {
     mockNeedsInvitationPasswordSetup.mockRejectedValueOnce(new Error('Secure storage is unavailable.'));
     const screen = render(<AppNavigator />);
-    await waitFor(() => expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Unable to verify account setup.')).toBeTruthy());
     expect(mockMembership).not.toHaveBeenCalled();
     expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(screen.queryByTestId('registered-route-PasswordRecovery')).toBeNull();
+    expect(screen.queryByText('Security & sessions')).toBeNull();
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(true);
+    fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(false);
+  });
+
+  test('an unfinished password recovery resumes before membership and requires a fresh policy after completion', async () => {
+    mockNeedsPasswordRecoverySetup.mockResolvedValueOnce(true);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy());
+    expect(screen.getByText('Credential purpose: recovery')).toBeTruthy();
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(true);
+    expect(applyMembershipSnapshot(membershipFor('alice'), useHomeStore.getState().sessionEpoch)).toBe(false);
+    expect(screen.queryByText('Security & sessions')).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Finish credential setup' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(mockMembership).toHaveBeenCalledTimes(1);
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(false);
+  });
+
+  test('invitation password enrollment takes priority when both setup records need completion', async () => {
+    mockNeedsInvitationPasswordSetup.mockResolvedValueOnce(true);
+    mockNeedsPasswordRecoverySetup.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Credential purpose: invitation')).toBeTruthy());
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(true);
+    fireEvent.press(screen.getByRole('button', { name: 'Finish credential setup' }));
+    await waitFor(() => expect(screen.getByText('Credential purpose: recovery')).toBeTruthy());
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(true);
+    fireEvent.press(screen.getByRole('button', { name: 'Finish credential setup' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-HomeAccess')).toBeTruthy());
+    expect(mockMembership).toHaveBeenCalledTimes(1);
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(false);
+  });
+
+  test('completion reads the current SDK session when sign-out precedes its event', async () => {
+    mockNeedsPasswordRecoverySetup.mockResolvedValueOnce(true);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy());
+    mockGetSession.mockResolvedValueOnce({ data: { session: null }, error: null });
+    fireEvent.press(screen.getByRole('button', { name: 'Finish credential setup' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Auth')).toBeTruthy());
+    expect(useHomeStore.getState().authenticatedUserId).toBeNull();
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('registered-route-PasswordRecovery')).toBeNull();
+  });
+
+  test('an old credential completion cannot rehydrate a replacement signed-in account', async () => {
+    mockNeedsPasswordRecoverySetup.mockResolvedValueOnce(true);
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy());
+    const oldCompletion = screen.UNSAFE_getByType(PasswordRecoveryScreen).props.onComplete as () => void;
+    await act(async () => { mockAuthChanged('SIGNED_OUT', null); });
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(useHomeStore.getState().activeHomeId).toBe('bob-home'));
+    const epoch = useHomeStore.getState().sessionEpoch;
+    const reads = mockGetSession.mock.calls.length;
+    await act(async () => { oldCompletion(); });
+    expect(mockGetSession).toHaveBeenCalledTimes(reads);
+    expect(useHomeStore.getState().sessionEpoch).toBe(epoch);
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+  });
+
+  test('failure to read continuity after completion stays blocked until a scoped retry', async () => {
+    mockNeedsPasswordRecoverySetup.mockResolvedValueOnce(true).mockRejectedValueOnce(new Error('Storage unavailable'));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy());
+    fireEvent.press(screen.getByRole('button', { name: 'Finish credential setup' }));
+    await waitFor(() => expect(screen.getByText('Unable to verify account setup.')).toBeTruthy());
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(true);
+    fireEvent.press(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(false);
+  });
+
+  test('unreadable password recovery stays blocked and cannot silently become ordinary sign-in', async () => {
+    mockNeedsPasswordRecoverySetup.mockRejectedValueOnce(new Error('Storage unavailable'));
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByText('Unable to verify account setup.')).toBeTruthy());
+    expect(mockMembership).not.toHaveBeenCalled();
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(true);
+    expect(mockModelHomeSyncMount).not.toHaveBeenCalled();
+  });
+
+  test('an ambiguous recovery callback rechecks saved setup despite intentionally clearing home authority', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    let finish: (value: Session | null) => void = () => {};
+    const authFlow = require('../services/authFlow') as typeof import('../services/authFlow');
+    jest.spyOn(authFlow, 'completeAuthCallback').mockImplementationOnce(async (_url, onRecovery) => {
+      onRecovery?.();
+      return new Promise((resolve) => { finish = resolve; });
+    });
+    await act(async () => { deliverLink({ url: 'vantahome://auth-callback?code=recovery' }); });
+    expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy();
+    expect(useHomeStore.getState().activeHomeId).toBeNull();
+    expect(useHomeStore.getState().authTaskBlockingHome).toBe(true);
+    mockNeedsPasswordRecoverySetup.mockResolvedValueOnce(true);
+    await act(async () => { finish(null); });
+    await waitFor(() => expect(mockNeedsPasswordRecoverySetup).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId('registered-route-PasswordRecovery')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main', { includeHiddenElements: true })).toBeNull();
+    expect(mockMembership).toHaveBeenCalledTimes(1);
+  });
+
+  test('an old recovery callback cannot restart account preparation after switching people', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    let finish: (value: Session | null) => void = () => {};
+    const authFlow = require('../services/authFlow') as typeof import('../services/authFlow');
+    jest.spyOn(authFlow, 'completeAuthCallback').mockImplementationOnce(async (_url, onRecovery) => {
+      onRecovery?.();
+      return new Promise((resolve) => { finish = resolve; });
+    });
+    await act(async () => { deliverLink({ url: 'vantahome://auth-callback?code=recovery' }); });
+    await act(async () => { mockAuthChanged('SIGNED_IN', sessionFor('bob')); });
+    await waitFor(() => expect(useHomeStore.getState().activeHomeId).toBe('bob-home'));
+    const epoch = useHomeStore.getState().sessionEpoch;
+    await act(async () => { finish(null); });
+    expect(useHomeStore.getState().sessionEpoch).toBe(epoch);
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-PasswordRecovery')).toBeNull();
+    expect(mockNeedsPasswordRecoverySetup).toHaveBeenCalledTimes(2);
   });
 
   test('a slow enrollment check for another account cannot replace the current navigation', async () => {

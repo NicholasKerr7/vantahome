@@ -236,6 +236,7 @@ export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSe
   const read = snapshotReads.get(result);
   if (read && !isMembershipReadCurrent(read)) return false;
   const current = useHomeStore.getState();
+  if (current.authTaskBlockingHome) return false;
   if (expectedSessionEpoch !== undefined && current.sessionEpoch !== expectedSessionEpoch) return false;
   if (current.authenticatedUserId !== result.activeMemberId) return false;
   if (!result.household.some((member) => member.id === result.activeMemberId))

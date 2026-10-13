@@ -27,6 +27,7 @@ export type CinematicArrivalProps = {
   statusMessage?: string;
   statusDescription?: string;
   onShowControls?: () => void;
+  onOpenSecurity?: () => void;
   onCoveredChange?: (covered: boolean) => void;
   onPosterReady?: () => void;
 };
@@ -61,7 +62,7 @@ function ArrivalStageBlend() {
 /** Carry launch, verification, and rendering through one interruptible cinematic surface. */
 export default function CinematicArrival({
   status, returning = false, onRetry, onSignOut, signingOut = false, retrying = false,
-  signOutError, statusMessage, statusDescription, onShowControls, onCoveredChange, onPosterReady,
+  signOutError, statusMessage, statusDescription, onShowControls, onOpenSecurity, onCoveredChange, onPosterReady,
 }: CinematicArrivalProps) {
   const blocking = status !== 'ready' && status !== 'inactive';
   const unavailable = status === 'unavailable';
@@ -197,7 +198,7 @@ export default function CinematicArrival({
               <Text style={[styles.title, compact && styles.titleCompact]}>{statusMessage ?? copy.title}</Text>
             </View>
             <Text style={styles.description}>{statusDescription ?? copy.description}</Text>
-            {(onRetry || onSignOut || canShowControls) && <View style={[styles.actions, largeText && styles.actionsLargeText]}>
+            {(onRetry || onSignOut || canShowControls || onOpenSecurity) && <View style={[styles.actions, largeText && styles.actionsLargeText]}>
               {canShowControls && <Pressable onPress={onShowControls} disabled={disabled} style={[styles.button, styles.buttonPrimary, largeText && styles.buttonLargeText, disabled && styles.disabled]}>
                 <Text style={[styles.buttonText, styles.buttonTextPrimary]}>Open device controls</Text>
               </Pressable>}
@@ -206,6 +207,9 @@ export default function CinematicArrival({
               </Pressable>}
               {onSignOut && <Pressable onPress={onSignOut} disabled={disabled} style={[styles.button, styles.buttonSecondary, largeText && styles.buttonLargeText, disabled && styles.disabled]}>
                 <Text style={styles.buttonText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
+              </Pressable>}
+              {onOpenSecurity && <Pressable onPress={onOpenSecurity} disabled={disabled} style={[styles.button, styles.buttonSecondary, largeText && styles.buttonLargeText, disabled && styles.disabled]}>
+                <Text style={styles.buttonText}>Security & sessions</Text>
               </Pressable>}
             </View>}
             {signOutError && <Text accessibilityRole="alert" style={styles.actionError}>{signOutError}</Text>}

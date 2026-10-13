@@ -58,6 +58,18 @@ test('new members see their inbox without automatically creating a household', a
   expect(useHomeStore.getState().membershipReady).toBe(false);
 });
 
+test('offers account security without granting a home or requiring the invitation read to succeed', async () => {
+  mockList.mockRejectedValueOnce(new Error('Offline'));
+  const open = jest.fn();
+  const screen = render(<HomeAccessScreen userId="alice" onComplete={jest.fn()} onOpenSecurity={open} />);
+  await waitFor(() => expect(screen.getByText('Offline')).toBeTruthy());
+  fireEvent.press(screen.getByText('Security & sessions'));
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(mockRespond).not.toHaveBeenCalled();
+  expect(mockBootstrap).not.toHaveBeenCalled();
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+});
+
 test('Check access enters a renewed guest membership without accepting another invitation', async () => {
   mockList.mockResolvedValue([]);
   const renewed = snapshot();

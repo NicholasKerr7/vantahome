@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { getAuthRedirectParams } from "../config/authRedirects";
+import { getAuthRedirectParams, makeAuthCallbackUri } from "../config/authRedirects";
 import { isValidInvitationCode } from "../config/invitationCode";
 import { secureSessionStorage } from "./secureSessionStorage";
 import { supabase } from "./supabaseClient";
@@ -9,6 +9,7 @@ import {
   bindInvitationPasswordSetup,
   discardInvitationPasswordIntent,
 } from "./invitationPasswordSetup";
+import { beginPasswordRecoverySetup, bindPasswordRecoverySetup, discardPasswordRecoveryIntent } from './passwordRecoverySetup';
 export {
   completeInvitationPasswordSetup,
   needsInvitationPasswordSetup,
@@ -16,18 +17,24 @@ export {
 
 const FLOW_KEY = "vantahome.auth.pending-flow";
 type FlowKind = "oauth" | "recovery" | "signup";
-type PendingFlow = { kind: FlowKind; createdAt: number; userId: string | null };
+type PendingFlow = { kind: FlowKind; createdAt: number; userId: string | null; recoveryEmail?: string };
+export type AuthFlowIntent = Readonly<{ version: number }>;
 const MAX_FLOW_AGE_MS = 60 * 60 * 1000;
 let pendingExchange: { code: string; promise: Promise<Session | null> } | null =
   null;
 let flowVersion = 0;
 let storageQueue = Promise.resolve();
 let activeCodeExchange: Promise<unknown> | null = null;
+let activeRecoveryRequest: Promise<unknown> | null = null;
 
 /** Password sign-in/sign-out must not race an SDK exchange already in flight. */
 export async function waitForAuthExchange() {
   await activeCodeExchange?.catch(() => {});
+  await activeRecoveryRequest?.catch(() => {});
 }
+
+/** Identify only the current locally initiated callback; this is not authentication. */
+export function isAuthFlowCurrent(intent: AuthFlowIntent): boolean { return intent.version === flowVersion; }
 
 /** Keep pending-flow writes ordered when callbacks and user actions overlap. */
 function updateFlowStorage(operation: () => Promise<void>) {
@@ -37,10 +44,10 @@ function updateFlowStorage(operation: () => Promise<void>) {
 }
 
 /** Bind the next PKCE callback to an expiring request from this device and identity. */
-export async function beginAuthFlow(kind: FlowKind) {
+export async function beginAuthFlow(kind: FlowKind, options?: { email: string }): Promise<AuthFlowIntent> {
   if (!supabase) throw new Error("Authentication is not configured.");
   ensureSecureAuthCrypto();
-  if (activeCodeExchange)
+  if (activeCodeExchange || activeRecoveryRequest)
     throw new Error("Sign-in is finishing. Please wait a moment.");
   const version = ++flowVersion;
   pendingExchange = null;
@@ -55,16 +62,34 @@ export async function beginAuthFlow(kind: FlowKind) {
         kind,
         createdAt: Date.now(),
         userId: data.session?.user.id ?? null,
+        ...(kind === 'recovery' && options ? { recoveryEmail: options.email.trim().toLowerCase() } : {}),
       } satisfies PendingFlow),
     );
   });
+  return { version };
 }
 
 /** Invalidate pending callbacks; callers changing identity also await the active exchange. */
-export async function cancelAuthFlow() {
-  ++flowVersion;
+export async function cancelAuthFlow(intent?: AuthFlowIntent) {
+  if (intent && !isAuthFlowCurrent(intent)) return;
+  const cancelledVersion = ++flowVersion;
   pendingExchange = null;
-  await updateFlowStorage(() => secureSessionStorage.removeItem(FLOW_KEY));
+  await updateFlowStorage(async () => {
+    if (flowVersion === cancelledVersion) await secureSessionStorage.removeItem(FLOW_KEY);
+  });
+}
+
+/** Serialize reset-email PKCE writes with callback exchange and later account entry. */
+export async function sendPasswordRecoveryEmail(intent: AuthFlowIntent, email: string): Promise<void> {
+  if (!supabase || !isAuthFlowCurrent(intent)) throw new Error('This recovery request was cancelled.');
+  if (activeCodeExchange || activeRecoveryRequest) throw new Error('Sign-in is finishing. Please wait a moment.');
+  const sending = (async () => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: makeAuthCallbackUri() });
+    if (error) throw new Error('The recovery request could not be confirmed. Check your email before trying again.');
+    if (!isAuthFlowCurrent(intent)) throw new Error('This recovery request was cancelled.');
+  })();
+  activeRecoveryRequest = sending;
+  try { await sending; } finally { if (activeRecoveryRequest === sending) activeRecoveryRequest = null; }
 }
 
 /** Remove only the rejected invitation session, never a different signed-in identity. */
@@ -73,6 +98,7 @@ async function discardInvitationSession(session: Session | null) {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   if (data.session?.user.id !== session.user.id) return;
+  if (session.access_token && data.session.access_token !== session.access_token) return;
   const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
   if (signOutError) throw signOutError;
 }
@@ -92,7 +118,7 @@ export async function verifyInvitationCode(
   ) {
     throw new Error("Enter your invited email address and one-time invitation code.");
   }
-  if (activeCodeExchange)
+  if (activeCodeExchange || activeRecoveryRequest)
     throw new Error("Sign-in is finishing. Please wait a moment.");
 
   const authClient = supabase;
@@ -207,12 +233,36 @@ export async function completeAuthCallback(
         await secureSessionStorage.removeItem(FLOW_KEY);
     });
     if (version !== flowVersion) return null;
+    // Only a validated, locally requested callback creates completion continuity.
+    // The pending email record bridges the SDK's auth event before user binding.
+    const recoveryIntent = flow.kind === 'recovery' && flow.recoveryEmail
+      ? await beginPasswordRecoverySetup(flow.recoveryEmail, flow.userId) : null;
+    if (version !== flowVersion) {
+      if (recoveryIntent) await discardPasswordRecoveryIntent(recoveryIntent);
+      return null;
+    }
     if (flow.kind === "recovery") onRecovery?.();
     const exchange = supabase!.auth.exchangeCodeForSession(code);
     activeCodeExchange = exchange;
     try {
       const { data, error } = await exchange;
-      return error || version !== flowVersion ? null : data.session;
+      if (error || version !== flowVersion || !data.session) {
+        if (recoveryIntent) await discardPasswordRecoveryIntent(recoveryIntent);
+        return null;
+      }
+      if (recoveryIntent) {
+        if ((recoveryIntent.userId && recoveryIntent.userId !== data.session.user.id)
+          || data.session.user.email?.trim().toLowerCase() !== recoveryIntent.email) {
+          await discardInvitationSession(data.session);
+          await discardPasswordRecoveryIntent(recoveryIntent);
+          return null;
+        }
+        try { await bindPasswordRecoverySetup(recoveryIntent, data.session.user); } catch {
+          // The persisted pending record still keeps this verified account in
+          // recovery if binding storage fails. Keep the visible recovery gate.
+        }
+      }
+      return version === flowVersion ? data.session : null;
     } finally {
       if (activeCodeExchange === exchange) activeCodeExchange = null;
     }

@@ -19,6 +19,7 @@ import DeviceDetailRoute from "../screens/DeviceDetailRoute";
 import RoomScreen from "../screens/RoomScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import AccountSecurityScreen from '../screens/AccountSecurityScreen';
 import ManageRoomsScreen from "../screens/ManageRoomsScreen";
 import AutomationBuilderScreen from "../screens/AutomationBuilderScreen";
 import CamerasScreen from "../screens/CamerasScreen";
@@ -30,7 +31,7 @@ import {
   applyMembershipSnapshot,
   syncMembershipFromSupabase,
 } from "../services/membership";
-import { HomeCacheLoadError, hydrateHomeAccount, invalidateHomeMembership, useHomeStore } from "../store/useHomeStore";
+import { HomeCacheLoadError, hydrateHomeAccount, invalidateHomeMembership, setAuthTaskBlockingHome, useHomeStore } from "../store/useHomeStore";
 import { resolveAuthExperience, runtimePolicy } from "../config/runtimeMode";
 import {
   cancelAuthFlow,
@@ -53,6 +54,8 @@ import { isAccountScopeCurrent } from '../features/account/accountIdentity';
 import { resolveSessionProfile } from '../features/account/sessionProfile';
 import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
 import { useWarmHomeRetention } from './useWarmHomeRetention';
+import { useAccountSecurityRoute } from '../features/account/useAccountSecurityRoute';
+import { needsPasswordRecoverySetup } from '../services/passwordRecoverySetup';
 
 /**
  * Root stack for the app.
@@ -67,6 +70,7 @@ export type RootStackParamList = {
   Auth: undefined;
   AccountEntry: undefined;
   HomeAccess: undefined;
+  AccountSecurity: undefined;
   PasswordRecovery: undefined;
   Onboarding: undefined;
   Main: NavigatorScreenParams<HomeStackParamList>;
@@ -92,7 +96,7 @@ function IntegrationsRoute(props: NativeStackScreenProps<RootStackParamList, 'In
 }
 
 /** Keep verification actions local to this account and discard results after the gate closes. */
-function MembershipVerificationGate({ status, onRetry, returning, canSignOut, busy, statusMessage, statusDescription, onCoveredChange, onShowControls }: {
+function MembershipVerificationGate({ status, onRetry, returning, canSignOut, busy, statusMessage, statusDescription, onCoveredChange, onShowControls, onOpenSecurity }: {
   status: 'preparing' | 'checking' | 'rendering' | 'ready' | 'inactive' | 'unavailable';
   onRetry?: () => void;
   returning: boolean;
@@ -102,6 +106,7 @@ function MembershipVerificationGate({ status, onRetry, returning, canSignOut, bu
   statusDescription?: string;
   onCoveredChange: (covered: boolean) => void;
   onShowControls?: () => void;
+  onOpenSecurity?: () => void;
 }) {
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -140,6 +145,7 @@ function MembershipVerificationGate({ status, onRetry, returning, canSignOut, bu
     onCoveredChange={onCoveredChange}
     onPosterReady={hideNativeLaunch}
     onShowControls={onShowControls}
+    onOpenSecurity={onOpenSecurity ? () => { if (!signOutAttempt.current && !busy) onOpenSecurity(); } : undefined}
     statusMessage={statusMessage}
     statusDescription={statusDescription}
     onRetry={onRetry ? () => { if (!signOutAttempt.current && !busy) onRetry(); } : undefined}
@@ -155,6 +161,7 @@ export default function AppNavigator() {
   const desktopPreview = Platform.OS === 'web' && width > 1366;
   const [session, setSession] = useState<Session | null>(null);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const credentialRecovery = useRef(false);
   const [invitationRequested, setInvitationRequested] = useState(false);
   const [invitationEnrollment, setInvitationEnrollment] = useState(false);
   const [authReady, setAuthReady] = useState(false);
@@ -162,7 +169,12 @@ export default function AppNavigator() {
   const [startupDescription, setStartupDescription] = useState('Retry to prepare your account on this device.');
   const [startupRetrying, setStartupRetrying] = useState(false);
   const retryStartup = useRef<(() => void) | null>(null);
+  const completeCredentialSetup = useRef<((userId: string, epoch: number) => Promise<void>) | null>(null);
   const [membershipRetry, setMembershipRetry] = useState(0);
+  const accountEpoch = useHomeStore((state) => state.sessionEpoch);
+  const authTaskBlockingHome = useHomeStore((state) => state.authTaskBlockingHome);
+  const accountSecurity = useAccountSecurityRoute({ userId: session?.user.id ?? null, ready: authReady,
+    credentialSetup: passwordRecovery || authTaskBlockingHome });
   const membershipReady = useHomeStore((s) => s.membershipReady);
   const verification = useHomeStore((s) => s.membershipVerification);
   const guestExpiresAt = useHomeStore((s) => {
@@ -180,6 +192,13 @@ export default function AppNavigator() {
   const homeRouteVisible = homeRoute?.scope === navigationScope ? homeRoute.visible : true;
   const arrival = useArrivalCoordinator(navigationScope);
   const [arrivalCovered, setArrivalCovered] = useState(true);
+
+  /** Close runtime authority synchronously before credential UI; completion still requires fresh home verification. */
+  function setCredentialRecovery(active: boolean) {
+    credentialRecovery.current = active;
+    setAuthTaskBlockingHome(active);
+    setPasswordRecovery(active);
+  }
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (next) => {
@@ -235,6 +254,8 @@ export default function AppNavigator() {
     let profileRevision = 0;
     let pendingProfileSave: { version: number; name: string; email: string | undefined; completion: Promise<void> } | null = null;
     let transition = 0;
+    let recoveryAttempt = 0;
+    let completingCredentialScope: string | null = null;
     let receivedAuthEvent = false;
     /** Persist only changed identity text and keep a failed or stale save outside startup completion. */
     const prepareSessionProfile = async (currentSession: Session, version: number) => {
@@ -293,7 +314,7 @@ export default function AppNavigator() {
       }
       if (currentUserId && currentUserId !== userId) {
         // Account-scoped credential setup cannot follow a different identity.
-        setPasswordRecovery(false);
+        setCredentialRecovery(false);
         setInvitationEnrollment(false);
       }
       currentUserId = userId;
@@ -309,7 +330,7 @@ export default function AppNavigator() {
       setAuthReady(false);
       setSession(nextSession);
       if (!nextSession) {
-        setPasswordRecovery(false);
+        setCredentialRecovery(false);
         setInvitationEnrollment(false);
       }
       try {
@@ -327,19 +348,37 @@ export default function AppNavigator() {
       }
       if (!mounted || version !== transition) return;
       if (nextSession) {
-        // A verified invitation can survive an app restart before its password is set.
-        // Storage/verification failures stay in credential setup rather than exposing controls.
-        let needsPasswordSetup = true;
+        // Neither an unfinished invitation nor password recovery may regain home
+        // authority on restart. Unknown continuity remains behind a retryable gate.
+        setAuthTaskBlockingHome(true);
+        let needsInvitationSetup: boolean;
+        let needsRecoverySetup: boolean;
         try {
-          needsPasswordSetup = await needsInvitationPasswordSetup(nextSession.user.id);
+          [needsInvitationSetup, needsRecoverySetup] = await Promise.all([
+            needsInvitationPasswordSetup(nextSession.user.id),
+            needsPasswordRecoverySetup(nextSession.user.id),
+          ]);
         } catch {
-          needsPasswordSetup = true;
+          if (!mounted || version !== transition) return;
+          setStartupRetrying(false);
+          setStartupError('Unable to verify account setup.');
+          setStartupDescription('Retry to check your saved sign-in before opening home controls.');
+          retryStartup.current = () => {
+            if (mounted && version === transition && currentUserId === userId) void receiveSession(latestSession, true);
+          };
+          return;
         }
         if (!mounted || version !== transition) return;
-        if (needsPasswordSetup) {
+        if (needsInvitationSetup) {
           setInvitationRequested(true);
           setInvitationEnrollment(true);
-          setPasswordRecovery(true);
+          setCredentialRecovery(true);
+        } else if (needsRecoverySetup) {
+          setInvitationEnrollment(false);
+          setCredentialRecovery(true);
+        } else {
+          // PASSWORD_RECOVERY can precede this read in the same SDK exchange.
+          setAuthTaskBlockingHome(credentialRecovery.current);
         }
         // Hydration restores only this account's cache. Metadata supplies a
         // first-login fallback; it must not undo a saved local display name.
@@ -351,6 +390,37 @@ export default function AppNavigator() {
       setStartupRetrying(false);
       setAuthReady(true);
     };
+    /** Re-read all remaining credential intent after a completed task, without admitting its previous home. */
+    const finishCredentialSetup = async (userId: string, epoch: number) => {
+      const isCurrent = () => mounted && useHomeStore.getState().authenticatedUserId === userId
+        && useHomeStore.getState().accountUserId === userId && useHomeStore.getState().sessionEpoch === epoch;
+      const completionKey = JSON.stringify([userId, epoch]);
+      if (!isCurrent() || completingCredentialScope === completionKey) return;
+      completingCredentialScope = completionKey;
+      setAuthTaskBlockingHome(true);
+      setAuthReady(false);
+      setStartupRetrying(true);
+      setStartupError(null);
+      retryStartup.current = null;
+      credentialRecovery.current = false;
+      setPasswordRecovery(false);
+      setInvitationEnrollment(false);
+      try {
+        const { data, error } = await authClient.auth.getSession();
+        if (!isCurrent()) return;
+        if (error) throw error;
+        // Sign-out can settle before its auth event reaches the navigator. The
+        // SDK's current result wins, never the previous route's captured session.
+        await receiveSession(data.session ?? null, true);
+      } catch {
+        if (!isCurrent()) return;
+        setStartupRetrying(false);
+        setStartupError('Unable to verify account setup.');
+        setStartupDescription('Retry to check your saved sign-in before opening home controls.');
+        retryStartup.current = () => { if (isCurrent()) void finishCredentialSetup(userId, epoch); };
+      } finally { if (completingCredentialScope === completionKey) completingCredentialScope = null; }
+    };
+    completeCredentialSetup.current = finishCredentialSetup;
     authClient.auth
       .getSession()
       .then(({ data }) => {
@@ -366,11 +436,28 @@ export default function AppNavigator() {
         return;
       }
       let recovery = false;
+      let recoveryCurrent = () => false;
       const recovered = await completeAuthCallback(url, () => {
         recovery = true;
-        if (mounted) setPasswordRecovery(true);
+        const scope = useHomeStore.getState();
+        const attempt = ++recoveryAttempt;
+        // Starting recovery deliberately clears home authority. Only account and
+        // authentication identity, plus this recovery attempt, delimit its callback.
+        recoveryCurrent = () => {
+          const current = useHomeStore.getState();
+          return mounted && credentialRecovery.current && attempt === recoveryAttempt
+            && current.authenticatedUserId === scope.authenticatedUserId
+            && current.accountUserId === scope.accountUserId && current.sessionEpoch === scope.sessionEpoch;
+        };
+        if (mounted) setCredentialRecovery(true);
       });
-      if (mounted && recovery && !recovered) setPasswordRecovery(false);
+      if (recovery && !recovered && recoveryCurrent()) {
+        // Ambiguous exchange failures must re-read persisted setup before any
+        // home is admitted; an obsolete callback cannot restart a newer login.
+        credentialRecovery.current = false;
+        setPasswordRecovery(false);
+        void receiveSession(latestSession, true);
+      }
     };
 
     void Linking.getInitialURL()
@@ -385,19 +472,20 @@ export default function AppNavigator() {
         void cancelAuthFlow();
         if (currentUserId) setInvitationRequested(false);
       }
-      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+      if (event === "PASSWORD_RECOVERY") { recoveryAttempt += 1; setCredentialRecovery(true); }
       void receiveSession(nextSession ?? null);
     });
     return () => {
       mounted = false;
       retryStartup.current = null;
+      completeCredentialSetup.current = null;
       linkSubscription.remove();
       data.subscription.unsubscribe();
     };
   }, []);
 
   useEffect(() => {
-    if (!session || passwordRecovery || !authReady) return;
+    if (!session || passwordRecovery || authTaskBlockingHome || !authReady) return;
     let active = true;
     const sessionEpoch = useHomeStore.getState().sessionEpoch;
     const generation = lifecycleGeneration.current;
@@ -424,7 +512,7 @@ export default function AppNavigator() {
     return () => {
       active = false;
     };
-  }, [passwordRecovery, session?.user.id, authReady, membershipRetry]);
+  }, [passwordRecovery, authTaskBlockingHome, session?.user.id, authReady, membershipRetry]);
 
   // A renewal confirmed by the foreground or periodic sync replaces the earlier
   // missing-access result without requiring another login or invitation.
@@ -437,7 +525,7 @@ export default function AppNavigator() {
   });
   // Shared background controls must obey the same credential and household gates
   // as private navigation, including when a verified session is later revoked.
-  const homeReady = authReady && !passwordRecovery && !checkingMembership && !needsHomeAccess
+  const homeReady = authReady && !passwordRecovery && !authTaskBlockingHome && !accountSecurity.isOpen && !checkingMembership && !needsHomeAccess
     && (authExperience === "authenticated" || authExperience === "demo");
   const retainHome = useWarmHomeRetention({
     admitted: homeReady && Boolean(session) && homeRouteVisible,
@@ -447,13 +535,14 @@ export default function AppNavigator() {
   });
   const awaitingScene = homeReady && homeRouteVisible && !arrival.dismissed
     && (!arrival.scene || arrival.scene.status === 'loading');
-  const arrivalStatus = !authReady
+  const arrivalStatus = accountSecurity.isOpen ? 'inactive' : !authReady
     ? startupError && !startupRetrying ? 'unavailable' : 'preparing'
     : checkingMembership ? verification === 'failed' ? 'unavailable' : 'checking'
     : awaitingScene ? 'rendering'
     : homeReady && homeRouteVisible && arrival.scene?.status === 'ready' ? 'ready' : 'inactive';
   // Privacy never waits for an animation callback; fades only affect presentation.
-  const shieldNavigation = checkingMembership || arrivalCovered;
+  // Only the isolated account route bypasses this shield; its branch contains no home screens.
+  const shieldNavigation = !accountSecurity.isOpen && (checkingMembership || arrivalCovered);
 
   /** Reuse graphics only from the main Home route, never a retained camera or account screen. */
   const trackHomeRoute = (state: NavigationState | PartialState<NavigationState> | undefined) => {
@@ -466,7 +555,7 @@ export default function AppNavigator() {
   return (
     <View style={[styles.viewport, desktopPreview && styles.desktopViewport]}>
       <ArrivalContext.Provider value={arrival.context}>
-      <ArrivalInteractionShield blocked={shieldNavigation} hidden={checkingMembership}>
+      <ArrivalInteractionShield blocked={shieldNavigation} hidden={checkingMembership && !accountSecurity.isOpen}>
         {authReady && <CommandFeedbackProvider enabled={homeReady}>
           <BottomSheetModalProvider>
             {homeReady && <ModelHomeSync key={`model-home:${navigationScope}`} />}
@@ -485,15 +574,16 @@ export default function AppNavigator() {
                     {() => (
                       <PasswordRecoveryScreen
                         purpose={invitationEnrollment ? 'invitation' : 'recovery'}
-                        onComplete={() => {
-                          setPasswordRecovery(false);
-                          setInvitationEnrollment(false);
-                        }}
+                        onComplete={() => { void completeCredentialSetup.current?.(session.user.id, accountEpoch); }}
                       />
                     )}
                   </Stack.Screen>
                 ) : authExperience === "configuration-required" ? (
                   <Stack.Screen name="Auth" component={AuthRequiredScreen} />
+                ) : accountSecurity.isOpen ? (
+                  <Stack.Screen name="AccountSecurity">
+                    {() => <AccountSecurityScreen onBack={accountSecurity.close} />}
+                  </Stack.Screen>
                 ) : session && ((checkingMembership && !retainHome) || needsHomeAccess) ? (
                   <Stack.Screen name="HomeAccess">
                     {() => checkingMembership ? null : <HomeAccessScreen
@@ -501,6 +591,7 @@ export default function AppNavigator() {
                       email={session.user.email}
                       onComplete={() => setInvitationRequested(false)}
                       onContinue={membershipReady ? () => setInvitationRequested(false) : undefined}
+                      onOpenSecurity={accountSecurity.eligible ? accountSecurity.open : undefined}
                     />}
                   </Stack.Screen>
                 ) : authExperience === "authenticated" ||
@@ -543,7 +634,7 @@ export default function AppNavigator() {
                       initialMode={invitationRequested ? 'invite' : 'login'}
                       onInvitationRequested={() => setInvitationRequested(true)}
                       onInvitationEnrollmentChange={(active) => {
-                        setPasswordRecovery(active);
+                        setCredentialRecovery(active);
                         setInvitationEnrollment(active);
                       }}
                     />}
@@ -564,6 +655,7 @@ export default function AppNavigator() {
           returning={retainHome}
           busy={startupRetrying}
           canSignOut={Boolean(session) && (checkingMembership || Boolean(startupError))}
+          onOpenSecurity={checkingMembership && accountSecurity.eligible ? accountSecurity.open : undefined}
           onRetry={!authReady
             ? startupError ? () => retryStartup.current?.() : undefined
             : checkingMembership ? () => setMembershipRetry((value) => value + 1) : undefined}

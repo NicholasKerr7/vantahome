@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import AuthScreen from '../AuthScreen';
 import { supabase } from '../../services/supabaseClient';
-import { beginAuthFlow, verifyInvitationCode } from '../../services/authFlow';
+import { beginAuthFlow, sendPasswordRecoveryEmail, verifyInvitationCode } from '../../services/authFlow';
 import type { Session, User } from '@supabase/supabase-js';
 import { fetchAuthProviderAvailability } from '../../services/authProviderAvailability';
 
@@ -12,7 +12,8 @@ jest.mock('../../services/supabaseClient', () => ({ supabase: { auth: {
   signInWithPassword: jest.fn(), signUp: jest.fn(), resetPasswordForEmail: jest.fn(),
 } } }));
 jest.mock('../../services/authFlow', () => ({
-  beginAuthFlow: jest.fn(async () => undefined), cancelAuthFlow: jest.fn(async () => undefined),
+  beginAuthFlow: jest.fn(async () => ({ version: 1 })), cancelAuthFlow: jest.fn(async () => undefined),
+  sendPasswordRecoveryEmail: jest.fn(async () => undefined),
   waitForAuthExchange: jest.fn(async () => undefined), verifyInvitationCode: jest.fn(), completeAuthCallback: jest.fn(),
 }));
 
@@ -132,7 +133,7 @@ test('recovery sends a scoped callback and avoids claiming an email account exis
   fireEvent.press(screen.getByText('Forgot password?'));
   fireEvent.changeText(screen.getByLabelText('Email'), 'someone@example.com');
   fireEvent.press(screen.getByRole('button', { name: 'Send reset link' })); await settle();
-  expect(beginAuthFlow).toHaveBeenCalledWith('recovery');
-  expect(supabase!.auth.resetPasswordForEmail).toHaveBeenCalledWith('someone@example.com', { redirectTo: 'vantahome://auth-callback' });
+  expect(beginAuthFlow).toHaveBeenCalledWith('recovery', { email: 'someone@example.com' });
+  expect(sendPasswordRecoveryEmail).toHaveBeenCalledWith({ version: 1 }, 'someone@example.com');
   expect(screen.getByText(/If an account uses this email/)).toBeTruthy();
 });

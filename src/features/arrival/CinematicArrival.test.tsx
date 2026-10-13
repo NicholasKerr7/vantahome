@@ -126,6 +126,26 @@ test('keeps one silent player across account, access, and rendering, then loops 
   expect(player.replaceAsync).toHaveBeenCalledTimes(2);
 });
 
+test('offers safe account controls during unavailable home verification without enabling device controls', async () => {
+  const open = jest.fn();
+  const screen = render(<CinematicArrival status="unavailable" onOpenSecurity={open} />);
+  await settle();
+  fireEvent.press(screen.getByText('Security & sessions'));
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Open device controls')).toBeNull();
+  screen.rerender(<CinematicArrival status="unavailable" onOpenSecurity={open} signingOut />);
+  fireEvent.press(screen.getByText('Security & sessions'));
+  expect(open).toHaveBeenCalledTimes(1);
+});
+
+test('a slow membership check reveals account recovery while ordinary arrival stays quiet', async () => {
+  const screen = render(<CinematicArrival status="checking" onOpenSecurity={jest.fn()} />);
+  await settle();
+  expect(screen.queryByText('Security & sessions')).toBeNull();
+  act(() => { jest.advanceTimersByTime(ARRIVAL_SLOW_MS); });
+  expect(screen.getByText('Security & sessions')).toBeTruthy();
+});
+
 test.each(['enter', 'hold'] as const)('readiness fades the current %s without switching clips or waiting for its ending', async (segment) => {
   const covered = jest.fn();
   const screen = render(<CinematicArrival status="rendering" onCoveredChange={covered} />);

@@ -6,7 +6,7 @@ import { hasCurrentMembershipAccess } from "./guestAccess";
 /** Authorize physical command dispatch independently of the isolated 3D simulation. */
 export function authorizeLocalDeviceCommand(command: DeviceCommand) {
   const state = useHomeStore.getState();
-  if (state.accountUserId && !state.membershipReady) {
+  if (state.authTaskBlockingHome || (state.accountUserId && !state.membershipReady)) {
     return { allowed: false, reason: "member_not_found" } as const;
   }
   const device = state.devices.find(

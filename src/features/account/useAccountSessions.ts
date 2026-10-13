@@ -17,6 +17,7 @@ export function useAccountSessions(scope: AccountScope) {
   const [view, setView] = useState<SessionView | null>(null);
   const [confirmation, setConfirmation] = useState<{ key: string; sessionId: string } | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const foreground = useRef(AppState.currentState !== 'background');
   const generation = useRef(0);
   const pending = useRef<string | null>(null);
   const mounted = useRef(false);
@@ -26,6 +27,7 @@ export function useAccountSessions(scope: AccountScope) {
     mounted.current = true;
     const listener = AppState.addEventListener('change', (state) => {
       if (state === 'background') {
+        foreground.current = false;
         generation.current += 1;
         confirmedAction.current = null;
         setConfirmation(null);
@@ -34,7 +36,13 @@ export function useAccountSessions(scope: AccountScope) {
       }
       // iOS also enters inactive while Face ID is on screen. Preserve that
       // deliberate confirmation; actual backgrounding still invalidates it.
-      if (state === 'active') setActive(true);
+      if (state === 'active') {
+        const returning = !foreground.current;
+        foreground.current = true;
+        setActive(true);
+        // A quick leave/return can batch into the same active state; still refresh the cleared inventory.
+        if (returning) setAttempt((value) => value + 1);
+      }
     });
     return () => { mounted.current = false; confirmedAction.current = null; listener.remove(); };
   }, []);

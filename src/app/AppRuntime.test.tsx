@@ -2,7 +2,7 @@ import React from "react";
 import { AppState } from "react-native";
 import { act, render } from "@testing-library/react-native";
 import App from "../../App";
-import { hydrateHomeAccount, selectVisibleRooms, useHomeStore } from "../store/useHomeStore";
+import { hydrateHomeAccount, selectVisibleRooms, setAuthTaskBlockingHome, useHomeStore } from "../store/useHomeStore";
 import { startDeviceRealtime } from "../services/realtime";
 import { startFlowRuntime } from "../services/flowRuntime";
 import { deviceClient } from "../services/deviceClient";
@@ -90,6 +90,48 @@ test("a biometric inactive transition preserves the pending command; background 
   expect(mockStopFlows).toHaveBeenCalledTimes(1);
   expect(useHomeStore.getState().membershipReady).toBe(false);
   expect(deviceClient.resetSession).toHaveBeenCalledTimes(2);
+  screen.unmount();
+});
+
+test('credential recovery stops runtimes synchronously and cannot refresh home access until completion', async () => {
+  const screen = render(<App />);
+  act(() => {
+    setAuthTaskBlockingHome(true);
+    expect(mockStopRealtime).toHaveBeenCalledTimes(1);
+    expect(mockStopFlows).toHaveBeenCalledTimes(1);
+    expect(useHomeStore.getState().membershipReady).toBe(false);
+  });
+  await act(async () => {
+    changeState('background');
+    changeState('active');
+    jest.advanceTimersByTime(60_000);
+  });
+  expect(syncMembershipFromSupabase).not.toHaveBeenCalled();
+  expect(startFlowRuntime).toHaveBeenCalledTimes(1);
+  act(() => setAuthTaskBlockingHome(false));
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  jest.mocked(syncMembershipFromSupabase).mockResolvedValueOnce(ownerSnapshot());
+  await act(async () => { jest.advanceTimersByTime(60_000); });
+  expect(useHomeStore.getState().membershipReady).toBe(true);
+  expect(startFlowRuntime).toHaveBeenCalledTimes(2);
+  screen.unmount();
+});
+
+test.each(['success', 'missing', 'failure'] as const)('a pre-recovery %s cannot reopen or alter home after recovery completes', async outcome => {
+  const pending = pendingMembership();
+  const screen = render(<App />);
+  await act(async () => { jest.advanceTimersByTime(60_000); });
+  act(() => {
+    setAuthTaskBlockingHome(true);
+    setAuthTaskBlockingHome(false);
+  });
+  await act(async () => {
+    if (outcome === 'failure') pending.reject(new Error('Old request'));
+    else pending.resolve(outcome === 'missing' ? null : ownerSnapshot());
+  });
+  expect(useHomeStore.getState().membershipReady).toBe(false);
+  expect(useHomeStore.getState().membershipVerification).toBe('checking');
+  expect(startFlowRuntime).toHaveBeenCalledTimes(1);
   screen.unmount();
 });
 

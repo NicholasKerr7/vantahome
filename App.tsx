@@ -45,9 +45,10 @@ if (sentryEnabled) {
 function App() {
   useGuestAccessExpiry();
   const notificationsEnabled = useHomeStore((s) => s.preferences.notifications);
+  const authTaskBlockingHome = useHomeStore((s) => s.authTaskBlockingHome);
   const homeAvailable =
-    useHomeStore((s) => s.membershipReady) ||
-    (!supabase && runtimePolicy.allowUnauthenticatedDemo);
+    (useHomeStore((s) => s.membershipReady) ||
+    (!supabase && runtimePolicy.allowUnauthenticatedDemo)) && !authTaskBlockingHome;
   useEffect(() => {
     let stop: (() => void) | undefined;
     let scope = "";
@@ -58,7 +59,7 @@ function App() {
       const state = useHomeStore.getState();
       const demo = !supabase && runtimePolicy.allowUnauthenticatedDemo;
       const allowed =
-        currentAppState === "active" && (demo || state.membershipReady)
+        currentAppState === "active" && !state.authTaskBlockingHome && (demo || state.membershipReady)
         && hasCurrentMembershipAccess(state.household.find((member) => member.id === state.activeMemberId));
       const nextScope = allowed
         ? JSON.stringify([
@@ -104,9 +105,9 @@ function App() {
       };
     };
     const refresh = async () => {
-      const { authenticatedUserId: userId, sessionEpoch } =
+      const { authenticatedUserId: userId, sessionEpoch, authTaskBlockingHome } =
         useHomeStore.getState();
-      if (!supabase || !userId || currentAppState !== "active") return;
+      if (!supabase || !userId || authTaskBlockingHome || currentAppState !== "active") return;
       const version = ++refreshVersion;
       const read = captureMembershipRead();
       try {

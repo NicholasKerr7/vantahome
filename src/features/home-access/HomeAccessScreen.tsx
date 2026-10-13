@@ -16,6 +16,7 @@ type Props = {
   email?: string;
   onComplete: () => void;
   onContinue?: () => void;
+  onOpenSecurity?: () => void;
 };
 
 type InvitationCardProps = {
@@ -72,7 +73,7 @@ function AccessFeedback({ access, disabled }: { access: Pick<ReturnType<typeof u
 }
 
 /** Offer verified invitations and deliberate owner setup before any household controls mount. */
-export default function HomeAccessScreen({ userId, email, onComplete, onContinue }: Props) {
+export default function HomeAccessScreen({ userId, email, onComplete, onContinue, onOpenSecurity }: Props) {
   const access = useHomeAccess({ userId, onComplete });
   const { height } = useWindowDimensions();
   const compact = height < 800;
@@ -185,9 +186,14 @@ export default function HomeAccessScreen({ userId, email, onComplete, onContinue
               {onContinue && <Pressable style={styles.primary} disabled={mutationDisabled} onPress={onContinue}>
                 <Text style={styles.primaryText}>Return to my home</Text>
               </Pressable>}
-              <Pressable style={styles.signOut} disabled={access.busy === 'signout'} onPress={() => { void access.signOut(); }}>
-                <Text style={styles.footerText}>{access.busy === 'signout' ? 'Signing out…' : 'Sign out'}</Text>
-              </Pressable>
+              <View style={styles.accountActions}>
+                {onOpenSecurity && <Pressable style={styles.signOut} disabled={Boolean(access.busy)} onPress={onOpenSecurity}>
+                  <Text style={styles.secondaryText}>Security & sessions</Text>
+                </Pressable>}
+                <Pressable style={styles.signOut} disabled={access.busy === 'signout'} onPress={() => { void access.signOut(); }}>
+                  <Text style={styles.footerText}>{access.busy === 'signout' ? 'Signing out…' : 'Sign out'}</Text>
+                </Pressable>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -234,6 +240,7 @@ const styles = StyleSheet.create({
   input: { minHeight: 50, color: theme.colors.text, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 15, paddingHorizontal: 15, fontSize: 15 },
   setup: { minHeight: 68, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   signOut: { minHeight: 44, alignSelf: 'center', paddingHorizontal: 24, justifyContent: 'center' },
+  accountActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' },
   footerText: { color: theme.colors.subtext, fontSize: 13 },
   back: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   // Keep ordinary small-phone onboarding within the safe viewport; the ScrollView remains an accessibility and keyboard fallback.

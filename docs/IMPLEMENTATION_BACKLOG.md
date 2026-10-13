@@ -9,9 +9,18 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Account recovery and independent security access | Complete in Preview 61 source | Security remains reachable without a home; reviewed verified-email recovery; persistent credential completion; captured-token password mutation; home authority/runtime gate. See handoff for native installation and remaining physical/email checks. |
 | Sent invitations | Complete in Preview 60 source/staging | Authorized household list, explicit pending/expired state, scoped cancellation, accept/reissue races, no implied account deletion or membership removal. See current handoff for native installation status. |
 | Account sessions | Complete in Preview 60 source/staging | Private current-account inventory, deliberate other-session sign-out, exact token binding, truthful acknowledgement and token-expiry limits, native/web recovery. Physical interaction review remains separate. |
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
+
+## Most recent adjacent findings
+
+The Preview 61 review closed recovery continuity after restart, mutable-session
+password targeting, stale sign-out callbacks, overlapping credential tasks and
+rapid background/resume session loading. Home admission now waits for all current
+credential tasks and fresh membership; a cached or stale response cannot reopen it.
+See the handoff for evidence and boundaries. No new schema or production changes.
 
 ## Next implementation priorities
 
@@ -20,6 +29,14 @@ simulation-only staging scope. Recheck volatile external state before changing i
    Establish recent server-verified authentication for high-impact operations;
    sensitive-action local biometrics already exist and must not be confused with
    whole-app locking or server authorization.
+   Dependencies confirmed in the current source: email changes require a dedicated
+   account-bound PKCE intent and hosted dual-mailbox confirmation checks; refresh
+   JWT email claims and invitation lists only after confirmation. Deleting an Auth
+   owner currently cascades through `homes.owner_id` (`001_init.sql`), so ownership
+   transfer and data-dependency review must precede any account-deletion endpoint.
+   Whole-app locking needs one native gate for UI, runtimes and commands plus
+   enrollment/storage recovery and real biometric tests; a visual overlay alone
+   is insufficient. Do not reuse simulation-skipped action confirmation as a lock.
 2. **Session revocation enforcement:** assess session-aware checks throughout the
    database/API authorization paths before promising immediate revocation.
    Supabase sign-out prevents future refresh; existing JWT access can last until
@@ -56,9 +73,6 @@ simulation-only staging scope. Recheck volatile external state before changing i
   and maintenance. Never infer offline from a powered-off device or invent history.
 - **Richer Routines:** open-for-duration and conditional branches in the canonical
   editor/executor, with restart/DST policy decided before durable hub execution.
-- **Security access without a home:** make session controls reachable during
-  expired/removed membership without exposing home data. Current account menu and
-  Profile routes sit behind the home gate; local sign-out remains available there.
 
 ## Discovery discipline
 

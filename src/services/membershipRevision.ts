@@ -15,6 +15,7 @@ export function captureMembershipRead() {
   return {
     revision, pendingMutations: pendingScopes.get(scopeKey()) ?? 0,
     userId: state.authenticatedUserId, sessionEpoch: state.sessionEpoch,
+    authTaskVersion: state.authTaskVersion,
     homeId: state.activeHomeId, accountHomeId: state.accountHomeId,
     // Presence, names and portraits do not change authority or invalidate a read.
     policy: JSON.stringify([
@@ -33,6 +34,7 @@ export function isMembershipReadCurrent(read: MembershipRead): boolean {
   return read.pendingMutations === 0 && current.pendingMutations === 0
     && read.revision === current.revision && read.userId === current.userId
     && read.sessionEpoch === current.sessionEpoch && read.homeId === current.homeId
+    && read.authTaskVersion === current.authTaskVersion
     && read.accountHomeId === current.accountHomeId && read.policy === current.policy;
 }
 
