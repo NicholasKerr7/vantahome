@@ -23,7 +23,7 @@ function validateModelRoomBinding(scope: HomeState, roomId: string, modelRoomId:
     || bindings.some((binding) => {
       const actual = scope.devices.find((device) => device.id === binding.deviceId && device.roomId === roomId);
       const model = getDevice(binding.modelDeviceId);
-      return !actual || !model || model.kind !== actual.kind || model.roomId !== modelRoomId;
+      return !actual || actual.modelPlacement || !model || model.templateDeviceId || model.kind !== actual.kind || model.roomId !== modelRoomId;
     })) throw new Error('Each device must match one device in the selected 3D room.');
 }
 

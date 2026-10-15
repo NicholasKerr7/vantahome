@@ -1,4 +1,4 @@
-import { DEVICES, ROOMS, getDevice } from './data';
+import { DEVICES, ROOMS, getDevice, type DeviceDefinition } from './data';
 
 /** A host-issued view and control scope; it never contains account identifiers. */
 export interface SceneAccess {
@@ -17,7 +17,7 @@ export const FULL_SCENE_ACCESS: SceneAccess = {
 };
 
 /** Validate every grant, including device-to-room membership and control-to-view containment. */
-export function parseSceneAccess(value: unknown): SceneAccess | null {
+export function parseSceneAccess(value: unknown, devices: readonly DeviceDefinition[] = DEVICES): SceneAccess | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const candidate = value as Record<string, unknown>;
   const fields = ['fullHome', 'propertyOverview', 'interiorLayout', 'roomIds', 'deviceIds', 'controllableDeviceIds'];
@@ -29,7 +29,7 @@ export function parseSceneAccess(value: unknown): SceneAccess | null {
   const rooms = new Set(candidate.roomIds);
   if (candidate.roomIds.some((id) => !ROOMS.some((room) => room.id === id))) return null;
   if (candidate.fullHome && ROOMS.some((room) => !rooms.has(room.id))) return null;
-  if (candidate.deviceIds.some((id) => { const device = getDevice(id); return !device || !rooms.has(device.roomId); })) return null;
+  if (candidate.deviceIds.some((id) => { const device = devices.find((entry) => entry.id === id); return !device || !rooms.has(device.roomId); })) return null;
   if (candidate.controllableDeviceIds.some((id) => !(candidate.deviceIds as string[]).includes(id))) return null;
   return { fullHome: candidate.fullHome,
     ...(typeof candidate.propertyOverview === 'boolean' ? { propertyOverview: candidate.propertyOverview } : {}),

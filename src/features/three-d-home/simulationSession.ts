@@ -15,6 +15,10 @@ import { parseSceneCatalogRequest, SCENE_CATALOG_CHANNEL, type SceneCatalogMessa
 import { canShareModelScenes, modelSceneCatalog } from './modelSceneCatalog';
 import { modelSimulationIdentity, modelSimulationScope, resolveModelSceneAccess, scopeSimulationSnapshot } from './modelSceneAccess';
 import { EMPTY_SCENE_ACCESS } from '../../../packages/home-scene/src/sceneAccess';
+import { getRuntimePlacements } from '../../../packages/home-scene/src/devicePlacement';
+import { reconcileSimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
+import { synchronizeRuntimeDeviceCatalog } from './runtimeDeviceCatalog';
+import { AUTHORED_DEVICES } from '../../../packages/home-scene/src/data';
 
 type HomeStore = Pick<StoreApi<HomeState>, 'getState' | 'setState' | 'subscribe'>;
 type SessionOptions = { store?: HomeStore; persistence?: SimulationPersistence; mode?: RuntimeMode; onSceneCatalog?: (message: SceneCatalogMessage) => void };
@@ -60,6 +64,7 @@ export class SimulationSession {
     this.mode = options.mode ?? runtimePolicy.mode;
     this.deliverCatalog = options.onSceneCatalog;
     const home = this.store.getState();
+    synchronizeRuntimeDeviceCatalog(home);
     this.identity = modelSimulationIdentity(home);
     this.sharedDemo = canShareDemoDevices(home, this.mode);
     // Account identifiers stay in the host's local storage key and never cross the frame boundary.
@@ -74,6 +79,7 @@ export class SimulationSession {
       if (restoring && this.catalogRequested) this.sendSceneCatalog();
     });
     this.unsubscribeStore = this.store.subscribe((state, previous) => {
+      synchronizeRuntimeDeviceCatalog(state);
       if (modelSimulationIdentity(state) !== this.identity) {
         // Preserve an interruption within the previous verified scope before teardown.
         this.pauseAuthorizedSafety(previous);
@@ -86,12 +92,17 @@ export class SimulationSession {
         || state.devices.some((device, index) => {
           const before = previous.devices[index];
           return device.id !== before?.id || device.kind !== before?.kind || device.roomId !== before?.roomId
-            || device.modelDeviceId !== before?.modelDeviceId || device.simulationOnly !== before?.simulationOnly;
+            || device.modelDeviceId !== before?.modelDeviceId || device.simulationOnly !== before?.simulationOnly
+            || device.name !== before?.name || JSON.stringify(device.modelPlacement) !== JSON.stringify(before?.modelPlacement);
         }));
       const accessChanged = state.roomMembers !== previous.roomMembers || state.memberPermissionOverrides !== previous.memberPermissionOverrides
         || state.household !== previous.household || state.rooms !== previous.rooms || state.membershipReady !== previous.membershipReady
         || registryChanged;
       if (accessChanged) {
+        if (this.state && state.membershipReady) {
+          const reconciled = reconcileSimulationSnapshot(this.state);
+          if (reconciled !== this.state) { this.state = reconciled; this.persistence.save(this.scope, reconciled); }
+        }
         if (!resolveModelSceneAccess(state, this.mode).controllableDeviceIds.includes(GATE_DEVICE_ID)) this.pauseAuthorizedSafety(previous);
         this.scheduleExpiry();
         if (this.requested) this.sendSnapshot();
@@ -125,7 +136,8 @@ export class SimulationSession {
 
   /** Install a validated baseline once, including recovery initiated by another open surface. */
   private restoreState(saved: SimulationSnapshot): void {
-    this.state = this.sharedDemo ? overlayDemoDevices(saved, this.store.getState().devices) : saved;
+    const reconciled = reconcileSimulationSnapshot(saved);
+    this.state = this.sharedDemo ? overlayDemoDevices(reconciled, this.store.getState().devices) : reconciled;
     if (this.sharedDemo) {
       // Persisted simulation alarms are authoritative; default host flags must not erase them.
       const current = this.store.getState().devices;
@@ -266,8 +278,10 @@ export class SimulationSession {
     if (!this.state || this.disposed) return;
     try {
       const home = this.store.getState();
+      if (modelSimulationIdentity(home) !== this.identity) { this.revokeAccess(); return; }
+      synchronizeRuntimeDeviceCatalog(home);
       const access = modelSimulationIdentity(home) === this.identity ? resolveModelSceneAccess(home, this.mode) : EMPTY_SCENE_ACCESS;
-      this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: scopeSimulationSnapshot(this.state, access), access,
+      this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: scopeSimulationSnapshot(this.state, access), access, placements: getRuntimePlacements(),
         ...(acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId }) });
     } catch {
       // A terminated WebView must not throw through a dashboard store update.
@@ -294,7 +308,7 @@ export class SimulationSession {
   private revokeAccess(): void {
     try {
       if (this.state && this.requested) this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot',
-        state: scopeSimulationSnapshot(this.state, EMPTY_SCENE_ACCESS), access: EMPTY_SCENE_ACCESS });
+        state: scopeSimulationSnapshot(this.state, EMPTY_SCENE_ACCESS, AUTHORED_DEVICES), access: EMPTY_SCENE_ACCESS, placements: [] });
       if (this.catalogRequested) this.deliverCatalog?.({ channel: SCENE_CATALOG_CHANNEL, version: 1, type: 'catalog',
         catalog: { scenes: [], activeSceneId: null } });
     }

@@ -1,0 +1,5 @@
+.device-placement-preview { flex: 1; min-height: 0; position: relative; overflow: hidden; border-radius: 22px; border: 1px solid #583c80; background: #100820; }
+.device-placement-preview iframe { width: 100%; height: 100%; position: absolute; inset: 0; border: 0; }
+.device-placement-preview-error { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #100820; color: #f8f2ff; }
+.device-placement-preview-error button { min-height: 44px; padding: 12px 20px; background: #462575; color: #fff; border: 1px solid #b46bff; border-radius: 12px; cursor: pointer; }
+.device-placement-preview-error button:focus-visible { outline: 2px solid #dfc4ff; outline-offset: 3px; }

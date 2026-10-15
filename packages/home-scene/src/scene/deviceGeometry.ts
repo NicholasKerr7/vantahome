@@ -1,4 +1,5 @@
 import source from '../device-geometry.json';
+import type { DeviceDefinition } from '../data';
 
 export type VectorTuple = [number, number, number];
 export type PartRole =
@@ -97,3 +98,18 @@ export function validateFixtureLibrary(value: unknown): FixtureLibrary {
   return value as unknown as FixtureLibrary;
 }
 export const FIXTURE_LIBRARY = validateFixtureLibrary(source);
+
+/** A placed TV needs its own shell because the original television body lives inside the house GLB. */
+const PLACED_TELEVISION: FixtureGeometry = {
+  parts: [
+    { name: 'television frame', shape: 'box', position: [0, 0.4725, -0.005], size: [1.275, 0.735, 0.05], rotation: [0, 0, 0], material: 'graphite', role: 'static' },
+    { name: 'television stand', shape: 'box', position: [0, 0.07, -0.025], size: [0.055, 0.11, 0.08], rotation: [0, 0, 0], material: 'graphite', role: 'static' },
+    { name: 'television base', shape: 'box', position: [0, 0.01, -0.025], size: [0.42, 0.02, 0.22], rotation: [0, 0, 0], material: 'graphite', role: 'static' },
+  ],
+};
+
+/** Reuse curated local geometry while retaining authored fixtures' baked static shells. */
+export function getDeviceFixtureGeometry(device: DeviceDefinition): FixtureGeometry | undefined {
+  if (device.templateDeviceId === 'family-tv') return PLACED_TELEVISION;
+  return FIXTURE_LIBRARY.devices[device.templateDeviceId ?? device.id];
+}

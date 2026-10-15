@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { createDefaultDevicePlacement } from '../../../packages/home-scene/src/devicePlacement';
 import { DEVICES, ROOMS } from '../../../packages/home-scene/src/data';
 import { useHomeStore } from '../../store/useHomeStore';
 import { saveModelRoomBinding } from '../../services/modelRoomBinding';
@@ -65,4 +66,20 @@ test('revoked administrators and changed identities cannot retain the connection
   act(() => { useHomeStore.setState({ household: [{ id: 'person', role: 'Tenant', name: 'Person', status: 'home' }] }); });
   expect(screen.queryByLabelText('Match devices')).toBeNull();
   expect(save).not.toHaveBeenCalled();
+});
+
+
+test('keeps added-device placement separate and prevents rebinding its room through authored fixture setup', async () => {
+  const legacy = { ...useHomeStore.getState().devices[0], modelDeviceId: target.id };
+  useHomeStore.setState({ devices: [legacy, { id: 'placed-lamp', name: 'Added reading lamp', roomId: 'cloud-room', kind: 'light', isOn: false,
+    simulationOnly: true, modelPlacement: createDefaultDevicePlacement('master-bedside-left', targetRoom.id)! }] });
+  const screen = render(<ModelRoomConnection roomId="cloud-room" onClose={jest.fn()} />);
+  expect(screen.queryByRole('radio', { name: 'Not connected' })).toBeNull();
+  expect(screen.getAllByRole('radio')).toHaveLength(1);
+  expect(screen.getByText('Added devices keep this room connection fixed. Remove them before changing the room connection.')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Match devices'));
+  expect(screen.getByText('Bedside lamp')).toBeTruthy();
+  expect(screen.queryByText('Added reading lamp')).toBeNull();
+  fireEvent.press(screen.getByLabelText('Save connection'));
+  await waitFor(() => expect(save).toHaveBeenCalledWith('cloud-room', targetRoom.id, [{ deviceId: legacy.id, modelDeviceId: target.id }]));
 });

@@ -118,6 +118,28 @@ device library, and feature routes remain available. This public build setting
 contains no credentials. The house has loading, retry, save-error, and session
 reconnection feedback; it is no longer an optional dashboard destination.
 
+## Adding simulation devices
+
+Verified Owners/Admins can open **Devices → Add**, choose a connected model room,
+select a supported fixture, position it in the furnished 3D preview, then review
+and save. Eight templates are supported initially: ceiling light, table lamp,
+ceiling fan, wall AC, wall speaker, grounds path light, air sensor and standalone
+TV. Up to 32 custom fixtures can supplement the 92 authored devices. Bounds and
+mounting rules are enforced; users still check furniture clearance visually.
+
+Staging migration `025_simulation_device_registration.sql` saves the device and
+its `model_placement` atomically. A private request receipt and client recovery
+journal make retries idempotent, including after restart. Membership refresh is
+authoritative for the runtime catalog; cached poses cannot grant access. Existing
+room grants apply to controls. Removal from full controls deletes the server row
+before the UI confirms it. Authored model-slot bindings remain separate.
+
+The placement editor uses the bundled scene at `#placement` with a bounded
+geometry-only protocol. It never pairs hardware or creates physical telemetry.
+Control state remains the existing local simulation; registry persistence does
+not imply shared household control-state synchronization. Editing a saved pose,
+renaming/moving saved custom fixtures and arbitrary model imports are future work.
+
 ## Editing the model
 
 The scene's React/Three.js source lives in `packages/home-scene/src`. Its five

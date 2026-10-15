@@ -18,6 +18,8 @@ export interface DeviceDefinition {
   hotspot: [number, number, number]; position: [number, number, number]; rotation: [number, number, number]; dimensions: [number, number, number];
   mount: 'floor' | 'wall' | 'ceiling' | 'surface'; model: string;
   defaultOn: boolean; defaultLevel: number; sourceKind?: string;
+  /** A curated source fixture for an owner-placed simulation device. Never a remote asset URL. */
+  templateDeviceId?: string;
 }
 
 /** Validate catalog shape once so missing room links or invalid placements fail clearly. */
@@ -38,9 +40,18 @@ export function validateHouseManifest(value: unknown): { rooms: RoomDefinition[]
 }
 const validated = validateHouseManifest(manifest);
 export const ROOMS: readonly RoomDefinition[] = validated.rooms;
-export const DEVICES: readonly DeviceDefinition[] = validated.devices;
+export const AUTHORED_DEVICES: readonly DeviceDefinition[] = validated.devices;
+const activeDevices: DeviceDefinition[] = [...AUTHORED_DEVICES];
+export const DEVICES: readonly DeviceDefinition[] = activeDevices;
 const roomById = new Map(ROOMS.map((room) => [room.id, room]));
 const deviceById = new Map(DEVICES.map((device) => [device.id, device]));
+
+/** Install definitions already validated by devicePlacement, preserving the shared catalog reference. */
+export function installRuntimeDeviceDefinitions(definitions: readonly DeviceDefinition[]): void {
+  activeDevices.splice(0, activeDevices.length, ...AUTHORED_DEVICES, ...definitions);
+  deviceById.clear();
+  for (const device of activeDevices) deviceById.set(device.id, device);
+}
 
 export const PRESETS: readonly { id: PresetId; name: string; description: string }[] = [
   { id: 'morning', name: 'Morning', description: 'Open up to the day' },

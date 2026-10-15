@@ -89,6 +89,11 @@ const WINDOW_LOTTIE_SOURCE = require("../../assets/animations/window-screen.json
 
 type Props = NativeStackScreenProps<RootStackParamList, "DeviceDetail">;
 
+/** Server-owned placements cannot use legacy metadata commands or local-only deletion. */
+function hasPersistedDevicePlacement(device: Device | undefined): boolean {
+  return Boolean(device?.modelPlacement || device?.modelDeviceId?.startsWith('placed-'));
+}
+
 function hexToRgb(hex: string) {
   const cleaned = hex.trim().replace("#", "");
   if (cleaned.length !== 3 && cleaned.length !== 6) return null;
@@ -925,6 +930,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
   );
   const hasModelCatalog = useHomeStore(isModelHome);
   const isModelCamera = hasModelCatalog && device?.kind === "camera" && getModelDevice(device.id)?.kind === "camera";
+  const isPlacedDevice = hasPersistedDevicePlacement(device);
   const removeDevice = useHomeStore((s) => s.removeDevice);
   const household = useHomeStore((s) => s.household);
   const activeHouseholdMember =
@@ -1821,6 +1827,9 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     Array<SprinklerSchedule["days"][number]>
   >(["Mon", "Wed", "Fri"]);
   const handleEditSave = () => {
+    // An editor opened earlier must not bypass a later authoritative registration.
+    const current = useHomeStore.getState().devices.find((candidate) => candidate.id === device.id);
+    if (!current || hasPersistedDevicePlacement(current)) return;
     if (!draftName.trim() || !canStackSave) return;
     const basePatch: Partial<Device> = {
       name: draftName.trim(),
@@ -1932,6 +1941,8 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
     setShowEdit(false);
   };
   const handleEditDelete = () => {
+    const current = useHomeStore.getState().devices.find((candidate) => candidate.id === device.id);
+    if (!current || hasPersistedDevicePlacement(current)) return;
     removeDevice(device.id);
     setShowEdit(false);
     navigation.goBack();
@@ -8400,7 +8411,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
                 <Text accessibilityRole="header" style={headerTitleStyle} numberOfLines={1}>{device.name}</Text>
               </View>
 
-              {!isModelCamera && <Pressable
+              {!isModelCamera && !isPlacedDevice && <Pressable
                 accessibilityLabel={`Edit ${device.name}`}
                 style={headerBtnStyle}
                 hitSlop={10}
@@ -9086,7 +9097,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
       </SafeAreaView>
 
       <DeviceEditModal
-        visible={showEdit && !isModelCamera}
+        visible={showEdit && !isModelCamera && !isPlacedDevice}
         onClose={() => setShowEdit(false)}
         cardStyle={editCardStyle}
         titleStyle={editTitleTextStyle}
@@ -9122,7 +9133,7 @@ export default function DeviceDetailScreen({ route, navigation }: Props) {
         primaryTextStyle={editPrimaryTextStyle}
         deleteButtonStyle={editDeleteButtonStyle}
         deleteTextStyle={editDeleteTextStyle}
-        canSave={draftName.trim().length > 0 && canStackSave}
+        canSave={!isPlacedDevice && draftName.trim().length > 0 && canStackSave}
         onSave={handleEditSave}
         onDelete={handleEditDelete}
       />

@@ -1,5 +1,6 @@
 import siteLayout from '../site-layout.json';
 import solarCorners from '../solar-corners.json';
+import { HOUSE_SCENE_BOUNDS as HOUSE_BOUNDS } from '../houseBounds';
 
 export type SitePoint3 = [number, number, number];
 
@@ -10,7 +11,6 @@ export interface LandscapeCameraPose {
 
 const FRAME_PADDING = 1.12;
 const DEFAULT_FOV = 42;
-const HOUSE_BOUNDS = { min: [-0.7, -0.25, -16.9], max: [17.3, 7.9, 0.7] } as const;
 
 /** Keep exterior-only orbiting cameras outside every corner of the furnished house. */
 export function getExteriorPrivacyDistance(target: SitePoint3): number {

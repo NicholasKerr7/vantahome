@@ -30,7 +30,8 @@ defects from ideas or untested risks.
 - Device hotspots: quick controls on mobile, full controls available; tablet
   avoids duplicating the adjacent inspector's quick toggle.
 - Simulation first. No hub purchased or connected; NUC 15 is the user's intended
-  hub direction. The 20-space/92-device authenticated model is simulation-only.
+  hub direction. The 20-space/92-authored-device model and up to 32 household-added
+  fixtures are simulation-only.
 - Individual accounts and household invitations. Owner/Admin/Member have whole
   home role scope; Guest/Tenant live information and controls follow room grants.
 - Property overview is separate from permissions: current invitees see the
@@ -44,6 +45,74 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Durable Add device and 3D placement — October 15 / Preview 65
+
+- **Devices → Add** now opens Room → Device → Place → Review for verified
+  Owners/Admins. Eight curated templates: ceiling light, table lamp, ceiling fan,
+  wall AC, wall speaker, outdoor path light, air sensor and TV with its own stand.
+  The furnished room preview supports tap placement, orbit/pinch, rotation and
+  height adjustments where appropriate, plus keyboard/screen-reader buttons.
+  Wall/ceiling mounting and room bounds are validated; fixture proximity is a
+  warning. This is not automatic furniture-collision detection or physical pairing.
+- Added devices are real household registry rows with `simulation_only=true` and
+  versioned `model_placement`. Staging migration **025** atomically saves the row,
+  room, pose and permanent retry receipt. Only a confirmed current Owner/Admin can
+  register/remove, including direct table operations. Maximum 32 additions/home.
+  Receipt reuse cannot duplicate or resurrect a deleted device. Production unchanged.
+- Additive staging migration **026** rejects outdoor path lights overlapping the
+  conservative house envelope, including their rotated footprint and clearance.
+  The editor uses the same shared bounds and shows the house exterior. A live
+  preflight found zero existing placed devices, so no saved pose needed repair.
+- An account/home-scoped local journal precedes the request. Uncertain saves resume
+  the same request after restart; success waits for the authoritative membership
+  refresh. Membership owns the render catalog. Cached simulation state cannot
+  grant a device or restore a deleted/revoked fixture. Old-account async disk work
+  and teardown snapshots cannot import a new account's catalog.
+- Runtime geometry shares existing hotspots, controls, effects and bounded light
+  budgets. Guest/Tenant access follows room grants. Layout sharing never grants
+  readings or controls. Added-device removal is confirmed and server-backed;
+  authored fixture-slot linking excludes custom fixtures, and room rebinding cannot
+  strand them. Device control state remains local simulation state; this does not
+  deliver shared household control-state sync.
+- The placement document is an isolated, demand-rendered editor using bundled
+  geometry, bounded typed messages and no device commands, credentials or storage.
+  Tablet/phone layouts retain reduced motion and fixed-page navigation. No new
+  dependency, generated model download or real-device transport was introduced.
+  Loading waits for the model's first rendered frame, with a 15-second recovery
+  deadline. Compact inner controls remain 44 pixels; the isolated document permits
+  widths below the full dashboard minimum. Outdoor picking uses the actual land
+  mesh, avoiding a coplanar fallback plane that caused jagged lawn artifacts.
+
+Verification: **3,491 app tests / 238 suites**, **1,116 scene tests / 95 suites**,
+and **761 PostgreSQL assertions / 16 suites** passed. SQL includes direct-write
+authority, retries, deletion, room binding, all fixture poses and parent-home
+cleanup. Real WebGL checks covered five mounting/template cases and tablet layout;
+a runtime-added lamp rendered a hotspot and accepted its simulated power control,
+with no browser errors. Browser probes use fixture accounts/mock service responses,
+not a live Owner's authenticated session. Staging deployment receipt:
+`work/device-placement-staging-deployment.json`; migration025 privileges and guards
+verified live; the additive026 receipt is
+`work/device-placement-staging-grounds-deployment.json`. Detailed evidence uses `work/device-placement-*` and
+`work/device-registration-*`. Native packaging/install status follows below.
+
+Additional focused tests cover the legacy metadata guard, model-room binding,
+outdoor clearance parity and preview readiness. The full wizard had **35 browser
+step captures** across phone, tablet portrait/landscape, 320×568 and enlarged text,
+with no overflow or page errors. The final inner-editor sweep covers **286×284**
+through tablet sizes, confirming reachable 44×44 controls. UI evidence:
+`work/add-device-wizard-*.json` and `work/add-device-placement-final.json`.
+
+**Preview 65 installed and launched** on the connected iPhone; installed-app
+inventory confirms **1.0.0 (65)**. Strict signature, device provisioning, staging
+endpoint, preview identity/schemes, arrival media and current packaged scene hash
+passed. Production metadata was restored; release version/assets/auth redirects,
+secret/history scan and diff checks passed. Scene: **31,938,951 bytes**, SHA256
+`24714c26fd5741195701b0c394b7828c0bd0ec50cbacd6ab70238ff572d7f859`.
+Provisioning expires **2026-10-19 05:19:39 UTC**. Task-owned servers 5187 and 8088
+were stopped and the temporary UI probe removed. Other user servers and production
+remain unchanged. Physical Owner add/place/toggle/restart verification has been
+requested; installation and browser probes are not physical interaction signoff.
 
 ## Smooth manual gate closing — October 15 / Preview 64
 

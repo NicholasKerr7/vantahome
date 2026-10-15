@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Modal, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
-import { DEVICES, ROOMS } from '../../../packages/home-scene/src/data';
+import { AUTHORED_DEVICES as DEVICES, ROOMS } from '../../../packages/home-scene/src/data';
 import { DeepAction, DeepPager, DeepScreen } from '../../components/deep/DeepScreen';
 import Pressable from '../../components/Pressable';
 import { saveModelRoomBinding } from '../../services/modelRoomBinding';
@@ -35,7 +35,8 @@ function ConnectionChoices({ choices, selected, onSelect, label }: { choices: re
 /** Explicitly connect a cloud room and same-kind devices to authored model positions. */
 export default function ModelRoomConnection({ roomId, onClose }: Props) {
   const room = useHomeStore((state) => state.rooms.find((candidate) => candidate.id === roomId));
-  const devices = useHomeStore(useShallow((state) => state.devices.filter((device) => device.roomId === roomId)));
+  const devices = useHomeStore(useShallow((state) => state.devices.filter((device) => device.roomId === roomId && !device.modelPlacement)));
+  const hasPlacedDevices = useHomeStore((state) => state.devices.some((device) => device.roomId === roomId && Boolean(device.modelPlacement)));
   const roomConnections = useHomeStore(useShallow((state) => state.rooms.filter((candidate) => candidate.id !== roomId && candidate.modelRoomId).map((candidate) => candidate.modelRoomId)));
   const allowed = useHomeStore((state) => selectHomeNavigationAccess(state).admin && Boolean(state.authenticatedUserId));
   const scope = useHomeStore(homeEditorScope);
@@ -52,7 +53,8 @@ export default function ModelRoomConnection({ roomId, onClose }: Props) {
   const pending = useRef(false);
   const currentDevice = devices[Math.min(devicePage, Math.max(0, devices.length - 1))];
   const selectedModelRoom = ROOMS.find((candidate) => candidate.id === modelRoomId);
-  const roomChoices: Choice[] = [{ id: '', name: 'Not connected', detail: 'Keep this room out of the 3D model' }, ...ROOMS
+  const roomChoices: Choice[] = [...(hasPlacedDevices ? [] : [{ id: '', name: 'Not connected', detail: 'Keep this room out of the 3D model' }]), ...ROOMS
+    .filter((candidate) => !hasPlacedDevices || candidate.id === room?.modelRoomId)
     .filter((candidate) => !roomConnections.includes(candidate.id))
     .map((candidate) => ({ id: candidate.id, name: candidate.name, detail: candidate.outdoor ? 'Outside' : candidate.floor === 'upper' ? 'Upper floor' : 'Ground floor' }))];
   const deviceChoices: Choice[] = [{ id: '', name: 'No model device', detail: 'Keep this device in its room collection' }, ...DEVICES
@@ -107,7 +109,7 @@ export default function ModelRoomConnection({ roomId, onClose }: Props) {
             ? <DeepAction label="Match devices" primary disabled={saving} onPress={() => { setDevicePage(0); setStep('devices'); }} />
             : <DeepAction label={saving ? 'Saving…' : 'Save connection'} primary disabled={saving} onPress={() => { void saveConnections(); }} />}
         </View>
-        <Text style={styles.note}>Room access follows these connections. Your 3D device controls remain a simulation.</Text>
+        <Text style={styles.note}>{hasPlacedDevices ? 'Added devices keep this room connection fixed. Remove them before changing the room connection.' : 'Room access follows these connections. Your 3D device controls remain a simulation.'}</Text>
       </View>
     </DeepScreen>
   </Modal>;

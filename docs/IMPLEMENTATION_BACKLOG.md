@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Durable Add device and 3D placement | Complete in Preview 65 source/staging | Eight supported templates, furnished placement editor, authoritative registration/removal, restart-safe retry receipts, scoped runtime catalog. See handoff for native install and physical verification. |
 | Smooth gate closing | Complete in Preview 64 source | Steady travel between one-second simulation samples; pause/interlock guards and covered-view synchronization. Native install status is in the handoff. |
 | Official geography and directional weather | Complete in Preview 63 source | NLA frontage calibration, Owner-confirmed property weather pin, shared true-bearing wind/rain/plants, stable orbit compass. See handoff for map limits and install status. |
 | Property compass, road markings and triangle cleanup | Complete in Preview 62 source | Original plan calibration superseded by Preview 63; unchanged property/camera placement; bounded compass, one road-paint mesh, 96 defective triangles removed. See handoff for installation and survey limits. |
@@ -18,6 +19,15 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+The Preview 65 Add-device work replaces the previous local-only add path. Tests
+cover uncertain saves, double submission, restart, stale account callbacks,
+direct-table authority, revoked membership, removal and room binding. Standalone
+TV geometry and its SQL footprint now agree. Initial placement is supported;
+server-backed rename/reposition/move, additional fixture templates and exact
+furniture collision checks remain follow-up opportunities. Household registry
+placement persistence is delivered; shared simulation control-state sync remains
+deferred. See the handoff for verified evidence, not a claim of exhaustive review.
 
 The Preview 61 review closed recovery continuity after restart, mutable-session
 password targeting, stale sign-out callbacks, overlapping credential tasks and

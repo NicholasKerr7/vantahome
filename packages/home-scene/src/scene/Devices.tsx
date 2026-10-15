@@ -15,6 +15,7 @@ import { Hotspot } from './Hotspot';
 import { DeviceEffects } from './DeviceEffects';
 import {
   FIXTURE_LIBRARY,
+  getDeviceFixtureGeometry,
   type FixtureGeometry,
   type FixturePart,
   type VectorTuple,
@@ -276,7 +277,7 @@ function MovingAssembly({
   return (
     <group ref={root}>
       {parts
-        .filter((part) => part.role === 'glow' || part.role === 'display')
+        .filter((part) => part.role === 'static' || part.role === 'glow' || part.role === 'display')
         .map((part) => partMesh(part))}
       <group ref={rotor} position={pivot}>
         {groups.rotor.map((part) => partMesh(part, pivot))}
@@ -317,7 +318,7 @@ function MovingAssembly({
 }
 
 /** Memoize fixture shells so one control update does not rebuild every device subtree. */
-const Fixture = memo(function Fixture({
+export const Fixture = memo(function Fixture({
   device,
   state,
   reducedMotion,
@@ -330,10 +331,10 @@ const Fixture = memo(function Fixture({
   onSelectDevice: (id: string) => void;
   canAnimate: RefObject<boolean>;
 }) {
-  const geometry = FIXTURE_LIBRARY.devices[device.id];
+  const geometry = getDeviceFixtureGeometry(device);
   const parts = useMemo(
-    () => geometry?.parts.filter((part) => part.role !== 'static') ?? [],
-    [geometry],
+    () => geometry?.parts.filter((part) => device.templateDeviceId || part.role !== 'static') ?? [],
+    [geometry, device.templateDeviceId],
   );
   return (
     <group
@@ -386,13 +387,15 @@ export function Devices({
     if (!canExploreInteriorLayout(access) && !full) return device.roomId === roomId;
     return full || (!room.outdoor && room.floor === floor);
   });
+  // Keep the three-light GPU budget while making the fixture being adjusted visibly light its surroundings.
   const practical = DEVICES.filter(
     (device) =>
       canViewSceneDevice(access, device.id) && device.roomId === roomId &&
       device.kind === 'light' &&
       device.model !== 'solar-streetlight' &&
       deviceStates[device.id]?.on,
-  ).slice(0, 3);
+  ).sort((left, right) => Number(right.id === selectedDevice) - Number(left.id === selectedDevice))
+    .slice(0, 3);
   return (
     <>
       {visible.map((device) => {

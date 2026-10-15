@@ -50,6 +50,7 @@ jest.mock('./supabaseClient', () => ({ supabase: {
 import { applyMembershipSnapshot, syncMembershipFromSupabase, type MembershipSyncResult } from './membership';
 import { hydrateHomeAccount, useHomeStore } from '../store/useHomeStore';
 import { beginMembershipMutation } from './membershipRevision';
+import { createDefaultDevicePlacement } from '../../packages/home-scene/src/devicePlacement';
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -101,6 +102,36 @@ test('a different authenticated identity cannot query the expected user’s hous
   mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'bob' } }, error: null });
   expect(await syncMembershipFromSupabase('alice')).toBeNull();
   expect(mockHomeReads).not.toHaveBeenCalled();
+});
+
+test('placed device identity and geometry survive fresh registry reads and overwrite stale local geometry', async () => {
+  const id = '12500000-0000-4000-8000-000000000001';
+  const placement = createDefaultDevicePlacement('master-bedside-left', 'living')!;
+  mockRegistryRows = {
+    rooms: [{ id: 'room-uuid', name: 'Living room', model_room_id: 'living' }],
+    devices: [{ id, room_id: 'room-uuid', name: 'My reading lamp', kind: 'light', model_device_id: `placed-${id}`,
+      simulation_only: true, model_placement: placement, device_state: null }],
+  };
+  const result = (await syncMembershipFromSupabase('alice'))!;
+  expect(result.devices[0]).toEqual(expect.objectContaining({ modelDeviceId: `placed-${id}`, modelPlacement: placement, simulationOnly: true }));
+  expect(applyMembershipSnapshot(result)).toBe(true);
+  useHomeStore.setState({ devices: [{ ...result.devices[0], modelPlacement: null, isOn: true, observedAt: Date.now() + 60_000 }] });
+  const reloaded = (await syncMembershipFromSupabase('alice'))!;
+  expect(applyMembershipSnapshot(reloaded)).toBe(true);
+  expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ modelPlacement: placement, simulationOnly: true, isOn: true }));
+});
+
+test.each([
+  { simulation_only: false }, { model_device_id: 'living-light' }, { kind: 'gate' },
+  { model_placement: { version: 1, templateId: 'unknown' } }, { room_id: 'missing-room' },
+])('invalid or mismatched placement cannot enter the scene registry: %j', async (patch) => {
+  const id = '12500000-0000-4000-8000-000000000001';
+  mockRegistryRows = {
+    rooms: [{ id: 'room-uuid', name: 'Living room', model_room_id: 'living' }],
+    devices: [{ id, room_id: 'room-uuid', name: 'My reading lamp', kind: 'light', model_device_id: `placed-${id}`,
+      simulation_only: true, model_placement: createDefaultDevicePlacement('master-bedside-left', 'living'), device_state: null, ...patch }],
+  };
+  expect((await syncMembershipFromSupabase('alice'))?.devices[0].modelPlacement).toBeNull();
 });
 
 test.each([true, false, undefined, null, 'true', 1])('maps layout sharing only from an explicit server boolean: %j', async (shared) => {

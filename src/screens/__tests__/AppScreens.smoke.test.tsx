@@ -382,6 +382,26 @@ describe("App screens smoke coverage", () => {
     renderScreen(<RoomScreen navigation={navigation} route={route} />);
   });
 
+  it.each([false, true])('exposes the durable Add device entry only to authenticated administrators (whole home: %s)', (showAll) => {
+    const initial = useHomeStore.getState();
+    useHomeStore.setState({ accountUserId: 'device-owner', authenticatedUserId: 'device-owner', accountHomeId: 'home', activeHomeId: 'home',
+      activeMemberId: 'device-owner', membershipReady: true, authTaskBlockingHome: false,
+      household: [{ id: 'device-owner', name: 'Owner', role: 'Owner', status: 'home' }],
+      realtime: { ...initial.realtime, enabled: false, useMqtt: false },
+    });
+    const navigation = { goBack: jest.fn(), navigate: jest.fn(), dispatch: jest.fn() } as never;
+    const route = { key: 'Room', name: 'Room', params: { roomId: initial.rooms[0]?.id, showAll } } as never;
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<RoomScreen navigation={navigation} route={route} />); });
+    try {
+      expect(tree.root.findAllByProps({ accessibilityLabel: 'Add a device' }).length).toBeGreaterThan(0);
+      act(() => { useHomeStore.setState({ household: [{ id: 'device-owner', name: 'Guest', role: 'Guest', status: 'home' }] }); });
+      expect(tree.root.findAllByProps({ accessibilityLabel: 'Add a device' })).toHaveLength(0);
+    } finally {
+      act(() => { tree.unmount(); useHomeStore.setState(initial); });
+    }
+  });
+
   it('keeps room devices reachable when the viewport shrinks and a final page becomes empty', () => {
     const roomId = seed.rooms[0]?.id ?? 'r1';
     const devices: Device[] = Array.from({ length: 7 }, (_, index) => ({

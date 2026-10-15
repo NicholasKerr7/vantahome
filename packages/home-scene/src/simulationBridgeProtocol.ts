@@ -1,6 +1,7 @@
 import { GATE_DEVICE_ID } from './gateSafetySimulation';
 import { restoreSafetySimulation, synchronizeSafetySimulation } from './safetySimulation';
-import { DEVICES, getDevice, isPositionDevice } from './data';
+import { AUTHORED_DEVICES, DEVICES, getDevice, isPositionDevice, type DeviceDefinition } from './data';
+import { buildRuntimeDeviceDefinitions, parseRuntimePlacedDevices, type RuntimePlacedDevice } from './devicePlacement';
 import { validateStoredSetting } from './deviceCapabilities';
 import { GAS_DEVICE_IDS, isGasDevice } from './gasSimulation';
 import type { DeviceState, DeviceStates, SettingValue } from './simulationTypes';
@@ -29,6 +30,8 @@ export interface SimulationSnapshotMessage extends SimulationEnvelope {
   state: SimulationSnapshot;
   /** Host-resolved visibility; persisted simulation state never grants access. */
   access?: SceneAccess;
+  /** Curated simulation fixtures only; never an asset URL, real binding or permission grant. */
+  placements?: RuntimePlacedDevice[];
 }
 
 /** Reject non-records, including arrays, before accessing nested bridge data. */
@@ -58,8 +61,8 @@ function isRequestId(value: unknown): value is number {
 }
 
 /** Validate one scene device without admitting telemetry, URLs, arbitrary fields or physical commands. */
-function readDeviceState(id: string, value: unknown): DeviceState | null {
-  const device = getDevice(id);
+function readDeviceState(id: string, value: unknown, devices: readonly DeviceDefinition[] = DEVICES): DeviceState | null {
+  const device = devices.find((entry) => entry.id === id);
   if (!device || !isRecord(value) || !hasKeys(value, ['on', 'level'], ['settings']) || typeof value.on !== 'boolean' || typeof value.level !== 'number' || !Number.isFinite(value.level) || value.level < 0 || value.level > 100) return null;
   if (isPositionDevice(device) && value.on !== (value.level > 0)) return null;
   if (isGasDevice(device.kind) && !value.on) return null;
@@ -78,14 +81,14 @@ function readDeviceState(id: string, value: unknown): DeviceState | null {
 }
 
 /** Validate a complete snapshot or a sparse transaction using the exact same catalog boundary. */
-function readChanges(value: unknown, complete: boolean): SimulationChanges | null {
+function readChanges(value: unknown, complete: boolean, devices: readonly DeviceDefinition[] = DEVICES): SimulationChanges | null {
   if (!isRecord(value) || !hasKeys(value, complete ? ['deviceStates', 'lightingMode', 'night', 'motionDisabled'] : [], ['deviceStates', 'lightingMode', 'night', 'motionDisabled'])) return null;
   const changes: SimulationChanges = {};
   if (Object.hasOwn(value, 'deviceStates')) {
-    if (!isRecord(value.deviceStates) || (complete && Object.keys(value.deviceStates).length !== DEVICES.length)) return null;
+    if (!isRecord(value.deviceStates) || (complete && Object.keys(value.deviceStates).length !== devices.length)) return null;
     changes.deviceStates = {};
     for (const [id, candidate] of Object.entries(value.deviceStates)) {
-      const state = readDeviceState(id, candidate);
+      const state = readDeviceState(id, candidate, devices);
       if (!state) return null;
       changes.deviceStates[id] = state;
     }
@@ -120,13 +123,17 @@ export function parseSimulationRequest(input: unknown): SimulationRequest | null
 /** Parse only complete host snapshots, preventing partial hydration or an arbitrary host payload. */
 export function parseSimulationSnapshotMessage(input: unknown): SimulationSnapshotMessage | null {
   const message = readEnvelope(input);
-  if (!message || message.type !== 'snapshot' || !hasKeys(message, ['channel', 'version', 'type', 'state'], ['acknowledgedRequestId', 'access'])) return null;
+  if (!message || message.type !== 'snapshot' || !hasKeys(message, ['channel', 'version', 'type', 'state'], ['acknowledgedRequestId', 'access', 'placements'])) return null;
   if (Object.hasOwn(message, 'acknowledgedRequestId') && !isRequestId(message.acknowledgedRequestId)) return null;
-  const state = readChanges(message.state, true) as SimulationSnapshot | null;
+  const placements = Object.hasOwn(message, 'placements') ? parseRuntimePlacedDevices(message.placements) : undefined;
+  if (placements === null) return null;
+  const devices = [...AUTHORED_DEVICES, ...buildRuntimeDeviceDefinitions(placements ?? [])];
+  const state = readChanges(message.state, true, devices) as SimulationSnapshot | null;
   if (!state) return null;
-  const access = Object.hasOwn(message, 'access') ? parseSceneAccess(message.access) : undefined;
+  const access = Object.hasOwn(message, 'access') ? parseSceneAccess(message.access, devices) : undefined;
   if (access === null) return null;
   return { channel: SIMULATION_CHANNEL, version: 1, type: 'snapshot', state,
+    ...(placements === undefined ? {} : { placements }),
     ...(access === undefined ? {} : { access }),
     ...(message.acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId: message.acknowledgedRequestId as number }) };
 }
@@ -139,7 +146,10 @@ export function parseStoredSimulationSnapshotMessage(input: unknown): Simulation
   if (!envelope || envelope.type !== 'snapshot' || !isRecord(envelope.state) || !isRecord(envelope.state.deviceStates)) return null;
   const previous = envelope.state.deviceStates;
   const addedIds: readonly string[] = Object.values(GAS_DEVICE_IDS);
-  const missing = DEVICES.filter((device) => !Object.hasOwn(previous, device.id));
+  const placements = Object.hasOwn(envelope, 'placements') ? parseRuntimePlacedDevices(envelope.placements) : [];
+  if (!placements) return null;
+  const catalog = [...AUTHORED_DEVICES, ...buildRuntimeDeviceDefinitions(placements)];
+  const missing = catalog.filter((device) => !Object.hasOwn(previous, device.id));
   if (!missing.length || missing.some((device) => !addedIds.includes(device.id))) return null;
   const defaults = createDefaultSimulationSnapshot().deviceStates;
   const deviceStates = { ...previous, ...Object.fromEntries(missing.map((device) => [device.id, defaults[device.id]])) };
@@ -153,6 +163,15 @@ export function createDefaultSimulationSnapshot(): SimulationSnapshot {
     deviceStates: Object.fromEntries(DEVICES.map((device) => [device.id, { on: isPositionDevice(device) ? device.defaultLevel > 0 : device.defaultOn, level: device.defaultLevel }])),
     lightingMode: 'auto', night: false, motionDisabled: false,
   };
+}
+
+/** Reconcile a validated saved state with today's active registry without resetting existing devices. */
+export function reconcileSimulationSnapshot(snapshot: SimulationSnapshot): SimulationSnapshot {
+  const defaults = createDefaultSimulationSnapshot();
+  const deviceStates = Object.fromEntries(DEVICES.map((device) => [device.id,
+    readDeviceState(device.id, snapshot.deviceStates[device.id]) ?? defaults.deviceStates[device.id],
+  ]));
+  return JSON.stringify(deviceStates) === JSON.stringify(snapshot.deviceStates) ? snapshot : { ...snapshot, deviceStates };
 }
 
 /** Merge a validated transaction while retaining every device and preference it did not mention. */

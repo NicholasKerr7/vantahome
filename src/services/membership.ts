@@ -10,6 +10,7 @@ import type {
 import { clearHomeAccountState, useHomeStore } from "../store/useHomeStore";
 import { applyDeviceStatePatch } from "../store/deviceState";
 import { parseDeviceStatePatch } from "./transportSchemas";
+import { getSimulationDeviceTemplate, parseSimulationDevicePlacement } from '../../packages/home-scene/src/devicePlacement';
 import {
   ACTION_PERMISSIONS,
   type ActionPermission,
@@ -40,6 +41,7 @@ type DeviceRow = {
   room_id: string | null;
   model_device_id?: string | null;
   simulation_only?: boolean;
+  model_placement?: unknown;
   device_state:
     | { state: unknown; updated_at: string }
     | Array<{ state: unknown; updated_at: string }>
@@ -157,7 +159,7 @@ export async function syncMembershipFromSupabase(
     roomsRequest,
     requireMembershipRead(client
       .from("devices")
-      .select("id, name, kind, room_id, model_device_id, simulation_only, device_state(state, updated_at)")
+      .select("id, name, kind, room_id, model_device_id, simulation_only, model_placement, device_state(state, updated_at)")
       .eq("home_id", membership.home_id)),
     // Failed overrides must never silently become the role's default permissions.
     requireMembershipRead(client
@@ -168,6 +170,12 @@ export async function syncMembershipFromSupabase(
   ]);
 
   const devices = ((devicesData ?? []) as unknown as DeviceRow[]).map((row) => {
+    const placement = parseSimulationDevicePlacement(row.model_placement);
+    const room = ((roomsData ?? []) as RoomRow[]).find((candidate) => candidate.id === row.room_id);
+    // Placement comes from the registry, never telemetry or a name-based room guess.
+    const modelPlacement = row.simulation_only === true && row.model_device_id === `placed-${row.id}`
+      && placement && placement.modelRoomId === room?.model_room_id
+      && getSimulationDeviceTemplate(placement.templateId)?.kind === row.kind ? placement : null;
     const device: Device = {
       id: row.id,
       name: row.name,
@@ -175,6 +183,7 @@ export async function syncMembershipFromSupabase(
       roomId: row.room_id ?? "",
       modelDeviceId: row.model_device_id,
       simulationOnly: row.simulation_only === true,
+      modelPlacement,
       isOn: false,
     };
     const observation = Array.isArray(row.device_state)
@@ -187,6 +196,7 @@ export async function syncMembershipFromSupabase(
       ...patch,
       // Transport observations cannot change this authoritative registry boundary.
       simulationOnly: device.simulationOnly,
+      modelPlacement: device.modelPlacement,
       observedAt: Number.isFinite(timestamp) ? timestamp : 0,
     };
   });
@@ -259,6 +269,7 @@ export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSe
         roomId: device.roomId,
         modelDeviceId: device.modelDeviceId,
         simulationOnly: device.simulationOnly,
+        modelPlacement: device.modelPlacement,
       };
     }
     return applyDeviceStatePatch(

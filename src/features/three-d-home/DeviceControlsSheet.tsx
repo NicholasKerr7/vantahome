@@ -20,6 +20,7 @@ import type { SimulationDeviceControls } from './modelDeviceControls';
 import { controlPageAnchor, getNativeControlCapacity, resolveControlPage, type NativeControlSpace } from './nativeControlPagination';
 import CinematicCardArtwork from '../cinematic-artwork/CinematicCardArtwork';
 import { deviceArtwork } from '../cinematic-artwork/artwork';
+import RemovePlacedDevice from '../devices/RemovePlacedDevice';
 
 const GROUPS = ['controls', 'modes', 'schedule', 'status'] as const;
 const GROUP_LABELS = { controls: 'Controls', modes: 'Modes', schedule: 'Routines', status: 'Status' };
@@ -64,6 +65,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
+          {!browsing && device?.templateDeviceId && <RemovePlacedDevice key={device.id} modelDeviceId={device.id} onRemoved={onClose} />}
           {(loadFailure || snapshot.status === 'disconnected') && onRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry loading saved controls" onPress={onRetry} style={styles.button}><Text style={styles.label}>Retry loading</Text></Pressable>}
           </View>
         </CinematicSurface>

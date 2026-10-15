@@ -21,6 +21,8 @@ import { assertSceneWriteAccess, canManageScenes, removeSceneState } from '../fe
 import { runSimulationScene } from '../features/scenes/simulationSceneExecution';
 import { homeEditorScope } from '../features/home-shell/homeEditorScope';
 import { validCachedRoutineCollections } from './cachedRoutineValidation';
+import type { SimulationDevicePlacement } from '../../packages/home-scene/src/devicePlacement';
+import { synchronizeRuntimeDeviceCatalog } from '../features/three-d-home/runtimeDeviceCatalog';
 
 export const AC_TEMP_MIN_C = 15;
 export const AC_TEMP_MAX_C = 28;
@@ -88,6 +90,8 @@ export type Device = {
   modelDeviceId?: string | null;
   /** Virtual registry entry: controls stay in the account's local 3D simulation. */
   simulationOnly?: boolean;
+  /** Server-owned, validated position for a user-placed simulation device. */
+  modelPlacement?: SimulationDevicePlacement | null;
   name: string;
   kind: DeviceKind;
   roomId: string;
@@ -2485,6 +2489,11 @@ export const useHomeStore = create<HomeState>()(
 );
 
 const demoState = useHomeStore.getState();
+
+// This subscription is registered before mounted controls; sign-out and membership
+// revocation synchronously remove custom geometry before downstream state readers run.
+useHomeStore.subscribe(synchronizeRuntimeDeviceCatalog);
+synchronizeRuntimeDeviceCatalog(useHomeStore.getState());
 
 /** Clear household data; a verified same-account home switch can retain personal preferences atomically. */
 export function clearHomeAccountState(userId: string | null, retainPersonalSettings = false) {

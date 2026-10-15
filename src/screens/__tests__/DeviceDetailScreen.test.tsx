@@ -7,6 +7,7 @@ import ModalActionRow from "../../components/ModalActionRow";
 import Pressable from "../../components/Pressable";
 import { deviceClient } from "../../services/deviceClient";
 import { useHomeStore } from "../../store/useHomeStore";
+import { createDefaultDevicePlacement } from '../../../packages/home-scene/src/devicePlacement';
 
 /** The rendered node fields needed to select a room through its visible label. */
 type RenderedDeviceNode = {
@@ -151,6 +152,64 @@ describe("DeviceDetailScreen", () => {
       act(() => tree.unmount());
       send.mockRestore();
     }
+  });
+
+  it.each([
+    { modelPlacement: createDefaultDevicePlacement('master-bedside-left', 'living') },
+    { modelDeviceId: 'placed-12500000-0000-4000-8000-000000000001' },
+  ])('hides legacy metadata editing for a persisted placement or its protected identity: %j', (placement) => {
+    useHomeStore.setState((state) => ({ devices: state.devices.map((device) => ({ ...device, ...placement, simulationOnly: true })) }));
+    const navigation = { goBack: jest.fn(), navigate: jest.fn() } as never;
+    const route = { key: 'DeviceDetail', name: 'DeviceDetail', params: { deviceId: 'd1' } } as never;
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<DeviceDetailScreen navigation={navigation} route={route} />); });
+    try {
+      expect(tree.root.findAllByProps({ testID: 'device-options-button' })).toHaveLength(0);
+      expect(tree.root.findByType(DeviceEditModal).props.visible).toBe(false);
+      expect(tree.root.findByType(DeviceEditModal).props.canSave).toBe(false);
+    } finally { act(() => tree.unmount()); }
+  });
+
+  it('rejects stale rename, room move and local deletion callbacks after placement becomes authoritative', () => {
+    const navigation = { goBack: jest.fn(), navigate: jest.fn() };
+    const route = { key: 'DeviceDetail', name: 'DeviceDetail', params: { deviceId: 'd1' } } as never;
+    const send = jest.spyOn(deviceClient, 'sendCommand');
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<DeviceDetailScreen navigation={navigation as never} route={route} />); });
+    try {
+      act(() => tree.root.findByProps({ testID: 'device-options-button' }).props.onPress());
+      const editor = tree.root.findByType(DeviceEditModal);
+      act(() => {
+        editor.props.onChangeDraftName('Unsaved rename');
+        editor.props.onChangeDraftRoomId('another-room');
+      });
+      const { onSave, onDelete } = tree.root.findByType(DeviceEditModal).props;
+      act(() => {
+        useHomeStore.setState((state) => ({ devices: state.devices.map((device) => ({ ...device,
+          simulationOnly: true, modelPlacement: createDefaultDevicePlacement('master-bedside-left', 'living') })) }));
+      });
+      act(() => { onSave(); onDelete(); });
+      expect(send).not.toHaveBeenCalled();
+      expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ id: 'd1', name: 'Coffee', roomId: 'r1' }));
+      expect(navigation.goBack).not.toHaveBeenCalled();
+      expect(tree.root.findByType(DeviceEditModal).props.visible).toBe(false);
+    } finally {
+      act(() => tree.unmount());
+      send.mockRestore();
+    }
+  });
+
+  it('preserves the existing authored-fixture editor', () => {
+    useHomeStore.setState((state) => ({ devices: state.devices.map((device) => ({ ...device,
+      modelDeviceId: 'living-light', simulationOnly: true, modelPlacement: null })) }));
+    const navigation = { goBack: jest.fn(), navigate: jest.fn() } as never;
+    const route = { key: 'DeviceDetail', name: 'DeviceDetail', params: { deviceId: 'd1' } } as never;
+    let tree!: ReactTestRenderer;
+    act(() => { tree = renderer.create(<DeviceDetailScreen navigation={navigation} route={route} />); });
+    try {
+      act(() => tree.root.findByProps({ testID: 'device-options-button' }).props.onPress());
+      expect(tree.root.findByType(DeviceEditModal).props.visible).toBe(true);
+    } finally { act(() => tree.unmount()); }
   });
 
 });

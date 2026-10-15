@@ -1,4 +1,4 @@
-import { DEVICES, ROOMS, getDevice } from '../../../packages/home-scene/src/data';
+import { DEVICES, ROOMS, getDevice, type DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS, type SceneAccess } from '../../../packages/home-scene/src/sceneAccess';
 import type { SimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { runtimePolicy, type RuntimeMode } from '../../config/runtimeMode';
@@ -77,9 +77,9 @@ export function resolveModelSceneAccess(state: HomeState, mode: RuntimeMode = ru
 }
 
 /** Replace hidden simulation readings with inert placeholders before crossing the rendering boundary. */
-export function scopeSimulationSnapshot(snapshot: SimulationSnapshot, access: SceneAccess): SimulationSnapshot {
+export function scopeSimulationSnapshot(snapshot: SimulationSnapshot, access: SceneAccess, catalog: readonly DeviceDefinition[] = DEVICES): SimulationSnapshot {
   const allowed = new Set(access.deviceIds);
-  return { ...snapshot, deviceStates: Object.fromEntries(DEVICES.map((device) => [device.id,
+  return { ...snapshot, deviceStates: Object.fromEntries(catalog.map((device) => [device.id,
     allowed.has(device.id) ? snapshot.deviceStates[device.id]
       : { on: device.kind === 'gas-meter' || device.kind === 'gas-leak', level: 0 },
   ])) };

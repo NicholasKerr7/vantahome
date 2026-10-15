@@ -21,7 +21,8 @@ export function TelevisionDisplay({
   state,
   reducedMotion,
   canAnimate,
-}: Omit<EffectProps, 'device'>) {
+  pedestalHeight = 0,
+}: Omit<EffectProps, 'device'> & { pedestalHeight?: number }) {
   const material = useRef<ShaderMaterial & { uniforms: ReturnType<typeof createTelevisionUniforms> }>(null);
   // React Three Fiber may copy uniform props; animate the mounted material's actual uniforms.
   const [uniforms] = useState(() => createTelevisionUniforms(state.on));
@@ -29,7 +30,7 @@ export function TelevisionDisplay({
     if (material.current) advanceTelevisionDisplay(material.current.uniforms, state, delta, reducedMotion, canAnimate.current);
   });
   return (
-    <mesh position={[0, 0.3475, 0.024]}>
+    <mesh position={[0, 0.3475 + pedestalHeight, 0.024]}>
       <planeGeometry args={[1.235, 0.695]} />
       <shaderMaterial
         ref={material}
@@ -235,6 +236,7 @@ export function DeviceEffects(props: EffectProps) {
         state={props.state}
         reducedMotion={props.reducedMotion}
         canAnimate={props.canAnimate}
+        pedestalHeight={props.device.templateDeviceId === 'family-tv' ? 0.125 : 0}
       />
     );
   if (

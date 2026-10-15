@@ -1,4 +1,5 @@
 import { EMPTY_SCENE_ACCESS, canControlSceneDevice, type SceneAccess } from './sceneAccess';
+import { replaceRuntimeDevices } from './devicePlacement';
 import {
   diffSimulationSnapshots, rebaseSimulationChanges, simulationChangeBaseline, parseSimulationSnapshotMessage, SIMULATION_CHANNEL,
   type SimulationChanges, type SimulationRequest, type SimulationSnapshot,
@@ -87,6 +88,9 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
       lastAcknowledgedId = acknowledgedId;
       for (const id of pending.keys()) if (id <= acknowledgedId) pending.delete(id);
     }
+    // Parsing is pure: install a validated catalog only after the acknowledgement is accepted.
+    // Missing catalogs intentionally clear the previous scope's custom fixtures.
+    replaceRuntimeDevices(message.placements ?? []);
     access = message.access ?? EMPTY_SCENE_ACCESS;
     for (const [id, edit] of pending) pending.set(id, { base: restrictChanges(edit.base), changes: restrictChanges(edit.changes) });
     beforeHydration = beforeHydration.map((edit) => ({ base: restrictChanges(edit.base), changes: restrictChanges(edit.changes) }));

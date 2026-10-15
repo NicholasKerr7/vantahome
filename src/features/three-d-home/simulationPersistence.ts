@@ -4,6 +4,7 @@ import {
   parseStoredSimulationSnapshotMessage,
   type SimulationSnapshot,
 } from '../../../packages/home-scene/src/simulationBridgeProtocol';
+import { getRuntimePlacements, type RuntimePlacedDevice } from '../../../packages/home-scene/src/devicePlacement';
 
 export type SimulationSaveStatus = 'loading' | 'load-error' | 'corrupt' | 'saving' | 'saved' | 'error' | 'disconnected';
 
@@ -28,6 +29,7 @@ type Storage = {
 };
 type StoredSimulation = {
   state: SimulationSnapshot;
+  placements: RuntimePlacedDevice[];
   status: SimulationSaveStatus;
   loading: Promise<SimulationLoadError | null>;
   loaded: boolean;
@@ -84,7 +86,12 @@ export class SimulationPersistence {
     // Do not let defaults or early renderer patches overwrite unread account data.
     if (!record.loaded) throw record.loadError ?? new SimulationLoadError('loading');
     record.state = state;
-    record.pending = JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state });
+    // Retain metadata during a temporary access recheck without granting it to a
+    // renderer. A queued save from this scope must never borrow another home's catalog.
+    const placements = new Map(record.placements.map((device) => [device.id, device]));
+    for (const device of getRuntimePlacements()) if (Object.hasOwn(state.deviceStates, device.id)) placements.set(device.id, device);
+    record.placements = [...placements.values()].filter((device) => Object.hasOwn(state.deviceStates, device.id));
+    record.pending = JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state, placements: record.placements });
     for (const listener of record.stateListeners) listener(state);
     this.notify(record, 'saving');
     if (!record.writing) void this.flush(scope, record);
@@ -95,7 +102,7 @@ export class SimulationPersistence {
     const cached = this.records.get(scope);
     if (cached) return cached;
     const record: StoredSimulation = {
-      state: createDefaultSimulationSnapshot(), status: 'loading', loading: Promise.resolve(null), loaded: false, loadError: null,
+      state: createDefaultSimulationSnapshot(), placements: getRuntimePlacements(), status: 'loading', loading: Promise.resolve(null), loaded: false, loadError: null,
       pending: null, writing: false, listeners: new Set(), stateListeners: new Set(),
     };
     this.records.set(scope, record);
@@ -110,7 +117,10 @@ export class SimulationPersistence {
     record.loading = Promise.resolve().then(() => this.storage.getItem(this.key(scope))).then((raw) => {
       const message = raw === null ? null : parseStoredSimulationSnapshotMessage(raw);
       if (raw !== null && !message) throw new SimulationLoadError('corrupt');
-      record.state = message?.state ?? createDefaultSimulationSnapshot();
+      // Empty storage keeps the defaults captured for this record before await;
+      // another household may now own the process-wide presentation catalog.
+      record.state = message?.state ?? record.state;
+      record.placements = message?.placements ?? (raw === null ? record.placements : []);
       record.loaded = true;
       this.notify(record, 'saved');
       for (const listener of record.stateListeners) listener(record.state);
