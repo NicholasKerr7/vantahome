@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 13, 2026. This is the current delivery queue, not a claim that
+Maintained October 15, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Property compass, road markings and triangle cleanup | Complete in Preview 62 source | Plan-derived orientation; unchanged property/camera placement; bounded compass, one road-paint mesh, 96 defective triangles removed. See handoff for installation and survey limits. |
 | Account recovery and independent security access | Complete in Preview 61 source | Security remains reachable without a home; reviewed verified-email recovery; persistent credential completion; captured-token password mutation; home authority/runtime gate. See handoff for native installation and remaining physical/email checks. |
 | Sent invitations | Complete in Preview 60 source/staging | Authorized household list, explicit pending/expired state, scoped cancellation, accept/reissue races, no implied account deletion or membership removal. See current handoff for native installation status. |
 | Account sessions | Complete in Preview 60 source/staging | Private current-account inventory, deliberate other-session sign-out, exact token binding, truthful acknowledgement and token-expiry limits, native/web recovery. Physical interaction review remains separate. |
@@ -21,6 +22,17 @@ password targeting, stale sign-out callbacks, overlapping credential tasks and
 rapid background/resume session loading. Home admission now waits for all current
 credential tasks and fresh membership; a cached or stale response cannot reopen it.
 See the handoff for evidence and boundaries. No new schema or production changes.
+
+The Preview 62 geometry pass preserved vertex/material/transform data and fixed
+an export-order dependency: gas fixture preservation hashes must be established
+after baseline triangle cleanup. Browser checks also caught and removed an initial
+compass DOM-root teardown race. The final 21-capture sweep had no browser errors.
+
+**Open visual alignment follow-up (P2):** `weatherGeometry.ts::windTravelDirection`
+still treats drawing-up as north. The newly documented site orientation should be
+applied consistently to rain travel and vegetation wind, with meteorological
+"from" semantics and reduced-motion coverage. This concerns visual direction,
+not the accuracy of the weather readings. No wind behavior was changed here.
 
 ## Next implementation priorities
 

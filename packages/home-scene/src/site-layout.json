@@ -2,7 +2,12 @@
   "version": 1,
   "units": "metres",
   "source": "Revised House Plan with Stamp.pdf, A002 site plan; A001 cover for planting character",
-  "coordinateSystem": "Blender x/east, y/north, z/up; original house unchanged. Three = [x,z,-y].",
+  "coordinateSystem": "Local plan axes: Blender x/right, y/up-page, z/up. Three = [x,z,-y]. These are not cardinal axes; the house and site transforms remain unchanged.",
+  "orientation": {
+    "reference": "A002 drawn north arrow",
+    "northDegreesClockwiseFromPlanUp": -30,
+    "accuracy": "Approximately 30 degrees west of drawing-up, read from the supplied plan. Not a surveyed bearing or device heading."
+  },
   "accuracy": "Site edges and driveway traced from A002 and aligned to the existing interpreted house; not a survey or construction model.",
   "assumptions": [
     "Flat grade: the source site plan has no contours or spot elevations.",

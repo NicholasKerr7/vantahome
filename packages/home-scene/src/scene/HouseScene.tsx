@@ -9,6 +9,7 @@ import { useGLTF } from '@react-three/drei';
 import { ACESFilmicToneMapping, Group, MathUtils, Mesh, PCFSoftShadowMap, type Object3D } from 'three';
 import { CameraRig } from './CameraRig';
 import { CinematicStage } from './CinematicStage';
+import { PropertyCompass, PropertyCompassProjection, type CompassMarkers } from './PropertyCompass';
 import { Devices } from './Devices';
 import { HotspotLayout } from './HotspotLayout';
 import { Landscape } from './Landscape';
@@ -119,7 +120,9 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
   const visibleProps = { ...props, access, view, cinematic, deviceStates: visibleStates };
   // Reset animation history immediately on revocation instead of easing from a formerly visible reading.
   const presentationScope = `${access.deviceIds.join('|')}:${canExploreInteriorLayout(access)}`;
-  return <Canvas className={`house-canvas ${view === 'immersive' ? 'is-immersive' : ''}`} shadows dpr={[1, quality.maxDpr]} camera={{ position: [28, 20, 16], fov: 42, near: 0.08, far: 500 }} gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping }} onCreated={({ gl }) => {
+  const compassMarkers = useRef<CompassMarkers>({});
+  const showCompass = !cinematic && !roomOnly && props.view === 'exterior';
+  return <><Canvas className={`house-canvas ${view === 'immersive' ? 'is-immersive' : ''}`} shadows dpr={[1, quality.maxDpr]} camera={{ position: [28, 20, 16], fov: 42, near: 0.08, far: 500 }} gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping }} onCreated={({ gl }) => {
       gl.shadowMap.type = PCFSoftShadowMap;
       gl.domElement.tabIndex = 0;
       gl.domElement.setAttribute('role', 'img');
@@ -132,6 +135,7 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       <CameraRig roomOnly={requiresRoomIsolation(access, props.view)} exteriorOnly={exteriorOnly} view={props.view} floor={props.floor} roomId={props.roomId} reducedMotion={props.reducedMotion} suspended={suspended} tourFrame={tourFrame} tourAllowed={cinematic} />
       {cinematic && <CinematicAtmosphere daylight={props.daylight} weather={weather} reducedMotion={props.reducedMotion} />}
       {!cinematic && !roomOnly && props.view !== 'immersive' && <CinematicStage exterior={props.view === 'exterior'} />}
+      <PropertyCompassProjection markers={compassMarkers} enabled={showCompass} />
       <Suspense key={`model:${presentationScope}`} fallback={null}>
         <HouseModel access={access} roomId={props.roomId} view={view} cinematic={cinematic} deviceStates={visibleStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
         <HotspotLayout access={props.access} roomId={props.roomId} view={view}>
@@ -145,7 +149,9 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
         <boxGeometry args={[bounds[1] - bounds[0], 0.12, bounds[3] - bounds[2]]} /><meshStandardMaterial color="#b6aca0" roughness={0.7} />
       </mesh>}
       <mesh position={[8, -1.02, -8]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[200, 200]} /><shadowMaterial color="#02080c" transparent opacity={0.42} depthWrite={false} /></mesh>
-    </Canvas>;
+    </Canvas>
+    {showCompass && <PropertyCompass markers={compassMarkers} />}
+    </>;
 }
 
 export type { HouseSceneProps } from './types';

@@ -133,6 +133,38 @@ geometry in `house-manifest.json`, `device-geometry.json`, and site metadata as
 needed. Preserve scene device IDs across visual changes; these are simulation
 IDs and must never be inferred to be physical device IDs.
 
+After exporting, run `node scripts/build-gas-device-assets.mjs` for the
+ground/exterior/landscape files with descriptor-appended gas fixtures. It verifies
+and cleans the original baseline before appending those fixtures, retaining their
+lossless rebuild hashes. For other models, inspect with
+`node scripts/clean-model-triangles.mjs path/to/model.glb`, then explicitly use
+`--write` to remove exact zero-area and attribute-identical, same-facing duplicate
+triangles. Reverse faces, seams, vertex bytes, materials and node transforms stay
+intact. Deformable geometry retains zero-area base faces. Unsupported compressed
+or sparse primitives are skipped by cleanup, not certified clean. The scene build
+rejects removable defects; cleanup is offline and adds no render-time processing.
+
+## Property compass and road markings
+
+The site's local axes follow the drawing, not cardinal directions. A002's drawn
+north arrow is approximately 30 degrees west of drawing-up; `siteOrientation.ts`
+converts this into the existing Three.js axes without moving the house, landscape,
+camera or hotspots. Compass points project around the property and stay bounded
+during orbit/zoom. The north label's `PLAN` note identifies the source; this is not
+a surveyed bearing or the phone's magnetic heading. The SVG overlay consumes no
+pointer events and disappears in floor, immersive and cinematic views.
+
+An exact title-reference match was located in the official NLA public parcel map.
+Its approximate mapped centre and measurement evidence remain in the local work
+cache, not in the shipped scene or shared weather settings. Mapped boundary
+dimensions disagree with the supplied plan; do not use them to rotate or reshape
+the authored model without new survey evidence.
+
+Road paint is an illustrative dashed centreline with edge lines, with an opening
+at the driveway apron. It uses one static mesh slightly above the existing road
+and polygon offset to avoid coplanar flicker. It is not a claim about real road
+paint or a traffic-engineering specification.
+
 See the [scene workspace README](../packages/home-scene/README.md) for the editing
 loop and generated output paths.
 

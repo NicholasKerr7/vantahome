@@ -1,6 +1,7 @@
-/** Add the two descriptor-authored gas fixtures without re-exporting existing house geometry.
+/** Clean the verified baseline and append two descriptor-authored gas fixtures.
  * Run from the repository root: node scripts/build-gas-device-assets.mjs
- * Existing accessor data, material definitions, textures and node transforms remain unchanged.
+ * Vertex data, material definitions, textures and node transforms remain unchanged;
+ * only exact defective triangles in the baseline are removed before appending.
  */
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -10,6 +11,7 @@ import { CylinderGeometry, Euler, Group, Matrix4, Mesh, MeshStandardMaterial, Qu
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { cleanModelTriangles } from './clean-model-triangles.mjs';
 
 export const GAS_ASSET_DEVICES = {
   ground: ['kitchen-gas-leak'],
@@ -182,7 +184,11 @@ async function main() {
     const filename = path.join(directory, 'public/models', `${name}.glb`);
     const original = await readFile(filename);
     const addition = await exportGasFixtureScene(ids, manifest, library);
-    const output = writeGlb(appendGasFixtures(readGlb(original), addition, ids));
+    // Clean the verified baseline before appending fixtures, so their preservation
+    // hashes describe the repaired house and subsequent device rebuilds stay safe.
+    const baseline = originalAsset(readGlb(original));
+    const cleaned = cleanModelTriangles(writeGlb(baseline), `${name}.glb baseline`);
+    const output = writeGlb(appendGasFixtures(readGlb(cleaned.buffer), addition, ids));
     if (!original.equals(output)) await writeFile(filename, output);
     process.stdout.write(`${name}.glb: ${output.length} bytes; ${ids.join(', ')}\n`);
   }

@@ -15,6 +15,7 @@ import { prepareVegetationWind, type VegetationWind } from './vegetationWind';
 import { prepareCinematicMaterials } from './cinematicMaterials';
 import { presentationGateLevel } from './cinematicPresentation';
 import type { CinematicTourFrame } from './cinematicTour';
+import { RoadMarkings } from './RoadMarkings';
 
 type LandscapeProps = Pick<HouseSceneProps, 'access' | 'view' | 'roomId' | 'deviceStates' | 'selectedDevice' | 'quickDeviceId' | 'hotspotControlMode' | 'reducedMotion' | 'onSelectDevice' | 'cinematic'> & { windSpeedKmh?: number; windDirectionDeg?: number; tourFrame?: CinematicTourFrame };
 const gateLayout = siteLayout.runtime.gate;
@@ -84,6 +85,7 @@ export function Landscape({ access = FULL_SCENE_ACCESS, view, roomId, deviceStat
 
   return <group name="seaview-landscape">
     <primitive object={preparedSite} />
+    <RoadMarkings />
     <group ref={carriage} name="entry-gate-carriage" position={initialPosition.current} rotation={[0, gateLayout.rotationY, 0]} onClick={canViewGate && !cinematic ? (event) => { event.stopPropagation(); onSelectDevice('entry-gate'); } : undefined}>
       <primitive object={preparedLeaf} />
     </group>

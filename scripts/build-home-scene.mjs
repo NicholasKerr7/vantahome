@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { assertCleanModelTriangles } from './clean-model-triangles.mjs';
 
 export const MODEL_NAMES = ['exterior', 'ground', 'upper', 'landscape', 'gate'];
 export const NATIVE_SIZE_LIMIT = 32 * 1024 * 1024;
@@ -82,6 +83,7 @@ async function readModels(sceneRoot) {
     const content = await readFile(join(publicRoot, 'models', `${name}.glb`));
     if (content.length > MODEL_SIZE_LIMIT) throw new Error(`${name}.glb exceeds the 12 MiB model budget.`);
     validateGlb(content, `${name}.glb`);
+    assertCleanModelTriangles(content, `${name}.glb`);
     models[name] = content;
     totalBytes += content.length;
   }

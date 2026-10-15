@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-13**. Read this before rediscovering the project.
+Last maintained: **2026-10-15**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -44,6 +44,56 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Property orientation, road paint and mesh cleanup — October 15 / Preview 62
+
+- Added N/E/S/W around the property, using A002's drawn north arrow: approximately
+  30° west of drawing-up. Labels follow orbit/zoom, stay bounded and consume no
+  input. A single DOM-owned SVG avoids additional React roots during loading and
+  teardown. Hidden on floor, immersive and cinematic views; no added animation.
+- The official NLA public parcel layer matched the supplied plan's exact title
+  reference. Approximate parcel-centre coordinates, raw responses and measurements
+  are in `work/property-orientation-{nla,report}.json`, outside the repository.
+  The map and plan boundary dimensions disagree; compass remains explicitly
+  plan-derived (`PLAN`), not survey-certified. No coordinate is hardcoded into the
+  scene and existing owner weather configuration is untouched.
+- Property, house, cameras, hotspots, room names and all model transforms remain
+  unchanged. Road paint adds one static mesh: dashed centreline and thin edges,
+  interrupted at the driveway. These are illustrative markings on the interpreted
+  road, not verified real-world road paint.
+- Removed **48 exact zero-area triangles and 48 attribute-identical duplicate
+  faces** across exterior/ground/upper GLBs. All five models retain every vertex
+  attribute, material, node transform and hierarchy; reverse faces and seams remain.
+  No removable triangles or skipped primitives remain in the current five assets.
+  Cleanup is offline, deterministic and guarded by the scene build. Gas fixtures
+  are rebuilt after cleaning their verified baseline, preserving future appends.
+  See [model editing](THREE_D_HOME.md#editing-the-model) for commands.
+
+Verification: **1,047 scene tests / 89 suites**, **56 script tests**, app and scene
+TypeScript, and scene web/native packaging passed. Browser evidence covers
+**21 captures** at **390×844, 768×1024 and 1024×768**: day/night/rain, orbit, zoom,
+floor transition and return; all four labels visible/bounded in exterior views,
+zero layout overflow or browser errors. Six additional reduced-motion close-ups
+covered gate/grounds, utility, living and family rooms across both floors, with
+zero page errors. No additional blob defect was reproduced; this is not exhaustive
+visual or physical-device signoff.
+
+**Preview 62 installed and launched** on the connected iPhone; device inventory
+confirms **1.0.0 (62)** and process presence was checked after launch. Initial
+installation lost its developer connection; a bounded retry succeeded. Strict
+signature, preview identity/schemes, device provisioning, arrival media and current
+scene markers/hash passed. Production metadata was restored and release
+metadata/assets/auth redirects plus secret/history checks passed. Scene:
+**31,921,753 bytes**, SHA256
+`17c5ab7ff7abd922c6b8a3c8d4c60097d2d3843c6287516891bd91a37a69eb5f`.
+Provisioning expires **2026-10-19 05:19:39 UTC**. Physical visual/interaction review
+of this update remains pending; install/process presence is not behavioral signoff.
+Task-owned scene server 5187 stopped after QA; existing user servers untouched.
+
+Artifacts: `work/property-geometry-browser-after.{cjs,json,log}`, matching screenshots,
+`property-geometry-closeups-final.*`, `property-geometry-cleanup/verification-final.json`,
+`property-{scene-tests-final,script-tests-final,scene-build-final,app-types}.log`,
+`property-orientation-preview62-*`. Existing hub/sync/iPad deferrals remain.
 
 ## Account recovery and independent security — October 13 / Preview 61
 
