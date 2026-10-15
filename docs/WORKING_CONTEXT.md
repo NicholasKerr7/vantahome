@@ -45,6 +45,49 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Smooth manual gate closing — October 15 / Preview 64
+
+- User reproduced a gate jump **after tapping Close**. The safety simulator emits
+  one-second position samples at 25% travel/second; the old exponential renderer
+  repeatedly decelerated toward each sample and surged at the next. No duplicate
+  timer or ordinary state reset was found. This is independent of geography.
+- `scene/gateMotion.ts` now closes at constant speed toward the latest accepted
+  simulation position, never extrapolating toward the final requested close target.
+  Opening keeps its responsive easing. A rapid Close stops unfinished opening;
+  if the visible pose trails the logical opening, it waits for confirmed closing
+  samples to catch up. Pause/fault cancels visual catch-up; hold/beam/vehicle/fire
+  constraints inhibit closing while authorized obstruction reopening remains smooth.
+- Covered canvases synchronize the gate on demand, so dismissing full controls
+  cannot replay stale travel. Existing reduced-motion, hidden-page, permission-loss
+  and cinematic authority handoff remain. No simulator cadence, persistence,
+  command, access or device geometry changes. Optional renderer labs remain unchanged.
+- Real WebGL carriage traces after the actual mobile **Close smart gate** action
+  reproduced the previous easing via a browser response override, then measured
+  the fixed code. Middle-80% frame speed range changed from approximately
+  **9.3–40.9%/second** to **22.9–26.8%/second** (nominal 25; frame sampling jitter).
+  The fixed gate reaches exact closed. Mobile and tablet recordings had no page
+  errors. Full-controls covered/reveal, reduced motion and revoked gate visibility
+  were separately checked against the actual scene object, with no page errors.
+
+Verification: **1,078 scene tests / 91 suites** passed; final focused reversal and
+resume additions passed **12 tests**. App TypeScript and scene build/TypeScript
+passed. Focused read-only review found no blocking issues. React review: no new
+state/effects, listeners, dependencies or per-frame React renders. Evidence:
+`work/gate-motion-{before,after,after-tablet,comparison,covered}.json`, browser
+helpers/captures, `gate-motion-*-tests.log`, `gate-motion-app-types.log`, and
+`gate-motion-scene-build.log`. These are simulation tests, not physical gate tests.
+
+**Preview 64 installed and launched** on the connected iPhone. Device inventory
+confirms **1.0.0 (64)**; its launched process was present in a subsequent inventory.
+Strict signature, device provisioning, preview identity/schemes, arrival media and
+current packaged scene hash passed. Production metadata was restored; release
+version/assets/auth redirects and secret/history checks passed. Scene:
+**31,922,843 bytes**, SHA256
+`7a6f57c38e20f49c08bd5a38b7bf9508f667987cc78c04bce0b7c94a89e25eeb`.
+Provisioning expires **2026-10-19 05:19:39 UTC**. The task-owned scene server 5187
+was stopped; other user servers and production were untouched. Physical iPhone
+motion/feel remains user verification; process presence is not visual signoff.
+
 ## Official geography and weather direction — October 15 / Preview 63
 
 - Supersedes Preview 62's drawn-arrow compass calibration. The official NLA June

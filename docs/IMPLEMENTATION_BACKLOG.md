@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Smooth gate closing | Complete in Preview 64 source | Steady travel between one-second simulation samples; pause/interlock guards and covered-view synchronization. Native install status is in the handoff. |
 | Official geography and directional weather | Complete in Preview 63 source | NLA frontage calibration, Owner-confirmed property weather pin, shared true-bearing wind/rain/plants, stable orbit compass. See handoff for map limits and install status. |
 | Property compass, road markings and triangle cleanup | Complete in Preview 62 source | Original plan calibration superseded by Preview 63; unchanged property/camera placement; bounded compass, one road-paint mesh, 96 defective triangles removed. See handoff for installation and survey limits. |
 | Account recovery and independent security access | Complete in Preview 61 source | Security remains reachable without a home; reviewed verified-email recovery; persistent credential completion; captured-token password mutation; home authority/runtime gate. See handoff for native installation and remaining physical/email checks. |
@@ -38,6 +39,13 @@ native worklet isolation and per-household weather configuration were reviewed.
 Official map alignment is not a certified survey; regional weather still cannot
 represent every on-site gust. The Owner confirmed saving the official parcel pin.
 See the handoff for build/install evidence and remaining physical review.
+
+The Preview 64 manual-close report identified a confirmed presentation-cadence
+mismatch: exponential easing made the gate surge at each one-second safety sample.
+Constant-speed confirmed-sample animation resolves it. Adjacent rapid reversal,
+pause/fault, partial target, obstruction reopening, reduced motion, scope revocation
+and full-controls reveal were covered. Simulator/permission behavior is unchanged;
+optional renderer labs were not changed because the report concerns the main scene.
 
 ## Next implementation priorities
 

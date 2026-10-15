@@ -393,6 +393,14 @@ deferred and no Android device result is claimed.
 
 ## Gate and fire safety simulation
 
+Gate presentation uses `scene/gateMotion.ts`: close at the simulator's 25%/second
+speed toward each accepted position, preserving one-second safety ticks. Do not
+exponentially ease each closing sample or animate toward an unconfirmed final
+target. Pause/fault freezes catch-up; explicit reopening remains eased. Reduced
+motion and covered demand-rendered views synchronize immediately. Permission loss
+and cinematic exit retain the existing authoritative-pose reset. No presentation
+helper writes commands or advances the simulation clock.
+
 The gate now has optional foreground auto-close (off by default), a 30-second
 clear-zone delay adjustable from 5–120 seconds, manual hold/release, and explicit
 vehicle, blocked-beam, and sensor-fault scenarios in full controls. Closing takes

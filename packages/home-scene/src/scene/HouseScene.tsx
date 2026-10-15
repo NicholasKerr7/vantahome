@@ -140,7 +140,7 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
         <HouseModel access={access} roomId={props.roomId} view={view} cinematic={cinematic} deviceStates={visibleStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
         <HotspotLayout access={props.access} roomId={props.roomId} view={view}>
         {!cinematic && <Devices {...visibleProps} />}
-        {!roomOnly && (view === 'exterior' || view === 'immersive') && <Landscape {...visibleProps} tourFrame={tourFrame} windSpeedKmh={weather?.windSpeedKmh ?? 0} windDirectionDeg={weather?.windDirectionDeg ?? 0} />}
+        {!roomOnly && (view === 'exterior' || view === 'immersive') && <Landscape {...visibleProps} suspended={suspended} tourFrame={tourFrame} windSpeedKmh={weather?.windSpeedKmh ?? 0} windDirectionDeg={weather?.windDirectionDeg ?? 0} />}
         </HotspotLayout>
         {!roomOnly && (view === 'exterior' || view === 'immersive') && <SolarLightPools deviceStates={visibleStates} reducedMotion={props.reducedMotion} />}
         {!roomOnly && weather ? <WeatherEffects weather={weather} view={view} roomId={props.roomId} reducedMotion={props.reducedMotion} /> : null}
