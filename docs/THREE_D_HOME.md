@@ -146,19 +146,33 @@ rejects removable defects; cleanup is offline and adds no render-time processing
 
 ## Property compass and road markings
 
-The site's local axes follow the drawing, not cardinal directions. A002's drawn
-north arrow is approximately 30 degrees west of drawing-up; `siteOrientation.ts`
-converts this into the existing Three.js axes without moving the house, landscape,
-camera or hotspots. Compass points project around the property and stay bounded
-during orbit/zoom. The north label's `PLAN` note identifies the source; this is not
-a surveyed bearing or the phone's magnetic heading. The SVG overlay consumes no
-pointer events and disappears in floor, immersive and cinematic views.
+The site's local axes follow the drawing, not cardinal directions. The official
+NLA mapped parcel frontage, independently corroborated by its mapped road,
+places true north **26.884524° west of drawing-up**. The June 2025 and September
+2024 parcel layers agree. `environment/propertyGeography.ts` converts true bearings
+into unchanged model X/Z axes, shared by compass, rain and vegetation in Three.js
+and the optional Filament lab. Meteorological wind bearings describe where wind
+comes **from**; droplets travel and plants lean in the opposite direction.
+No house, landscape, camera or hotspot transform is changed.
+
+Compass points use one camera-relative directional ring, with a ray/ellipse
+intersection that preserves screen bearings through orbit, pan and zoom. The
+north label says `TRUE`; its accessible description states the map-derived
+accuracy limit. This is not a survey-certified bearing or phone magnetic heading.
+The SVG consumes no pointer events and disappears in floor, immersive and cinematic
+views. Rain follows time-dependent downwind trajectories; conservative wind-path
+roof envelopes prevent rain entering furnished rooms. Reduced motion remains intact.
 
 An exact title-reference match was located in the official NLA public parcel map.
-Its approximate mapped centre and measurement evidence remain in the local work
-cache, not in the shipped scene or shared weather settings. Mapped boundary
-dimensions disagree with the supplied plan; do not use them to rotate or reshape
-the authored model without new survey evidence.
+Its mapped centre and reproducible measurement evidence remain in the local work
+cache (`official-property-georeference-*`), not hardcoded in the shipped scene.
+The Owner saved that pin through the existing household Weather setting. Weather
+requests and caches use the exact saved coordinates and time zone; other homes and
+the explicitly labelled unconfigured town fallback remain unchanged. Exact requests
+still return regional model-grid weather, not an on-site sensor measurement.
+Mapped boundary dimensions disagree with the plan, so frontage alignment is used
+instead of averaging incompatible corners. Do not rotate or reshape the authored
+model without new survey evidence. Source: [NLA eLand map](https://apps.nla.gov.jm/elandv2/interactivemap.aspx).
 
 Road paint is an illustrative dashed centreline with edge lines, with an opening
 at the driveway apron. It uses one static mesh slightly above the existing road

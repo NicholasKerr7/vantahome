@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   createWeatherAnchors, irrigationJetPoint, isInsideWeatherParcel, weatherLandingHeight,
-  weatherMagnitude, weatherParticleCount, weatherPrecipitation, windTravelDirection, type SceneWeather,
+  weatherMagnitude, weatherParticleCount, weatherPrecipitation, windTravelDirection, weatherWindLandingHeight,
+  RAIN_CEILING, RAIN_FLOOR, rainWindSlope, type SceneWeather,
 } from './weatherGeometry';
+import { geographicBearingDirection } from '../environment/propertyGeography';
 
 const dryWeather: SceneWeather = {
   rainMm: 0, snowfallCm: 0, cloudCover: 0, windSpeedKmh: 0,
@@ -25,11 +27,39 @@ describe('weather placement and motion', () => {
     expect(weatherLandingHeight(25, -18)).toBeCloseTo(-0.325);
   });
 
-  it('translates north and east source winds into the scene travel directions', () => {
-    expect(windTravelDirection(0)[1]).toBeCloseTo(1);
-    expect(windTravelDirection(90)[0]).toBeCloseTo(-1);
-    expect(windTravelDirection(180)[1]).toBeCloseTo(-1);
-    expect(windTravelDirection(Number.NaN)).toEqual([-0, 1]);
+  it('moves precipitation away from all four official compass source directions', () => {
+    for (const bearing of [0, 90, 180, 270]) {
+      const source = geographicBearingDirection(bearing);
+      const travel = windTravelDirection(bearing);
+      expect(travel[0] * source[0] + travel[1] * source[1]).toBeCloseTo(-1);
+    }
+    expect(windTravelDirection(Number.NaN)).toEqual(windTravelDirection(0));
+  });
+
+  it('keeps complete wind-driven paths above roofs across every bearing and maximum wind', () => {
+    const anchors = createWeatherAnchors(460);
+    let minimumClearance = Infinity;
+    let minimumLanding = Infinity;
+    for (const snow of [false, true]) {
+      for (let bearing = 0; bearing < 360; bearing += 15) {
+        const [dx, dz] = windTravelDirection(bearing);
+        for (const [x, z] of anchors) {
+          const landing = weatherWindLandingHeight(x, z, 500, bearing, snow);
+          minimumLanding = Math.min(minimumLanding, landing);
+          for (const fraction of [0, 0.25, 0.5, 0.75, 1]) {
+            const altitude = (RAIN_CEILING - landing + 0.25) * fraction;
+            const px = x - dx * rainWindSlope(500) * altitude;
+            const pz = z - dz * rainWindSlope(500) * altitude;
+            minimumClearance = Math.min(minimumClearance, landing + altitude - weatherLandingHeight(px, pz));
+          }
+        }
+      }
+    }
+    expect(minimumClearance).toBeGreaterThanOrEqual(0);
+    expect(minimumLanding).toBeGreaterThanOrEqual(RAIN_FLOOR);
+    expect(rainWindSlope(Infinity)).toBe(0);
+    expect(rainWindSlope(-5)).toBe(0);
+    expect(rainWindSlope(500)).toBeCloseTo(55 / 650);
   });
 
   it('bounds mobile cost and avoids particles for dry or malformed observations', () => {

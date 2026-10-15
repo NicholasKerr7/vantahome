@@ -29,7 +29,8 @@ const windShader = `
     float phase = palm > .5 ? crown.x * .63 + crown.z * .41 : floor(point.x*1.8)*.57 + floor(point.z*1.8)*.43;
     float crownHeight = max(.5, crown.y - ${siteLayout.parcel.lawnElevation.toFixed(3)});
     float bend = palm > .5 ? pow(clamp(rootHeight/crownHeight,0.,1.),2.) * .085 : pow(clamp(rootHeight/.65,0.,1.),2.) * .025;
-    float gust = sin(landscapeTime*.95 + phase) + sin(landscapeTime*.41 + phase*1.7)*.35;
+    // Gusts relax around a downwind mean instead of bending equally into the incoming wind.
+    float gust = .62 + sin(landscapeTime*.95 + phase)*.25 + sin(landscapeTime*.41 + phase*1.7)*.13;
     point.xz += landscapeDirection * landscapeWind * bend * gust;
     // Fronds flutter away from their supported crown; no movement is added at the trunk root.
     float leafTip = palm * smoothstep(.12,1.25,nearest);
@@ -45,7 +46,7 @@ function applyWindShader(material: Material, uniforms: WindUniforms): void {
     shader.vertexShader = windShader + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed = landscapeBend(transformed);');
   };
-  material.customProgramCacheKey = () => 'vantahome-rooted-vegetation-wind-v1';
+  material.customProgramCacheKey = () => 'vantahome-rooted-vegetation-wind-v2';
 }
 
 /** Animate only the named botanical batches; all foundations, pots and architecture remain untouched. */

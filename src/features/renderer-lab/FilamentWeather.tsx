@@ -5,6 +5,7 @@ import { WEATHER_GROUPS, weatherGroupPose } from '../../../packages/home-scene/s
 import type { LabSettings } from './protocol';
 import type { ModelKind } from './FilamentModel';
 import { FilamentRain } from './FilamentRain';
+import { windTravelDirection } from '../../../packages/home-scene/src/environment/propertyGeography';
 
 interface Props {
   source: number;
@@ -35,6 +36,8 @@ export function FilamentWeather({ source, settings, onLoaded }: Props) {
   const lastSettings = useSharedValue('');
   const lastWeather = useSharedValue('');
   const { weather, windSpeed, windDirection, motion, resetKey } = settings;
+  // Resolve map calibration on JS; worklets receive only a small numeric vector.
+  const windTravel = useMemo(() => windTravelDirection(windDirection), [windDirection]);
   const mode = `${weather}:${resetKey}`;
   const signature = `${weather}:${windSpeed}:${windDirection}:${motion}:${resetKey}`;
 
@@ -67,7 +70,7 @@ export function FilamentWeather({ source, settings, onLoaded }: Props) {
     lastFrame.value = elapsed.value;
     batches.forEach(({ group, entity }) => {
       if (group.kind !== 'plant') return;
-      const pose = weatherGroupPose(group, elapsed.value, weather, windSpeed, windDirection, motion);
+      const pose = weatherGroupPose(group, elapsed.value, weather, windSpeed, windTravel, motion);
       let matrix = identity.scaling(pose.scale);
       // SDK helpers pre-multiply; reverse the calls to match Three's XYZ Euler order.
       if (pose.rotation[2]) matrix = matrix.rotate(pose.rotation[2], [0, 0, 1]);
@@ -76,7 +79,7 @@ export function FilamentWeather({ source, settings, onLoaded }: Props) {
       transformManager.setTransform(entity, matrix.translate(pose.position));
     });
   }, [batches, identity, transformManager, elapsed, lastFrame, lastSettings, lastWeather, weather,
-    windSpeed, windDirection, motion, signature, mode]);
+    windSpeed, windTravel, motion, signature, mode]);
 
   // useModel owns scene membership and destruction. Shadow flags and transforms
   // are managed above per batch, so a whole-asset ModelRenderer is unnecessary.

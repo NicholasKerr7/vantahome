@@ -19,13 +19,13 @@ export interface WeatherPose {
 export const WEATHER_GROUPS = data.groups as WeatherGroup[];
 export const ORIGINAL_WEATHER_FOLIAGE_NAMES = data.originalFoliageNames;
 
-/** Resolve the identical, bounded animation pose on the native render thread and in Three.js. */
+/** Resolve bounded native/Three poses using a map-calibrated downwind vector prepared on JS. */
 export function weatherGroupPose(
   group: WeatherGroup,
   elapsed: number,
   weather: WeatherKind,
   windSpeed: number,
-  windDirection: number,
+  windTravel: readonly [number, number],
   motion: boolean,
 ): WeatherPose {
   'worklet';
@@ -33,9 +33,8 @@ export function weatherGroupPose(
   const rotation: WeatherVector = [0, 0, 0];
   const scale: WeatherVector = [1, 1, 1];
   const intensity = weather === 'storm' ? 3 : weather === 'heavy' ? 2 : weather === 'light' ? 1 : 0;
-  const time = Math.max(0, elapsed);
-  const angle = windDirection * Math.PI / 180;
-  const wind = Math.max(0, Math.min(55, windSpeed));
+  const time = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
+  const wind = Number.isFinite(windSpeed) ? Math.max(0, Math.min(55, windSpeed)) : 0;
 
   if (group.kind === 'plant') {
     if (motion && wind > 0) {
@@ -43,8 +42,8 @@ export function weatherGroupPose(
       const gust = 0.6 + 0.25 * Math.sin(time * 0.73 + group.phase * 6.28)
         + 0.15 * Math.sin(time * 1.93 + group.phase * 11);
       const bend = Math.min(0.095, wind * 0.0017) * gust;
-      rotation[0] = Math.cos(angle) * bend;
-      rotation[2] = Math.sin(angle) * bend;
+      rotation[0] = windTravel[1] * bend;
+      rotation[2] = -windTravel[0] * bend;
     }
     return { position, scale, rotation };
   }
@@ -59,11 +58,11 @@ export function weatherGroupPose(
     const speed = intensity === 3 ? 15 : intensity === 2 ? 11 : 7;
     const phase = (time * speed / 6 + group.phase) % 1;
     const height = 6 * (1 - phase);
-    // The streak reaches its surveyed landing point as horizontal drift tends to zero.
+    // The streak reaches its authored landing point as horizontal drift tends to zero.
     const drift = height * wind / 650;
-    position[0] += Math.sin(angle) * drift;
+    position[0] -= windTravel[0] * drift;
     position[1] += height;
-    position[2] -= Math.cos(angle) * drift;
+    position[2] -= windTravel[1] * drift;
   } else if (group.kind === 'splash') {
     const phase = (time * (intensity === 3 ? 2.6 : 1.8) + group.phase) % 1;
     position[1] += Math.sin(phase * Math.PI) * (intensity === 3 ? 0.14 : 0.08);

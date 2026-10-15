@@ -9,7 +9,8 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Property compass, road markings and triangle cleanup | Complete in Preview 62 source | Plan-derived orientation; unchanged property/camera placement; bounded compass, one road-paint mesh, 96 defective triangles removed. See handoff for installation and survey limits. |
+| Official geography and directional weather | Complete in Preview 63 source | NLA frontage calibration, Owner-confirmed property weather pin, shared true-bearing wind/rain/plants, stable orbit compass. See handoff for map limits and install status. |
+| Property compass, road markings and triangle cleanup | Complete in Preview 62 source | Original plan calibration superseded by Preview 63; unchanged property/camera placement; bounded compass, one road-paint mesh, 96 defective triangles removed. See handoff for installation and survey limits. |
 | Account recovery and independent security access | Complete in Preview 61 source | Security remains reachable without a home; reviewed verified-email recovery; persistent credential completion; captured-token password mutation; home authority/runtime gate. See handoff for native installation and remaining physical/email checks. |
 | Sent invitations | Complete in Preview 60 source/staging | Authorized household list, explicit pending/expired state, scoped cancellation, accept/reissue races, no implied account deletion or membership removal. See current handoff for native installation status. |
 | Account sessions | Complete in Preview 60 source/staging | Private current-account inventory, deliberate other-session sign-out, exact token binding, truthful acknowledgement and token-expiry limits, native/web recovery. Physical interaction review remains separate. |
@@ -28,11 +29,15 @@ an export-order dependency: gas fixture preservation hashes must be established
 after baseline triangle cleanup. Browser checks also caught and removed an initial
 compass DOM-root teardown race. The final 21-capture sweep had no browser errors.
 
-**Open visual alignment follow-up (P2):** `weatherGeometry.ts::windTravelDirection`
-still treats drawing-up as north. The newly documented site orientation should be
-applied consistently to rain travel and vegetation wind, with meteorological
-"from" semantics and reduced-motion coverage. This concerns visual direction,
-not the accuracy of the weather readings. No wind behavior was changed here.
+**Resolved in Preview 63 source:** compass and all wind/rain/plant renderers now
+share an official-map true-north basis and meteorological "from" semantics.
+Additional confirmed findings were fixed: main rain lacked time-dependent sideways
+travel, and mixing finite-world and directional compass projections caused label
+jumps at close zoom. Reduced motion, wind-path roof clearance, resource ownership,
+native worklet isolation and per-household weather configuration were reviewed.
+Official map alignment is not a certified survey; regional weather still cannot
+represent every on-site gust. The Owner confirmed saving the official parcel pin.
+See the handoff for build/install evidence and remaining physical review.
 
 ## Next implementation priorities
 

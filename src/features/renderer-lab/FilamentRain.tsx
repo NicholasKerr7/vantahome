@@ -6,6 +6,7 @@ import {
 } from 'react-native-filament';
 import { useSharedValue } from 'react-native-worklets-core';
 import type { LabSettings } from './protocol';
+import { windTravelDirection } from '../../../packages/home-scene/src/environment/propertyGeography';
 
 const WATER_MODEL = require('../../../assets/renderer-lab/filament-rain.glb');
 const WATER_MATERIAL = require('../../../assets/renderer-lab/filament-water.filamat');
@@ -46,6 +47,11 @@ export function FilamentRain({ settings, onReady }: Props) {
   const [ready, setReady] = useState(false);
   const [failure, setFailure] = useState<Error | null>(null);
   const { weather, windSpeed, windDirection, night, motion, resetKey } = settings;
+  // Match Three's upwind height offset without importing geographic helpers into a native worklet.
+  const [travelX, travelZ] = windTravelDirection(windDirection);
+  const wind = Number.isFinite(windSpeed) ? Math.min(55, Math.max(0, windSpeed)) / 650 : 0;
+  const windX = -travelX * wind;
+  const windZ = -travelZ * wind;
   const mode = `${weather}:${resetKey}`;
   const signature = `${weather}:${windSpeed}:${windDirection}:${night}:${motion}`;
 
@@ -150,22 +156,20 @@ export function FilamentRain({ settings, onReady }: Props) {
     const viewportHeight = Math.max(1, view.getViewport().height / pixelRatio);
     const resized = previousHeight.value !== viewportHeight;
     if (!animated && !changed && !reset && !resized) return;
-    const angle = windDirection * Math.PI / 180;
-    const wind = Math.min(55, Math.max(0, windSpeed)) / 650;
     for (const { instance, kind } of owned.bindings) {
       if (animated || reset) instance.setFloatParameter('time', elapsed.value);
       if (changed) {
         instance.setFloatParameter('intensity', intensity);
         instance.setFloatParameter('night', night ? 1 : 0);
         instance.setFloatParameter('motion', motion ? 1 : 0);
-        if (kind !== 3) instance.setFloat3Parameter('wind', [Math.sin(angle) * wind, 0, -Math.cos(angle) * wind]);
+        if (kind !== 3) instance.setFloat3Parameter('wind', [windX, 0, windZ]);
       }
       if (resized && kind !== 3) instance.setFloatParameter('viewportHeight', viewportHeight);
     }
     previousSettings.value = signature;
     previousHeight.value = viewportHeight;
   }, [active, resources, elapsed, previousMode, previousSettings, previousHeight, mode, signature,
-    weather, windSpeed, windDirection, night, motion, view, pixelRatio]);
+    weather, windX, windZ, night, motion, view, pixelRatio]);
 
   if (failure) throw failure;
   return null;

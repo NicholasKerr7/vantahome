@@ -4,9 +4,11 @@
   "source": "Revised House Plan with Stamp.pdf, A002 site plan; A001 cover for planting character",
   "coordinateSystem": "Local plan axes: Blender x/right, y/up-page, z/up. Three = [x,z,-y]. These are not cardinal axes; the house and site transforms remain unchanged.",
   "orientation": {
-    "reference": "A002 drawn north arrow",
-    "northDegreesClockwiseFromPlanUp": -30,
-    "accuracy": "Approximately 30 degrees west of drawing-up, read from the supplied plan. Not a surveyed bearing or device heading."
+    "reference": "Official NLA parcel frontage, corroborated by the mapped road (June 2025 parcel and September 2024 road layers)",
+    "northDegreesClockwiseFromPlanUp": -26.884524018094538,
+    "frontageTrueBearingDegrees": 116.920408635227,
+    "frontageModelBearingDegrees": 90.03588461713247,
+    "accuracy": "True-north alignment derived from the official mapped frontage; not survey-certified. Plan and mapped parcel dimensions differ. House, land, camera and scale remain unchanged."
   },
   "accuracy": "Site edges and driveway traced from A002 and aligned to the existing interpreted house; not a survey or construction model.",
   "assumptions": [

@@ -3,6 +3,7 @@ import { PixelRatio } from 'react-native';
 import { act, cleanup, render } from '@testing-library/react-native';
 import { FilamentRain } from '../FilamentRain';
 import { INITIAL_LAB_SETTINGS } from '../protocol';
+import { windTravelDirection } from '../../../../packages/home-scene/src/environment/propertyGeography';
 
 jest.mock('../../../../assets/renderer-lab/filament-rain.glb', () => 10, { virtual: true });
 jest.mock('../../../../assets/renderer-lab/filament-water.filamat', () => 11, { virtual: true });
@@ -194,6 +195,25 @@ test('keeps wet intensity while reduced motion stops water updates, and clear re
   });
 });
 
+test('all native water batches follow calibrated cardinal changes without rebuilding GPU resources', () => {
+  const onReady = jest.fn();
+  const settings = { ...INITIAL_LAB_SETTINGS, weather: 'heavy' as const, windSpeed: 26 };
+  const { rerender } = render(<FilamentRain settings={settings} onReady={onReady} />);
+  for (const windDirection of [0, 90, 180, 270]) {
+    rerender(<FilamentRain settings={{ ...settings, windDirection }} onReady={onReady} />);
+    frame();
+    const [travelX, travelZ] = windTravelDirection(windDirection);
+    for (const instance of waterInstances().slice(0, 3)) {
+      const wind = instance.vectors.get('wind')!;
+      expect(wind[0]).toBeCloseTo(-travelX * 26 / 650);
+      expect(wind[1]).toBe(0);
+      expect(wind[2]).toBeCloseTo(-travelZ * 26 / 650);
+    }
+  }
+  expect(mockCreateMaterial).toHaveBeenCalledTimes(2);
+  expect(mockSetMaterial).toHaveBeenCalledTimes(4);
+});
+
 test('resets deterministically and updates viewport and bounded meteorological wind without recreating resources', () => {
   const onReady = jest.fn();
   const storm = { ...INITIAL_LAB_SETTINGS, weather: 'storm' as const, windSpeed: 180, windDirection: 90 };
@@ -201,8 +221,9 @@ test('resets deterministically and updates viewport and bounded meteorological w
   frame(); frame(10);
   const instances = waterInstances();
   expect(instances[0].floats.get('time')).toBe(0.08);
-  expect(instances[0].vectors.get('wind')?.[0]).toBeCloseTo(55 / 650);
-  expect(instances[0].vectors.get('wind')?.[2]).toBeCloseTo(0);
+  const [dx, dz] = windTravelDirection(90);
+  expect(instances[0].vectors.get('wind')?.[0]).toBeCloseTo(-dx * 55 / 650);
+  expect(instances[0].vectors.get('wind')?.[2]).toBeCloseTo(-dz * 55 / 650);
   mockHeight = 844;
   rerender(<FilamentRain settings={{ ...storm, resetKey: 1, motion: false }} onReady={onReady} />);
   frame();

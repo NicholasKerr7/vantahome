@@ -34,7 +34,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('renders all four directions after the first frame, even with anchors behind the camera', () => {
+it('renders all four true directions after the first frame, even at a close zoom', () => {
   renderCompass(true);
   const camera = new PerspectiveCamera(42, 390 / 580, 0.08, 500);
   camera.position.set(10, 3, -12);
@@ -45,7 +45,8 @@ it('renders all four directions after the first frame, even with anchors behind 
   for (const marker of Object.values(markers.current)) {
     expect(marker?.getAttribute('transform')).toMatch(/^translate\([\d.]+ [\d.]+\)$/);
   }
-  expect(container.querySelector('svg')?.getAttribute('aria-label')).toContain('Approximate orientation');
+  expect(container.querySelector('svg')?.getAttribute('aria-label')).toContain('True north aligned to the official NLA parcel map');
+  expect(container.querySelector('.property-cardinal-note')?.textContent).toBe('TRUE');
   expect(container.querySelectorAll('button, [tabindex]')).toHaveLength(0);
 });
 

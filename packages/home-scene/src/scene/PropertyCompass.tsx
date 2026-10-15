@@ -8,14 +8,14 @@ interface CompassProps { markers: RefObject<CompassMarkers> }
 
 /** One DOM-owned SVG avoids additional React roots during scene loading or teardown. */
 export function PropertyCompass({ markers }: CompassProps) {
-  return <svg className="property-compass-overlay" role="img" aria-label="Property compass. Approximate orientation based on the A002 site-plan north arrow.">
+  return <svg className="property-compass-overlay" role="img" aria-label="Property compass. True north aligned to the official NLA parcel map; map-derived, not survey-certified.">
     {SITE_CARDINALS.map(({ label, name }) => <g key={label}
       ref={(element) => { markers.current[label] = element; }}
       className={`property-cardinal${label === 'N' ? ' is-north' : ''}`}
       data-cardinal={label} visibility="hidden" aria-hidden="true">
-      <title>{name} · Based on site plan</title>
+      <title>{name} · NLA map alignment</title>
       <text x="0" y={label === 'N' ? -5 : 0}>{label}</text>
-      {label === 'N' && <text className="property-cardinal-note" x="0" y="10">PLAN</text>}
+      {label === 'N' && <text className="property-cardinal-note" x="0" y="10">TRUE</text>}
     </g>)}
   </svg>;
 }

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { INITIAL_STATE, type LabState } from './contracts';
 import { createThreeRain } from './threeRain';
 import { WEATHER_GROUPS } from './weatherAnimation';
+import { windTravelDirection } from '../environment/propertyGeography';
 
 /** Build borrowed authored meshes separately from the generated water resources. */
 function weatherFixture() {
@@ -98,8 +99,11 @@ describe('Three.js rain resource ownership', () => {
     const effects = createThreeRain(fixture.weatherModel);
     const { uniforms } = generatedWater(fixture.weatherModel);
     effects.apply(settings({ windSpeed: 180, windDirection: 90 }));
-    expect(uniforms.uWind.value.x).toBeCloseTo(55 / 650);
-    expect(uniforms.uWind.value.y).toBeCloseTo(0);
+    const [dx, dz] = windTravelDirection(90);
+    expect(uniforms.uWind.value.x).toBeCloseTo(-dx * 55 / 650);
+    expect(uniforms.uWind.value.y).toBeCloseTo(-dz * 55 / 650);
+    // Height decreases while falling, so its GPU offset moves opposite the upwind uniform.
+    expect(-uniforms.uWind.value.x * dx - uniforms.uWind.value.y * dz).toBeGreaterThan(0);
     effects.update(4);
     effects.resize(844);
     effects.update(Number.NaN);

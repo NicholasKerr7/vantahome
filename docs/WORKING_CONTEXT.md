@@ -45,9 +45,66 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Official geography and weather direction — October 15 / Preview 63
+
+- Supersedes Preview 62's drawn-arrow compass calibration. The official NLA June
+  2025 and September 2024 parcel layers match the plan title and each other. The
+  mapped frontage is corroborated by the independent mapped road; alignment is
+  **26.884524° west of drawing-up**. North is labelled `TRUE`, with an accessible
+  map-derived accuracy statement. The house, land, cameras and hotspots remain
+  unchanged. Parcel/model edge lengths differ, so this is not a certified survey.
+- Fresh raw official responses, reproducible calculation and report are in
+  `work/official-property-georeference-{raw.json,measure.py,report.json}`. This report
+  supersedes `property-orientation-report.json` and corrects its old grid-convergence
+  sign. Private parcel identifiers and coordinates remain outside shipped assets.
+- The user **confirmed saving the official parcel-centre pin** through Owner →
+  House → Settings → Weather, using `America/Jamaica`. This uses the existing
+  household RPC/provider-consent path. No backend, other-household setting or
+  generic unconfigured fallback was changed. A live request at the exact pin
+  succeeded (`official-property-weather-live.json`); the returned weather grid
+  centre is expected to differ. This remains regional model weather, not an
+  on-site sensor. Save success is user-confirmed, not independently read from Auth.
+- Shared `environment/propertyGeography.ts` now converts true bearings for the
+  compass, main rain/plants and optional Three.js/Filament labs. Wind is FROM its
+  reported bearing; rain travels and foliage bends downwind. Falling rain now has
+  time-dependent horizontal travel with an upwind tail. Conservative full-path
+  roof envelopes preserve house/pavilion clipping; no new GPU particle budget.
+- Fixed a compass-label jump during panned close orbits by using one directional
+  projection ring at every distance. Opposite directions remain opposite. Native
+  worklets capture numeric wind values only; touch/reduced motion and weather
+  lifecycle/resource ownership remain intact. Independent focused review found
+  no actionable issues in this change; this is not an exhaustive app audit.
+
+Verification: **1,066 scene tests / 90 suites**, **9 native rain tests**, **113
+weather host tests / 7 suites**, app/scene TypeScript, main scene packaging and
+renderer-lab web packaging passed. Roof tests sample **110,400 trajectories**.
+The first full test run caught the old compass-label expectation and two timeouts
+under concurrent work; the expectation was updated, expensive loop assertions
+were reduced without reducing samples, and the full suite passed with two workers.
+Browser: **21 captures** across **390×844, 768×1024, 1024×768**, day/night/rain,
+orbit/zoom/floor-return; all cardinal labels visible, bounded and non-interactive,
+zero page errors or overflow. Four additional captures covered reduced-motion
+views and the restricted Guest exterior overview, also without page errors.
+Artifacts: `work/official-geography-*` and
+`work/official-weather-direction-*`.
+
+**Preview 63 installed** on the connected iPhone; device inventory confirms
+**1.0.0 (63)**. The user confirmed unlocking and opening it. Automatic launch and
+one bounded retry were blocked by Apple's service reporting `Locked`; subsequent
+process inventory did not independently confirm VantaHome. Do not interpret this
+as a reproduced app crash or as completed physical direction/visual signoff.
+Strict signature, preview identity/schemes, device provisioning, arrival media and
+current scene markers/hash passed. Production metadata was restored; release
+version/assets/auth redirects and secret/history checks passed. Scene:
+**31,922,352 bytes**, SHA256
+`4134d9ce0ad4c0af670f1abd0c87a253b2864872c63ecb1d15b83c75d22c7f70`.
+Provisioning expires **2026-10-19 05:19:39 UTC**. The task-owned scene server 5187
+was stopped after QA. Other user servers and production remain unchanged.
+
 ## Property orientation, road paint and mesh cleanup — October 15 / Preview 62
 
-- Added N/E/S/W around the property, using A002's drawn north arrow: approximately
+- Historical Preview 62 baseline (orientation superseded above): added N/E/S/W
+  around the property, using A002's drawn north arrow: approximately
   30° west of drawing-up. Labels follow orbit/zoom, stay bounded and consume no
   input. A single DOM-owned SVG avoids additional React roots during loading and
   teardown. Hidden on floor, immersive and cinematic views; no added animation.

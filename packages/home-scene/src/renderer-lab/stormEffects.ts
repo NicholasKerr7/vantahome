@@ -5,6 +5,7 @@ import {
 import type { LabState } from './contracts';
 import type { WeatherKind } from './weather';
 import { ORIGINAL_WEATHER_FOLIAGE_NAMES, WEATHER_GROUPS, stormFlash, weatherGroupPose } from './weatherAnimation';
+import { windTravelDirection } from '../environment/propertyGeography';
 import { createThreeRain } from './threeRain';
 
 interface StormScene {
@@ -99,10 +100,11 @@ export function createStormEffects({ scene, weatherModel, landscape, exterior, a
     if (!animated && !needsUpdate) return;
     needsUpdate = false;
     if (animated) elapsed += Math.min(0.08, Math.max(0, delta));
+    const windTravel = windTravelDirection(state.windDirection);
     for (const { metadata, node } of groups) {
       // Water now has independent GPU phases; the shared asset still drives rooted foliage.
       if (metadata.kind !== 'plant' && metadata.kind !== 'wet') continue;
-      const pose = weatherGroupPose(metadata, elapsed, state.weather, state.windSpeed, state.windDirection, state.motion);
+      const pose = weatherGroupPose(metadata, elapsed, state.weather, state.windSpeed, windTravel, state.motion);
       node.position.fromArray(pose.position);
       node.scale.fromArray(pose.scale);
       node.rotation.set(...pose.rotation);

@@ -2,6 +2,7 @@ import { DoubleSide, Group, Mesh, ShaderMaterial, Vector2, type Object3D } from 
 import type { LabState } from './contracts';
 import { createRainGeometry } from './threeRainGeometry';
 import { WATER_FRAGMENT, WATER_VERTEX, WET_FRAGMENT, WET_VERTEX } from './threeRainShaders';
+import { windTravelDirection } from '../environment/propertyGeography';
 
 export interface ThreeRainEffects {
   apply: (state: LabState) => void;
@@ -54,9 +55,10 @@ export function createThreeRain(weatherModel: Object3D): ThreeRainEffects {
       uniforms.uIntensity.value = state.weather === 'storm' ? 3 : state.weather === 'heavy' ? 2 : state.weather === 'light' ? 1 : 0;
       uniforms.uNight.value = state.night ? 1 : 0;
       uniforms.uMotion.value = state.motion ? 1 : 0;
-      const angle = state.windDirection * Math.PI / 180;
-      const wind = Math.min(55, Math.max(0, state.windSpeed)) / 650;
-      uniforms.uWind.value.set(Math.sin(angle) * wind, -Math.cos(angle) * wind);
+      const [travelX, travelZ] = windTravelDirection(state.windDirection);
+      const wind = Number.isFinite(state.windSpeed) ? Math.min(55, Math.max(0, state.windSpeed)) / 650 : 0;
+      // GPU height offsets start upwind and shrink to zero as drops reach their anchors.
+      uniforms.uWind.value.set(-travelX * wind, -travelZ * wind);
       field.visible = state.motion && state.weather !== 'clear';
     },
     /** One shared clock drives independent deterministic particle ages on the GPU. */

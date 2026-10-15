@@ -4,8 +4,8 @@ import { BufferAttribute, BufferGeometry, ShaderMaterial, Vector2 } from 'three'
 import type { HouseView } from './types';
 import { usePageMotion } from './usePageMotion';
 import {
-  PARCEL_POINTS, RAIN_CEILING, createWeatherAnchors, weatherLandingHeight,
-  weatherMagnitude, weatherParticleCount, weatherPrecipitation, weatherSeed, windTravelDirection, type SceneWeather,
+  PARCEL_POINTS, RAIN_CEILING, createWeatherAnchors, weatherLandingHeight, weatherWindLandingHeight,
+  rainWindSlope, weatherParticleCount, weatherPrecipitation, weatherSeed, windTravelDirection, type SceneWeather,
 } from './weatherGeometry';
 
 interface WeatherEffectsProps {
@@ -34,16 +34,18 @@ const fragmentShader = `
   }
 `;
 const vertexShader = `
-  uniform float time; uniform float snow; uniform float windSpeed;
+  uniform float time; uniform float snow; uniform float windSlope;
   uniform vec2 wind; attribute float phase; attribute float landing;
   varying vec2 worldGround; varying float visibility;
   void main() {
     float cycle = fract(phase + time * mix(.63,.095,snow));
     float span = ${RAIN_CEILING.toFixed(1)} - landing;
-    float head = landing + (1.0-cycle) * span;
+    float height = (1.0-cycle) * span;
     float streakLength = mix(.25,.075,snow);
-    vec3 point = vec3(position.x, head + position.y * streakLength, position.z);
-    point.xz += wind * windSpeed * (.015 + position.y * .007);
+    float altitude = height + position.y * streakLength;
+    vec3 point = vec3(position.x, landing + altitude, position.z);
+    // Upper endpoints are upwind; the falling head approaches its fixed landing anchor downwind.
+    point.xz -= wind * windSlope * altitude;
     point.xz += vec2(sin(time*.38+phase*25.), cos(time*.3+phase*29.)) * snow * .14;
     worldGround = point.xz;
     visibility = smoothstep(0.,.09,cycle) * (1.-smoothstep(.91,1.,cycle));
@@ -73,7 +75,7 @@ function Precipitation({ weather, reducedMotion }: Pick<WeatherEffectsProps, 'we
     geometry.setAttribute('landing', new BufferAttribute(landings, 1));
     const material = new ShaderMaterial({
       uniforms: {
-        time: { value: 0 }, snow: { value: 0 }, windSpeed: { value: 0 },
+        time: { value: 0 }, snow: { value: 0 }, windSlope: { value: 0 },
         wind: { value: new Vector2() }, parcel: { value: parcelVectors },
       },
       vertexShader, fragmentShader, transparent: true, depthWrite: false, toneMapped: false,
@@ -84,8 +86,16 @@ function Precipitation({ weather, reducedMotion }: Pick<WeatherEffectsProps, 'we
   useEffect(() => {
     geometry.setDrawRange(0, particleCount * 2);
     material.uniforms.snow!.value = Number(snow);
-    material.uniforms.windSpeed!.value = weatherMagnitude(weather.windSpeedKmh, 22);
+    material.uniforms.windSlope!.value = rainWindSlope(weather.windSpeedKmh);
     (material.uniforms.wind!.value as Vector2).set(...windTravelDirection(weather.windDirectionDeg));
+    const positions = geometry.getAttribute('position');
+    const landings = geometry.getAttribute('landing');
+    // Only weather changes update this small buffer; the GPU owns all frame-by-frame particle motion.
+    for (let index = 0; index < MAX_PARTICLES; index++) {
+      const landing = weatherWindLandingHeight(positions.getX(index * 2), positions.getZ(index * 2), weather.windSpeedKmh, weather.windDirectionDeg, snow);
+      landings.setX(index * 2, landing); landings.setX(index * 2 + 1, landing);
+    }
+    landings.needsUpdate = true;
   }, [geometry, material, particleCount, snow, weather.windDirectionDeg, weather.windSpeedKmh]);
   useFrame((_, delta) => {
     if (canAnimate.current && particleCount > 0) material.uniforms.time!.value += Math.min(delta, 0.06);
