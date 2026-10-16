@@ -1,8 +1,9 @@
 # Vanta home assistant
 
-Implemented October 16, 2026. Simulation first, staging only. The user chose
-**build now; connect AI later**. No provider key, API billing or live model call
-was configured as part of this delivery.
+Implemented October 16, 2026. Simulation first, staging only. Initially delivered
+without a provider connection; the user subsequently authorized activation and
+privately saved a dedicated OpenAI staging key. Secret-name presence is verified.
+API billing/model access and a real authenticated answer still require verification.
 
 ## Experience
 
@@ -71,8 +72,8 @@ minute and 60 per day per actor, plus 600 per day for the staging server. Availa
 checks allow 30 per minute. Limit failures fail closed. Logs contain the existing
 operational metadata, never questions, answers or credentials.
 
-To connect later, privately add `OPENAI_API_KEY` to this staging project's server
-secrets, with API billing and an appropriate account budget. An optional
+`OPENAI_API_KEY` is now present in this staging project's server secrets after the
+user's private setup. Verify API billing and an appropriate account budget. An optional
 `HOME_CONCIERGE_MODEL` secret overrides the default. Never use `EXPO_PUBLIC_*` for
 provider credentials. Recheck the model's current structured-output compatibility
 and limits before changing it. Then use **Check connection** and run a small
@@ -86,7 +87,8 @@ scene-editor integration have automated coverage. Browser tests use the real
 presentation with explicit simulation/answer fixtures and do not call a model.
 The maintained working context records final counts, native install and evidence.
 
-Staging deployment verifies the active JWT-protected function, absent provider key
-and HTTP 401 for an unauthenticated request. This is not a real authenticated model
-answer test. Physical dictation/keyboard feel, live answer quality/latency/cost,
+Initial staging deployment verified the active JWT-protected function and HTTP 401
+for an unauthenticated request. The later activation check verified only the secret's
+name, without reading its value. Neither is a real authenticated model answer test.
+Physical dictation/keyboard feel, live answer quality/latency/cost,
 Android hardware and deferred physical iPad testing remain distinct acceptance work.

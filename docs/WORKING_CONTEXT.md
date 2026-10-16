@@ -50,18 +50,19 @@ defects from ideas or untested risks.
 
 - **Live activation now authorized:** the user subsequently asked to connect OpenAI
   and test in the app. Created the separate OpenAI **VantaHome Staging** project
-  (`proj_KNfFzIjQlgpdkOHyQQc6ooWu`). Prepared an unsubmitted user-owned key named
+  (`proj_KNfFzIjQlgpdkOHyQQc6ooWu`). Prepared a user-owned key named
   **VantaHome staging concierge**, Restricted, Responses Write (UI reports two
-  effective permissions), 30-day expiry. The user must generate/copy it privately
-  into the prepared staging Supabase `OPENAI_API_KEY` secret form and close the
-  reveal dialog. Do not inspect the key or clipboard. At the last metadata check,
-  no key was configured; billing/model access and real app answers are unverified.
-  Browser handoffs: Chrome API Keys tab `1394035335`, staging Secrets `1394035341`.
-  Recheck tabs/state; IDs are temporary. Evidence: `work/openai-staging-key-prepared.jpg`.
-  After the user confirms Save, inspect only secret-name presence, then test a real
-  authenticated home brief and a 1–3-device scene draft. Availability alone checks
-  configuration presence, not provider readiness. No billing transaction or model
-  call has been made. Review server metadata and the user's iPhone result; preserve
+  effective permissions), 30-day expiry. On October 16 the user confirmed privately
+  creating/copying it into staging Supabase and closing the reveal dialog. CLI
+  secret-name-only verification confirms `OPENAI_API_KEY` exists; no model override
+  is configured. Do not inspect the key or clipboard. Billing/model access and
+  real app answers remain unverified; OpenAI's billing page returned a blank UI.
+  Chrome API Keys tab `1394035335` and staging diagnostics `1394035341` are temporary;
+  recheck state. Evidence: `work/openai-staging-key-prepared.jpg`.
+  The user has been asked to test microphone → Ask → Home brief → Send on Preview 70.
+  Then test a 1–3-device scene draft. Availability alone checks configuration
+  presence, not provider readiness. No billing transaction has been made.
+  Review server metadata and the user's iPhone result; preserve
   separate Review/Save/Run and Guest restrictions. A read-only audit noted generic
   upstream 503 errors currently look like missing configuration; distinguish these
   if encountered during live testing.

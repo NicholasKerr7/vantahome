@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Vanta home assistant | Installed in Preview 70; live connection now in progress | Existing microphone opens Ask/Controls, an on-device simulation brief and review-only scene draft flow. User now authorized connection; separate OpenAI staging project/key form prepared, private key entry and live tests pending. See handoff for current evidence. |
+| Vanta home assistant | Installed in Preview 70; staging key configured, live test pending | Existing microphone opens Ask/Controls, an on-device simulation brief and review-only scene draft flow. User privately saved the dedicated OpenAI staging key; secret-name presence verified. Billing/model access and live answers remain unverified. See handoff for current evidence. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
 | Saved-device editing | Complete in Preview 66 source/staging | Rename, compatible room move and 3D reposition preserve device identity/settings. Revision conflicts and durable retries prevent stale overwrite or resurrection. See handoff for native/physical status. |
@@ -79,8 +79,8 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
-Current task: finish the authorized OpenAI staging connection after the user saves
-the prepared key privately. Verify billing/model access with a real authenticated
+Current task: finish the authorized OpenAI staging connection; the user has saved
+the key privately and secret-name presence is verified. Verify billing/model access with a real authenticated
 app answer, then a small scene review and scoped/negative cases. Do not treat the
 availability response as a provider health test. Never read or store the key in
 chat, repository, screenshots or evidence. See the handoff for prepared tabs/state.
