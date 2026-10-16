@@ -48,6 +48,17 @@ defects from ideas or untested risks.
 
 ## Vanta home assistant — October 16 / Preview 70
 
+- **Guest AI acceptance in progress:** current focused checks pass **134 tests /
+  8 suites**, including room-limited context, layout-sharing isolation, withheld
+  scene authority, Guest expiry, account switches, late responses, one-use review
+  tokens, server reauthorization and forbidden proposals. Evidence:
+  `work/concierge-guest-restrictions-tests.log` (129/7) and
+  `work/concierge-guest-handoff-tests.log` (5/1). No code changes or new deployment.
+  User has been asked to sign into the existing Guest, check that the Owner answer
+  is gone, and send Home brief. **Physical result pending; do not mark Guest live
+  checks passed from fixture tests or an unattributed log entry.** Next verify
+  withheld private-room readings, no scene Review/Create without automation.manage,
+  and no gate/door action. See the compact checklist in HOME_CONCIERGE.md.
 - **Live connection accepted / Preview 71:** the user added API credit privately,
   confirmed the balance updated and live answers now work. Independently verified
   two staging **HTTP 200 / `answered`** operations: **6,411 ms**

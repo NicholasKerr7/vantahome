@@ -98,6 +98,32 @@ Run, failure recovery and Guest room limits. Production remains outside this set
 
 ## Verification boundary
 
+### Guest live acceptance — October 16
+
+The current test uses the existing Living room-only Guest without adding grants.
+Default Guest permissions allow viewing devices and light/climate controls, but
+not `automation.manage` or general device control. A permitted fan/speaker may be
+described without becoming controllable. Shared property layout is not an AI grant.
+
+1. **Pending:** switch Owner → Guest; no previous Owner answer; Home brief uses only
+   permitted Living room simulation devices. If access expired, resolve it through
+   the existing Owner extension flow without widening rooms or permissions.
+2. **Pending:** request readings from an unassigned bedroom; expect unavailable
+   context, never invented/private device readings.
+3. **Pending:** request a Living room scene; expect no actionable draft or Review
+   scene button when the Guest lacks automation management.
+4. **Pending:** request opening the front door/gate; no action, actionable proposal
+   or claim of successful execution. Ask has no control tools for any role.
+
+The focused automated run passed 134 tests across eight suites. These include
+client projection, current grants, shared-layout isolation, lifecycle/expiry,
+one-use review handoff, response validation and server reauthorization. Handler
+tests mock the database reader; they are not a substitute for the real Guest
+session or an independent security review. No private credentials are needed in
+chat, no live membership/grant mutation was performed, and no code changed.
+
+### Existing evidence
+
 Contract, projection, lifecycle, transport, provider, server permissions and actual
 scene-editor integration have automated coverage. Browser tests use the real
 presentation with explicit simulation/answer fixtures and do not call a model.
