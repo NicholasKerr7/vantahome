@@ -48,6 +48,21 @@ defects from ideas or untested risks.
 
 ## Vanta home assistant — October 16 / Preview 70
 
+- **Live connection accepted / Preview 71:** the user added API credit privately,
+  confirmed the balance updated and live answers now work. Independently verified
+  two staging **HTTP 200 / `answered`** operations: **6,411 ms**
+  (`75a383cc-f7e1-4462-b37e-c8abcfec5bc5`) and **12,062 ms**
+  (`8137c784-fc55-4d00-8f50-e9ab6f5755f9`). This outcome follows structured-response
+  validation and a fresh identity/home-permission check; it is a real provider
+  answer, not merely availability. No answer content, payment details or key was
+  inspected/retained. Evidence: `work/concierge-live-answer-acceptance.json`.
+  Billing blockage is resolved; no new key, permission expansion, deployment or
+  iPhone rebuild was needed after funding. Next: a small comfort-scene draft through
+  **Review scene → Create → explicit Run scene**, then scoped/negative live cases. The two timings
+  are observations, not a performance benchmark; broad quality/cost remains unmeasured.
+  The physical test prompt requests only the Living room Pendant light on at 30%,
+  leaving all other devices/settings unchanged. User has been asked to confirm
+  creating the scene does not execute it, then explicitly run it. Result pending.
 - **Live Send diagnosis:** the user confirms Preview 71 now shows Home brief.
   Availability succeeds (`200 availability_checked`), but Send fails. Staging
   `home-concierge` v3 added bounded provider error classification: fixed categories
@@ -60,11 +75,8 @@ defects from ideas or untested risks.
   page eventually loaded and independently shows **Free trial / $0.00 API credit**
   for the **Personal** organization containing VantaHome Staging. Key metadata
   shows Active and Responses Write. Evidence: `work/openai-staging-billing-zero.png`.
-  The user's other credit may be in another API organization or ChatGPT; do not
-  assume it transfers. No payment, permission expansion or successful live answer
-  has occurred. Next: user funds this API organization privately or identifies the
-  funded API organization, then repeat one authenticated Send. Do not replace or
-  broaden the current key merely to fix a zero balance.
+  This historical zero-balance blocker was resolved when the user privately added
+  credit, as recorded above. No key replacement or permission expansion was needed.
   This server-only diagnostic update works with Preview 71, without a new build.
   Refined exact quota codes in **v4 ACTIVE, JWT verification enabled** to identify
   credit balance, project spend, organization spend/usage or billing limits when
@@ -92,8 +104,8 @@ defects from ideas or untested risks.
   Production metadata was restored; release version/assets/auth-redirect checks
   and tracked-file secret scan passed. Evidence: `work/concierge-fix-tests.log`,
   `concierge-preview71-package.json`, and build/install/launch receipts.
-  The user confirmed Home brief appears; live Send is blocked by the API quota
-  issue recorded above. Live model answers remain unverified.
+  The user confirmed Home brief appears; the later credit addition and live answer
+  verification are recorded above.
 - **Live activation now authorized:** the user subsequently asked to connect OpenAI
   and test in the app. Created the separate OpenAI **VantaHome Staging** project
   (`proj_KNfFzIjQlgpdkOHyQQc6ooWu`). Prepared a user-owned key named
@@ -101,13 +113,13 @@ defects from ideas or untested risks.
   effective permissions), 30-day expiry. On October 16 the user confirmed privately
   creating/copying it into staging Supabase and closing the reveal dialog. CLI
   secret-name-only verification confirms `OPENAI_API_KEY` exists; no model override
-  is configured. Do not inspect the key or clipboard. Billing/model access and
-  real app answers remain unverified; the later billing inspection is recorded above.
+  is configured. Do not inspect the key or clipboard. The later billing resolution
+  and real app answer verification are recorded above.
   Chrome API Keys tab `1394035335` and staging diagnostics `1394035341` are temporary;
   recheck state. Evidence: `work/openai-staging-key-prepared.jpg`.
-  After resolving the quota issue, test a real answer and a 1–3-device scene draft.
+  The real-answer check passed; next test a 1–3-device scene draft.
   Availability alone checks configuration
-  presence, not provider readiness. No billing transaction has been made.
+  presence, not provider readiness. The user completed funding privately.
   Review server metadata and the user's iPhone result; preserve
   separate Review/Save/Run and Guest restrictions. Preview 71 distinguishes
   temporary failures from missing configuration; staging diagnostics now classify

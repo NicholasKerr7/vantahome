@@ -3,12 +3,11 @@
 Implemented October 16, 2026. Simulation first, staging only. Initially delivered
 without a provider connection; the user subsequently authorized activation and
 privately saved a dedicated OpenAI staging key. Secret-name presence is verified.
-API billing/model access and a real authenticated answer still require verification.
-The Preview 71 physical retry reaches OpenAI but returns credit-balance HTTP 429.
-The billing UI confirms $0.00 API credit in the organization containing VantaHome
-Staging. The user initially reported credit; it may belong to another organization
-or product. Fund this API organization or identify the funded API organization
-before further live testing; replacing or broadening this key is not a remedy.
+The initial Preview 71 physical retry exposed an empty API credit balance. The user
+added credit privately and confirmed live answers work. Staging logs independently
+verify two HTTP 200 `answered` operations (6.4 and 12.1 seconds), including response
+validation and the final access check. No key expansion or new native build was
+needed. Live scene review/save/run and Guest/negative cases remain pending.
 
 The first iPhone connection check exposed a client guard that rejected the signed-in
 no-hub default. Preview 71 allows that saved simulation while keeping configured
@@ -104,6 +103,8 @@ The maintained working context records final counts, native install and evidence
 
 Initial staging deployment verified the active JWT-protected function and HTTP 401
 for an unauthenticated request. The later activation check verified only the secret's
-name, without reading its value. Neither is a real authenticated model answer test.
-Physical dictation/keyboard feel, live answer quality/latency/cost,
+name, without reading its value. Those checks alone did not test real answers;
+the later physical acceptance and two `answered` operations do. No answer content
+was inspected or retained during log verification. Physical scene review/save/run,
+Guest/negative live cases, dictation/keyboard feel, broader answer quality/latency/cost,
 Android hardware and deferred physical iPad testing remain distinct acceptance work.

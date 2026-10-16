@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Vanta home assistant | Preview 71 local brief confirmed; live Send blocked by zero API balance | Staging v4 diagnoses OpenAI credit-balance HTTP 429; billing UI confirms $0.00 in the organization containing VantaHome Staging. User must fund that API organization or identify their funded API organization. No key expansion is needed; live answers remain unverified. See handoff. |
+| Vanta home assistant | Preview 71 live answers confirmed | User privately added API credit; two real staging answers independently verified (HTTP 200, 6.4/12.1 s). Small scene Review/Save/Run and Guest/negative live cases remain pending. No key expansion or new native build was needed. See handoff. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
 | Saved-device editing | Complete in Preview 66 source/staging | Rename, compatible room move and 3D reposition preserve device identity/settings. Revision conflicts and durable retries prevent stale overwrite or resurrection. See handoff for native/physical status. |
@@ -28,8 +28,10 @@ The physical Send test exposed insufficient operational diagnostics: all provide
 HTTP failures became the same unavailable outcome. Fixed, bounded categories now
 distinguish quota, permission, model, request, service and transport failures without
 retaining provider messages, questions or keys. Public errors remain compatible
-with Preview 71. The live credit-balance failure is unresolved; fixture success is not
-provider acceptance, and availability only checks configuration presence.
+with Preview 71. The user resolved the empty API balance privately; two live
+`answered` operations now corroborate their success report. Availability still
+only checks configuration presence. Scene quality, review/save/run and live scoped
+cases remain separate from this initial answer acceptance.
 
 The first physical AI connection check exposed a gap hidden by the ready-simulation
 test fixture: signed-in accounts enable a transport setting with an empty endpoint,
@@ -94,14 +96,11 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
-Current task: finish the authorized OpenAI staging connection; the user has saved
-the key privately and secret-name presence is verified. Exact provider diagnostics
-and the billing page confirm an empty API credit balance for this organization;
-user must fund it privately or identify their existing funded API organization.
-Do not replace/broaden a key to address a zero balance.
-Verify billing/model access with a real authenticated
-app answer, then a small scene review and scoped/negative cases. Do not treat the
-availability response as a provider health test. Never read or store the key in
+Current task: finish live assistant acceptance. The user funded the API organization
+privately and real authenticated answers now pass. Next verify a small scene draft
+through Review scene, Create and explicit Run scene, followed by scoped/negative live cases.
+Record actual quality, latency and cost without treating two requests as a benchmark.
+Do not treat the availability response as a provider health test. Never read or store the key in
 chat, repository, screenshots or evidence. See the handoff for prepared tabs/state.
 
 1. **Account lifecycle:** safe email changes, account deletion with ownership/data
