@@ -7,7 +7,9 @@ The initial Preview 71 physical retry exposed an empty API credit balance. The u
 added credit privately and confirmed live answers work. Staging logs independently
 verify two HTTP 200 `answered` operations (6.4 and 12.1 seconds), including response
 validation and the final access check. No key expansion or new native build was
-needed. Live scene review/save/run and Guest/negative cases remain pending.
+needed. The user also confirmed a scene for the Living room Pendant light, on at
+30%, through Review scene, Create and explicit Run scene; creation did not execute
+the scene. Guest/negative live cases and broader quality/cost remain follow-up.
 
 The first iPhone connection check exposed a client guard that rejected the signed-in
 no-hub default. Preview 71 allows that saved simulation while keeping configured
@@ -105,6 +107,7 @@ Initial staging deployment verified the active JWT-protected function and HTTP 4
 for an unauthenticated request. The later activation check verified only the secret's
 name, without reading its value. Those checks alone did not test real answers;
 the later physical acceptance and two `answered` operations do. No answer content
-was inspected or retained during log verification. Physical scene review/save/run,
-Guest/negative live cases, dictation/keyboard feel, broader answer quality/latency/cost,
+was inspected or retained during log verification. The one-light physical scene
+review/create/run check also passed by user confirmation. Guest/negative live cases,
+dictation/keyboard feel, broader answer quality/latency/cost,
 Android hardware and deferred physical iPad testing remain distinct acceptance work.

@@ -57,12 +57,13 @@ defects from ideas or untested risks.
   answer, not merely availability. No answer content, payment details or key was
   inspected/retained. Evidence: `work/concierge-live-answer-acceptance.json`.
   Billing blockage is resolved; no new key, permission expansion, deployment or
-  iPhone rebuild was needed after funding. Next: a small comfort-scene draft through
-  **Review scene → Create → explicit Run scene**, then scoped/negative live cases. The two timings
-  are observations, not a performance benchmark; broad quality/cost remains unmeasured.
-  The physical test prompt requests only the Living room Pendant light on at 30%,
-  leaving all other devices/settings unchanged. User has been asked to confirm
-  creating the scene does not execute it, then explicitly run it. Result pending.
+  iPhone rebuild was needed after funding. The user also confirmed the full
+  **Review scene → Create → explicit Run scene** physical test: "Living room
+  evening" targets only the Living room Pendant light, on at 30%, leaving other
+  devices/settings unchanged. Creating does not execute; explicit Run applies the
+  requested setting. Initial live answer and scene-flow acceptance are complete.
+  Guest/scoped negative live cases remain follow-up. The two timings are observations,
+  not a performance benchmark; broad quality/cost remains unmeasured.
 - **Live Send diagnosis:** the user confirms Preview 71 now shows Home brief.
   Availability succeeds (`200 availability_checked`), but Send fails. Staging
   `home-concierge` v3 added bounded provider error classification: fixed categories
@@ -117,7 +118,7 @@ defects from ideas or untested risks.
   and real app answer verification are recorded above.
   Chrome API Keys tab `1394035335` and staging diagnostics `1394035341` are temporary;
   recheck state. Evidence: `work/openai-staging-key-prepared.jpg`.
-  The real-answer check passed; next test a 1–3-device scene draft.
+  The real-answer and one-device scene-draft checks passed as recorded above.
   Availability alone checks configuration
   presence, not provider readiness. The user completed funding privately.
   Review server metadata and the user's iPhone result; preserve

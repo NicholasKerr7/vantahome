@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Vanta home assistant | Preview 71 live answers confirmed | User privately added API credit; two real staging answers independently verified (HTTP 200, 6.4/12.1 s). Small scene Review/Save/Run and Guest/negative live cases remain pending. No key expansion or new native build was needed. See handoff. |
+| Vanta home assistant | Preview 71 live answer and scene flow accepted | Two real staging answers independently verified (HTTP 200, 6.4/12.1 s); user confirmed a one-light 30% scene through Review, Create and explicit Run. Guest/negative live cases and broader quality/cost remain follow-up. No key expansion or new native build was needed. See handoff. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
 | Saved-device editing | Complete in Preview 66 source/staging | Rename, compatible room move and 3D reposition preserve device identity/settings. Revision conflicts and durable retries prevent stale overwrite or resurrection. See handoff for native/physical status. |
@@ -30,8 +30,9 @@ distinguish quota, permission, model, request, service and transport failures wi
 retaining provider messages, questions or keys. Public errors remain compatible
 with Preview 71. The user resolved the empty API balance privately; two live
 `answered` operations now corroborate their success report. Availability still
-only checks configuration presence. Scene quality, review/save/run and live scoped
-cases remain separate from this initial answer acceptance.
+only checks configuration presence. The user subsequently confirmed the one-light
+scene through Review/Create/Run. Live scoped cases and broader scene quality remain
+separate from this initial answer and scene acceptance.
 
 The first physical AI connection check exposed a gap hidden by the ready-simulation
 test fixture: signed-in accounts enable a transport setting with an empty endpoint,
@@ -96,9 +97,9 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
-Current task: finish live assistant acceptance. The user funded the API organization
-privately and real authenticated answers now pass. Next verify a small scene draft
-through Review scene, Create and explicit Run scene, followed by scoped/negative live cases.
+Initial live assistant acceptance is complete: the user funded the API organization
+privately, real authenticated answers pass, and one small scene passed Review scene,
+Create and explicit Run scene on the iPhone. Follow up with scoped/negative live cases.
 Record actual quality, latency and cost without treating two requests as a benchmark.
 Do not treat the availability response as a provider health test. Never read or store the key in
 chat, repository, screenshots or evidence. See the handoff for prepared tabs/state.
