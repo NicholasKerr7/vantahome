@@ -54,11 +54,15 @@ defects from ideas or untested risks.
   tokens, server reauthorization and forbidden proposals. Evidence:
   `work/concierge-guest-restrictions-tests.log` (129/7) and
   `work/concierge-guest-handoff-tests.log` (5/1). No code changes or new deployment.
-  User has been asked to sign into the existing Guest, check that the Owner answer
-  is gone, and send Home brief. **Physical result pending; do not mark Guest live
-  checks passed from fixture tests or an unattributed log entry.** Next verify
-  withheld private-room readings, no scene Review/Create without automation.manage,
-  and no gate/door action. See the compact checklist in HOME_CONCIERGE.md.
+  **First physical result passed:** user signed in as the existing Guest and
+  confirmed Living room-only Home brief with no previous Owner answer. Evidence:
+  `work/concierge-guest-live-acceptance.json`. They are now testing an unassigned
+  bedroom question and a mixed Living-room scene/front-door request. Still pending:
+  those results, a comfort-only scene request to isolate automation.manage denial,
+  and a return-to-Owner check. A mixed door refusal alone cannot prove the scene
+  management boundary because safety/access devices are excluded for every role.
+  Do not infer account identity or output contents from payload-free logs. See the
+  compact checklist in HOME_CONCIERGE.md.
 - **Live connection accepted / Preview 71:** the user added API credit privately,
   confirmed the balance updated and live answers now work. Independently verified
   two staging **HTTP 200 / `answered`** operations: **6,411 ms**

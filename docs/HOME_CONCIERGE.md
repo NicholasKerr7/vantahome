@@ -105,15 +105,17 @@ Default Guest permissions allow viewing devices and light/climate controls, but
 not `automation.manage` or general device control. A permitted fan/speaker may be
 described without becoming controllable. Shared property layout is not an AI grant.
 
-1. **Pending:** switch Owner → Guest; no previous Owner answer; Home brief uses only
-   permitted Living room simulation devices. If access expired, resolve it through
-   the existing Owner extension flow without widening rooms or permissions.
+1. **Passed by user confirmation:** switch Owner → Guest; no previous Owner answer;
+   Home brief uses only permitted Living room simulation devices.
 2. **Pending:** request readings from an unassigned bedroom; expect unavailable
    context, never invented/private device readings.
-3. **Pending:** request a Living room scene; expect no actionable draft or Review
-   scene button when the Guest lacks automation management.
-4. **Pending:** request opening the front door/gate; no action, actionable proposal
-   or claim of successful execution. Ask has no control tools for any role.
+3. **Pending:** request a comfort-only Living room scene; expect no actionable draft
+   or Review scene button when the Guest lacks automation management. A combined
+   door/scene refusal does not isolate this permission.
+4. **Pending:** mixed Living room dimming/front-door request; no action, actionable
+   proposal or claim of successful execution. Ask has no control tools for any role.
+5. **Pending:** return to Owner; full-home context and Set a mood return, without a
+   retained Guest answer/draft. No model request is required for this final check.
 
 The focused automated run passed 134 tests across eight suites. These include
 client projection, current grants, shared-layout isolation, lifecycle/expiry,
