@@ -111,8 +111,11 @@ secret/history scan and diff checks passed. Scene: **31,938,951 bytes**, SHA256
 `24714c26fd5741195701b0c394b7828c0bd0ec50cbacd6ab70238ff572d7f859`.
 Provisioning expires **2026-10-19 05:19:39 UTC**. Task-owned servers 5187 and 8088
 were stopped and the temporary UI probe removed. Other user servers and production
-remain unchanged. Physical Owner add/place/toggle/restart verification has been
-requested; installation and browser probes are not physical interaction signoff.
+remain unchanged. On October 15, the user confirmed that adding the device worked
+on the iPhone and that the device and its position remained after reopening the
+app. This verifies the physical save/reopen path; do not infer additional control
+or failure-recovery tests from that report. Saved-device rename/reposition/move
+is not implemented in Preview 65; controls and confirmed removal are available.
 
 ## Smooth manual gate closing — October 15 / Preview 64
 
