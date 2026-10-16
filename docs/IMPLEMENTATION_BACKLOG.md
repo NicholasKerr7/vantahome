@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Vanta home assistant | Installed in Preview 70; staging endpoint deployed | Existing microphone now opens Ask/Controls, an on-device simulation brief and review-only scene draft flow. The user chose to connect AI later; no provider key or live model calls. See handoff for native evidence. |
+| Vanta home assistant | Installed in Preview 70; live connection now in progress | Existing microphone opens Ask/Controls, an on-device simulation brief and review-only scene draft flow. User now authorized connection; separate OpenAI staging project/key form prepared, private key entry and live tests pending. See handoff for current evidence. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
 | Saved-device editing | Complete in Preview 66 source/staging | Rename, compatible room move and 3D reposition preserve device identity/settings. Revision conflicts and durable retries prevent stale overwrite or resurrection. See handoff for native/physical status. |
@@ -79,6 +79,12 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
+Current task: finish the authorized OpenAI staging connection after the user saves
+the prepared key privately. Verify billing/model access with a real authenticated
+app answer, then a small scene review and scoped/negative cases. Do not treat the
+availability response as a provider health test. Never read or store the key in
+chat, repository, screenshots or evidence. See the handoff for prepared tabs/state.
+
 1. **Account lifecycle:** safe email changes, account deletion with ownership/data
    dependencies, ownership transfer, and optional whole-app biometric lock.
    Establish recent server-verified authentication for high-impact operations;
@@ -107,12 +113,10 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Explicitly deferred
 
-- **Live AI connection, explicitly deferred by the user:** the first assistant
-  experience and guarded server adapter are built. Privately configure a staging
-  OpenAI API key/billing when requested, then verify real answer quality, latency,
-  cost, permission-scoped drafts and recovery. API billing is separate from ChatGPT.
-  Current capability is comfort-scene drafting, not routine generation or autonomous
-  operation. Routine proposals can follow after the live first slice is accepted.
+- **Further AI scope:** live provider activation is now the current authorized task
+  above. Routine generation and autonomous operation remain deferred; current scope
+  is comfort-scene drafting with explicit review. Routine proposals can follow after
+  the live first slice is accepted.
 - Hub pairing, real-device bindings/observations and durable app-closed routines:
   no hub yet; NUC 15 is the intended direction. Reuse the existing SQLite worker
   foundation rather than recreating it. Respect the supervised one-light pilot.
