@@ -19,8 +19,9 @@ function abortable<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
 
 /** Surface useful recovery without forwarding provider errors, prompts, or credentials. */
 export class ConciergeServiceError extends Error {
-  constructor(public readonly code: 'unavailable' | 'access' | 'limited' | 'network' | 'invalid') {
+  constructor(public readonly code: 'unavailable' | 'service' | 'access' | 'limited' | 'network' | 'invalid') {
     super({ unavailable: 'AI is not connected yet. Your on-device brief and Controls are available.',
+      service: 'The assistant service is temporarily unavailable. Please try again shortly. Your on-device brief and Controls are available.',
       access: 'Your home access changed. Reopen the assistant to continue.',
       limited: 'The assistant has reached its request limit. Please try again later.',
       network: 'The assistant could not connect. Check your connection and try again.',
@@ -52,8 +53,10 @@ async function callConcierge(scope: RequestScope, payload: object, signal: Abort
     if (controller.signal.aborted) throw new ConciergeServiceError('network');
     if (requestError) {
       const status = typeof Response !== 'undefined' && requestError.context instanceof Response ? requestError.context.status : 0;
+      // A running service can fail temporarily even when its provider key is configured.
+      // Availability false, an absent client or a missing endpoint cover disconnected setup.
       throw new ConciergeServiceError(status === 429 ? 'limited' : status === 401 || status === 403 ? 'access'
-        : status === 503 || status === 404 ? 'unavailable' : 'network');
+        : status === 404 ? 'unavailable' : status === 502 ? 'invalid' : status >= 500 ? 'service' : 'network');
     }
     // The server already bounds output. This additional boundary rejects malformed proxy/client responses.
     if (JSON.stringify(result)?.length > MAX_RESPONSE_BYTES) throw new ConciergeServiceError('invalid');

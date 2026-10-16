@@ -7,7 +7,7 @@ import { resolveModelSceneAccess } from '../three-d-home/modelSceneAccess';
 import { useSimulationControls } from '../three-d-home/useSimulationControls';
 import type { ControlSnapshot, SimulationControlClient } from '../three-d-home/simulationControlClient';
 import type { ConciergeResponse } from '../../../shared/home-concierge/contract';
-import { conciergeAvailability, requestConcierge } from './conciergeService';
+import { conciergeAvailability, ConciergeServiceError, requestConcierge } from './conciergeService';
 import { stageAssistantDraft } from './assistantDraftHandoff';
 import { useHomeConcierge } from './useHomeConcierge';
 
@@ -83,6 +83,25 @@ test('keeps the local brief available when the provider is not configured', asyn
   expect(result.current.status).toBe('unavailable');
   expect(result.current.context.available).toBe(true);
   await act(async () => { await result.current.ask('What is on?'); });
+  expect(requestConcierge).not.toHaveBeenCalled();
+  unmount();
+});
+
+test('an explicit connection retry recovers from a service failure without sending a question', async () => {
+  jest.mocked(conciergeAvailability).mockRejectedValueOnce(new ConciergeServiceError('service')).mockResolvedValueOnce(true);
+  const { result, unmount } = renderHook(useHomeConcierge);
+  await settle();
+  expect(result.current.status).toBe('error');
+  expect(result.current.error).toContain('service is temporarily unavailable');
+  expect(result.current.context.available).toBe(true);
+  expect(result.current.canAsk).toBe(false);
+
+  act(() => { result.current.retryAvailability(); });
+  await settle();
+  expect(conciergeAvailability).toHaveBeenCalledTimes(2);
+  expect(result.current.status).toBe('ready');
+  expect(result.current.error).toBeNull();
+  expect(result.current.canAsk).toBe(true);
   expect(requestConcierge).not.toHaveBeenCalled();
   unmount();
 });

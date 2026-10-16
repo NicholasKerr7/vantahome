@@ -53,7 +53,9 @@ function currentSimulationAccess(state: HomeState, now: number): boolean {
     && state.accountUserId && state.activeHomeId && state.accountUserId === state.authenticatedUserId
     && state.accountHomeId === state.activeHomeId && (member.userId ?? member.id) === state.authenticatedUserId
     && (deadline === null || deadline > now)
-    && !state.realtime.enabled && !state.realtime.useMqtt);
+    // Signed-in accounts enable the transport setting before a hub is configured.
+    // An empty endpoint still uses the saved simulation, as the device editor does.
+    && !(state.realtime.enabled && state.realtime.wsUrl.trim()) && !state.realtime.useMqtt);
 }
 
 /** Bound untrusted display names without retaining hidden controls in prompts or local review copy. */
@@ -75,7 +77,7 @@ export function assistantAuthorizationFingerprint(state: HomeState): string {
     .map((entry) => [entry.permission, entry.allowed]).sort((left, right) => String(left[0]).localeCompare(String(right[0])));
   const access = resolveModelSceneAccess(state);
   return JSON.stringify([homeEditorScope(state), state.authTaskBlockingHome, member?.role, member?.accessExpiresAt,
-    state.realtime.enabled, state.realtime.useMqtt, rooms, devices, overrides,
+    state.realtime.enabled, state.realtime.wsUrl.trim(), state.realtime.useMqtt, rooms, devices, overrides,
     [...access.deviceIds].sort(), [...access.controllableDeviceIds].sort()]);
 }
 

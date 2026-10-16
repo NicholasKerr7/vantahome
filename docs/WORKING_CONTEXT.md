@@ -48,6 +48,28 @@ defects from ideas or untested risks.
 
 ## Vanta home assistant — October 16 / Preview 70
 
+- **Connection recovery fix / Preview 71:** the Owner reported Check connection
+  remaining at Home information unavailable. The assistant rejected the actual
+  signed-in default (`realtime.enabled: true`, empty `wsUrl`) even though no hub
+  transport was configured. It now matches the existing simulation editor's
+  no-hub rule; a configured enabled socket or MQTT still blocks this AI slice.
+  Endpoint changes invalidate pending answers/reviews. Retry also reconnects an
+  unavailable local simulation session before checking cloud configuration.
+  Generic server failures now use temporary-service copy rather than claiming
+  the key is missing. No key/permission/backend changes were required for this fix.
+  Verification: **85 assistant tests / 7 suites**, app TypeScript and diff check
+  pass. Six new tests use the real hook/client/session/persistence, covering cold
+  hydration, StrictMode reopening, the signed-in default, failed-read recovery
+  with exact saved values, corrupt-cache rejection and stale household reads.
+  The prior tests substituted an already-ready simulation and missed this boundary.
+  **Preview 71 built, installed and launched** on the connected iPhone. Signing,
+  staging endpoint, assistant markers, absence of the provider key/endpoint from
+  the app, original arrival assets and unchanged scene hash passed package checks.
+  Production metadata was restored; release version/assets/auth-redirect checks
+  and tracked-file secret scan passed. Evidence: `work/concierge-fix-tests.log`,
+  `concierge-preview71-package.json`, and build/install/launch receipts.
+  The user has been asked to repeat microphone → Ask → Home brief → Send.
+  Live model answers remain unverified pending that physical test.
 - **Live activation now authorized:** the user subsequently asked to connect OpenAI
   and test in the app. Created the separate OpenAI **VantaHome Staging** project
   (`proj_KNfFzIjQlgpdkOHyQQc6ooWu`). Prepared a user-owned key named

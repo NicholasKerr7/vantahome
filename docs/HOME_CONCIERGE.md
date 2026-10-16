@@ -5,6 +5,12 @@ without a provider connection; the user subsequently authorized activation and
 privately saved a dedicated OpenAI staging key. Secret-name presence is verified.
 API billing/model access and a real authenticated answer still require verification.
 
+The first iPhone connection check exposed a client guard that rejected the signed-in
+no-hub default. Preview 71 allows that saved simulation while keeping configured
+WebSocket/MQTT transport excluded. Check connection also rehydrates failed local
+reads without overwriting saved settings; temporary server failures use distinct
+copy. Real simulation-bridge integration tests cover these boundaries.
+
 ## Experience
 
 The dashboard's existing microphone opens **Home intelligence**. **Ask** shows an

@@ -121,8 +121,14 @@ export function useHomeConcierge() {
     catch { setError('This suggestion is no longer available. Ask for a fresh scene.'); return null; }
   }, [answer, simulation.client]);
 
+  /** Restore an unavailable local snapshot before retrying the server configuration check. */
+  const retryAvailability = useCallback(() => {
+    if (!simulation.ready) simulation.reconnect();
+    setRevision((value) => value + 1);
+  }, [simulation.ready, simulation.reconnect]);
+
   return { context, status, response: answer?.response ?? null, error, ask, cancel, clear,
     canAsk: available && context.available && status !== 'asking' && status !== 'checking',
     canReview: Boolean(answer?.response.scene && context.canDraft && assistantContextIsCurrent(answer.context, useHomeStore.getState())),
-    prepareReview, retryAvailability: () => setRevision((value) => value + 1) };
+    prepareReview, retryAvailability };
 }

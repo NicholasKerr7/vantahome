@@ -72,10 +72,21 @@ test.each(['ready', 'account', 'home', 'blocked', 'socket', 'mqtt', 'member'] as
   if (change === 'account') home.authenticatedUserId = 'other';
   if (change === 'home') home.activeHomeId = 'other';
   if (change === 'blocked') home.authTaskBlockingHome = true;
-  if (change === 'socket') home.realtime = { ...home.realtime, enabled: true };
+  if (change === 'socket') home.realtime = { ...home.realtime, enabled: true, wsUrl: 'wss://hub.example.invalid' };
   if (change === 'mqtt') home.realtime = { ...home.realtime, useMqtt: true };
   if (change === 'member') home.activeMemberId = 'other';
   expect(buildAssistantContext(home, reading, now)).toMatchObject({ available: false, devices: [], requestContext: null });
+});
+
+test('accepts the signed-in no-hub default without enabling physical transport', () => {
+  const home = virtualSceneHome({ realtime: { enabled: true, wsUrl: '', useMqtt: false } });
+  const context = buildAssistantContext(home, snapshot(home), now);
+  expect(context.available).toBe(true);
+  expect(context.devices.length).toBeGreaterThan(0);
+  const connected = { ...home, realtime: { ...home.realtime, wsUrl: 'wss://hub.example.invalid' } };
+  expect(assistantAuthorizationFingerprint(connected)).not.toBe(context.fingerprint);
+  expect(assistantContextIsCurrent(context, connected, now)).toBe(false);
+  expect(buildAssistantContext(connected, snapshot(connected), now).available).toBe(false);
 });
 
 test.each(['loading', 'load-error', 'corrupt', 'error', 'disconnected'] as const)('does not report %s storage readings as ready', (status) => {

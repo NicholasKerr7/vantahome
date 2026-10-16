@@ -26,6 +26,26 @@ test('sends only the explicit question and permitted snapshot under the captured
   expect(invoke.mock.calls[0][1].body).toEqual({ operation: 'ask', question: 'What is on?', context, homeId: 'home' });
 });
 
+test.each([
+  [401, 'access', 'Your home access changed'],
+  [403, 'access', 'Your home access changed'],
+  [404, 'unavailable', 'AI is not connected yet'],
+  [429, 'limited', 'reached its request limit'],
+  [500, 'service', 'service is temporarily unavailable'],
+  [502, 'invalid', 'answer could not be verified'],
+  [503, 'service', 'service is temporarily unavailable'],
+] as const)('gives a useful recovery for HTTP %s without exposing server details', async (status, code, message) => {
+  invoke.mockResolvedValue({ data: null, error: { context: new Response('private server details', { status }) } });
+  await expect(conciergeAvailability(scope, new AbortController().signal)).rejects.toMatchObject({ code, message: expect.stringContaining(message) });
+});
+
+test('keeps transport failures distinct from service and configuration failures', async () => {
+  invoke.mockResolvedValue({ data: null, error: new Error('private network details') });
+  await expect(conciergeAvailability(scope, new AbortController().signal)).rejects.toMatchObject({
+    code: 'network', message: 'The assistant could not connect. Check your connection and try again.',
+  });
+});
+
 test.each(['different-user', 'revoked-scope', 'cancelled'] as const)('does not send after %s during authentication', async (change) => {
   const abort = new AbortController();
   if (change === 'different-user') session.mockResolvedValue({ data: { session: { user: { id: 'other' }, access_token: 'other' } }, error: null });

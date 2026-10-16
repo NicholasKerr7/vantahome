@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Vanta home assistant | Installed in Preview 70; staging key configured, live test pending | Existing microphone opens Ask/Controls, an on-device simulation brief and review-only scene draft flow. User privately saved the dedicated OpenAI staging key; secret-name presence verified. Billing/model access and live answers remain unverified. See handoff for current evidence. |
+| Vanta home assistant | Preview 71 connection recovery installed and launched | Fixed the signed-in no-hub default blocking the assistant and retry failing to restore an unavailable local snapshot. Dedicated OpenAI staging secret presence verified; billing/model access and live answers remain unverified pending the new physical test. See handoff for current evidence. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
 | Saved-device editing | Complete in Preview 66 source/staging | Rename, compatible room move and 3D reposition preserve device identity/settings. Revision conflicts and durable retries prevent stale overwrite or resurrection. See handoff for native/physical status. |
@@ -23,6 +23,14 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+The first physical AI connection check exposed a gap hidden by the ready-simulation
+test fixture: signed-in accounts enable a transport setting with an empty endpoint,
+which the assistant incorrectly treated as a configured live hub. The corrected
+guard, endpoint-sensitive cancellation and actual local snapshot retry now have
+real hook/client/session/persistence coverage. Generic HTTP 503 failures no longer
+claim a missing key. Persistence write errors that retain unsaved in-memory edits
+remain separate from read recovery; do not reset that data to make AI available.
 
 The assistant review fixed imported scene settings expanding into unrelated editor
 defaults, old tokens erasing newer reviews, pre-aborted promise rejections,
