@@ -34,32 +34,30 @@ describe('packaged cinematic card imagery', () => {
     }
   });
 
-  it('gives all device kinds matching quick and full-control identities', () => {
+  it('keeps hotspot quick and full-control headings free of decorative photos for every device kind', () => {
     vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) });
     const representatives = [...new Map(DEVICES.map((device) => [device.kind, device])).values()];
     for (const device of representatives) {
-      const expected = `data-artwork="${deviceArtwork(device)}"`;
       const quick = renderToStaticMarkup(<QuickDeviceControls deviceId={device.id} onClose={() => undefined} onFullControls={() => undefined} />);
       const full = renderToStaticMarkup(<DeviceControlSheet deviceId={device.id} onClose={() => undefined} />);
-      expect(quick, device.kind).toContain(expected);
-      expect(full, device.kind).toContain(expected);
+      expect(quick, device.kind).not.toMatch(/cinematic-artwork|<img/);
+      expect(full, device.kind).not.toMatch(/cinematic-artwork|<img/);
       expect(quick, device.kind).toContain('aria-describedby="quick-device-state"');
       expect(full, device.kind).toContain('class="device-sheet-state" aria-live="polite"');
     }
   });
 
-  it('keeps imagery independent of power state and removes it with revoked controls', () => {
+  it('keeps image-free hotspot controls truthful about power and removes them when revoked', () => {
     const device = getDevice('family-tv')!;
-    const artwork = `data-artwork="${deviceArtwork(device)}"`;
     const render = () => renderToStaticMarkup(<QuickDeviceControls deviceId={device.id} onClose={() => undefined} onFullControls={() => undefined} />);
     const states = useHomeStore.getState().deviceStates;
     useHomeStore.setState({ deviceStates: { ...states, [device.id]: { ...states[device.id], on: true } } });
     const on = render();
-    expect(on).toContain(artwork);
+    expect(on).not.toMatch(/cinematic-artwork|<img/);
     expect(on).toContain('data-device-active="true"');
     useHomeStore.setState({ deviceStates: { ...states, [device.id]: { ...states[device.id], on: false } } });
     const off = render();
-    expect(off).toContain(artwork);
+    expect(off).not.toMatch(/cinematic-artwork|<img/);
     expect(off).toContain('data-device-active="false"');
     expect(off).toContain('Turn on');
     useHomeStore.getState().applyAccessSnapshot({}, { fullHome: false, roomIds: [], deviceIds: [], controllableDeviceIds: [] });

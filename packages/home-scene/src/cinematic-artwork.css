@@ -3,13 +3,10 @@
 .has-cinematic-artwork { position: relative; isolation: isolate; overflow: hidden; }
 .has-cinematic-artwork > :not(.cinematic-artwork) { position: relative; z-index: 1; }
 .cinematic-artwork { --artwork-shadow-rgb: 20 18 26; display: block; overflow: hidden; pointer-events: none; user-select: none; background: var(--surface); }
-.cinematic-artwork--backdrop,
-.cinematic-artwork--identity { position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
+.cinematic-artwork--backdrop { position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
 .cinematic-artwork img { display: block; width: 100%; height: 100%; object-fit: cover; }
 /* One neutral shade protects text while keeping reference images free of a purple wash. */
 .cinematic-artwork-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(var(--artwork-shadow-rgb) / 68%) 0%, rgb(var(--artwork-shadow-rgb) / 60%) 35%, rgb(var(--artwork-shadow-rgb) / 94%) 100%); }
-.cinematic-artwork--identity .cinematic-artwork-shade { background: linear-gradient(90deg, rgb(var(--artwork-shadow-rgb) / 94%) 0%, rgb(var(--artwork-shadow-rgb) / 85%) 44%, rgb(var(--artwork-shadow-rgb) / 75%) 100%); }
-.cinematic-artwork--identity img { object-position: right center; }
 .cinematic-artwork--thumbnail { position: relative; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 10px; }
 .cinematic-artwork--thumbnail .cinematic-artwork-shade { background: linear-gradient(135deg, rgb(var(--background-rgb) / 6%), rgb(var(--background-rgb) / 42%)); }
 .cinematic-artwork-symbol { position: absolute; display: grid; place-items: center; right: 0; bottom: 0; width: 18px; height: 18px; border-radius: 7px 0 0; color: var(--text); background: rgb(var(--background-rgb) / 82%); }
@@ -45,11 +42,6 @@
 .dashboard-preset.has-cinematic-artwork { --scene-artwork-shade: 20 18 26; color: var(--text); text-shadow: 0 1px 3px rgb(var(--scene-artwork-shade) / 85%); }
 .dashboard-preset.has-cinematic-artwork .cinematic-artwork-shade { background: linear-gradient(180deg, rgb(var(--scene-artwork-shade) / 4%), rgb(var(--scene-artwork-shade) / 12%) 16%, rgb(var(--scene-artwork-shade) / 64%) 40%, rgb(var(--scene-artwork-shade) / 80%)); }
 .dashboard-preset.has-cinematic-artwork[aria-pressed='true'] { color: var(--accent-text); border-color: rgb(var(--accent-rgb) / 72%); }
-/* Identity art clips itself; the close button keeps its existing 44px target
-   and its visible focus outline beyond the heading's edges. */
-.device-sheet-heading.has-cinematic-artwork,
-.quick-device-heading.has-cinematic-artwork { overflow: visible; border-radius: 14px; }
-.has-cinematic-artwork > .quick-device-close { color: var(--text); background: rgb(var(--background-rgb) / 82%); }
 
 @container app-viewport (max-width: 599px) {
   .dashboard-room-select > .cinematic-artwork--thumbnail { flex-basis: 28px; width: 28px; height: 28px; border-radius: 9px; }

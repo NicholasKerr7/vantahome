@@ -5,7 +5,7 @@ import './cinematic-artwork.css';
 
 interface CinematicArtworkProps {
   artwork: ArtworkKey;
-  presentation?: 'backdrop' | 'thumbnail' | 'identity';
+  presentation?: 'backdrop' | 'thumbnail';
   children?: ReactNode;
 }
 

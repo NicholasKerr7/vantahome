@@ -46,6 +46,29 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Cleaner hotspot controls — October 15 / Preview 67
+
+- Removed the pasted decorative device-photo layer from both mobile hotspot quick
+  controls and full-controls headers on all viewports. Names, icons, truthful
+  status, sliders, edit/close actions and permission checks stay intact.
+- Removed the unused scene `identity` artwork variant and its CSS. Card/background
+  imagery elsewhere is outside this targeted cleanup. No state, schema, persistence
+  or device-behavior changes.
+- Updated existing artwork assertions; **163 tests / 5 focused scene suites** and
+  scene TypeScript/build passed. Browser checks at 390×844, 768×1024, 1024×768 and
+  320×568 confirmed image-free headers, usable power/brightness/full-control
+  actions, 44px close targets, no overflow and no JavaScript errors. The standalone
+  scene tests are simulation checks, not authenticated iPhone interaction tests.
+  The task-owned browser server was stopped.
+- **Preview 67 installed and launched** on the connected iPhone; inventory confirms
+  **1.0.0 (67)**. Signature, device provisioning, preview identity, staging endpoint,
+  arrival assets and packaged scene verification passed, including absence of the
+  removed identity-artwork variant. Scene: **31,940,035 bytes**, SHA256
+  `87a5d67c72ad8ddef85fba1c09b2162ab5511e9b5495bc638c0087f6de7524e2`.
+  Production metadata restored; release/version/assets/auth checks and secret scan
+  passed. No backend changes. Physical visual acceptance remains user review.
+  Evidence: `work/hotspot-artwork-*`.
+
 ## Saved-device editing — October 15 / Preview 66
 
 - Added **Full controls → Edit device** for saved custom fixtures, from both the

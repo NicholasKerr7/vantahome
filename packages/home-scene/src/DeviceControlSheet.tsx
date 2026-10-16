@@ -8,8 +8,6 @@ import { hotspotPresentation } from './hotspotPresentation';
 import { primaryDeviceAction } from './quickDevicePresentation';
 import { getDevice, getRoom, type DeviceDefinition, type DeviceId } from './data';
 import { useHomeStore, type DeviceState } from './state';
-import { CinematicArtwork } from './CinematicCardArtwork';
-import { deviceArtwork } from './cinematicArtwork';
 import './device-control-sheet.css';
 import { isEmbeddedScene } from './embeddedHost';
 import { requestDeviceEditing } from './requestDeviceEditing';
@@ -77,8 +75,7 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
 
   return <dialog ref={dialog} id="full-device-controls" className="device-control-sheet" aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
-      <header className="device-sheet-heading has-cinematic-artwork" data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone}>
-        <CinematicArtwork artwork={deviceArtwork(device)} presentation="identity" />
+      <header className="device-sheet-heading" data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone}>
         <span className={`device-sheet-icon ${presentation.active ? 'is-on' : ''}`}><Icon size={24} strokeWidth={1.5} aria-hidden="true" /></span>
         <div className="device-sheet-identity">
           <p className="device-sheet-location">{getRoom(device.roomId).name}<span aria-hidden="true"> · </span>Full controls</p>
