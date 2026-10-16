@@ -44,5 +44,6 @@ export const settingsStyles = StyleSheet.create({
   input: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 10, color: theme.colors.text, fontSize: 14, borderWidth: 1, borderColor: theme.colors.stroke, borderRadius: 16 },
   subpageNavigation: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, borderTopWidth: 1, borderTopColor: theme.colors.stroke, paddingTop: 6 },
   pagerButton: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center" },
+  pageLabel: { color: theme.colors.subtext, fontSize: 12 },
   notice: { borderLeftWidth: 2, borderLeftColor: theme.colors.accent, paddingLeft: 12, paddingVertical: 4 },
 });

@@ -12,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import CinematicSurface from "../CinematicSurface";
 import Pressable from "../Pressable";
-import PageScrollRail from "../PageScrollRail";
 import { theme } from "../../theme/theme";
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -187,13 +186,11 @@ export function DeepPager({
   pageCount,
   onChange,
   label = "pages",
-  resetKey,
 }: {
   page: number;
   pageCount: number;
   onChange: (page: number) => void;
   label?: string;
-  resetKey?: string | number;
 }) {
   const count = Math.max(1, pageCount);
   const current = Math.max(0, Math.min(page, count - 1));
@@ -208,7 +205,9 @@ export function DeepPager({
       >
         <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
       </Pressable>
-      <PageScrollRail page={current} count={count} onChange={onChange} label={label} resetKey={resetKey} />
+      <Text accessibilityLiveRegion="polite" style={styles.pageLabel}>
+        {current + 1} <Text style={styles.pageTotal}>/ {count}</Text>
+      </Text>
       <Pressable
         accessibilityLabel={`Next ${label}`}
         accessibilityState={{ disabled: current === count - 1 }}
@@ -335,4 +334,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  pageLabel: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: "500",
+    fontVariant: ["tabular-nums"],
+  },
+  pageTotal: { color: theme.colors.subtext },
 });

@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from 'react';
 import { describe, expect, it } from "vitest";
 import { DEVICES, ROOMS, getDevice } from "./data";
 import { DashboardInspector } from "./DashboardInspector";
@@ -25,6 +27,13 @@ const environment: LiveEnvironment = {
   clockSource: "solar-calculation",
   refresh: () => undefined,
 };
+
+/** Inspect the accessible current page separately from inert preloaded neighbor cards. */
+function renderVisibleMarkup(element: ReactNode) {
+  const document = new DOMParser().parseFromString(renderToStaticMarkup(element), 'text/html');
+  document.querySelectorAll('[inert]').forEach((node) => node.remove());
+  return document.body.innerHTML;
+}
 
 describe("selected device reading", () => {
   it("shows brightness only while a light is on", () => {
@@ -97,7 +106,7 @@ describe("bounded card composition", () => {
   });
 
   it("separates the selected state/action card from two paged room tiles", () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderVisibleMarkup(
       <DashboardInspector
         onFullControls={() => undefined}
         onBrowseDevices={() => undefined}
@@ -115,7 +124,7 @@ describe("bounded card composition", () => {
   });
 
   it("shows exact room inventory counts and four distinct room cards", () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderVisibleMarkup(
       <DashboardLibrary
         view="rooms"
         environment={environment}
@@ -140,7 +149,7 @@ describe("bounded card composition", () => {
   });
 
   it("makes a device card open full controls with room and state in its accessible label", () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderVisibleMarkup(
       <DashboardLibrary
         view="devices"
         environment={environment}

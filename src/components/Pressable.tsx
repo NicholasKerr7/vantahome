@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useContext } from "react";
+import { CardScrollInteractionContext } from './cardScrollInteraction';
 import {
   Pressable as RNPressable,
   type PressableProps,
@@ -18,14 +19,23 @@ export default function Pressable({
   pressedStyle,
   disablePressedStyle,
   accessibilityRole = "button",
+  onPress,
+  onLongPress,
   ...props
 }: Props) {
   const applyPressedStyle = !disablePressedStyle;
+  const canActivate = useContext(CardScrollInteractionContext);
+  // Only card scrolling supplies this guard; controls elsewhere retain their existing behavior.
+  const actionProps = {
+    onPress: canActivate && onPress ? (event: Parameters<NonNullable<PressableProps['onPress']>>[0]) => { if (canActivate()) onPress(event); } : onPress,
+    onLongPress: canActivate && onLongPress ? (event: Parameters<NonNullable<PressableProps['onLongPress']>>[0]) => { if (canActivate()) onLongPress(event); } : onLongPress,
+  };
 
   if (typeof style === "function") {
     return (
       <RNPressable
         {...props}
+        {...actionProps}
         accessibilityRole={accessibilityRole}
         style={(state) => {
           const base = style(state);
@@ -39,6 +49,7 @@ export default function Pressable({
   return (
     <RNPressable
       {...props}
+      {...actionProps}
       accessibilityRole={accessibilityRole}
       style={({ pressed }) => [
         style,

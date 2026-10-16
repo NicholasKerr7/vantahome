@@ -32,7 +32,7 @@ function resizeGrid(height: number) {
 
 /** Read actual visible device identities, independent of title or status formatting. */
 function visibleIds() {
-  return [...container.querySelectorAll<HTMLElement>('[data-inspector-device]')].map((element) => element.dataset.inspectorDevice);
+  return [...container.querySelectorAll<HTMLElement>('.card-scroll-item:not([inert]) [data-inspector-device]')].map((element) => element.dataset.inspectorDevice);
 }
 
 /** Exercise the real inspector with the current room, selection and access snapshot. */

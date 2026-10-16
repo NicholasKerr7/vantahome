@@ -1,6 +1,6 @@
 import { FULL_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
 import React from "react";
-import { StyleSheet } from "react-native";
+import { FlatList, StyleSheet } from "react-native";
 import { act, fireEvent, render } from "@testing-library/react-native";
 import { DEVICES } from "../../../../packages/home-scene/src/data";
 import DeviceBrowser from "../DeviceBrowser";
@@ -298,4 +298,20 @@ test("provides an explicit exit for an empty active search after the keyboard bl
   fireEvent.press(screen.getByLabelText("Close device search"));
   expect(screen.getByLabelText("Living room, 1 devices")).toBeTruthy();
   expect(screen.queryByLabelText("Close device search")).toBeNull();
+});
+
+test('swipes the actual room cards without opening a room or sending a device command', () => {
+  const onSelect = jest.fn();
+  const toggle = jest.spyOn(client, 'toggle').mockImplementation(() => undefined);
+  const screen = render(<DeviceBrowser snapshot={snapshot} client={client} onSelect={onSelect} />);
+  fireEvent(screen.getByTestId('device-browser-card-area'), 'layout', { nativeEvent: { layout: { width: 360, height: 220 } } });
+  fireEvent(screen.getByTestId('device-browser-pages'), 'layout', { nativeEvent: { layout: { width: 360, height: 220 } } });
+  const list = screen.UNSAFE_getByType(FlatList);
+  expect(list.props.horizontal).toBe(true);
+  fireEvent(list, 'scrollBeginDrag');
+  fireEvent(list, 'momentumScrollEnd', { nativeEvent: { contentOffset: { x: 360, y: 0 } } });
+  expect(screen.getByTestId('device-browser-pages-page-1').props.accessibilityElementsHidden).toBe(false);
+  expect(screen.getByLabelText('Previous controls page').props.accessibilityState.disabled).toBe(false);
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(toggle).not.toHaveBeenCalled();
 });

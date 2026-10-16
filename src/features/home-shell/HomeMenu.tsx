@@ -4,7 +4,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInRight, ReduceMotion } from 'react-native-reanimated';
 import Pressable from '../../components/Pressable';
-import PageScrollRail from '../../components/PageScrollRail';
 import { theme } from '../../theme/theme';
 import { HOME_MENU_PAGES, type HomeDestination } from './homeDestinations';
 
@@ -91,8 +90,7 @@ export default function HomeMenu({ onClose, onSelect, rendererAvailable, activit
               style={[styles.iconButton, visiblePage === 0 && styles.disabled]} onPress={() => setItemPage(visiblePage - 1)}>
               <Ionicons name="arrow-back" size={19} color={theme.colors.text} />
             </Pressable>
-            <PageScrollRail page={visiblePage} count={pageCount} onChange={setItemPage}
-              label="Menu destinations" resetKey={`${section?.title}:${pageSize}:${items.map((item) => item.id).join(',')}`} />
+            <Text accessibilityLiveRegion="polite" style={styles.pageLabel}>Page {visiblePage + 1} of {pageCount}</Text>
             <Pressable accessibilityLabel="Next menu destinations" disabled={visiblePage === pageCount - 1}
               style={[styles.iconButton, visiblePage === pageCount - 1 && styles.disabled]} onPress={() => setItemPage(visiblePage + 1)}>
               <Ionicons name="arrow-forward" size={19} color={theme.colors.text} />
@@ -135,5 +133,6 @@ const styles = StyleSheet.create({
   destinationTitle: { color: theme.colors.text, fontSize: 17, lineHeight: 22, fontWeight: '500', letterSpacing: -0.2 },
   destinationDetail: { color: theme.colors.subtext, fontSize: 12, lineHeight: 17, fontWeight: '400' },
   footer: { paddingTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  pageLabel: { flex: 1, textAlign: 'center', color: theme.colors.subtext, fontSize: 12, lineHeight: 18 },
   disabled: { opacity: 0.35 },
 });

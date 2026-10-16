@@ -133,7 +133,7 @@ function pageFits(label) {
 
 /** Check complete bounds and actual tap reachability without scrolling anything into view. */
 function controlsFit(selector, label, minimumHeight = 44) {
-  const controls = evaluate(`(() => [...document.querySelectorAll(${JSON.stringify(selector)})].filter((element) => element.checkVisibility()).map((element) => {
+  const controls = evaluate(`(() => [...document.querySelectorAll(${JSON.stringify(selector)})].filter((element) => element.checkVisibility() && !element.closest('[inert]')).map((element) => {
     const box = element.getBoundingClientRect();
     const x = box.x + box.width / 2; const y = box.y + box.height / 2;
     return { text: element.getAttribute('aria-label') || element.textContent.trim(), width: box.width, height: box.height,
@@ -321,9 +321,10 @@ function railPagination() {
   const seenRooms = [];
   const expectedRooms = manifest.rooms.filter((room) => room.floor === 'ground' || room.outdoor).map((room) => room.id).sort();
   for (let page = 0; page < 10; page += 1) {
+    settle('.card-scroll-item:not([inert])');
     controlsFit('.dashboard-room-list button', `room rail page ${page + 1}`);
     controlsFit('.dashboard-pager button', `room rail pagination ${page + 1}`);
-    const current = evaluate(`({ ids:[...document.querySelectorAll('.dashboard-room-list [data-room-id]')].map((element) => element.dataset.roomId), page:document.querySelector('[data-room-page]').textContent, last:document.querySelector('[aria-label="Next room page"]').disabled })`);
+    const current = evaluate(`({ ids:[...document.querySelectorAll('.dashboard-room-list .card-scroll-item:not([inert]) [data-room-id]')].map((element) => element.dataset.roomId), page:document.querySelector('[data-room-page]').textContent, last:document.querySelector('[aria-label="Next room page"]').disabled })`);
     seenRooms.push(...current.ids);
     pageFits(`room rail page ${page + 1}`);
     if (current.last) break;
@@ -334,14 +335,15 @@ function railPagination() {
   const seenDevices = [];
   const expectedDevices = manifest.devices.filter((device) => device.roomId === 'living').map((device) => device.name).sort();
   for (let page = 0; page < 10; page += 1) {
+    settle('.card-scroll-item:not([inert])');
     controlsFit('.dashboard-device-row', `room devices page ${page + 1}`);
     controlsFit('.dashboard-device-footer button', `room device navigation ${page + 1}`);
-    const current = evaluate(`({ names:[...document.querySelectorAll('.dashboard-device-row [title]')].map((element) => element.title), last:document.querySelector('[aria-label="Next devices"]').disabled })`);
+    const current = evaluate(`({ names:[...document.querySelectorAll('.card-scroll-item:not([inert]) .dashboard-device-row [title]')].map((element) => element.title), last:document.querySelector('[aria-label="Next devices"]').disabled })`);
     seenDevices.push(...current.names);
     pageFits(`room devices page ${page + 1}`);
     if (current.last) break;
     browser('click', '[aria-label="Next devices"]');
-    waitFor(`JSON.stringify([...document.querySelectorAll('.dashboard-device-row [title]')].map((element) => element.title)) !== ${JSON.stringify(JSON.stringify(current.names))}`);
+    waitFor(`JSON.stringify([...document.querySelectorAll('.card-scroll-item:not([inert]) .dashboard-device-row [title]')].map((element) => element.title)) !== ${JSON.stringify(JSON.stringify(current.names))}`);
   }
   check(JSON.stringify(seenDevices.sort()) === JSON.stringify(expectedDevices), 'landscape device pages expose every living-room device exactly once');
   console.log('PASS landscape room/device pagination');
@@ -354,10 +356,11 @@ function libraryPagination(view) {
   const expected = (view === 'rooms' ? manifest.rooms : manifest.devices).map((item) => item.id).sort();
   const seen = [];
   for (let page = 0; page < 30; page += 1) {
+    settle('.card-scroll-item:not([inert])');
     controlsFit(`#dashboard-library [${attribute}]`, `${view} results page ${page + 1}`);
     controlsFit('#dashboard-library .library-pagination button', `${view} page navigation ${page + 1}`);
-    check(evaluate('(() => { const list=document.querySelector(".library-results"); const modal=document.querySelector("#dashboard-library"); return list.scrollHeight <= list.clientHeight + 1 && list.scrollWidth <= list.clientWidth + 1 && modal.scrollHeight <= modal.clientHeight + 1; })()'), `${view} page ${page + 1}: navigation is paginated without a clipped or scrolling result list`);
-    const current = evaluate(`({ ids:[...document.querySelectorAll('#dashboard-library [${attribute}]')].map((element) => element.getAttribute('${attribute}')), page:document.querySelector('[data-library-page]').textContent, last:document.querySelector('[aria-label="Next results page"]').disabled })`);
+    check(evaluate('(() => { const list=document.querySelector(".library-results"); const modal=document.querySelector("#dashboard-library"); return list.scrollHeight <= list.clientHeight + 1 && getComputedStyle(list).overflowX === "auto" && modal.scrollHeight <= modal.clientHeight + 1; })()'), `${view} page ${page + 1}: cards scroll horizontally while result and dialog heights stay bounded`);
+    const current = evaluate(`({ ids:[...document.querySelectorAll('#dashboard-library .card-scroll-item:not([inert]) [${attribute}]')].map((element) => element.getAttribute('${attribute}')), page:document.querySelector('[data-library-page]').textContent, last:document.querySelector('[aria-label="Next results page"]').disabled })`);
     seen.push(...current.ids);
     pageFits(`${view} page ${page + 1}`);
     if (page === 0) screenshot(`dashboard-${view}-first-page`);

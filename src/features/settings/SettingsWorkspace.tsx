@@ -5,7 +5,6 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../app/AppNavigator";
 import Pressable from "../../components/Pressable";
-import PageScrollRail from "../../components/PageScrollRail";
 import ThemedSwitch from "../../components/ThemedSwitch";
 import CinematicSurface from "../../components/CinematicSurface";
 import { theme } from "../../theme/theme";
@@ -163,8 +162,7 @@ export default function SettingsWorkspace() {
           <DevelopmentPage page={toolPage} model={model} editing={editing} setEditing={setEditing} />
           {!editing && <View style={styles.subpageNavigation}>
             <Pressable accessibilityLabel="Previous connection page" disabled={toolPage === 0} accessibilityState={{ disabled: toolPage === 0 }} onPress={() => setToolPage(toolPage - 1)} style={[styles.pagerButton, toolPage === 0 && styles.disabled]}><Ionicons name="arrow-back" size={20} color={theme.colors.text} /></Pressable>
-            <PageScrollRail page={toolPage} count={TOOL_PAGES.length} onChange={setToolPage}
-              label="Connection tools" resetKey={weatherScope} />
+            <Text style={styles.pageLabel}>{TOOL_PAGES[toolPage]} · {toolPage + 1} / {TOOL_PAGES.length}</Text>
             <Pressable accessibilityLabel="Next connection page" disabled={toolPage === TOOL_PAGES.length - 1} accessibilityState={{ disabled: toolPage === TOOL_PAGES.length - 1 }} onPress={() => setToolPage(toolPage + 1)} style={[styles.pagerButton, toolPage === TOOL_PAGES.length - 1 && styles.disabled]}><Ionicons name="arrow-forward" size={20} color={theme.colors.text} /></Pressable>
           </View>}
         </>}

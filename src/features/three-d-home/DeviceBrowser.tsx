@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Pressable from "../../components/Pressable";
+import ScrollableCardPages from "../../components/ScrollableCardPages";
 import DeviceCollectionCard, {
   DEVICE_COLLECTION_CARD_MIN_HEIGHT,
 } from "../../components/DeviceCollectionCard";
@@ -120,16 +121,7 @@ export default function DeviceBrowser({
       );
   const pageCount = Math.max(1, Math.ceil(choices.length / pageSize));
   const visiblePage = Math.min(page, pageCount - 1);
-  const visible = choices.slice(
-    visiblePage * pageSize,
-    (visiblePage + 1) * pageSize,
-  );
-  const sparsePage =
-    showingDevices && (visible.length < pageSize || choices.length === 1);
-  const cardRows = Array.from(
-    { length: Math.ceil(visible.length / columns) },
-    (_, row) => visible.slice(row * columns, (row + 1) * columns),
-  );
+
 
   /** Recalculate card capacity only when available space actually changes. */
   function measure(event: LayoutChangeEvent) {
@@ -298,7 +290,13 @@ export default function DeviceBrowser({
             </Pressable>
           </View>
         )}
-        {cardRows.map((row) => (
+        {choices.length > 0 && <ScrollableCardPages page={visiblePage} count={pageCount} onChange={setPage}
+          resetKey={`${roomId}:${query}:${showingFavorites}:${compactSearch}:${pageSize}:${choices.map((choice) => choice.id).join('|')}`}
+          testID="device-browser-pages" renderPage={(page) => {
+            const visible = choices.slice(page * pageSize, (page + 1) * pageSize);
+            const sparsePage = showingDevices && (visible.length < pageSize || choices.length === 1);
+            const cardRows = Array.from({ length: Math.ceil(visible.length / columns) }, (_, row) => visible.slice(row * columns, (row + 1) * columns));
+            return <View style={styles.cards}>{cardRows.map((row) => (
           <View
             key={row[0].id}
             testID="device-browser-result-row"
@@ -378,13 +376,13 @@ export default function DeviceBrowser({
             )}
             {row.length < columns && <View style={styles.spacer} />}
           </View>
-        ))}
+        ))}</View>;
+          }} />}
       </View>
       <ControlPagination
         page={visiblePage}
         count={pageCount}
         onChange={setPage}
-        resetKey={`${roomId}:${query}:${showingFavorites}:${pageSize}:${choices.map((choice) => choice.id).join(',')}`}
       />
     </>
   );

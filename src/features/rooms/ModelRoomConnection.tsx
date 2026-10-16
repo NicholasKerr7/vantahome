@@ -28,8 +28,7 @@ function ConnectionChoices({ choices, selected, onSelect, label }: { choices: re
         <Text numberOfLines={2} style={styles.choiceName}>{choice.name}</Text>
         <Text numberOfLines={1} style={styles.detail}>{choice.detail}</Text>
       </Pressable>)}</View>
-    <DeepPager label={label} page={page} pageCount={pageCount} onChange={setPage}
-      resetKey={`${label}:${pageSize}:${choices.map((choice) => choice.id).join(',')}`} />
+    <DeepPager label={label} page={page} pageCount={pageCount} onChange={setPage} />
   </View>;
 }
 
@@ -101,8 +100,7 @@ export default function ModelRoomConnection({ roomId, onClose }: Props) {
           : currentDevice ? <>
             <ConnectionChoices key={currentDevice.id} label="model devices" choices={deviceChoices} selected={bindings[currentDevice.id] ?? ''}
               onSelect={(next) => { if (!saving) { setBindings((previous) => ({ ...previous, [currentDevice.id]: next })); setError(null); } }} />
-            <DeepPager label="room devices" page={Math.min(devicePage, devices.length - 1)} pageCount={devices.length} onChange={setDevicePage}
-              resetKey={`${roomId}:${devices.map((device) => device.id).join(',')}`} />
+            <DeepPager label="room devices" page={Math.min(devicePage, devices.length - 1)} pageCount={devices.length} onChange={setDevicePage} />
           </> : <Text style={styles.detail}>Add devices to this room before connecting their model positions.</Text>}
         {error && <Text accessibilityRole="alert" numberOfLines={3} style={styles.error}>{error}</Text>}
         <View style={styles.footer}>

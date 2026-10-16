@@ -15,7 +15,7 @@ import { libraryCardPageSize } from './dashboardCardPresentation';
 import { hotspotPresentation } from './hotspotPresentation';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { deviceArtwork, roomArtwork } from './cinematicArtwork';
-import { PageScrollRail } from './PageScrollRail';
+import { HorizontalCardScroller } from './HorizontalCardScroller';
 import './dashboard-cards.css';
 
 export type DashboardLibraryView = 'rooms' | 'assigned-rooms' | 'devices' | 'settings' | 'environment';
@@ -102,11 +102,11 @@ export function DashboardLibrary({ environment, onEnvironment, view, onClose, on
     {view === 'environment' ? <EnvironmentPanel environment={environment} /> : view === 'settings' ? <ScenePreferencesPanel environment={environment} reducedMotion={reducedMotion} systemReducedMotion={systemReducedMotion} onClose={onClose} onEnvironment={onEnvironment} /> : <>
       <label className="library-search"><Search size={18} /><span className="sr-only">{roomsView ? 'Find a room' : 'Find a device'}</span><input autoComplete="off" type="search" id={roomsView ? 'room-search' : 'device-search'} value={query} placeholder={roomsView ? 'Search rooms or floors' : 'Search name, room or type'} onChange={(event) => { setQuery(event.currentTarget.value); setRequestedPage(0); }} /></label>
       <div className="library-result-summary"><span>{current.total} {roomsView ? 'rooms' : view}</span><span>Choose to {roomsView ? 'explore' : 'control'}</span></div>
-      <div className="library-results library-card-grid" data-library-view={roomsView ? 'rooms' : view} data-page-size={pageSize}>{roomsView
-        ? roomPage.items.map((room) => <LibraryRoomCard key={room.id} room={room} selected={room.id === roomId} onSelect={() => { setRoom(room.id); onClose(); }} />)
-        : devicePage.items.map((device) => <LibraryDeviceCard key={device.id} device={device} onSelect={() => onDevice(device.id)} />)}
-        {current.total === 0 ? <p className="library-empty" role="status">No matches. Try another room or device name.</p> : null}</div>
-      <footer className="library-pagination"><button aria-label="Previous results page" disabled={current.page === 0} onClick={() => setRequestedPage(current.page - 1)}><ChevronLeft size={18} /><span>Previous</span></button><PageScrollRail page={current.page} count={current.pages} onChange={setRequestedPage} label={roomsView ? 'Room results' : 'Device results'} resetKey={`${view}:${query}:${pageSize}:${(roomsView ? rooms : devices).map((item) => item.id).join('|')}`} statusMarker="library" /><button aria-label="Next results page" disabled={current.page + 1 === current.pages} onClick={() => setRequestedPage(current.page + 1)}><span>Next</span><ChevronRight size={18} /></button></footer>
+      <HorizontalCardScroller className="library-results library-card-grid" page={current.page} count={current.pages} pageSize={pageSize} onChange={setRequestedPage} label={roomsView ? 'Room cards' : 'Device cards'} resetKey={`${view}:${query}:${pageSize}:${(roomsView ? rooms : devices).map((item) => item.id).join('|')}`}>{roomsView
+        ? rooms.map((room) => <LibraryRoomCard key={room.id} room={room} selected={room.id === roomId} onSelect={() => { setRoom(room.id); onClose(); }} />)
+        : devices.map((device) => <LibraryDeviceCard key={device.id} device={device} onSelect={() => onDevice(device.id)} />)}
+        {current.total === 0 ? <p className="library-empty" role="status">No matches. Try another room or device name.</p> : null}</HorizontalCardScroller>
+      <footer className="library-pagination"><button aria-label="Previous results page" disabled={current.page === 0} onClick={() => setRequestedPage(current.page - 1)}><ChevronLeft size={18} /><span>Previous</span></button><span role="status" data-library-page>{current.page + 1} / {current.pages}</span><button aria-label="Next results page" disabled={current.page + 1 === current.pages} onClick={() => setRequestedPage(current.page + 1)}><span>Next</span><ChevronRight size={18} /></button></footer>
     </>}
   </dialog>;
 }

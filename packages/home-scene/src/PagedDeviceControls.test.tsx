@@ -13,9 +13,9 @@ let resize: () => void;
 /** Report a measured sheet resize without relying on a browser layout engine. */
 class TestResizeObserver {
   /** Capture the observer notification so each test controls its layout transition. */
-  constructor(private callback: () => void) {}
+  constructor(callback: () => void) { resize = callback; }
   /** Measurements come from the panel's clientHeight getter in this test. */
-  observe(element: HTMLElement) { if (element.classList.contains('device-control-page')) resize = this.callback; }
+  observe() {}
   /** The synchronous stub has no pending notifications to release. */
   disconnect() {}
 }
@@ -53,17 +53,6 @@ afterEach(() => {
 });
 
 describe('full-control focus during resizing', () => {
-  it('browses with the footer rail without moving focus into a device field', () => {
-    renderControls('living-fan');
-    act(() => container.querySelector<HTMLButtonElement>('[data-control-group="modes"]')!.click());
-    const target = container.querySelector<HTMLButtonElement>('[data-scroll-page="1"]')!;
-    act(() => { target.focus(); target.click(); });
-    expect(container.textContent).toContain('Direction');
-    expect(document.activeElement).toBe(target);
-    expect(container.querySelector('[role="status"]')?.textContent).toBe('2 / 4');
-    expect(container.querySelector<HTMLButtonElement>('[aria-label="Previous controls page"]')?.disabled).toBe(false);
-  });
-
   it('explains saved-only fan settings and clears that explanation when the working direction control is shown', () => {
     renderControls('living-fan');
     act(() => container.querySelector<HTMLButtonElement>('[data-control-group="modes"]')!.click());

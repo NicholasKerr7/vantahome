@@ -11,6 +11,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../app/AppNavigator";
 import Pressable from "../components/Pressable";
+import ScrollableCardPages from "../components/ScrollableCardPages";
 import ModalCard from "../components/ModalCard";
 import ModalForm, { useModalViewportStyle } from "../components/ModalForm";
 import {
@@ -201,11 +202,13 @@ export default function ManageRoomsScreen({ navigation }: Props) {
         returnKeyType="search"
       />
       <View
-        style={[styles.grid, wide && styles.gridWide]}
+        style={styles.grid}
         onLayout={pagination.measure}
         testID="room-index-area"
       >
-        {matchingRooms.slice(pagination.start, pagination.end).map((room) => {
+        {matchingRooms.length > 0 && <ScrollableCardPages page={pagination.page} count={pagination.pageCount} onChange={pagination.changePage}
+          resetKey={`${search}:${pagination.capacity}:${matchingRooms.map((room) => room.id).join('|')}`} testID="room-index-pages"
+          renderPage={(page) => <View style={[styles.grid, wide && styles.gridWide]}>{matchingRooms.slice(page * pagination.capacity, (page + 1) * pagination.capacity).map((room) => {
           const metadata = modelHome
             ? ROOMS.find((space) => space.id === room.id)
             : undefined;
@@ -265,7 +268,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
               </Pressable>
             </View>
           );
-        })}
+        })}</View>} />}
         {matchingRooms.length === 0 && (
           <View style={styles.empty}>
             <Ionicons
@@ -282,7 +285,6 @@ export default function ManageRoomsScreen({ navigation }: Props) {
         page={pagination.page}
         pageCount={pagination.pageCount}
         onChange={pagination.changePage}
-        resetKey={`${search}:${matchingRooms.map((room) => room.id).join(',')}`}
       />
       {selectedRoom && (
         <ModalCard

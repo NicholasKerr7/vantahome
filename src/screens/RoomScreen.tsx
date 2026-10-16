@@ -5,10 +5,11 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   useWindowDimensions,
 } from "react-native";
 import Pressable from "../components/Pressable";
+import ScrollableCardPages from "../components/ScrollableCardPages";
+import { collectionRows } from "./components/collectionPagination";
 import { DeepAction, DeepPager, DeepScreen } from "../components/deep/DeepScreen";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -142,7 +143,6 @@ export default function RoomScreen({ route, navigation }: Props) {
   const running = devices.filter((device) => devicePresentation(device).active).length;
   const pageCount = Math.max(1, Math.ceil(devices.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
-  const visibleDevices = devices.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   // Bottom sheet state: we keep only the selected ID and derive the device
   // object from the store so the sheet stays in sync with slider changes.
@@ -209,6 +209,30 @@ export default function RoomScreen({ route, navigation }: Props) {
     undoTimer.current = setTimeout(() => setUndoScene(null), 5000);
   };
 
+  /** Keep each card action explicit while the surrounding collection owns horizontal gestures. */
+  function renderDeviceCard(item: Device) {
+    const definition = getDevice(item.id);
+    const modelId = simulationBindings[item.id];
+    const presentation = devicePresentation(item);
+    return <View key={item.id} style={cardFrameStyle}>
+      <DeviceCollectionCard {...presentation}
+        artwork={deviceArtwork({ ...item, modelDeviceId: modelId ?? item.modelDeviceId })}
+        disabled={Boolean(modelId) ? !simulation.ready || !simulation.access?.controllableDeviceIds.includes(modelId)
+          : Boolean(item.simulationOnly || (modelHome && definition?.kind === item.kind))}
+        onOpen={() => navigation.navigate("DeviceDetail", { deviceId: item.id })}
+        onQuickAction={() => { void handleDeviceQuickAction(item); }}
+        onLongPress={() => {
+          if (modelId || item.simulationOnly || (modelHome && definition?.kind === item.kind)) {
+            navigation.navigate("DeviceDetail", { deviceId: item.id });
+            return;
+          }
+          setSelectedId(item.id);
+          // Wait for the selected device to reach the native sheet before presenting it.
+          requestAnimationFrame(() => sheetRef.current?.present());
+        }} />
+    </View>;
+  }
+
   return (
     <>
       <DeepScreen
@@ -228,49 +252,18 @@ export default function RoomScreen({ route, navigation }: Props) {
             if (Number.isFinite(measuredWidth)) setGridWidth(measuredWidth);
           }}
         >
-          <FlatList
-            key={`room-grid-${columns}`}
-            data={visibleDevices}
-            keyExtractor={(d) => d.id}
-            numColumns={columns}
-            columnWrapperStyle={columns > 1 ? columnWrapperStyle : undefined}
-            contentContainerStyle={gridContentStyle}
-            style={styles.gridList}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.emptyCollection}>
-                <Ionicons name="cube-outline" size={28} color={theme.colors.accentText} />
-                <Text style={styles.emptyTitle}>No devices yet</Text>
-                <Text style={styles.emptySubtitle}>{isWholeHome ? "Devices appear here when added to a room." : "Add a device to start shaping this room."}</Text>
-              </View>
-            }
-            renderItem={({ item }) => {
-              const definition = getDevice(item.id);
-              const modelId = simulationBindings[item.id];
-              const presentation = devicePresentation(item);
-              return <View style={cardFrameStyle}>
-                <DeviceCollectionCard {...presentation}
-                  artwork={deviceArtwork({ ...item, modelDeviceId: modelId ?? item.modelDeviceId })}
-                  disabled={Boolean(modelId) ? !simulation.ready || !simulation.access?.controllableDeviceIds.includes(modelId)
-                    : Boolean(item.simulationOnly || (modelHome && definition?.kind === item.kind))}
-                  onOpen={() => navigation.navigate("DeviceDetail", { deviceId: item.id })}
-                  onQuickAction={() => { void handleDeviceQuickAction(item); }}
-                  onLongPress={() => {
-                    if (modelId || item.simulationOnly || (modelHome && definition?.kind === item.kind)) {
-                      navigation.navigate("DeviceDetail", { deviceId: item.id });
-                      return;
-                    }
-                    setSelectedId(item.id);
-                    // Wait for the selected device to reach the native sheet before presenting it.
-                    requestAnimationFrame(() => sheetRef.current?.present());
-                  }} />
-              </View>;
-            }}
-          />
+          <ScrollableCardPages page={currentPage} count={pageCount} onChange={setPage}
+            resetKey={`${roomId}:${showAll}:${pageSize}:${devices.map((device) => device.id).join(',')}`}
+            testID="room-device-cards" renderPage={(cardPage) => <View style={gridContentStyle}>
+              {devices.length ? collectionRows(devices.slice(cardPage * pageSize, (cardPage + 1) * pageSize), columns).map((row) =>
+                <View key={row[0].id} style={columnWrapperStyle}>{row.map(renderDeviceCard)}</View>) : <View style={styles.emptyCollection}>
+                  <Ionicons name="cube-outline" size={28} color={theme.colors.accentText} />
+                  <Text style={styles.emptyTitle}>No devices yet</Text>
+                  <Text style={styles.emptySubtitle}>{isWholeHome ? "Devices appear here when added to a room." : "Add a device to start shaping this room."}</Text>
+                </View>}
+            </View>} />
         </View>
-        <DeepPager page={currentPage} pageCount={pageCount} onChange={setPage} label="Devices"
-          resetKey={`${roomId}:${showAll}:${pageSize}:${devices.map((device) => device.id).join(',')}`} />
+        <DeepPager page={currentPage} pageCount={pageCount} onChange={setPage} label="Devices" />
       </DeepScreen>
 
       {undoScene ? (
@@ -352,9 +345,8 @@ const styles = StyleSheet.create({
   phoneGridSpacing: { gap: 12 },
   tabletGridSpacing: { gap: 16 },
   gridViewport: { flex: 1, minHeight: 0, marginTop: 4, overflow: "hidden" },
-  gridList: { width: "100%", alignSelf: "stretch", flex: 1 },
-  gridContent: { width: "100%" },
-  gridRow: { width: "100%", alignItems: "stretch" },
+  gridContent: { flex: 1, minHeight: 0, width: "100%" },
+  gridRow: { width: "100%", flexDirection: "row", alignItems: "stretch" },
   undoBar: {
     position: "absolute",
     bottom: 22,

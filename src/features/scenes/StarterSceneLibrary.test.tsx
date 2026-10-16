@@ -10,31 +10,13 @@ import { upgradeModelHomeCatalog } from '../three-d-home/modelHomeCatalog';
 import { SimulationSession } from '../three-d-home/simulationSession';
 import { simulationPersistence } from '../three-d-home/simulationPersistence';
 import { createModelScenes } from '../three-d-home/modelSceneCatalog';
-import { StarterSceneLibrary } from './StarterSceneLibrary';
 
 jest.mock('@expo/vector-icons/Ionicons', () => require('react-native').View);
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => require('react-native').View);
-jest.mock('../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false, useDecorativeMotionState: () => ({ allowed: false, reducedMotion: true }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('../../theme/layout', () => ({ useResponsive: () => ({ width: 390, height: 844, isLandscape: false, isTablet: false, contentWidth: 390, gutter: 22, topPad: 56, scale: 1 }) }));
 
 beforeEach(() => useHomeStore.setState(virtualSceneHome()));
-
-test('browsing presets through the rail never chooses or runs one and clamps when the list shrinks', () => {
-  const presets = availableStarterScenes(useHomeStore.getState());
-  const onChoose = jest.fn();
-  const onClose = jest.fn();
-  const screen = render(<StarterSceneLibrary presets={presets} onChoose={onChoose} onClose={onClose} />);
-  fireEvent.press(screen.getByLabelText(`Go to Scene presets page ${presets.length} of ${presets.length}`));
-  expect(screen.getByLabelText(`Review ${presets[presets.length - 1].name} preset`)).toBeTruthy();
-  expect(onChoose).not.toHaveBeenCalled();
-  expect(useHomeStore.getState().activeSceneId).toBeNull();
-  screen.rerender(<StarterSceneLibrary presets={presets.slice(0, 1)} onChoose={onChoose} onClose={onClose} />);
-  expect(screen.getByText('1 / 1')).toBeTruthy();
-  expect(screen.getByLabelText('Previous preset').props.accessibilityState.disabled).toBe(true);
-  expect(screen.getByLabelText('Next preset').props.accessibilityState.disabled).toBe(true);
-  expect(screen.getByLabelText(`Review ${presets[0].name} preset`)).toBeTruthy();
-});
 
 test('preset review creates a renamed ordinary scene only after saving, then permits edit and confirmed delete', () => {
   const screen = render(<ScenesScreen embedded />);

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DeepPager } from '../../components/deep/DeepScreen';
 import Pressable from '../../components/Pressable';
+import ScrollableCardPages from '../../components/ScrollableCardPages';
 import DeviceIcon from '../../components/DeviceIcon';
 import { theme } from '../../theme/theme';
 import type { Device } from '../../store/useHomeStore';
@@ -38,8 +39,10 @@ export default function DeviceWizardChoices({ choices, selectedId, label, onSele
   const pageCount = Math.max(1, Math.ceil(choices.length / pageSize));
   const page = Math.min(Math.floor(anchorIndex / pageSize), pageCount - 1);
   return <View style={styles.body} onLayout={(event) => { setAvailableHeight(event.nativeEvent.layout.height); setAvailableWidth(event.nativeEvent.layout.width); }}>
-    <View style={styles.grid}>
-      {choices.slice(page * pageSize, (page + 1) * pageSize).map((choice) => {
+    <ScrollableCardPages page={page} count={pageCount} onChange={(next) => setAnchorIndex(next * pageSize)}
+      resetKey={`${label}:${pageSize}:${choices.map((choice) => choice.id).join(',')}`} testID="device-wizard-cards"
+      renderPage={(cardPage) => <View style={styles.grid}>
+      {choices.slice(cardPage * pageSize, (cardPage + 1) * pageSize).map((choice) => {
         const selected = choice.id === selectedId;
         return <Pressable key={choice.id} accessibilityRole="radio" accessibilityLabel={choice.name}
           accessibilityHint={choice.detail} accessibilityState={{ checked: selected }}
@@ -57,9 +60,8 @@ export default function DeviceWizardChoices({ choices, selectedId, label, onSele
             color={selected ? theme.colors.accentText : theme.colors.subtext} />
         </Pressable>;
       })}
-    </View>
-    <DeepPager page={page} pageCount={pageCount} label={label} onChange={(next) => setAnchorIndex(next * pageSize)}
-      resetKey={`${label}:${pageSize}:${choices.map((choice) => choice.id).join(',')}`} />
+    </View>} />
+    <DeepPager page={page} pageCount={pageCount} label={label} onChange={(next) => setAnchorIndex(next * pageSize)} />
   </View>;
 }
 

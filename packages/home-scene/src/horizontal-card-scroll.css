@@ -1,0 +1,62 @@
+/* Cards retain a bounded two-dimensional layout; only their horizontal strip moves. */
+.horizontal-card-scroller { --card-scroll-columns: 2; --card-scroll-rows: 1; --card-scroll-gap: 8px; display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--card-scroll-rows), minmax(0, 1fr)); grid-template-columns: none; grid-auto-columns: calc((100% - (var(--card-scroll-columns) - 1) * var(--card-scroll-gap)) / var(--card-scroll-columns)); gap: var(--card-scroll-gap); min-width: 0; min-height: 0; flex: 1; overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x; }
+.horizontal-card-scroller::-webkit-scrollbar { display: none; }
+.card-scroll-item { display: flex; min-width: 0; min-height: 0; }
+.card-scroll-item[data-page-start='true'] { scroll-snap-align: start; }
+.card-scroll-item > button { width: 100%; height: 100%; min-width: 0; flex: 1; }
+.horizontal-card-scroller[data-dragging='true'] { cursor: grabbing; user-select: none; }
+.horizontal-card-scroller button, .horizontal-card-scroller .card-scroll-item { touch-action: pan-x; }
+.card-scroll-columns-1 { --card-scroll-columns: 1; }
+.card-scroll-columns-3 { --card-scroll-columns: 3; }
+.card-scroll-columns-4 { --card-scroll-columns: 4; }
+.card-scroll-rows-1 { --card-scroll-rows: 1; }
+.card-scroll-rows-2 { --card-scroll-rows: 2; }
+.card-scroll-rows-3 { --card-scroll-rows: 3; }
+.card-scroll-rows-4 { --card-scroll-rows: 4; }
+.card-scroll-rows-5 { --card-scroll-rows: 5; }
+.card-scroll-rows-6 { --card-scroll-rows: 6; }
+.card-scroll-rows-7 { --card-scroll-rows: 7; }
+.card-scroll-rows-8 { --card-scroll-rows: 8; }
+.card-scroll-rows-9 { --card-scroll-rows: 9; }
+.card-scroll-rows-10 { --card-scroll-rows: 10; }
+.card-scroll-rows-11 { --card-scroll-rows: 11; }
+.card-scroll-rows-12 { --card-scroll-rows: 12; }
+.card-scroll-rows-13 { --card-scroll-rows: 13; }
+.card-scroll-rows-14 { --card-scroll-rows: 14; }
+.card-scroll-rows-15 { --card-scroll-rows: 15; }
+.card-scroll-rows-16 { --card-scroll-rows: 16; }
+.card-scroll-rows-17 { --card-scroll-rows: 17; }
+.card-scroll-rows-18 { --card-scroll-rows: 18; }
+.card-scroll-rows-19 { --card-scroll-rows: 19; }
+.card-scroll-rows-20 { --card-scroll-rows: 20; }
+.card-scroll-rows-21 { --card-scroll-rows: 21; }
+.card-scroll-rows-22 { --card-scroll-rows: 22; }
+.card-scroll-rows-23 { --card-scroll-rows: 23; }
+.card-scroll-rows-24 { --card-scroll-rows: 24; }
+.card-scroll-rows-25 { --card-scroll-rows: 25; }
+.card-scroll-rows-26 { --card-scroll-rows: 26; }
+.card-scroll-rows-27 { --card-scroll-rows: 27; }
+.card-scroll-rows-28 { --card-scroll-rows: 28; }
+.card-scroll-rows-29 { --card-scroll-rows: 29; }
+.card-scroll-rows-30 { --card-scroll-rows: 30; }
+.card-scroll-rows-31 { --card-scroll-rows: 31; }
+.card-scroll-rows-32 { --card-scroll-rows: 32; }
+/* Existing card styles still own their content; these surfaces own only horizontal layout. */
+.card-inspector .device-card-grid.horizontal-card-scroller,
+.dashboard-library.card-library .library-card-grid.horizontal-card-scroller,
+.dashboard-scenes .preset-grid.horizontal-card-scroller,
+.dashboard-room-list.horizontal-card-scroller { grid-template-columns: none; grid-template-rows: repeat(var(--card-scroll-rows), minmax(0, 1fr)); grid-auto-rows: auto; gap: var(--card-scroll-gap); }
+.dashboard-library.card-library .library-card-grid.horizontal-card-scroller { --card-scroll-gap: 12px; }
+.dashboard-room-list.horizontal-card-scroller { --card-scroll-gap: 5px; }
+.dashboard-scenes .preset-grid.horizontal-card-scroller { --card-scroll-gap: 6px; }
+.property-assigned-rooms .assigned-room-cards { flex: 0 0 192px; }
+.property-assigned-rooms .assigned-room-cards[data-page-size='1'] { flex-basis: 56px; }
+.property-assigned-rooms .assigned-room-cards[data-page-size='2'] { flex-basis: 124px; }
+@container app-viewport (max-width: 599px) {
+  .dashboard-library.card-library .library-card-grid.horizontal-card-scroller { --card-scroll-gap: 8px; }
+}
+@media (max-height: 700px) {
+  .property-assigned-rooms .assigned-room-cards { flex-basis: 148px; }
+  .property-assigned-rooms .assigned-room-cards[data-page-size='1'] { flex-basis: 44px; }
+  .property-assigned-rooms .assigned-room-cards[data-page-size='2'] { flex-basis: 96px; }
+}

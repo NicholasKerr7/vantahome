@@ -46,48 +46,45 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Smooth horizontal navigation — October 15 / Preview 68
+## Actual card scrolling — October 15 / Preview 69
 
-- The user chose one task at a time; this pass implements scrolling only. AI is
-  saved in the implementation backlog for a separate future task.
-- Added compact horizontal page rails beside existing Previous/Next buttons in
-  native deep screens, device controls/library, scenes/routines, scene presets,
-  the utility menu and connection-tool pages. The main Three.js scene has matching
-  rails in full controls, room/device libraries, room navigation, assigned rooms
-  and the inspector. Page contents remain bounded; gestures stay in the footer.
-- Native scrolling supplies touch momentum; scene rails use CSS snapping. Page
-  selection commits after a gesture settles, without per-frame React updates.
-  Taps, keyboard access and original arrows remain. Scope/count/layout/selection
-  changes cancel old gestures; positioning cannot send commands or run scenes.
-  System reduced motion is preserved; the scene also respects its saved motion
-  setting. Single-page rails remain inactive. No dependencies or backend changes.
-- Preset paging now clamps its controls when available presets shrink. Compact
-  action copy keeps the rail usable on narrow screens and with enlarged text.
-  The inline dashboard scene strip retains its arrows to preserve card space;
-  integration setup retains its combined details/paging footer. Validation steps
-  and save/confirmation actions do not gain swipe shortcuts.
-- Verification: app/scene TypeScript, **1,168 scene tests / 97 suites**, scene
-  packaging and **96 final app tests / 8 suites** passed. The broad app run passed
-  243 suites; the remaining two had old assertions forbidding any ScrollView,
-  updated to require horizontal-only scrolling and passed in the final run.
-  Additional focused tests cover stale gestures, momentum, reduced motion,
-  scope changes, keyboard navigation and action isolation.
-- Browser checks passed **14 native RNWeb cases and 6 scene profiles**, covering
-  390×844, 768×1024, 1024×768, 320×568, enlarged text and reduced motion. Actual
-  emulated touch swipes, horizontal wheel, taps/arrows, keyboard and scope/resize
-  cancellation worked with no page overflow, JavaScript errors or pagination-
-  triggered device commands. The 320×568 preset modal at 1.5× text retains an
-  89px rail and 44px controls. Fixtures/mock clients were used; no live household
-  records were changed. Temporary probes and task-owned servers were removed.
-- **Preview 68 installed and launched** on the connected iPhone; inventory confirms
-  **1.0.0 (68)**. Signature, device provisioning, staging endpoint, arrival assets
-  and packaged scene verification passed. Scene: **31,946,613 bytes**, SHA256
-  `273c6cb7f003ec10d2f0284f8bcd7b9239a8eab5c27887dc663ca064357bbe4e`.
-  Production metadata restored; release/version/assets/auth checks and secret scan
-  passed. Evidence: `work/smooth-scroll-*`, especially `smooth-scroll-qa-summary.json`
-  and `smooth-scroll-preview68-package.json`. Physical swipe feel remains user
-  review; installation is not interaction acceptance. iPad physical testing stays
-  deferred. No production, hub or real-device changes.
+- **Correction:** the user rejected Preview 68's footer-only page rails. They
+  meant the cards themselves should scroll. Those rails and their hooks/styles
+  are removed; preserve ordinary page counts and existing Previous/Next buttons.
+  Preview 68's evidence remains in `work/smooth-scroll-*`, but is superseded.
+- Actual room/device/scene/routine cards, assigned-room cards, scene shortcuts,
+  starter presets and add/edit-device choices now move horizontally beneath the
+  finger. Previous/Next scrolls the same card surface. The dashboard and collection
+  heights stay bounded; full device-control forms/sliders retain their own inputs.
+  AI remains saved in the backlog for a separate task.
+- Native FlatList paging supplies momentum; scene cards use native horizontal
+  overflow/snapping with mouse-drag support. Scope/count/layout changes cancel old
+  gestures. Dragging cannot activate cards or Run/control actions; offscreen pages
+  are excluded from focus/accessibility. Only nearby scene content renders, native
+  pages are virtualized, and per-frame offsets stay outside React state.
+- Reduced motion disables programmatic travel while preserving direct scrolling.
+  Existing inspector focus/selection survives responsive repartition. Preset and
+  device selection remain valid when the final page shrinks. No dependencies,
+  backend/schema changes or live household mutations.
+- Verification: app/scene TypeScript, **3,609 app tests / 245 suites**, **1,166 scene
+  tests / 97 suites**, and scene packaging passed. **15 browser cases** (9 RNWeb,
+  6 scene) passed at 320×568, 390×844, 768×1024 and 1024×768, including enlarged
+  text and reduced motion. Actual touch drags visibly moved cards; wheel/mouse and
+  buttons moved that same surface; action isolation, hidden-page focus protection,
+  search resets, no page overflow and no JavaScript errors were checked.
+  Tests cover scope/layout cancellation; browser checks used simulation fixtures.
+- Evidence: `work/card-scroll-qa-summary.json`, `card-scroll-native-browser.json`,
+  `card-scroll-scene-browser.json`, `card-scroll-app-tests.log`,
+  `card-scroll-scene-tests.log`, and associated screenshots. Temporary probes and
+  task-owned servers/browser were removed. Physical iPhone gesture feel remains
+  user review; iPad physical testing remains deferred.
+- **Preview 69 installed and launched** on the connected iPhone; inventory
+  confirms **1.0.0 (69)**. Signature, device provisioning, staging endpoint, arrival
+  media and exact packaged scene checks passed. Scene: **31,949,595 bytes**, SHA256
+  `3620096e05a8a92c1c0afda2244868735a0ff2b3fd87d28659b94c303e1a9174`.
+  `work/card-scroll-preview69-package.json` records verification. Production build
+  metadata was restored; release version/assets/auth-redirect checks passed.
+  Production, hub and real-device control remain unchanged.
 
 ## Cleaner hotspot controls — October 15 / Preview 67
 

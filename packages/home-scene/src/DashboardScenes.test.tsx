@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardScenes } from "./DashboardChrome";
@@ -49,8 +50,10 @@ describe("saved scene shortcuts", () => {
     expect(markup).toContain("Previous scenes");
     expect(markup).toContain("Next scenes");
     expect(markup).toContain("Saved scene 2");
-    expect(markup).not.toContain("Saved scene 3");
-    expect(markup.match(/data-artwork=/g)).toHaveLength(3);
+    const document = new DOMParser().parseFromString(markup, 'text/html');
+    expect(document.querySelectorAll('.card-scroll-item:not([inert]) button')).toHaveLength(3);
+    expect(document.querySelector('.card-scroll-item[inert] button')?.textContent).toContain('Saved scene 3');
+    expect(document.querySelectorAll('[data-artwork]')).toHaveLength(6);
   });
 
   it('retains the authored preset artwork when its display name changes', () => {

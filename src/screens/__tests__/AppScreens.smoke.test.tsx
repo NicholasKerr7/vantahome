@@ -1,6 +1,6 @@
 import React from "react";
 import renderer, { act, type ReactTestRenderer } from "react-test-renderer";
-import { Alert, FlatList, ScrollView, StyleSheet, Text } from "react-native";
+import { Alert, FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
 import AuthScreen from "../AuthScreen";
 import OnboardingScreen from "../OnboardingScreen";
 import SettingsScreen from "../SettingsScreen";
@@ -17,6 +17,7 @@ import Pressable from "../../components/Pressable";
 import ScreenFrame from "../../components/ScreenFrame";
 import DeviceBottomSheet from '../../components/DeviceBottomSheet';
 import DeviceCollectionCard from '../../components/DeviceCollectionCard';
+import ScrollableCardPages from '../../components/ScrollableCardPages';
 import {
   useHomeStore,
   type AutomationFlow,
@@ -309,7 +310,7 @@ describe("App screens smoke coverage", () => {
         expect(content).toMatchObject({ flex: 1, minHeight: 0, paddingTop: 0, paddingBottom: 0 });
         expect(tree.root.findAllByType(ScreenFrame)).toHaveLength(0);
         const collection = tree.root.findByProps({ testID: id === "scenes-screen-content" ? "embedded-scenes-collection" : "embedded-automations-collection" });
-        expect(collection.findAllByType(ScrollView).every((scroll: { props: { horizontal?: boolean } }) => scroll.props.horizontal === true)).toBe(true);
+        expect(collection.findAllByType(ScrollView).every((scroll: { props: { horizontal?: boolean } }) => scroll.props.horizontal)).toBe(true);
         expect(tree.root.findAllByType(Text).some((node: RenderedScreenNode) => node.props.children === title)).toBe(false);
       } finally {
         act(() => { tree.unmount(); });
@@ -413,21 +414,26 @@ describe("App screens smoke coverage", () => {
     let tree!: ReactTestRenderer;
     act(() => { tree = renderer.create(<RoomScreen navigation={navigation} route={route} />); });
     try {
-      act(() => { tree.root.findByProps({ testID: 'room-device-viewport' }).props.onLayout({ nativeEvent: { layout: { height: 240 } } }); });
-      expect(tree.root.findByType(FlatList).props.scrollEnabled).toBe(false);
-      const capacity = tree.root.findByType(FlatList).props.data.length;
-      expect(capacity).toBeGreaterThan(0);
-      expect(tree.root.findByType(FlatList).props.data.map((device: Device) => device.id)).toEqual(devices.slice(0, capacity).map((device) => device.id));
-      for (let page = 1; page < Math.ceil(devices.length / capacity); page += 1) {
+      act(() => { tree.root.findByProps({ testID: 'room-device-viewport' }).props.onLayout({ nativeEvent: { layout: { height: 240, width: 340 } } }); });
+      act(() => { tree.root.findAllByType(View).find((node: { props: { testID?: string } }) => node.props.testID === 'room-device-cards')!.props.onLayout({ nativeEvent: { layout: { height: 240, width: 340 } } }); });
+      expect(tree.root.findByType(FlatList).props.horizontal).toBe(true);
+      expect(tree.root.findByType(FlatList).props.pagingEnabled).toBe(true);
+      const pageCount = tree.root.findByType(ScrollableCardPages).props.count;
+      expect(pageCount).toBeGreaterThan(1);
+      for (let page = 1; page < pageCount; page += 1) {
         act(() => { tree.root.findAllByType(Pressable).find((node: RenderedScreenNode) => node.props.accessibilityLabel === 'Next Devices')!.props.onPress(); });
       }
-      expect(tree.root.findByType(FlatList).props.data[0].id).toBe('paged-device-6');
+      expect(tree.root.findByType(ScrollableCardPages).props.page).toBe(pageCount - 1);
       act(() => { useHomeStore.setState({ devices: devices.slice(0, 2) }); });
-      const remaining = tree.root.findByType(FlatList).props.data as Device[];
-      expect(remaining.length).toBeGreaterThan(0);
-      expect(remaining.every((device) => ['paged-device-0', 'paged-device-1'].includes(device.id))).toBe(true);
-      act(() => { tree.root.findAllByType(DeviceCollectionCard)[0].props.onOpen(); });
-      expect((navigation as { navigate: jest.Mock }).navigate).toHaveBeenCalledWith('DeviceDetail', { deviceId: remaining[0].id });
+      const remainingPages = tree.root.findByType(ScrollableCardPages).props.count;
+      expect(remainingPages).toBeLessThan(pageCount);
+      expect(tree.root.findByType(ScrollableCardPages).props.page).toBe(remainingPages - 1);
+      const currentPage = tree.root.findAllByType(View).find((node: { props: { testID?: string } }) => node.props.testID === `room-device-cards-page-${remainingPages - 1}`)!;
+      const visibleCards = currentPage.findAllByType(DeviceCollectionCard);
+      expect(visibleCards.length).toBeGreaterThan(0);
+      const visibleDevice = devices.find((device) => device.name === visibleCards[0].props.name)!;
+      act(() => { visibleCards[0].props.onOpen(); });
+      expect((navigation as { navigate: jest.Mock }).navigate).toHaveBeenCalledWith('DeviceDetail', { deviceId: visibleDevice.id });
     } finally {
       act(() => { tree.unmount(); });
     }

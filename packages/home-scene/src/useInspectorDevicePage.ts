@@ -61,5 +61,5 @@ export function useInspectorDevicePage(devices: readonly DeviceDefinition[], roo
     setPagination({ selectionKey, anchorId: devices[nextPage * pagination.capacity]?.id, capacity: pagination.capacity });
   }
 
-  return { gridRef: setGrid, page, pageCount, pageStart, visibleDevices: devices.slice(pageStart, pageStart + pagination.capacity), goToPage };
+  return { gridRef: setGrid, page, pageCount, pageStart, pageSize: pagination.capacity, visibleDevices: devices.slice(pageStart, pageStart + pagination.capacity), goToPage };
 }

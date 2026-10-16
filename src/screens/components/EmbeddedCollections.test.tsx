@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer, { act, type ReactTestRenderer } from 'react-test-renderer';
-import { ScrollView, StyleSheet, Text, type LayoutChangeEvent } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Pressable from '../../components/Pressable';
 import type { AutomationFlow, AutomationRule, Scene } from '../../store/useHomeStore';
 import { selectRoutines } from '../../store/routines';
@@ -32,7 +32,7 @@ function routineProps() { return { routines, onCreate: jest.fn(), onOpen: jest.f
 /** Deliver a real layout-shaped event to exercise the same bounded sizing used on phones. */
 function measure(tree: ReactTestRenderer, testID: string, width: number, height: number) {
   const event = { nativeEvent: { layout: { x: 0, y: 0, width, height } } } as LayoutChangeEvent;
-  act(() => { tree.root.findByProps({ testID }).props.onLayout(event); });
+  act(() => { tree.root.findAllByType(View).find((node: { props: { testID?: string } }) => node.props.testID === testID)!.props.onLayout(event); });
 }
 
 /** Find custom controls before their native hosts, avoiding duplicate press invocations. */
@@ -77,13 +77,13 @@ describe('Embedded feature collections', () => {
     measure(tree!, 'scene-page-area', 288, 570);
     expect(visibleIds(tree!, 'scene-tile-')).toHaveLength(capacity);
     expect(StyleSheet.flatten(tree!.root.findByProps({ testID: 'scene-row-0' }).props.style).maxHeight).toBe(maxHeight);
-    expect(tree!.root.findAllByType(ScrollView).every((scroll: { props: { horizontal?: boolean } }) => scroll.props.horizontal === true)).toBe(true);
+    expect(tree!.root.findAllByType(ScrollView)).toHaveLength(0);
   });
 
-  it.each([[288, 245, 1], [780, 680, 4], [1100, 550, 4]])('pages every scene within %sx%s without a vertical page scroller', (width, height, expectedCapacity) => {
+  it.each([[288, 245, 1], [780, 680, 4], [1100, 550, 4]])('pages every scene within %sx%s without a page scroller', (width, height, expectedCapacity) => {
     act(() => { tree = renderer.create(<EmbeddedScenes scenes={scenes} rooms={[]} activeSceneId={null} onCreate={jest.fn()} onClear={jest.fn()} onOpen={jest.fn()} onRun={jest.fn()} />); });
     measure(tree!, 'scene-page-area', width, height);
-    expect(tree!.root.findAllByType(ScrollView).every((scroll: { props: { horizontal?: boolean } }) => scroll.props.horizontal === true)).toBe(true);
+    expect(tree!.root.findAllByType(ScrollView)).toHaveLength(0);
     expect(visibleIds(tree!, 'scene-tile-')).toHaveLength(expectedCapacity);
     const seen = new Set<string>();
     for (let index = 0; index < scenes.length; index++) {
@@ -117,7 +117,7 @@ describe('Embedded feature collections', () => {
     act(() => { tree = renderer.create(<EmbeddedAutomations {...props} />); });
     measure(tree!, 'routine-page-area', 288, 199);
     const first = routines[0];
-    expect(tree!.root.findAllByType(ScrollView).every((scroll: { props: { horizontal?: boolean } }) => scroll.props.horizontal === true)).toBe(true);
+    expect(tree!.root.findAllByType(ScrollView)).toHaveLength(0);
     expect(visibleIds(tree!, 'routine-row-')).toEqual([`routine-row-${first.id}`]);
     act(() => { button(tree!, `${first.name} enabled`).props.onPress(); });
     expect(props.onToggle).toHaveBeenCalledWith(first.id);
@@ -145,7 +145,7 @@ describe('Embedded feature collections', () => {
       expect(StyleSheet.flatten(button(tree!, label).props.style).minHeight).toBeGreaterThanOrEqual(44);
     }
     expect(tree!.root.findAllByType(Pressable).filter((node: TestNode) => node.props.accessibilityRole === 'switch')).toHaveLength(1);
-    expect(tree!.root.findAllByType(ScrollView).every((scroll: { props: { horizontal?: boolean } }) => scroll.props.horizontal === true)).toBe(true);
+    expect(tree!.root.findAllByType(ScrollView)).toHaveLength(0);
   });
 
   it('renders actual steps and the foreground-only execution limit', () => {
@@ -185,32 +185,25 @@ describe('Embedded feature collections', () => {
     expect(button(tree!, 'Previous routines page').props.disabled).toBe(true);
   });
 
-  it('scrolls scene pages without running or editing a scene', () => {
-    const props = { scenes, rooms: [], activeSceneId: null, onCreate: jest.fn(), onClear: jest.fn(), onOpen: jest.fn(), onRun: jest.fn() };
-    act(() => { tree = renderer.create(<EmbeddedScenes {...props} />); });
+  it('scrolls the scene cards themselves and keeps arrow navigation on the same collection', () => {
+    const onRun = jest.fn();
+    const onOpen = jest.fn();
+    act(() => { tree = renderer.create(<EmbeddedScenes scenes={scenes} rooms={[]} activeSceneId={null}
+      onCreate={jest.fn()} onClear={jest.fn()} onOpen={onOpen} onRun={onRun} />); });
     measure(tree!, 'scene-page-area', 288, 245);
-    measure(tree!, 'page-scroll-rail', 160, 46);
-    const scroll = tree!.root.findByType(ScrollView);
+    measure(tree!, 'scene-card-pages', 288, 245);
+    const list = tree!.root.findByType(FlatList);
+    expect(list.props.horizontal).toBe(true);
     act(() => {
-      scroll.props.onScrollBeginDrag();
-      scroll.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 152, y: 0 } } });
+      list.props.onScrollBeginDrag();
+      list.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 288, y: 0 } } });
     });
-    expect(visibleIds(tree!, 'scene-tile-')).toEqual(['scene-tile-scene-2']);
-    expect(props.onRun).not.toHaveBeenCalled();
-    expect(props.onOpen).not.toHaveBeenCalled();
-  });
-
-  it('discards a prior collection gesture when the routine filter changes without changing its count', () => {
-    const props = routineProps();
-    act(() => { tree = renderer.create(<EmbeddedAutomations {...props} />); });
-    measure(tree!, 'routine-page-area', 288, 199);
-    measure(tree!, 'page-scroll-rail', 160, 46);
-    const scroll = tree!.root.findByType(ScrollView);
-    act(() => scroll.props.onScrollBeginDrag());
-    const replacement = [...props.routines].reverse();
-    act(() => tree!.update(<EmbeddedAutomations {...props} routines={replacement} />));
-    act(() => scroll.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 152, y: 0 } } }));
-    expect(visibleIds(tree!, 'routine-row-')).toEqual([`routine-row-${replacement[0].id}`]);
-    expect(props.onToggle).not.toHaveBeenCalled();
+    const page = tree!.root.findAllByType(View).find((node: { props: { testID?: string } }) => node.props.testID === 'scene-card-pages-page-1');
+    expect(page?.props.accessibilityElementsHidden).toBe(false);
+    act(() => button(tree!, 'Next scenes page').props.onPress());
+    const nextPage = tree!.root.findAllByType(View).find((node: { props: { testID?: string } }) => node.props.testID === 'scene-card-pages-page-2');
+    expect(nextPage?.props.accessibilityElementsHidden).toBe(false);
+    expect(onRun).not.toHaveBeenCalled();
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });
