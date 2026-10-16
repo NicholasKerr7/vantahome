@@ -17,11 +17,23 @@ export type ConciergeGeneration = {
   canDraft: boolean;
 };
 
+type ProviderFailureCategory = "auth" | "permission" | "model" | "quota" | "quota_credit_balance"
+  | "quota_project_spend" | "quota_organization_spend" | "quota_organization_usage" | "quota_billing_limit" | "rate_limit"
+  | "schema" | "request" | "service" | "network";
+
 /** Stable public errors deliberately omit provider messages, request content and credentials. */
 export class ConciergeProviderError extends Error {
-  constructor(public readonly code: "unavailable" | "timeout" | "invalid_response") {
+  readonly diagnosticCode: string;
+
+  constructor(public readonly code: "unavailable" | "timeout" | "invalid_response",
+    diagnosis?: { category: ProviderFailureCategory; status?: number }) {
     super(code);
     this.name = "ConciergeProviderError";
+    // Only locally classified categories and bounded HTTP numbers reach operational logs.
+    const status = diagnosis?.status;
+    const safeStatus = typeof status === "number" && Number.isInteger(status) && status >= 400 && status <= 599
+      ? `_http_${status}` : "";
+    this.diagnosticCode = diagnosis ? `provider_${diagnosis.category}${safeStatus}` : code;
   }
 }
 
@@ -44,7 +56,7 @@ Proposals are drafts and have not run. Never say a requested change has happened
 Prefer a compact title and two or three helpful sentences. Return only the required JSON structure.`;
 
 /** Read a bounded response stream before parsing; oversized or incomplete output is never shown. */
-async function readProviderJson(response: Response): Promise<unknown> {
+async function readProviderJson(response: Response, maxBytes = 65_536): Promise<unknown> {
   if (!response.body) throw new ConciergeProviderError("invalid_response");
   const reader = response.body.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -55,7 +67,7 @@ async function readProviderJson(response: Response): Promise<unknown> {
       const chunk = await reader.read();
       if (chunk.done) break;
       bytes += chunk.value.byteLength;
-      if (bytes > 65_536) throw new ConciergeProviderError("invalid_response");
+      if (bytes > maxBytes) throw new ConciergeProviderError("invalid_response");
       text += decoder.decode(chunk.value, { stream: true });
     }
     return JSON.parse(text + decoder.decode()) as unknown;
@@ -65,6 +77,38 @@ async function readProviderJson(response: Response): Promise<unknown> {
   } finally {
     reader.releaseLock();
   }
+}
+
+/** Classify only exact known provider codes; arbitrary messages, identifiers and parameters never escape. */
+function classifyProviderFailure(status: number, body: unknown): ProviderFailureCategory {
+  const error = isPlainObject(body) && isPlainObject(body.error) ? body.error : null;
+  if (status === 401) return "auth";
+  if (status === 403) return "permission";
+  if (status === 429) {
+    // Specific allowlisted codes take precedence over the provider's generic quota type.
+    if (error?.code === "credit_balance_exhausted") return "quota_credit_balance";
+    if (error?.code === "project_spend_limit_exceeded") return "quota_project_spend";
+    if (error?.code === "organization_spend_limit_exceeded") return "quota_organization_spend";
+    if (error?.code === "organization_usage_limit_exceeded") return "quota_organization_usage";
+    if (error?.code === "billing_hard_limit_reached") return "quota_billing_limit";
+    return error?.code === "insufficient_quota" || error?.type === "insufficient_quota" ? "quota" : "rate_limit";
+  }
+  if (status === 404) return "model";
+  if (status >= 500) return "service";
+  if (error?.code === "model_not_found" || error?.param === "model") return "model";
+  if (error?.code === "invalid_json_schema" || error?.param === "text.format.schema"
+    || error?.param === "text.format" || error?.param === "response_format") return "schema";
+  return "request";
+}
+
+/** Inspect at most 4 KiB of a failed response solely to select a fixed, payload-free diagnostic category. */
+async function providerHttpFailure(response: Response): Promise<ConciergeProviderError> {
+  let body: unknown;
+  try { body = await readProviderJson(response, 4_096); }
+  catch { /* Malformed or oversized error bodies still retain the safe HTTP classification. */ }
+  return new ConciergeProviderError("unavailable", {
+    category: classifyProviderFailure(response.status, body), status: response.status,
+  });
 }
 
 /** Accept one completed text response; refuse tool calls, refusals and partial model output. */
@@ -117,14 +161,11 @@ export async function generateConciergeResponse(
           schema: CONCIERGE_RESPONSE_JSON_SCHEMA } },
       }),
     });
-    if (!response.ok) {
-      await response.body?.cancel().catch(() => undefined);
-      throw new ConciergeProviderError("unavailable");
-    }
+    if (!response.ok) throw await providerHttpFailure(response);
     return extractStructuredOutput(await readProviderJson(response));
   } catch (error) {
     if (abort.signal.aborted) throw new ConciergeProviderError("timeout");
-    throw error instanceof ConciergeProviderError ? error : new ConciergeProviderError("unavailable");
+    throw error instanceof ConciergeProviderError ? error : new ConciergeProviderError("unavailable", { category: "network" });
   } finally {
     clearTimeout(timeout);
     options.signal?.removeEventListener("abort", cancel);

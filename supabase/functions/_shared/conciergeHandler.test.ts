@@ -175,6 +175,15 @@ it.each(['timeout', 'unavailable', 'invalid_response'] as const)('returns safe t
   expect(await response.text()).not.toContain('example-request');
 });
 
+it('logs only the classified provider outcome while preserving the existing public failure contract', async () => {
+  const { send, deps } = setup();
+  deps.generate.mockRejectedValue(new ConciergeProviderError('unavailable', { category: 'quota', status: 429 }));
+  const response = await send();
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({ error: 'Vanta is temporarily unavailable.' });
+  expect(deps.finalize).toHaveBeenCalledWith(expect.anything(), response, 'provider_quota_http_429', expect.anything());
+});
+
 it('never exposes raw upstream, SQL or authentication error text', async () => {
   const { send, deps } = setup();
   deps.readHome.mockRejectedValue(new Error('private-provider-body-with-credential'));

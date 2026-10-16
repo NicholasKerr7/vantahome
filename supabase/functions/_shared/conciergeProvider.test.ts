@@ -51,6 +51,70 @@ it.each([401, 429, 500])('hides upstream body on provider HTTP %s', async (statu
 });
 
 it.each([
+  [401, { code: 'invalid_api_key' }, 'auth'],
+  [403, { code: 'insufficient_permissions' }, 'permission'],
+  [404, { code: 'model_not_found' }, 'model'],
+  [400, { code: 'model_not_found' }, 'model'],
+  [400, { param: 'model' }, 'model'],
+  [429, { code: 'insufficient_quota' }, 'quota'],
+  [429, { type: 'insufficient_quota' }, 'quota'],
+  [429, { code: 'billing_hard_limit_reached' }, 'quota_billing_limit'],
+  [429, { code: 'credit_balance_exhausted' }, 'quota_credit_balance'],
+  [429, { code: 'organization_spend_limit_exceeded' }, 'quota_organization_spend'],
+  [429, { code: 'project_spend_limit_exceeded' }, 'quota_project_spend'],
+  [429, { code: 'organization_usage_limit_exceeded' }, 'quota_organization_usage'],
+  [429, { code: 'billing_hard_limit_reached', type: 'insufficient_quota' }, 'quota_billing_limit'],
+  [429, { code: 'credit_balance_exhausted', type: 'insufficient_quota' }, 'quota_credit_balance'],
+  [429, { code: 'organization_spend_limit_exceeded', type: 'insufficient_quota' }, 'quota_organization_spend'],
+  [429, { code: 'project_spend_limit_exceeded', type: 'insufficient_quota' }, 'quota_project_spend'],
+  [429, { code: 'organization_usage_limit_exceeded', type: 'insufficient_quota' }, 'quota_organization_usage'],
+  [429, { code: 'rate_limit_exceeded' }, 'rate_limit'],
+  [400, { code: 'invalid_json_schema' }, 'schema'],
+  [400, { param: 'text.format.schema' }, 'schema'],
+  [400, { code: 'unsupported_parameter' }, 'request'],
+  [500, { code: 'server_error' }, 'service'],
+  [503, {}, 'service'],
+] as const)('keeps HTTP %s diagnostics payload-free (%j)', async (status, metadata, category) => {
+  const privateValue = 'private-key-question-and-provider-message';
+  const body = { error: { message: privateValue, details: privateValue, ...metadata }, request_id: privateValue };
+  const failure = await provider(body, status).run().catch((error: unknown) => error);
+  expect(failure).toMatchObject({ code: 'unavailable', message: 'unavailable',
+    diagnosticCode: `provider_${category}_http_${status}` });
+  expect(JSON.stringify(failure)).not.toContain(privateValue);
+});
+
+it('does not retain arbitrary provider codes, types or parameters', async () => {
+  const privateValue = 'private-key-question-and-provider-message';
+  const failure = await provider({ error: { code: privateValue, type: privateValue, param: privateValue, message: privateValue } }, 400)
+    .run().catch((error: unknown) => error);
+  expect(failure).toMatchObject({ diagnosticCode: 'provider_request_http_400' });
+  expect(JSON.stringify(failure)).not.toContain(privateValue);
+});
+
+it('bounds failed responses before parsing and falls back to their HTTP category', async () => {
+  const privateValue = 'private-provider-message';
+  const failure = await provider({ error: { code: 'insufficient_quota', message: privateValue.repeat(300) } }, 429)
+    .run().catch((error: unknown) => error);
+  expect(failure).toMatchObject({ code: 'unavailable', diagnosticCode: 'provider_rate_limit_http_429' });
+  expect(JSON.stringify(failure)).not.toContain(privateValue);
+});
+
+it('preserves safe HTTP diagnostics when the provider error body is not JSON', async () => {
+  const fetcher: typeof fetch = jest.fn(async () => new Response('private HTML error page', { status: 500 }));
+  await expect(generateConciergeResponse(generation, { apiKey: 'example-private-provider-key', model: 'gpt-6.1-sol', fetch: fetcher }))
+    .rejects.toMatchObject({ code: 'unavailable', message: 'unavailable', diagnosticCode: 'provider_service_http_500' });
+});
+
+it('classifies transport failures without retaining private transport details', async () => {
+  const privateValue = 'private transport details';
+  const fetcher: typeof fetch = jest.fn(async () => { throw new Error(privateValue); });
+  const failure = await generateConciergeResponse(generation, { apiKey: 'example-private-provider-key', model: 'gpt-6.1-sol', fetch: fetcher })
+    .catch((error: unknown) => error);
+  expect(failure).toMatchObject({ code: 'unavailable', diagnosticCode: 'provider_network' });
+  expect(JSON.stringify(failure)).not.toContain(privateValue);
+});
+
+it.each([
   { status: 'incomplete', output: [] },
   { status: 'completed', output: [] },
   { status: 'completed', output: [{ type: 'function_call', arguments: '{}' }] },

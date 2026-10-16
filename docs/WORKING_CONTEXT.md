@@ -48,6 +48,30 @@ defects from ideas or untested risks.
 
 ## Vanta home assistant — October 16 / Preview 70
 
+- **Live Send diagnosis:** the user confirms Preview 71 now shows Home brief.
+  Availability succeeds (`200 availability_checked`), but Send fails. Staging
+  `home-concierge` v3 added bounded provider error classification: fixed categories
+  and HTTP status only, never provider messages, keys, prompts or answers.
+  The user's retry confirms **`provider_quota_http_429`** (2,746 ms,
+  request `79331a3d-f613-42b3-8026-d27385f8ebb5`). OpenAI receives the request but
+  rejects it for credit/spend quota. The user initially reported existing credit.
+  Follow-up **v4** diagnostics resolve the ambiguity: **`provider_quota_credit_balance_http_429`**
+  (2,405 ms, request `22993b0b-f30f-4ed1-9911-9d89beb19d8b`). The OpenAI billing
+  page eventually loaded and independently shows **Free trial / $0.00 API credit**
+  for the **Personal** organization containing VantaHome Staging. Key metadata
+  shows Active and Responses Write. Evidence: `work/openai-staging-billing-zero.png`.
+  The user's other credit may be in another API organization or ChatGPT; do not
+  assume it transfers. No payment, permission expansion or successful live answer
+  has occurred. Next: user funds this API organization privately or identifies the
+  funded API organization, then repeat one authenticated Send. Do not replace or
+  broaden the current key merely to fix a zero balance.
+  This server-only diagnostic update works with Preview 71, without a new build.
+  Refined exact quota codes in **v4 ACTIVE, JWT verification enabled** to identify
+  credit balance, project spend, organization spend/usage or billing limits when
+  the provider supplies that code. Generic insufficient-quota remains generic.
+  **78 provider/handler tests / 2 suites**, Edge TypeScript, tracked-file secret
+  scan and diff check pass. Evidence: `work/concierge-provider-diagnostics-tests.log`.
+  The v4 physical Send produced the exact credit-balance failure recorded above.
 - **Connection recovery fix / Preview 71:** the Owner reported Check connection
   remaining at Home information unavailable. The assistant rejected the actual
   signed-in default (`realtime.enabled: true`, empty `wsUrl`) even though no hub
@@ -68,8 +92,8 @@ defects from ideas or untested risks.
   Production metadata was restored; release version/assets/auth-redirect checks
   and tracked-file secret scan passed. Evidence: `work/concierge-fix-tests.log`,
   `concierge-preview71-package.json`, and build/install/launch receipts.
-  The user has been asked to repeat microphone → Ask → Home brief → Send.
-  Live model answers remain unverified pending that physical test.
+  The user confirmed Home brief appears; live Send is blocked by the API quota
+  issue recorded above. Live model answers remain unverified.
 - **Live activation now authorized:** the user subsequently asked to connect OpenAI
   and test in the app. Created the separate OpenAI **VantaHome Staging** project
   (`proj_KNfFzIjQlgpdkOHyQQc6ooWu`). Prepared a user-owned key named
@@ -78,16 +102,16 @@ defects from ideas or untested risks.
   creating/copying it into staging Supabase and closing the reveal dialog. CLI
   secret-name-only verification confirms `OPENAI_API_KEY` exists; no model override
   is configured. Do not inspect the key or clipboard. Billing/model access and
-  real app answers remain unverified; OpenAI's billing page returned a blank UI.
+  real app answers remain unverified; the later billing inspection is recorded above.
   Chrome API Keys tab `1394035335` and staging diagnostics `1394035341` are temporary;
   recheck state. Evidence: `work/openai-staging-key-prepared.jpg`.
-  The user has been asked to test microphone → Ask → Home brief → Send on Preview 70.
-  Then test a 1–3-device scene draft. Availability alone checks configuration
+  After resolving the quota issue, test a real answer and a 1–3-device scene draft.
+  Availability alone checks configuration
   presence, not provider readiness. No billing transaction has been made.
   Review server metadata and the user's iPhone result; preserve
-  separate Review/Save/Run and Guest restrictions. A read-only audit noted generic
-  upstream 503 errors currently look like missing configuration; distinguish these
-  if encountered during live testing.
+  separate Review/Save/Run and Guest restrictions. Preview 71 distinguishes
+  temporary failures from missing configuration; staging diagnostics now classify
+  provider failures without logging private payloads.
 - The user chose **build now; connect AI later**. The existing dashboard microphone
   now opens a purple **Home intelligence** panel with **Ask / Controls**. The local
   brief reads actual permitted simulation snapshots; existing typed/spoken controls

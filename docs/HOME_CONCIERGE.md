@@ -4,6 +4,11 @@ Implemented October 16, 2026. Simulation first, staging only. Initially delivere
 without a provider connection; the user subsequently authorized activation and
 privately saved a dedicated OpenAI staging key. Secret-name presence is verified.
 API billing/model access and a real authenticated answer still require verification.
+The Preview 71 physical retry reaches OpenAI but returns credit-balance HTTP 429.
+The billing UI confirms $0.00 API credit in the organization containing VantaHome
+Staging. The user initially reported credit; it may belong to another organization
+or product. Fund this API organization or identify the funded API organization
+before further live testing; replacing or broadening this key is not a remedy.
 
 The first iPhone connection check exposed a client guard that rejected the signed-in
 no-hub default. Preview 71 allows that saved simulation while keeping configured
@@ -77,6 +82,10 @@ provider deadline and 25-second client deadline. Requests are capped at eight pe
 minute and 60 per day per actor, plus 600 per day for the staging server. Availability
 checks allow 30 per minute. Limit failures fail closed. Logs contain the existing
 operational metadata, never questions, answers or credentials.
+Provider failures add only a locally allowlisted category and bounded HTTP status
+to that metadata. At most 4 KiB of an error response is inspected for exact known
+codes; arbitrary messages, codes, parameters and identifiers are discarded. The
+client continues to receive the existing safe error contract.
 
 `OPENAI_API_KEY` is now present in this staging project's server secrets after the
 user's private setup. Verify API billing and an appropriate account budget. An optional

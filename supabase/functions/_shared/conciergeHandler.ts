@@ -99,7 +99,7 @@ export function createConciergeHandler(deps: ConciergeHandlerDependencies): (req
     } catch (error) {
       if (error instanceof RequestValidationError) return respond(400, { error: "Invalid concierge request." }, "invalid_request");
       if (error instanceof ConciergeProviderError) return respond(error.code === "invalid_response" ? 502 : 503,
-        { error: error.code === "timeout" ? "Vanta took too long. Please try again." : "Vanta is temporarily unavailable." }, error.code);
+        { error: error.code === "timeout" ? "Vanta took too long. Please try again." : "Vanta is temporarily unavailable." }, error.diagnosticCode);
       return respond(503, { error: "Vanta is temporarily unavailable." }, "unavailable");
     }
   };
