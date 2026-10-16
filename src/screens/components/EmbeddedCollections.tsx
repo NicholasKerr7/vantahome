@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Pressable from '../../components/Pressable';
+import PageScrollRail from '../../components/PageScrollRail';
 import type { Room, Scene } from '../../store/useHomeStore';
 import type { Routine } from '../../store/routines';
 import { theme } from '../../theme/theme';
@@ -17,14 +18,14 @@ import { isModelHome } from '../../features/three-d-home/modelHomeScope';
 
 type Pagination = ReturnType<typeof useCollectionPagination>;
 
-/** Explicit previous/next controls keep every item reachable without scrolling or gestures. */
-function CollectionPager({ pagination, total, noun }: { pagination: Pagination; total: number; noun: string }) {
+/** Keep the explicit arrows while adding a bounded horizontal way to browse collection pages. */
+function CollectionPager({ pagination, total, noun, resetKey }: { pagination: Pagination; total: number; noun: string; resetKey: string }) {
   const { page, pageCount, start, end, changePage } = pagination;
   return <View style={styles.pager}>
     <Text style={styles.pageCount} accessibilityLiveRegion="polite">{total ? `${start + 1}–${end} of ${total}` : `0 ${noun}`}</Text>
     <View style={styles.pageActions}>
       <Pressable accessibilityLabel={`Previous ${noun} page`} accessibilityState={{ disabled: page === 0 }} disabled={page === 0} style={[styles.pageButton, page === 0 && styles.disabled]} onPress={() => changePage(page - 1)}><Ionicons name="arrow-back" size={18} color={theme.colors.text} /></Pressable>
-      <Text style={styles.pageNumber}>{page + 1} / {pageCount}</Text>
+      <PageScrollRail page={page} count={pageCount} onChange={changePage} label={noun} resetKey={resetKey} />
       <Pressable accessibilityLabel={`Next ${noun} page`} accessibilityState={{ disabled: page >= pageCount - 1 }} disabled={page >= pageCount - 1} style={[styles.pageButton, page >= pageCount - 1 && styles.disabled]} onPress={() => changePage(page + 1)}><Ionicons name="arrow-forward" size={18} color={theme.colors.text} /></Pressable>
     </View>
   </View>;
@@ -63,7 +64,7 @@ export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear
         {row.length < pagination.columns && <View style={styles.emptyTileSpace} />}
       </View>) : <View style={styles.emptyState}><Ionicons name="sparkles-outline" size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>Make room for a mood.</Text><Text style={styles.emptyCopy}>Create your first scene to bring several devices together in one tap.</Text></View>}
     </View>
-    <CollectionPager pagination={pagination} total={scenes.length} noun="scenes" />
+    <CollectionPager pagination={pagination} total={scenes.length} noun="scenes" resetKey={scenes.map((scene) => scene.id).join('|')} />
   </View>;
 }
 
@@ -101,7 +102,7 @@ export function EmbeddedAutomations({ routines, deviceName, onClearFilter, canMa
       </View>)}
       {!routines.length && <View style={styles.emptyState}><Ionicons name="git-network-outline" size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>A little less to think about.</Text><Text style={styles.emptyCopy}>Choose when your home should act, any conditions, and what it should do.</Text></View>}
     </View>
-    <CollectionPager pagination={pagination} total={routines.length} noun="routines" />
+    <CollectionPager pagination={pagination} total={routines.length} noun="routines" resetKey={routines.map((routine) => routine.id).join('|')} />
   </View>;
 }
 
@@ -126,10 +127,9 @@ const styles = StyleSheet.create({
   routineRowStandard: { maxHeight: 250 },
   emptyTileSpace: { flex: 1 },
   pager: { minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  pageCount: { color: theme.colors.muted, fontSize: 11 },
-  pageActions: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  pageCount: { color: theme.colors.muted, fontSize: 11, maxWidth: 100 },
+  pageActions: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 10 },
   pageButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: theme.colors.card2 },
-  pageNumber: { color: theme.colors.subtext, fontSize: 11, fontVariant: ['tabular-nums'], minWidth: 44, textAlign: 'center' },
   disabled: { opacity: 0.3 },
   emptyState: { flex: 1, minHeight: 0, justifyContent: 'center', maxWidth: 380, gap: 10, paddingBottom: 8 },
   emptyTitle: { color: theme.colors.text, fontSize: 21, fontWeight: '500', letterSpacing: -0.5 },

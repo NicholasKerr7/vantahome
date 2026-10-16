@@ -9,6 +9,8 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Smooth horizontal navigation | Complete in Preview 68 source | Touch/trackpad page rails complement existing arrows; no vertical page scrolling or gesture-triggered device actions. See handoff for browser/native acceptance. AI is separately deferred below. |
+| Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
 | Saved-device editing | Complete in Preview 66 source/staging | Rename, compatible room move and 3D reposition preserve device identity/settings. Revision conflicts and durable retries prevent stale overwrite or resurrection. See handoff for native/physical status. |
 | Durable Add device and 3D placement | Complete in Preview 65 source/staging | Eight supported templates, furnished placement editor, authoritative registration/removal, restart-safe retry receipts, scoped runtime catalog. See handoff for native install and physical verification. |
 | Smooth gate closing | Complete in Preview 64 source | Steady travel between one-second simulation samples; pause/interlock guards and covered-view synchronization. Native install status is in the handoff. |
@@ -97,6 +99,12 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Explicitly deferred
 
+- **AI experience, saved at the user's request:** revisit after the current smooth
+  navigation pass. Start with a discreet, optional assistant that explains the
+  current home and drafts scenes/routines for review, integrated into the existing
+  voice/account experience. Confirm data boundaries and permissions before choosing
+  a provider or implementation. Suggestions must never expand room access or bypass
+  explicit authorization for device commands. No AI implementation in this pass.
 - Hub pairing, real-device bindings/observations and durable app-closed routines:
   no hub yet; NUC 15 is the intended direction. Reuse the existing SQLite worker
   foundation rather than recreating it. Respect the supervised one-light pilot.

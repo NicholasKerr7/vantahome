@@ -6,6 +6,7 @@ import { isEmbeddedScene, requestDeviceRoutines } from './embeddedHost';
 import type { DeviceDefinition } from './data';
 import type { DeviceState } from './state';
 import { useControlPageCapacity } from './useControlPageCapacity';
+import { PageScrollRail } from './PageScrollRail';
 import './paged-device-controls.css';
 
 const GROUPS = [
@@ -67,11 +68,11 @@ export function PagedDeviceControls({ device, current }: { device: DeviceDefinit
     tabs.current?.querySelector<HTMLButtonElement>(`[data-control-group="${group.id}"]`)?.focus({ preventScroll: true });
   }
 
-  /** Focus the changed panel so keyboard users can continue into its first field. */
-  function changePage(next: number) {
+  /** Buttons focus the changed panel; scrolling leaves focus on the browsing rail. */
+  function changePage(next: number, focusPanel = true) {
     const nextPage = groupPages[next];
     setPageAnchor(nextPage?.capabilities[0]?.id ?? nextPage?.id ?? null);
-    panel.current?.focus({ preventScroll: true });
+    if (focusPanel) panel.current?.focus({ preventScroll: true });
   }
 
   /** Keep the focused field or action mounted when resizing repartitions its category. */
@@ -98,7 +99,7 @@ export function PagedDeviceControls({ device, current }: { device: DeviceDefinit
     </div>
     <footer className="device-control-pagination">
       <button type="button" aria-label="Previous controls page" aria-controls={panelId} disabled={currentIndex === 0} onClick={() => changePage(currentIndex - 1)}><ChevronLeft size={16} aria-hidden="true" /><span>Previous</span></button>
-      <p role="status" aria-live="polite" aria-atomic="true">{currentIndex + 1} / {Math.max(1, groupPages.length)}<span className="sr-only"> {selectedGroup} pages</span></p>
+      <PageScrollRail page={currentIndex} count={groupPages.length} onChange={(next) => changePage(next, false)} label="Controls" resetKey={`${device.id}:${selectedGroup}:${groupPages.map((entry) => entry.id).join('|')}`} />
       <button type="button" aria-label="Next controls page" aria-controls={panelId} disabled={currentIndex >= groupPages.length - 1} onClick={() => changePage(currentIndex + 1)}><span>Next</span><ChevronRight size={16} aria-hidden="true" /></button>
     </footer>
   </section>;

@@ -56,7 +56,6 @@ export const controlStyles = StyleSheet.create({
   actionText: { color: colors.text, fontSize: 13, fontWeight: '600', textAlign: 'center' },
   selection: { borderBottomColor: colors.accent, backgroundColor: theme.colors.card },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  page: { color: colors.muted, fontSize: 12, textAlign: 'center', flex: 1 },
   list: { flex: 1, minHeight: 0, justifyContent: 'center', gap: 4 },
   item: { minHeight: 56, padding: 12, borderRadius: 16, backgroundColor: theme.colors.surfaceRaised, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: colors.stroke },
 });

@@ -9,6 +9,7 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 47, bottom: 34, left: 0, right: 0 }),
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
+jest.mock('../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false }));
 
 beforeEach(() => { mockDimensions = { width: 390, height: 844, scale: 1, fontScale: 1 }; });
 
@@ -22,7 +23,7 @@ test.each([
   const screen = render(<HomeMenu onClose={jest.fn()} onSelect={onSelect} rendererAvailable activityAvailable />);
   const destinations: string[] = [];
   for (let page = 0; page < expectedPages; page += 1) {
-    expect(screen.getByText(`Page ${page + 1} of ${expectedPages}`)).toBeTruthy();
+    expect(screen.getByLabelText(`Go to Menu destinations page ${page + 1} of ${expectedPages}`).props.accessibilityState.selected).toBe(true);
     for (const title of ['Rooms', 'Cameras', 'Household', 'Settings']) {
       const destination = screen.queryByLabelText(title);
       if (destination) { destinations.push(title); fireEvent.press(destination); }
@@ -53,6 +54,19 @@ test('groups utilities by purpose and leaves the primary destinations to the per
   fireEvent.press(screen.getByLabelText('Command activity'));
   fireEvent.press(screen.getByLabelText('History'));
   expect(onSelect.mock.calls.map(([destination]) => destination)).toEqual(['integrations', 'renderer', 'notifications', 'activity', 'audit']);
+});
+
+test('the page rail browses destinations without opening them and leaves the arrow buttons usable', () => {
+  mockDimensions = { width: 320, height: 562, scale: 1, fontScale: 2 };
+  const onSelect = jest.fn();
+  const screen = render(<HomeMenu onClose={jest.fn()} onSelect={onSelect} rendererAvailable activityAvailable />);
+  fireEvent.press(screen.getByLabelText('Go to Menu destinations page 3 of 4'));
+  expect(screen.getByLabelText('Household')).toBeTruthy();
+  expect(onSelect).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByLabelText('Next menu destinations'));
+  expect(screen.getByLabelText('Settings')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Previous menu destinations'));
+  expect(screen.getByLabelText('Household')).toBeTruthy();
 });
 
 test('removes unavailable tools and clamps the current page when a capability disappears', () => {

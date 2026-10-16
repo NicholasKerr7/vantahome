@@ -13,6 +13,7 @@ let mockDevelopmentTools = true;
 
 jest.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: mockNavigate }) }));
 jest.mock("@expo/vector-icons/Ionicons", () => require("react-native").View);
+jest.mock("../../components/useDecorativeMotion", () => ({ useDecorativeMotion: () => false }));
 jest.mock("../../services/supabaseClient", () => ({ supabase: null }));
 jest.mock("../../services/cloudRegistry", () => ({ bootstrapHome: (home: string, expectedUserId?: string) => mockBootstrap(home, expectedUserId) }));
 jest.mock("../../services/deviceClient", () => ({ deviceClient: {
@@ -149,7 +150,11 @@ describe("architectural settings workspace", () => {
     expect(useHomeStore.getState().realtime).toMatchObject({ enabled: true, useMqtt: true, wsUrl: "ws://localhost:9000" });
     for (let page = 1; page < 4; page += 1) {
       act(() => { action(tree!, "Next connection page").props.onPress(); });
-      expect(tree.root.findAllByType(ScrollView)).toHaveLength(0);
+      const pageRails = tree.root.findAllByType(ScrollView);
+      expect(pageRails).toHaveLength(1);
+      expect(pageRails[0].props.horizontal).toBe(true);
+      expect(pageRails[0].props.bounces).toBe(false);
+      expect(pageRails[0].props.overScrollMode).toBe('never');
     }
     expect(action(tree, "Next connection page").props.disabled).toBe(true);
     expect(tree.root.findAllByType(Text).some((node: TestNode) => String(node.props.children).includes("Never expose an anonymous MQTT broker"))).toBe(true);

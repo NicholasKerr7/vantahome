@@ -1,0 +1,16 @@
+/* The rail stays inside the existing footer: page content and device gestures never scroll. */
+.page-scroll-rail { position: relative; flex: 1; min-width: 44px; height: 44px; border-radius: 12px; background: rgb(var(--accent-rgb) / 5%); }
+.page-scroll-status { position: absolute; inset: 3px 0 auto; text-align: center; pointer-events: none; color: var(--text-soft); font-size: 11px; line-height: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 1; }
+.page-scroll-track { display: flex; width: 100%; height: 44px; padding-inline: calc(50% - 22px); overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scroll-padding-inline: calc(50% - 22px); scrollbar-width: none; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x; border-radius: inherit; }
+.page-scroll-track::-webkit-scrollbar { display: none; }
+.page-scroll-rail .page-scroll-target { display: flex; align-items: flex-end; justify-content: center; flex: 0 0 44px; width: 44px; min-width: 44px; min-height: 44px; height: 44px; margin: 0; padding: 0 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text-soft); scroll-snap-align: center; touch-action: pan-x; }
+.page-scroll-dot { width: 6px; height: 6px; border-radius: 10px; background: var(--muted); opacity: .55; transition: width 160ms ease, background-color 160ms ease, opacity 160ms ease; }
+.page-scroll-target[aria-current='page'] .page-scroll-dot { width: 18px; background: var(--accent); opacity: 1; }
+.page-scroll-target:focus-visible { outline: 2px solid var(--accent-text); outline-offset: -3px; }
+.page-scroll-rail[data-single-page='true'] { background: transparent; }
+.page-scroll-rail[data-single-page='true'] .page-scroll-status { inset-block-start: 14px; }
+.page-scroll-rail[data-single-page='true'] .page-scroll-track { visibility: hidden; }
+.device-control-pagination:has(.page-scroll-rail) { grid-template-columns: minmax(44px, 1fr) minmax(60px, 1fr) minmax(44px, 1fr); }
+.library-pagination:has(.page-scroll-rail), .dashboard-pager:has(.page-scroll-rail) { gap: 8px; }
+.reduce-motion .page-scroll-dot, .page-scroll-rail[data-reduced-motion='true'] .page-scroll-dot { transition: none; }
+@media (prefers-reduced-motion: reduce) { .page-scroll-dot { transition: none; } }

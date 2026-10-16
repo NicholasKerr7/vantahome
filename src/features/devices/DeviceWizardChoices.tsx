@@ -58,7 +58,8 @@ export default function DeviceWizardChoices({ choices, selectedId, label, onSele
         </Pressable>;
       })}
     </View>
-    <DeepPager page={page} pageCount={pageCount} label={label} onChange={(next) => setAnchorIndex(next * pageSize)} />
+    <DeepPager page={page} pageCount={pageCount} label={label} onChange={(next) => setAnchorIndex(next * pageSize)}
+      resetKey={`${label}:${pageSize}:${choices.map((choice) => choice.id).join(',')}`} />
   </View>;
 }
 

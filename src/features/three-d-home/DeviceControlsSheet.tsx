@@ -147,7 +147,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
         style={[styles.item, readDeviceSetting(device, state, option.field) === choice.value && styles.selection]}>
         <Text style={styles.label}>{choice.label}{readDeviceSetting(device, state, option.field) === choice.value ? ' ✓' : ''}</Text>
       </Pressable>)}</View>
-      <ControlPagination page={visibleOptionPage} count={optionCount} onChange={(index) => setOptionAnchor(index * optionSize)} />
+      <ControlPagination page={visibleOptionPage} count={optionCount} onChange={(index) => setOptionAnchor(index * optionSize)}
+        resetKey={`${device.id}:${option.field}:${optionSize}`} />
     </> : <>
       <View accessibilityRole="tablist" style={styles.tabs}>{GROUPS.map((item) => {
         const available = allPages.some((candidate) => candidate.group === item);
@@ -172,7 +173,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
           state={state} client={client} disabled={disabled} compact={compact} singleColumn={capacity.singleColumn} onOptions={(next) => { setPageAnchor(next.id); setOption(next); setOptionAnchor(0); }} />)}
         {!current && <Text style={styles.detail}>Use the quick action above for this device.</Text>}
       </View>
-      <ControlPagination page={selectedPage} count={pages.length} onChange={changePage} />
+      <ControlPagination page={selectedPage} count={pages.length} onChange={changePage}
+        resetKey={`${device.id}:${group}:${capacity.fields}:${capacity.actions}`} />
     </>}
   </>;
 }

@@ -15,6 +15,7 @@ import { libraryCardPageSize } from './dashboardCardPresentation';
 import { hotspotPresentation } from './hotspotPresentation';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { deviceArtwork, roomArtwork } from './cinematicArtwork';
+import { PageScrollRail } from './PageScrollRail';
 import './dashboard-cards.css';
 
 export type DashboardLibraryView = 'rooms' | 'assigned-rooms' | 'devices' | 'settings' | 'environment';
@@ -105,7 +106,7 @@ export function DashboardLibrary({ environment, onEnvironment, view, onClose, on
         ? roomPage.items.map((room) => <LibraryRoomCard key={room.id} room={room} selected={room.id === roomId} onSelect={() => { setRoom(room.id); onClose(); }} />)
         : devicePage.items.map((device) => <LibraryDeviceCard key={device.id} device={device} onSelect={() => onDevice(device.id)} />)}
         {current.total === 0 ? <p className="library-empty" role="status">No matches. Try another room or device name.</p> : null}</div>
-      <footer className="library-pagination"><button aria-label="Previous results page" disabled={current.page === 0} onClick={() => setRequestedPage(current.page - 1)}><ChevronLeft size={18} /><span>Previous</span></button><span role="status" data-library-page>{current.page + 1} / {current.pages}</span><button aria-label="Next results page" disabled={current.page + 1 === current.pages} onClick={() => setRequestedPage(current.page + 1)}><span>Next</span><ChevronRight size={18} /></button></footer>
+      <footer className="library-pagination"><button aria-label="Previous results page" disabled={current.page === 0} onClick={() => setRequestedPage(current.page - 1)}><ChevronLeft size={18} /><span>Previous</span></button><PageScrollRail page={current.page} count={current.pages} onChange={setRequestedPage} label={roomsView ? 'Room results' : 'Device results'} resetKey={`${view}:${query}:${pageSize}:${(roomsView ? rooms : devices).map((item) => item.id).join('|')}`} statusMarker="library" /><button aria-label="Next results page" disabled={current.page + 1 === current.pages} onClick={() => setRequestedPage(current.page + 1)}><span>Next</span><ChevronRight size={18} /></button></footer>
     </>}
   </dialog>;
 }

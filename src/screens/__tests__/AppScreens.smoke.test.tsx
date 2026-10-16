@@ -309,7 +309,7 @@ describe("App screens smoke coverage", () => {
         expect(content).toMatchObject({ flex: 1, minHeight: 0, paddingTop: 0, paddingBottom: 0 });
         expect(tree.root.findAllByType(ScreenFrame)).toHaveLength(0);
         const collection = tree.root.findByProps({ testID: id === "scenes-screen-content" ? "embedded-scenes-collection" : "embedded-automations-collection" });
-        expect(collection.findAllByType(ScrollView)).toHaveLength(0);
+        expect(collection.findAllByType(ScrollView).every((scroll: { props: { horizontal?: boolean } }) => scroll.props.horizontal === true)).toBe(true);
         expect(tree.root.findAllByType(Text).some((node: RenderedScreenNode) => node.props.children === title)).toBe(false);
       } finally {
         act(() => { tree.unmount(); });

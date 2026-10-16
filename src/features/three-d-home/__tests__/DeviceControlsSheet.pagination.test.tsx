@@ -12,6 +12,7 @@ import { deviceStatus, getCapabilities, readDeviceSetting } from '../../../../pa
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
 jest.mock('../../../components/CinematicSurface', () => require('react-native').View);
+jest.mock('../../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false }));
 const mockOpenRoutines = jest.fn();
 jest.mock('../useDeviceRoutines', () => ({ useDeviceRoutines: () => mockOpenRoutines }));
 
@@ -53,7 +54,7 @@ test('an unread cache shows recovery without presenting editable default control
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
 
-test('keeps every dense TV control reachable with one large-text control per page and no scrolling', () => {
+test('keeps every dense TV control reachable with one large-text control per page and no vertical scrolling', () => {
   const { screen, runAction } = renderControls('family-tv');
   measure(screen, 130);
   const expectedPages = getInspectorPages(getDevice('family-tv')!, 3);
@@ -82,7 +83,7 @@ test('keeps every dense TV control reachable with one large-text control per pag
       .toBe(expectedPages.filter((page) => page.group === group).flatMap((page) => page.capabilities).length);
   }
   expect(new Set(seen).size).toBe(seen.length);
-  expect(screen.UNSAFE_queryAllByType(ScrollView)).toHaveLength(0);
+  expect(screen.UNSAFE_queryAllByType(ScrollView).every((scroll) => scroll.props.horizontal === true)).toBe(true);
   expect(screen.UNSAFE_getByType(Modal).props.animationType).toBe('none');
 });
 

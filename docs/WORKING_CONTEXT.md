@@ -46,6 +46,49 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Smooth horizontal navigation — October 15 / Preview 68
+
+- The user chose one task at a time; this pass implements scrolling only. AI is
+  saved in the implementation backlog for a separate future task.
+- Added compact horizontal page rails beside existing Previous/Next buttons in
+  native deep screens, device controls/library, scenes/routines, scene presets,
+  the utility menu and connection-tool pages. The main Three.js scene has matching
+  rails in full controls, room/device libraries, room navigation, assigned rooms
+  and the inspector. Page contents remain bounded; gestures stay in the footer.
+- Native scrolling supplies touch momentum; scene rails use CSS snapping. Page
+  selection commits after a gesture settles, without per-frame React updates.
+  Taps, keyboard access and original arrows remain. Scope/count/layout/selection
+  changes cancel old gestures; positioning cannot send commands or run scenes.
+  System reduced motion is preserved; the scene also respects its saved motion
+  setting. Single-page rails remain inactive. No dependencies or backend changes.
+- Preset paging now clamps its controls when available presets shrink. Compact
+  action copy keeps the rail usable on narrow screens and with enlarged text.
+  The inline dashboard scene strip retains its arrows to preserve card space;
+  integration setup retains its combined details/paging footer. Validation steps
+  and save/confirmation actions do not gain swipe shortcuts.
+- Verification: app/scene TypeScript, **1,168 scene tests / 97 suites**, scene
+  packaging and **96 final app tests / 8 suites** passed. The broad app run passed
+  243 suites; the remaining two had old assertions forbidding any ScrollView,
+  updated to require horizontal-only scrolling and passed in the final run.
+  Additional focused tests cover stale gestures, momentum, reduced motion,
+  scope changes, keyboard navigation and action isolation.
+- Browser checks passed **14 native RNWeb cases and 6 scene profiles**, covering
+  390×844, 768×1024, 1024×768, 320×568, enlarged text and reduced motion. Actual
+  emulated touch swipes, horizontal wheel, taps/arrows, keyboard and scope/resize
+  cancellation worked with no page overflow, JavaScript errors or pagination-
+  triggered device commands. The 320×568 preset modal at 1.5× text retains an
+  89px rail and 44px controls. Fixtures/mock clients were used; no live household
+  records were changed. Temporary probes and task-owned servers were removed.
+- **Preview 68 installed and launched** on the connected iPhone; inventory confirms
+  **1.0.0 (68)**. Signature, device provisioning, staging endpoint, arrival assets
+  and packaged scene verification passed. Scene: **31,946,613 bytes**, SHA256
+  `273c6cb7f003ec10d2f0284f8bcd7b9239a8eab5c27887dc663ca064357bbe4e`.
+  Production metadata restored; release/version/assets/auth checks and secret scan
+  passed. Evidence: `work/smooth-scroll-*`, especially `smooth-scroll-qa-summary.json`
+  and `smooth-scroll-preview68-package.json`. Physical swipe feel remains user
+  review; installation is not interaction acceptance. iPad physical testing stays
+  deferred. No production, hub or real-device changes.
+
 ## Cleaner hotspot controls — October 15 / Preview 67
 
 - Removed the pasted decorative device-photo layer from both mobile hotspot quick

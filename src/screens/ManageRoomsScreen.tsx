@@ -282,6 +282,7 @@ export default function ManageRoomsScreen({ navigation }: Props) {
         page={pagination.page}
         pageCount={pagination.pageCount}
         onChange={pagination.changePage}
+        resetKey={`${search}:${matchingRooms.map((room) => room.id).join(',')}`}
       />
       {selectedRoom && (
         <ModalCard

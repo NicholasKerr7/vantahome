@@ -14,6 +14,7 @@ import { deviceCardReading } from './dashboardCardPresentation';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { deviceArtwork, roomArtwork } from './cinematicArtwork';
 import { useInspectorDevicePage } from './useInspectorDevicePage';
+import { PageScrollRail } from './PageScrollRail';
 import './dashboard-inspector.css';
 import './dashboard-cards.css';
 
@@ -39,7 +40,7 @@ function PropertyOverviewCompanion() {
       {page.items.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} onClick={() => setRoom(room.id)}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon strokeWidth={1.5} /></CinematicArtwork><span>{room.name}<small>Open your room</small></span><ArrowUpRight size={16} aria-hidden="true" /></button>; })}
       {!rooms.length && <p>Your administrator can share a room with you.</p>}
     </section>
-    {page.pages > 1 && <div className="dashboard-pager" aria-label="Assigned room pages"><button aria-label="Previous assigned rooms" disabled={page.page === 0} onClick={() => setRequestedPage(page.page - 1)}><ChevronLeft size={17} /></button><span>{page.page + 1} / {page.pages}</span><button aria-label="Next assigned rooms" disabled={page.page + 1 === page.pages} onClick={() => setRequestedPage(page.page + 1)}><ChevronRight size={17} /></button></div>}
+    {page.pages > 1 && <div className="dashboard-pager" aria-label="Assigned room pages"><button aria-label="Previous assigned rooms" disabled={page.page === 0} onClick={() => setRequestedPage(page.page - 1)}><ChevronLeft size={17} /></button><PageScrollRail page={page.page} count={page.pages} onChange={setRequestedPage} label="Assigned rooms" resetKey={rooms.map((room) => room.id).join('|')} /><button aria-label="Next assigned rooms" disabled={page.page + 1 === page.pages} onClick={() => setRequestedPage(page.page + 1)}><ChevronRight size={17} /></button></div>}
     <p className="property-control-note">Your controls stay in assigned rooms.{canExploreInteriorLayout(access) ? ' Other rooms show layout only.' : ''}</p>
   </aside>;
 }
@@ -120,8 +121,9 @@ export function DashboardInspector({ onFullControls, onBrowseDevices }: Dashboar
     </section>
     <footer className="dashboard-device-footer">
       <button type="button" className="dashboard-page-button" aria-label="Previous devices" aria-controls="dashboard-room-device-list" disabled={page === 0} onClick={() => goToPage(page - 1)}><ChevronLeft size={18} aria-hidden="true" /></button>
+      <PageScrollRail page={page} count={pageCount} onChange={goToPage} label="Room devices" resetKey={`${room.id}:${selectedDevice?.id ?? ''}:${roomDevices.map((device) => device.id).join('|')}`} />
       <button type="button" className="dashboard-page-button" aria-label="Next devices" aria-controls="dashboard-room-device-list" disabled={page === pageCount - 1} onClick={() => goToPage(page + 1)}><ChevronRight size={18} aria-hidden="true" /></button>
-      <button type="button" className="dashboard-browse-devices" onClick={onBrowseDevices}><Grid2X2 size={15} aria-hidden="true" />All devices</button>
+      <button type="button" className="dashboard-browse-devices" aria-label="All devices" title="All devices" onClick={onBrowseDevices}><Grid2X2 size={17} aria-hidden="true" /><span className="sr-only">All devices</span></button>
     </footer>
   </aside>;
 }

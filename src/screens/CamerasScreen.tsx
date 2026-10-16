@@ -357,6 +357,7 @@ export default function CamerasScreen({ navigation }: Props) {
               pageCount={pageCount}
               onChange={changePage}
               label="cameras"
+              resetKey={`${filter}:${pageSize}:${cameras.map((camera) => camera.id).join(',')}`}
             />
           </>
         )}

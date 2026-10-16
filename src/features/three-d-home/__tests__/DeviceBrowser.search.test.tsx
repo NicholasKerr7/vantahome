@@ -6,6 +6,8 @@ import { DEVICES } from "../../../../packages/home-scene/src/data";
 import DeviceBrowser from "../DeviceBrowser";
 import { SimulationControlClient } from "../simulationControlClient";
 
+jest.mock('../../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false }));
+
 jest.mock("@expo/vector-icons", () => ({
   Ionicons: require("react-native").View,
 }));

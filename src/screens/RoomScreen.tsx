@@ -269,7 +269,8 @@ export default function RoomScreen({ route, navigation }: Props) {
             }}
           />
         </View>
-        <DeepPager page={currentPage} pageCount={pageCount} onChange={setPage} label="Devices" />
+        <DeepPager page={currentPage} pageCount={pageCount} onChange={setPage} label="Devices"
+          resetKey={`${roomId}:${showAll}:${pageSize}:${devices.map((device) => device.id).join(',')}`} />
       </DeepScreen>
 
       {undoScene ? (

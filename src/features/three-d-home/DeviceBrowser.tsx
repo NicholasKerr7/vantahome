@@ -384,6 +384,7 @@ export default function DeviceBrowser({
         page={visiblePage}
         count={pageCount}
         onChange={setPage}
+        resetKey={`${roomId}:${query}:${showingFavorites}:${pageSize}:${choices.map((choice) => choice.id).join(',')}`}
       />
     </>
   );
