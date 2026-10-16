@@ -54,7 +54,7 @@ test('keeps one header and sends weather actions only after the current scene is
   act(() => mockStatus('error'));
   fireEvent.press(screen.getByLabelText('Retry 3D Home'));
   expect(mockSceneProps.chromeCommand).toBeUndefined();
-  expect(screen.getByLabelText('Open voice control')).toBeTruthy();
+  expect(screen.getByLabelText('Open home assistant')).toBeTruthy();
   expect(screen.getByLabelText(/Open account:/)).toBeTruthy();
 });
 
@@ -97,7 +97,7 @@ test('a failed scene request never claims its changes were applied', () => {
   act(() => mockSceneProps.onSaveStatus?.('error'));
   expect(screen.getByText('A change couldn’t be completed or saved. Review your controls and try again.')).toBeTruthy();
   expect(screen.queryByText(/Changes work for this session/)).toBeNull();
-  expect(screen.getByLabelText('Open voice control')).toBeTruthy();
+  expect(screen.getByLabelText('Open home assistant')).toBeTruthy();
 });
 test('pauses covered graphics without replacing the loaded scene and resumes on dismissal', () => {
   const screen = render(<ThreeDHomeScreen />);

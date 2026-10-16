@@ -13,7 +13,7 @@ import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
 export type HomeStackParamList = {
   Home: undefined;
   Automations: { deviceId?: string } | undefined;
-  Scenes: undefined;
+  Scenes: { assistantDraftToken?: string } | undefined;
   Settings: undefined;
   Renderer: undefined;
 };
@@ -27,9 +27,9 @@ export function loadThreeDHomeScreen() {
 }
 
 /** Retain scene creation and execution inside the shared home frame. */
-function ScenesFeature() {
+function ScenesFeature({ route }: NativeStackScreenProps<HomeStackParamList, 'Scenes'>) {
   const Screen = require('../screens/ScenesScreen').default as typeof import('../screens/ScenesScreen').default;
-  return <FeatureScreenFrame title="Scenes" section="scenes"><Screen embedded /></FeatureScreenFrame>;
+  return <FeatureScreenFrame title="Scenes" section="scenes"><Screen embedded assistantDraftToken={route.params?.assistantDraftToken} /></FeatureScreenFrame>;
 }
 
 /** Retain schedules and the automation builder without a second dashboard. */

@@ -60,7 +60,7 @@ export default function UnifiedHomeHeader({ scene, ready, onEnvironment, onVoice
           <Text style={styles.temperature} numberOfLines={1}>{weather.temperature}</Text>
         </View>
       </Pressable>
-      <Pressable style={styles.voice} onPress={onVoice} accessibilityLabel="Open voice control" accessibilityHint="Speak a command to your home">
+      <Pressable style={styles.voice} onPress={onVoice} accessibilityLabel="Open home assistant" accessibilityHint="Ask Vanta Concierge or use voice controls">
         <Ionicons name="mic-outline" size={21} color={theme.colors.accentText} />
       </Pressable>
       <DashboardAccountButton compact={!wide} onPress={onAccount} />

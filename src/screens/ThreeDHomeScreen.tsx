@@ -1,6 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, View } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Pressable from '../components/Pressable';
@@ -24,8 +24,9 @@ import { canPrepareModelSimulation } from '../services/modelSimulationSetup';
 import { useSceneArrival } from '../features/arrival/ArrivalContext';
 import { canEditSimulationDevice } from '../services/simulationDeviceEditing';
 import { canManageSimulationDevices } from '../services/simulationDeviceRegistration';
+import { openHomeFeature } from '../app/homeNavigation';
 
-const HomeVoicePanel = React.lazy(() => import('../features/home-voice/HomeVoicePanel'));
+const HomeAssistantPanel = React.lazy(() => import('../features/home-assistant/HomeAssistantPanel'));
 const HomeDeviceLibrary = React.lazy(() => import('../features/home-shell/HomeDeviceLibrary'));
 const AccountSheet = React.lazy(() => import('../features/account/AccountSheet'));
 const AccountPreferences = React.lazy(() => import('../features/account/AccountPreferences'));
@@ -75,6 +76,7 @@ function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnap
 
 /** Keep the property central while primary navigation remains visible beside or below it. */
 export default function ThreeDHomeScreen() {
+  const navigation = useNavigation();
   const identity = useHomeStore(modelPresentationIdentity);
   const accessCurrent = useHomeStore((state) => !(state.accountUserId || state.authenticatedUserId) || state.membershipReady);
   const needsModelSetup = useHomeStore(canPrepareModelSimulation);
@@ -167,7 +169,8 @@ export default function ThreeDHomeScreen() {
     {focused && active && accessCurrent && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeDeviceLibrary onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
     {focused && active && accessCurrent && panel === 'voice' && <Modal transparent visible animationType="none" onRequestClose={() => setPanel(null)}>
       <SafeAreaView style={styles.modalOverlay}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.voiceWrap}>
-        <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeVoicePanel onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>
+        <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeAssistantPanel onClose={() => setPanel(null)}
+          onReviewScene={(token) => { setPanel(null); openHomeFeature(navigation.dispatch, 'Scenes', { assistantDraftToken: token }); }} /></Suspense></HomePanelBoundary>
       </KeyboardAvoidingView></SafeAreaView>
     </Modal>}
   </SafeAreaView>;
@@ -183,7 +186,7 @@ const styles = StyleSheet.create({
   scene: { flex: 1, minHeight: 0, overflow: 'hidden', backgroundColor: theme.colors.bg0 },
   featureLoading: { padding: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg0 },
   modalOverlay: { flex: 1, backgroundColor: theme.colors.overlayStrong, justifyContent: 'center', alignItems: 'center', padding: 14 },
-  voiceWrap: { width: '100%', maxWidth: 520, maxHeight: '100%' },
+  voiceWrap: { flex: 1, width: '100%', maxWidth: 560, maxHeight: '100%', minHeight: 0, justifyContent: 'center' },
   saveNotice: { position: 'absolute', bottom: 8, left: 12, right: 12, padding: 10, gap: 8, borderRadius: theme.radius.sm, backgroundColor: theme.colors.bg0, borderWidth: 1, borderColor: theme.colors.stroke },
   saveNoticeText: { color: theme.colors.text, fontSize: 12, textAlign: 'center' },
   feedback: { ...StyleSheet.absoluteFillObject, padding: theme.spacing(3), justifyContent: 'center', alignItems: 'center', gap: theme.spacing(2), backgroundColor: theme.colors.bg0 },

@@ -25,7 +25,7 @@ function commandFeedback(outcome: VoiceCommandOutcome, description: string): str
 }
 
 /** A tap-to-speak simulation surface shared by the 3D home and its full device controls. */
-export default function HomeVoicePanel({ onClose }: { onClose: () => void }) {
+export default function HomeVoicePanel({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }) {
   const { client, ready, status } = useSimulationControls();
   const { height, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -48,12 +48,11 @@ export default function HomeVoicePanel({ onClose }: { onClose: () => void }) {
   useEffect(() => { if (!ready) cancel(); }, [ready, cancel]);
   const message = status === 'disconnected' ? 'Your account or connection changed. Close and reopen voice control.'
     : status === 'error' ? 'Changes are in this session, but could not be saved on this device.' : error ?? feedback;
-  return <CinematicSurface style={[styles.card, compact && styles.compact]}>
-    <View accessibilityViewIsModal style={styles.body}>
-    <View style={styles.row}>
+  const content = <View accessibilityViewIsModal={!embedded} style={styles.body}>
+    {!embedded && <View style={styles.row}>
       <View style={styles.grow}><Text style={styles.eyebrow}>YOUR HOME · SIMULATION</Text><Text accessibilityRole="header" style={styles.title}>Voice control</Text></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Close voice control" onPress={() => { cancel(); onClose(); }} style={styles.button}><Text style={styles.label}>Done</Text></Pressable>
-    </View>
+    </View>}
     {!typing && !compact && <VoiceSignal listening={listening} />}
     {!typing && <Text style={styles.detail}>{compact ? 'Speak or type a room or device command.' : 'Control the house by room or device name. Voice and touch share the same saved simulation.'}</Text>}
     {Platform.OS !== 'web' && !typing && <Pressable accessibilityRole="button" accessibilityLabel={listening ? 'Finish speaking' : 'Start speaking'}
@@ -72,6 +71,6 @@ export default function HomeVoicePanel({ onClose }: { onClose: () => void }) {
     </View>
     <View style={styles.feedback}><Text accessibilityLiveRegion="polite" style={styles.feedbackText}>{listening ? 'Say one command. Listening stops automatically after 10 seconds.' : message}</Text></View>
     {!typing && <Text style={styles.detail}>{Platform.OS === 'web' ? 'Type to try voice commands in this preview.' : compact ? 'The microphone listens only after you tap.' : 'The microphone listens only after you tap. Your phone’s speech service may require a network connection.'}</Text>}
-    </View>
-  </CinematicSurface>;
+    </View>;
+  return embedded ? content : <CinematicSurface style={[styles.card, compact && styles.compact]}>{content}</CinematicSurface>;
 }

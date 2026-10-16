@@ -10,6 +10,9 @@ content_path = "./supabase/templates/invite.html"
 [functions.home-bootstrap]
 verify_jwt = true
 
+[functions.home-concierge]
+verify_jwt = true
+
 [functions.device-command]
 verify_jwt = true
 

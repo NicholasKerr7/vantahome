@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-15**. Read this before rediscovering the project.
+Last maintained: **2026-10-16**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -46,6 +46,49 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Vanta home assistant — October 16 / Preview 70
+
+- The user chose **build now; connect AI later**. The existing dashboard microphone
+  now opens a purple **Home intelligence** panel with **Ask / Controls**. The local
+  brief reads actual permitted simulation snapshots; existing typed/spoken controls
+  remain available. No API key, provider account, billing or real model call was made.
+- Ask is prepared for one explicit question and a reviewable comfort-scene draft.
+  Prompt chips and dictation fill the composer; only Send shares the question and
+  permitted names/settings. Without a provider key it clearly says AI is not
+  connected. No cameras, safety/access controls, profiles, coordinates, occupancy
+  or history are automatically included. See [design and setup](HOME_CONCIERGE.md).
+- The server uses caller JWT/RLS, current permissions, bounded structured output,
+  persistent request budgets and a fixed OpenAI endpoint. It has no model tools or
+  command execution. Account/home/grant changes and backgrounding cancel requests;
+  responses/review expire after 60 seconds. Guest restrictions remain in force.
+- Review opens the ordinary scene editor through a one-use in-memory token. Nothing
+  saves or runs automatically. Save preserves explicit suggested/edited fields;
+  brightness-only proposals cannot acquire power, and TV power cannot acquire
+  channel/volume defaults. Running the saved scene remains a separate action.
+- Adjacent review fixed stale review tokens erasing newer drafts, cancelled promise
+  rejection handling, foreground availability refresh and small-phone keyboard
+  layout. The component is lazy-loaded; no dependency was added. Current shared
+  scene/routine sync and hub work remain deferred.
+- **Staging only:** deployed `home-concierge` version 1 with JWT verification.
+  Provider key absence and unauthenticated HTTP 401 verified. Receipt:
+  `work/concierge-staging-deployment.json`. No database migration or production
+  change. Authenticated live AI quality/latency/cost remains untested until connected.
+- Verification: app/Edge TypeScript; **3,768 app tests / 254 suites** full regression
+  pass, then **113 final focused tests / 10 suites** after keyboard and exact-editor
+  refinements. The latter includes eight real handoff/editor tests. **20 browser
+  cases** cover phones, tablet orientations, enlarged text, disconnected/answer/error
+  states, direct controls and five keyboard-padding layouts. These use explicit
+  answer/simulation fixtures, not live AI. Secret scan and diff checks passed.
+  Evidence: `work/concierge-*`, `assistant-ui-*` and `assistant-keyboard-*`.
+- **Preview 70 installed and launched** on the connected iPhone; inventory confirms
+  **1.0.0 (70)**. Signature, device provisioning, staging endpoint, assistant bundle
+  markers, arrival assets and exact scene hash verified. Scene remains **31,949,595
+  bytes**, SHA256 `3620096e05a8a92c1c0afda2244868735a0ff2b3fd87d28659b94c303e1a9174`.
+  Receipt: `work/concierge-preview70-package.json`. Production metadata was restored;
+  release version/assets/auth-redirect checks passed. All temporary browser probes
+  and task-owned servers were removed. Physical dictation and keyboard feel remain
+  user review; physical iPad testing remains deferred.
+
 ## Actual card scrolling — October 15 / Preview 69
 
 - **Correction:** the user rejected Preview 68's footer-only page rails. They
@@ -56,7 +99,7 @@ defects from ideas or untested risks.
   starter presets and add/edit-device choices now move horizontally beneath the
   finger. Previous/Next scrolls the same card surface. The dashboard and collection
   heights stay bounded; full device-control forms/sliders retain their own inputs.
-  AI remains saved in the backlog for a separate task.
+  The separate AI task is now delivered above; live provider connection remains deferred.
 - Native FlatList paging supplies momentum; scene cards use native horizontal
   overflow/snapping with mouse-drag support. Scope/count/layout changes cancel old
   gestures. Dragging cannot activate cards or Run/control actions; offscreen pages

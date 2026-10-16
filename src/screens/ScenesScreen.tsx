@@ -52,17 +52,21 @@ import { canManageScenes } from '../features/scenes/sceneManagement';
 import { buildVirtualSceneAction, normalizeSceneOverride } from '../features/scenes/virtualSceneAction';
 import { isModelHome } from '../features/three-d-home/modelHomeScope';
 import { sceneOutcome, sceneSafetyEffects } from '../features/scenes/sceneOutcome';
+import { consumeAssistantDraft } from '../features/home-assistant/assistantDraftHandoff';
+import { buildAssistantSceneAction } from '../features/home-assistant/assistantSceneAction';
 
 export type ScenesScreenProps = {
   /** The root feature wrapper provides the title, safe areas and back navigation. */
   embedded?: boolean;
+  /** Opaque, one-use review token; generated content stays out of navigation history. */
+  assistantDraftToken?: string;
 };
 
 type SceneEditorActions = { selectedDeviceIds: string[]; overrides: Record<string, Partial<Device>> };
-type SceneEditorSession = { scope: string; invalidated: boolean; actions?: SceneEditorActions };
+type SceneEditorSession = { scope: string; invalidated: boolean; actions?: SceneEditorActions; explicitSettings: boolean };
 
 /** Keep scene controls reusable in the original tab or the 3D home's feature wrapper. */
-export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {}) {
+export default function ScenesScreen({ embedded = false, assistantDraftToken }: ScenesScreenProps = {}) {
   const { width, height, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
   const minSize = Math.min(width, contentWidth);
@@ -212,8 +216,8 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
   }, []);
 
   /** Capture each modal opening independently; the surrounding screen can remain mounted across homes. */
-  const beginEditor = (actions?: SceneEditorActions) => {
-    const session = { scope: homeEditorScope(useHomeStore.getState()), invalidated: false, actions };
+  const beginEditor = (actions?: SceneEditorActions, explicitSettings = false) => {
+    const session = { scope: homeEditorScope(useHomeStore.getState()), invalidated: false, actions, explicitSettings };
     activeEditorSession.current = session;
     setEditorSession(session);
   };
@@ -534,7 +538,11 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     try {
       const actions = permittedSelection.flatMap((id) => {
         const device = deviceMap.get(id);
-        return device ? [buildSceneAction(device, overrides[id])] : [];
+        if (!device) return [];
+        const override = overrides[id];
+        // Imported suggestions retain only proposed or explicitly edited fields. Newly selected devices use the normal editor.
+        return [editorSession.explicitSettings && override && Object.keys(override).length
+          ? buildAssistantSceneAction(device, override) : buildSceneAction(device, override)];
       });
       if (!actions.length) return;
 
@@ -551,7 +559,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     }
   };
 
-  const openEdit = (scene: Scene) => {
+  const openEdit = (scene: Scene, explicitSettings = false) => {
     setSceneError(null);
     if (!sceneIsVisible(scene, rooms, devices)) return;
     setEditingSceneId(scene.id);
@@ -573,7 +581,7 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
       nextOverrides[action.deviceId] = { ...action.patch };
     });
     setOverrides(nextOverrides);
-    beginEditor({ selectedDeviceIds: deviceIds, overrides: nextOverrides });
+    beginEditor({ selectedDeviceIds: deviceIds, overrides: nextOverrides }, explicitSettings);
   };
 
   /** Presets enter the ordinary editor as drafts; choosing one never runs or overwrites a scene. */
@@ -584,6 +592,17 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
     openEdit({ ...current.draft, id: 'unsaved-preset' });
     setEditingSceneId(null);
   };
+
+  const reviewedAssistantToken = useRef<string | null>(null);
+  useEffect(() => {
+    if (!assistantDraftToken || reviewedAssistantToken.current === assistantDraftToken) return;
+    reviewedAssistantToken.current = assistantDraftToken;
+    const draft = consumeAssistantDraft(assistantDraftToken);
+    if (!draft) { setSceneError('This suggestion expired or your home access changed. Ask for a fresh scene.'); return; }
+    // Enter the established editable review. Nothing is saved or run by accepting the handoff.
+    openEdit({ ...draft, id: 'unsaved-assistant-draft' }, true);
+    setEditingSceneId(null);
+  }, [assistantDraftToken]);
 
   /** Retire the confirmation token immediately so a retained callback cannot delete after switching homes. */
   const closeDelete = useCallback(() => { activeDeleteReview.current = null; setDeleteReview(null); }, []);
@@ -891,7 +910,9 @@ export default function ScenesScreen({ embedded = false }: ScenesScreenProps = {
             )}
           </ModalField>
                 <Text style={modalHintStyle}>
-                  Scenes capture the current device settings and are saved on this device.
+                  {editorSession?.explicitSettings
+                    ? 'Suggested devices keep only the proposed settings and your edits. Save the scene here; run it separately when ready.'
+                    : 'Scenes capture the current device settings and are saved on this device.'}
                 </Text>
         </ScrollView>
         <ModalActionRow
