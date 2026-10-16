@@ -42,6 +42,7 @@ type DeviceRow = {
   model_device_id?: string | null;
   simulation_only?: boolean;
   model_placement?: unknown;
+  model_revision?: unknown;
   device_state:
     | { state: unknown; updated_at: string }
     | Array<{ state: unknown; updated_at: string }>
@@ -159,7 +160,7 @@ export async function syncMembershipFromSupabase(
     roomsRequest,
     requireMembershipRead(client
       .from("devices")
-      .select("id, name, kind, room_id, model_device_id, simulation_only, model_placement, device_state(state, updated_at)")
+      .select("id, name, kind, room_id, model_device_id, simulation_only, model_placement, model_revision, device_state(state, updated_at)")
       .eq("home_id", membership.home_id)),
     // Failed overrides must never silently become the role's default permissions.
     requireMembershipRead(client
@@ -184,6 +185,8 @@ export async function syncMembershipFromSupabase(
       modelDeviceId: row.model_device_id,
       simulationOnly: row.simulation_only === true,
       modelPlacement,
+      modelRevision: Number.isInteger(row.model_revision) && (row.model_revision as number) >= 0
+        ? row.model_revision as number : undefined,
       isOn: false,
     };
     const observation = Array.isArray(row.device_state)
@@ -197,6 +200,7 @@ export async function syncMembershipFromSupabase(
       // Transport observations cannot change this authoritative registry boundary.
       simulationOnly: device.simulationOnly,
       modelPlacement: device.modelPlacement,
+      modelRevision: device.modelRevision,
       observedAt: Number.isFinite(timestamp) ? timestamp : 0,
     };
   });
@@ -270,6 +274,7 @@ export function applyMembershipSnapshot(result: MembershipSyncResult, expectedSe
         modelDeviceId: device.modelDeviceId,
         simulationOnly: device.simulationOnly,
         modelPlacement: device.modelPlacement,
+        modelRevision: device.modelRevision,
       };
     }
     return applyDeviceStatePatch(

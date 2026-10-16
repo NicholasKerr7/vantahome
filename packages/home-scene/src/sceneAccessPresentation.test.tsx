@@ -8,6 +8,7 @@ import { QuickDeviceControls } from './QuickDeviceControls';
 import { DeviceControlSheet } from './DeviceControlSheet';
 import { SceneViewControls } from './SceneViewControls';
 import { roomArtwork } from './cinematicArtwork';
+import { createDefaultDevicePlacement, replaceRuntimeDevices } from './devicePlacement';
 
 vi.mock('./state', async (importOriginal) => {
   const original = await importOriginal<typeof import('./state')>();
@@ -16,7 +17,7 @@ vi.mock('./state', async (importOriginal) => {
   return { ...original, useHomeStore: Object.assign(readCurrent, original.useHomeStore) };
 });
 
-afterEach(() => useHomeStore.setState({ ...createDefaultState(), access: FULL_SCENE_ACCESS }));
+afterEach(() => { replaceRuntimeDevices([]); useHomeStore.setState({ ...createDefaultState(), access: FULL_SCENE_ACCESS }); vi.unstubAllGlobals(); });
 
 it('offers an exterior companion and assigned-room entry without empty device controls or floor access', () => {
   useHomeStore.getState().applyAccessSnapshot({}, {
@@ -77,4 +78,24 @@ it('removes revoked hotspot sheets and hides editable controls for view-only dev
   const sheet = renderToStaticMarkup(<DeviceControlSheet deviceId="master-light" onClose={() => undefined} />);
   expect(sheet).toContain('View only.');
   expect(sheet).not.toContain('type="range"');
+});
+
+it.each(['quick', 'full'] as const)('closes a %s control surface safely when a placed device moves outside the current room scope', (surface) => {
+  vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) });
+  const id = 'placed-00000000-0000-4000-8000-000000000001';
+  replaceRuntimeDevices([{ id, name: 'Reading light', placement: createDefaultDevicePlacement('master-bedside-left', 'living')! }]);
+  useHomeStore.setState(createDefaultState());
+  useHomeStore.getState().applyAccessSnapshot({}, {
+    fullHome: false, roomIds: ['living'], deviceIds: [id], controllableDeviceIds: [id],
+  });
+  const renderSurface = () => renderToStaticMarkup(surface === 'quick'
+    ? <QuickDeviceControls deviceId={id} onClose={() => undefined} onFullControls={() => undefined} />
+    : <DeviceControlSheet deviceId={id} onClose={() => undefined} />);
+  expect(renderSurface()).toContain('Reading light');
+  // The bridge replaces its catalog before React commits dismissal of an already open surface.
+  replaceRuntimeDevices([]);
+  useHomeStore.getState().applyAccessSnapshot({ deviceStates: createDefaultState().deviceStates }, {
+    fullHome: false, roomIds: ['living'], deviceIds: [], controllableDeviceIds: [],
+  });
+  expect(renderSurface()).toBe('');
 });

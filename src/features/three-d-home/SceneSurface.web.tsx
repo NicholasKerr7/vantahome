@@ -1,3 +1,4 @@
+import { parseDeviceEditingRequest } from '../../../packages/home-scene/src/deviceEditingNavigation';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { consumeHomeChromeCommand, parseSceneStatus, type SceneSurfaceProps } from './protocol';
 import { useSceneSimulationSession } from './useSceneSimulationSession';
@@ -15,7 +16,7 @@ import { useHomeChromePreferences } from './useHomeChromePreferences';
 const ignoreSaveStatus = () => undefined;
 
 /** Run the self-contained scene in an opaque origin with no access to app storage or DOM. */
-export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const documentReady = useRef(false);
   const consumedCommand = useRef(0);
@@ -71,7 +72,11 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
       }
       const status = parseSceneStatus(event.data);
       const navigation = parseRoutineNavigation(event.data);
+      const editing = parseDeviceEditingRequest(event.data);
       if (status) { documentReady.current = status === 'ready'; onStatus(status); publishPresentation(); }
+      else if (editing) {
+        if (!suspendedRef.current && simulation.current?.canNavigate()) onDeviceEdit?.(editing.deviceId);
+      }
       else if (navigation) {
         if (!suspendedRef.current && simulation.current?.canNavigate()) onDeviceRoutines?.(navigation.deviceId);
       }
@@ -79,7 +84,7 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     }
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onStatus, onDeviceRoutines, onChromeSnapshot, publishPresentation, simulation]);
+  }, [onStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, publishPresentation, simulation]);
   return <iframe
     ref={frame}
     className="vantahome-scene-frame"

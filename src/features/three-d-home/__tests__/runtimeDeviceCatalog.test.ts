@@ -56,3 +56,24 @@ test('switching to another home replaces rather than merges the previous home ge
   synchronizeRuntimeDeviceCatalog(second);
   expect(getDevice(modelId)).toBeUndefined();
 });
+
+test('editing an existing registry identity replaces its name, pose and room without duplicate geometry', () => {
+  const state = home();
+  synchronizeRuntimeDeviceCatalog(state);
+  const placement = createDefaultDevicePlacement('master-bedside-left', 'master')!;
+  const moved = { ...state.devices[0], name: 'Primary reading light', roomId: 'room-b', modelPlacement: placement };
+  synchronizeRuntimeDeviceCatalog({ ...state, devices: [moved] });
+  expect(getRuntimePlacements()).toEqual([{ id: modelId, name: moved.name, placement }]);
+  expect(getDevice(modelId)).toMatchObject({ id: modelId, name: moved.name, roomId: 'master', position: placement.position });
+});
+
+test.each(['Guest', 'Tenant'] as const)('a moved device follows the destination room for a %s, independent of layout sharing', (role) => {
+  const state = home(role);
+  state.household[0].shareInteriorLayout = true;
+  const moved = { ...state.devices[0], roomId: 'room-b', modelPlacement: createDefaultDevicePlacement('master-bedside-left', 'master')! };
+  expect(runtimeDevicesForHome(state)).toHaveLength(1);
+  expect(runtimeDevicesForHome({ ...state, devices: [moved] })).toEqual([]);
+  const destination = { ...state, devices: [moved], roomMembers: [{ memberId: 'owner', roomIds: ['room-b'] }] };
+  expect(runtimeDevicesForHome(destination)).toHaveLength(1);
+  expect(runtimeDevicesForHome({ ...destination, membershipReady: false })).toEqual([]);
+});

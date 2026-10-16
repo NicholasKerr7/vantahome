@@ -8,6 +8,8 @@ export interface SceneAccess {
   roomIds: string[];
   deviceIds: string[];
   controllableDeviceIds: string[];
+  /** Presentation capability only; the host and server recheck every metadata edit. */
+  editableDeviceIds?: string[];
 }
 
 export const EMPTY_SCENE_ACCESS: SceneAccess = { fullHome: false, propertyOverview: false, interiorLayout: false, roomIds: [], deviceIds: [], controllableDeviceIds: [] };
@@ -20,7 +22,7 @@ export const FULL_SCENE_ACCESS: SceneAccess = {
 export function parseSceneAccess(value: unknown, devices: readonly DeviceDefinition[] = DEVICES): SceneAccess | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const candidate = value as Record<string, unknown>;
-  const fields = ['fullHome', 'propertyOverview', 'interiorLayout', 'roomIds', 'deviceIds', 'controllableDeviceIds'];
+  const fields = ['fullHome', 'propertyOverview', 'interiorLayout', 'roomIds', 'deviceIds', 'controllableDeviceIds', 'editableDeviceIds'];
   if (Object.keys(candidate).some((key) => !fields.includes(key)) || typeof candidate.fullHome !== 'boolean') return null;
   if (['propertyOverview', 'interiorLayout'].some((key) => key in candidate && typeof candidate[key] !== 'boolean')) return null;
   /** Grants are unique strings; duplicates are rejected rather than silently normalized. */
@@ -31,10 +33,13 @@ export function parseSceneAccess(value: unknown, devices: readonly DeviceDefinit
   if (candidate.fullHome && ROOMS.some((room) => !rooms.has(room.id))) return null;
   if (candidate.deviceIds.some((id) => { const device = devices.find((entry) => entry.id === id); return !device || !rooms.has(device.roomId); })) return null;
   if (candidate.controllableDeviceIds.some((id) => !(candidate.deviceIds as string[]).includes(id))) return null;
+  if (candidate.editableDeviceIds !== undefined && (!list(candidate.editableDeviceIds) || candidate.editableDeviceIds.length > 32
+    || candidate.editableDeviceIds.some((id) => !(candidate.deviceIds as string[]).includes(id) || !devices.find((device) => device.id === id)?.templateDeviceId))) return null;
   return { fullHome: candidate.fullHome,
     ...(typeof candidate.propertyOverview === 'boolean' ? { propertyOverview: candidate.propertyOverview } : {}),
     ...(typeof candidate.interiorLayout === 'boolean' ? { interiorLayout: candidate.interiorLayout } : {}),
-    roomIds: [...candidate.roomIds], deviceIds: [...candidate.deviceIds], controllableDeviceIds: [...candidate.controllableDeviceIds] };
+    roomIds: [...candidate.roomIds], deviceIds: [...candidate.deviceIds], controllableDeviceIds: [...candidate.controllableDeviceIds],
+    ...(candidate.editableDeviceIds === undefined ? {} : { editableDeviceIds: [...candidate.editableDeviceIds as string[]] }) };
 }
 
 /** Exterior presentation never grants a room, a device reading, or an action. */

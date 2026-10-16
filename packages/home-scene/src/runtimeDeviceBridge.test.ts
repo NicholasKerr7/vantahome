@@ -85,4 +85,40 @@ describe('runtime device snapshot boundaries', () => {
     expect(getDevice(id)).toBeUndefined();
     client.dispose();
   });
+
+  it('replaces a saved fixture in place when the host renames and moves it, preserving its control state', () => {
+    const applySnapshot = vi.fn();
+    const client = createSimulationBridgeClient({ store: { subscribe: () => () => {}, applySnapshot },
+      send: vi.fn(), onHydrated: vi.fn(), onSyncError: vi.fn() });
+    const original = message();
+    client.receive(original);
+    const edited: RuntimePlacedDevice = { ...placement, name: 'Primary reading light',
+      placement: createDefaultDevicePlacement('master-bedside-left', 'master')! };
+    const moved: SimulationSnapshotMessage = { ...original, placements: [edited], access: {
+      fullHome: false, roomIds: ['master'], deviceIds: [id], controllableDeviceIds: [id],
+    } };
+    client.receive(moved);
+    expect(getRuntimePlacements()).toEqual([edited]);
+    expect(getDevice(id)).toMatchObject({ id, name: edited.name, roomId: 'master', position: edited.placement.position });
+    expect(applySnapshot).toHaveBeenLastCalledWith(original.state, moved.access);
+    expect(applySnapshot.mock.lastCall?.[0].deviceStates[id]).toEqual({ on: true, level: 34, settings: { brightness: 34 } });
+    // A frame cannot restore the previous room grant alongside the new pose.
+    client.receive({ ...moved, access: { ...moved.access, roomIds: ['living'] } });
+    expect(applySnapshot).toHaveBeenCalledTimes(2);
+    expect(getRuntimePlacements()).toEqual([edited]);
+    client.dispose();
+  });
+
+  it('reading stale cached metadata cannot move a current device back or erase its saved controls', () => {
+    const previous = message();
+    const edited: RuntimePlacedDevice = { ...placement, name: 'Primary reading light',
+      placement: createDefaultDevicePlacement('master-bedside-left', 'master')! };
+    replaceRuntimeDevices([edited]);
+    const restored = parseStoredSimulationSnapshotMessage(JSON.stringify(previous));
+    expect(restored).not.toBeNull();
+    const reconciled = reconcileSimulationSnapshot(restored!.state);
+    expect(reconciled.deviceStates[id]).toEqual(previous.state.deviceStates[id]);
+    expect(getRuntimePlacements()).toEqual([edited]);
+    expect(getDevice(id)?.roomId).toBe('master');
+  });
 });

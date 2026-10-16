@@ -92,6 +92,8 @@ export type Device = {
   simulationOnly?: boolean;
   /** Server-owned, validated position for a user-placed simulation device. */
   modelPlacement?: SimulationDevicePlacement | null;
+  /** Server-owned version for safe edits to saved simulation geometry. */
+  modelRevision?: number;
   name: string;
   kind: DeviceKind;
   roomId: string;

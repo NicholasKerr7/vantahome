@@ -1,3 +1,4 @@
+import { parseDeviceEditingRequest } from '../../../packages/home-scene/src/deviceEditingNavigation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { theme } from '../../theme/theme';
@@ -21,7 +22,7 @@ import { useHomeChromePreferences } from './useHomeChromePreferences';
 const ignoreSaveStatus = () => undefined;
 
 /** Load a packaged simulation without sharing cookies, tokens or real device commands. */
-export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
   const [uri, setUri] = useState<string | null>(null);
   const source = useMemo(() => uri ? { uri } : undefined, [uri]);
   const webView = useRef<WebView>(null);
@@ -103,10 +104,14 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
       }
       const status = parseSceneStatus(event.nativeEvent.data);
       const navigation = parseRoutineNavigation(event.nativeEvent.data);
+      const editing = parseDeviceEditingRequest(event.nativeEvent.data);
       if (status) {
         if (!isCurrentSceneDocument(event.nativeEvent.url, uri)) return;
         documentReady.current = status === 'ready';
         onStatus(status); publishPresentation();
+      }
+      else if (editing) {
+        if (isCurrentSceneDocument(event.nativeEvent.url, uri) && !suspendedRef.current && simulation.current?.canNavigate()) onDeviceEdit?.(editing.deviceId);
       }
       else if (navigation) {
         if (!suspendedRef.current && simulation.current?.canNavigate()) onDeviceRoutines?.(navigation.deviceId);

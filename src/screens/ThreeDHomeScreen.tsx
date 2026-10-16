@@ -22,19 +22,22 @@ import { useRetainedScene } from '../features/three-d-home/useRetainedScene';
 import ModelSimulationSetup from '../features/three-d-home/components/ModelSimulationSetup';
 import { canPrepareModelSimulation } from '../services/modelSimulationSetup';
 import { useSceneArrival } from '../features/arrival/ArrivalContext';
+import { canEditSimulationDevice } from '../services/simulationDeviceEditing';
+import { canManageSimulationDevices } from '../services/simulationDeviceRegistration';
 
 const HomeVoicePanel = React.lazy(() => import('../features/home-voice/HomeVoicePanel'));
 const HomeDeviceLibrary = React.lazy(() => import('../features/home-shell/HomeDeviceLibrary'));
 const AccountSheet = React.lazy(() => import('../features/account/AccountSheet'));
 const AccountPreferences = React.lazy(() => import('../features/account/AccountPreferences'));
+const SimulationDeviceEditor = React.lazy(() => import('../features/devices/SimulationDeviceEditor'));
 
-type SessionProps = Pick<SceneSurfaceProps, 'onChromeSnapshot' | 'chromeCommand' | 'allowChromePreferencesWhileSuspended'> & {
+type SessionProps = Pick<SceneSurfaceProps, 'onChromeSnapshot' | 'chromeCommand' | 'allowChromePreferencesWhileSuspended' | 'onDeviceEdit'> & {
   onRetry: () => void; onDevices: () => void; covered: boolean; onSceneStatus: (status: SceneStatus | 'loading') => void;
   unifiedArrival: boolean;
 };
 
 /** Bound loading time while the surrounding home navigation always remains available. */
-function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended, unifiedArrival }: SessionProps) {
+function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended, unifiedArrival, onDeviceEdit }: SessionProps) {
   const workspaceCovered = useScenePresentationPaused();
   const openDeviceRoutines = useDeviceRoutines();
   const [status, setStatus] = useState<SceneStatus | 'loading'>('loading');
@@ -52,7 +55,7 @@ function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnap
   }, [status, updateStatus, loadFailure]);
   return <View style={styles.scene}>
     {status !== 'error' && <SceneSurface suspended={covered || workspaceCovered} onStatus={updateStatus} onSaveStatus={setSaveStatus} onDeviceRoutines={openDeviceRoutines}
-      onChromeSnapshot={onChromeSnapshot} chromeCommand={chromeCommand} allowChromePreferencesWhileSuspended={allowChromePreferencesWhileSuspended && !workspaceCovered} />}
+      onChromeSnapshot={onChromeSnapshot} chromeCommand={chromeCommand} onDeviceEdit={onDeviceEdit} allowChromePreferencesWhileSuspended={allowChromePreferencesWhileSuspended && !workspaceCovered} />}
     {(loadFailure || (status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected'))) && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
       <Text style={styles.saveNoticeText}>{loadFailure ?? (saveStatus === 'error'
         ? 'A change couldn’t be completed or saved. Review your controls and try again.'
@@ -79,6 +82,8 @@ export default function ThreeDHomeScreen() {
   const { active, retained, suspended } = useRetainedScene(focused && accessCurrent && !needsModelSetup);
   const [attempt, setAttempt] = useState(0);
   const [panel, setPanel] = useState<'voice' | 'devices' | 'account' | 'preferences' | null>(null);
+  const [editing, setEditing] = useState<{ key: string; deviceId: string } | null>(null);
+  const editingAllowed = useHomeStore(canManageSimulationDevices);
   const [chrome, setChrome] = useState<{ key: string; snapshot: HomeChromeSnapshot } | null>(null);
   const [rendererStatus, setRendererStatus] = useState<{ key: string; status: SceneStatus | 'loading' } | null>(null);
   const [command, setCommand] = useState<{ key: string; request: NonNullable<SceneSurfaceProps['chromeCommand']> } | null>(null);
@@ -91,6 +96,7 @@ export default function ThreeDHomeScreen() {
   }, [sessionKey, retained]);
   const sceneEnabled = isThreeDHomeEnabled();
   const sceneReady = rendererStatus?.key === sessionKey && rendererStatus.status === 'ready' && retained && sceneEnabled && accessCurrent && !needsModelSetup;
+  const editorVisible = editing?.key === sessionKey && editingAllowed && focused && active && accessCurrent;
   const visibleChrome = accessCurrent && retained && chrome?.key === sessionKey && rendererStatus?.status !== 'error' ? chrome.snapshot : null;
   /** The loading film may reveal verified controls while graphics are still preparing. */
   const openControls = useCallback(() => setPanel('devices'), []);
@@ -108,6 +114,16 @@ export default function ThreeDHomeScreen() {
   const updateRendererStatus = useCallback((status: SceneStatus | 'loading') => {
     if (currentSessionKey.current === sessionKey) setRendererStatus({ key: sessionKey, status });
   }, [sessionKey]);
+  /** Resolve a renderer identifier against the current verified registry, never against message-supplied metadata. */
+  const openDeviceEditor = useCallback((modelDeviceId: string) => {
+    const state = useHomeStore.getState();
+    if (currentSessionKey.current !== sessionKey || !sceneReady || !focused || suspended || !accessCurrent
+      || panel || editing || modelPresentationIdentity(state) !== identity) return;
+    const device = state.devices.find((candidate) => candidate.modelDeviceId === modelDeviceId);
+    if (device && canEditSimulationDevice(state, device.id)) setEditing({ key: sessionKey, deviceId: device.id });
+  }, [sessionKey, sceneReady, focused, suspended, accessCurrent, panel, editing, identity]);
+  /** Keep the retained property camera and controls when the editor is cancelled or saved. */
+  const closeDeviceEditor = useCallback(() => setEditing(null), []);
   /** Send only a fresh visible user action; closing a preference sheet and opening scene help share one commit. */
   const sendChromeCommand = useCallback((next: HomeChromeCommand) => {
     if (!sceneReady || !focused || suspended || !accessCurrent || modelPresentationIdentity(useHomeStore.getState()) !== identity) return;
@@ -120,6 +136,10 @@ export default function ThreeDHomeScreen() {
     if (suspended || !focused || !accessCurrent) setCommand(null);
   }, [active, focused, accessCurrent, suspended]);
   useEffect(() => {
+    // An old editor must never reappear after a home change, permission loss or background visit.
+    if (!editorVisible) setEditing(null);
+  }, [editorVisible]);
+  useEffect(() => {
     // A released WebView must re-establish readiness before its header sends any new action.
     if (!retained) {
       setRendererStatus(null); setChrome(null); setCommand(null);
@@ -131,11 +151,15 @@ export default function ThreeDHomeScreen() {
     <HomeWorkspace section="home">
     <UnifiedHomeHeader scene={visibleChrome} ready={sceneReady && Boolean(visibleChrome)}
       onEnvironment={() => sendChromeCommand({ type: 'open-environment' })} onVoice={() => setPanel('voice')} onAccount={() => setPanel('account')} />
-    {needsModelSetup ? (focused && active ? <ModelSimulationSetup /> : <View style={styles.scene} />) : retained && sceneEnabled ? <SceneSession key={sessionKey} unifiedArrival={unifiedArrival} covered={panel !== null || suspended || !accessCurrent} onRetry={() => setAttempt((value) => value + 1)} onDevices={openControls}
+    {needsModelSetup ? (focused && active ? <ModelSimulationSetup /> : <View style={styles.scene} />) : retained && sceneEnabled ? <SceneSession key={sessionKey} unifiedArrival={unifiedArrival} covered={panel !== null || editorVisible || suspended || !accessCurrent} onRetry={() => setAttempt((value) => value + 1)} onDevices={openControls}
       onSceneStatus={updateRendererStatus} onChromeSnapshot={updateChrome} chromeCommand={command?.key === sessionKey ? command.request : undefined}
+      onDeviceEdit={openDeviceEditor}
       allowChromePreferencesWhileSuspended={panel === 'preferences' && focused && !suspended && accessCurrent} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}
     </HomeWorkspace>
+    {editorVisible && editing && <HomePanelBoundary onClose={closeDeviceEditor}><Suspense fallback={<LoadingFeature />}>
+      <SimulationDeviceEditor deviceId={editing.deviceId} onClose={closeDeviceEditor} onSaved={closeDeviceEditor} savedActionLabel="Back to 3D Home" />
+    </Suspense></HomePanelBoundary>}
     {focused && active && accessCurrent && panel === 'account' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><AccountSheet onClose={() => setPanel(null)} onPreferences={() => setPanel('preferences')} /></Suspense></HomePanelBoundary>}
     {focused && active && accessCurrent && panel === 'preferences' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}>
       <AccountPreferences scene={sceneReady ? visibleChrome : null} onSceneCommand={sendChromeCommand} onClose={() => setPanel(null)} onBack={() => setPanel('account')} />

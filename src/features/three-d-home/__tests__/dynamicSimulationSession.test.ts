@@ -1,7 +1,8 @@
 import { createStore } from 'zustand/vanilla';
 import { AUTHORED_DEVICES, getDevice } from '../../../../packages/home-scene/src/data';
-import { createDefaultDevicePlacement, getRuntimePlacements, replaceRuntimeDevices, type RuntimePlacedDevice } from '../../../../packages/home-scene/src/devicePlacement';
+import { clampDevicePlacement, createDefaultDevicePlacement, getRuntimePlacements, getSimulationDeviceTemplate, replaceRuntimeDevices, type RuntimePlacedDevice } from '../../../../packages/home-scene/src/devicePlacement';
 import { createDefaultSimulationSnapshot, parseSimulationSnapshotMessage, type SimulationSnapshotMessage } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
+import type { DeviceState } from '../../../../packages/home-scene/src/simulationTypes';
 import { useHomeStore, type HomeState, type HouseholdMember } from '../../../store/useHomeStore';
 import { SimulationPersistence } from '../simulationPersistence';
 import { SimulationSession } from '../simulationSession';
@@ -13,7 +14,8 @@ const request = { channel: 'vantahome-simulation', version: 1, type: 'request' }
 function home(role: HouseholdMember['role'] = 'Owner'): HomeState {
   return { ...useHomeStore.getState(), accountUserId: 'person', authenticatedUserId: 'person', activeMemberId: 'person', sessionEpoch: 1,
     accountHomeId: 'home', activeHomeId: 'home', membershipReady: true, authTaskBlockingHome: false,
-    household: [{ id: 'person', name: 'Person', role, status: 'home' }], rooms: [{ id: 'room-a', name: 'Living', modelRoomId: 'living' }],
+    household: [{ id: 'person', name: 'Person', role, status: 'home' }],
+    rooms: [{ id: 'room-a', name: 'Living', modelRoomId: 'living' }, { id: 'room-b', name: 'Primary', modelRoomId: 'master' }],
     roomMembers: [{ memberId: 'person', roomIds: ['room-a'] }], memberPermissionOverrides: [],
     devices: [{ id: deviceId, modelDeviceId: modelId, name: 'Reading light', kind: 'light', roomId: 'room-a', isOn: false,
       simulationOnly: true, modelPlacement: createDefaultDevicePlacement('master-bedside-left', 'living')! }],
@@ -26,6 +28,12 @@ function edit(session: SimulationSession, baseline: SimulationSnapshotMessage, r
   session.handleMessage({ ...request, type: 'patch', requestId,
     base: { deviceStates: { [modelId]: baseline.state.deviceStates[modelId] } },
     changes: { deviceStates: { [modelId]: { on: true, level: 37, settings: { color: '#FF9AA2', lightColorMode: 'color' } } } } });
+}
+/** Represent a server-confirmed edit while retaining the original device and model identities. */
+function movedDevice(state: HomeState): HomeState['devices'][number] {
+  const placement = createDefaultDevicePlacement('master-bedside-left', 'master')!;
+  return { ...state.devices[0], name: 'Primary reading light', roomId: 'room-b',
+    modelPlacement: clampDevicePlacement({ ...placement, rotationY: Math.PI / 2 })! };
 }
 afterEach(() => { replaceRuntimeDevices([]); jest.useRealTimers(); });
 
@@ -148,5 +156,127 @@ test('an old session revokes itself without sending the next household custom ca
   expect(parseSimulationSnapshotMessage(revoked)).not.toBeNull();
   expect(session.canNavigate()).toBe(false);
   expect(getRuntimePlacements().map((device) => device.name)).toEqual(['Next household lamp']);
+  session.dispose();
+});
+
+test('rename, pose edits and a room move preserve the same device settings through refresh and cold restart', async () => {
+  const disk = new Map<string, string>();
+  const storage = { getItem: async (key: string) => disk.get(key) ?? null,
+    setItem: async (key: string, value: string) => { disk.set(key, value); } };
+  const store = createStore<HomeState>(() => home());
+  const deliver = jest.fn();
+  const session = new SimulationSession(deliver, jest.fn(), { store, persistence: new SimulationPersistence(storage), mode: 'development' });
+  session.handleMessage(request); await settle();
+  edit(session, deliver.mock.lastCall![0]); await settle();
+  const settings = { on: true, level: 37, settings: { color: '#FF9AA2', lightColorMode: 'color' } };
+  const renamed = { ...store.getState().devices[0], name: 'Evening reading light' };
+  store.setState({ devices: [renamed] }); await settle();
+  expect(getDevice(modelId)?.name).toBe(renamed.name);
+  expect(deliver.mock.lastCall![0].state.deviceStates[modelId]).toEqual(settings);
+  const pose = renamed.modelPlacement!;
+  const repositioned = { ...renamed, modelPlacement: clampDevicePlacement({ ...pose,
+    position: [pose.position[0] + 0.35, 0.9, pose.position[2]], rotationY: Math.PI / 4 })! };
+  store.setState({ devices: [repositioned] }); await settle();
+  expect(getDevice(modelId)).toMatchObject({ position: repositioned.modelPlacement.position,
+    rotation: [0, repositioned.modelPlacement.rotationY, 0] });
+  expect(deliver.mock.lastCall![0].state.deviceStates[modelId]).toEqual(settings);
+  const moved = movedDevice(store.getState());
+  // Membership revalidation pauses controls but must not replace the same device with defaults.
+  store.setState({ membershipReady: false }); await settle();
+  store.setState({ devices: [moved], membershipReady: true }); await settle();
+  const refreshed = deliver.mock.lastCall![0] as SimulationSnapshotMessage;
+  expect(refreshed.placements).toEqual([{ id: modelId, name: moved.name, placement: moved.modelPlacement }]);
+  expect(refreshed.state.deviceStates[modelId]).toEqual(settings);
+  expect(getDevice(modelId)).toMatchObject({ id: modelId, name: moved.name, roomId: 'master', position: moved.modelPlacement!.position,
+    rotation: [0, moved.modelPlacement!.rotationY, 0] });
+  expect(Object.keys(refreshed.state.deviceStates)).toHaveLength(AUTHORED_DEVICES.length + 1);
+  expect(parseSimulationSnapshotMessage(refreshed)).not.toBeNull();
+  session.dispose(); replaceRuntimeDevices([]);
+  const reopenedDeliver = jest.fn();
+  const reopened = new SimulationSession(reopenedDeliver, jest.fn(), { store, persistence: new SimulationPersistence(storage), mode: 'development' });
+  reopened.handleMessage(request); await settle();
+  const reopenedSnapshot = reopenedDeliver.mock.lastCall![0] as SimulationSnapshotMessage;
+  expect(reopenedSnapshot.state.deviceStates[modelId]).toEqual(settings);
+  expect(reopenedSnapshot.placements).toEqual(refreshed.placements);
+  expect(getDevice(modelId)?.roomId).toBe('master');
+  reopened.dispose();
+});
+
+test.each<{ templateId: string; settings: DeviceState['settings'] }>([
+  { templateId: 'master-bedside-left', settings: { color: '#FF9AA2', lightColorMode: 'color' } },
+  { templateId: 'living-fan', settings: { speed: 65 } },
+  { templateId: 'master-ac', settings: { tempC: 21, mode: 'dry' } },
+  { templateId: 'living-speaker', settings: { volume: 42, muted: true, speakerSource: 'AirPlay', speakerPreset: 'Warm' } },
+  { templateId: 'family-tv', settings: { volume: 22, muted: true } },
+  { templateId: 'living-air', settings: { sampleChecked: true, airAlertsEnabled: false } },
+])('stale cached metadata cannot undo a $templateId room move or erase its saved controls', async ({ templateId, settings }) => {
+  const current = home();
+  current.devices[0] = { ...current.devices[0], kind: getSimulationDeviceTemplate(templateId)!.kind,
+    modelPlacement: createDefaultDevicePlacement(templateId, 'living')! };
+  const oldFixture: RuntimePlacedDevice = { id: modelId, name: current.devices[0].name, placement: current.devices[0].modelPlacement! };
+  replaceRuntimeDevices([oldFixture]);
+  const state = createDefaultSimulationSnapshot();
+  state.deviceStates[modelId] = { on: true, level: 18, settings };
+  const saved = JSON.stringify({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', placements: [oldFixture], state });
+  replaceRuntimeDevices([]);
+  const moved = { ...current.devices[0], name: 'Moved fixture', roomId: 'room-b',
+    modelPlacement: createDefaultDevicePlacement(templateId, 'master')! };
+  const store = createStore<HomeState>(() => ({ ...current, devices: [moved] }));
+  const deliver = jest.fn();
+  const session = new SimulationSession(deliver, jest.fn(), { store,
+    persistence: new SimulationPersistence({ getItem: async () => saved, setItem: async () => undefined }), mode: 'development' });
+  session.handleMessage(request); await settle();
+  expect(deliver.mock.lastCall![0].state.deviceStates[modelId]).toEqual(state.deviceStates[modelId]);
+  expect(deliver.mock.lastCall![0].placements).toEqual([{ id: modelId, name: moved.name, placement: moved.modelPlacement }]);
+  expect(getDevice(modelId)).toMatchObject({ name: moved.name, roomId: 'master', position: moved.modelPlacement!.position });
+  session.dispose();
+});
+
+test('moving out of a Guest room rejects both a queued old-frame command and later stale commands', async () => {
+  const current = home('Guest');
+  current.household[0].shareInteriorLayout = true;
+  const store = createStore<HomeState>(() => current);
+  const storage = { getItem: async () => null, setItem: jest.fn(async (_key: string, _value: string) => undefined) };
+  const deliver = jest.fn();
+  const session = new SimulationSession(deliver, jest.fn(), { store, persistence: new SimulationPersistence(storage), mode: 'development' });
+  session.handleMessage(request); await settle();
+  const oldFrame = deliver.mock.lastCall![0] as SimulationSnapshotMessage;
+  expect(oldFrame.access?.controllableDeviceIds).toContain(modelId);
+  // Queue before the refresh, then move before the authorization callback executes.
+  edit(session, oldFrame);
+  store.setState({ devices: [movedDevice(current)] }); await settle();
+  const writesAfterRevocation = storage.setItem.mock.calls.length;
+  expect(deliver.mock.lastCall![0].placements).toEqual([]);
+  expect(deliver.mock.lastCall![0].access.controllableDeviceIds).not.toContain(modelId);
+  expect(deliver.mock.lastCall![0].state.deviceStates[modelId]).toBeUndefined();
+  edit(session, oldFrame, 2); await settle();
+  expect(storage.setItem).toHaveBeenCalledTimes(writesAfterRevocation);
+  expect(getDevice(modelId)).toBeUndefined();
+  for (const [, serialized] of storage.setItem.mock.calls) {
+    expect(JSON.parse(serialized).state.deviceStates[modelId]).toBeUndefined();
+  }
+  session.dispose();
+});
+
+test('a destination-room Guest receives a moved fixture only after fresh membership is admitted', async () => {
+  const current = home('Guest');
+  current.roomMembers = [{ memberId: 'person', roomIds: ['room-b'] }];
+  const store = createStore<HomeState>(() => current);
+  const storage = { getItem: async () => null, setItem: jest.fn(async () => undefined) };
+  const deliver = jest.fn();
+  const session = new SimulationSession(deliver, jest.fn(), { store, persistence: new SimulationPersistence(storage), mode: 'development' });
+  session.handleMessage(request); await settle();
+  expect(deliver.mock.lastCall![0].placements).toEqual([]);
+  store.setState({ devices: [movedDevice(current)], membershipReady: false }); await settle();
+  expect(getDevice(modelId)).toBeUndefined();
+  expect(deliver.mock.lastCall![0].access.controllableDeviceIds).toEqual([]);
+  store.setState({ membershipReady: true }); await settle();
+  const admitted = deliver.mock.lastCall![0] as SimulationSnapshotMessage;
+  expect(admitted.access?.roomIds).toEqual(['master']);
+  expect(admitted.access?.controllableDeviceIds).toEqual([modelId]);
+  expect(admitted.placements?.[0].placement.modelRoomId).toBe('master');
+  expect(parseSimulationSnapshotMessage(admitted)).not.toBeNull();
+  edit(session, admitted); await settle();
+  expect(deliver.mock.lastCall![0].state.deviceStates[modelId]).toMatchObject({ on: true, level: 37 });
   session.dispose();
 });

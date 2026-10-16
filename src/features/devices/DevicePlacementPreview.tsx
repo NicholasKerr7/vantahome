@@ -11,24 +11,24 @@ import type { DevicePlacementPreviewProps } from './devicePlacementPreviewTypes'
 import { usePlacementPreviewReadiness } from './usePlacementPreviewReadiness';
 
 /** Mount an isolated, on-demand 3D editor; only validated placement drafts can return to the wizard. */
-export default function DevicePlacementPreview({ placement, onChange, disabled = false }: DevicePlacementPreviewProps) {
+export default function DevicePlacementPreview({ placement, onChange, disabled = false, excludeModelDeviceId }: DevicePlacementPreviewProps) {
   const frame = useRef<WebView>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = usePlacementPreviewReadiness(attempt, placement.modelRoomId);
-  const current = useRef({ placement, onChange, disabled });
-  current.current = { placement, onChange, disabled };
+  const current = useRef({ placement, onChange, disabled, excludeModelDeviceId });
+  current.current = { placement, onChange, disabled, excludeModelDeviceId };
   const source = useMemo(() => uri ? { uri } : undefined, [uri]);
   const publish = useCallback(() => {
     const draft = current.current;
-    frame.current?.injectJavaScript(nativePlacementScript({ channel: PLACEMENT_CHANNEL, version: 1, type: 'configure', placement: draft.placement, disabled: draft.disabled, devices: getRuntimePlacements() }));
+    frame.current?.injectJavaScript(nativePlacementScript({ channel: PLACEMENT_CHANNEL, version: 1, type: 'configure', placement: draft.placement, disabled: draft.disabled, devices: getRuntimePlacements().filter((device) => device.id !== draft.excludeModelDeviceId) }));
   }, []);
   useEffect(() => {
     let active = true;
     void prepareNativeScene().then((value) => { if (active) setUri(`${value}#placement`); }).catch(() => { if (active) setStatus('error'); });
     return () => { active = false; };
   }, [attempt]);
-  useEffect(publish, [publish, placement, disabled]);
+  useEffect(publish, [publish, placement, disabled, excludeModelDeviceId]);
   return <View style={styles.container}>
     {source && uri && <WebView key={attempt} ref={frame} source={source} style={styles.surface}
       originWhitelist={['*']} allowingReadAccessToURL={uri.split('#')[0]} allowFileAccess

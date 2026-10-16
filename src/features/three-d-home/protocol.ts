@@ -10,6 +10,7 @@ export type SceneSurfaceProps = {
   onStatus: (status: SceneStatus) => void;
   onSaveStatus?: (status: SimulationSaveStatus) => void;
   onDeviceRoutines?: (deviceId: string) => void;
+  onDeviceEdit?: (modelDeviceId: string) => void;
   onChromeSnapshot?: (snapshot: HomeChromeSnapshot) => void;
   chromeCommand?: HomeChromeCommandIntent;
   /** Enable setters only while a foreground native Preferences panel covers this retained scene. */

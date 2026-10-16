@@ -50,11 +50,16 @@ export function resolveModelSceneAccess(state: HomeState, mode: RuntimeMode = ru
   const overrides = state.memberPermissionOverrides.filter((entry) => entry.memberId === member.id);
   const visible = new Set<string>();
   const controllable = new Set<string>();
+  const editable = new Set<string>();
   for (const device of selectVisibleDevices(state)) {
     const id = offline ? resolveDemoDeviceMapping(device)?.sceneId : device.modelDeviceId;
     const definition = id ? getDevice(id) : undefined;
     if (!definition || definition.kind !== device.kind || modeledRooms.get(device.roomId) !== definition.roomId) continue;
     visible.add(definition.id);
+    if (!offline && !state.authTaskBlockingHome && ['Owner', 'Admin'].includes(member.role)
+      && !(state.realtime.enabled && state.realtime.wsUrl.trim()) && !state.realtime.useMqtt
+      && device.simulationOnly && device.modelPlacement && definition.templateDeviceId
+      && Number.isSafeInteger(device.modelRevision) && (device.modelRevision ?? -1) >= 0) editable.add(definition.id);
     // A whole inspector is enabled only when its most sensitive action is allowed.
     const permission = device.kind === 'gas-meter' || device.kind === 'gas-leak' ? 'safety.control'
       : permissionForCommand({ op: 'toggle', deviceId: device.id }, device);
@@ -73,6 +78,7 @@ export function resolveModelSceneAccess(state: HomeState, mode: RuntimeMode = ru
     roomIds: ROOMS.filter((room) => assigned.has(room.id)).map((room) => room.id),
     deviceIds: DEVICES.filter((device) => visible.has(device.id)).map((device) => device.id),
     controllableDeviceIds: DEVICES.filter((device) => controllable.has(device.id)).map((device) => device.id),
+    ...(editable.size ? { editableDeviceIds: [...editable] } : {}),
   };
 }
 

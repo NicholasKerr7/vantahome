@@ -1,5 +1,5 @@
 import { getFireIncident } from '../../../packages/home-scene/src/fireSafetySimulation';
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDevice, getRoom, type DeviceDefinition } from '../../../packages/home-scene/src/data';
@@ -21,6 +21,12 @@ import { controlPageAnchor, getNativeControlCapacity, resolveControlPage, type N
 import CinematicCardArtwork from '../cinematic-artwork/CinematicCardArtwork';
 import { deviceArtwork } from '../cinematic-artwork/artwork';
 import RemovePlacedDevice from '../devices/RemovePlacedDevice';
+import { useHomeStore } from '../../store/useHomeStore';
+import { canEditSimulationDevice } from '../../services/simulationDeviceEditing';
+import { canManageSimulationDevices } from '../../services/simulationDeviceRegistration';
+import { homeEditorScope } from '../home-shell/homeEditorScope';
+
+const SimulationDeviceEditor = React.lazy(() => import('../devices/SimulationDeviceEditor'));
 
 const GROUPS = ['controls', 'modes', 'schedule', 'status'] as const;
 const GROUP_LABELS = { controls: 'Controls', modes: 'Modes', schedule: 'Routines', status: 'Status' };
@@ -39,6 +45,18 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   const landscape = width >= 760 && width > height;
   const compact = height < 700 || fontScale > 1.15;
   const [browsing, setBrowsing] = useState(deviceId === null);
+  const [editing, setEditing] = useState<{ deviceId: string; scope: string } | null>(null);
+  const editorScope = useHomeStore(homeEditorScope);
+  const editableDevice = useHomeStore((state) => state.devices.find((item) => item.modelDeviceId === deviceId && canEditSimulationDevice(state, item.id)));
+  const editAllowed = useHomeStore((state) => Boolean(editing && canManageSimulationDevices(state) && homeEditorScope(state) === editing.scope));
+  useEffect(() => { if (editing && !editAllowed) setEditing(null); }, [editing, editAllowed]);
+  /** A deferred tap cannot open an old device inside a newly selected account or household. */
+  function openEditor(): void {
+    const state = useHomeStore.getState();
+    if (editableDevice && homeEditorScope(state) === editorScope && canEditSimulationDevice(state, editableDevice.id)) {
+      setEditing({ deviceId: editableDevice.id, scope: editorScope });
+    }
+  }
   const incident = getFireIncident(snapshot.state.deviceStates);
   const emergencyVisible = incident.active && !incident.acknowledged;
   // Release the native modal so the global incident and its persistent banner stay reachable.
@@ -49,6 +67,9 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
     : snapshot.status === 'error' ? 'Could not save locally. Your changes are still in this session.'
       : !snapshot.ready ? 'Loading saved controls…' : snapshot.status === 'saving' ? 'Saving simulation…' : 'Simulation · Saved on this device');
   if (emergencyVisible) return null;
+  if (editing && editAllowed) return <Suspense fallback={<View style={styles.overlay}><Text style={styles.detail}>Preparing device editor…</Text></View>}>
+    <SimulationDeviceEditor key={editing.deviceId} deviceId={editing.deviceId} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />
+  </Suspense>;
   return <Modal transparent visible animationType={motionAllowed ? 'fade' : 'none'} onRequestClose={onClose}>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.overlay, landscape && styles.overlayLandscape]}>
       <SafeAreaView style={[styles.safeArea, landscape && styles.safeAreaLandscape]}>
@@ -65,7 +86,9 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
-          {!browsing && device?.templateDeviceId && <RemovePlacedDevice key={device.id} modelDeviceId={device.id} onRemoved={onClose} />}
+          {!browsing && editableDevice && snapshot.ready && <Pressable accessibilityRole="button" accessibilityLabel="Edit device"
+            onPress={openEditor} style={styles.button}><Text style={styles.label}>Edit device</Text></Pressable>}
+          {!browsing && device?.templateDeviceId && <RemovePlacedDevice key={`remove:${device.id}`} modelDeviceId={device.id} onRemoved={onClose} />}
           {(loadFailure || snapshot.status === 'disconnected') && onRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry loading saved controls" onPress={onRetry} style={styles.button}><Text style={styles.label}>Retry loading</Text></Pressable>}
           </View>
         </CinematicSurface>

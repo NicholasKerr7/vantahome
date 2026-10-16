@@ -46,6 +46,58 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Saved-device editing — October 15 / Preview 66
+
+- Added **Full controls → Edit device** for saved custom fixtures, from both the
+  property hotspot inspector and native device library. Verified Owners/Admins
+  can rename, move to a compatible room, reposition, rotate and adjust supported
+  mounting height through **Details → Place → Review**. The preview omits the
+  old fixture pose; closing returns to the retained property or original controls.
+- Editing updates the existing registry row, UUID, model ID and template. It never
+  deletes/recreates the device or submits control settings. Membership refresh and
+  simulation reconciliation preserve same-ID power, levels, color and capability
+  settings; fresh room grants determine visibility and controls after a move.
+- Additive staging migration **027** implements server-owned revisions and atomic
+  compare-and-save, with permanent private request receipts. Direct writes cannot
+  forge revisions or replace fixture identity/template. Concurrent edits report a
+  conflict; retry cannot overwrite a newer edit or resurrect a removed device.
+  Applied only to staging; privileges and guards verified. Receipt:
+  `work/device-edit-staging-deployment.json`; source SHA256
+  `47430605902918bf649a23878aa3e83cb240266032f5ee0e7e227c01fbeaf10d`.
+- Account/home/device-scoped journals preserve the exact submitted edit before
+  networking. Uncertain results resume the same request after reopening; success
+  waits for a fresh authoritative registry. Confirmed conflicts offer explicit
+  reload. Pre-write biometric cancellation leaves the draft editable; an uncertain
+  retry cannot be unlocked by cancellation. Removed fixtures have a clear exit.
+- Adjacent fixes: revoked custom quick/full controls no longer dereference missing
+  catalog records; native edit parsing no longer imports browser-only code; stale
+  edit callbacks cannot cross household/session boundaries; inspector/removal keys
+  are distinct. Editing grants are presentation hints, rechecked by host and RPC.
+
+Verification: **3,580 app tests / 243 suites**, **1,155 scene tests / 96 suites**,
+**809 SQL assertions / 17 suites**, and real two-connection edit/delete races
+passed. Additional final editor/native-entry/host tests: **30 / 3 suites**
+(including 15 new native-entry cases); pagination checks also passed. Browser UI checks captured 30 screens across
+phone, tablet portrait/landscape, 320×568, enlarged text, retries and conflicts,
+with no overflow or page errors. These use fixture identities/mocked services,
+not a live Owner session. App/scene TypeScript and scene packaging passed.
+The rebuilt embedded scene also verified that Owner Edit emits one validated
+navigation intent, Guest grants hide it, and brightness remains unchanged with no
+device-control patch or page errors. Temporary probes were removed and owned
+servers stopped. Detailed evidence: `work/device-edit-*` and `work/edit-device-*`.
+
+**Preview 66 installed and launched** on the connected iPhone; installed inventory
+confirms **1.0.0 (66)**. Strict signature, device provisioning, preview schemes,
+staging endpoint, four arrival assets and packaged scene bytes/hash passed.
+Scene: **31,940,702 bytes**, SHA256
+`b7d3974b7fda51edeaa36e5ba03335a134dbce5042c4b68bf16df0e3e504c23d`.
+Provisioning expires **2026-10-19 05:19:39 UTC**. Production metadata was restored;
+release version/assets/auth redirects and tracked/history secret checks passed.
+Physical edit, reopen and settings-preservation acceptance remains user testing;
+installation/launch is not an interaction signoff.
+No production, real-device, hub, household control-state sync or iPad acceptance
+claims are implied by these simulation checks.
+
 ## Durable Add device and 3D placement — October 15 / Preview 65
 
 - **Devices → Add** now opens Room → Device → Place → Review for verified

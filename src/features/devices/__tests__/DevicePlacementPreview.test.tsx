@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { createDefaultDevicePlacement } from '../../../../packages/home-scene/src/devicePlacement';
+import { createDefaultDevicePlacement, getRuntimePlacements, replaceRuntimeDevices } from '../../../../packages/home-scene/src/devicePlacement';
 import { PLACEMENT_CHANNEL } from '../../../../packages/home-scene/src/placement/placementProtocol';
 import DevicePlacementPreview from '../DevicePlacementPreview';
 import { PLACEMENT_PREVIEW_TIMEOUT_MS } from '../usePlacementPreviewReadiness';
@@ -24,7 +24,23 @@ function send(type: 'ready' | 'rendered', url = 'file:///cache/index.html#placem
   mockMessage({ nativeEvent: { url, data: JSON.stringify({ channel: PLACEMENT_CHANNEL, version: 1, type }) } });
 }
 beforeEach(() => { jest.useFakeTimers(); mockInject.mockClear(); });
-afterEach(() => jest.useRealTimers());
+afterEach(() => { replaceRuntimeDevices([]); jest.useRealTimers(); });
+
+test('an edit preview excludes only the original fixture without changing the saved render catalog', async () => {
+  const devices = [
+    { id: 'placed-11111111-1111-4111-8111-111111111111', name: 'Edited fixture', placement },
+    { id: 'placed-22222222-2222-4222-8222-222222222222', name: 'Other fixture', placement },
+  ];
+  replaceRuntimeDevices(devices);
+  const screen = render(<DevicePlacementPreview placement={placement} onChange={jest.fn()} excludeModelDeviceId={devices[0].id} />);
+  await act(async () => { await Promise.resolve(); });
+  act(() => send('ready'));
+  const configuration = mockInject.mock.lastCall![0] as string;
+  expect(configuration).toContain(devices[1].id);
+  expect(configuration).not.toContain(devices[0].id);
+  expect(getRuntimePlacements()).toEqual(devices);
+  screen.unmount();
+});
 
 test('keeps the loading cover after bridge readiness and waits for an actual frame from the local document', async () => {
   const screen = render(<DevicePlacementPreview placement={placement} onChange={jest.fn()} />);

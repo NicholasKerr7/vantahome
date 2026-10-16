@@ -110,15 +110,15 @@ test('placed device identity and geometry survive fresh registry reads and overw
   mockRegistryRows = {
     rooms: [{ id: 'room-uuid', name: 'Living room', model_room_id: 'living' }],
     devices: [{ id, room_id: 'room-uuid', name: 'My reading lamp', kind: 'light', model_device_id: `placed-${id}`,
-      simulation_only: true, model_placement: placement, device_state: null }],
+      simulation_only: true, model_placement: placement, model_revision: 3, device_state: null }],
   };
   const result = (await syncMembershipFromSupabase('alice'))!;
-  expect(result.devices[0]).toEqual(expect.objectContaining({ modelDeviceId: `placed-${id}`, modelPlacement: placement, simulationOnly: true }));
+  expect(result.devices[0]).toEqual(expect.objectContaining({ modelDeviceId: `placed-${id}`, modelPlacement: placement, modelRevision: 3, simulationOnly: true }));
   expect(applyMembershipSnapshot(result)).toBe(true);
-  useHomeStore.setState({ devices: [{ ...result.devices[0], modelPlacement: null, isOn: true, observedAt: Date.now() + 60_000 }] });
+  useHomeStore.setState({ devices: [{ ...result.devices[0], modelPlacement: null, modelRevision: 0, isOn: true, observedAt: Date.now() + 60_000 }] });
   const reloaded = (await syncMembershipFromSupabase('alice'))!;
   expect(applyMembershipSnapshot(reloaded)).toBe(true);
-  expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ modelPlacement: placement, simulationOnly: true, isOn: true }));
+  expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ modelPlacement: placement, modelRevision: 3, simulationOnly: true, isOn: true }));
 });
 
 test.each([
@@ -322,4 +322,34 @@ test('a previous account mutation completing cannot discard the new account memb
   expect(applyMembershipSnapshot(currentSnapshot)).toBe(true);
   expect(useHomeStore.getState().membershipReady).toBe(true);
   expect(useHomeStore.getState().activeMemberId).toBe('bob');
+});
+
+
+test.each([undefined, null, -1, 1.5, '2', {}])('invalid revision never becomes editing authority: %j', async (revision) => {
+  const id = '12500000-0000-4000-8000-000000000001';
+  mockRegistryRows = {
+    rooms: [{ id: 'room-uuid', name: 'Living', model_room_id: 'living' }],
+    devices: [{ id, room_id: 'room-uuid', name: 'Lamp', kind: 'light', model_device_id: `placed-${id}`,
+      simulation_only: true, model_placement: createDefaultDevicePlacement('master-bedside-left', 'living'), model_revision: revision,
+      device_state: { state: { modelRevision: 99 }, updated_at: '2026-10-15T10:00:00Z' } }],
+  };
+  expect((await syncMembershipFromSupabase('alice'))?.devices[0].modelRevision).toBeUndefined();
+});
+
+test('moving a same-identity lamp refreshes metadata without losing its local power, brightness and color', async () => {
+  const id = '12500000-0000-4000-8000-000000000001';
+  const placement = createDefaultDevicePlacement('master-bedside-left', 'kitchen')!;
+  mockRegistryRows = {
+    rooms: [{ id: 'kitchen-uuid', name: 'Kitchen', model_room_id: 'kitchen' }],
+    devices: [{ id, room_id: 'kitchen-uuid', name: 'Moved lamp', kind: 'light', model_device_id: `placed-${id}`,
+      simulation_only: true, model_placement: placement, model_revision: 7, device_state: null }],
+  };
+  useHomeStore.setState({ accountHomeId: 'oldest-home' });
+  const result = (await syncMembershipFromSupabase('alice'))!;
+  useHomeStore.setState({ devices: [{ ...result.devices[0], name: 'Old lamp',
+    roomId: 'living-uuid', modelRevision: 6, modelPlacement: createDefaultDevicePlacement('master-bedside-left', 'living'),
+    isOn: true, brightness: 63, color: '#aabbcc', observedAt: 10 }] });
+  expect(applyMembershipSnapshot(result)).toBe(true);
+  expect(useHomeStore.getState().devices[0]).toEqual(expect.objectContaining({ id, name: 'Moved lamp', roomId: 'kitchen-uuid',
+    modelRevision: 7, modelPlacement: placement, isOn: true, brightness: 63, color: '#aabbcc' }));
 });

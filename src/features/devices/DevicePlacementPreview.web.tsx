@@ -6,17 +6,17 @@ import { usePlacementPreviewReadiness } from './usePlacementPreviewReadiness';
 import './device-placement-preview.css';
 
 /** Host the same packaged editor in an opaque iframe without granting cookies, storage, or commands. */
-export default function DevicePlacementPreview({ placement, onChange, disabled = false }: DevicePlacementPreviewProps) {
+export default function DevicePlacementPreview({ placement, onChange, disabled = false, excludeModelDeviceId }: DevicePlacementPreviewProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = usePlacementPreviewReadiness(attempt, placement.modelRoomId);
-  const current = useRef({ placement, onChange, disabled });
-  current.current = { placement, onChange, disabled };
+  const current = useRef({ placement, onChange, disabled, excludeModelDeviceId });
+  current.current = { placement, onChange, disabled, excludeModelDeviceId };
   const publish = useCallback(() => {
     const draft = current.current;
-    frame.current?.contentWindow?.postMessage({ channel: PLACEMENT_CHANNEL, version: 1, type: 'configure', placement: draft.placement, disabled: draft.disabled, devices: getRuntimePlacements() }, '*');
+    frame.current?.contentWindow?.postMessage({ channel: PLACEMENT_CHANNEL, version: 1, type: 'configure', placement: draft.placement, disabled: draft.disabled, devices: getRuntimePlacements().filter((device) => device.id !== draft.excludeModelDeviceId) }, '*');
   }, []);
-  useEffect(publish, [publish, placement, disabled]);
+  useEffect(publish, [publish, placement, disabled, excludeModelDeviceId]);
   useEffect(() => {
     /** A neighboring frame cannot supply draft geometry or a false readiness signal. */
     function receive(event: MessageEvent<unknown>) {

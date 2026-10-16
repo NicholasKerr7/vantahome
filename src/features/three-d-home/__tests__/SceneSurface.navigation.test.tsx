@@ -7,6 +7,7 @@ import { WEATHER_CONFIGURATION_CHANNEL, nativePropertyWeatherScript } from '../.
 import type { HomeWeatherSettingsState } from '../../weather-settings/useHomeWeatherSettings';
 import { HOME_CHROME_CHANNEL, type HomeChromeSnapshot } from '../../../../packages/home-scene/src/homeChromeProtocol';
 import type { HomeChromeCommandIntent } from '../protocol';
+import { createDefaultDevicePlacement, replaceRuntimeDevices } from '../../../../packages/home-scene/src/devicePlacement';
 
 type NativeMessage = { nativeEvent: { data: string; url?: string } };
 let mockNativeMessage: (event: NativeMessage) => void;
@@ -111,6 +112,7 @@ afterEach(() => {
   window.addEventListener = originalAddListener;
   window.removeEventListener = originalRemoveListener;
   jest.clearAllMocks();
+  replaceRuntimeDevices([]);
 });
 
 /** Deliver a request from the owned renderer, matching each platform's transport envelope. */
@@ -250,4 +252,40 @@ test('native readiness ignores messages from a replaced document', async () => {
   expect(onStatus).not.toHaveBeenCalled();
   act(() => { mockNativeMessage({ nativeEvent: { data, url: 'file:///cache/index.html' } }); });
   expect(onStatus).toHaveBeenCalledWith('ready');
+});
+
+test.each(['native', 'web'] as const)('%s edit navigation requires the current document and a live, unsuspended session', async (platform) => {
+  const deviceId = 'placed-00000000-0000-4000-8000-000000000001';
+  replaceRuntimeDevices([{ id: deviceId, name: 'Reading light', placement: createDefaultDevicePlacement('master-bedside-left', 'living')! }]);
+  const Component = platform === 'native' ? NativeSceneSurface : WebSceneSurface;
+  const onDeviceEdit = jest.fn();
+  const onStatus = jest.fn();
+  const screen = render(<Component onStatus={onStatus} onDeviceEdit={onDeviceEdit} />, {
+    createNodeMock: (element) => element.type === 'iframe' ? { contentWindow: mockFrameWindow } : null,
+  });
+  await act(async () => { await Promise.resolve(); });
+  const message = { channel: 'vantahome-navigation', version: 1, type: 'device-edit', deviceId };
+  act(() => sendChrome(platform, message, false));
+  act(() => sendChrome(platform, { ...message, deviceId: 'living-light' }));
+  act(() => sendChrome(platform, { ...message, deviceId: 'placed-00000000-0000-4000-8000-000000000099' }));
+  act(() => sendChrome(platform, { ...message, placement: { position: [0, 0, 0] } }));
+  expect(onDeviceEdit).not.toHaveBeenCalled();
+  act(() => sendChrome(platform, message));
+  expect(onDeviceEdit).toHaveBeenCalledWith(deviceId);
+  expect(onDeviceEdit).toHaveBeenCalledTimes(1);
+
+  screen.rerender(<Component suspended onStatus={onStatus} onDeviceEdit={onDeviceEdit} />);
+  act(() => sendChrome(platform, message));
+  screen.rerender(<Component onStatus={onStatus} onDeviceEdit={onDeviceEdit} />);
+  mockCanNavigate.mockReturnValue(false);
+  act(() => sendChrome(platform, message));
+  mockSession.current = null;
+  act(() => sendChrome(platform, message));
+  expect(onDeviceEdit).toHaveBeenCalledTimes(1);
+  mockSession.current = { handleMessage: jest.fn(), canNavigate: mockCanNavigate };
+  mockCanNavigate.mockReturnValue(true);
+  replaceRuntimeDevices([]);
+  act(() => sendChrome(platform, message));
+  expect(onDeviceEdit).toHaveBeenCalledTimes(1);
+  screen.unmount();
 });

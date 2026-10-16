@@ -1,30 +1,41 @@
 import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
-import { Power, X } from 'lucide-react';
+import { Pencil, Power, X } from 'lucide-react';
 import { DEVICE_ICONS } from './DeviceControlCard';
 import { PagedDeviceControls } from './PagedDeviceControls';
 import { deviceActionFeedback, deviceStatus } from './deviceCapabilities';
 import { hotspotPresentation } from './hotspotPresentation';
 import { primaryDeviceAction } from './quickDevicePresentation';
-import { getDevice, getRoom, type DeviceId } from './data';
-import { useHomeStore } from './state';
+import { getDevice, getRoom, type DeviceDefinition, type DeviceId } from './data';
+import { useHomeStore, type DeviceState } from './state';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { deviceArtwork } from './cinematicArtwork';
 import './device-control-sheet.css';
+import { isEmbeddedScene } from './embeddedHost';
+import { requestDeviceEditing } from './requestDeviceEditing';
+
+type DeviceControlSheetProps = { deviceId: DeviceId; onClose: () => void };
+
+/** Unmount removed or revoked fixtures before their stale dialog can read deleted catalog data. */
+export function DeviceControlSheet({ deviceId, onClose }: DeviceControlSheetProps) {
+  const device = useHomeStore((state) => canViewSceneDevice(state.access, deviceId) ? getDevice(deviceId) : undefined);
+  const current = useHomeStore((state) => state.deviceStates[deviceId]);
+  if (!device || !current) return null;
+  return <DeviceControlSheetContents device={device} current={current} onClose={onClose} />;
+}
 
 /** Keep complete device controls in one screen without moving the home or its camera. */
-export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; onClose: () => void }) {
+function DeviceControlSheetContents({ device, current, onClose }: { device: DeviceDefinition; current: DeviceState; onClose: () => void }) {
+  const deviceId = device.id;
   const dialog = useRef<HTMLDialogElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
-  const device = getDevice(deviceId)!;
-  const current = useHomeStore((state) => state.deviceStates[deviceId]);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
   const Icon = DEVICE_ICONS[device.kind];
   const presentation = hotspotPresentation(device, current);
   const action = primaryDeviceAction(device, current);
   const ActionIcon = action.isSwitch ? Power : Icon;
-  const visible = useHomeStore((state) => canViewSceneDevice(state.access, deviceId));
   const controllable = useHomeStore((state) => canControlSceneDevice(state.access, deviceId));
+  const editable = useHomeStore((state) => canViewSceneDevice(state.access, deviceId) && state.access.editableDeviceIds?.includes(deviceId) === true);
 
   // Release native modality during the commit, before the parent restores focus.
   useLayoutEffect(() => {
@@ -64,7 +75,6 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
     }
   }
 
-  if (!visible) return null;
   return <dialog ref={dialog} id="full-device-controls" className="device-control-sheet" aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
       <header className="device-sheet-heading has-cinematic-artwork" data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone}>
@@ -75,6 +85,8 @@ export function DeviceControlSheet({ deviceId, onClose }: { deviceId: DeviceId; 
           <h2 id="sheet-device-control-title" ref={title} tabIndex={-1}>{device.name}</h2>
           <p className="device-sheet-state" aria-live="polite"><span className={presentation.active ? 'is-on' : ''} aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}</p>
         </div>
+        {editable && isEmbeddedScene() && <button type="button" className="quick-device-close" aria-label="Edit device" title="Edit device"
+          onClick={() => { requestDeviceEditing(deviceId); dismiss(); }}><Pencil size={18} aria-hidden="true" /></button>}
         <button type="button" className="quick-device-close" aria-label="Close full controls" onClick={dismiss}><X size={20} aria-hidden="true" /></button>
       </header>
       <button type="button" className="device-sheet-primary" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.isSwitch ? `${device.name} power` : action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span></button>

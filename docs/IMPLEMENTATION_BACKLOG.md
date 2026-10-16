@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Saved-device editing | Complete in Preview 66 source/staging | Rename, compatible room move and 3D reposition preserve device identity/settings. Revision conflicts and durable retries prevent stale overwrite or resurrection. See handoff for native/physical status. |
 | Durable Add device and 3D placement | Complete in Preview 65 source/staging | Eight supported templates, furnished placement editor, authoritative registration/removal, restart-safe retry receipts, scoped runtime catalog. See handoff for native install and physical verification. |
 | Smooth gate closing | Complete in Preview 64 source | Steady travel between one-second simulation samples; pause/interlock guards and covered-view synchronization. Native install status is in the handoff. |
 | Official geography and directional weather | Complete in Preview 63 source | NLA frontage calibration, Owner-confirmed property weather pin, shared true-bearing wind/rain/plants, stable orbit compass. See handoff for map limits and install status. |
@@ -23,11 +24,20 @@ simulation-only staging scope. Recheck volatile external state before changing i
 The Preview 65 Add-device work replaces the previous local-only add path. Tests
 cover uncertain saves, double submission, restart, stale account callbacks,
 direct-table authority, revoked membership, removal and room binding. Standalone
-TV geometry and its SQL footprint now agree. Initial placement is supported;
-server-backed rename/reposition/move, additional fixture templates and exact
-furniture collision checks remain follow-up opportunities. Household registry
+TV geometry and its SQL footprint now agree. Preview 66 delivers
+server-backed rename/reposition/move with optimistic revisions and exact retry
+receipts. Additional fixture templates and exact furniture collision checks remain
+follow-up opportunities. Household registry
 placement persistence is delivered; shared simulation control-state sync remains
 deferred. See the handoff for verified evidence, not a claim of exhaustive review.
+
+Preview 66's bounded edit review also fixed missing-catalog crashes in open guest
+controls, a browser-only import in the native bridge, stale edit callbacks crossing
+household scope, pre-write cancellation locking the draft, removed-device recovery,
+and duplicate inspector/removal keys. Tests preserve same-ID lamp, fan, AC, speaker,
+TV and air-sensor settings across metadata edits and cold restart. Old-room guest
+commands, including queued commands, fail after a move. Physical rename/move/reopen
+acceptance is the remaining feature check; no shared control-state sync is implied.
 
 The Preview 61 review closed recovery continuity after restart, mutable-session
 password targeting, stale sign-out callbacks, overlapping credential tasks and

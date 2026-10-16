@@ -1,13 +1,13 @@
 import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useEffect, useRef } from 'react';
 import { ArrowUpRight, Power, X } from 'lucide-react';
-import { getDevice, getRoom, type DeviceId } from './data';
+import { getDevice, getRoom, type DeviceDefinition, type DeviceId } from './data';
 import { deviceActionFeedback, deviceStatus, isMonitor } from './deviceCapabilities';
 import { DEVICE_ICONS } from './DeviceControlCard';
 import { PrimaryDeviceRange } from './PrimaryDeviceRange';
 import { primaryDeviceAction, primaryDeviceRange } from './quickDevicePresentation';
 import { hotspotPresentation } from './hotspotPresentation';
-import { useHomeStore } from './state';
+import { useHomeStore, type DeviceState } from './state';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { deviceArtwork } from './cinematicArtwork';
 import './quick-device-controls.css';
@@ -18,15 +18,21 @@ interface QuickDeviceControlsProps {
   onFullControls: (id: DeviceId) => void;
 }
 
-/** Keep immediate device actions beside the house without moving the camera. */
+/** Remove the transient controls immediately when a saved fixture leaves the current room scope. */
 export function QuickDeviceControls({ deviceId, onClose, onFullControls }: QuickDeviceControlsProps) {
+  const device = useHomeStore((state) => canViewSceneDevice(state.access, deviceId) ? getDevice(deviceId) : undefined);
+  const current = useHomeStore((state) => state.deviceStates[deviceId]);
+  if (!device || !current) return null;
+  return <QuickDeviceControlsContents device={device} current={current} onClose={onClose} onFullControls={onFullControls} />;
+}
+
+/** Keep immediate device actions beside the house without moving the camera. */
+function QuickDeviceControlsContents({ device, current, onClose, onFullControls }: Omit<QuickDeviceControlsProps, 'deviceId'> & { device: DeviceDefinition; current: DeviceState }) {
+  const deviceId = device.id;
   const panel = useRef<HTMLElement>(null);
   const power = useRef<HTMLButtonElement>(null);
-  const current = useHomeStore((state) => state.deviceStates[deviceId]);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
-  const device = getDevice(deviceId)!;
   const controllable = useHomeStore((state) => canControlSceneDevice(state.access, deviceId));
-  const visible = useHomeStore((state) => canViewSceneDevice(state.access, deviceId));
   const action = primaryDeviceAction(device, current);
   const range = primaryDeviceRange(device, current);
   const Icon = DEVICE_ICONS[device.kind];
@@ -59,7 +65,6 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
     };
   }, [deviceId, onClose]);
 
-  if (!visible) return null;
   return <section ref={panel} id="quick-device-controls" className={`quick-device-controls ${range ? 'has-primary-range' : ''}`} data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
     <div className="quick-device-heading has-cinematic-artwork">
       <CinematicArtwork artwork={deviceArtwork(device)} presentation="identity" />
