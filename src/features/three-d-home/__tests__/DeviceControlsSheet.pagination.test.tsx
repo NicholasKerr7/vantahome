@@ -32,6 +32,7 @@ function renderControls(deviceId: string) {
   const props = { deviceId, client, snapshot: { ...client.getSnapshot(), ready: true, access: FULL_SCENE_ACCESS }, motionAllowed: false, onClose, onSelect: jest.fn() };
   const screen = render(<DeviceControlsSheet {...props} />);
   if (deviceId === 'family-tv') fireEvent.press(screen.getByLabelText('More TV controls'));
+  if (getDevice(deviceId)?.kind === 'light') fireEvent.press(screen.getByLabelText('More lighting controls'));
   return { screen, props, runAction, setSetting, onClose };
 }
 

@@ -1,0 +1,67 @@
+/* A local SVG preview adds depth without another renderer or an idle animation loop. */
+.device-control-sheet.is-lighting-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.lighting-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.lighting-stage { display: grid; align-items: safe center; justify-items: center; min-width: 0; min-height: 0; padding: 4px 0 8px; container: lighting-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.lighting-console { display: grid; width: min(360px, 100%); gap: 10px; padding: 16px; border: 1px solid #8B789E; border-radius: 32px; background: linear-gradient(135deg, #473D53, #1C1528 14%, #100B1A 56%, #2C2038); box-shadow: inset 2px 1px 1px #FFFFFF3B, inset -2px -2px 3px #06020B, 2px 5px 0 #10091C, 3px 6px 0 #79608D6B, 0 18px 28px #09021066; color: var(--text); }
+.lighting-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.lighting-brand { display: grid; gap: 4px; text-align: center; }
+.lighting-brand span { font-size: 8px; letter-spacing: 2.6px; color: #B7ACCB; }
+.lighting-brand strong { font-size: 12px; font-weight: 500; letter-spacing: 3px; }
+.lighting-console button { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 6px; border: 1px solid #FFFFFF26; border-radius: 13px; background: linear-gradient(145deg, #40334F, #231A30 70%); box-shadow: inset 0 1px 1px #FFFFFF2B, 0 3px 3px #07030DBB; color: var(--text); cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.lighting-console .lighting-key { width: 44px; height: 44px; border-radius: 50%; }
+.lighting-power[aria-checked='true'] { color: #DFC4FF; border-color: #B986DD; background: linear-gradient(135deg, #573C6D, #251B32); }
+.lighting-dial { position: relative; width: 224px; height: 224px; justify-self: center; }
+.lighting-dial-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.lighting-ring-track, .lighting-ring-value { fill: none; stroke-width: 5px; }
+.lighting-ring-track { stroke: #34283F; }
+.lighting-ring-value { stroke-linecap: round; transition: stroke 300ms ease, stroke-dasharray 250ms ease; }
+.lighting-console[data-lit='false'] .lighting-ring-value { opacity: .35; }
+.lighting-reading { position: absolute; inset: 42px 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center; }
+.lighting-bulb { color: #E8D6F3; margin-bottom: 3px; }
+.lighting-console[data-lit='false'] .lighting-bulb { color: #9787A5; }
+.lighting-reading output { font-size: 43px; line-height: 1.05; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; }
+.lighting-reading output small { margin-left: 2px; font-size: 17px; letter-spacing: 0; color: #D5BCE6; }
+.lighting-reading > span { font-size: 8px; letter-spacing: 1.5px; color: #C1B1CE; }
+.lighting-reading p { margin-top: 5px; color: #CFB8E5; font-size: 10px; line-height: 1.3; }
+.lighting-adjustment { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.lighting-console input { width: 100%; min-width: 0; height: 44px; margin: 0; accent-color: var(--accent); cursor: pointer; touch-action: pan-x; }
+.lighting-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.lighting-modes button { font-size: 12px; }
+.lighting-console button[aria-pressed='true'] { border-color: #C195E6; background: linear-gradient(135deg, #5A3C72, #30203B); }
+.lighting-palette { min-height: 96px; }
+.lighting-white { display: grid; grid-template-rows: 44px 44px; gap: 8px; }
+.lighting-white input { accent-color: #E8C4A1; }
+.lighting-white-presets { display: grid; grid-template-columns: repeat(4, minmax(44px, 1fr)); gap: 6px; }
+.lighting-white-presets button { flex-direction: column; gap: 2px; font-size: 10px; }
+.lighting-white-presets small { font-size: 9px; color: #C9B7D7; }
+.lighting-colors { display: grid; grid-template-columns: repeat(3, minmax(44px, 1fr)); grid-template-rows: repeat(2, 44px); gap: 8px; }
+.lighting-colors button { font-size: 10px; }
+.lighting-colors svg { flex-shrink: 0; }
+.lighting-console button:not(:disabled):active { transform: translateY(2px); }
+.lighting-console :disabled { opacity: .4; cursor: default; }
+.lighting-console :is(button, input):focus-visible, .lighting-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.lighting-feedback { display: grid; gap: 4px; margin: 0; min-height: 30px; padding-inline: 8px; text-align: center; color: var(--text-soft); font-size: 11px; line-height: 1.5; }
+.lighting-feedback span { font-size: 7px; letter-spacing: 1.8px; color: var(--muted); }
+.lighting-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.lighting-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+/* The host's available height chooses the tier, including native header and navigation space. */
+@container lighting-stage (max-height: 540px) {
+  .lighting-console { padding: 12px; gap: 8px; }
+  .lighting-dial { width: 192px; height: 192px; }
+  .lighting-reading { inset: 33px 24px; }
+  .lighting-reading output { font-size: 38px; }
+}
+@container lighting-stage (max-height: 490px) {
+  .lighting-console { padding: 10px; gap: 6px; }
+  .lighting-dial { width: 140px; height: 140px; }
+  .lighting-reading { inset: 24px 17px; gap: 2px; }
+  .lighting-reading output { font-size: 30px; }
+  .lighting-bulb { width: 16px; height: 16px; margin: 0; }
+  .lighting-reading > span { font-size: 7px; }
+  .lighting-reading p { margin-top: 1px; font-size: 8px; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-lighting-controller .device-sheet-content { padding-inline: 12px; } .lighting-colors { gap: 6px; } }
+@media (hover: hover) { .lighting-console button:not(:disabled):hover { border-color: #BA91E1AA; } }
+.lighting-workspace[data-motion-disabled='true'] * { transition: none; animation: none; scroll-behavior: auto; }
+.lighting-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .lighting-workspace * { transition: none; animation: none; scroll-behavior: auto; } .lighting-workspace button:active { transform: none; } }

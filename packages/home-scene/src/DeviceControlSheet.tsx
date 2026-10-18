@@ -14,11 +14,12 @@ import { requestDeviceEditing } from './requestDeviceEditing';
 import { TvRemoteControl } from './TvRemoteControl';
 import { ClimateController } from './ClimateControlPanel';
 import { BlindsController } from './BlindsControlPanel';
+import { LightingController } from './LightingControlPanel';
 import { formatClimateTemperature, readClimateControllerState } from './climateController';
 
 type DeviceControlSheetProps = { deviceId: DeviceId; onClose: () => void };
 const CONTROLLER_CLASSES: Partial<Record<DeviceDefinition['kind'], string>> = {
-  tv: 'is-tv-remote', ac: 'is-climate-controller', blinds: 'is-blinds-controller',
+  tv: 'is-tv-remote', ac: 'is-climate-controller', blinds: 'is-blinds-controller', light: 'is-lighting-controller',
 };
 
 /** Unmount removed or revoked fixtures before their stale dialog can read deleted catalog data. */
@@ -100,7 +101,8 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
       </header>
       {device.kind === 'tv' && controllable ? <TvRemoteControl key={deviceId} device={device} current={current} />
         : device.kind === 'ac' && controllable ? <ClimateController key={deviceId} device={device} current={current} />
-        : device.kind === 'blinds' && controllable ? <BlindsController key={deviceId} device={device} current={current} /> : <>
+        : device.kind === 'blinds' && controllable ? <BlindsController key={deviceId} device={device} current={current} />
+        : device.kind === 'light' && controllable ? <LightingController key={deviceId} device={device} current={current} /> : <>
         <button type="button" className="device-sheet-primary" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.isSwitch ? `${device.name} power` : action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span></button>
         {controllable ? <PagedDeviceControls key={deviceId} device={device} current={current} /> : <p className="device-hint">View only. Your household role does not allow changing this device.</p>}
       </>}

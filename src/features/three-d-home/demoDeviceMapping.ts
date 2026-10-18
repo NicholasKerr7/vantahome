@@ -72,11 +72,13 @@ function synchronizeDemoLightAppearance(device: Device, previous: DeviceState, s
   const temperature = getCapabilities('light').find((capability) => 'field' in capability && capability.field === 'colorTempK');
   const validColor = color && validateSetting(color, device.color);
   const validTemperature = temperature && validateSetting(temperature, device.colorTempK);
-  // Materialized host defaults are not edits: keep a saved white-light mode when
-  // its optional color field was never written by the scene.
+  // Materialized host defaults are not edits: preserve saved intent unless a
+  // value changed, while inferring white for legacy temperature-only records.
   const colorChanged = validColor !== undefined && readDeviceSetting(definition, previous, 'color') !== validColor;
   const temperatureChanged = validTemperature !== undefined && readDeviceSetting(definition, previous, 'colorTempK') !== validTemperature;
-  const mode = colorChanged ? 'color' : validTemperature !== undefined && (temperatureChanged || validColor === undefined) ? 'temperature' : undefined;
+  const hasSavedMode = previous.settings?.lightColorMode === 'color' || previous.settings?.lightColorMode === 'temperature';
+  const inferLegacyWhite = !hasSavedMode && validColor === undefined;
+  const mode = colorChanged ? 'color' : validTemperature !== undefined && (temperatureChanged || inferLegacyWhite) ? 'temperature' : undefined;
   if (mode && next.settings?.lightColorMode !== mode) next = { ...next, settings: { ...next.settings, lightColorMode: mode } };
   return next;
 }

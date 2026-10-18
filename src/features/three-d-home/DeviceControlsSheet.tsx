@@ -28,6 +28,7 @@ import { homeEditorScope } from '../home-shell/homeEditorScope';
 import { TvRemoteControl } from './TvRemoteControl';
 import { ClimateController } from './ClimateController';
 import { BlindsController } from './BlindsController';
+import { LightingController } from './LightingController';
 
 const SimulationDeviceEditor = React.lazy(() => import('../devices/SimulationDeviceEditor'));
 
@@ -37,6 +38,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   tv: { accessible: 'Back to TV remote', visible: 'Back to remote' },
   ac: { accessible: 'Back to climate controller', visible: 'Back to climate' },
   blinds: { accessible: 'Back to blinds controller', visible: 'Back to blinds' },
+  light: { accessible: 'Back to lighting controller', visible: 'Back to lighting' },
 };
 type Group = typeof GROUPS[number];
 interface SheetProps {
@@ -145,6 +147,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if (device.kind === 'ac' && !advancedControls) return <ClimateController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'blinds' && !advancedControls) return <BlindsController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'light' && !advancedControls) return <LightingController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
 
   return <>

@@ -9,7 +9,8 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Smart blinds controller | Preview 79 installed and launched; physical acceptance pending | Sculpted Home/Devices controllers share saved position, geometry, bounded ±5% actions and presets; More preserves advanced controls. 61 scene + 49 native tests, TypeScript and web/native scene builds pass. Embedded responsive boundaries, interaction, reload retention and Home/Devices synchronization verified. No ordinary scrolling at 13 tested phone/tablet/boundary profiles; 320×568 retains accessible internal fallback. Five native-component browser profiles fit. Final fresh browser run has no errors. Signature/staging/scene hash and size (31,997,819 bytes) verified; Apple inventory confirms 1.0.0 (79). No hub, motor or permission expansion. See handoff. |
+| Tactile lighting controller | Preview 80 installed and launched; physical acceptance pending | Sculpted Home/Devices controls share power-preserving dimming, white/color presets and effect-aware appearance; More retains advanced settings. Fixed saved Color mode overwritten by unchanged temperature-only host records. 172 distinct focused tests, TypeScript, web/native scene builds and review pass. Eleven embedded profiles and five native-component browser profiles fit with targets ≥44px; tiny 320×568 keeps internal fallback. Off/on-at-zero, effects, Home/Devices agreement and reload retention verified; final fresh browser has zero errors. Signature/staging/scene hash and size (32,011,709 bytes) verified; Apple inventory confirms 1.0.0 (80). No transport or permission expansion. See handoff. |
+| Smart blinds controller | Preview 79 user accepted | User says the blinds work great; individual unreported physical scenarios are not claimed separately. Sculpted Home/Devices controllers share saved position, geometry, bounded ±5% actions and presets; More preserves advanced controls. 61 scene + 49 native tests, TypeScript and web/native scene builds pass. Embedded responsive boundaries, interaction, reload retention and Home/Devices synchronization verified. No ordinary scrolling at 13 tested phone/tablet/boundary profiles; 320×568 retains accessible internal fallback. Five native-component browser profiles fit. Final fresh browser run has no errors. Signature/staging/scene hash and size (31,997,819 bytes) verified; Apple inventory confirmed 1.0.0 (79), since superseded by Preview 80. No hub, motor or permission expansion. See handoff. |
 | Dashboard shell focus outline | Preview 78 user accepted | User confirmed the reported outline fix works. One CSS rule removes the whole-property-panel outline while retaining the focus-return target and interactive outlines. Ten existing tests, scene TypeScript/builds and package verification passed. No separate physical keyboard skip-link acceptance is claimed. No logic/layout/state/security change. See handoff. |
 | Centered climate layout in embedded Home | Preview 77 installed and launched; physical acceptance pending | CSS-only padding and tiered layout retain a centered 208px ring in embedded Home; middle tier ≤536px, compact only ≤500px. Actual Expo host 440×860 (96px native safe-area allowance) yields iframe 440×723, 560.75px stage, 531px console and 208px ring without overflow; all 14 targets ≥44px. Boundary and other phone/tablet profiles passed. At host 320×568, the existing 103px internal stage overflow remains as an accessible scroll fallback; no page overflow. Eight panel tests, scene TypeScript and web/native builds passed; power/target and More/Back focus passed, zero errors, CSS review no findings. Preview 77 signature/staging/scene hash and size (31,986,079 bytes) passed; production metadata restored. Apple inventory confirms 1.0.0 (77). Physical acceptance remains pending; logic, authorization and persistence unchanged. See handoff. |
 | Climate controller spacing | Preview 76 superseded by Preview 77 centered layout | Responds to the user's crowded orb/buttons and caption report. Web CSS adds 15px regular / 8px compact face-to-key clearance, preserves 44px keys and centers the caption at 9px / 8px; no state or native changes. Eight existing panel tests, scene TypeScript and web/native builds passed. The 11-profile standalone scene App browser sweep passed its target/overlap/overflow/caption and 23→24→23 checks with zero console errors, but missed embedded native chrome; see Preview 77 correction. Signature, staging and packaged scene hash/size (31,985,826 bytes) verified; production metadata restored. Apple inventory confirmed 1.0.0 (76) at that milestone; Preview 77 is now installed. Physical climate acceptance remains pending. Prior 212-test feature evidence is separate. See handoff. |
@@ -31,13 +32,24 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 ## Most recent adjacent findings
 
+**Resolved lighting persistence defect:** unchanged host temperature defaults no
+longer replace an explicit saved Color mode. Real temperature edits still select
+white, and legacy temperature-only records still infer white. Three new regression
+cases and all 37 mapping tests pass. Browser reload retained Color/Rose/65% and the
+separate 3000K white choice. Shared effects, solar streetlight rules, fire overrides,
+runtime device IDs and revoked authority were checked; no new bypass was added.
+Existing adaptive lighting/motion/night/auto-off preferences do not become a
+hub-backed automation engine through this controller. Physical lighting acceptance,
+climate acceptance, hub/sync and physical iPad work remain separate.
+
 The blinds controller uses the shared guarded state and existing cache formats,
 including relative actions evaluated against current state. Review caught two
 responsive fit bands; measured 540px/500px thresholds resolve them. RN-web omits
 `accessibilityState.checked`, so the new preset radios also explicitly expose
 `aria-checked`. These fixes do not change room grants or persistence authority.
 The 320×568 host needs an internal scroll fallback; do not claim every viewport
-is scroll-free. Physical blinds and climate acceptance remain pending.
+is scroll-free. The user has accepted the overall blinds experience; physical
+climate acceptance remains pending.
 
 **P2 adjacent accessibility follow-up (source-confirmed pattern, UI check pending):**
 native TV source and climate mode/preset/swing radios use the same

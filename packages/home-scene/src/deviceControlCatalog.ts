@@ -43,7 +43,18 @@ function coverControls(kind: 'gate' | 'garage' | 'door' | 'window' | 'blinds'): 
   return [action(kind, 'command-open', 'Open', { openPercent: 100 }), action(kind, 'command-close', 'Close', { openPercent: 0 })];
 }
 
-const lightColors: [string, string][] = [['Amber', '#FFD166'], ['Ice', '#A0E9FF'], ['Rose', '#FF9AA2'], ['Lavender', '#B69CFF'], ['Mint', '#A5FF9B'], ['White', '#FFFFFF']];
+/** Keep the controller swatches and validated color selector on the same palette. */
+export const LIGHT_COLOR_PRESETS = [
+  { label: 'Amber', value: '#FFD166' }, { label: 'Ice', value: '#A0E9FF' },
+  { label: 'Rose', value: '#FF9AA2' }, { label: 'Lavender', value: '#B69CFF' },
+  { label: 'Mint', value: '#A5FF9B' }, { label: 'White', value: '#FFFFFF' },
+] as const;
+
+/** Shared manual white choices retain the original catalog's four temperatures. */
+export const LIGHT_WHITE_PRESETS = [
+  { label: 'Warm', value: 2400 }, { label: 'Soft', value: 3000 },
+  { label: 'Neutral', value: 4000 }, { label: 'Daylight', value: 5200 },
+] as const;
 
 /** Share the allowlisted local TV sources with both remote interfaces. */
 export const TV_SOURCE_OPTIONS = ['Live TV', 'Guide', 'YouTube', 'Netflix', 'Settings', 'Home'] as const;
@@ -52,7 +63,11 @@ export const TV_SOURCE_OPTIONS = ['Live TV', 'Guide', 'YouTube', 'Netflix', 'Set
 export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapability[]>> = {
   ...gasCapabilities,
   light: [
-    choice('light', 'color', 'Color', lightColors, 'controls'),
+    choice('light', 'color', 'Color', LIGHT_COLOR_PRESETS.map(({ label, value }): [string, string] => [label, value]), 'controls'),
+    action('light', 'brightness-up', 'Brighter', {}, { type: 'increment', field: 'brightness', delta: 5 }),
+    action('light', 'brightness-down', 'Dimmer', {}, { type: 'increment', field: 'brightness', delta: -5 }),
+    action('light', 'mode-white', 'White light', { lightColorMode: 'temperature', lightEffect: 'none' }),
+    action('light', 'mode-color', 'Color light', { lightColorMode: 'color', lightEffect: 'none' }),
     range('light', 'colorTempK', 'White temperature', 2000, 6500, 'K', 'controls', 100),
     choice('light', 'lightColorMode', 'Color mode', [['Color', 'color'], ['White temperature', 'temperature']]),
     choice('light', 'lightEffect', 'Effect preview', [['None', 'none'], ['Focus', 'focus'], ['Relax', 'relax'], ['Sunset', 'sunset'], ['Party', 'party']]),
@@ -61,7 +76,7 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     action('light', 'scene-warm', 'Warm scene', { isOn: true, brightness: 60, color: '#FFD166', lightColorMode: 'color', lightEffect: 'none' }),
     action('light', 'scene-cool', 'Cool scene', { isOn: true, brightness: 70, color: '#A0E9FF', lightColorMode: 'color', lightEffect: 'none' }),
     action('light', 'scene-focus', 'Focus scene', { isOn: true, brightness: 80, color: '#FFFFFF', lightColorMode: 'color', lightEffect: 'none' }),
-    ...([['Warm white', 2400], ['Soft white', 3000], ['Neutral white', 4000], ['Daylight', 5200]] as const).map(([label, temperature]) => action('light', `white-${temperature}`, label, { isOn: true, colorTempK: temperature, lightColorMode: 'temperature', lightEffect: 'none' })),
+    ...LIGHT_WHITE_PRESETS.map(({ label, value }) => action('light', `white-${value}`, label === 'Daylight' ? label : `${label} white`, { isOn: true, colorTempK: value, lightColorMode: 'temperature', lightEffect: 'none' })),
   ],
   tv: [
     choice('tv', 'source', 'Preview source', TV_SOURCE_OPTIONS, 'controls'),

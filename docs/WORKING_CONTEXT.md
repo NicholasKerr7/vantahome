@@ -46,7 +46,52 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Smart blinds controller — October 18 / Preview 79 installed
+## Tactile lighting controller — October 18 / Preview 80 installed
+
+- User confirmed the blinds work great and delegated the next controller choice.
+  Chose lighting for everyday usefulness: sculpted Home/Devices consoles, a
+  brightness-responsive opal preview, bounded ±5% dimming, White/Color modes,
+  four white temperatures and six color presets. Home also has precision sliders;
+  Devices retains precise settings in More. More/Back preserves advanced controls.
+  No new renderer, dependency, idle animation loop or real-device transport.
+- Both surfaces use guarded canonical state and the scene's existing appearance
+  projection. Changing brightness/color/temperature preserves power. Off and
+  on-at-zero show no emitted light; effects use their effective preview while
+  retaining the saved brightness readout. Manual choices clear effects, and an
+  active effect does not falsely select manual presets. Relative feedback says
+  Off when appropriate. Solar scheduling and fire overrides retain authority.
+- Fixed an adjacent confirmed persistence defect: an unchanged temperature-only
+  host record could overwrite explicitly saved Color mode. Saved intent now wins
+  unless the temperature actually changed; legacy white inference remains.
+  Three regression cases cover saved mode, real edits and legacy records.
+- **67 scene tests / eight suites + 68 native tests / five suites + 37 mapping
+  tests (172 distinct tests)** passed, plus app/scene TypeScript, scene web/native
+  builds and focused React/accessibility review. Tests include rapid steps,
+  bounds, off-state edits, effects, runtime-added devices, saved formats,
+  authorization/revoked callbacks and solar/fire authority. Evidence:
+  `work/lighting-{combined-tests,native-tests,native-typecheck,shared-typecheck,scene-build}.log`.
+- Actual embedded Home at 440×860 (96px phone safe-area allowance) has a 526px
+  console and 224px dial with no overflow. Eleven phone/tablet/boundary profiles
+  fit, including both sides of 540px/490px stage-content thresholds. Tiny 320×568
+  keeps an accessible 139px internal scroll fallback, with no page overflow.
+  Five native-component browser profiles fit; 440×860 viewport/content are both
+  602px. All measured targets are at least 44px. Evidence:
+  `work/lighting-browser-layouts.json`, `work/lighting-browser-native-layouts.json`.
+- Browser verified power-preserving edits, zero brightness, effect/manual
+  transitions, More/Back focus, precise temperature, Home/Devices synchronization
+  and full reload retaining 65%, Rose, On and the remembered 3000K white choice.
+  Final fresh browser run has zero console errors. Screenshots and error receipt:
+  `work/lighting-iphone-{home,devices}.png`, `work/lighting-final-browser-errors.json`.
+  These checks are browser evidence, not physical iPhone acceptance.
+- Preview 80 passed signature, staging identity/redirects, retained controller
+  markers and exact generated/package scene hash and size (**32,011,709 bytes**,
+  below 32 MiB). Production metadata was restored. Installed and launched on
+  the iPhone; Apple inventory confirms **1.0.0 (80)**, now latest installed.
+  Evidence: `work/lighting-preview80-{build.log,package.json,install.json,apps.json,launch.json}`.
+  Physical lighting acceptance remains: comfortable dimming/presets, off-state
+  edits, More/Back, Home/Devices agreement and retention after reopening.
+
+## Smart blinds controller — October 18 / Preview 79 user accepted
 
 - User confirmed the dashboard outline fix works and asked for the next device.
   Added sculpted blinds controllers to embedded Home and native Devices, following
@@ -84,10 +129,11 @@ defects from ideas or untested risks.
   scene SHA-256 and size checks (**31,997,819 bytes**, below 32 MiB). The final
   native bundle was generated after the last accessibility fixes; production
   metadata was restored. Installed and launched on the iPhone; Apple inventory
-  confirms **1.0.0 (79)**, now latest installed. Evidence:
+  confirms **1.0.0 (79)** at that milestone. Evidence:
   `work/blinds-preview79-{build.log,package.json,install.json,apps.json,launch.json}`.
-  Physical blinds acceptance remains pending: presets/steps/Open/Close, More/Back,
-  matching Home/Devices positions and retention after closing/reopening.
+  User subsequently confirmed “the blinds work great” before requesting lighting.
+  This accepts the overall experience; individual unreported physical scenarios
+  are not claimed separately. Preview 80 supersedes this installed build.
 
 ## Dashboard shell focus outline — October 18 / Preview 78 user accepted
 

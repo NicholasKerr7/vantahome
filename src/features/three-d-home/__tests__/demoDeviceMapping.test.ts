@@ -139,6 +139,31 @@ describe("dashboard controls to scene", () => {
     expect(overlayDemoDevices(overlaid, [demo('living-light', 'light', { brightness: previous.deviceStates['living-light'].level, color: defaultColor, colorTempK: 3400 })])).toBe(overlaid);
   });
 
+  test('an unchanged temperature-only host record preserves explicit saved color mode', () => {
+    const previous = change(snapshot(), 'living-light', { on: false, level: 37,
+      settings: { color: '#FF9AA2', colorTempK: 3200, lightColorMode: 'color', lightEffect: 'none', scheduleEnabled: true } });
+    const devices = [demo('living-light', 'light', { isOn: false, brightness: 37, colorTempK: 3200 })];
+    const overlaid = overlayDemoDevices(previous, devices);
+    expect(overlaid).toBe(previous);
+    expect(overlayDemoDevices(overlaid, devices)).toBe(overlaid);
+  });
+
+  test('an actual temperature-only host edit selects white while preserving power and other settings', () => {
+    const previous = change(snapshot(), 'living-light', { on: false, level: 37,
+      settings: { color: '#FF9AA2', colorTempK: 3200, lightColorMode: 'color', scheduleEnabled: true } });
+    const overlaid = overlayDemoDevices(previous, [demo('living-light', 'light', { isOn: false, brightness: 37, colorTempK: 4200 })]);
+    expect(overlaid.deviceStates['living-light']).toEqual({ on: false, level: 37,
+      settings: { color: '#FF9AA2', colorTempK: 4200, lightColorMode: 'temperature', scheduleEnabled: true } });
+    expect(previous.deviceStates['living-light'].settings?.lightColorMode).toBe('color');
+  });
+
+  test('legacy temperature-only records still infer white when no mode was saved', () => {
+    const previous = change(snapshot(), 'living-light', { on: false, level: 37, settings: { colorTempK: 3200 } });
+    const overlaid = overlayDemoDevices(previous, [demo('living-light', 'light', { isOn: false, brightness: 37, colorTempK: 3200 })]);
+    expect(overlaid.deviceStates['living-light']).toEqual({ on: false, level: 37,
+      settings: { colorTempK: 3200, lightColorMode: 'temperature' } });
+  });
+
   test('reflects original white-temperature edits and cleared effects without overriding unchanged color intent', () => {
     const previous = change(snapshot(), 'master-bedside-left', { settings: { color: '#FF9AA2', colorTempK: 3200, lightColorMode: 'color', lightEffect: 'party' } });
     const white = overlayDemoDevices(previous, [demo('d5', 'light', { color: '#FF9AA2', colorTempK: 5200 })]);
