@@ -46,6 +46,29 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Dashboard shell focus outline — October 18 / Preview 78 installed
+
+- At the user's request, removed the unintended purple outline around the whole
+  property panel with one documented CSS rule:
+  `#house-preview[tabindex='-1']:focus { outline: none; }`. The stable programmatic
+  focus-return target remains; canvas, buttons and hotspots retain their outlines.
+  No TypeScript, logic, layout, state or security behavior changed.
+- **10 existing RecenterViewControl / SceneViewControls tests**, scene TypeScript
+  and web/native builds passed; focused review found no issues. Evidence:
+  `work/dashboard-shell-focus-tests.log`,
+  `work/dashboard-shell-focus-scene-build.log`,
+  `work/dashboard-shell-focus-preview78-build.log`.
+- Browser verification stopped when the CUA transport closed, including after
+  a bounded reconnect attempt. **No new visual verification or screenshot was
+  completed.** Preview 78 built, passed signature/staging/scene hash and exact
+  shell-rule verification, and installed and launched on the iPhone. Apple
+  inventory confirms **1.0.0 (78)**, now latest installed. The scene is
+  **31,986,128 bytes**, below 32 MiB; production metadata was restored. Evidence:
+  `work/dashboard-shell-focus-preview78-{package,devices,install,apps,launch}.json`.
+  Next: verify Recenter and exit from the idle tour show no shell
+  ring, then use the keyboard skip link → Tab and confirm the canvas still has a
+  focus ring. Physical acceptance and the climate checks below remain pending.
+
 ## Centered climate layout in embedded Home — October 18 / Preview 77 installed
 
 - Corrected the CSS layout against the Expo embedded Home surface, whose native
@@ -73,7 +96,8 @@ defects from ideas or untested risks.
   tests.log,scene-build.log}`. No control logic, authorization, persistence,
   device commands or dependencies changed.
 - **Preview 77 built, passed package verification, and installed and launched on
-  the iPhone.** Apple inventory confirms **1.0.0 (77)**, now latest installed.
+  the iPhone.** Apple inventory confirmed **1.0.0 (77)** at that milestone;
+  Preview 78 now supersedes it.
   Signature, Preview identity/schemes, staging configuration, exact scene hash,
   both new layout thresholds and fixture exclusion passed; the scene is
   **31,986,079 bytes**, below 32 MiB. Production metadata was restored. Evidence:

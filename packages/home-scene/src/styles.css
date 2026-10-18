@@ -51,6 +51,8 @@ button, a, input, summary { outline-offset: 5px; }
 :focus-visible { outline: 2px solid var(--accent); }
 /* Static headings receive focus for screen-reader announcements, not interaction. */
 :is(h1, h2, h3, h4, h5, h6)[tabindex='-1']:focus { outline: none; }
+/* Camera recovery returns focus to this static shell; its canvas and controls keep their own indicators. */
+#house-preview[tabindex='-1']:focus { outline: none; }
 /* Status colors are steady, with readable text alongside every simulated alarm. */
 [data-device-tone='alarm'] { --device-status-accent: var(--device-alarm); }
 [data-device-tone='warning'], [data-device-tone='closed'] { --device-status-accent: var(--device-warning); }
