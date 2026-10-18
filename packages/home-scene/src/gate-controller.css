@@ -1,0 +1,61 @@
+/* Fit the existing full-controls stage; no extra renderer or continuously animated effects. */
+.device-control-sheet.is-gate-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.gate-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.gate-stage { display: grid; align-items: safe center; justify-items: center; min-width: 0; min-height: 0; padding: 4px 0 8px; container: gate-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.gate-console { display: grid; width: min(380px, 100%); gap: 11px; padding: 18px; border: 1px solid #87739A; border-radius: 30px; background: linear-gradient(145deg, #51435E, #22182F 12%, #110C1B 54%, #2F233C); box-shadow: inset 2px 1px 1px #FFFFFF38, inset -2px -2px 3px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; color: var(--text); }
+.gate-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.gate-emblem { display: grid; place-items: center; width: 44px; height: 44px; color: #CBA6EE; border: 1px solid #A17AC244; border-radius: 14px; background: #35244488; }
+.gate-brand { display: grid; gap: 4px; text-align: center; }
+.gate-brand span { font-size: 8px; letter-spacing: 2.6px; color: #B7ACCB; }
+.gate-brand strong { font-size: 13px; font-weight: 500; letter-spacing: 3px; }
+.gate-console button { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 8px; border: 1px solid #FFFFFF26; border-radius: 13px; background: linear-gradient(145deg, #40334F, #231A30 70%); box-shadow: inset 0 1px 1px #FFFFFF24, 0 3px 3px #07030DBB; color: var(--text); cursor: pointer; touch-action: manipulation; user-select: none; font-size: 12px; transition: transform 140ms ease, border-color 180ms ease; }
+.gate-console .gate-key { width: 44px; height: 44px; border-radius: 50%; }
+.gate-visual { display: grid; border-radius: 18px; border: 1px solid #A080BD20; background: radial-gradient(ellipse at 50% 20%, #70438D22, transparent 70%), linear-gradient(135deg, #140D20, #20152B); overflow: hidden; }
+.gate-artwork { display: block; width: 100%; height: 160px; }
+.gate-reading { display: flex; align-items: center; gap: 12px; padding: 0 15px 13px; }
+.gate-reading > div { display: grid; gap: 4px; min-width: 100px; }
+.gate-reading span { color: #B8A4CB; font-size: 8px; letter-spacing: 1px; }
+.gate-reading output { font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+.gate-reading output small { margin-left: 3px; font-size: 13px; color: #D0B6E3; }
+.gate-reading p { color: #DCC6EF; font-size: 11px; line-height: 1.5; }
+.gate-sensors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.gate-indicator { display: grid; gap: 5px; min-width: 0; padding: 8px; border: 1px solid #A080BD24; border-radius: 11px; background: #130D1DC9; }
+.gate-indicator span { color: #BBA7CE; font-size: 9px; }
+.gate-indicator strong { color: #E1CCE9; font-size: 11px; font-weight: 500; }
+.gate-indicator[data-alert='true'] strong { color: #F4CCA0; }
+.gate-timer { display: flex; align-items: center; gap: 9px; padding: 8px 3px; color: #BCA2D3; }
+.gate-timer > div { display: grid; gap: 4px; flex: 1; }
+.gate-timer span { font-size: 11px; color: #E8D8F2; }
+.gate-timer small { font-size: 8px; }
+.gate-timer strong { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gate-actions, .gate-secondary { display: flex; gap: 9px; }
+.gate-actions > button, .gate-secondary > button { flex: 1; }
+.gate-console .gate-actions > button { min-height: 48px; background: linear-gradient(140deg, #684880, #342140); border-color: #B88DD599; }
+.gate-hold[aria-pressed='true'] { border-color: #E3C294; color: #F4D6B3; }
+.gate-feedback { display: grid; gap: 4px; margin: 0; min-height: 30px; padding-inline: 8px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.gate-feedback span { font-size: 7px; letter-spacing: 1.8px; color: var(--muted); }
+.gate-feedback[data-safety='blocked'], .gate-feedback[data-safety='unknown'] { color: #F4CCA0; }
+.gate-console button:not(:disabled):active { transform: translateY(2px); }
+.gate-console :disabled { opacity: .4; cursor: default; }
+.gate-console button:focus-visible, .gate-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.gate-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.gate-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container gate-stage (max-height: 550px) {
+  .gate-console { padding: 13px; gap: 8px; }
+  .gate-artwork { height: 140px; }
+  .gate-reading { padding-bottom: 10px; }
+}
+@container gate-stage (max-height: 510px) {
+  .gate-console { padding: 10px; gap: 6px; }
+  .gate-artwork { height: 100px; }
+  .gate-reading { padding: 0 10px 8px; }
+  .gate-reading output { font-size: 28px; }
+  .gate-indicator { padding: 6px; gap: 3px; }
+  .gate-timer { padding-block: 5px; }
+  .gate-console .gate-actions > button { min-height: 44px; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-gate-controller .device-sheet-content { padding-inline: 12px; } }
+@media (hover: hover) { .gate-console button:not(:disabled):hover { border-color: #BA91E1AA; } }
+.gate-workspace[data-motion-disabled='true'] * { transition: none; animation: none; scroll-behavior: auto; }
+.gate-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .gate-workspace * { transition: none; animation: none; scroll-behavior: auto; } .gate-workspace button:active { transform: none; } }

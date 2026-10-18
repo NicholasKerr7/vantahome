@@ -46,6 +46,53 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Entry gate console — October 18 / Preview 82 built and verified; install pending
+
+- Added coordinated sculpted Home/Devices gate consoles with a single sliding
+  leaf that follows the accepted position, not the closing target. The lightweight
+  SVG has no idle animation loop or independent clock. The console projects only
+  `entry-gate`, matching the existing simulation clock's scope; other gate devices
+  retain the original inspector. No new engine, dependency, transport or hardware
+  control was introduced.
+- Existing guarded **Open / Close / Hold open / Release hold / Resume auto-close**
+  commands remain the action boundary; there is no Stop or pedestrian command.
+  Safety inputs, holds, movement and actual countdown state are explicit. Resume
+  rearms a paused, fully open gate's enabled auto-close timer; it does not restart
+  a partial close. More preserves safety, timer, position and other advanced
+  controls. Existing access, hydration and save guards remain in force.
+- **98 web/shared tests / six suites + 121 native tests / eight suites
+  (219 distinct focused tests)** passed, along with TypeScript, scene web/native
+  builds and focused review. Review removed duplicate web/native live announcements
+  so only status announces position changes, and corrected SVG gradient units so
+  vertical pickets remain visible. Evidence:
+  `work/gate-{web-tests,native-tests,native-typecheck,scene-build}.log`.
+- Fourteen embedded phone/tablet/boundary profiles passed fit checks, including
+  the 550px/510px thresholds. At 440×860 the console is 549.5px within a 574px
+  stage. Tiny 320×568 retains a **146px internal scroll fallback** with zero page
+  overflow. Five native-component browser profiles fit; all measured controls
+  are at least 44px. Evidence: `work/gate-browser-layouts.json` and
+  `work/gate-browser-native-layouts.json`.
+- Browser verified that a blocked beam disables commands; restored countdown
+  state is paused at 100%, and Resume creates a fresh countdown observed at 29s.
+  Hold stops the countdown and blocks closing; holds survive reload and agree
+  between Home and Devices. Manual Close accepts the command at 100%, then the
+  existing clock advances to 75% and ultimately 0%. Home More/Back restores focus;
+  native Back retains the same state. The final test state is closed, unheld,
+  beam clear and auto-close Off. Screenshots: `work/gate-{home,native}.png`.
+  Final fresh browser receipt has **zero errors**:
+  `work/gate-final-browser-errors.json`. These are browser checks, not physical
+  iPhone acceptance.
+- Preview 82 built and passed signature, staging identity/URL schemes, asset
+  manifest, retained controller and exact generated/package scene checks:
+  **32,044,461 bytes** (30.560 MiB), below 32 MiB. Production metadata was restored.
+  Package receipt: `work/gate-preview82-package.json`.
+  **INSTALL PENDING:** the attempt failed with CoreDevice 4016 because the iPhone
+  was unavailable; receipt: `work/gate-preview82-install.json`. Preview 82 is not
+  installed. Preview 81 remains the latest verified installed build.
+  Physical gate and energy acceptance remain pending; asking for the next
+  controller did not accept the energy milestone. Existing physical climate,
+  iPad, hub and household-sync deferrals remain unchanged.
+
 ## Energy consoles — October 18 / Preview 81 installed
 
 - Added coordinated Home/Devices consoles for the energy meter, solar array,

@@ -36,6 +36,7 @@ function renderControls(deviceId: string) {
   if (getDevice(deviceId)?.kind === 'light') fireEvent.press(screen.getByLabelText('More lighting controls'));
   const kind = getDevice(deviceId)?.kind;
   if (kind && isEnergyDeviceKind(kind)) fireEvent.press(screen.getByLabelText('More energy controls'));
+  if (deviceId === 'entry-gate') fireEvent.press(screen.getByLabelText('More gate controls'));
   return { screen, props, runAction, setSetting, onClose };
 }
 

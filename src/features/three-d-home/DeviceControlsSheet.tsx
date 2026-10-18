@@ -30,6 +30,8 @@ import { ClimateController } from './ClimateController';
 import { BlindsController } from './BlindsController';
 import { LightingController } from './LightingController';
 import { EnergyController } from './EnergyController';
+import { GateController } from './GateController';
+import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
 import { isEnergyDeviceKind } from '../../../packages/home-scene/src/energyController';
 import { canViewSceneDevice } from '../../../packages/home-scene/src/sceneAccess';
 
@@ -46,6 +48,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   solar: { accessible: 'Back to energy controller', visible: 'Back to energy' },
   battery: { accessible: 'Back to energy controller', visible: 'Back to energy' },
   generator: { accessible: 'Back to energy controller', visible: 'Back to energy' },
+  gate: { accessible: 'Back to gate controller', visible: 'Back to gate' },
 };
 type Group = typeof GROUPS[number];
 interface SheetProps {
@@ -142,7 +145,7 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   const visibleOptionPage = Math.min(Math.floor(optionAnchor / optionSize), Math.max(0, optionCount - 1));
   const options = option?.options.slice(visibleOptionPage * optionSize, (visibleOptionPage + 1) * optionSize);
   const { tone } = hotspotPresentation(device, state);
-  const controllerReturn = CONTROLLER_RETURN_LABELS[device.kind];
+  const controllerReturn = device.kind === 'gate' && device.id !== GATE_DEVICE_ID ? undefined : CONTROLLER_RETURN_LABELS[device.kind];
 
   /** Measure the space left by real header, feedback, footer and Dynamic Type sizes. */
   function measureSpace(event: LayoutChangeEvent, choices = false): void {
@@ -165,6 +168,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if (device.kind === 'light' && !advancedControls) return <LightingController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (isEnergyDeviceKind(device.kind) && !advancedControls) return <EnergyController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'gate' && device.id === GATE_DEVICE_ID && !advancedControls) return <GateController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
 
   return <>
