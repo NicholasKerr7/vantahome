@@ -46,6 +46,43 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Centered climate layout in embedded Home — October 18 / Preview 77 installed
+
+- Corrected the CSS layout against the Expo embedded Home surface, whose native
+  chrome leaves less scene space than the earlier standalone browser checks.
+  Sheet padding is 14px/12px (from 22px/20px), sheet/workspace gaps are 8px/6px,
+  and stage padding is 4px/8px. The centered 208px ring remains: a middle layout
+  at stage heights ≤536px uses an 8px console gap and 12px padding, trimming the
+  decorative vent to fit 494px tall; only ≤500px uses the 140px ring and 378px
+  compact console.
+- Embedded browser verification allowed 96px for native safe areas from a
+  440×956 phone: host **440×860**, iframe **440×723**, stage content **560.75px**,
+  console **531px**, ring **208px**. It has no overflow and all 14 targets are
+  ≥44px. Boundary hosts 440×836/835 yield 537/536px stages and 531/494px consoles;
+  440×794/793 yield 501/500px stages and 208/140px rings. Other passing hosts:
+  428×832, 414×805, 390×748, 375×716, 768×928 and 1024×720.
+- The **320×568 host retains its pre-existing 103px internal stage overflow**,
+  with no page overflow. Keep the accessible internal scroll fallback; these
+  results do not establish a scroll-free layout at every size. The earlier
+  Preview 76 standalone sweep did not include this embedded-chrome constraint.
+- The **8 ClimateControlPanel tests**, scene TypeScript and web/native builds
+  passed; a focused CSS review found no findings. Embedded browser power/target
+  interaction passed from off at 22°C to on at 23°C, and More/Back restored focus,
+  with zero error logs. Evidence:
+  `work/climate-centered-{viewports.json,browser-acceptance.json,iphone.png,
+  tests.log,scene-build.log}`. No control logic, authorization, persistence,
+  device commands or dependencies changed.
+- **Preview 77 built, passed package verification, and installed and launched on
+  the iPhone.** Apple inventory confirms **1.0.0 (77)**, now latest installed.
+  Signature, Preview identity/schemes, staging configuration, exact scene hash,
+  both new layout thresholds and fixture exclusion passed; the scene is
+  **31,986,079 bytes**, below 32 MiB. Production metadata was restored. Evidence:
+  `work/climate-centered-preview77-build.log` and
+  `work/climate-centered-preview77-{package,devices,install,apps,launch}.json`.
+  Physical centered-layout and controller acceptance remain pending: check fit
+  and interactions, then matching Home/Devices settings and close/reopen retention.
+  Physical iPad testing, hub execution and household sync remain deferred.
+
 ## Climate spacing correction — October 18 / Preview 76 installed
 
 - The user reported that Preview 75's orb and temperature buttons felt too close,
@@ -53,11 +90,13 @@ defects from ideas or untested risks.
   CSS: the regular 208px orb retains its size with 15px of face-to-key clearance;
   the compact 140px orb has 8px. Temperature keys remain 44px. The target caption
   is centered on two lines at 9px normally and 8px compact (previously 6px compact).
-  A 536px stage-height threshold keeps the full ring on normal phone layouts.
+  Its 536px compact threshold was verified only in the standalone scene App;
+  it did not retain the full ring under embedded native chrome. Preview 77's
+  tiered correction is recorded above.
   Device state, native controller styling, permissions and persistence are unchanged.
 - This correction passed the **8 existing ClimateControlPanel tests**, scene
   TypeScript, and scene web/native builds. A focused read-only review reported no
-  findings. The new actual App browser sweep covered **11 viewport profiles** from
+  findings. The standalone scene App browser sweep covered **11 viewport profiles** from
   320×568 to 1440×900: all 14 controls remained at least 44px, with no overlap,
   page/stage overflow or caption escape from the orb. Temperature increase
   **23 → 24** and decrease **24 → 23** passed, with zero console errors. This is
@@ -67,13 +106,14 @@ defects from ideas or untested risks.
 - **Preview 76 built, passed signature/staging/packaged scene hash verification,
   and installed and launched on the iPhone.** The packaged native scene is
   **31,985,826 bytes**, below 32 MiB; production build metadata was restored.
-  Apple app inventory confirms **1.0.0 (76)**, now the latest installed build.
+  Apple app inventory confirmed **1.0.0 (76)** at that milestone; Preview 77
+  supersedes it above.
   Evidence: `work/climate-spacing-preview76-build.log` and
   `work/climate-spacing-preview76-{package,devices,install,apps,launch}.json`.
   Physical spacing/fit and full climate-controller acceptance remain pending.
   Acceptance status: `work/climate-spacing-preview76-acceptance.json`.
-  Next: collect the iPhone spacing/interaction result before Home/Devices and
-  close/reopen checks. Simulation-only staging scope, reduced-motion behavior
+  Follow the Preview 77 centered-layout correction above before the remaining
+  Home/Devices and close/reopen checks. Simulation-only staging scope, reduced-motion behavior
   and the iPad physical testing deferral remain in force.
 
 ## Climate controller — October 17 / Preview 75 installed, iPhone acceptance pending
@@ -98,7 +138,7 @@ defects from ideas or untested risks.
   panel, shared actions, TV regressions and presentation/preference bridge.
   Final `npm run lint` and scene web/native builds passed; the native scene bundle
   is **30.5 MiB**, below 32 MiB.
-- Actual standalone App browser checks passed **11 viewports**, from 320×568 to
+- Standalone scene App browser checks passed **11 viewports**, from 320×568 to
   1440×900: all 14 controller controls were at least 44px, with no overlap or page
   overflow. Reduced-motion checks found no controller animations/transitions.
   More/Back restored focus; rapid relative steps, mode/preset/swing changes and
@@ -118,7 +158,8 @@ defects from ideas or untested risks.
   Home → Primary suite → Air conditioning → Full controls for comfortable fit,
   power, repeated temperature/fan presses, modes, presets, swing and More/Back.
   The October 18 spacing report and installed correction are recorded above.
-  Continue physical checks on Preview 76, then verify matching Home/Devices settings and
+  Continue physical checks after the Preview 77 layout correction is installed,
+  then verify matching Home/Devices settings and
   close/reopen retention, including remembered settings while powered off. iPad
   physical testing remains deferred. Simulation-only staging scope and the
   no-hub boundary remain unchanged; production is unchanged.

@@ -1,7 +1,8 @@
 /* Static materials and short interaction transitions add depth without another graphics context. */
-.device-control-sheet.is-climate-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
-.climate-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 8px; min-height: 0; min-width: 0; }
-.climate-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 8px 0 14px; container: climate-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+/* The host already reserves its header and dock; spend the sheet height on the controller. */
+.device-control-sheet.is-climate-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.climate-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-height: 0; min-width: 0; }
+.climate-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 4px 0 8px; container: climate-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 .climate-console {
   --climate-ink: #f3edff;
   --climate-muted: #b7accb;
@@ -71,8 +72,13 @@
 @keyframes climate-airflow-arrival { from { opacity: .35; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
 @media (hover: hover) { .climate-key:not(:disabled):hover, .climate-mode-key:not(:disabled):hover, .climate-preset-key:not(:disabled):hover { border-color: #ba91e1aa; } }
 @media (max-width: 360px) { .device-control-sheet.is-climate-controller .device-sheet-content { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)); } }
-/* Short views reflow the modes beside the dial; their touch targets never shrink. */
+/* Preserve the full orb in embedded phone views by trimming decoration before controls. */
 @container climate-stage (max-height: 536px) {
+  .climate-console { grid-template-areas: 'top' 'dial' 'modes' 'air' 'presets'; gap: 8px; padding: 12px; }
+  .climate-vent { display: none; }
+}
+/* Only shorter screens need the 378px side-by-side console; touch targets stay full size. */
+@container climate-stage (max-height: 500px) {
   .climate-console { grid-template-areas: 'top top' 'dial modes' 'air air' 'presets presets'; grid-template-columns: 140px minmax(0, 1fr); gap: 8px; padding: 14px 12px; }
   .climate-dial { width: 140px; height: 176px; }
   .climate-ring { height: 140px; }
