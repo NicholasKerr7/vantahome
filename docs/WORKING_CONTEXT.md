@@ -75,8 +75,13 @@ defects from ideas or untested risks.
   request, the iPhone became available and Preview 74 installed and launched.
   Apple app inventory confirms **1.0.0 (74)**. Receipts:
   `work/tv-remote-preview74-{devices,install,apps,launch}.json`. This supersedes the
-  earlier unavailable-device status. Physical remote interaction remains pending;
-  installation and browser checks do not replace iPhone/iPad/Android UI testing.
+  earlier unavailable-device status. The user confirmed the Home TV remote fits
+  comfortably and responds correctly through power, repeated volume presses,
+  mute/unmute, directional ring/OK/Back, and More/Back, without jumping or clipping.
+  This is physical acceptance by user report. Devices-entry consistency and saved
+  source/volume/paused state after closing/reopening remain pending. Evidence:
+  `work/tv-remote-preview74-acceptance.json`. iPad/Android physical checks remain
+  separate; no broader performance or physical TV-control claim is implied.
 
 ## Arrow-free scenes and quieter Home returns — October 17 / Preview 73
 
