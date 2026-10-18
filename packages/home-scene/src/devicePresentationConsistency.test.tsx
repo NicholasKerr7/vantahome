@@ -71,7 +71,7 @@ describe('dashboard device presentation across the whole catalog', () => {
         expect(root.querySelector('.device-sheet-primary[role="switch"]')).toBeNull();
       }
       if (device.kind === 'light' || device.kind === 'tv') {
-        expect(root.querySelector('.device-sheet-primary')?.getAttribute('aria-checked')).toBe(String(on));
+        expect(root.querySelector(device.kind === 'tv' ? '.tv-remote-power' : '.device-sheet-primary')?.getAttribute('aria-checked')).toBe(String(on));
       }
     }
   });

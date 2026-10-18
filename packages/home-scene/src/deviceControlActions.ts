@@ -127,6 +127,11 @@ function applyNavigationOperation(device: DeviceDefinition, current: DeviceState
   const settings = { ...current.settings, remoteFocus: row * 3 + column + 1, remoteAction: direction };
   if (direction === 'select') Object.assign(settings, { remoteSelection: currentFocus + 1 });
   if (direction === 'home') Object.assign(settings, { source: 'Home', remoteFocus: 5, remoteSelection: 0 });
+  // Back dismisses the preview selection before returning the sample menu home.
+  if (direction === 'back') {
+    if (Number(readDeviceSetting(device, current, 'remoteSelection')) > 0) Object.assign(settings, { remoteSelection: 0 });
+    else Object.assign(settings, { source: 'Home', remoteFocus: 5, remoteSelection: 0 });
+  }
   return { ...current, on: true, settings };
 }
 
@@ -153,7 +158,9 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
   if (operation?.type === 'navigate') next = applyNavigationOperation(device, next, operation.direction);
   if (operation?.type === 'increment') {
     next = applyDeviceSetting(id, next, operation.field, Number(readDeviceSetting(device, next, operation.field)) + operation.delta);
-    next = operation.field === 'channel' ? { ...next, on: true, settings: { ...next.settings, source: 'Live TV' } } : { ...next, on: Number(next.settings?.timeRemainingSec) > 0 };
+    // Relative volume changes preserve the current power and playback state.
+    if (operation.field === 'channel') next = { ...next, on: true, settings: { ...next.settings, source: 'Live TV' } };
+    else if (operation.field === 'timeRemainingSec') next = { ...next, on: Number(next.settings?.timeRemainingSec) > 0 };
   }
   return { ...next, settings: { ...next.settings, lastAction: actionId } };
 }

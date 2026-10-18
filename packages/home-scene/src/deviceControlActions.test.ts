@@ -64,6 +64,52 @@ describe('shared simulation controls', () => {
     expect(state.settings).toMatchObject({ source: 'Home', remoteFocus: 5, remoteSelection: 0 });
   });
 
+  it('uses Back to dismiss a TV selection before returning home without losing saved settings', () => {
+    const device = deviceOfKind('tv');
+    const before = { ...initial(device), on: false, settings: {
+      source: 'Netflix', remoteFocus: 2, remoteSelection: 2, volume: 45, muted: true,
+      playbackState: 'paused', playbackPositionSec: 120, trackIndex: 3,
+    } };
+    const dismissed = runDeviceActionState(device.id, before, 'tv-remote-back');
+    expect(dismissed).toMatchObject({ on: true, settings: {
+      ...before.settings, remoteSelection: 0, remoteAction: 'back', lastAction: 'tv-remote-back',
+    } });
+    expect(before.settings.remoteSelection).toBe(2);
+    expect(deviceActionFeedback(device, dismissed)).toBe('Preview back');
+    roundTrip(device, dismissed);
+    const home = runDeviceActionState(device.id, dismissed, 'tv-remote-back');
+    expect(home.settings).toEqual({ ...dismissed.settings, source: 'Home', remoteFocus: 5 });
+    expect(runDeviceActionState(device.id, home, 'tv-remote-back')).toEqual(home);
+    roundTrip(device, home);
+  });
+
+  it.each([true, false])('bounds relative TV volume without changing power (%s), mute or playback', (on) => {
+    const device = deviceOfKind('tv');
+    const before = { ...initial(device), on, settings: {
+      volume: 98, muted: true, source: 'Netflix', channel: 14, playbackState: 'paused', playbackPositionSec: 120,
+    } };
+    const up = runDeviceActionState(device.id, before, 'tv-volume-up');
+    expect(up).toMatchObject({ on, settings: { ...before.settings, volume: 100, lastAction: 'tv-volume-up' } });
+    expect(deviceActionFeedback(device, up)).toBe('Preview volume 100%');
+    let down = up;
+    for (let index = 0; index < 25; index++) down = runDeviceActionState(device.id, down, 'tv-volume-down');
+    expect(down).toMatchObject({ on, settings: { ...before.settings, volume: 0, lastAction: 'tv-volume-down' } });
+    expect(before.settings.volume).toBe(98);
+    roundTrip(device, up);
+    roundTrip(device, down);
+  });
+
+  it('accumulates rapid remote volume presses from current store state instead of a stale render value', () => {
+    const device = deviceOfKind('tv');
+    useHomeStore.getState().setDeviceSetting(device.id, 'volume', 30);
+    const sendAction = useHomeStore.getState().runDeviceAction;
+    for (let index = 0; index < 6; index++) sendAction(device.id, 'tv-volume-up');
+    for (let index = 0; index < 2; index++) sendAction(device.id, 'tv-volume-down');
+    const after = useHomeStore.getState().deviceStates[device.id];
+    expect(readDeviceSetting(device, after, 'volume')).toBe(50);
+    roundTrip(device, after);
+  });
+
   it('persists opening-device preferences through actions, reloads, and toggles', () => {
     for (const kind of ['gate', 'blinds', 'window', 'garage', 'door'] as const) {
       const device = deviceOfKind(kind);

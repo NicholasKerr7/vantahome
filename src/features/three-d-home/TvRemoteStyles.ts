@@ -1,0 +1,56 @@
+import { StyleSheet } from 'react-native';
+import { theme } from '../../theme/theme';
+
+/** Sculpted remote materials remain static and cheap to composite over the property. */
+export const tvRemoteMaterials = {
+  edge: [theme.colors.accentText, theme.colors.surfaceRaised, '#100C19'] as const,
+  body: ['#2A2436', '#14101F', '#20162E'] as const,
+  ring: ['#625071', '#21172F', '#372644'] as const,
+};
+
+/** Shared touch geometry uses real 44pt targets, never scaled-down controls. */
+export const tvRemoteStyles = StyleSheet.create({
+  viewport: { flex: 1, minHeight: 0 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 4 },
+  shell: { width: '100%', maxWidth: 310, padding: 2, borderRadius: 40, shadowColor: '#000000', shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  shellCompact: { maxWidth: 360, borderRadius: 30 },
+  body: { borderRadius: 38, padding: 14, gap: 10, borderWidth: 1, borderColor: '#706078' },
+  bodyCompact: { borderRadius: 28, padding: 10, gap: 7 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  header: { justifyContent: 'space-between' },
+  key: { minWidth: 44, minHeight: 44, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#30273D', borderWidth: 1, borderColor: '#63536F', borderBottomWidth: 3, paddingHorizontal: 6, paddingVertical: 5 },
+  keyCircle: { width: 44, height: 44, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 22 },
+  keyWide: { flex: 1, minWidth: 44 },
+  keyActive: { backgroundColor: '#50316A', borderColor: theme.colors.accent },
+  keyPressed: { backgroundColor: '#62417D', borderBottomWidth: 1, opacity: 0.82 },
+  keyDisabled: { opacity: 0.38 },
+  keyLabel: { color: theme.colors.text, fontSize: 10, fontWeight: '600', textAlign: 'center' },
+  source: { flex: 1, minWidth: 0, minHeight: 44, borderRadius: 14, backgroundColor: '#0D0A14', borderWidth: 1, borderColor: '#5D4A6A', justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 5, gap: 2 },
+  sourceName: { color: theme.colors.text, fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  powerStatus: { color: theme.colors.subtext, fontSize: 9, letterSpacing: 1, textAlign: 'center' },
+  powerStatusOn: { color: theme.colors.accentText },
+  core: { alignItems: 'center', gap: 10 },
+  coreCompact: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
+  dpad: { width: 140, height: 140, borderRadius: 70, borderWidth: 1, borderColor: '#80618F', flexShrink: 0, shadowColor: '#000000', shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
+  dpadKey: { position: 'absolute', borderWidth: 0, borderBottomWidth: 0, backgroundColor: 'transparent' },
+  up: { top: 0, left: 47 },
+  down: { bottom: 0, left: 47 },
+  left: { left: 0, top: 47 },
+  right: { right: 0, top: 47 },
+  select: { top: 47, left: 47, backgroundColor: '#23172F', borderWidth: 1, borderColor: '#AE87CE', borderBottomWidth: 3 },
+  controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 14, width: '100%' },
+  controlsCompact: { width: 94, gap: 6, flexWrap: 'wrap' },
+  rocker: { width: 44, paddingVertical: 3, borderRadius: 24, alignItems: 'center', backgroundColor: '#0E0A16', borderWidth: 1, borderColor: '#50405D' },
+  rockerKey: { borderWidth: 0, borderBottomWidth: 0, backgroundColor: 'transparent' },
+  rockerLabel: { fontSize: 9, fontWeight: '600', color: theme.colors.subtext, textAlign: 'center', paddingVertical: 2 },
+  centerKeys: { gap: 6 },
+  centerKeysCompact: { flexDirection: 'row', gap: 6 },
+  footer: { alignItems: 'center', gap: 4 },
+  brand: { color: theme.colors.accentText, fontSize: 9, letterSpacing: 3, textAlign: 'center' },
+  feedback: { color: theme.colors.subtext, fontSize: 11, lineHeight: 16, textAlign: 'center' },
+  sourcePanel: { gap: 8, width: '100%', padding: 6 },
+  sourceTitle: { color: theme.colors.text, fontSize: 18, fontWeight: '600', flex: 1 },
+  sourceOption: { minHeight: 48, borderRadius: 16, padding: 12, backgroundColor: theme.colors.surfaceRaised, borderWidth: 1, borderColor: theme.colors.stroke },
+  sourceOptionSelected: { borderColor: theme.colors.accent, backgroundColor: '#4A2964' },
+  sourceOptionText: { color: theme.colors.text, fontSize: 15, fontWeight: '500' },
+});

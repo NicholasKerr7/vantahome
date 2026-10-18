@@ -31,6 +31,7 @@ function renderControls(deviceId: string) {
   const onClose = jest.fn();
   const props = { deviceId, client, snapshot: { ...client.getSnapshot(), ready: true, access: FULL_SCENE_ACCESS }, motionAllowed: false, onClose, onSelect: jest.fn() };
   const screen = render(<DeviceControlsSheet {...props} />);
+  if (deviceId === 'family-tv') fireEvent.press(screen.getByLabelText('More TV controls'));
   return { screen, props, runAction, setSetting, onClose };
 }
 
@@ -53,7 +54,7 @@ test('an unread cache shows recovery without presenting editable default control
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
 
-test('keeps every dense TV control reachable with one large-text control per page and no scrolling', () => {
+test('keeps every advanced TV control reachable with one large-text control per page and no scrolling', () => {
   const { screen, runAction } = renderControls('family-tv');
   measure(screen, 130);
   const expectedPages = getInspectorPages(getDevice('family-tv')!, 3);

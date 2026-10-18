@@ -65,6 +65,11 @@ describe('shared original-device control pages', () => {
     expect(validateStoredSetting('tv', 'playbackPositionSec', 9000)).toBe(3600);
     expect(validateStoredSetting('tv', 'playbackState', 'playing')).toBe('playing');
     expect(validateStoredSetting('tv', 'playbackState', 'https://stream.example')).toBeUndefined();
+    expect(validateStoredSetting('tv', 'remoteAction', 'back')).toBe('back');
+    expect(validateStoredSetting('tv', 'remoteAction', 'launch-app')).toBeUndefined();
+    expect(validateStoredSetting('tv', 'lastAction', 'tv-remote-back')).toBe('tv-remote-back');
+    expect(validateStoredSetting('tv', 'lastAction', 'tv-volume-up')).toBe('tv-volume-up');
+    expect(validateStoredSetting('tv', 'lastAction', 'tv-volume-down')).toBe('tv-volume-down');
     expect(validateStoredSetting('camera', 'cameraPreviewEvent', 'Known visitor preview')).toBe('Known visitor preview');
     expect(validateStoredSetting('camera', 'cameraPreviewEvent', 'untrusted arbitrary event')).toBeUndefined();
     expect(validateStoredSetting('energy', 'powerW', 999)).toBeUndefined();

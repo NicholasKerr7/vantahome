@@ -12,11 +12,11 @@ export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'g
 export type DeviceKind = typeof DEVICE_KINDS[number];
 export type ControlGroup = 'controls' | 'modes' | 'schedule' | 'status';
 export type DeviceActionOperation =
-  | { type: 'increment'; field: 'channel' | 'timeRemainingSec'; delta: number }
+  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume'; delta: number }
   | { type: 'media'; command: 'play-pause' | 'rewind' | 'forward' | 'previous' | 'next' }
   | { type: 'gas'; command: GasCommand }
   | { type: 'fire'; command: FireCommand }
-  | { type: 'navigate'; direction: 'up' | 'down' | 'left' | 'right' | 'select' | 'home' };
+  | { type: 'navigate'; direction: 'up' | 'down' | 'left' | 'right' | 'select' | 'home' | 'back' };
 interface CapabilityBase { id: string; label: string; group?: ControlGroup; configurationOnly?: boolean }
 export type DeviceCapability = CapabilityBase & (
   | { type: 'range'; field: string; min: number; max: number; step?: number; unit?: string }
@@ -133,6 +133,7 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
   const operation = action.operation;
   if (operation?.type === 'navigate') {
     if (operation.direction === 'home') return 'Preview home';
+    if (operation.direction === 'back') return 'Preview back';
     return operation.direction === 'select' ? `Preview tile ${readDeviceSetting(device, state, 'remoteSelection')} selected` : `Preview focus · tile ${readDeviceSetting(device, state, 'remoteFocus')}`;
   }
   if (operation?.type === 'media') {
@@ -140,6 +141,7 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
     if (operation.command === 'previous' || operation.command === 'next') return `Preview track ${readDeviceSetting(device, state, 'trackIndex')}`;
     return `Preview position ${readDeviceSetting(device, state, 'playbackPositionSec')}s`;
   }
+  if (device.kind === 'tv' && operation?.type === 'increment' && operation.field === 'volume') return `Preview volume ${readDeviceSetting(device, state, 'volume')}%`;
   if (device.kind === 'tv' && (operation?.type === 'increment' || 'source' in action.patch)) return operation ? `Preview channel ${readDeviceSetting(device, state, 'channel')} · Live TV` : `${readDeviceSetting(device, state, 'source')} · local preview`;
   if (device.kind === 'camera') return String(readDeviceSetting(device, state, 'cameraPreviewEvent'));
   if (device.kind === 'light') return `${action.label} · ${state.level}%`;

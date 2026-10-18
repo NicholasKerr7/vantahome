@@ -45,6 +45,9 @@ function coverControls(kind: 'gate' | 'garage' | 'door' | 'window' | 'blinds'): 
 
 const lightColors: [string, string][] = [['Amber', '#FFD166'], ['Ice', '#A0E9FF'], ['Rose', '#FF9AA2'], ['Lavender', '#B69CFF'], ['Mint', '#A5FF9B'], ['White', '#FFFFFF']];
 
+/** Share the allowlisted local TV sources with both remote interfaces. */
+export const TV_SOURCE_OPTIONS = ['Live TV', 'Guide', 'YouTube', 'Netflix', 'Settings', 'Home'] as const;
+
 // These fields are the extra controls authored directly in the original detail screens.
 export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapability[]>> = {
   ...gasCapabilities,
@@ -61,12 +64,14 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     ...([['Warm white', 2400], ['Soft white', 3000], ['Neutral white', 4000], ['Daylight', 5200]] as const).map(([label, temperature]) => action('light', `white-${temperature}`, label, { isOn: true, colorTempK: temperature, lightColorMode: 'temperature', lightEffect: 'none' })),
   ],
   tv: [
-    choice('tv', 'source', 'Preview source', ['Live TV', 'Guide', 'YouTube', 'Netflix', 'Settings', 'Home'], 'controls'),
+    choice('tv', 'source', 'Preview source', TV_SOURCE_OPTIONS, 'controls'),
+    action('tv', 'volume-up', 'Volume +', {}, { type: 'increment', field: 'volume', delta: 5 }),
+    action('tv', 'volume-down', 'Volume −', {}, { type: 'increment', field: 'volume', delta: -5 }),
     range('tv', 'channel', 'Preview channel', 1, 999),
     action('tv', 'channel-up', 'Channel +', {}, { type: 'increment', field: 'channel', delta: 1 }),
     action('tv', 'channel-down', 'Channel −', {}, { type: 'increment', field: 'channel', delta: -1 }),
     ...(['Guide', 'YouTube', 'Netflix', 'Settings'] as const).map((source) => action('tv', `source-${source.toLowerCase()}`, `${source} preview`, { isOn: true, source })),
-    ...(['up', 'left', 'select', 'right', 'down', 'home'] as const).map((direction) => action('tv', `remote-${direction}`, direction === 'select' ? 'OK' : `${direction[0].toUpperCase()}${direction.slice(1)}`, {}, { type: 'navigate', direction })),
+    ...(['up', 'left', 'select', 'right', 'down', 'home', 'back'] as const).map((direction) => action('tv', `remote-${direction}`, direction === 'select' ? 'OK' : `${direction[0].toUpperCase()}${direction.slice(1)}`, {}, { type: 'navigate', direction })),
     ...mediaControls('tv'), stat('tv', 'remoteFocus', 'Preview focused tile'), stat('tv', 'remoteSelection', 'Preview selected tile'), stat('tv', 'remoteAction', 'Last remote input'),
   ],
   ac: [
@@ -171,6 +176,6 @@ function playbackStatus(kind: 'tv' | 'speaker'): DeviceCapability[] {
 }
 export const simulatedStatusFields: Partial<Record<DeviceKind, DeviceCapability[]>> = {
   ...gasStoredFields, ...fireStoredFields, gate: gateSafetyStoredFields,
-  tv: [...playbackStatus('tv'), range('tv', 'remoteFocus', '', 1, 9), range('tv', 'remoteSelection', '', 0, 9), choice('tv', 'remoteAction', '', ['none', 'up', 'down', 'left', 'right', 'select', 'home'])],
+  tv: [...playbackStatus('tv'), range('tv', 'remoteFocus', '', 1, 9), range('tv', 'remoteSelection', '', 0, 9), choice('tv', 'remoteAction', '', ['none', 'up', 'down', 'left', 'right', 'select', 'home', 'back'])],
   speaker: playbackStatus('speaker'),
 };

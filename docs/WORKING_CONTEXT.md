@@ -46,6 +46,36 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Tactile TV remote — October 17 / Preview 74 ready
+
+- Replaced the primary paginated TV controls with a code-rendered, sculpted remote
+  in both Home hotspot full controls and the native Devices inspector. Its common
+  keys stay together; **More** retains the advanced controls, routines and status
+  pages. The shell uses the existing styling systems, without a generated image,
+  additional renderer or dependency. Touch targets, keyboard focus and reduced
+  motion remain supported.
+- Both surfaces use the same catalog and guarded, persisted simulation actions.
+  Added Back (dismiss the selected preview tile, then return to the sample Home
+  menu) and relative volume steps of five, bounded to 0–100 while preserving power,
+  mute and playback. Source and playback actions remain local previews; no provider
+  app, stream or real TV control is implied. Household permissions are unchanged.
+- Verification: **134 scene tests / 7 suites**, **31 native tests / 3 suites**,
+  app/scene TypeScript and scene build passed. Actual App browser checks covered
+  ten viewports from 320×568 to 1440×900: all 21 remote keys were at least 44px,
+  with no overlap or page overflow. Reload preserved YouTube, volume 40, power on
+  and playing; More/Back restored focus correctly, and fresh-load console errors
+  were zero. Evidence: `work/tv-remote-{web-tests.log,native-tests.log,viewports.json,
+  mobile-final.png,scene-build.log,browser-acceptance.json}`. The editing suite
+  retains its existing non-failing decorative-motion async-act warning; the
+  remote and pagination suites pass cleanly when run separately.
+- Preview 74 built and passed signature, Preview URL-scheme, staging-domain,
+  native/web remote marker and packaged scene hash/size checks: 31,969,107 bytes,
+  below 32 MiB. Evidence: `work/tv-remote-preview74-{build.log,package.json}`.
+  Production build metadata was restored. Apple reports the iPhone unavailable
+  (`work/tv-remote-preview74-devices.json`), so installation was not attempted.
+  **Preview 73 is the last confirmed installed build.** Physical remote interaction
+  remains unreviewed; browser checks do not replace iPhone/iPad/Android testing.
+
 ## Arrow-free scenes and quieter Home returns — October 17 / Preview 73
 
 - Removed only the dashboard scene arrows. The cards use the full row with native

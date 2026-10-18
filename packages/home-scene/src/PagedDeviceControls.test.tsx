@@ -82,7 +82,7 @@ describe('full-control focus during resizing', () => {
   it('keeps a focused compact action mounted when fewer actions fit', () => {
     renderControls('family-tv');
     const next = container.querySelector<HTMLButtonElement>('[aria-label="Next controls page"]')!;
-    while (!container.querySelector('.device-control-page.is-compact') && !next.disabled) act(() => next.click());
+    while (container.querySelectorAll('.device-control-page.is-compact .capability-action').length <= 2 && !next.disabled) act(() => next.click());
     const actions = container.querySelectorAll<HTMLButtonElement>('.device-control-page .capability-action');
     expect(actions.length).toBeGreaterThan(2);
     const action = actions[actions.length - 1];

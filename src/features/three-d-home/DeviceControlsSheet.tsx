@@ -25,6 +25,7 @@ import { useHomeStore } from '../../store/useHomeStore';
 import { canEditSimulationDevice } from '../../services/simulationDeviceEditing';
 import { canManageSimulationDevices } from '../../services/simulationDeviceRegistration';
 import { homeEditorScope } from '../home-shell/homeEditorScope';
+import { TvRemoteControl } from './TvRemoteControl';
 
 const SimulationDeviceEditor = React.lazy(() => import('../devices/SimulationDeviceEditor'));
 
@@ -97,10 +98,11 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   </Modal>;
 }
 
-/** Keep the original quick action visible while paging through the complete shared capability catalog. */
+/** Give TVs a tactile default remote while retaining every shared capability in the advanced inspector. */
 function DeviceInspector({ device, state, client, disabled, compact, fontScale, onBrowse, onRoutines }: {
   device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; compact: boolean; fontScale: number; onBrowse: () => void; onRoutines: () => void;
 }) {
+  const [advancedTvControls, setAdvancedTvControls] = useState(false);
   const [group, setGroup] = useState<Group>('controls');
   const [pageAnchor, setPageAnchor] = useState<string | null>(null);
   const [option, setOption] = useState<EnumCapability | null>(null);
@@ -130,7 +132,12 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     setPageAnchor(controlPageAnchor(pages[index]));
   }
 
+  if (device.kind === 'tv' && !advancedTvControls) return <TvRemoteControl device={device} state={state} client={client}
+    disabled={disabled} compact={compact} onMore={() => setAdvancedTvControls(true)} />;
+
   return <>
+    {device.kind === 'tv' && <Pressable accessibilityRole="button" accessibilityLabel="Back to TV remote"
+      onPress={() => { setAdvancedTvControls(false); setOption(null); }} style={styles.button}><Text style={styles.label}>Back to remote</Text></Pressable>}
     {!option && <View style={styles.row}>
       <Pressable accessibilityRole="button" disabled={disabled} onPress={() => client.toggle(device.id)}
         style={[styles.button, styles.primary, styles.grow, disabled && styles.disabled]}><Text style={[styles.label, styles.primaryText]}>{quickActionLabel(device, state)}</Text></Pressable>
