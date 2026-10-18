@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
 import { randomUUID } from 'expo-crypto';
 import ScenesScreen from '../../screens/ScenesScreen';
 import ModalActionRow from '../../components/ModalActionRow';
@@ -65,7 +65,9 @@ test('import opens an editable unsaved draft and Cancel leaves the home and scen
   screen.unmount();
 });
 
-test('saving an unchanged brightness-only proposal keeps exactly the proposed setting', () => {
+test.each(['Owner', 'Member'] as const)('%s saves a brightness-only proposal without adding settings or running it', (role) => {
+  const home = useHomeStore.getState();
+  useHomeStore.setState({ household: [{ ...home.household[0], role }] });
   const screen = openDraft();
   fireEvent.press(screen.getByText('Create'));
   expect(useHomeStore.getState().scenes).toHaveLength(1);
@@ -75,6 +77,41 @@ test('saving an unchanged brightness-only proposal keeps exactly the proposed se
   expect(useHomeStore.getState().activeSceneId).toBeNull();
   expect(runScene).not.toHaveBeenCalled();
   screen.unmount();
+});
+
+// Exercise the regular entry point as well as AI handoff under a verified Member fixture.
+test('Member creates a scene manually, reopens it, and requests execution only on Run scene', async () => {
+  const home = useHomeStore.getState();
+  useHomeStore.setState({ household: [{ ...home.household[0], role: 'Member' }] });
+  const light = home.devices.find((device) => device.id === 'registry-device:living-light')!;
+  const screen = render(<ScenesScreen embedded />);
+  fireEvent.press(screen.getByLabelText('Create scene'));
+  fireEvent.changeText(screen.getByLabelText('Scene name'), 'Member evening');
+  fireEvent.press(screen.getByLabelText('One room'));
+  fireEvent.press(screen.getByLabelText('Scene room: Living room'));
+  fireEvent.press(screen.getByLabelText(`Include ${light.name}`));
+  fireEvent.press(screen.getByText('Create'));
+
+  const saved = useHomeStore.getState().scenes;
+  expect(saved).toHaveLength(1);
+  expect(saved[0]).toMatchObject({ name: 'Member evening', scope: 'room', roomId: light.roomId });
+  expect(saved[0].actions).toHaveLength(1);
+  expect(saved[0].actions[0].deviceId).toBe(light.id);
+  expect(useHomeStore.getState().devices).toBe(home.devices);
+  expect(useHomeStore.getState().activeSceneId).toBeNull();
+  expect(runScene).not.toHaveBeenCalled();
+  screen.unmount();
+
+  // Remount proves the collection reads the saved store entry; native cold-start persistence is a separate check.
+  const reopened = render(<ScenesScreen embedded />);
+  fireEvent.press(reopened.getByLabelText('Details for Member evening'));
+  expect(runScene).not.toHaveBeenCalled();
+  const detailActions = reopened.UNSAFE_getAllByType(ModalActionRow)
+    .find((row) => row.props.actions.some((action: { label: string }) => action.label === 'Run scene'))!;
+  await act(async () => { fireEvent.press(within(detailActions).getByText('Run scene')); });
+  expect(runScene).toHaveBeenCalledTimes(1);
+  expect(runScene).toHaveBeenCalledWith(saved[0].id);
+  reopened.unmount();
 });
 
 test('saving a TV power-only proposal never captures its current channel, volume, mute or source', () => {

@@ -147,7 +147,8 @@ Temporary Guest access is enforced by server time, including when the app is
 closed. The client also checks its cached deadline on use, at expiry, and on
 resume. Expired memberships remain visible to administrators for review. A fresh
 invitation may still deliberately renew an expired Guest; acceptance replaces old
-room assignments and clears old action overrides. Use the member-card renewal to
+room assignments and removes old Allow overrides; explicit Deny overrides remain
+until an authorized administrator resets them. Use the member-card renewal to
 retain existing assignments and overrides. Tenant access does not expire.
 
 Assigned-room rendering provides **visual privacy in the app**, not confidentiality

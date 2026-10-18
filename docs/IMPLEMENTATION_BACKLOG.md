@@ -109,6 +109,11 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
+**Current authorized check:** actual Member scene creation using a separate invited
+account, preserving Guest. Invitation delivery passed by user confirmation;
+acceptance, manual creation, explicit Run, cold-start retention and AI scene
+review are not yet physically verified for Member. See HOME_CONCIERGE.md.
+
 Initial live assistant acceptance is complete: real authenticated answers pass,
 one small scene passed Review scene, Create and explicit Run scene on the iPhone,
 and the bounded Guest checklist is complete by user report. Broader role/override

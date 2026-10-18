@@ -48,6 +48,20 @@ defects from ideas or untested risks.
 
 ## Vanta home assistant — October 16–17 / Preview 71
 
+- **Actual Member acceptance in progress:** the user chose a separate Member account
+  and provided its email in chat, preserving the existing Guest. They have been
+  asked to send **Test Member** an invitation from the Owner's Household → Invite
+  flow with role **Member** and whole-home room access. The user confirmed it was
+  sent and the email arrived; recipient acceptance is still pending. Next: confirm
+  the actual Member badge and Create button, test manual scene creation,
+  explicit Run and cold-start retention, then the AI draft/review/Create/Run path.
+  Use HOME_CONCIERGE.md's Member checklist. No account role was changed by the agent.
+  Two explicit Member success cases now cover AI draft saving and manual scene
+  creation/reopening/explicit Run request; **40 tests / 3 suites** pass. The editor
+  and store are real, membership is a fixture and execution is mocked. Evidence:
+  `work/concierge-member-scene-tests.log`; physical persistence is still pending.
+  App TypeScript and diff checks pass. Existing collection tests emit async
+  reduced-motion `act` warnings. Only tests and documentation changed; no rebuild.
 - **Bounded Guest AI acceptance complete by user report:** the existing focused
   automated checks passed **134 tests / 8 suites**, including room-limited context,
   layout-sharing isolation, withheld scene authority, Guest expiry, account switches,

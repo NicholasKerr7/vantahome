@@ -141,6 +141,39 @@ tests mock the database reader; they are not a substitute for the real Guest
 session or an independent security review. No private credentials are needed in
 chat, no live membership/grant mutation was performed, and no code changed.
 
+### Actual Member live acceptance — started October 17
+
+The user chose a separate Member test account and supplied its invitation address
+in chat. Preserve the existing Guest account, room grants and deadline. The Owner
+was asked to use account → Household → Invite, name **Test Member**, role **Member**,
+then **Review access → Whole-home room access → Invite person**. The user confirmed
+the invitation was sent and its email arrived. Recipient acceptance and actual
+Member-role verification are pending; do not equate delivery with membership.
+
+1. **Pending:** recipient accepts the invitation and the account role explicitly
+   shows **Member** for the intended home. Do not use Demo or an Owner session.
+2. **Pending:** Scenes exposes **Create scene** (a plus icon on compact screens).
+   Create **Member evening** for only the Living room Pendant light, on at 30%.
+   Creating must save the scene without running it or changing the light.
+3. **Pending:** explicit **Run scene** applies the saved setting; closing/reopening
+   the app retains the scene and its exact device/settings. Scene definitions are
+   local to this account/device; this does not test household scene sync.
+4. **Pending:** Ask can draft a separate one-light comfort scene for Member;
+   **Review scene → Create → explicit Run scene** works without extra devices or
+   settings. An explicit `automation.manage` denial must still block management.
+
+The app has no existing-member role-change UI. Sending an invitation to an active
+Guest does not convert it. A fresh separate Member should inherit scene permission
+without overrides; adding an Allow override to Guest would not test the Member role.
+
+Automated preparation passed **40 tests / 3 suites**, adding explicit Member
+coverage for AI draft saving and manual Create → reopen → Run request. These use
+the actual editor/store with a verified-membership fixture; execution is mocked,
+and remounting retains the same store. They do not prove live authentication,
+cold-start persistence or physical simulation changes. Evidence:
+`work/concierge-member-scene-tests.log`. The existing collection suite still emits
+reduced-motion async `act` warnings; no application code was changed.
+
 ### Existing evidence
 
 Contract, projection, lifecycle, transport, provider, server permissions and actual

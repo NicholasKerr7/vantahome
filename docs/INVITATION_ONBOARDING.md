@@ -238,9 +238,10 @@ The server accepts future Guest deadlines up to 30 days; Tenant and other roles
 remain permanent. Expiry blocks room/device reads and new commands, including
 voice authorization, without a scheduler or deleting membership. The owner can
 still review the expired person. A deliberate fresh invitation may renew an
-expired Guest with its new rooms and deadline; old room grants and permission
-overrides are cleared during that acceptance. Existing active membership cannot
-be overwritten by a stale invitation.
+expired Guest with its new rooms and deadline; old room grants and Allow overrides
+are cleared during that acceptance. Explicit Deny overrides remain until an
+authorized administrator resets them. Existing active membership cannot be
+overwritten by a stale invitation.
 
 Rooms and devices in the cloud use UUIDs. An administrator explicitly maps them
 to authored model IDs; display names never create a mapping or grant access.
