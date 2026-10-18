@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Tactile TV remote — October 17 / Preview 74 installed
+## Tactile TV remote — October 17 / Preview 74 iPhone acceptance complete
 
 - Replaced the primary paginated TV controls with a code-rendered, sculpted remote
   in both Home hotspot full controls and the native Devices inspector. Its common
@@ -78,8 +78,9 @@ defects from ideas or untested risks.
   earlier unavailable-device status. The user confirmed the Home TV remote fits
   comfortably and responds correctly through power, repeated volume presses,
   mute/unmute, directional ring/OK/Back, and More/Back, without jumping or clipping.
-  This is physical acceptance by user report. Devices-entry consistency and saved
-  source/volume/paused state after closing/reopening remain pending. Evidence:
+  The user then confirmed Home and Devices show the same source, volume and paused
+  state, and those settings survive fully closing/reopening the app. The planned
+  iPhone remote acceptance is complete by user report. Evidence:
   `work/tv-remote-preview74-acceptance.json`. iPad/Android physical checks remain
   separate; no broader performance or physical TV-control claim is implied.
 

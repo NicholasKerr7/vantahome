@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Tactile TV remote | Preview 74 installed; Home remote accepted by user | Code-rendered remote in Home hotspot and native Devices controls; More retains advanced pages. Shared bounded Back and relative-volume actions use existing guarded local persistence. 134 scene + 31 native tests, app/scene TypeScript, scene build and ten actual App browser viewports passed; 21 keys ≥44px, no overlap/overflow, reload retention and focus verified. Signature, staging identity and bundled scene checks passed. Apple app inventory confirms 1.0.0 (74). User reports Home remote fits and responds correctly without jumping/clipping; Devices-entry consistency and restart retention remain pending. No new dependency, renderer, permission or provider control. See handoff. |
+| Tactile TV remote | Preview 74 installed; planned iPhone acceptance complete | Code-rendered remote in Home hotspot and native Devices controls; More retains advanced pages. Shared bounded Back and relative-volume actions use existing guarded local persistence. 134 scene + 31 native tests, app/scene TypeScript, scene build and ten actual App browser viewports passed; 21 keys ≥44px, no overlap/overflow, reload retention and focus verified. Signature, staging identity and bundled scene checks passed. Apple app inventory confirms 1.0.0 (74). User confirms comfortable Home remote interaction, matching source/volume/paused state through Devices, and retention after fully closing/reopening. No new dependency, renderer, permission or provider control. See handoff. |
 | Arrow-free dashboard scenes and quieter Home return | Preview 73 installed; physical Home-return checks accepted | Full-width momentum scrolling, keyboard/focus recovery, no scene arrows. Initial launch film no longer replays for same-session renderer recovery after the 45-second retention budget; membership shielding remains. 75 scene + 137 native/root tests, eight browser viewport checks. User confirmed both 5-second and 60-second foreground tab returns without launch replay, with usable navigation; before/after app PID unchanged. Physical swipe feel remains unreported. See handoff. |
 | Vanta home assistant | Preview 71 bounded Owner, Guest and Member checks accepted | Two real staging answers independently verified (HTTP 200, 6.4/12.1 s). Owner scene flow, Guest room/draft restrictions and account-switch cleanup, plus actual Member manual/AI scene creation, explicit Run and local restart retention passed by user report. Broader role/override configurations and quality/cost remain follow-up. No key expansion or new native build was needed. See handoff. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
@@ -31,9 +31,10 @@ avoiding lost presses from a stale displayed value. Back has bounded sample-menu
 semantics and persisted allowlisting. Existing hydration, access revocation and
 save recovery remain in force; no remote-specific state store or permission grant
 was introduced. The Home remote physical fit/interaction check passed by user
-report on Preview 74, including repeated volume presses and More/Back. Remaining
-acceptance is Devices-entry consistency and saved source, volume and paused state
-after closing/reopening the app; the user checklist is pending.
+report on Preview 74, including repeated volume presses and More/Back. The user
+also confirmed matching source, volume and paused state through Devices and after
+fully closing/reopening the app. The planned iPhone checklist is complete by user
+report; iPad/Android physical testing and real TV integration remain separate.
 
 The reported Home "restart" was clarified as the launch animation followed by
 Home. The confirmed source cause was renderer retention expiry feeding an ordinary
