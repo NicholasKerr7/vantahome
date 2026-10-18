@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Climate controller — October 17 / Preview 75 built, ready to install
+## Climate controller — October 17 / Preview 75 installed, iPhone acceptance pending
 
 - Added the climate controller to Home full controls and the native Devices
   inspector. Target temperature, Cold/Fan/Dry mode, fan speed, swing and
@@ -81,12 +81,16 @@ defects from ideas or untested risks.
   (30.5 MiB)** below 32 MiB. Web/native climate and TV markers are present; QA
   fixtures are excluded. Production build metadata was restored. Evidence:
   `work/climate-preview75-build.log`, `work/climate-preview75-package.json`.
-  Preview 75 is ready to install; **installation and physical climate acceptance
-  remain pending. Preview 74 is the last installed build.** Installation was not
-  requested this turn. Next: when installed, verify fit, controls, cross-surface
-  state and close/reopen retention on the iPhone. iPad physical testing remains
-  deferred. Simulation-only staging scope and the no-hub boundary remain unchanged;
-  production is unchanged.
+  At the user's subsequent request, the existing package was reverified and
+  **Preview 75 installed and launched on the iPhone**. Apple app inventory confirms
+  **1.0.0 (75)**. Receipts: `work/climate-preview75-{devices,install,apps,launch}.json`.
+  Physical climate acceptance remains pending: the user has been asked to check
+  Home → Primary suite → Air conditioning → Full controls for comfortable fit,
+  power, repeated temperature/fan presses, modes, presets, swing and More/Back.
+  Next: collect that result, then verify matching Home/Devices settings and
+  close/reopen retention, including remembered settings while powered off. iPad
+  physical testing remains deferred. Simulation-only staging scope and the
+  no-hub boundary remain unchanged; production is unchanged.
 
 ## Tactile TV remote — October 17 / Preview 74 iPhone acceptance complete
 
