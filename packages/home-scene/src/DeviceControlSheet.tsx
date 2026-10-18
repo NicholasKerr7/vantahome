@@ -13,9 +13,13 @@ import { isEmbeddedScene } from './embeddedHost';
 import { requestDeviceEditing } from './requestDeviceEditing';
 import { TvRemoteControl } from './TvRemoteControl';
 import { ClimateController } from './ClimateControlPanel';
+import { BlindsController } from './BlindsControlPanel';
 import { formatClimateTemperature, readClimateControllerState } from './climateController';
 
 type DeviceControlSheetProps = { deviceId: DeviceId; onClose: () => void };
+const CONTROLLER_CLASSES: Partial<Record<DeviceDefinition['kind'], string>> = {
+  tv: 'is-tv-remote', ac: 'is-climate-controller', blinds: 'is-blinds-controller',
+};
 
 /** Unmount removed or revoked fixtures before their stale dialog can read deleted catalog data. */
 export function DeviceControlSheet({ deviceId, onClose }: DeviceControlSheetProps) {
@@ -80,7 +84,7 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
     }
   }
 
-  const controllerClass = controllable ? device.kind === 'tv' ? ' is-tv-remote' : device.kind === 'ac' ? ' is-climate-controller' : '' : '';
+  const controllerClass = controllable ? ` ${CONTROLLER_CLASSES[device.kind] ?? ''}` : '';
   return <dialog ref={dialog} id="full-device-controls" className={`device-control-sheet${controllerClass}`} aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
       <header className="device-sheet-heading" data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone}>
@@ -95,7 +99,8 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
         <button type="button" className="quick-device-close" aria-label="Close full controls" onClick={dismiss}><X size={20} aria-hidden="true" /></button>
       </header>
       {device.kind === 'tv' && controllable ? <TvRemoteControl key={deviceId} device={device} current={current} />
-        : device.kind === 'ac' && controllable ? <ClimateController key={deviceId} device={device} current={current} /> : <>
+        : device.kind === 'ac' && controllable ? <ClimateController key={deviceId} device={device} current={current} />
+        : device.kind === 'blinds' && controllable ? <BlindsController key={deviceId} device={device} current={current} /> : <>
         <button type="button" className="device-sheet-primary" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.isSwitch ? `${device.name} power` : action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span></button>
         {controllable ? <PagedDeviceControls key={deviceId} device={device} current={current} /> : <p className="device-hint">View only. Your household role does not allow changing this device.</p>}
       </>}

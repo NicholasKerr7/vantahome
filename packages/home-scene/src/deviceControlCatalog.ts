@@ -113,7 +113,12 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     stat('vacuum', 'vacuumAreaM2', 'Sample cleaned area', 'm²'), stat('vacuum', 'vacuumRuntimeMin', 'Sample runtime', 'min'),
   ],
   gate: [...coverControls('gate'), ...gateSafetyCapabilities, toggle('gate', 'autoOpenEnabled', 'Auto-open preference')],
-  garage: coverControls('garage'), door: coverControls('door'), blinds: coverControls('blinds'),
+  garage: coverControls('garage'), door: coverControls('door'),
+  blinds: [
+    ...coverControls('blinds'),
+    action('blinds', 'position-up', 'Raise 5%', {}, { type: 'increment', field: 'openPercent', delta: 5 }),
+    action('blinds', 'position-down', 'Lower 5%', {}, { type: 'increment', field: 'openPercent', delta: -5 }),
+  ],
   window: [...coverControls('window'), action('window', 'vent', 'Vent', { openPercent: 25 })],
   microwave: [
     ...([30, 60, 120] as const).map((delta) => action('microwave', `add-${delta}`, `+${delta < 60 ? `${delta}s` : `${delta / 60}m`}`, {}, { type: 'increment', field: 'timeRemainingSec', delta })),

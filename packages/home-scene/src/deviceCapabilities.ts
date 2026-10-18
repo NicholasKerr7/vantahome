@@ -12,7 +12,7 @@ export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'g
 export type DeviceKind = typeof DEVICE_KINDS[number];
 export type ControlGroup = 'controls' | 'modes' | 'schedule' | 'status';
 export type DeviceActionOperation =
-  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume' | 'tempC' | 'acFanSpeed'; delta: number }
+  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume' | 'tempC' | 'acFanSpeed' | 'openPercent'; delta: number }
   | { type: 'media'; command: 'play-pause' | 'rewind' | 'forward' | 'previous' | 'next' }
   | { type: 'gas'; command: GasCommand }
   | { type: 'fire'; command: FireCommand }
@@ -146,7 +146,7 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
   if (device.kind === 'ac' && operation?.type === 'increment') return operation.field === 'tempC' ? `Target ${readDeviceSetting(device, state, 'tempC')}°C · simulation` : `Fan ${readDeviceSetting(device, state, 'acFanSpeed')}% · simulation`;
   if (device.kind === 'camera') return String(readDeviceSetting(device, state, 'cameraPreviewEvent'));
   if (device.kind === 'light') return `${action.label} · ${state.level}%`;
-  if ('openPercent' in action.patch) return state.level === 0 ? 'Closed in preview' : `${state.level}% open in preview`;
+  if ('openPercent' in action.patch || (operation?.type === 'increment' && operation.field === 'openPercent')) return state.level === 0 ? 'Closed in preview' : `${state.level}% open in preview`;
   if (operation?.type === 'increment') return `Preview time ${readDeviceSetting(device, state, operation.field)}s`;
   return `${action.label} · simulation`;
 }

@@ -27,11 +27,17 @@ import { canManageSimulationDevices } from '../../services/simulationDeviceRegis
 import { homeEditorScope } from '../home-shell/homeEditorScope';
 import { TvRemoteControl } from './TvRemoteControl';
 import { ClimateController } from './ClimateController';
+import { BlindsController } from './BlindsController';
 
 const SimulationDeviceEditor = React.lazy(() => import('../devices/SimulationDeviceEditor'));
 
 const GROUPS = ['controls', 'modes', 'schedule', 'status'] as const;
 const GROUP_LABELS = { controls: 'Controls', modes: 'Modes', schedule: 'Routines', status: 'Status' };
+const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { accessible: string; visible: string }>> = {
+  tv: { accessible: 'Back to TV remote', visible: 'Back to remote' },
+  ac: { accessible: 'Back to climate controller', visible: 'Back to climate' },
+  blinds: { accessible: 'Back to blinds controller', visible: 'Back to blinds' },
+};
 type Group = typeof GROUPS[number];
 interface SheetProps {
   deviceId: string | null; client: SimulationDeviceControls; snapshot: ControlSnapshot;
@@ -120,6 +126,7 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   const visibleOptionPage = Math.min(Math.floor(optionAnchor / optionSize), Math.max(0, optionCount - 1));
   const options = option?.options.slice(visibleOptionPage * optionSize, (visibleOptionPage + 1) * optionSize);
   const { tone } = hotspotPresentation(device, state);
+  const controllerReturn = CONTROLLER_RETURN_LABELS[device.kind];
 
   /** Measure the space left by real header, feedback, footer and Dynamic Type sizes. */
   function measureSpace(event: LayoutChangeEvent, choices = false): void {
@@ -137,12 +144,13 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     disabled={disabled} compact={compact} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'ac' && !advancedControls) return <ClimateController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'blinds' && !advancedControls) return <BlindsController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
 
   return <>
-    {(device.kind === 'tv' || device.kind === 'ac') && <Pressable accessibilityRole="button"
-      accessibilityLabel={device.kind === 'tv' ? 'Back to TV remote' : 'Back to climate controller'}
+    {controllerReturn && <Pressable accessibilityRole="button" accessibilityLabel={controllerReturn.accessible}
       onPress={() => { setAdvancedControls(false); setOption(null); }} style={styles.button}>
-      <Text style={styles.label}>{device.kind === 'tv' ? 'Back to remote' : 'Back to climate'}</Text></Pressable>}
+      <Text style={styles.label}>{controllerReturn.visible}</Text></Pressable>}
     {!option && <View style={styles.row}>
       <Pressable accessibilityRole="button" disabled={disabled} onPress={() => client.toggle(device.id)}
         style={[styles.button, styles.primary, styles.grow, disabled && styles.disabled]}><Text style={[styles.label, styles.primaryText]}>{quickActionLabel(device, state)}</Text></Pressable>

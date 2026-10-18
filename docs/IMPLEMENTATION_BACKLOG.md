@@ -9,7 +9,8 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Dashboard shell focus outline | Preview 78 installed and launched; visual acceptance pending | User-approved single CSS rule removes the whole-property-panel outline while retaining the programmatic focus-return target and canvas/button/hotspot outlines. Ten existing RecenterViewControl / SceneViewControls tests, scene TypeScript and web/native builds passed; review found no issues. Browser verification stopped when CUA transport closed: no new visual verification or screenshot. Signature/staging/scene hash and exact shell-rule verification passed (31,986,128 bytes); production metadata restored. Apple inventory confirms 1.0.0 (78), installed and launched. Physical verification pending; check Recenter/idle-tour exit without the shell ring, then keyboard skip-link → Tab with a visible canvas ring. No logic/layout/state/security change. See handoff. |
+| Smart blinds controller | Preview 79 installed and launched; physical acceptance pending | Sculpted Home/Devices controllers share saved position, geometry, bounded ±5% actions and presets; More preserves advanced controls. 61 scene + 49 native tests, TypeScript and web/native scene builds pass. Embedded responsive boundaries, interaction, reload retention and Home/Devices synchronization verified. No ordinary scrolling at 13 tested phone/tablet/boundary profiles; 320×568 retains accessible internal fallback. Five native-component browser profiles fit. Final fresh browser run has no errors. Signature/staging/scene hash and size (31,997,819 bytes) verified; Apple inventory confirms 1.0.0 (79). No hub, motor or permission expansion. See handoff. |
+| Dashboard shell focus outline | Preview 78 user accepted | User confirmed the reported outline fix works. One CSS rule removes the whole-property-panel outline while retaining the focus-return target and interactive outlines. Ten existing tests, scene TypeScript/builds and package verification passed. No separate physical keyboard skip-link acceptance is claimed. No logic/layout/state/security change. See handoff. |
 | Centered climate layout in embedded Home | Preview 77 installed and launched; physical acceptance pending | CSS-only padding and tiered layout retain a centered 208px ring in embedded Home; middle tier ≤536px, compact only ≤500px. Actual Expo host 440×860 (96px native safe-area allowance) yields iframe 440×723, 560.75px stage, 531px console and 208px ring without overflow; all 14 targets ≥44px. Boundary and other phone/tablet profiles passed. At host 320×568, the existing 103px internal stage overflow remains as an accessible scroll fallback; no page overflow. Eight panel tests, scene TypeScript and web/native builds passed; power/target and More/Back focus passed, zero errors, CSS review no findings. Preview 77 signature/staging/scene hash and size (31,986,079 bytes) passed; production metadata restored. Apple inventory confirms 1.0.0 (77). Physical acceptance remains pending; logic, authorization and persistence unchanged. See handoff. |
 | Climate controller spacing | Preview 76 superseded by Preview 77 centered layout | Responds to the user's crowded orb/buttons and caption report. Web CSS adds 15px regular / 8px compact face-to-key clearance, preserves 44px keys and centers the caption at 9px / 8px; no state or native changes. Eight existing panel tests, scene TypeScript and web/native builds passed. The 11-profile standalone scene App browser sweep passed its target/overlap/overflow/caption and 23→24→23 checks with zero console errors, but missed embedded native chrome; see Preview 77 correction. Signature, staging and packaged scene hash/size (31,985,826 bytes) verified; production metadata restored. Apple inventory confirmed 1.0.0 (76) at that milestone; Preview 77 is now installed. Physical climate acceptance remains pending. Prior 212-test feature evidence is separate. See handoff. |
 | Climate controller | Preview 75 installed and launched; iPhone acceptance pending | Shared controller in Home and native Devices, with advanced controls under More. Relative temperature/fan actions preserve power and existing guarded local persistence; C/F preference is scoped presentation over canonical Celsius. 147 scene + 48 native + 17 host tests (212 distinct), final app TypeScript and scene web/native builds passed. Eleven standalone scene App browser viewports passed, all 14 controls ≥44px with no overlap/overflow, reduced motion, focus, state changes and reload retention verified. Preview signature, identity, staging configuration, climate/TV markers and packaged scene hash/size (31,985,650 bytes; 30.5 MiB) passed; production metadata restored. Existing package reverified, installed and launched at the user's request; Apple inventory confirms 1.0.0 (75). Physical climate acceptance remains pending; simulation-only, no hub or expanded permissions. See handoff. |
@@ -30,12 +31,24 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 ## Most recent adjacent findings
 
-The dashboard shell outline fix is limited to the programmatic focus target;
-interactive focus outlines and stable focus return remain. Existing tests and
-builds pass, but the browser transport closed before new visual checks completed.
-Recenter/idle-tour exit and skip-link → Tab canvas focus need visual confirmation;
-no new screenshot or physical acceptance is claimed. Preview 78 passed package
-verification and installed/launched; Apple inventory confirms 1.0.0 (78). Climate acceptance and existing deferrals remain.
+The blinds controller uses the shared guarded state and existing cache formats,
+including relative actions evaluated against current state. Review caught two
+responsive fit bands; measured 540px/500px thresholds resolve them. RN-web omits
+`accessibilityState.checked`, so the new preset radios also explicitly expose
+`aria-checked`. These fixes do not change room grants or persistence authority.
+The 320×568 host needs an internal scroll fallback; do not claim every viewport
+is scroll-free. Physical blinds and climate acceptance remain pending.
+
+**P2 adjacent accessibility follow-up (source-confirmed pattern, UI check pending):**
+native TV source and climate mode/preset/swing radios use the same
+`accessibilityState.checked`-only pattern that RN-web omitted for blinds. Check
+their web DOM/announcements and add the explicit cross-platform `aria-checked`
+alias with native state retained. This is about the native components rendered
+on web; do not infer broken iPhone VoiceOver behavior. Blinds is fixed and verified.
+
+The user accepted the Preview 78 dashboard shell outline fix. Interactive focus
+outlines and stable focus return remain; a separate physical keyboard skip-link
+test was not reported. Existing deferrals remain.
 
 Preview 76's standalone scene App browser sweep missed the native chrome that
 reduces available height in embedded Home. The centered-layout correction uses
@@ -167,10 +180,11 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
-**Immediate dashboard follow-up:** on installed Preview 78, confirm Recenter/exit
-from the idle tour has no shell ring and
-keyboard skip-link → Tab still reaches the canvas with a visible focus ring.
-New browser/physical verification remains pending after the transport closure.
+**Immediate blinds follow-up:** on Preview 79, verify Home → Primary suite →
+Window blinds → Full controls, then presets/±5%/Open/Close and More/Back. Check the
+same position through Devices and after closing/reopening the app. Physical fit,
+touch feel and retention acceptance remain pending; browser/shared-state tests
+already pass. Dashboard shell issue is accepted by the user.
 
 **Immediate climate follow-up:** collect the centered layout, spacing and caption
 fit on the iPhone running installed Preview 77 with native chrome. Follow with full interaction, matching Home/Devices

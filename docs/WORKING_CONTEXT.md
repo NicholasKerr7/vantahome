@@ -46,7 +46,50 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Dashboard shell focus outline — October 18 / Preview 78 installed
+## Smart blinds controller — October 18 / Preview 79 installed
+
+- User confirmed the dashboard outline fix works and asked for the next device.
+  Added sculpted blinds controllers to embedded Home and native Devices, following
+  TV/climate: shared slat geometry, opening percentage, Open/Close, bounded ±5%
+  actions, Privacy 25% / Half 50% / Daylight 75% presets and More/Back. Home has a
+  primary precision slider; Devices retains it in More. No extra 3D renderer,
+  dependency, independent tilt, fake Stop command or physical motor claim.
+- All commands use the current guarded shared device state. `openPercent` aliases
+  canonical `level`, with coherent open/closed state and preserved unrelated
+  settings. Tests cover rapid taps, limits, native/browser persisted formats,
+  external changes, read-only access, stale revoked callbacks and device switching.
+  The shared action feedback now reports opening position for relative commands.
+- **61 scene tests / seven suites and 49 native tests / four suites**, app/scene
+  TypeScript and scene web/native builds passed. Focused React/accessibility review
+  found responsive threshold gaps; corrected and measured both sides of 540px
+  and 500px stage-content thresholds. Explicit `aria-checked` also fixes RN-web
+  preset announcements while retaining native accessibility state.
+- Actual embedded host 440×860 allows 96px for physical phone safe areas:
+  iframe 440×723, stage content 560.75px, console 532.55px; all nine targets ≥44px.
+  Thirteen phone/tablet/boundary profiles fit with no internal/page overflow.
+  The tiny 320×568 host retains an accessible 109px internal scroll fallback,
+  with no page overflow. Native Devices fits five measured phone/tablet profiles;
+  at 440×860 its viewport/content are both 602px. These are browser measurements,
+  not physical-device acceptance.
+- Browser verified presets, rapid steps, precise slider, Open/Close limits,
+  More/Back focus, full reload retaining 75%, Home → Devices agreement, and
+  native adjustment to 50% returning correctly to Home. Evidence:
+  `work/blinds-{combined-tests,native-tests,native-typecheck,scene-build}.log`,
+  `work/blinds-browser-layouts.json`, `work/blinds-browser-native-layouts.json`,
+  `work/blinds-iphone-{home,devices}.png`. Final fresh-load browser run has zero
+  console errors (`work/blinds-final-browser-errors.json`); fixed decorative SVG
+  DOM attributes as well as preset announcements. Native radio selection now
+  exposes `aria-checked=true` in the actual browser, matching the visual state.
+- Preview 79 passed signature, staging identity, redirects, controller markers,
+  scene SHA-256 and size checks (**31,997,819 bytes**, below 32 MiB). The final
+  native bundle was generated after the last accessibility fixes; production
+  metadata was restored. Installed and launched on the iPhone; Apple inventory
+  confirms **1.0.0 (79)**, now latest installed. Evidence:
+  `work/blinds-preview79-{build.log,package.json,install.json,apps.json,launch.json}`.
+  Physical blinds acceptance remains pending: presets/steps/Open/Close, More/Back,
+  matching Home/Devices positions and retention after closing/reopening.
+
+## Dashboard shell focus outline — October 18 / Preview 78 user accepted
 
 - At the user's request, removed the unintended purple outline around the whole
   property panel with one documented CSS rule:
@@ -62,12 +105,12 @@ defects from ideas or untested risks.
   a bounded reconnect attempt. **No new visual verification or screenshot was
   completed.** Preview 78 built, passed signature/staging/scene hash and exact
   shell-rule verification, and installed and launched on the iPhone. Apple
-  inventory confirms **1.0.0 (78)**, now latest installed. The scene is
+  inventory confirmed **1.0.0 (78)** at that milestone. The scene was
   **31,986,128 bytes**, below 32 MiB; production metadata was restored. Evidence:
   `work/dashboard-shell-focus-preview78-{package,devices,install,apps,launch}.json`.
-  Next: verify Recenter and exit from the idle tour show no shell
-  ring, then use the keyboard skip link → Tab and confirm the canvas still has a
-  focus ring. Physical acceptance and the climate checks below remain pending.
+  User subsequently confirmed “it works” before requesting the next controller;
+  the reported shell-outline issue is accepted. This does not establish a
+  separate physical keyboard skip-link test. Climate checks below remain pending.
 
 ## Centered climate layout in embedded Home — October 18 / Preview 77 installed
 
