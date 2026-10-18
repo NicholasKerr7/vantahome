@@ -98,7 +98,7 @@ Run, failure recovery and Guest room limits. Production remains outside this set
 
 ## Verification boundary
 
-### Guest live acceptance — October 16
+### Guest live acceptance — October 16–17
 
 The current test uses the existing Living room-only Guest without adding grants.
 Default Guest permissions allow viewing devices and light/climate controls, but
@@ -115,11 +115,13 @@ constitute a physical Member-login acceptance test.
 
 1. **Passed by user confirmation:** switch Owner → Guest; no previous Owner answer;
    Home brief uses only permitted Living room simulation devices.
-2. **Pending:** request readings from an unassigned bedroom; expect unavailable
-   context, never invented/private device readings.
-3. **Pending:** request a comfort-only Living room scene; expect no actionable draft
-   or Review scene button when the Guest lacks automation management. A combined
-   door/scene refusal does not isolate this permission.
+2. **Passed by user report, October 17:** the question about primary-bedroom lights
+   returned that the primary bedroom was not listed. This records the reported
+   unavailable-room response; the full provider answer was not independently inspected.
+3. **Passed by user confirmation, October 17:** the comfort-only Living room scene
+   request was unavailable. The user explicitly confirmed no Review scene button,
+   new saved scene or light change. This isolates the Guest's lack of automation
+   management without relying on a door refusal.
 4. **Pending:** mixed Living room dimming/front-door request; no action, actionable
    proposal or claim of successful execution. Ask has no control tools for any role.
 5. **Pending:** return to Owner; full-home context and Set a mood return, without a

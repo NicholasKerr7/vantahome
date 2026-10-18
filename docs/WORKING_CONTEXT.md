@@ -62,11 +62,14 @@ defects from ideas or untested risks.
   Member defect. Current client/server rules grant Member `automation.manage` by
   default; explicit denials and current-session checks still apply. No grants or
   code were changed; an actual Member login was not physically tested.
-  Next live check: a comfort-only Living room scene request to isolate
-  `automation.manage` denial. Unassigned-bedroom, mixed scene/front-door and
-  return-to-Owner results also remain pending. A mixed door refusal alone cannot
-  prove the scene management boundary because safety/access devices are excluded
-  for every role.
+  **Additional physical results, October 17:** the comfort-only Living room scene
+  request was unavailable, with explicit user confirmation of no Review scene
+  button, saved scene or light change. The primary-bedroom lights question returned
+  that the room was not listed, by user report; the full answer was not independently
+  inspected. Remaining live checks: mixed scene/front-door refusal and return to
+  Owner with full-home options restored and Guest answers/drafts cleared. Keep the
+  isolated scene-denial result distinct from the safety-device refusal, which
+  applies to every role.
   Do not infer account identity or output contents from payload-free logs. See the
   compact checklist in HOME_CONCIERGE.md.
 - **Live connection accepted / Preview 71:** the user added API credit privately,
