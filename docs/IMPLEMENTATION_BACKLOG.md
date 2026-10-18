@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 16, 2026. This is the current delivery queue, not a claim that
+Maintained October 17, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -23,6 +23,12 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+The reported missing Member scene-creation option was clarified on October 17:
+the user was still signed in as Guest. Its hidden creation tools are expected;
+Member has scene authority by default, subject to explicit overrides. No defect
+or permission expansion was established. Guest AI scene-denial and private-room
+negative tests remain pending; see the live checklist in HOME_CONCIERGE.md.
 
 The physical Send test exposed insufficient operational diagnostics: all provider
 HTTP failures became the same unavailable outcome. Fixed, bounded categories now

@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-16**. Read this before rediscovering the project.
+Last maintained: **2026-10-17**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -56,11 +56,17 @@ defects from ideas or untested risks.
   `work/concierge-guest-handoff-tests.log` (5/1). No code changes or new deployment.
   **First physical result passed:** user signed in as the existing Guest and
   confirmed Living room-only Home brief with no previous Owner answer. Evidence:
-  `work/concierge-guest-live-acceptance.json`. They are now testing an unassigned
-  bedroom question and a mixed Living-room scene/front-door request. Still pending:
-  those results, a comfort-only scene request to isolate automation.manage denial,
-  and a return-to-Owner check. A mixed door refusal alone cannot prove the scene
-  management boundary because safety/access devices are excluded for every role.
+  `work/concierge-guest-live-acceptance.json`. On October 17 the user clarified
+  that the reported missing Member scene-creation button was observed while still
+  signed in as **Guest**. This is the expected default restriction, not a confirmed
+  Member defect. Current client/server rules grant Member `automation.manage` by
+  default; explicit denials and current-session checks still apply. No grants or
+  code were changed; an actual Member login was not physically tested.
+  Next live check: a comfort-only Living room scene request to isolate
+  `automation.manage` denial. Unassigned-bedroom, mixed scene/front-door and
+  return-to-Owner results also remain pending. A mixed door refusal alone cannot
+  prove the scene management boundary because safety/access devices are excluded
+  for every role.
   Do not infer account identity or output contents from payload-free logs. See the
   compact checklist in HOME_CONCIERGE.md.
 - **Live connection accepted / Preview 71:** the user added API credit privately,

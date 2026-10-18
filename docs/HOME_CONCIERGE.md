@@ -105,6 +105,14 @@ Default Guest permissions allow viewing devices and light/climate controls, but
 not `automation.manage` or general device control. A permitted fan/speaker may be
 described without becoming controllable. Shared property layout is not an AI grant.
 
+**October 17 role clarification:** the user reported no Create/Add scene option,
+then confirmed they were still signed in as Guest, not Member. The absent creation
+tools match Guest's default permissions. Member receives `automation.manage` by
+default in both client and server rules, subject to explicit overrides and current
+access verification. No permission changes or runtime fix were needed. This checks
+the Guest UI restriction; it does not replace the AI scene-denial test below or
+constitute a physical Member-login acceptance test.
+
 1. **Passed by user confirmation:** switch Owner → Guest; no previous Owner answer;
    Home brief uses only permitted Living room simulation devices.
 2. **Pending:** request readings from an unassigned bedroom; expect unavailable
