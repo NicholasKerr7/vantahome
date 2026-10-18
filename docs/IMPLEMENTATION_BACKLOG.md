@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Arrow-free dashboard scenes and quieter Home return | Preview 73 built and verified; installation deferred by user | Full-width momentum scrolling, keyboard/focus recovery, no scene arrows. Initial launch film no longer replays for same-session renderer recovery after the 45-second retention budget; membership shielding remains. 75 scene + 137 native/root tests, eight browser viewport checks. Physical swipe and long-tab-return acceptance pending. See handoff. |
+| Arrow-free dashboard scenes and quieter Home return | Preview 73 installed; physical Home-return checks accepted | Full-width momentum scrolling, keyboard/focus recovery, no scene arrows. Initial launch film no longer replays for same-session renderer recovery after the 45-second retention budget; membership shielding remains. 75 scene + 137 native/root tests, eight browser viewport checks. User confirmed both 5-second and 60-second foreground tab returns without launch replay, with usable navigation; before/after app PID unchanged. Physical swipe feel remains unreported. See handoff. |
 | Vanta home assistant | Preview 71 bounded Owner, Guest and Member checks accepted | Two real staging answers independently verified (HTTP 200, 6.4/12.1 s). Owner scene flow, Guest room/draft restrictions and account-switch cleanup, plus actual Member manual/AI scene creation, explicit Run and local restart retention passed by user report. Broader role/override configurations and quality/cost remain follow-up. No key expansion or new native build was needed. See handoff. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
@@ -31,7 +31,10 @@ reload into the initial arrival film. Preview 73 separates initial admission fro
 later renderer loading, preserves memory release and access shielding, and covers
 error/retry plus stale callbacks across account/home changes. The existing
 background membership policy may still remount navigation; no process crash was
-established. Installation and physical acceptance remain deferred by the user.
+established. Preview 73 is now installed and launched at the user's request. The
+user confirmed 5-second and 60-second foreground tab returns without launch replay,
+with navigation working; before/after inventories showed the same app PID. This
+bounded Home-return acceptance is complete; physical swipe review remains unreported.
 
 The reported missing Member scene-creation option was clarified on October 17:
 the user was still signed in as Guest. Its hidden creation tools are expected;

@@ -79,10 +79,19 @@ defects from ideas or untested risks.
   Preview 73 built and passed signature, Preview URL-scheme, staging-domain, and
   packaged scene hash/size verification (31,952,122 bytes, below 32 MiB); fixture and
   scene-arrow controls are excluded. Package evidence:
-  `work/scene-swipe-preview73-{build.log,package.json}`. Installation remains
-  **deferred by the user's "Install later" instruction**; Preview 71 remains the
-  last confirmed installed build. Physical return-to-Home and swipe acceptance is
-  still pending.
+  `work/scene-swipe-preview73-{build.log,package.json}`.
+- **Preview 73 installed and launched on the iPhone** after the user explicitly
+  requested installation. Apple app inventory confirms **1.0.0 (73)**; the process
+  was present after launch. Receipts: `work/scene-swipe-preview73-{install,apps,
+  launch,process-before,process-after}.json`. This supersedes the earlier
+  installation deferral. The user confirmed both Home → Devices for 5 seconds →
+  Home and the 60-second foreground/screen-awake repeat return without the launch
+  animation, with navigation working. Before/after process inventory independently
+  showed the same app PID, **62534**, supporting process continuity during this
+  bounded test. Evidence: `work/scene-swipe-preview73-acceptance.json`.
+  Return-to-Home physical acceptance is complete by user report; scene-swipe feel
+  remains separately unreported. A cold launch and background membership recheck
+  are different paths; this is not a general crash/performance certification.
 
 ## Responsive dashboard scene cards — October 17 / Preview 72 (superseded by 73)
 
