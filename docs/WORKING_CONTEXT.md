@@ -48,23 +48,25 @@ defects from ideas or untested risks.
 
 ## Vanta home assistant — October 16–17 / Preview 71
 
-- **Actual Member acceptance in progress:** the user chose a separate Member account
-  and provided its email in chat, preserving the existing Guest. They have been
-  asked to send **Test Member** an invitation from the Owner's Household → Invite
-  flow with role **Member** and whole-home room access. The user confirmed it was
-  sent and the email arrived. The user then confirmed the actual **Member** role,
+- **Bounded actual Member acceptance complete by user confirmation:** the user
+  invited a separate **Test Member** account through the Owner's Household flow,
+  preserving the existing Guest. They confirmed email delivery, the **Member** role,
   visible Create scene button, and saving **Member evening** for only the Living
   room Pendant light, On at 30%, with the light remaining off. Manual creation and
   save-without-execution passed by user confirmation. Explicit Run then set it to
   30%; the user confirmed the scene and light state survived fully closing and
-  reopening. Next: AI draft **Member calm**, one light On at 20%, Review → Create
-  while the light stays at 30% → explicit Run to 20%. That AI result is pending.
-  Use HOME_CONCIERGE.md's Member checklist. No account role was changed by the agent.
+  reopening. The user also confirmed AI draft **Member calm**, one light On at 20%:
+  Review → Create left the light at 30%, and explicit Run applied 20%. This completes
+  the planned Member checklist for the default-permission test account. No provider
+  output or device state was independently inspected; broader override combinations
+  and independent security review remain separate. The Guest account was preserved.
+  See HOME_CONCIERGE.md. No account role was changed by the agent.
   Two explicit Member success cases now cover AI draft saving and manual scene
   creation/reopening/explicit Run request; **40 tests / 3 suites** pass. The editor
   and store are real, membership is a fixture and execution is mocked. Evidence:
-  `work/concierge-member-scene-tests.log`. Physical manual creation, Run and local
-  persistence passed by user report; see `work/concierge-member-live-acceptance.json`.
+  `work/concierge-member-scene-tests.log`. Physical manual/AI creation, explicit Run
+  and local restart persistence passed by user report; see
+  `work/concierge-member-live-acceptance.json`.
   App TypeScript and diff checks pass. Existing collection tests emit async
   reduced-motion `act` warnings. Only tests and documentation changed; no rebuild.
 - **Bounded Guest AI acceptance complete by user report:** the existing focused

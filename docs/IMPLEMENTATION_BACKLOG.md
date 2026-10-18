@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Vanta home assistant | Preview 71 Owner flow and bounded Guest checks accepted | Two real staging answers independently verified (HTTP 200, 6.4/12.1 s); user confirmed a one-light 30% scene through Review, Create and explicit Run. Existing Guest room limits, withheld scene drafting and account-switch cleanup checked by user report. Broader role/override configurations and quality/cost remain follow-up. No key expansion or new native build was needed. See handoff. |
+| Vanta home assistant | Preview 71 bounded Owner, Guest and Member checks accepted | Two real staging answers independently verified (HTTP 200, 6.4/12.1 s). Owner scene flow, Guest room/draft restrictions and account-switch cleanup, plus actual Member manual/AI scene creation, explicit Run and local restart retention passed by user report. Broader role/override configurations and quality/cost remain follow-up. No key expansion or new native build was needed. See handoff. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
 | Saved-device editing | Complete in Preview 66 source/staging | Rename, compatible room move and 3D reposition preserve device identity/settings. Revision conflicts and durable retries prevent stale overwrite or resurrection. See handoff for native/physical status. |
@@ -32,7 +32,7 @@ comfort-only scene request produced no review button, saved scene or light chang
 the unassigned-bedroom question reported the room was not listed. The mixed
 scene/door request reported scene drafting unavailable, and returning to Owner
 restored Owner options with Guest answer/draft cleared. This bounded Guest checklist
-is complete by user report; the separate Member checks below remain in progress.
+is complete by user report; the separate Member checklist also passed as recorded below.
 These are user-operated checks, not independent inspection of
 provider answers or mixed-prompt device state; see HOME_CONCIERGE.md.
 
@@ -109,16 +109,17 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
-**Current authorized check:** actual Member scene creation using a separate invited
-account, preserving Guest. Invitation delivery, actual Member role, visible Create
-scene button, manual save without execution, explicit Run at 30% and cold-start
-scene/light-state retention passed by user confirmation. The Member AI draft,
-review, Create and explicit Run flow remains pending. See HOME_CONCIERGE.md.
+**Member scene acceptance completed:** the separately invited account showed Member
+and Create scene, saved a manual scene without running it, applied 30% on explicit
+Run and retained its one-light scene/settings after restart. AI Review → Create
+then saved Member calm without changing the light from 30%, and explicit Run
+applied 20%. All outcomes are by user confirmation; Guest was preserved. See
+HOME_CONCIERGE.md for the bounded evidence and untested override configurations.
 
 Initial live assistant acceptance is complete: real authenticated answers pass,
 one small scene passed Review scene, Create and explicit Run scene on the iPhone,
 and the bounded Guest checklist is complete by user report. Broader role/override
-configurations remain distinct follow-up work; the actual Member test is in progress.
+configurations remain distinct follow-up work beyond the completed Member checklist.
 Record actual quality, latency and cost without treating two requests as a benchmark.
 Do not treat the availability response as a provider health test. Never read or store the key in
 chat, repository, screenshots or evidence. See the handoff for prepared tabs/state.

@@ -9,8 +9,9 @@ verify two HTTP 200 `answered` operations (6.4 and 12.1 seconds), including resp
 validation and the final access check. No key expansion or new native build was
 needed. The user also confirmed a scene for the Living room Pendant light, on at
 30%, through Review scene, Create and explicit Run scene; creation did not execute
-the scene. The bounded Guest live checklist below is now complete by user report;
-broader permission configurations and answer quality/cost remain follow-up.
+the scene. The bounded Guest and actual Member live checklists below are complete
+by user report; broader permission configurations and answer quality/cost remain
+follow-up.
 
 The first iPhone connection check exposed a client guard that rejected the signed-in
 no-hub default. Preview 71 allows that saved simulation while keeping configured
@@ -141,7 +142,7 @@ tests mock the database reader; they are not a substitute for the real Guest
 session or an independent security review. No private credentials are needed in
 chat, no live membership/grant mutation was performed, and no code changed.
 
-### Actual Member live acceptance — started October 17
+### Actual Member live acceptance — completed October 17
 
 The user chose a separate Member test account and supplied its invitation address
 in chat. Preserve the existing Guest account, room grants and deadline. The Owner
@@ -149,6 +150,9 @@ was asked to use account → Household → Invite, name **Test Member**, role **
 then **Review access → Whole-home room access → Invite person**. The user confirmed
 the invitation was sent and its email arrived, then confirmed the new account
 shows Member and exposes Create scene. These are user-operated iPhone results.
+
+**This bounded Member checklist is complete by user confirmation.** It tests the
+separate Member account with its default permissions, not every override or role.
 
 1. **Passed by user confirmation:** the new account explicitly shows **Member**,
    and Scenes exposes **Create scene** (a plus icon on compact screens).
@@ -158,10 +162,13 @@ shows Member and exposes Create scene. These are user-operated iPhone results.
    On at 30%; the scene's one-light settings and the light state survived fully
    closing and reopening the app. This tests local account/device persistence,
    not household scene sync.
-4. **Pending:** Ask drafts **Member calm**, only the Living room Pendant light On
-   at 20%, leaving other devices/settings unchanged. Review promptly, verify the
-   one-light action and Create; the light must stay at 30% until explicit Run sets
-   it to 20%. An explicit `automation.manage` denial must still block management.
+4. **Passed by user confirmation:** Ask drafted **Member calm** for only the Living
+   room Pendant light On at 20%. Review → Create saved without changing the light
+   from 30%; explicit Run then set it to 20%. The user confirmed the complete
+   requested flow. Provider output and device state were not independently inspected.
+
+Explicit `automation.manage` denial remains a required boundary, covered by the
+existing retained-review test; it was not changed or retested on this live Member.
 
 The app has no existing-member role-change UI. Sending an invitation to an active
 Guest does not convert it. A fresh separate Member should inherit scene permission
@@ -188,6 +195,6 @@ name, without reading its value. Those checks alone did not test real answers;
 the later physical acceptance and two `answered` operations do. No answer content
 was inspected or retained during log verification. The one-light physical scene
 review/create/run check also passed by user confirmation. The bounded Guest cases
-above are complete by user report. Broader role/override combinations,
+and Member cases above are complete by user report. Broader role/override combinations,
 dictation/keyboard feel, answer quality/latency/cost,
 Android hardware and deferred physical iPad testing remain distinct acceptance work.
