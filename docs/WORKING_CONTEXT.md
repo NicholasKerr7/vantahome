@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Tactile TV remote — October 17 / Preview 74 ready
+## Tactile TV remote — October 17 / Preview 74 installed
 
 - Replaced the primary paginated TV controls with a code-rendered, sculpted remote
   in both Home hotspot full controls and the native Devices inspector. Its common
@@ -71,10 +71,12 @@ defects from ideas or untested risks.
 - Preview 74 built and passed signature, Preview URL-scheme, staging-domain,
   native/web remote marker and packaged scene hash/size checks: 31,969,107 bytes,
   below 32 MiB. Evidence: `work/tv-remote-preview74-{build.log,package.json}`.
-  Production build metadata was restored. Apple reports the iPhone unavailable
-  (`work/tv-remote-preview74-devices.json`), so installation was not attempted.
-  **Preview 73 is the last confirmed installed build.** Physical remote interaction
-  remains unreviewed; browser checks do not replace iPhone/iPad/Android testing.
+  Production build metadata was restored. At the user's subsequent installation
+  request, the iPhone became available and Preview 74 installed and launched.
+  Apple app inventory confirms **1.0.0 (74)**. Receipts:
+  `work/tv-remote-preview74-{devices,install,apps,launch}.json`. This supersedes the
+  earlier unavailable-device status. Physical remote interaction remains pending;
+  installation and browser checks do not replace iPhone/iPad/Android UI testing.
 
 ## Arrow-free scenes and quieter Home returns — October 17 / Preview 73
 
