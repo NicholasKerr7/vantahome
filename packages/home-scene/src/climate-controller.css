@@ -28,17 +28,19 @@
 .climate-key svg, .climate-mode-key svg { flex-shrink: 0; }
 .climate-key:not(:disabled):active, .climate-mode-key:not(:disabled):active, .climate-preset-key:not(:disabled):active { transform: translateY(2px); box-shadow: inset 0 2px 5px #050109bb, 0 1px 0 #ffffff14; }
 .climate-power[aria-checked='true'] { color: #e2bcff; border-color: #c997ff80; box-shadow: inset 0 1px 1px #ffffff33, 0 0 14px #b46bff35; }
-.climate-dial { grid-area: dial; position: relative; width: 208px; height: 208px; justify-self: center; }
-.climate-dial-face { position: absolute; inset: 23px; border: 1px solid #806c975c; border-radius: 50%; background: radial-gradient(ellipse at 35% 15%, #42334e, #1c1427 48%, #0d0915 80%); box-shadow: inset 1px 2px 4px #ffffff12, inset -2px -5px 8px #0009, 0 4px 8px #0008; }
-.climate-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+/* Reserve space below the orb so the temperature keys never sit on its bevel. */
+.climate-dial { grid-area: dial; position: relative; width: 208px; height: 244px; justify-self: center; }
+.climate-dial-face { position: absolute; inset: 23px 23px 59px; border: 1px solid #806c975c; border-radius: 50%; background: radial-gradient(ellipse at 35% 15%, #42334e, #1c1427 48%, #0d0915 80%); box-shadow: inset 1px 2px 4px #ffffff12, inset -2px -5px 8px #0009, 0 4px 8px #0008; }
+.climate-ring { position: absolute; inset: 0; width: 100%; height: 208px; overflow: visible; }
 .climate-tick { stroke: #6d617b; stroke-width: 1.5; opacity: .6; }
 .climate-tick.is-active { stroke: #e1bdff; opacity: 1; }
 .climate-ring-track, .climate-ring-value { stroke-width: 6; stroke-linecap: round; fill: none; }
 .climate-ring-track { stroke: #493650; }
 .climate-ring-value { transition: stroke-dasharray 240ms ease, opacity 180ms ease; filter: drop-shadow(0 0 3px #b46bff80); }
 .climate-console[data-powered='false'] .climate-ring-value { opacity: .24; filter: none; }
-.climate-reading { position: absolute; inset: 46px 0 auto; display: grid; justify-items: center; gap: 4px; pointer-events: none; }
+.climate-reading { position: absolute; inset: 51px 38px auto; display: grid; justify-items: center; gap: 4px; pointer-events: none; }
 .climate-caption { font-size: 8px; line-height: 1.5; letter-spacing: 1.2px; color: var(--climate-muted); }
+.climate-reading .climate-caption { max-width: 104px; font-size: 9px; line-height: 1.2; letter-spacing: 1px; text-align: center; text-wrap: balance; }
 .climate-reading output { display: flex; align-items: flex-start; font-size: 58px; line-height: 1.05; font-weight: 400; letter-spacing: -3px; font-variant-numeric: tabular-nums; }
 .climate-reading output small { margin-top: 8px; margin-left: 3px; font-size: 18px; letter-spacing: 0; color: #c9badb; }
 .climate-mode-label { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #cfb8e5; }
@@ -70,13 +72,13 @@
 @media (hover: hover) { .climate-key:not(:disabled):hover, .climate-mode-key:not(:disabled):hover, .climate-preset-key:not(:disabled):hover { border-color: #ba91e1aa; } }
 @media (max-width: 360px) { .device-control-sheet.is-climate-controller .device-sheet-content { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)); } }
 /* Short views reflow the modes beside the dial; their touch targets never shrink. */
-@container climate-stage (max-height: 530px) {
+@container climate-stage (max-height: 536px) {
   .climate-console { grid-template-areas: 'top top' 'dial modes' 'air air' 'presets presets'; grid-template-columns: 140px minmax(0, 1fr); gap: 8px; padding: 14px 12px; }
-  .climate-dial { width: 140px; height: 152px; }
+  .climate-dial { width: 140px; height: 176px; }
   .climate-ring { height: 140px; }
-  .climate-dial-face { inset: 16px 16px 28px; }
-  .climate-reading { top: 31px; gap: 2px; }
-  .climate-reading .climate-caption { font-size: 6px; letter-spacing: .7px; }
+  .climate-dial-face { inset: 16px 16px 52px; }
+  .climate-reading { inset: 29px 22px auto; gap: 2px; }
+  .climate-reading .climate-caption { max-width: 88px; font-size: 8px; letter-spacing: .7px; }
   .climate-reading output { font-size: 39px; letter-spacing: -2px; }
   .climate-reading output small { font-size: 12px; margin-top: 5px; }
   .climate-mode-label { font-size: 9px; gap: 3px; }

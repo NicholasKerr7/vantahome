@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 17, 2026. This is the current delivery queue, not a claim that
+Maintained October 18, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Climate controller spacing | Preview 76 installed and launched; physical acceptance pending | Responds to the user's crowded orb/buttons and caption report. Web CSS adds 15px regular / 8px compact face-to-key clearance, preserves 44px keys and centers the caption at 9px / 8px; no state or native changes. Eight existing panel tests, scene TypeScript and web/native builds passed. New 11-profile browser sweep: all 14 controls ≥44px, no overlap/page/stage overflow, caption contained, 23→24→23 interaction passed and zero console errors. Signature, staging and packaged scene hash/size (31,985,826 bytes) verified; production metadata restored. Apple app inventory confirms 1.0.0 (76), now latest installed. Physical spacing and full climate acceptance remain pending. Prior 212-test feature evidence is separate. See handoff. |
 | Climate controller | Preview 75 installed and launched; iPhone acceptance pending | Shared controller in Home and native Devices, with advanced controls under More. Relative temperature/fan actions preserve power and existing guarded local persistence; C/F preference is scoped presentation over canonical Celsius. 147 scene + 48 native + 17 host tests (212 distinct), final app TypeScript and scene web/native builds passed. Eleven actual App browser viewports passed, all 14 controls ≥44px with no overlap/overflow, reduced motion, focus, state changes and reload retention verified. Preview signature, identity, staging configuration, climate/TV markers and packaged scene hash/size (31,985,650 bytes; 30.5 MiB) passed; production metadata restored. Existing package reverified, installed and launched at the user's request; Apple inventory confirms 1.0.0 (75). Physical climate acceptance remains pending; simulation-only, no hub or expanded permissions. See handoff. |
 | Tactile TV remote | Preview 74 installed; planned iPhone acceptance complete | Code-rendered remote in Home hotspot and native Devices controls; More retains advanced pages. Shared bounded Back and relative-volume actions use existing guarded local persistence. 134 scene + 31 native tests, app/scene TypeScript, scene build and ten actual App browser viewports passed; 21 keys ≥44px, no overlap/overflow, reload retention and focus verified. Signature, staging identity and bundled scene checks passed. Apple app inventory confirms 1.0.0 (74). User confirms comfortable Home remote interaction, matching source/volume/paused state through Devices, and retention after fully closing/reopening. No new dependency, renderer, permission or provider control. See handoff. |
 | Arrow-free dashboard scenes and quieter Home return | Preview 73 installed; physical Home-return checks accepted | Full-width momentum scrolling, keyboard/focus recovery, no scene arrows. Initial launch film no longer replays for same-session renderer recovery after the 45-second retention budget; membership shielding remains. 75 scene + 137 native/root tests, eight browser viewport checks. User confirmed both 5-second and 60-second foreground tab returns without launch replay, with usable navigation; before/after app PID unchanged. Physical swipe feel remains unreported. See handoff. |
@@ -26,6 +27,17 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+The user reported crowded orb/buttons and target text on installed Preview 75.
+The October 18 web-only spacing correction preserves the ring size on normal
+phones, separates the temperature keys and improves caption layout. Eleven new
+browser profiles and the existing eight panel tests pass; the focused reviewer
+reported no findings. This does not complete physical fit or climate acceptance.
+Preview 76 passed package verification and installed/launched successfully; Apple
+inventory confirms 1.0.0 (76), now the latest installed build. The next check is
+the corrected controller's physical spacing/fit and interaction on the iPhone;
+state, scope and persistence behavior are unchanged. See the spacing evidence in
+the handoff rather than treating the older 212-test result as a new test run.
 
 Climate temperature and fan keys now reduce current shared state, preserving
 rapid presses and off-state power. Manual fan changes clear conflicting presets;
@@ -145,10 +157,11 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
-**Immediate climate follow-up:** collect Preview 75's iPhone interaction result,
-then check matching Home/Devices settings and close/reopen retention, including
-remembered settings while powered off. Physical climate acceptance is pending;
-iPad testing remains explicitly deferred.
+**Immediate climate follow-up:** collect the corrected orb/button spacing and
+caption fit on the iPhone running installed Preview 76. Follow with full
+interaction, matching Home/Devices settings and close/reopen retention, including
+remembered settings while powered off. Physical spacing and climate-controller
+acceptance remain pending; iPad testing remains explicitly deferred.
 
 **Member scene acceptance completed:** the separately invited account showed Member
 and Create scene, saved a manual scene without running it, applied 30% on explicit

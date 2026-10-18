@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-17**. Read this before rediscovering the project.
+Last maintained: **2026-10-18**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -46,6 +46,36 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Climate spacing correction — October 18 / Preview 76 installed
+
+- The user reported that Preview 75's orb and temperature buttons felt too close,
+  and the target caption was crowded. Adjusted only the embedded web controller's
+  CSS: the regular 208px orb retains its size with 15px of face-to-key clearance;
+  the compact 140px orb has 8px. Temperature keys remain 44px. The target caption
+  is centered on two lines at 9px normally and 8px compact (previously 6px compact).
+  A 536px stage-height threshold keeps the full ring on normal phone layouts.
+  Device state, native controller styling, permissions and persistence are unchanged.
+- This correction passed the **8 existing ClimateControlPanel tests**, scene
+  TypeScript, and scene web/native builds. A focused read-only review reported no
+  findings. The new actual App browser sweep covered **11 viewport profiles** from
+  320×568 to 1440×900: all 14 controls remained at least 44px, with no overlap,
+  page/stage overflow or caption escape from the orb. Temperature increase
+  **23 → 24** and decrease **24 → 23** passed, with zero console errors. This is
+  new spacing evidence, separate from the original 212-test feature verification
+  below. Evidence: `work/climate-spacing-{viewports.json,browser-acceptance.json,
+  phone.png,tests.log,scene-build.log}`.
+- **Preview 76 built, passed signature/staging/packaged scene hash verification,
+  and installed and launched on the iPhone.** The packaged native scene is
+  **31,985,826 bytes**, below 32 MiB; production build metadata was restored.
+  Apple app inventory confirms **1.0.0 (76)**, now the latest installed build.
+  Evidence: `work/climate-spacing-preview76-build.log` and
+  `work/climate-spacing-preview76-{package,devices,install,apps,launch}.json`.
+  Physical spacing/fit and full climate-controller acceptance remain pending.
+  Acceptance status: `work/climate-spacing-preview76-acceptance.json`.
+  Next: collect the iPhone spacing/interaction result before Home/Devices and
+  close/reopen checks. Simulation-only staging scope, reduced-motion behavior
+  and the iPad physical testing deferral remain in force.
+
 ## Climate controller — October 17 / Preview 75 installed, iPhone acceptance pending
 
 - Added the climate controller to Home full controls and the native Devices
@@ -87,7 +117,8 @@ defects from ideas or untested risks.
   Physical climate acceptance remains pending: the user has been asked to check
   Home → Primary suite → Air conditioning → Full controls for comfortable fit,
   power, repeated temperature/fan presses, modes, presets, swing and More/Back.
-  Next: collect that result, then verify matching Home/Devices settings and
+  The October 18 spacing report and installed correction are recorded above.
+  Continue physical checks on Preview 76, then verify matching Home/Devices settings and
   close/reopen retention, including remembered settings while powered off. iPad
   physical testing remains deferred. Simulation-only staging scope and the
   no-hub boundary remain unchanged; production is unchanged.
