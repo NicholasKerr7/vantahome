@@ -1,5 +1,5 @@
 import { canExploreInteriorLayout, canNavigateSceneRoom, canViewSceneRoom, canViewSceneDevice } from './sceneAccess';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { BedDouble, Clock3, ChevronDown, ChevronLeft, ChevronRight, Cloud, CloudLightning, CloudOff, CloudRain, CloudSun, Grid2X2, Home, Layers3, Moon, Settings2, Snowflake, Sofa, Sparkles, Sun, Utensils, type LucideIcon } from 'lucide-react';
 import { DEVICES, ROOMS, getRoom, type RoomId } from './data';
 import { useSceneCatalog } from './useSceneCatalog';
@@ -99,25 +99,25 @@ export function DashboardRoomBar({ onRooms }: { onRooms: () => void }) {
   return <div className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon /></CinematicArtwork><span className="dashboard-room-choice"><small>EXPLORE YOUR HOME</small><span>{room.name}</span></span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
 }
 
-/** Fit saved scene shortcuts to the available row, retaining swipe and arrow navigation. */
+/** Fit saved scene shortcuts to a clean scrolling row with native touch and keyboard browsing. */
 export function DashboardScenes() {
   const { catalog, status, runScene, retry } = useSceneCatalog();
-  const { rowRef, page, pageCount, pageSize, goToPage, onFocusCapture } = useSceneCardPage(catalog.scenes);
+  const { rowRef, page, pageCount, pageSize, goToPage, onFocusCapture, onBlurCapture, onKeyDown } = useSceneCardPage(catalog.scenes);
+  const keyboardHintId = useId();
   const paged = pageCount > 1;
   const icons = [Sun, Sparkles, Moon, Home];
-  return <section ref={rowRef} onFocusCapture={onFocusCapture} className="dashboard-scenes" aria-label="Home scenes">
+  return <section ref={rowRef} onFocusCapture={onFocusCapture} onBlurCapture={onBlurCapture} onKeyDown={onKeyDown} tabIndex={-1} className="dashboard-scenes" aria-label="Home scenes">
     <div className="dashboard-scenes-label"><Sparkles size={16} /><span>Scenes</span></div>
-    {paged && <button className="dashboard-scene-page" aria-label="Previous scenes" disabled={page === 0} onClick={() => goToPage(page - 1)}><ChevronLeft size={17} /></button>}
     {catalog.scenes.length > 0 && <HorizontalCardScroller className="preset-grid" page={page} count={pageCount} pageSize={pageSize} columns={pageSize} onChange={goToPage} label="Scene cards" resetKey={`${pageSize}:${catalog.scenes.map((scene) => scene.id).join('|')}`}>
       {catalog.scenes.map((scene) => {
         const presetIndex = MODEL_SCENE_PRESETS.findIndex((preset) => preset.sceneId === scene.id);
         const Icon = icons[presetIndex] ?? Sparkles;
         const artwork = sceneArtwork({ name: scene.name, modelPreset: MODEL_SCENE_PRESETS[presetIndex]?.id });
-        return <button key={scene.id} data-scene-id={scene.id} className="dashboard-preset has-cinematic-artwork" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id}
+        return <button key={scene.id} data-scene-id={scene.id} className="dashboard-preset has-cinematic-artwork" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id} aria-describedby={paged ? keyboardHintId : undefined}
           onClick={() => runScene(scene.id)}><CinematicArtwork artwork={artwork} /><Icon size={17} strokeWidth={1.5} aria-hidden="true" /><span>{scene.name}</span></button>;
       })}
     </HorizontalCardScroller>}
-    {paged && <button className="dashboard-scene-page" aria-label="Next scenes" disabled={page === pageCount - 1} onClick={() => goToPage(page + 1)}><ChevronRight size={17} /></button>}
+    {paged && <span className="sr-only" id={keyboardHintId}>Use Left and Right arrow keys to browse scenes. Home and End move to the first and last scene.</span>}
     {paged && <span className="sr-only" role="status">Scene page {page + 1} of {pageCount}</span>}
     {!catalog.scenes.length && <div className="dashboard-scenes-empty" role="status">{status === 'loading' ? 'Loading scenes…' : status === 'error' ? <button onClick={retry}>Retry scenes</button> : 'No saved scenes'}</div>}
   </section>;

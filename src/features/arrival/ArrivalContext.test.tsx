@@ -35,6 +35,49 @@ test('waits for an actual renderer publication instead of manufacturing readines
   expect(result.current.dismissed).toBe(false);
   act(() => result.current.showControls());
   expect(result.current.scene).toBeNull();
+  expect(result.current.initialArrivalComplete).toBe(false);
+});
+
+test.each(['ready', 'available'] as const)('a current %s scene completes only this scope and later reloads stay local', (status) => {
+  const { result } = renderHook(() => useArrivalCoordinator('owner:home'));
+  const first = result.current.context.register();
+  act(() => first.publish({ status, openControls: jest.fn() }));
+  expect(result.current.initialArrivalComplete).toBe(true);
+  act(() => first.release());
+  expect(result.current.scene).toBeNull();
+  const replacement = result.current.context.register();
+  act(() => replacement.publish({ status: 'loading', openControls: jest.fn() }));
+  expect(result.current.scene?.status).toBe('loading');
+  expect(result.current.initialArrivalComplete).toBe(true);
+});
+
+test('an initial error or a replaced renderer cannot complete the introduction', () => {
+  const { result } = renderHook(() => useArrivalCoordinator('owner:home'));
+  const previous = result.current.context.register();
+  const current = result.current.context.register();
+  act(() => {
+    previous.publish({ status: 'ready', openControls: jest.fn() });
+    current.publish({ status: 'error', openControls: jest.fn() });
+  });
+  expect(result.current.initialArrivalComplete).toBe(false);
+});
+
+test.each(['guest:home:1', 'owner:other-home:1', 'owner:home:2'])('changing scope to %s requires a fresh arrival, including when returning to the earlier scope', (scope) => {
+  const { result, rerender } = renderHook<Coordinator, { currentScope: string }>(({ currentScope }) => useArrivalCoordinator(currentScope), {
+    initialProps: { currentScope: 'owner:home:1' },
+  });
+  const previous = result.current.context.register();
+  act(() => previous.publish({ status: 'ready', openControls: jest.fn() }));
+  expect(result.current.initialArrivalComplete).toBe(true);
+  rerender({ currentScope: scope });
+  expect(result.current.initialArrivalComplete).toBe(false);
+  act(() => previous.publish({ status: 'ready', openControls: jest.fn() }));
+  expect(result.current.initialArrivalComplete).toBe(false);
+  rerender({ currentScope: 'owner:home:1' });
+  expect(result.current.initialArrivalComplete).toBe(false);
+  act(() => previous.publish({ status: 'ready', openControls: jest.fn() }));
+  expect(result.current.scene).toBeNull();
+  expect(result.current.initialArrivalComplete).toBe(false);
 });
 
 test('ignores a replaced renderer’s late publication and release', () => {
@@ -172,5 +215,6 @@ test('StrictMode remount cleanup cannot release the replacement renderer lease',
   </React.StrictMode>);
   expect(current.scene?.status).toBe('ready');
   expect(current.scene?.scope).toBe('owner:home');
+  expect(current.initialArrivalComplete).toBe(true);
   screen.unmount();
 });

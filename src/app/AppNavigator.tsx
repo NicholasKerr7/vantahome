@@ -533,7 +533,7 @@ export default function AppNavigator() {
     scope: navigationScope,
     guestExpiresAt,
   });
-  const awaitingScene = homeReady && homeRouteVisible && !arrival.dismissed
+  const awaitingScene = homeReady && homeRouteVisible && !arrival.initialArrivalComplete && !arrival.dismissed
     && (!arrival.scene || arrival.scene.status === 'loading');
   const arrivalStatus = accountSecurity.isOpen ? 'inactive' : !authReady
     ? startupError && !startupRetrying ? 'unavailable' : 'preparing'

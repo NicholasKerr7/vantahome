@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Responsive dashboard scene shortcuts | Preview 72; installation deferred by user | Removed the >4-scene CSS collapse; measured 1–4 cards with horizontal scrolling and retained arrows. Eight browser viewport checks, 70 focused tests, focus/resize/reorder recovery and reduced motion verified. No new physical acceptance. See handoff. |
+| Arrow-free dashboard scenes and quieter Home return | Preview 73 built and verified; installation deferred by user | Full-width momentum scrolling, keyboard/focus recovery, no scene arrows. Initial launch film no longer replays for same-session renderer recovery after the 45-second retention budget; membership shielding remains. 75 scene + 137 native/root tests, eight browser viewport checks. Physical swipe and long-tab-return acceptance pending. See handoff. |
 | Vanta home assistant | Preview 71 bounded Owner, Guest and Member checks accepted | Two real staging answers independently verified (HTTP 200, 6.4/12.1 s). Owner scene flow, Guest room/draft restrictions and account-switch cleanup, plus actual Member manual/AI scene creation, explicit Run and local restart retention passed by user report. Broader role/override configurations and quality/cost remain follow-up. No key expansion or new native build was needed. See handoff. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |
@@ -24,6 +24,14 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+The reported Home "restart" was clarified as the launch animation followed by
+Home. The confirmed source cause was renderer retention expiry feeding an ordinary
+reload into the initial arrival film. Preview 73 separates initial admission from
+later renderer loading, preserves memory release and access shielding, and covers
+error/retry plus stale callbacks across account/home changes. The existing
+background membership policy may still remount navigation; no process crash was
+established. Installation and physical acceptance remain deferred by the user.
 
 The reported missing Member scene-creation option was clarified on October 17:
 the user was still signed in as Guest. Its hidden creation tools are expected;

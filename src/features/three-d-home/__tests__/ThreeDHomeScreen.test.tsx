@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrivalContext } from '../../arrival/ArrivalContext';
+import { ArrivalContext, useArrivalCoordinator } from '../../arrival/ArrivalContext';
 import { AppState } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import ThreeDHomeScreen from '../../../screens/ThreeDHomeScreen';
@@ -162,6 +162,50 @@ test('preserves a paused scene during short background visits and releases graph
   expect(remove).toHaveBeenCalledTimes(3);
 });
 
+test('a long tab visit reloads inside Home after initial arrival and ignores the released renderer', () => {
+  let arrival!: ReturnType<typeof useArrivalCoordinator>;
+  /** Exercise the real coordinator and screen retention together, without starting native graphics. */
+  function HomeArrivalHarness() {
+    arrival = useArrivalCoordinator('owner:home:1');
+    return <ArrivalContext.Provider value={arrival.context}><ThreeDHomeScreen /></ArrivalContext.Provider>;
+  }
+  const screen = render(<HomeArrivalHarness />);
+  expect(arrival.initialArrivalComplete).toBe(false);
+  expect(arrival.scene?.status).toBe('loading');
+  expect(screen.queryByTestId('property-arrival')).toBeNull();
+  act(() => mockStatus('ready'));
+  expect(arrival.initialArrivalComplete).toBe(true);
+  const firstSurface = screen.getByTestId('scene-surface');
+  const releasedProps = mockSceneProps;
+
+  mockFocused = false;
+  screen.rerender(<HomeArrivalHarness />);
+  expect(screen.getByTestId('scene-surface')).toBe(firstSurface);
+  act(() => jest.advanceTimersByTime(SCENE_RETENTION_MS + 1));
+  expect(screen.queryByTestId('scene-surface')).toBeNull();
+  expect(arrival.scene).toBeNull();
+
+  mockFocused = true;
+  screen.rerender(<HomeArrivalHarness />);
+  expect(arrival.initialArrivalComplete).toBe(true);
+  expect(arrival.scene?.status).toBe('loading');
+  expect(screen.getByTestId('property-arrival')).toBeTruthy();
+  expect(screen.getByTestId('scene-surface')).not.toBe(firstSurface);
+  fireEvent.press(screen.getByLabelText('Scenes'));
+  expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'NAVIGATE', payload: { name: 'Main', params: { screen: 'Scenes', pop: true }, pop: true } }));
+
+  act(() => releasedProps.onStatus('ready'));
+  expect(arrival.scene?.status).toBe('loading');
+  expect(screen.getByTestId('property-arrival')).toBeTruthy();
+  act(() => mockStatus('error'));
+  expect(screen.getByText('The 3D view couldn’t load')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Retry 3D Home'));
+  expect(arrival.initialArrivalComplete).toBe(true);
+  expect(screen.getByTestId('property-arrival')).toBeTruthy();
+  act(() => mockStatus('ready'));
+  expect(screen.queryByTestId('property-arrival')).toBeNull();
+});
+
 test('a same-account recheck retains paused graphics and closes the native menu until fresh verification', () => {
   const original = useHomeStore.getState();
   const verified = { ...original, accountUserId: 'warm-person', authenticatedUserId: 'warm-person', accountHomeId: 'warm-home',
@@ -188,7 +232,7 @@ test('a same-account recheck retains paused graphics and closes the native menu 
 
 test('cache failure releases arrival for retry without unmounting or timing out the paused renderer', () => {
   const publish = jest.fn();
-  const context = { register: () => ({ publish, release: jest.fn() }) };
+  const context = { register: () => ({ publish, release: jest.fn() }), initialArrivalComplete: false };
   const screen = render(<ArrivalContext.Provider value={context}><ThreeDHomeScreen /></ArrivalContext.Provider>);
   const surface = screen.getByTestId('scene-surface');
   act(() => { mockSceneProps.onSaveStatus?.('load-error'); });

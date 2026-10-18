@@ -222,6 +222,7 @@ describe("navigation session boundaries", () => {
   let deliverLink: (event: { url: string }) => void;
   beforeEach(async () => {
     mockSupabaseAvailable = true;
+    mockSceneReady = true;
     AppState.currentState = 'active';
     jest.spyOn(AppState, 'addEventListener').mockImplementation((_, callback) => {
       changeAppState = callback;
@@ -301,6 +302,39 @@ describe("navigation session boundaries", () => {
     mockSceneReady = true;
     screen.rerender(<AppNavigator />);
     await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+  });
+
+  test('returning to a previously opened Home keeps navigation usable during renderer reload but still shields access rechecks', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    act(() => mockNavigationChanged({ index: 0, routes: [{ name: 'Main', state: { routes: [{ name: 'Scenes' }] } }] }));
+    mockSceneReady = false;
+    screen.rerender(<AppNavigator />);
+    act(() => mockNavigationChanged({ index: 0, routes: [{ name: 'Main', state: { routes: [{ name: 'Home' }] } }] }));
+    expect(screen.queryByTestId('cinematic-rendering')).toBeNull();
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+
+    act(() => invalidateHomeMembership('checking'));
+    expect(screen.getByText('Verifying your home…')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
+    expect(mockFeedbackEnabled).toHaveBeenLastCalledWith(false);
+    act(() => invalidateHomeMembership('failed'));
+    expect(screen.getByText('Unable to verify home access.')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main', { includeHiddenElements: true })).toBeNull();
+    act(() => applyMembershipSnapshot(membershipFor('alice'), useHomeStore.getState().sessionEpoch));
+    expect(screen.queryByTestId('cinematic-rendering')).toBeNull();
+    expect(screen.getByTestId('registered-route-Main')).toBeTruthy();
+  });
+
+  test.each(['home', 'session'] as const)('changing the %s scope requires the initial renderer arrival again', async (scope) => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-Main')).toBeTruthy());
+    mockSceneReady = false;
+    act(() => { useHomeStore.setState(scope === 'home'
+      ? { accountHomeId: 'alice-other-home' }
+      : { sessionEpoch: useHomeStore.getState().sessionEpoch + 1 }); });
+    expect(screen.getByTestId('cinematic-rendering')).toBeTruthy();
+    expect(screen.queryByTestId('registered-route-Main')).toBeNull();
   });
 
   test('restoring the same account keeps its saved display name and profile preferences', async () => {

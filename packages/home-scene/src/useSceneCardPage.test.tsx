@@ -28,7 +28,7 @@ class TestResizeObserver {
 /** Keep keyed cards mounted while exposing which identities the hook makes reachable. */
 function SceneRow({ items }: { items: readonly { id: string }[] }) {
   pagination = useSceneCardPage(items);
-  return <section ref={pagination.rowRef} className="dashboard-scenes">
+  return <section ref={pagination.rowRef} onFocusCapture={pagination.onFocusCapture} onBlurCapture={pagination.onBlurCapture} onKeyDown={pagination.onKeyDown} tabIndex={-1} className="dashboard-scenes">
     <span className="dashboard-scenes-label">Scenes</span>
     {items.map((scene, index) => <button key={scene.id} data-scene-id={scene.id}
       data-visible={Math.floor(index / pagination.pageSize) === pagination.page}>{scene.id}</button>)}
@@ -69,7 +69,7 @@ beforeEach(() => {
     visibility: 'visible',
     /** Supply the same layout tokens used by the dashboard stylesheet. */
     getPropertyValue(property: string) {
-      return ({ '--scene-card-min-width': '110px', '--scene-card-gap': '6px', '--scene-page-width': '44px' } as Record<string, string>)[property] ?? '';
+      return ({ '--scene-card-min-width': '144px', '--scene-card-gap': '6px' } as Record<string, string>)[property] ?? '';
     },
   }) as CSSStyleDeclaration);
   container = document.createElement('div');
@@ -86,9 +86,9 @@ afterEach(() => {
 
 describe('responsive dashboard scene pages', () => {
   it.each([
-    [296, 0, 1, 1], [296, 1, 1, 1], [296, 4, 1, 4], [296, 5, 1, 5], [296, 7, 1, 7],
+    [280, 7, 1, 7], [296, 0, 1, 1], [296, 1, 1, 1], [296, 4, 2, 2], [296, 5, 2, 3], [296, 7, 2, 4],
     [366, 4, 2, 2], [366, 5, 2, 3], [366, 7, 2, 4],
-    [458, 4, 4, 1], [458, 5, 3, 2], [458, 7, 3, 3], [744, 7, 4, 2],
+    [458, 4, 3, 2], [458, 5, 3, 2], [458, 7, 3, 3], [744, 7, 4, 2],
   ])('fits %s pixels and %s scenes into %s-card pages', (width, total, capacity, pages) => {
     rowWidth = width;
     renderScenes(scenes.slice(0, total));
@@ -99,17 +99,17 @@ describe('responsive dashboard scene pages', () => {
   });
 
   it('reserves only a visible label and responds when that label changes width', () => {
-    rowWidth = 560;
+    rowWidth = 640;
     renderScenes();
     expect(pagination.pageSize).toBe(4);
     labelVisible = true;
-    resizeRow(560);
+    resizeRow(640);
     expect(pagination.pageSize).toBe(3);
-    labelWidth = 150;
-    resizeRow(560);
+    labelWidth = 260;
+    resizeRow(640);
     expect(pagination.pageSize).toBe(2);
     labelVisible = false;
-    resizeRow(560);
+    resizeRow(640);
     expect(pagination.pageSize).toBe(4);
     expect(observed).toHaveBeenCalledWith(container.querySelector('section'));
     expect(observed).toHaveBeenCalledWith(container.querySelector('.dashboard-scenes-label'));
@@ -123,7 +123,7 @@ describe('responsive dashboard scene pages', () => {
     resizeRow(744);
     expect(pagination.page).toBe(1);
     expect(visibleIds()).toContain('scene-6');
-    resizeRow(296);
+    resizeRow(280);
     expect(pagination.page).toBe(6);
     expect(visibleIds()).toEqual(['scene-6']);
     act(() => pagination.goToPage(-1));
@@ -161,7 +161,7 @@ describe('responsive dashboard scene pages', () => {
     renderScenes();
     const focused = container.querySelector<HTMLButtonElement>('[data-scene-id="scene-3"]')!;
     act(() => focused.focus());
-    resizeRow(296);
+    resizeRow(280);
     expect(visibleIds()).toEqual(['scene-3']);
     expect(document.activeElement).toBe(focused);
     const reordered = [scenes[3], ...scenes.filter((scene) => scene.id !== 'scene-3')];
@@ -182,7 +182,7 @@ describe('responsive dashboard scene pages', () => {
     resizeRow(0);
     expect(pagination.pageSize).toBe(2);
     expect(visibleIds()).toEqual(['scene-4', 'scene-5']);
-    resizeRow(296);
+    resizeRow(280);
     expect(visibleIds()).toEqual(['scene-4']);
     outside.remove();
     act(() => root.render(null));

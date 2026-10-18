@@ -184,6 +184,7 @@ function dashboardLayout(width, height, expectedLayout) {
   controlsFit('.floor-switch button', `${label} floor navigation`);
   controlsFit('.view-controls button', `${label} view modes`);
   controlsFit('.preset-grid .card-scroll-item:not([inert]) button', `${label} current scene presets`);
+  check(evaluate('!document.querySelector(".dashboard-scenes button[aria-label=\\"Previous scenes\\"], .dashboard-scenes button[aria-label=\\"Next scenes\\"]")'), `${label}: scene browsing uses the scrolling surface without arrow controls`);
   check(evaluate('[...document.querySelectorAll(".view-controls button")].filter((button) => button.checkVisibility()).length === 3'), `${label}: all three view modes remain available`);
   const scenePage = evaluate(`(() => {
     const grid = document.querySelector('.preset-grid');

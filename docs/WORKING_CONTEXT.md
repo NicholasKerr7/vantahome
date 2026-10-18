@@ -46,7 +46,45 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Responsive dashboard scene cards — October 17 / Preview 72
+## Arrow-free scenes and quieter Home returns — October 17 / Preview 73
+
+- Removed only the dashboard scene arrows. The cards use the full row with native
+  horizontal momentum, drag support and contained overscroll. Phones show two
+  cards at 145–200px in the tested widths; tablets show up to four. Keyboard users
+  can browse with Left/Right/Home/End; Tab and explicit activation remain native.
+  Reduced motion, focused-card resize/reorder/deletion recovery, and protection
+  against a swipe's trailing click are covered. Other device/room arrows remain.
+- The user clarified that the apparent Home restart is the VantaHome launch film
+  followed by Home, not a reported process crash. A confirmed source path matched:
+  after 45 seconds away, graphics retention releases the renderer; its next loading
+  publication incorrectly triggered the root launch film. Initial arrival now
+  completes once per account/session/home admission. Subsequent renderer reloads
+  show the quiet local property placeholder with navigation available.
+- Both retention budgets remain 45 seconds. Membership checking/failure still
+  shields the home independently; a new account/session/home resets initial
+  arrival. Generation-scoped leases reject stale callbacks even across A → B → A.
+  Error/retry and rendering-readiness behavior remain intact. Background membership
+  rechecks can still remount navigation under the existing privacy policy; this
+  change does not diagnose every possible process termination or route reset.
+- Verification: **75 scene tests / 5 suites**, **137 native/root lifecycle tests /
+  6 suites**, app/scene TypeScript, web/offline scene build and independent read-only
+  lifecycle review. Browser checks passed eight phone/tablet/desktop-preview sizes,
+  swipe, focus, Home/End, reduced motion and one explicit click. No page overflow or
+  remaining scene arrows; no gesture-triggered run. New final-load checks had no
+  console errors; earlier development hot-refresh errors are not a crash diagnosis.
+- Evidence: `work/scene-swipe-only-{focused-tests.log,viewports.json}`,
+  `work/home-arrival-{focused-tests,typecheck}.log`,
+  `work/scene-swipe-home-return-build.log`, and `work/scene-swipe-*.png`.
+  The synthetic catalog fixture was removed from the repo after browser checks.
+  Preview 73 built and passed signature, Preview URL-scheme, staging-domain, and
+  packaged scene hash/size verification (31,952,122 bytes, below 32 MiB); fixture and
+  scene-arrow controls are excluded. Package evidence:
+  `work/scene-swipe-preview73-{build.log,package.json}`. Installation remains
+  **deferred by the user's "Install later" instruction**; Preview 71 remains the
+  last confirmed installed build. Physical return-to-Home and swipe acceptance is
+  still pending.
+
+## Responsive dashboard scene cards — October 17 / Preview 72 (superseded by 73)
 
 - Fixed the reported mobile scene-card collapse. With more than four saved scenes,
   a later legacy `has-scene-pages` CSS rule overrode the horizontal scroller's grid:
