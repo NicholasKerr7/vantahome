@@ -46,11 +46,12 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Vanta home assistant — October 16 / Preview 70
+## Vanta home assistant — October 16–17 / Preview 71
 
-- **Guest AI acceptance in progress:** current focused checks pass **134 tests /
-  8 suites**, including room-limited context, layout-sharing isolation, withheld
-  scene authority, Guest expiry, account switches, late responses, one-use review
+- **Bounded Guest AI acceptance complete by user report:** the existing focused
+  automated checks passed **134 tests / 8 suites**, including room-limited context,
+  layout-sharing isolation, withheld scene authority, Guest expiry, account switches,
+  late responses, one-use review
   tokens, server reauthorization and forbidden proposals. Evidence:
   `work/concierge-guest-restrictions-tests.log` (129/7) and
   `work/concierge-guest-handoff-tests.log` (5/1). No code changes or new deployment.
@@ -66,10 +67,14 @@ defects from ideas or untested risks.
   request was unavailable, with explicit user confirmation of no Review scene
   button, saved scene or light change. The primary-bedroom lights question returned
   that the room was not listed, by user report; the full answer was not independently
-  inspected. Remaining live checks: mixed scene/front-door refusal and return to
-  Owner with full-home options restored and Guest answers/drafts cleared. Keep the
-  isolated scene-denial result distinct from the safety-device refusal, which
-  applies to every role.
+  inspected. The mixed scene/front-door request subsequently returned scene
+  drafting unavailable, by user report. Returning to Owner restored Owner options
+  and cleared the Guest answer and draft. This completes the planned bounded live
+  checklist for the existing Guest; mixed-prompt output/device state were not
+  independently inspected. Keep the isolated scene-denial result distinct from
+  the safety-device exclusion enforced for every role. Other role/override
+  configurations, broader answer quality/cost and independent review remain
+  outside this acceptance. No app rebuild, grant change or new deployment needed.
   Do not infer account identity or output contents from payload-free logs. See the
   compact checklist in HOME_CONCIERGE.md.
 - **Live connection accepted / Preview 71:** the user added API credit privately,
@@ -86,8 +91,9 @@ defects from ideas or untested risks.
   evening" targets only the Living room Pendant light, on at 30%, leaving other
   devices/settings unchanged. Creating does not execute; explicit Run applies the
   requested setting. Initial live answer and scene-flow acceptance are complete.
-  Guest/scoped negative live cases remain follow-up. The two timings are observations,
-  not a performance benchmark; broad quality/cost remains unmeasured.
+  The bounded Guest live checklist was subsequently completed as recorded above.
+  The two timings are observations, not a performance benchmark; broader role
+  configurations and quality/cost remain unmeasured.
 - **Live Send diagnosis:** the user confirms Preview 71 now shows Home brief.
   Availability succeeds (`200 availability_checked`), but Send fails. Staging
   `home-concierge` v3 added bounded provider error classification: fixed categories

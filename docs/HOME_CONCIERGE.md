@@ -9,7 +9,8 @@ verify two HTTP 200 `answered` operations (6.4 and 12.1 seconds), including resp
 validation and the final access check. No key expansion or new native build was
 needed. The user also confirmed a scene for the Living room Pendant light, on at
 30%, through Review scene, Create and explicit Run scene; creation did not execute
-the scene. Guest/negative live cases and broader quality/cost remain follow-up.
+the scene. The bounded Guest live checklist below is now complete by user report;
+broader permission configurations and answer quality/cost remain follow-up.
 
 The first iPhone connection check exposed a client guard that rejected the signed-in
 no-hub default. Preview 71 allows that saved simulation while keeping configured
@@ -105,6 +106,9 @@ Default Guest permissions allow viewing devices and light/climate controls, but
 not `automation.manage` or general device control. A permitted fan/speaker may be
 described without becoming controllable. Shared property layout is not an AI grant.
 
+**This bounded live checklist is complete by user report.** It covers the tested
+Guest configuration in Preview 71, not every role, grant combination or model answer.
+
 **October 17 role clarification:** the user reported no Create/Add scene option,
 then confirmed they were still signed in as Guest, not Member. The absent creation
 tools match Guest's default permissions. Member receives `automation.manage` by
@@ -122,10 +126,13 @@ constitute a physical Member-login acceptance test.
    request was unavailable. The user explicitly confirmed no Review scene button,
    new saved scene or light change. This isolates the Guest's lack of automation
    management without relying on a door refusal.
-4. **Pending:** mixed Living room dimming/front-door request; no action, actionable
-   proposal or claim of successful execution. Ask has no control tools for any role.
-5. **Pending:** return to Owner; full-home context and Set a mood return, without a
-   retained Guest answer/draft. No model request is required for this final check.
+4. **Passed by user report, October 17:** the mixed Living room dimming/front-door
+   request returned that scene drafting was unavailable. Full output and device
+   state for this prompt were not independently inspected. Ask has no control
+   tools for any role; this report is not a physical-door execution test.
+5. **Passed by user confirmation, October 17:** returning to Owner restored the
+   Owner options and cleared the Guest answer and draft. No additional model
+   request was needed for this account-switch check.
 
 The focused automated run passed 134 tests across eight suites. These include
 client projection, current grants, shared-layout isolation, lifecycle/expiry,
@@ -146,6 +153,7 @@ for an unauthenticated request. The later activation check verified only the sec
 name, without reading its value. Those checks alone did not test real answers;
 the later physical acceptance and two `answered` operations do. No answer content
 was inspected or retained during log verification. The one-light physical scene
-review/create/run check also passed by user confirmation. Guest/negative live cases,
-dictation/keyboard feel, broader answer quality/latency/cost,
+review/create/run check also passed by user confirmation. The bounded Guest cases
+above are complete by user report. Broader role/override combinations,
+dictation/keyboard feel, answer quality/latency/cost,
 Android hardware and deferred physical iPad testing remain distinct acceptance work.
