@@ -48,7 +48,7 @@
 .dashboard-room-list.horizontal-card-scroller { grid-template-columns: none; grid-template-rows: repeat(var(--card-scroll-rows), minmax(0, 1fr)); grid-auto-rows: auto; gap: var(--card-scroll-gap); }
 .dashboard-library.card-library .library-card-grid.horizontal-card-scroller { --card-scroll-gap: 12px; }
 .dashboard-room-list.horizontal-card-scroller { --card-scroll-gap: 5px; }
-.dashboard-scenes .preset-grid.horizontal-card-scroller { --card-scroll-gap: 6px; }
+.dashboard-scenes .preset-grid.horizontal-card-scroller { --card-scroll-gap: var(--scene-card-gap); }
 .property-assigned-rooms .assigned-room-cards { flex: 0 0 192px; }
 .property-assigned-rooms .assigned-room-cards[data-page-size='1'] { flex-basis: 56px; }
 .property-assigned-rooms .assigned-room-cards[data-page-size='2'] { flex-basis: 124px; }

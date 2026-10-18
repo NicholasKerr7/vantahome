@@ -183,8 +183,16 @@ function dashboardLayout(width, height, expectedLayout) {
   controlsFit('button[aria-label^="Property time and weather:"]', `${label} time and weather access`);
   controlsFit('.floor-switch button', `${label} floor navigation`);
   controlsFit('.view-controls button', `${label} view modes`);
-  controlsFit('.preset-grid button', `${label} scene presets`);
-  check(evaluate('[...document.querySelectorAll(".view-controls button")].filter((button) => button.checkVisibility()).length === 3 && [...document.querySelectorAll(".preset-grid button")].filter((button) => button.checkVisibility()).length === 4'), `${label}: all three view modes and four presets remain available`);
+  controlsFit('.preset-grid .card-scroll-item:not([inert]) button', `${label} current scene presets`);
+  check(evaluate('[...document.querySelectorAll(".view-controls button")].filter((button) => button.checkVisibility()).length === 3'), `${label}: all three view modes remain available`);
+  const scenePage = evaluate(`(() => {
+    const grid = document.querySelector('.preset-grid');
+    return { page: Number(grid?.dataset.cardPage), pages: Number(grid?.dataset.cardCount), size: Number(grid?.dataset.pageSize),
+      visible: [...grid.querySelectorAll('.card-scroll-item:not([inert]) button')].filter((button) => button.checkVisibility()).length };
+  })()`);
+  check(scenePage.size >= 1 && scenePage.size <= 4 && scenePage.pages === Math.ceil(4 / scenePage.size)
+    && scenePage.page >= 0 && scenePage.page < scenePage.pages
+    && scenePage.visible === Math.min(scenePage.size, 4 - scenePage.page * scenePage.size), `${label}: four presets remain available through complete current scene pages (${JSON.stringify(scenePage)})`);
   if (expectedLayout === 'tablet-landscape') {
     check(inViewport(current.inspector, current) && current.inspector.left >= current.house.right - 1, `${label}: full inspector fits to the right of the model`);
     controlsFit('.dashboard-room-list button', `${label} room rail`);

@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Responsive dashboard scene shortcuts | Preview 72; installation deferred by user | Removed the >4-scene CSS collapse; measured 1–4 cards with horizontal scrolling and retained arrows. Eight browser viewport checks, 70 focused tests, focus/resize/reorder recovery and reduced motion verified. No new physical acceptance. See handoff. |
 | Vanta home assistant | Preview 71 bounded Owner, Guest and Member checks accepted | Two real staging answers independently verified (HTTP 200, 6.4/12.1 s). Owner scene flow, Guest room/draft restrictions and account-switch cleanup, plus actual Member manual/AI scene creation, explicit Run and local restart retention passed by user report. Broader role/override configurations and quality/cost remain follow-up. No key expansion or new native build was needed. See handoff. |
 | Actual card scrolling | Installed in Preview 69 | Supersedes rejected Preview 68 footer rails: cards themselves scroll horizontally with momentum; arrows move the same surface. No vertical page scrolling or gesture-triggered actions. See handoff for installation and physical acceptance. |
 | Cleaner hotspot controls | Complete in Preview 67 | Decorative identity photos removed from quick/full hotspot headers; card artwork elsewhere remains. |

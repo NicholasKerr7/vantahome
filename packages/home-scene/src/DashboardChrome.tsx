@@ -11,6 +11,7 @@ import { weatherDescription } from './environment/weatherClient';
 import { CinematicArtwork } from './CinematicCardArtwork';
 import { roomArtwork, sceneArtwork } from './cinematicArtwork';
 import { HorizontalCardScroller } from './HorizontalCardScroller';
+import { useSceneCardPage } from './useSceneCardPage';
 import vantahomeMark from '../../../assets/brand/vantahome-mark-256.png?inline';
 
 /** Keep room symbols familiar without coupling navigation to device geometry. */
@@ -98,26 +99,26 @@ export function DashboardRoomBar({ onRooms }: { onRooms: () => void }) {
   return <div className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon /></CinematicArtwork><span className="dashboard-room-choice"><small>EXPLORE YOUR HOME</small><span>{room.name}</span></span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
 }
 
-/** Page through the same saved scenes as the native collection without enlarging the home layout. */
+/** Fit saved scene shortcuts to the available row, retaining swipe and arrow navigation. */
 export function DashboardScenes() {
   const { catalog, status, runScene, retry } = useSceneCatalog();
-  const [requestedPage, setRequestedPage] = useState(0);
-  const paged = catalog.scenes.length > 4;
-  const page = paginateItems(catalog.scenes, requestedPage, paged ? 3 : 4);
+  const { rowRef, page, pageCount, pageSize, goToPage, onFocusCapture } = useSceneCardPage(catalog.scenes);
+  const paged = pageCount > 1;
   const icons = [Sun, Sparkles, Moon, Home];
-  return <section className="dashboard-scenes" aria-label="Home scenes">
+  return <section ref={rowRef} onFocusCapture={onFocusCapture} className="dashboard-scenes" aria-label="Home scenes">
     <div className="dashboard-scenes-label"><Sparkles size={16} /><span>Scenes</span></div>
-    {paged && <button className="dashboard-scene-page" aria-label="Previous scenes" disabled={page.page === 0} onClick={() => setRequestedPage(page.page - 1)}><ChevronLeft size={17} /></button>}
-    <HorizontalCardScroller className={`preset-grid${paged ? ' has-scene-pages' : ''}`} page={page.page} count={page.pages} pageSize={paged ? 3 : 4} columns={paged ? 3 : 4} onChange={setRequestedPage} label="Scene cards" resetKey={catalog.scenes.map((scene) => scene.id).join('|')}>
+    {paged && <button className="dashboard-scene-page" aria-label="Previous scenes" disabled={page === 0} onClick={() => goToPage(page - 1)}><ChevronLeft size={17} /></button>}
+    {catalog.scenes.length > 0 && <HorizontalCardScroller className="preset-grid" page={page} count={pageCount} pageSize={pageSize} columns={pageSize} onChange={goToPage} label="Scene cards" resetKey={`${pageSize}:${catalog.scenes.map((scene) => scene.id).join('|')}`}>
       {catalog.scenes.map((scene) => {
         const presetIndex = MODEL_SCENE_PRESETS.findIndex((preset) => preset.sceneId === scene.id);
         const Icon = icons[presetIndex] ?? Sparkles;
         const artwork = sceneArtwork({ name: scene.name, modelPreset: MODEL_SCENE_PRESETS[presetIndex]?.id });
-        return <button key={scene.id} className="dashboard-preset has-cinematic-artwork" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id}
+        return <button key={scene.id} data-scene-id={scene.id} className="dashboard-preset has-cinematic-artwork" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id}
           onClick={() => runScene(scene.id)}><CinematicArtwork artwork={artwork} /><Icon size={17} strokeWidth={1.5} aria-hidden="true" /><span>{scene.name}</span></button>;
       })}
-    </HorizontalCardScroller>
-    {paged && <button className="dashboard-scene-page" aria-label="Next scenes" disabled={page.page === page.pages - 1} onClick={() => setRequestedPage(page.page + 1)}><ChevronRight size={17} /></button>}
+    </HorizontalCardScroller>}
+    {paged && <button className="dashboard-scene-page" aria-label="Next scenes" disabled={page === pageCount - 1} onClick={() => goToPage(page + 1)}><ChevronRight size={17} /></button>}
+    {paged && <span className="sr-only" role="status">Scene page {page + 1} of {pageCount}</span>}
     {!catalog.scenes.length && <div className="dashboard-scenes-empty" role="status">{status === 'loading' ? 'Loading scenes…' : status === 'error' ? <button onClick={retry}>Retry scenes</button> : 'No saved scenes'}</div>}
   </section>;
 }

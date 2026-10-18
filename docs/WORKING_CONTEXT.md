@@ -46,6 +46,37 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Responsive dashboard scene cards — October 17 / Preview 72
+
+- Fixed the reported mobile scene-card collapse. With more than four saved scenes,
+  a later legacy `has-scene-pages` CSS rule overrode the horizontal scroller's grid:
+  the actual seven-scene embedded fixture reproduced three **6px-wide** buttons.
+  Removed the competing track definitions and duplicate spacing rules.
+- The row now measures its available width, label and arrow space. Typical phones
+  show two readable cards (130px at a 390px embedded viewport), narrow phones show
+  one, and tablets show up to four. Existing arrows and native horizontal momentum
+  move the same cards; no vertical page scrolling. Empty/failed states, current
+  scene artwork, bounded rendering and reduced motion remain intact.
+- Pagination follows scene identity through resize, reorder and deletion. Focus is
+  captured before catalog reconciliation so moving a focused card to a distant
+  page cannot unmount it. Swiping/paging never executes a scene; explicit activation
+  still sends exactly one request. Scene persistence/permissions are unchanged.
+- Verification: **70 tests / 5 suites**, scene TypeScript and offline/web scene
+  build; actual App/CSS browser checks at eight embedded viewport sizes spanning
+  phone, tablet portrait/landscape and desktop preview, with synthetic saved
+  catalogs (4, 5 and 7 scenes). Checked arrows, direct dragging, final partial page,
+  focused scene continuity on rotation, reduced-motion alignment, and the phone
+  landscape orientation message. No document overflow; touch targets >=44px.
+  A clean-tab load/resize/phone-rotation round trip had no console errors; earlier
+  hot-refresh teardown errors did not reproduce in that flow. Physical
+  iPhone/Android/iPad behavior is not newly verified by these browser checks.
+- Evidence: `work/scene-card-layout-{tests,build}.log`,
+  `work/scene-card-layout-viewports.json`, `work/scene-cards-*.png`; the temporary
+  browser fixture is retained only in `work/scene-cards-qa.{html,ts,css}`, excluded
+  from the app. Preview 72 final package verification is recorded in
+  `work/scene-cards-preview72-package.json`; installation is **deferred at the
+  user's explicit request** ("Install later"). Preview 71 remains installed.
+
 ## Vanta home assistant — October 16–17 / Preview 71
 
 - **Bounded actual Member acceptance complete by user confirmation:** the user
