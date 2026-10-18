@@ -147,20 +147,21 @@ The user chose a separate Member test account and supplied its invitation addres
 in chat. Preserve the existing Guest account, room grants and deadline. The Owner
 was asked to use account → Household → Invite, name **Test Member**, role **Member**,
 then **Review access → Whole-home room access → Invite person**. The user confirmed
-the invitation was sent and its email arrived. Recipient acceptance and actual
-Member-role verification are pending; do not equate delivery with membership.
+the invitation was sent and its email arrived, then confirmed the new account
+shows Member and exposes Create scene. These are user-operated iPhone results.
 
-1. **Pending:** recipient accepts the invitation and the account role explicitly
-   shows **Member** for the intended home. Do not use Demo or an Owner session.
-2. **Pending:** Scenes exposes **Create scene** (a plus icon on compact screens).
-   Create **Member evening** for only the Living room Pendant light, on at 30%.
-   Creating must save the scene without running it or changing the light.
-3. **Pending:** explicit **Run scene** applies the saved setting; closing/reopening
-   the app retains the scene and its exact device/settings. Scene definitions are
-   local to this account/device; this does not test household scene sync.
-4. **Pending:** Ask can draft a separate one-light comfort scene for Member;
-   **Review scene → Create → explicit Run scene** works without extra devices or
-   settings. An explicit `automation.manage` denial must still block management.
+1. **Passed by user confirmation:** the new account explicitly shows **Member**,
+   and Scenes exposes **Create scene** (a plus icon on compact screens).
+2. **Passed by user confirmation:** **Member evening** saved for the Living room
+   Pendant light, On at 30%, while the light stayed off. Creating did not run it.
+3. **Passed by user confirmation:** explicit **Run scene** set the Pendant light to
+   On at 30%; the scene's one-light settings and the light state survived fully
+   closing and reopening the app. This tests local account/device persistence,
+   not household scene sync.
+4. **Pending:** Ask drafts **Member calm**, only the Living room Pendant light On
+   at 20%, leaving other devices/settings unchanged. Review promptly, verify the
+   one-light action and Create; the light must stay at 30% until explicit Run sets
+   it to 20%. An explicit `automation.manage` denial must still block management.
 
 The app has no existing-member role-change UI. Sending an invitation to an active
 Guest does not convert it. A fresh separate Member should inherit scene permission

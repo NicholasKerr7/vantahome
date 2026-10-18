@@ -52,14 +52,19 @@ defects from ideas or untested risks.
   and provided its email in chat, preserving the existing Guest. They have been
   asked to send **Test Member** an invitation from the Owner's Household → Invite
   flow with role **Member** and whole-home room access. The user confirmed it was
-  sent and the email arrived; recipient acceptance is still pending. Next: confirm
-  the actual Member badge and Create button, test manual scene creation,
-  explicit Run and cold-start retention, then the AI draft/review/Create/Run path.
+  sent and the email arrived. The user then confirmed the actual **Member** role,
+  visible Create scene button, and saving **Member evening** for only the Living
+  room Pendant light, On at 30%, with the light remaining off. Manual creation and
+  save-without-execution passed by user confirmation. Explicit Run then set it to
+  30%; the user confirmed the scene and light state survived fully closing and
+  reopening. Next: AI draft **Member calm**, one light On at 20%, Review → Create
+  while the light stays at 30% → explicit Run to 20%. That AI result is pending.
   Use HOME_CONCIERGE.md's Member checklist. No account role was changed by the agent.
   Two explicit Member success cases now cover AI draft saving and manual scene
   creation/reopening/explicit Run request; **40 tests / 3 suites** pass. The editor
   and store are real, membership is a fixture and execution is mocked. Evidence:
-  `work/concierge-member-scene-tests.log`; physical persistence is still pending.
+  `work/concierge-member-scene-tests.log`. Physical manual creation, Run and local
+  persistence passed by user report; see `work/concierge-member-live-acceptance.json`.
   App TypeScript and diff checks pass. Existing collection tests emit async
   reduced-motion `act` warnings. Only tests and documentation changed; no rebuild.
 - **Bounded Guest AI acceptance complete by user report:** the existing focused
@@ -76,7 +81,8 @@ defects from ideas or untested risks.
   signed in as **Guest**. This is the expected default restriction, not a confirmed
   Member defect. Current client/server rules grant Member `automation.manage` by
   default; explicit denials and current-session checks still apply. No grants or
-  code were changed; an actual Member login was not physically tested.
+  code were changed during Guest acceptance; the later actual Member login and
+  manual creation results are recorded above.
   **Additional physical results, October 17:** the comfort-only Living room scene
   request was unavailable, with explicit user confirmation of no Review scene
   button, saved scene or light change. The primary-bedroom lights question returned

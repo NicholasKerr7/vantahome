@@ -32,8 +32,8 @@ comfort-only scene request produced no review button, saved scene or light chang
 the unassigned-bedroom question reported the room was not listed. The mixed
 scene/door request reported scene drafting unavailable, and returning to Owner
 restored Owner options with Guest answer/draft cleared. This bounded Guest checklist
-is complete by user report; other role/override configurations remain untested on
-the physical phone. These are user-operated checks, not independent inspection of
+is complete by user report; the separate Member checks below remain in progress.
+These are user-operated checks, not independent inspection of
 provider answers or mixed-prompt device state; see HOME_CONCIERGE.md.
 
 The physical Send test exposed insufficient operational diagnostics: all provider
@@ -110,14 +110,15 @@ optional renderer labs were not changed because the report concerns the main sce
 ## Next implementation priorities
 
 **Current authorized check:** actual Member scene creation using a separate invited
-account, preserving Guest. Invitation delivery passed by user confirmation;
-acceptance, manual creation, explicit Run, cold-start retention and AI scene
-review are not yet physically verified for Member. See HOME_CONCIERGE.md.
+account, preserving Guest. Invitation delivery, actual Member role, visible Create
+scene button, manual save without execution, explicit Run at 30% and cold-start
+scene/light-state retention passed by user confirmation. The Member AI draft,
+review, Create and explicit Run flow remains pending. See HOME_CONCIERGE.md.
 
 Initial live assistant acceptance is complete: real authenticated answers pass,
 one small scene passed Review scene, Create and explicit Run scene on the iPhone,
 and the bounded Guest checklist is complete by user report. Broader role/override
-configurations remain distinct follow-up work, including an actual Member login.
+configurations remain distinct follow-up work; the actual Member test is in progress.
 Record actual quality, latency and cost without treating two requests as a benchmark.
 Do not treat the availability response as a provider health test. Never read or store the key in
 chat, repository, screenshots or evidence. See the handoff for prepared tabs/state.
