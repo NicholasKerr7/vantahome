@@ -46,7 +46,58 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Tactile lighting controller — October 18 / Preview 80 installed
+## Energy consoles — October 18 / Preview 81 installed
+
+- Added coordinated Home/Devices consoles for the energy meter, solar array,
+  battery and generator. Each has distinct sculpted code/SVG appliance artwork,
+  a prominent current sample, supporting readings and guarded primary controls;
+  More/Back preserves advanced settings. No new dependencies, renderer, idle
+  animation loops or real-device transport. Independent device samples are not
+  combined into invented home totals, import/export or directional energy flow.
+- Meter outage/restore and sample checks remain local simulations. Solar shows
+  its own generation/yield/inverter samples. Battery Enable/Disable preserves
+  charge and preferences; reserve and storage mode are saved preferences only,
+  without simulated charging. Generator Manual/Auto is also a saved preference;
+  only the explicit Start/Stop simulation action changes its running preview.
+- Fixed a selected-device view-grant gap: the current scene device/room grants
+  are intersected with the library allowlist before rendering either selected
+  controls or the fallback browser. Revoked devices no longer reappear through
+  stale library room lists, search or favorites, and rejected selections use the
+  library header without stale edit/remove affordances. Guarded actions still
+  recheck current authority; this does not expand permissions or shared state.
+- **113 web/shared tests / five suites + 106 native tests / seven suites
+  (219 distinct focused tests)** passed, along with TypeScript, scene web/native
+  builds and focused review. Coverage includes power/settings retention, sample
+  isolation, revoked callbacks and fallback visibility, More/Back, existing
+  controllers and editing. The editing suite retains its existing non-failing
+  reduced-motion async-act warning. Evidence:
+  `work/energy-{web-tests,native-tests,native-typecheck,scene-build}.log`.
+- Eleven embedded phone/tablet/boundary profiles passed fit checks. The tiny
+  320×568 host retains a **147px internal scroll fallback**, with zero page
+  overflow. Five native-component browser profiles fit after reducing the regular
+  body gap from 10px to 9px; all measured controls are at least 44px. Evidence:
+  `work/energy-browser-layouts.json`, `work/energy-browser-native-layouts.json`.
+- Browser verified Home/Devices battery toggling while retaining **78% charge,
+  47% reserve and Self-Use**, More/Back focus, and full reload retention. Meter
+  outage was isolated, restored and sample-checked; generator Manual did not
+  start it, while explicit Start showed **3.90 kW** and Stop **0.00 kW**. Solar's
+  **3.20 kW** sample remained unchanged. Final fresh browser receipt has zero
+  errors: `work/energy-final-browser-errors.json`. Screenshots:
+  `work/energy-battery-{home,native}.png`. This is browser evidence, not physical
+  iPhone acceptance of the new consoles.
+- Final Preview 81 passed signature/signed identity, staging/redirect markers,
+  retained controllers and exact generated/package scene hash and size checks:
+  **32,030,057 bytes** (30.546 MiB), below 32 MiB. Battery header power and final
+  550px/490px fit tiers are present. Production metadata was restored. A disk-full
+  build was retried successfully after removing only reproducible old Expo exports
+  and simulator compiler caches; source, assets and verification evidence remain.
+  Package evidence: `work/energy-preview81-{build.log,package.json}`.
+  Installed and launched on the iPhone; Apple inventory confirms **1.0.0 (81)**,
+  now latest installed. Receipts: `work/energy-preview81-{install,apps,launch}.json`.
+  Physical energy acceptance, existing climate checks, physical iPad testing,
+  hub execution and household sync remain separate; production is unchanged.
+
+## Tactile lighting controller — October 18 / Preview 80 user accepted
 
 - User confirmed the blinds work great and delegated the next controller choice.
   Chose lighting for everyday usefulness: sculpted Home/Devices consoles, a
@@ -86,10 +137,11 @@ defects from ideas or untested risks.
 - Preview 80 passed signature, staging identity/redirects, retained controller
   markers and exact generated/package scene hash and size (**32,011,709 bytes**,
   below 32 MiB). Production metadata was restored. Installed and launched on
-  the iPhone; Apple inventory confirms **1.0.0 (80)**, now latest installed.
+  the iPhone; Apple inventory confirmed **1.0.0 (80)**, since superseded by Preview 81.
   Evidence: `work/lighting-preview80-{build.log,package.json,install.json,apps.json,launch.json}`.
-  Physical lighting acceptance remains: comfortable dimming/presets, off-state
-  edits, More/Back, Home/Devices agreement and retention after reopening.
+  The user subsequently accepted the overall lighting experience before the
+  energy work. Individual unreported physical scenarios are not claimed
+  separately; browser evidence above remains distinct from that overall report.
 
 ## Smart blinds controller — October 18 / Preview 79 user accepted
 

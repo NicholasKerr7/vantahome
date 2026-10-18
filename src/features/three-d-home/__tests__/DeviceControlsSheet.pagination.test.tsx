@@ -4,6 +4,7 @@ import { Modal, ScrollView, StyleSheet, Text } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import { getInspectorPages } from '../../../../packages/home-scene/src/deviceRoutinePages';
 import { getDevice } from '../../../../packages/home-scene/src/data';
+import { isEnergyDeviceKind } from '../../../../packages/home-scene/src/energyController';
 import { DeviceControlsSheet } from '../DeviceControlsSheet';
 import { NativeCapabilityControl } from '../NativeCapabilityControl';
 import { SimulationControlClient } from '../simulationControlClient';
@@ -33,6 +34,8 @@ function renderControls(deviceId: string) {
   const screen = render(<DeviceControlsSheet {...props} />);
   if (deviceId === 'family-tv') fireEvent.press(screen.getByLabelText('More TV controls'));
   if (getDevice(deviceId)?.kind === 'light') fireEvent.press(screen.getByLabelText('More lighting controls'));
+  const kind = getDevice(deviceId)?.kind;
+  if (kind && isEnergyDeviceKind(kind)) fireEvent.press(screen.getByLabelText('More energy controls'));
   return { screen, props, runAction, setSetting, onClose };
 }
 

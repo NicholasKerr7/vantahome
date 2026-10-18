@@ -9,7 +9,8 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Tactile lighting controller | Preview 80 installed and launched; physical acceptance pending | Sculpted Home/Devices controls share power-preserving dimming, white/color presets and effect-aware appearance; More retains advanced settings. Fixed saved Color mode overwritten by unchanged temperature-only host records. 172 distinct focused tests, TypeScript, web/native scene builds and review pass. Eleven embedded profiles and five native-component browser profiles fit with targets ≥44px; tiny 320×568 keeps internal fallback. Off/on-at-zero, effects, Home/Devices agreement and reload retention verified; final fresh browser has zero errors. Signature/staging/scene hash and size (32,011,709 bytes) verified; Apple inventory confirms 1.0.0 (80). No transport or permission expansion. See handoff. |
+| Energy consoles | Preview 81 installed and launched; physical acceptance pending | Four selected-device Home/Devices consoles use code/SVG artwork without idle loops or invented combined flow. Battery power preserves charge/reserve/mode; reserve/storage and generator start mode remain saved preferences only. Current view grants intersect library scope for selected controls and fallback room/search/favorite results, including edit-footer removal. 113 web/shared + 106 native tests (219 distinct), TypeScript and scene web/native builds pass. Eleven embedded profiles and five native profiles fit with ≥44px controls; 320×568 keeps a 147px internal fallback with zero page overflow. Home/Devices state, More/Back focus, reload, isolated meter outage/restore, explicit generator Start/Stop and unchanged solar sample verified; final browser errors are zero. Final package signing/staging/scene hash and size (32,030,057 bytes) verified; production metadata restored. Installed and launched; Apple inventory confirms 1.0.0 (81). Physical energy acceptance remains pending. See handoff. |
+| Tactile lighting controller | Preview 80 user accepted | User accepted the overall lighting experience; individual unreported physical scenarios are not claimed separately. Sculpted Home/Devices controls share power-preserving dimming, white/color presets and effect-aware appearance; More retains advanced settings. Fixed saved Color mode overwritten by unchanged temperature-only host records. 172 distinct focused tests, TypeScript, web/native scene builds and review pass. Eleven embedded profiles and five native-component browser profiles fit with targets ≥44px; tiny 320×568 keeps internal fallback. Off/on-at-zero, effects, Home/Devices agreement and reload retention verified; final fresh browser has zero errors. Signature/staging/scene hash and size (32,011,709 bytes) verified; Apple inventory confirms 1.0.0 (80). No transport or permission expansion. See handoff. |
 | Smart blinds controller | Preview 79 user accepted | User says the blinds work great; individual unreported physical scenarios are not claimed separately. Sculpted Home/Devices controllers share saved position, geometry, bounded ±5% actions and presets; More preserves advanced controls. 61 scene + 49 native tests, TypeScript and web/native scene builds pass. Embedded responsive boundaries, interaction, reload retention and Home/Devices synchronization verified. No ordinary scrolling at 13 tested phone/tablet/boundary profiles; 320×568 retains accessible internal fallback. Five native-component browser profiles fit. Final fresh browser run has no errors. Signature/staging/scene hash and size (31,997,819 bytes) verified; Apple inventory confirmed 1.0.0 (79), since superseded by Preview 80. No hub, motor or permission expansion. See handoff. |
 | Dashboard shell focus outline | Preview 78 user accepted | User confirmed the reported outline fix works. One CSS rule removes the whole-property-panel outline while retaining the focus-return target and interactive outlines. Ten existing tests, scene TypeScript/builds and package verification passed. No separate physical keyboard skip-link acceptance is claimed. No logic/layout/state/security change. See handoff. |
 | Centered climate layout in embedded Home | Preview 77 installed and launched; physical acceptance pending | CSS-only padding and tiered layout retain a centered 208px ring in embedded Home; middle tier ≤536px, compact only ≤500px. Actual Expo host 440×860 (96px native safe-area allowance) yields iframe 440×723, 560.75px stage, 531px console and 208px ring without overflow; all 14 targets ≥44px. Boundary and other phone/tablet profiles passed. At host 320×568, the existing 103px internal stage overflow remains as an accessible scroll fallback; no page overflow. Eight panel tests, scene TypeScript and web/native builds passed; power/target and More/Back focus passed, zero errors, CSS review no findings. Preview 77 signature/staging/scene hash and size (31,986,079 bytes) passed; production metadata restored. Apple inventory confirms 1.0.0 (77). Physical acceptance remains pending; logic, authorization and persistence unchanged. See handoff. |
@@ -32,6 +33,25 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 ## Most recent adjacent findings
 
+**Resolved energy visibility defect:** a stale selected identity and library list
+could project plausible sample defaults after its scene view grant was revoked.
+Selected controls and fallback browser rooms/search/favorites now share the
+intersection of current device/room grants and supplied library IDs. Rejected
+selection also restores the library heading and hides edit/remove affordances.
+Regression cases preserve read-only controls and optional-access compatibility;
+deferred commands still use the existing live authority guard. This bounded fix
+does not constitute an exhaustive security audit.
+
+Energy samples remain selected-device readings: meter and solar values are
+independent, battery charge is not editable, and reserve/storage/generator Auto
+preferences do not become charging or automatic-start behavior. Browser tests
+verified battery power retention, isolated meter outage/restore, generator
+explicit Start/Stop and unchanged solar. All 219 distinct focused tests pass.
+Native regular spacing was tightened by one point after actual-height checks;
+tiny embedded 320×568 retains its 147px internal fallback with no page overflow.
+Final Preview 81 packaging passed and the app is installed/launched; physical
+energy acceptance remains pending. Use the handoff receipts for the final build.
+
 **Resolved lighting persistence defect:** unchanged host temperature defaults no
 longer replace an explicit saved Color mode. Real temperature edits still select
 white, and legacy temperature-only records still infer white. Three new regression
@@ -39,8 +59,9 @@ cases and all 37 mapping tests pass. Browser reload retained Color/Rose/65% and 
 separate 3000K white choice. Shared effects, solar streetlight rules, fire overrides,
 runtime device IDs and revoked authority were checked; no new bypass was added.
 Existing adaptive lighting/motion/night/auto-off preferences do not become a
-hub-backed automation engine through this controller. Physical lighting acceptance,
-climate acceptance, hub/sync and physical iPad work remain separate.
+hub-backed automation engine through this controller. The user accepted the
+overall Preview 80 lighting experience; unreported individual physical scenarios
+are not implied. Climate acceptance, hub/sync and physical iPad work remain separate.
 
 The blinds controller uses the shared guarded state and existing cache formats,
 including relative actions evaluated against current state. Review caught two
@@ -192,11 +213,15 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
-**Immediate blinds follow-up:** on Preview 79, verify Home → Primary suite →
-Window blinds → Full controls, then presets/±5%/Open/Close and More/Back. Check the
-same position through Devices and after closing/reopening the app. Physical fit,
-touch feel and retention acceptance remain pending; browser/shared-state tests
-already pass. Dashboard shell issue is accepted by the user.
+**Immediate energy follow-up:** on installed Preview 81, open Energy pavilion
+and check each energy device's full controls. Verify battery power/reserve/storage,
+generator explicit Start/Stop, meter outage/restore, and More/Back. Confirm
+Home/Devices settings agreement and retention after reopening. Browser/shared-state
+checks already pass; physical fit/touch acceptance remains pending.
+
+The user has accepted the overall blinds Preview 79 and lighting Preview 80
+experiences and the dashboard shell fix. Individual unreported physical scenarios
+remain unverified rather than being silently marked complete.
 
 **Immediate climate follow-up:** collect the centered layout, spacing and caption
 fit on the iPhone running installed Preview 77 with native chrome. Follow with full interaction, matching Home/Devices

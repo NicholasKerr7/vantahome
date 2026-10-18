@@ -29,6 +29,9 @@ import { TvRemoteControl } from './TvRemoteControl';
 import { ClimateController } from './ClimateController';
 import { BlindsController } from './BlindsController';
 import { LightingController } from './LightingController';
+import { EnergyController } from './EnergyController';
+import { isEnergyDeviceKind } from '../../../packages/home-scene/src/energyController';
+import { canViewSceneDevice } from '../../../packages/home-scene/src/sceneAccess';
 
 const SimulationDeviceEditor = React.lazy(() => import('../devices/SimulationDeviceEditor'));
 
@@ -39,6 +42,10 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   ac: { accessible: 'Back to climate controller', visible: 'Back to climate' },
   blinds: { accessible: 'Back to blinds controller', visible: 'Back to blinds' },
   light: { accessible: 'Back to lighting controller', visible: 'Back to lighting' },
+  energy: { accessible: 'Back to energy controller', visible: 'Back to energy' },
+  solar: { accessible: 'Back to energy controller', visible: 'Back to energy' },
+  battery: { accessible: 'Back to energy controller', visible: 'Back to energy' },
+  generator: { accessible: 'Back to energy controller', visible: 'Back to energy' },
 };
 type Group = typeof GROUPS[number];
 interface SheetProps {
@@ -63,7 +70,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   /** A deferred tap cannot open an old device inside a newly selected account or household. */
   function openEditor(): void {
     const state = useHomeStore.getState();
-    if (editableDevice && homeEditorScope(state) === editorScope && canEditSimulationDevice(state, editableDevice.id)) {
+    if (device && editableDevice && homeEditorScope(state) === editorScope && canEditSimulationDevice(state, editableDevice.id)) {
       setEditing({ deviceId: editableDevice.id, scope: editorScope });
     }
   }
@@ -71,7 +78,14 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   const emergencyVisible = incident.active && !incident.acknowledged;
   // Release the native modal so the global incident and its persistent banner stay reachable.
   useEffect(() => { if (emergencyVisible) onClose(); }, [emergencyVisible, onClose]);
-  const device = allowedDeviceIds && deviceId && !allowedDeviceIds.includes(deviceId) ? undefined : getDevice(deviceId);
+  // Apply the same current view grants to selection and the fallback browser, even if library props are stale.
+  const access = snapshot.access;
+  const visibleDeviceIds = access
+    ? access.deviceIds.filter((id) => (!allowedDeviceIds || allowedDeviceIds.includes(id)) && canViewSceneDevice(access, id))
+    : allowedDeviceIds;
+  const deviceVisible = deviceId !== null && (!visibleDeviceIds || visibleDeviceIds.includes(deviceId));
+  const device = deviceVisible ? getDevice(deviceId) : undefined;
+  const showingBrowser = browsing || !device;
   const loadFailure = simulationLoadFailureMessage(snapshot.status);
   const status = loadFailure ?? (snapshot.status === 'disconnected' ? 'Session changed. Close and reopen controls.'
     : snapshot.status === 'error' ? 'Could not save locally. Your changes are still in this session.'
@@ -86,19 +100,19 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
         <CinematicSurface style={[styles.card, compact && styles.compact]}>
           <View accessibilityViewIsModal style={[styles.cardContent, compact && styles.compactContent]}>
           <View style={styles.row}>
-            {!browsing && device && width >= 390 && fontScale <= 1.15 && <CinematicCardArtwork artwork={deviceArtwork(device)} variant="thumbnail" />}
-            <View style={styles.grow}><Text numberOfLines={1} style={styles.eyebrow}>{browsing ? 'YOUR HOME' : getRoom(device?.roomId ?? '').name.toUpperCase()}</Text>
-              <Text accessibilityRole="header" accessibilityLabel={browsing ? 'Device library' : device?.name} numberOfLines={compact ? 1 : 2} style={[styles.title, compact && styles.compactTitle]}>{browsing ? 'Device library' : device?.name}</Text></View>
+            {!showingBrowser && device && width >= 390 && fontScale <= 1.15 && <CinematicCardArtwork artwork={deviceArtwork(device)} variant="thumbnail" />}
+            <View style={styles.grow}><Text numberOfLines={1} style={styles.eyebrow}>{showingBrowser ? 'YOUR HOME' : getRoom(device.roomId).name.toUpperCase()}</Text>
+              <Text accessibilityRole="header" accessibilityLabel={showingBrowser ? 'Device library' : device.name} numberOfLines={compact ? 1 : 2} style={[styles.title, compact && styles.compactTitle]}>{showingBrowser ? 'Device library' : device.name}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close device controls" onPress={onClose} style={styles.button}><Text style={styles.label}>Done</Text></Pressable>
           </View>
           {!snapshot.ready ? <View style={styles.content}><Text style={styles.detail}>{loadFailure ? 'Controls will stay paused until your saved settings can be restored.' : 'Preparing your saved controls…'}</Text></View>
-            : browsing || !device ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={allowedDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
+            : showingBrowser ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={visibleDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
-          {!browsing && editableDevice && snapshot.ready && <Pressable accessibilityRole="button" accessibilityLabel="Edit device"
+          {!showingBrowser && editableDevice && snapshot.ready && <Pressable accessibilityRole="button" accessibilityLabel="Edit device"
             onPress={openEditor} style={styles.button}><Text style={styles.label}>Edit device</Text></Pressable>}
-          {!browsing && device?.templateDeviceId && <RemovePlacedDevice key={`remove:${device.id}`} modelDeviceId={device.id} onRemoved={onClose} />}
+          {!showingBrowser && device?.templateDeviceId && <RemovePlacedDevice key={`remove:${device.id}`} modelDeviceId={device.id} onRemoved={onClose} />}
           {(loadFailure || snapshot.status === 'disconnected') && onRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry loading saved controls" onPress={onRetry} style={styles.button}><Text style={styles.label}>Retry loading</Text></Pressable>}
           </View>
         </CinematicSurface>
@@ -149,6 +163,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if (device.kind === 'blinds' && !advancedControls) return <BlindsController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'light' && !advancedControls) return <LightingController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (isEnergyDeviceKind(device.kind) && !advancedControls) return <EnergyController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
 
   return <>

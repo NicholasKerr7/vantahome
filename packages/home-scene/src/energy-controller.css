@@ -1,0 +1,63 @@
+/* A bounded appliance console uses existing samples without another WebGL context. */
+.device-control-sheet.is-energy-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.energy-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.energy-stage { display: grid; align-items: safe center; justify-items: center; min-width: 0; min-height: 0; padding: 4px 0 8px; container: energy-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.energy-console { display: grid; width: min(380px, 100%); gap: 12px; padding: 18px; border: 1px solid #87739A; border-radius: 30px; background: linear-gradient(145deg, #51435E, #22182F 12%, #110C1B 54%, #2F233C); box-shadow: inset 2px 1px 1px #FFFFFF38, inset -2px -2px 3px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; color: var(--text); }
+.energy-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.energy-emblem { display: grid; place-items: center; width: 44px; height: 44px; color: #CBA6EE; border: 1px solid #A17AC244; border-radius: 14px; background: #35244488; }
+.energy-brand { display: grid; gap: 4px; text-align: center; }
+.energy-brand span { font-size: 8px; letter-spacing: 2.6px; color: #B7ACCB; }
+.energy-brand strong { font-size: 12px; font-weight: 500; letter-spacing: 3px; }
+.energy-console button { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 7px; border: 1px solid #FFFFFF26; border-radius: 12px; background: linear-gradient(145deg, #40334F, #231A30 70%); box-shadow: inset 0 1px 1px #FFFFFF24, 0 3px 3px #07030DBB; color: var(--text); cursor: pointer; touch-action: manipulation; user-select: none; font-size: 11px; transition: transform 140ms ease, border-color 180ms ease; }
+.energy-console .energy-key { width: 44px; height: 44px; border-radius: 50%; }
+.energy-battery-power[aria-checked='true'] { color: #DFC4FF; border-color: #B986DD; background: linear-gradient(135deg, #573C6D, #251B32); }
+.energy-hero { display: grid; grid-template-columns: 52% minmax(0, 1fr); align-items: center; min-height: 148px; border-radius: 18px; border: 1px solid #A080BD20; background: radial-gradient(ellipse at 25% 80%, #70438D29, transparent 70%), linear-gradient(135deg, #140D20, #20152B); }
+.energy-artwork { display: block; width: 100%; height: 148px; }
+.energy-reading { display: grid; gap: 7px; min-width: 0; padding: 10px 8px 10px 0; }
+.energy-reading > span { color: #B8A4CB; font-size: 9px; line-height: 1.4; }
+.energy-reading output { font-size: 34px; line-height: 1.05; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+.energy-reading output small { margin-left: 4px; font-size: 13px; letter-spacing: 0; color: #D0B6E3; }
+.energy-reading p { max-width: 145px; color: #CFB8E5; font-size: 10px; line-height: 1.4; }
+.energy-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.energy-metric { display: grid; gap: 5px; min-width: 0; padding: 10px; border: 1px solid #A080BD24; border-radius: 12px; background: #130D1DC9; }
+.energy-metric > span { color: #BBA7CE; font-size: 9px; }
+.energy-metric strong { color: #F0E4FA; font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.energy-metric small { margin-left: 4px; color: #C8AFDC; font-size: 10px; }
+.energy-choice-group { display: grid; gap: 7px; }
+.energy-choice-group > span { color: #BDA6CF; font-size: 9px; letter-spacing: .6px; }
+.energy-choices, .energy-grid-actions { display: flex; gap: 7px; }
+.energy-choices > button, .energy-grid-actions > button { flex: 1; }
+.energy-console button[aria-pressed='true'], .energy-console .energy-primary { border-color: #B88DD599; background: linear-gradient(140deg, #684880, #342140); }
+.energy-reserve { display: grid; gap: 4px; }
+.energy-reserve label { display: flex; align-items: center; gap: 5px; color: #BDA6CF; font-size: 10px; }
+.energy-reserve label strong { margin-left: auto; font-size: 12px; color: #F0E4FA; }
+.energy-reserve input { width: 100%; min-width: 0; height: 44px; margin: 0; accent-color: var(--accent); cursor: pointer; touch-action: pan-x; }
+.energy-reserve .energy-choice-group > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.energy-note { color: #B9A6C8; font-size: 9px; text-align: center; line-height: 1.5; }
+.energy-feedback { display: grid; gap: 4px; margin: 0; min-height: 30px; padding-inline: 8px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.energy-feedback span { font-size: 7px; letter-spacing: 1.8px; color: var(--muted); }
+.energy-console button:not(:disabled):active { transform: translateY(2px); }
+.energy-console :disabled { opacity: .4; cursor: default; }
+.energy-console :is(button, input):focus-visible, .energy-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.energy-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.energy-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+/* The actual embedded stage chooses the tier, after native navigation and safe areas. */
+@container energy-stage (max-height: 550px) {
+  .energy-console { padding: 12px; gap: 8px; }
+  .energy-hero { min-height: 120px; }
+  .energy-artwork { height: 120px; }
+  .energy-metric { padding: 8px; gap: 4px; }
+}
+@container energy-stage (max-height: 490px) {
+  .energy-console { padding: 10px; gap: 6px; }
+  .energy-hero { min-height: 80px; }
+  .energy-artwork { height: 80px; }
+  .energy-reading output { font-size: 28px; }
+  .energy-reading { gap: 4px; }
+  .energy-metric { padding: 6px 8px; gap: 3px; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-energy-controller .device-sheet-content { padding-inline: 12px; } .energy-reading output { font-size: 28px; } }
+@media (hover: hover) { .energy-console button:not(:disabled):hover { border-color: #BA91E1AA; } }
+.energy-workspace[data-motion-disabled='true'] * { transition: none; animation: none; scroll-behavior: auto; }
+.energy-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .energy-workspace * { transition: none; animation: none; scroll-behavior: auto; } .energy-workspace button:active { transform: none; } }
