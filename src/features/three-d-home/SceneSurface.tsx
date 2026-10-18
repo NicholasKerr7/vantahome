@@ -17,6 +17,8 @@ import { useHomeWeatherSettings } from '../weather-settings/useHomeWeatherSettin
 import { EMPTY_WEATHER_CONFIGURATION, WEATHER_CONFIGURATION_CHANNEL, nativePropertyWeatherScript, type PropertyWeatherConfiguration } from '../../../packages/home-scene/src/environment/propertyWeatherConfiguration';
 import { homeChromePreferencesMessage, nativeHomeChromeCommandScript, nativeHomeChromePreferencesScript, parseHomeChromeSnapshot } from '../../../packages/home-scene/src/homeChromeProtocol';
 import { useHomeChromePreferences } from './useHomeChromePreferences';
+import { useHomeStore } from '../../store/useHomeStore';
+import { homeEditorScope } from '../home-shell/homeEditorScope';
 
 /** Keep the optional persistence notification from restarting a simulation session. */
 const ignoreSaveStatus = () => undefined;
@@ -29,17 +31,32 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
   const weather = useRef<NativeWeatherBroker | null>(null);
   const documentReady = useRef(false);
   const consumedCommand = useRef(0);
+  const publishedPreferences = useRef<string | null>(null);
+  const publishPreferences = useRef<(force?: boolean) => void>(() => undefined);
   /** Stable delivery callbacks let authorization reconnect without rebuilding the WebView. */
   const deliverSnapshot = useCallback((message: SimulationSnapshotMessage) => {
     webView.current?.injectJavaScript(nativeSimulationSnapshotScript(message));
+    publishPreferences.current();
   }, []);
   const deliverCatalog = useCallback((message: SceneCatalogMessage) => {
     webView.current?.injectJavaScript(nativeSceneCatalogScript(message));
   }, []);
   const simulation = useSceneSimulationSession(deliverSnapshot, deliverCatalog, onSaveStatus);
   const chromePreferences = useHomeChromePreferences();
-  const chromePreferencesRef = useRef(chromePreferences);
-  chromePreferencesRef.current = chromePreferences;
+  const tempUnit = useHomeStore((state) => state.profile.tempUnit === 'F' ? 'F' : 'C');
+  const preferenceScope = useHomeStore(homeEditorScope);
+  const chromePreferencesRef = useRef<typeof chromePreferences & { tempUnit: 'C' | 'F' }>({ ...chromePreferences, tempUnit });
+  chromePreferencesRef.current = { ...chromePreferences, tempUnit };
+  /** Hydrated snapshots can arrive after a scope effect; publish the latest verified preferences once. */
+  publishPreferences.current = (force = false) => {
+    const preference = chromePreferencesRef.current;
+    if (!webView.current || !preference.ready || !simulation.current?.canNavigate()) return;
+    const message = homeChromePreferencesMessage(preference.idleEnabled, preference.preferenceError, preference.tempUnit);
+    const publication = JSON.stringify([preferenceScope, message]);
+    if (!force && publishedPreferences.current === publication) return;
+    publishedPreferences.current = publication;
+    webView.current.injectJavaScript(nativeHomeChromePreferencesScript(message));
+  };
   const propertyWeather = useHomeWeatherSettings();
   const weatherConfiguration = useRef<PropertyWeatherConfiguration>(EMPTY_WEATHER_CONFIGURATION);
   weatherConfiguration.current = {
@@ -53,15 +70,14 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
   /** Reapply current presentation state after a document load without reconnecting device controls. */
   const publishPresentation = useCallback(() => {
     weather.current?.setLocation(weatherConfiguration.current.location);
-    const preference = chromePreferencesRef.current;
-    const preferenceScript = preference.ready && simulation.current?.canNavigate()
-      ? nativeHomeChromePreferencesScript(homeChromePreferencesMessage(preference.idleEnabled, preference.preferenceError)) : '';
-    webView.current?.injectJavaScript(nativeScenePresentationScript(suspendedRef.current) + nativePropertyWeatherScript(weatherConfiguration.current) + preferenceScript);
+    publishPreferences.current(true);
+    webView.current?.injectJavaScript(nativeScenePresentationScript(suspendedRef.current) + nativePropertyWeatherScript(weatherConfiguration.current));
   }, [simulation]);
   useEffect(publishPresentation, [publishPresentation, suspended, propertyWeather.location, propertyWeather.configured, propertyWeather.loading, propertyWeather.canManage]);
   useEffect(() => {
-    if (chromePreferences.ready && simulation.current?.canNavigate()) webView.current?.injectJavaScript(nativeHomeChromePreferencesScript(homeChromePreferencesMessage(chromePreferences.idleEnabled, chromePreferences.preferenceError)));
-  }, [chromePreferences.ready, chromePreferences.idleEnabled, chromePreferences.preferenceError, simulation]);
+    // Reapply after fresh membership as well as unit changes; this never replaces the document.
+    publishPreferences.current();
+  }, [chromePreferences.ready, chromePreferences.idleEnabled, chromePreferences.preferenceError, tempUnit, preferenceScope, simulation]);
   useEffect(() => {
     const message = consumeHomeChromeCommand(chromeCommand, consumedCommand, {
       ready: documentReady.current && chromePreferences.ready, canNavigate: simulation.current?.canNavigate() === true,

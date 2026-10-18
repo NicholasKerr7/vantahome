@@ -110,6 +110,19 @@ describe('shared simulation controls', () => {
     roundTrip(device, after);
   });
 
+  it('still starts channel and microwave previews while climate increments preserve power', () => {
+    const tv = deviceOfKind('tv');
+    const television = runDeviceActionState(tv.id, { ...initial(tv), on: false, settings: { source: 'Netflix', channel: 1 } }, 'tv-channel-down');
+    expect(television).toMatchObject({ on: true, settings: { source: 'Live TV', channel: 1 } });
+    expect(deviceActionFeedback(tv, television)).toBe('Preview channel 1 · Live TV');
+    roundTrip(tv, television);
+    const microwave = deviceOfKind('microwave');
+    const timer = runDeviceActionState(microwave.id, { ...initial(microwave), on: false, settings: { timeRemainingSec: 0 } }, 'microwave-add-30');
+    expect(timer).toMatchObject({ on: true, settings: { timeRemainingSec: 30 } });
+    expect(deviceActionFeedback(microwave, timer)).toBe('Preview time 30s');
+    roundTrip(microwave, timer);
+  });
+
   it('persists opening-device preferences through actions, reloads, and toggles', () => {
     for (const kind of ['gate', 'blinds', 'window', 'garage', 'door'] as const) {
       const device = deviceOfKind(kind);

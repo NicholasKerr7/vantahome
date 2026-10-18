@@ -158,7 +158,7 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
   if (operation?.type === 'navigate') next = applyNavigationOperation(device, next, operation.direction);
   if (operation?.type === 'increment') {
     next = applyDeviceSetting(id, next, operation.field, Number(readDeviceSetting(device, next, operation.field)) + operation.delta);
-    // Relative volume changes preserve the current power and playback state.
+    // Volume and climate increments preserve power; only channels and timers start a preview.
     if (operation.field === 'channel') next = { ...next, on: true, settings: { ...next.settings, source: 'Live TV' } };
     else if (operation.field === 'timeRemainingSec') next = { ...next, on: Number(next.settings?.timeRemainingSec) > 0 };
   }

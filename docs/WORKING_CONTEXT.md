@@ -46,6 +46,48 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Climate controller — October 17 / Preview 75 built, ready to install
+
+- Added the climate controller to Home full controls and the native Devices
+  inspector. Target temperature, Cold/Fan/Dry mode, fan speed, swing and
+  Normal/Eco/Quiet/Turbo airflow presets stay together; **More** retains the
+  existing advanced controls. The controller displays saved targets and a visual
+  airflow preview, not a fabricated room-temperature reading.
+- Both surfaces use the existing catalog, guarded controls and local persistence.
+  Relative temperature steps of 1°C and fan steps of 10% reduce current state,
+  clamp to 15–28°C and 0–100%, and preserve power. Manual fan adjustments clear
+  airflow presets; Normal clears all three preset flags atomically. Off-state
+  adjustments remain off. Scope, membership, hydration and save-recovery guards
+  remain in force; no new permission or real AC command path was introduced.
+- The account's Celsius/Fahrenheit preference is presentation-only on both
+  surfaces. The scoped preference bridge covers delayed hydration and account
+  recovery; stored targets remain Celsius, and Fahrenheit controls describe the
+  actual 1.8°F equivalent step.
+- Verification: **147 scene tests / 8 suites**, **48 native tests / 4 suites** and
+  **17 host tests** passed (**212 distinct focused tests**), covering the climate
+  panel, shared actions, TV regressions and presentation/preference bridge.
+  Final `npm run lint` and scene web/native builds passed; the native scene bundle
+  is **30.5 MiB**, below 32 MiB.
+- Actual standalone App browser checks passed **11 viewports**, from 320×568 to
+  1440×900: all 14 controller controls were at least 44px, with no overlap or page
+  overflow. Reduced-motion checks found no controller animations/transitions.
+  More/Back restored focus; rapid relative steps, mode/preset/swing changes and
+  off-state preservation passed. Reload restored **25°C, Dry, fan 70%, Horizontal,
+  Quiet**. Evidence: `work/climate-viewports.json`,
+  `work/climate-browser-acceptance.json`, `work/climate-mobile-final.png`.
+- **Preview 75 built and passed package verification:** signature,
+  `com.anonymous.vantahome.preview` identity/build 75, Preview URL schemes,
+  staging-only configuration, exact packaged scene hash and **31,985,650 bytes
+  (30.5 MiB)** below 32 MiB. Web/native climate and TV markers are present; QA
+  fixtures are excluded. Production build metadata was restored. Evidence:
+  `work/climate-preview75-build.log`, `work/climate-preview75-package.json`.
+  Preview 75 is ready to install; **installation and physical climate acceptance
+  remain pending. Preview 74 is the last installed build.** Installation was not
+  requested this turn. Next: when installed, verify fit, controls, cross-surface
+  state and close/reopen retention on the iPhone. iPad physical testing remains
+  deferred. Simulation-only staging scope and the no-hub boundary remain unchanged;
+  production is unchanged.
+
 ## Tactile TV remote — October 17 / Preview 74 iPhone acceptance complete
 
 - Replaced the primary paginated TV controls with a code-rendered, sculpted remote

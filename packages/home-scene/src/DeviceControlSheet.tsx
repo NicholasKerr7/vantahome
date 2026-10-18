@@ -12,6 +12,8 @@ import './device-control-sheet.css';
 import { isEmbeddedScene } from './embeddedHost';
 import { requestDeviceEditing } from './requestDeviceEditing';
 import { TvRemoteControl } from './TvRemoteControl';
+import { ClimateController } from './ClimateControlPanel';
+import { formatClimateTemperature, readClimateControllerState } from './climateController';
 
 type DeviceControlSheetProps = { deviceId: DeviceId; onClose: () => void };
 
@@ -34,7 +36,11 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
   const action = primaryDeviceAction(device, current);
   const ActionIcon = action.isSwitch ? Power : Icon;
   const controllable = useHomeStore((state) => canControlSceneDevice(state.access, deviceId));
+  const tempUnit = useHomeStore((state) => state.tempUnit);
   const editable = useHomeStore((state) => canViewSceneDevice(state.access, deviceId) && state.access.editableDeviceIds?.includes(deviceId) === true);
+  const status = device.kind === 'ac'
+    ? `${current.on ? 'On' : 'Off'} · Target ${formatClimateTemperature(readClimateControllerState(device, current).targetC, tempUnit)}°${tempUnit}`
+    : deviceActionFeedback(device, current) ?? deviceStatus(device, current);
 
   // Release native modality during the commit, before the parent restores focus.
   useLayoutEffect(() => {
@@ -74,20 +80,22 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
     }
   }
 
-  return <dialog ref={dialog} id="full-device-controls" className={`device-control-sheet${device.kind === 'tv' && controllable ? ' is-tv-remote' : ''}`} aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
+  const controllerClass = controllable ? device.kind === 'tv' ? ' is-tv-remote' : device.kind === 'ac' ? ' is-climate-controller' : '' : '';
+  return <dialog ref={dialog} id="full-device-controls" className={`device-control-sheet${controllerClass}`} aria-labelledby="sheet-device-control-title" onKeyDown={trapFocus} onCancel={(event) => { event.preventDefault(); dismiss(); }} onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className="device-sheet-content">
       <header className="device-sheet-heading" data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone}>
         <span className={`device-sheet-icon ${presentation.active ? 'is-on' : ''}`}><Icon size={24} strokeWidth={1.5} aria-hidden="true" /></span>
         <div className="device-sheet-identity">
           <p className="device-sheet-location">{getRoom(device.roomId).name}<span aria-hidden="true"> · </span>Full controls</p>
           <h2 id="sheet-device-control-title" ref={title} tabIndex={-1}>{device.name}</h2>
-          <p className="device-sheet-state" aria-live="polite"><span className={presentation.active ? 'is-on' : ''} aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}</p>
+          <p className="device-sheet-state" aria-live="polite"><span className={presentation.active ? 'is-on' : ''} aria-hidden="true" />{status}</p>
         </div>
         {editable && isEmbeddedScene() && <button type="button" className="quick-device-close" aria-label="Edit device" title="Edit device"
           onClick={() => { requestDeviceEditing(deviceId); dismiss(); }}><Pencil size={18} aria-hidden="true" /></button>}
         <button type="button" className="quick-device-close" aria-label="Close full controls" onClick={dismiss}><X size={20} aria-hidden="true" /></button>
       </header>
-      {device.kind === 'tv' && controllable ? <TvRemoteControl key={deviceId} device={device} current={current} /> : <>
+      {device.kind === 'tv' && controllable ? <TvRemoteControl key={deviceId} device={device} current={current} />
+        : device.kind === 'ac' && controllable ? <ClimateController key={deviceId} device={device} current={current} /> : <>
         <button type="button" className="device-sheet-primary" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.isSwitch ? `${device.name} power` : action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span></button>
         {controllable ? <PagedDeviceControls key={deviceId} device={device} current={current} /> : <p className="device-hint">View only. Your household role does not allow changing this device.</p>}
       </>}

@@ -83,4 +83,16 @@ describe('home chrome presentation protocol', () => {
     expect(receive).toHaveBeenCalledTimes(1);
     dispose(); expect(host.listeners.size).toBe(0);
   });
+
+  it('validates display units and treats older preference messages as Celsius', () => {
+    const fahrenheit = homeChromePreferencesMessage(true, false, 'F');
+    expect(parseHomeChromePreferences(fahrenheit)?.tempUnit).toBe('F');
+    expect(parseHomeChromePreferences(JSON.stringify(fahrenheit))?.tempUnit).toBe('F');
+    expect(homeChromePreferencesMessage(true, false).tempUnit).toBe('C');
+    const legacy = { channel: HOME_CHROME_CHANNEL, version: 1, type: 'preferences', idleEnabled: true, preferenceError: false };
+    expect(parseHomeChromePreferences(legacy)).toEqual({ ...legacy, tempUnit: 'C' });
+    for (const tempUnit of ['K', 'f', null, undefined, 1, { unit: 'F' }]) {
+      expect(parseHomeChromePreferences({ ...legacy, tempUnit })).toBeNull();
+    }
+  });
 });

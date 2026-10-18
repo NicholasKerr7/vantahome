@@ -26,6 +26,7 @@ import { canEditSimulationDevice } from '../../services/simulationDeviceEditing'
 import { canManageSimulationDevices } from '../../services/simulationDeviceRegistration';
 import { homeEditorScope } from '../home-shell/homeEditorScope';
 import { TvRemoteControl } from './TvRemoteControl';
+import { ClimateController } from './ClimateController';
 
 const SimulationDeviceEditor = React.lazy(() => import('../devices/SimulationDeviceEditor'));
 
@@ -44,7 +45,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   const openDeviceRoutines = useDeviceRoutines(onClose);
   const { width, height, fontScale } = useWindowDimensions();
   const landscape = width >= 760 && width > height;
-  const compact = height < 700 || fontScale > 1.15;
+  const compact = width < 390 || height < 700 || fontScale > 1.15;
   const [browsing, setBrowsing] = useState(deviceId === null);
   const [editing, setEditing] = useState<{ deviceId: string; scope: string } | null>(null);
   const editorScope = useHomeStore(homeEditorScope);
@@ -98,11 +99,11 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   </Modal>;
 }
 
-/** Give TVs a tactile default remote while retaining every shared capability in the advanced inspector. */
+/** Give supported devices tactile primary controls while preserving every advanced capability. */
 function DeviceInspector({ device, state, client, disabled, compact, fontScale, onBrowse, onRoutines }: {
   device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; compact: boolean; fontScale: number; onBrowse: () => void; onRoutines: () => void;
 }) {
-  const [advancedTvControls, setAdvancedTvControls] = useState(false);
+  const [advancedControls, setAdvancedControls] = useState(false);
   const [group, setGroup] = useState<Group>('controls');
   const [pageAnchor, setPageAnchor] = useState<string | null>(null);
   const [option, setOption] = useState<EnumCapability | null>(null);
@@ -132,12 +133,16 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     setPageAnchor(controlPageAnchor(pages[index]));
   }
 
-  if (device.kind === 'tv' && !advancedTvControls) return <TvRemoteControl device={device} state={state} client={client}
-    disabled={disabled} compact={compact} onMore={() => setAdvancedTvControls(true)} />;
+  if (device.kind === 'tv' && !advancedControls) return <TvRemoteControl device={device} state={state} client={client}
+    disabled={disabled} compact={compact} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'ac' && !advancedControls) return <ClimateController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
 
   return <>
-    {device.kind === 'tv' && <Pressable accessibilityRole="button" accessibilityLabel="Back to TV remote"
-      onPress={() => { setAdvancedTvControls(false); setOption(null); }} style={styles.button}><Text style={styles.label}>Back to remote</Text></Pressable>}
+    {(device.kind === 'tv' || device.kind === 'ac') && <Pressable accessibilityRole="button"
+      accessibilityLabel={device.kind === 'tv' ? 'Back to TV remote' : 'Back to climate controller'}
+      onPress={() => { setAdvancedControls(false); setOption(null); }} style={styles.button}>
+      <Text style={styles.label}>{device.kind === 'tv' ? 'Back to remote' : 'Back to climate'}</Text></Pressable>}
     {!option && <View style={styles.row}>
       <Pressable accessibilityRole="button" disabled={disabled} onPress={() => client.toggle(device.id)}
         style={[styles.button, styles.primary, styles.grow, disabled && styles.disabled]}><Text style={[styles.label, styles.primaryText]}>{quickActionLabel(device, state)}</Text></Pressable>

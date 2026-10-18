@@ -22,7 +22,7 @@ export type HomeChromeCommand =
   | { type: 'set-tour'; enabled: boolean };
 export type HomeChromeSnapshotMessage = { channel: typeof HOME_CHROME_CHANNEL; version: 1; type: 'snapshot'; snapshot: HomeChromeSnapshot };
 export type HomeChromeCommandMessage = { channel: typeof HOME_CHROME_CHANNEL; version: 1; type: 'command'; id: number; command: HomeChromeCommand };
-export type HomeChromePreferencesMessage = { channel: typeof HOME_CHROME_CHANNEL; version: 1; type: 'preferences'; idleEnabled: boolean; preferenceError: boolean };
+export type HomeChromePreferencesMessage = { channel: typeof HOME_CHROME_CHANNEL; version: 1; type: 'preferences'; idleEnabled: boolean; preferenceError: boolean; tempUnit?: 'C' | 'F' };
 type ChromeWindow = Window & { ReactNativeWebView?: { postMessage: (message: string) => void } };
 
 /** Restrict each envelope and payload to its documented fields without coercion. */
@@ -74,17 +74,20 @@ export function homeChromeCommandMessage(id: number, command: HomeChromeCommand)
   return { channel: HOME_CHROME_CHANNEL, version: 1, type: 'command', id, command };
 }
 
-/** A host configuration carries one stored presentation preference and never initiates an action. */
-export function homeChromePreferencesMessage(idleEnabled: boolean, preferenceError: boolean): HomeChromePreferencesMessage {
-  return { channel: HOME_CHROME_CHANNEL, version: 1, type: 'preferences', idleEnabled, preferenceError };
+/** Host configuration combines device-local tour and account-local display preferences without actions. */
+export function homeChromePreferencesMessage(idleEnabled: boolean, preferenceError: boolean, tempUnit: 'C' | 'F' = 'C'): HomeChromePreferencesMessage {
+  return { channel: HOME_CHROME_CHANNEL, version: 1, type: 'preferences', idleEnabled, preferenceError, tempUnit };
 }
 
-/** Reject extra fields or coerced flags before applying the host's device-local configuration. */
+/** Accept older hosts as Celsius while rejecting extra fields, unknown units and coerced flags. */
 export function parseHomeChromePreferences(input: unknown): HomeChromePreferencesMessage | null {
   const message = readMessage(input);
-  if (!hasKeys(message, ['channel', 'version', 'type', 'idleEnabled', 'preferenceError']) || message.channel !== HOME_CHROME_CHANNEL || message.version !== 1 || message.type !== 'preferences'
-    || typeof message.idleEnabled !== 'boolean' || typeof message.preferenceError !== 'boolean') return null;
-  return message as HomeChromePreferencesMessage;
+  const requiredKeys = ['channel', 'version', 'type', 'idleEnabled', 'preferenceError'];
+  if (!(hasKeys(message, requiredKeys) || hasKeys(message, [...requiredKeys, 'tempUnit']))
+    || message.channel !== HOME_CHROME_CHANNEL || message.version !== 1 || message.type !== 'preferences'
+    || typeof message.idleEnabled !== 'boolean' || typeof message.preferenceError !== 'boolean'
+    || ('tempUnit' in message && message.tempUnit !== 'C' && message.tempUnit !== 'F')) return null;
+  return { ...message, tempUnit: message.tempUnit ?? 'C' } as HomeChromePreferencesMessage;
 }
 
 /** Deliver only the validated stored preference to the packaged native document. */

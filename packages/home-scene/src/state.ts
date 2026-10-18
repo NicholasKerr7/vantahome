@@ -34,6 +34,8 @@ export interface HomeSnapshot {
 }
 
 interface HomeStore extends HomeSnapshot {
+  /** Account display preference supplied by the host; never part of the saved simulation. */
+  tempUnit: 'C' | 'F';
   access: SceneAccess;
   applyAccessSnapshot: (snapshot: Partial<HomeSnapshot>, access: SceneAccess) => void;
   setRoom: (roomId: RoomId) => void;
@@ -209,7 +211,7 @@ function authorizedDeviceChanges(state: HomeStore, next: DeviceStates): DeviceSt
 }
 
 export const useHomeStore = create<HomeStore>((set) => ({
-  ...readInitialState(), persistenceError: false,
+  ...readInitialState(), persistenceError: false, tempUnit: 'C',
   access: isEmbeddedScene() ? EMPTY_SCENE_ACCESS : FULL_SCENE_ACCESS,
   /** Reconcile grants and navigation atomically, retaining valid choices on host echoes. */
   applyAccessSnapshot: (snapshot, access) => set((state) => {

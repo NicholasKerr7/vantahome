@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Climate controller | Preview 75 built and verified, ready to install; Preview 74 last installed | Shared controller in Home and native Devices, with advanced controls under More. Relative temperature/fan actions preserve power and existing guarded local persistence; C/F preference is scoped presentation over canonical Celsius. 147 scene + 48 native + 17 host tests (212 distinct), final app TypeScript and scene web/native builds passed. Eleven actual App browser viewports passed, all 14 controls ≥44px with no overlap/overflow, reduced motion, focus, state changes and reload retention verified. Preview signature, identity, staging configuration, climate/TV markers and packaged scene hash/size (31,985,650 bytes; 30.5 MiB) passed; production metadata restored. Installation and physical climate acceptance remain pending; simulation-only, no hub or expanded permissions. See handoff. |
 | Tactile TV remote | Preview 74 installed; planned iPhone acceptance complete | Code-rendered remote in Home hotspot and native Devices controls; More retains advanced pages. Shared bounded Back and relative-volume actions use existing guarded local persistence. 134 scene + 31 native tests, app/scene TypeScript, scene build and ten actual App browser viewports passed; 21 keys ≥44px, no overlap/overflow, reload retention and focus verified. Signature, staging identity and bundled scene checks passed. Apple app inventory confirms 1.0.0 (74). User confirms comfortable Home remote interaction, matching source/volume/paused state through Devices, and retention after fully closing/reopening. No new dependency, renderer, permission or provider control. See handoff. |
 | Arrow-free dashboard scenes and quieter Home return | Preview 73 installed; physical Home-return checks accepted | Full-width momentum scrolling, keyboard/focus recovery, no scene arrows. Initial launch film no longer replays for same-session renderer recovery after the 45-second retention budget; membership shielding remains. 75 scene + 137 native/root tests, eight browser viewport checks. User confirmed both 5-second and 60-second foreground tab returns without launch replay, with usable navigation; before/after app PID unchanged. Physical swipe feel remains unreported. See handoff. |
 | Vanta home assistant | Preview 71 bounded Owner, Guest and Member checks accepted | Two real staging answers independently verified (HTTP 200, 6.4/12.1 s). Owner scene flow, Guest room/draft restrictions and account-switch cleanup, plus actual Member manual/AI scene creation, explicit Run and local restart retention passed by user report. Broader role/override configurations and quality/cost remain follow-up. No key expansion or new native build was needed. See handoff. |
@@ -25,6 +26,19 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+Climate temperature and fan keys now reduce current shared state, preserving
+rapid presses and off-state power. Manual fan changes clear conflicting presets;
+Normal clears all preset flags in one action, while older saved conflicts use the
+same conservative priority as the scene airflow. The C/F presentation bridge
+covers delayed preference hydration and account recovery without changing stored
+Celsius targets or device authority. Browser reload retained 25°C, Dry, fan 70%,
+Horizontal and Quiet; current hydration, scope/membership and save-recovery guards
+remain in force. These focused checks do not replace physical climate acceptance
+or independent security review; no room-temperature reading or real AC control
+is implied. Preview 75 is built and package-verified, ready to install; installation
+and physical acceptance remain pending, and Preview 74 is the last installed
+build. Evidence is linked in the handoff.
 
 TV remote volume keys now dispatch relative actions against current shared state,
 avoiding lost presses from a stale displayed value. Back has bounded sample-menu
@@ -131,6 +145,12 @@ and full-controls reveal were covered. Simulator/permission behavior is unchange
 optional renderer labs were not changed because the report concerns the main scene.
 
 ## Next implementation priorities
+
+**Immediate climate follow-up:** Preview 75 is built and verified, ready to
+install; installation was not requested this turn. When installed, check
+controller fit, repeated presses, More/Back, matching Home/Devices settings and
+close/reopen retention on the iPhone. Physical climate acceptance is pending;
+iPad testing remains explicitly deferred.
 
 **Member scene acceptance completed:** the separately invited account showed Member
 and Create scene, saved a manual scene without running it, applied 30% on explicit

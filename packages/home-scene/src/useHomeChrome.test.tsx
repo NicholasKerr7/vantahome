@@ -34,8 +34,8 @@ function send(id: number, command: HomeChromeCommand): void {
 }
 
 /** Echo only canonical host preferences, with no command or persistence side effect in the scene. */
-function configure(idleEnabled: boolean, preferenceError = false): void {
-  window.dispatchEvent(new CustomEvent(HOME_CHROME_CHANNEL, { detail: homeChromePreferencesMessage(idleEnabled, preferenceError) }));
+function configure(idleEnabled: boolean, preferenceError = false, tempUnit: 'C' | 'F' = 'C'): void {
+  window.dispatchEvent(new CustomEvent(HOME_CHROME_CHANNEL, { detail: homeChromePreferencesMessage(idleEnabled, preferenceError, tempUnit) }));
 }
 
 beforeEach(() => {
@@ -43,7 +43,7 @@ beforeEach(() => {
   vi.stubGlobal('ReactNativeWebView', { postMessage });
   vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
   postMessage.mockReset(); onOpenEnvironment.mockReset(); onOpenPreferences.mockReset();
-  useHomeStore.setState({ motionDisabled: false });
+  useHomeStore.setState({ motionDisabled: false, tempUnit: 'C' });
   useCinematicStore.setState({ idleEnabled: true, preferenceError: false, showcase: false });
   container = document.createElement('main'); document.body.append(container); root = createRoot(container);
 });
@@ -102,6 +102,23 @@ describe('native header scene presentation', () => {
     act(() => root.render(<ChromeProbe hostSuspended systemReducedMotion />));
     act(() => send(3, { type: 'set-motion', disabled: false }));
     expect(useHomeStore.getState().motionDisabled).toBe(true);
+  });
+
+  it('updates only temperature presentation and clears a previous account unit for older hosts', () => {
+    const localWrite = vi.spyOn(Storage.prototype, 'setItem');
+    const deviceStates = useHomeStore.getState().deviceStates;
+    act(() => root.render(<ChromeProbe hostSuspended />));
+    act(() => configure(true, false, 'F'));
+    expect(useHomeStore.getState().tempUnit).toBe('F');
+    expect(useHomeStore.getState().deviceStates).toBe(deviceStates);
+    expect(localWrite).not.toHaveBeenCalled();
+    const legacy = { channel: HOME_CHROME_CHANNEL, version: 1, type: 'preferences', idleEnabled: true, preferenceError: false };
+    act(() => window.dispatchEvent(new CustomEvent(HOME_CHROME_CHANNEL, { detail: legacy })));
+    expect(useHomeStore.getState().tempUnit).toBe('C');
+    act(() => window.dispatchEvent(new CustomEvent(HOME_CHROME_CHANNEL, { detail: { ...legacy, tempUnit: 'K' } })));
+    expect(useHomeStore.getState().tempUnit).toBe('C');
+    expect(useHomeStore.getState().deviceStates).toBe(deviceStates);
+    expect(localWrite).not.toHaveBeenCalled();
   });
 
   it('does not accept hidden-document setters or replay them on return', () => {

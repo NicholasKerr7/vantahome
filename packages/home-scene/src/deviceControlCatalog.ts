@@ -76,6 +76,11 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
   ],
   ac: [
     range('ac', 'acFanSpeed', 'Fan speed', 0, 100, '%'),
+    action('ac', 'temperature-up', 'Temperature +', {}, { type: 'increment', field: 'tempC', delta: 1 }),
+    action('ac', 'temperature-down', 'Temperature −', {}, { type: 'increment', field: 'tempC', delta: -1 }),
+    action('ac', 'fan-up', 'Fan +', {}, { type: 'increment', field: 'acFanSpeed', delta: 10 }),
+    action('ac', 'fan-down', 'Fan −', {}, { type: 'increment', field: 'acFanSpeed', delta: -10 }),
+    action('ac', 'preset-normal', 'Normal airflow', { acEcoMode: false, acTurboMode: false, acQuietMode: false }),
     choice('ac', 'acSwingMode', 'Swing', [['Off', 'off'], ['Vertical', 'vertical'], ['Horizontal', 'horizontal'], ['Both', 'both']]),
     toggle('ac', 'acEcoMode', 'Eco airflow preview'), toggle('ac', 'acTurboMode', 'Turbo airflow preview'), toggle('ac', 'acQuietMode', 'Quiet airflow preview'),
     range('ac', 'acTargetHumidity', 'Target humidity', 30, 60, '%'), stat('ac', 'acFilterLife', 'Filter life', '%'),

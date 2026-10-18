@@ -8,10 +8,13 @@ import type { HomeWeatherSettingsState } from '../../weather-settings/useHomeWea
 import { HOME_CHROME_CHANNEL, type HomeChromeSnapshot } from '../../../../packages/home-scene/src/homeChromeProtocol';
 import type { HomeChromeCommandIntent } from '../protocol';
 import { createDefaultDevicePlacement, replaceRuntimeDevices } from '../../../../packages/home-scene/src/devicePlacement';
+import { useHomeStore } from '../../../store/useHomeStore';
+import { createDefaultSimulationSnapshot, type SimulationSnapshotMessage } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
 
 type NativeMessage = { nativeEvent: { data: string; url?: string } };
 let mockNativeMessage: (event: NativeMessage) => void;
 let mockWebMessage: (event: MessageEvent<unknown>) => void;
+let mockDeliverSnapshot: (message: SimulationSnapshotMessage) => void;
 const mockCanNavigate = jest.fn();
 const mockSetWeatherLocation = jest.fn();
 const mockWeatherConstructor = jest.fn();
@@ -31,7 +34,10 @@ const originalRemoveListener = window.removeEventListener;
 
 jest.mock('../scene-surface.css', () => ({}));
 jest.mock('../prepareNativeScene', () => ({ prepareNativeScene: async () => 'file:///cache/index.html' }));
-jest.mock('../useSceneSimulationSession', () => ({ useSceneSimulationSession: () => mockSession }));
+jest.mock('../useSceneSimulationSession', () => ({ useSceneSimulationSession: (deliver: typeof mockDeliverSnapshot) => {
+  mockDeliverSnapshot = deliver;
+  return mockSession;
+} }));
 jest.mock('../useHomeChromePreferences', () => ({ useHomeChromePreferences: () => mockChromePreferences }));
 jest.mock('../../weather-settings/useHomeWeatherSettings', () => ({ useHomeWeatherSettings: () => mockWeatherSettings }));
 jest.mock('../nativeWeather', () => ({ NativeWeatherBroker: class {
@@ -164,6 +170,80 @@ function deliveredCommands(platform: 'native' | 'web'): number {
     ? mockInjectJavaScript.mock.calls.filter(([script]: [string]) => script.includes(`CustomEvent('${HOME_CHROME_CHANNEL}'`) && script.includes('"type":"command"')).length
     : mockFrameWindow.postMessage.mock.calls.filter(([message]) => message.channel === HOME_CHROME_CHANNEL && message.type === 'command').length;
 }
+
+/** Isolate host preference delivery from weather, lifecycle and device-state messages. */
+function deliveredPreferences(platform: 'native' | 'web'): string[] {
+  return platform === 'native'
+    ? mockInjectJavaScript.mock.calls.map(([script]: [string]) => script).filter((script) => script.includes('"type":"preferences"'))
+    : mockFrameWindow.postMessage.mock.calls.filter(([message]) => message.channel === HOME_CHROME_CHANNEL && message.type === 'preferences')
+      .map(([message]) => JSON.stringify(message));
+}
+
+/** Resolve delayed session hydration without inventing another renderer load or ready notification. */
+function deliverHydratedSnapshot(): void {
+  mockDeliverSnapshot({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: createDefaultSimulationSnapshot() });
+}
+
+test.each(['native', 'web'] as const)('%s updates the account temperature unit without remounting and reapplies it after fresh membership', async (platform) => {
+  const originalState = useHomeStore.getState();
+  useHomeStore.setState({ profile: { ...originalState.profile, tempUnit: 'C' }, membershipReady: true });
+  const Component = platform === 'native' ? NativeSceneSurface : WebSceneSurface;
+  const onStatus = jest.fn();
+  const frameNode = { contentWindow: mockFrameWindow };
+  const createNodeMock = jest.fn((element) => element.type === 'iframe' ? frameNode : null);
+  const screen = render(<Component onStatus={onStatus} />, { createNodeMock });
+  await act(async () => { await Promise.resolve(); });
+  act(() => sendChrome(platform, { channel: 'vantahome-scene', version: 1, status: 'ready' }));
+  const document = platform === 'native' ? screen.getByTestId('native-scene-document') : screen.UNSAFE_root.findByProps({ title: '3D Home simulation' });
+  mockInjectJavaScript.mockClear(); mockFrameWindow.postMessage.mockClear();
+
+  act(() => { useHomeStore.setState({ profile: { ...originalState.profile, tempUnit: 'F' } }); });
+  expect(deliveredPreferences(platform).at(-1)).toContain('"tempUnit":"F"');
+  expect(platform === 'native' ? screen.getByTestId('native-scene-document') : screen.UNSAFE_root.findByProps({ title: '3D Home simulation' })).toBe(document);
+  if (platform === 'native') expect(mockWeatherConstructor).toHaveBeenCalledTimes(1);
+  else expect(createNodeMock).toHaveBeenCalledTimes(1);
+
+  mockInjectJavaScript.mockClear(); mockFrameWindow.postMessage.mockClear();
+  mockCanNavigate.mockReturnValue(false);
+  act(() => { useHomeStore.setState({ profile: { ...originalState.profile, tempUnit: undefined }, membershipReady: false, sessionEpoch: originalState.sessionEpoch + 1 }); });
+  expect(deliveredPreferences(platform)).toHaveLength(0);
+  act(() => { useHomeStore.setState({ membershipReady: true }); });
+  expect(deliveredPreferences(platform)).toHaveLength(0);
+  mockCanNavigate.mockReturnValue(true);
+  act(deliverHydratedSnapshot);
+  expect(deliveredPreferences(platform).at(-1)).toContain('"tempUnit":"C"');
+  const deliveryCount = deliveredPreferences(platform).length;
+  act(deliverHydratedSnapshot);
+  expect(deliveredPreferences(platform)).toHaveLength(deliveryCount);
+  expect(platform === 'native' ? screen.getByTestId('native-scene-document') : screen.UNSAFE_root.findByProps({ title: '3D Home simulation' })).toBe(document);
+  expect(mockSaveChromePreference).not.toHaveBeenCalled();
+  screen.unmount();
+  useHomeStore.setState(originalState);
+});
+
+test.each(['native', 'web'] as const)('%s publishes the current unit after delayed initial hydration without repeated snapshot echoes', async (platform) => {
+  const originalState = useHomeStore.getState();
+  useHomeStore.setState({ profile: { ...originalState.profile, tempUnit: 'F' } });
+  mockCanNavigate.mockReturnValue(false);
+  const Component = platform === 'native' ? NativeSceneSurface : WebSceneSurface;
+  const screen = render(<Component onStatus={jest.fn()} />, {
+    createNodeMock: (element) => element.type === 'iframe' ? { contentWindow: mockFrameWindow } : null,
+  });
+  await act(async () => { await Promise.resolve(); });
+  act(() => sendChrome(platform, { channel: 'vantahome-scene', version: 1, status: 'ready' }));
+  expect(deliveredPreferences(platform)).toHaveLength(0);
+  mockCanNavigate.mockReturnValue(true);
+  act(deliverHydratedSnapshot);
+  expect(deliveredPreferences(platform)).toHaveLength(1);
+  expect(deliveredPreferences(platform)[0]).toContain('"tempUnit":"F"');
+  act(deliverHydratedSnapshot);
+  expect(deliveredPreferences(platform)).toHaveLength(1);
+  mockCanNavigate.mockReturnValue(false);
+  act(deliverHydratedSnapshot);
+  expect(deliveredPreferences(platform)).toHaveLength(1);
+  screen.unmount();
+  useHomeStore.setState(originalState);
+});
 
 test.each(['native', 'web'] as const)('%s accepts chrome snapshots only from the current document and current membership', async (platform) => {
   const Component = platform === 'native' ? NativeSceneSurface : WebSceneSurface;

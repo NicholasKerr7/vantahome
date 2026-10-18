@@ -11,6 +11,8 @@ import { EMPTY_WEATHER_CONFIGURATION, WEATHER_CONFIGURATION_CHANNEL, type Proper
 import './scene-surface.css';
 import { homeChromePreferencesMessage, parseHomeChromeSnapshot } from '../../../packages/home-scene/src/homeChromeProtocol';
 import { useHomeChromePreferences } from './useHomeChromePreferences';
+import { useHomeStore } from '../../store/useHomeStore';
+import { homeEditorScope } from '../home-shell/homeEditorScope';
 
 /** Keep an optional save-status callback stable when callers do not display it. */
 const ignoreSaveStatus = () => undefined;
@@ -20,17 +22,32 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
   const frame = useRef<HTMLIFrameElement>(null);
   const documentReady = useRef(false);
   const consumedCommand = useRef(0);
+  const publishedPreferences = useRef<string | null>(null);
+  const publishPreferences = useRef<(force?: boolean) => void>(() => undefined);
   /** Stable deliveries reconnect permissions without navigating or replacing this iframe. */
   const deliverSnapshot = useCallback((message: SimulationSnapshotMessage) => {
     frame.current?.contentWindow?.postMessage(message, '*');
+    publishPreferences.current();
   }, []);
   const deliverCatalog = useCallback((message: SceneCatalogMessage) => {
     frame.current?.contentWindow?.postMessage(message, '*');
   }, []);
   const simulation = useSceneSimulationSession(deliverSnapshot, deliverCatalog, onSaveStatus);
   const chromePreferences = useHomeChromePreferences();
-  const chromePreferencesRef = useRef(chromePreferences);
-  chromePreferencesRef.current = chromePreferences;
+  const tempUnit = useHomeStore((state) => state.profile.tempUnit === 'F' ? 'F' : 'C');
+  const preferenceScope = useHomeStore(homeEditorScope);
+  const chromePreferencesRef = useRef<typeof chromePreferences & { tempUnit: 'C' | 'F' }>({ ...chromePreferences, tempUnit });
+  chromePreferencesRef.current = { ...chromePreferences, tempUnit };
+  /** Hydrated snapshots can arrive after a scope effect; publish the latest verified preferences once. */
+  publishPreferences.current = (force = false) => {
+    const preference = chromePreferencesRef.current;
+    if (!frame.current?.contentWindow || !preference.ready || !simulation.current?.canNavigate()) return;
+    const message = homeChromePreferencesMessage(preference.idleEnabled, preference.preferenceError, preference.tempUnit);
+    const publication = JSON.stringify([preferenceScope, message]);
+    if (!force && publishedPreferences.current === publication) return;
+    publishedPreferences.current = publication;
+    frame.current.contentWindow.postMessage(message, '*');
+  };
   const propertyWeather = useHomeWeatherSettings();
   const weatherConfiguration = useRef<PropertyWeatherConfiguration>(EMPTY_WEATHER_CONFIGURATION);
   weatherConfiguration.current = {
@@ -44,14 +61,14 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
   /** Send again after document readiness so an early covering panel cannot lose its pause. */
   const publishPresentation = useCallback(() => {
     frame.current?.contentWindow?.postMessage(scenePresentationMessage(suspendedRef.current), '*');
-    const preference = chromePreferencesRef.current;
-    if (preference.ready && simulation.current?.canNavigate()) frame.current?.contentWindow?.postMessage(homeChromePreferencesMessage(preference.idleEnabled, preference.preferenceError), '*');
+    publishPreferences.current(true);
     frame.current?.contentWindow?.postMessage(weatherConfiguration.current, '*');
   }, [simulation]);
   useEffect(publishPresentation, [publishPresentation, suspended, propertyWeather.location, propertyWeather.configured, propertyWeather.loading, propertyWeather.canManage]);
   useEffect(() => {
-    if (chromePreferences.ready && simulation.current?.canNavigate()) frame.current?.contentWindow?.postMessage(homeChromePreferencesMessage(chromePreferences.idleEnabled, chromePreferences.preferenceError), '*');
-  }, [chromePreferences.ready, chromePreferences.idleEnabled, chromePreferences.preferenceError, simulation]);
+    // Reapply after fresh membership as well as unit changes; this never replaces the document.
+    publishPreferences.current();
+  }, [chromePreferences.ready, chromePreferences.idleEnabled, chromePreferences.preferenceError, tempUnit, preferenceScope, simulation]);
   useEffect(() => {
     const message = consumeHomeChromeCommand(chromeCommand, consumedCommand, {
       ready: documentReady.current && chromePreferences.ready, canNavigate: simulation.current?.canNavigate() === true,

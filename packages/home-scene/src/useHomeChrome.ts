@@ -44,9 +44,11 @@ export function useHomeChrome(options: HomeChromeOptions): void {
     if (!isEmbeddedScene()) return;
     // A trusted resume event can precede its React render; consume its state synchronously.
     const stopPresentation = subscribeScenePresentation(window, (suspended) => { hostSuspended.current = suspended; });
-    const stopPreferences = subscribeHomeChromePreferences(window, ({ idleEnabled, preferenceError }) => {
+    const stopPreferences = subscribeHomeChromePreferences(window, ({ idleEnabled, preferenceError, tempUnit }) => {
       // Native/opaque embeds never own storage; a stored preference cannot start a tour itself.
       useCinematicStore.setState({ idleEnabled, preferenceError, ...(!idleEnabled ? { showcase: false } : {}) });
+      // Every accepted message replaces the previous account's presentation, including older Celsius hosts.
+      useHomeStore.setState({ tempUnit: tempUnit ?? 'C' });
       setPreferencesReady(true);
     });
     const stopCommands = subscribeHomeChromeCommands(window, ({ id, command }) => {
