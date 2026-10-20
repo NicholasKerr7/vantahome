@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-18**. Read this before rediscovering the project.
+Last maintained: **2026-10-20**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Entry gate console — October 18 / Preview 82 built and verified; install pending
+## Entry gate console — October 18 / Preview 82 installed; iPhone interaction accepted
 
 - Added coordinated sculpted Home/Devices gate consoles with a single sliding
   leaf that follows the accepted position, not the closing target. The lightweight
@@ -86,12 +86,19 @@ defects from ideas or untested risks.
   manifest, retained controller and exact generated/package scene checks:
   **32,044,461 bytes** (30.560 MiB), below 32 MiB. Production metadata was restored.
   Package receipt: `work/gate-preview82-package.json`.
-  **INSTALL PENDING:** the attempt failed with CoreDevice 4016 because the iPhone
-  was unavailable; receipt: `work/gate-preview82-install.json`. Preview 82 is not
-  installed. Preview 81 remains the latest verified installed build.
-  Physical gate and energy acceptance remain pending; asking for the next
-  controller did not accept the energy milestone. Existing physical climate,
-  iPad, hub and household-sync deferrals remain unchanged.
+  Reverified the package, then installed and launched after the USB reconnect;
+  Apple inventory confirms **1.0.0 (82)**, the latest verified installed build.
+  Receipts: `work/gate-preview82-{install-connected,apps,launch}.json`.
+  `work/gate-preview82-device-details.json` confirms a wired, connected device.
+  The earlier unavailable-device attempt failed with CoreDevice 4016
+  (`work/gate-preview82-install.json`); it is no longer an installation blocker.
+  User confirmed the iPhone Open/Close, Hold open/Release hold and More/Back
+  test fits comfortably and works smoothly, without clipping. Home/Devices
+  agreement and full app restart retention are the next physical checks; no
+  broader safety-scenario or real-motor acceptance is inferred.
+  Physical energy acceptance remains pending; asking for the next controller
+  did not accept that milestone. Existing physical climate, iPad, hub and
+  household-sync deferrals remain unchanged.
 
 ## Energy consoles — October 18 / Preview 81 installed
 
@@ -140,7 +147,8 @@ defects from ideas or untested risks.
   and simulator compiler caches; source, assets and verification evidence remain.
   Package evidence: `work/energy-preview81-{build.log,package.json}`.
   Installed and launched on the iPhone; Apple inventory confirms **1.0.0 (81)**,
-  now latest installed. Receipts: `work/energy-preview81-{install,apps,launch}.json`.
+  since superseded by Preview 82. Receipts:
+  `work/energy-preview81-{install,apps,launch}.json`.
   Physical energy acceptance, existing climate checks, physical iPad testing,
   hub execution and household sync remain separate; production is unchanged.
 
