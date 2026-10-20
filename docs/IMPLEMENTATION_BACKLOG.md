@@ -9,7 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
-| Entry gate console | Preview 82 installed; iPhone interaction accepted | Home/Devices consoles project the existing entry gate only, with a single sliding leaf following accepted position and no independent clock or idle loop. Existing guarded Open/Close/Hold/Release/Resume only; no Stop, pedestrian command, engine or hardware expansion. Safety, paused restoration, countdown, holds, reload agreement and More/Back verified. 98 web/shared + 121 native tests (219 distinct), TypeScript, scene web/native builds and review pass. Fourteen embedded and five native profiles fit with ≥44px targets; 320×568 retains a 146px internal fallback with zero page overflow. Final fresh browser errors are zero. Build/signature/staging/asset/scene checks pass (32,044,461 bytes); production metadata restored. Package reverified; installation and launch succeeded after USB reconnect, and Apple inventory confirms 1.0.0 (82), superseding Preview 81. The earlier CoreDevice 4016 connection failure is resolved. User accepted iPhone fit, animation, Open/Close, Hold/Release and More/Back. Physical Home/Devices agreement, restart retention and energy acceptance remain pending. See handoff. |
+| Entry gate console | Preview 82 installed; planned iPhone checks accepted | Home/Devices consoles project the existing entry gate only, with a single sliding leaf following accepted position and no independent clock or idle loop. Existing guarded Open/Close/Hold/Release/Resume only; no Stop, pedestrian command, engine or hardware expansion. Safety, paused restoration, countdown, holds, reload agreement and More/Back verified. 98 web/shared + 121 native tests (219 distinct), TypeScript, scene web/native builds and review pass. Fourteen embedded and five native profiles fit with ≥44px targets; 320×568 retains a 146px internal fallback with zero page overflow. Final fresh browser errors are zero. Build/signature/staging/asset/scene checks pass (32,044,461 bytes); production metadata restored. Package reverified; installation and launch succeeded after USB reconnect, and Apple inventory confirms 1.0.0 (82), superseding Preview 81. The earlier CoreDevice 4016 connection failure is resolved. User accepted iPhone fit, animation, Open/Close, Hold/Release and More/Back, then confirmed Home/Devices agreement, hold retention after full app restart and successful Release/Close. Broader safety scenarios are not implied; energy acceptance remains pending. See handoff. |
 | Energy consoles | Preview 81 installed and launched; physical acceptance pending | Four selected-device Home/Devices consoles use code/SVG artwork without idle loops or invented combined flow. Battery power preserves charge/reserve/mode; reserve/storage and generator start mode remain saved preferences only. Current view grants intersect library scope for selected controls and fallback room/search/favorite results, including edit-footer removal. 113 web/shared + 106 native tests (219 distinct), TypeScript and scene web/native builds pass. Eleven embedded profiles and five native profiles fit with ≥44px controls; 320×568 keeps a 147px internal fallback with zero page overflow. Home/Devices state, More/Back focus, reload, isolated meter outage/restore, explicit generator Start/Stop and unchanged solar sample verified; final browser errors are zero. Final package signing/staging/scene hash and size (32,030,057 bytes) verified; production metadata restored. Installed and launched; Apple inventory confirms 1.0.0 (81). Physical energy acceptance remains pending. See handoff. |
 | Tactile lighting controller | Preview 80 user accepted | User accepted the overall lighting experience; individual unreported physical scenarios are not claimed separately. Sculpted Home/Devices controls share power-preserving dimming, white/color presets and effect-aware appearance; More retains advanced settings. Fixed saved Color mode overwritten by unchanged temperature-only host records. 172 distinct focused tests, TypeScript, web/native scene builds and review pass. Eleven embedded profiles and five native-component browser profiles fit with targets ≥44px; tiny 320×568 keeps internal fallback. Off/on-at-zero, effects, Home/Devices agreement and reload retention verified; final fresh browser has zero errors. Signature/staging/scene hash and size (32,011,709 bytes) verified; Apple inventory confirms 1.0.0 (80). No transport or permission expansion. See handoff. |
 | Smart blinds controller | Preview 79 user accepted | User says the blinds work great; individual unreported physical scenarios are not claimed separately. Sculpted Home/Devices controllers share saved position, geometry, bounded ±5% actions and presets; More preserves advanced controls. 61 scene + 49 native tests, TypeScript and web/native scene builds pass. Embedded responsive boundaries, interaction, reload retention and Home/Devices synchronization verified. No ordinary scrolling at 13 tested phone/tablet/boundary profiles; 320×568 retains accessible internal fallback. Five native-component browser profiles fit. Final fresh browser run has no errors. Signature/staging/scene hash and size (31,997,819 bytes) verified; Apple inventory confirmed 1.0.0 (79), since superseded by Preview 80. No hub, motor or permission expansion. See handoff. |
@@ -53,9 +53,11 @@ zero. Preview 82 passed package checks again and is installed and launched;
 Apple inventory confirms 1.0.0 (82), superseding Preview 81. The USB reconnect
 resolved the earlier unavailable-device installation failure (CoreDevice 4016);
 see the handoff receipts. User accepted the iPhone Open/Close, Hold/Release,
-More/Back, smooth animation and comfortable fit without clipping. Home/Devices
-agreement and full app restart retention remain pending on the physical iPhone;
-broader safety scenarios and real hardware are not implied.
+More/Back, smooth animation and comfortable fit without clipping. User also
+confirmed matching open/held state with Close disabled through Home and Devices,
+hold retention after full app restart and successful Release hold → Close.
+Planned iPhone checks are accepted; broader safety scenarios, automatic-close
+recovery and real hardware are not implied.
 Energy Preview 81 physical acceptance is still pending: requesting the next
 controller did not constitute acceptance.
 
@@ -240,14 +242,13 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
-**Immediate gate follow-up:** on installed Preview 82, set Hold open, verify the
-same open/held state with Close disabled through Devices, then wait for local
-save and fully close/reopen the app. Confirm the held state survives; finish with
-Release hold → Close. The user accepted fit, animation, Open/Close, Hold/Release
-and More/Back. Browser state/fit/focus checks pass with zero final errors; physical
-Home/Devices agreement and restart retention remain pending. Preserve existing
-simulation-only commands and paused restart behavior; do not infer real gate or
-motor success.
+**Gate acceptance completed:** on installed Preview 82, the user confirmed fit,
+smooth animation, Open/Close, Hold/Release and More/Back, followed by Home/Devices
+agreement with Close disabled while held, hold retention after full app restart,
+and successful Release hold → Close. No further repetition of those checks is
+needed without a change or regression. Broader safety scenarios and automatic-close
+recovery remain separate physical follow-ups; preserve simulation-only commands
+and paused restart behavior, with no inferred real gate or motor success.
 
 **Immediate energy follow-up:** on installed Preview 82, open Energy pavilion
 and check each energy device's full controls. Verify battery power/reserve/storage,

@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Entry gate console — October 18 / Preview 82 installed; iPhone interaction accepted
+## Entry gate console — October 18 / Preview 82 installed; planned iPhone checks accepted
 
 - Added coordinated sculpted Home/Devices gate consoles with a single sliding
   leaf that follows the accepted position, not the closing target. The lightweight
@@ -93,9 +93,11 @@ defects from ideas or untested risks.
   The earlier unavailable-device attempt failed with CoreDevice 4016
   (`work/gate-preview82-install.json`); it is no longer an installation blocker.
   User confirmed the iPhone Open/Close, Hold open/Release hold and More/Back
-  test fits comfortably and works smoothly, without clipping. Home/Devices
-  agreement and full app restart retention are the next physical checks; no
-  broader safety-scenario or real-motor acceptance is inferred.
+  test fits comfortably and works smoothly, without clipping. User subsequently
+  confirmed matching open/held state with Close disabled through Home and Devices,
+  hold retention after fully closing/reopening, and successful Release hold → Close.
+  Planned iPhone interaction and persistence checks are accepted. Broader safety
+  scenarios, automatic-close recovery and real-motor acceptance are not inferred.
   Physical energy acceptance remains pending; asking for the next controller
   did not accept that milestone. Existing physical climate, iPad, hub and
   household-sync deferrals remain unchanged.
