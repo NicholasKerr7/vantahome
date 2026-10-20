@@ -46,6 +46,50 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Robot vacuum console — October 20 / Preview 84 verified; installation deferred
+
+- Added sculpted robot/dock consoles in embedded Home and native Devices. Start,
+  Pause, Resume and Dock use the existing guarded saved simulation; four cleaning
+  modes, bounded relative suction steps, Mop and Quiet preserve power/activity.
+  More retains every original advanced setting. No dependency, extra renderer,
+  continuous animation, route engine or hardware transport was introduced.
+- Fixed a real consistency issue: paused/docked activity previously appeared as
+  Idle in generic device summaries after a preference change. A shared activity
+  projection now keeps hotspots, library, advanced Activity and both consoles
+  aligned with authoritative power. Both consoles share maintenance warnings;
+  invalid samples remain unavailable. Battery, area and runtime do not advance.
+- **149 focused tests** pass: 117 shared/catalog, 7 web, 25 native/pagination.
+  App/scene TypeScript, web/native scene builds, diff checks and bounded source
+  review pass. Evidence: `work/vacuum-{shared-final-tests,web-tests,native-tests,
+  native-typecheck,scene-build}.log`.
+- Thirteen embedded profiles including intermediate height boundaries fit with
+  44px targets and no page/horizontal overflow. Regular phone/tablet profiles
+  need no scrolling; 320×568 retains a 167px contained fallback. At 440×956 with
+  96px host safe-area allowance, the 553.5px console fits a 574px stage. Five
+  native-component browser profiles also fit with 44px targets and no overflow.
+  Receipts: `work/vacuum-browser-layouts.json`,
+  `work/vacuum-browser-native-layouts.json`; screenshots `work/vacuum-home.png`
+  and `work/vacuum-native.png`.
+- Actual App browser flow verified Start/Pause/Resume/Dock, bounds, editing
+  preferences while paused/docked, both More/Back paths, web focus restoration,
+  and Home/Devices agreement. Paused/Spot/100%/Mop On/Quiet On survived reload;
+  native Dock/Edge/90% then survived reload and appeared in embedded Home.
+  Local demo ended Docked/Auto/70%/Mop Off/Quiet Off. Battery remained 86%.
+  Final browser errors: zero (`work/vacuum-final-browser-errors.json`). Metro
+  initially served pre-edit native modules; restarting its local QA cache fixed
+  that stale preview. No product navigation change was needed.
+- Preview 84 built and passed signature, staging identity/redirect, profile,
+  retained controller and exact packaged scene checks. Scene **32,080,275 bytes**
+  (30.594 MiB), SHA prefix **b8353fe33168**, within the 32 MiB budget. Production
+  metadata restored; temporary QA entry excluded from Hermes. Receipt:
+  `work/vacuum-preview84-package.json`; build logs `work/vacuum-preview84-build*`.
+- User chose **Install later**. Do not install until asked. Preview 83 remains
+  the latest verified installed build. Preview 84 package is at
+  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app`; reverify
+  package/profile/device reachability before later installation. Vacuum physical
+  interaction/persistence is pending. Water physical persistence is also deferred
+  by the user; hub/sync and physical iPad deferrals are unchanged.
+
 ## Water consoles — October 20 / Preview 83 installed; iPhone interaction accepted
 
 - Added sculpted water-heater and water-meter consoles in embedded Home and

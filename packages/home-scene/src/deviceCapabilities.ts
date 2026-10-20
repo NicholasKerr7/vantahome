@@ -6,13 +6,14 @@ import { supplementalCapabilities, supplementalDefaults, simulatedStatusFields, 
 import type { DeviceDefinition } from './data';
 import type { DeviceState, SettingValue } from './simulationTypes';
 import { configurationPageNote, describeCapabilitySupport } from './deviceCapabilitySupport';
+import { readVacuumActivity, vacuumActivityLabel } from './vacuumActivity';
 export type { SettingValue } from './simulationTypes';
 
 export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar', 'gas-meter', 'gas-leak'] as const;
 export type DeviceKind = typeof DEVICE_KINDS[number];
 export type ControlGroup = 'controls' | 'modes' | 'schedule' | 'status';
 export type DeviceActionOperation =
-  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume' | 'tempC' | 'acFanSpeed' | 'openPercent' | 'brightness' | 'waterBudgetL'; delta: number }
+  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume' | 'tempC' | 'acFanSpeed' | 'openPercent' | 'brightness' | 'waterBudgetL' | 'vacuumSuction'; delta: number }
   | { type: 'media'; command: 'play-pause' | 'rewind' | 'forward' | 'previous' | 'next' }
   | { type: 'gas'; command: GasCommand }
   | { type: 'fire'; command: FireCommand }
@@ -94,6 +95,8 @@ export function readDeviceSetting(device: DeviceDefinition, state: DeviceState, 
     if (gasValue !== undefined) return gasValue;
   }
   if (field === 'isOn') return state.on;
+  // The advanced Activity sample must agree with power-authoritative quick and full controls.
+  if (device.kind === 'vacuum' && field === 'status') return readVacuumActivity(state);
   if (field === 'armed' && device.kind === 'camera') return state.on;
   if (field === 'powerW' && device.kind === 'generator') return state.on ? Math.round(state.level * 60) : 0;
   if (field === 'chargePercent' && device.kind === 'battery') return state.level;
@@ -146,6 +149,9 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
   if (device.kind === 'ac' && operation?.type === 'increment') return operation.field === 'tempC' ? `Target ${readDeviceSetting(device, state, 'tempC')}°C · simulation` : `Fan ${readDeviceSetting(device, state, 'acFanSpeed')}% · simulation`;
   if (device.kind === 'water-heater' && operation?.type === 'increment') return `Target ${readDeviceSetting(device, state, 'tempC')}°C · saved preference`;
   if (device.kind === 'water' && operation?.type === 'increment') return `Usage budget ${readDeviceSetting(device, state, 'waterBudgetL')} L · saved preference`;
+  if (device.kind === 'vacuum') return operation?.type === 'increment'
+    ? `${vacuumActivityLabel(state)} · Suction ${readDeviceSetting(device, state, 'vacuumSuction')}% · saved preference`
+    : vacuumActivityLabel(state);
   if (device.kind === 'camera') return String(readDeviceSetting(device, state, 'cameraPreviewEvent'));
   if (device.kind === 'light') return `${state.on ? '' : 'Off · '}${action.label} · ${state.level}%`;
   if ('openPercent' in action.patch || (operation?.type === 'increment' && operation.field === 'openPercent')) return state.level === 0 ? 'Closed in preview' : `${state.level}% open in preview`;
@@ -193,7 +199,8 @@ export function deviceStatus(device: DeviceDefinition, state: DeviceState): stri
   if (isGasDevice(device.kind)) return gasDeviceStatus(device.kind, state);
   if (device.kind === 'camera') return readDeviceSetting(device, state, 'armed') ? 'Armed' : 'Disarmed';
   if (isMonitor(device.kind)) return state.settings?.sampleChecked ? 'Sample checked' : 'Monitoring sample';
+  if (device.kind === 'vacuum') return vacuumActivityLabel(state);
   if (['gate', 'garage', 'window', 'blinds', 'door'].includes(device.kind)) return state.level === 0 ? 'Closed' : state.level === 100 ? 'Fully open' : `${state.level}% open`;
-  if (['washer', 'dryer', 'dishwasher', 'microwave', 'vacuum', 'coffee', 'generator'].includes(device.kind)) return state.on ? 'Running' : 'Idle';
+  if (['washer', 'dryer', 'dishwasher', 'microwave', 'coffee', 'generator'].includes(device.kind)) return state.on ? 'Running' : 'Idle';
   return state.on ? 'On' : 'Off';
 }

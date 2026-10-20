@@ -122,6 +122,8 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
   ],
   vacuum: [
     action('vacuum', 'pause', 'Pause cleaning', { isOn: false, status: 'paused' }),
+    { ...action('vacuum', 'suction-up', 'Suction +', {}, { type: 'increment', field: 'vacuumSuction', delta: 10 }), configurationOnly: true },
+    { ...action('vacuum', 'suction-down', 'Suction −', {}, { type: 'increment', field: 'vacuumSuction', delta: -10 }), configurationOnly: true },
     choice('vacuum', 'vacuumMode', 'Cleaning mode', [['Auto', 'auto'], ['Spot', 'spot'], ['Edge', 'edge'], ['Room', 'room']]),
     range('vacuum', 'vacuumSuction', 'Suction', 0, 100, '%'), toggle('vacuum', 'vacuumMop', 'Mop'), toggle('vacuum', 'vacuumQuietMode', 'Quiet mode'),
     stat('vacuum', 'vacuumBinFull', 'Bin full'), stat('vacuum', 'vacuumBrushDirty', 'Brush needs cleaning'), stat('vacuum', 'vacuumFilterLife', 'Filter life', '%'),

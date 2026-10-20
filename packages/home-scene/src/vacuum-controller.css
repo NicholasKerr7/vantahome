@@ -1,0 +1,62 @@
+/* Sculpted metal and accepted activity use ordinary CSS/SVG, without an idle rendering loop. */
+.device-control-sheet.is-vacuum-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.vacuum-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.vacuum-stage { display: grid; align-items: safe center; justify-items: center; min-width: 0; min-height: 0; padding: 2px 0 4px; container: vacuum-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.vacuum-console { display: grid; grid-template-areas: 'top' 'visual' 'actions' 'modes' 'suction' 'prefs' 'note'; width: min(380px, 100%); gap: 10px; padding: 16px; border: 1px solid #9B84B0; border-radius: 30px; background: linear-gradient(140deg, #51465F, #261C34 12%, #100C1B 57%, #30233E); box-shadow: inset 2px 1px 1px #FFFFFF38, inset -2px -2px 3px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; color: var(--text); }
+.vacuum-top { grid-area: top; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.vacuum-emblem { display: grid; place-items: center; width: 44px; height: 44px; color: #D3B4EF; }
+.vacuum-brand { display: grid; gap: 4px; text-align: center; }
+.vacuum-brand span { font-size: 8px; letter-spacing: 2.6px; color: #B7ACCB; }
+.vacuum-brand strong { font-size: 12px; font-weight: 500; letter-spacing: 3px; }
+.vacuum-console button { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 7px; border: 1px solid #FFFFFF26; border-radius: 13px; background: linear-gradient(145deg, #40334F, #231A30 70%); box-shadow: inset 0 1px 1px #FFFFFF24, 0 3px 3px #07030DBB; color: var(--text); cursor: pointer; touch-action: manipulation; user-select: none; font-size: 11px; transition: transform 140ms ease, border-color 180ms ease; }
+.vacuum-console .vacuum-key { width: 44px; height: 44px; border-radius: 50%; }
+.vacuum-console :is(button[aria-checked='true'], button[aria-pressed='true'], .vacuum-primary) { border-color: #B88DD599; background: linear-gradient(140deg, #634780, #30203F); }
+.vacuum-visual { grid-area: visual; display: grid; justify-items: center; gap: 3px; padding: 6px 8px 10px; border-radius: 22px; border: 1px solid #B994DC24; background: radial-gradient(ellipse at 50% 58%, #7845A333, transparent 72%), #130E1DA8; }
+.vacuum-artwork { display: block; width: 100%; max-width: 300px; height: 150px; }
+.vacuum-activity-ring { transition: stroke 240ms ease; }
+.vacuum-readings { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; padding-inline: 5px; }
+.vacuum-readings strong { font-size: 12px; font-weight: 500; color: #E7D6F4; }
+.vacuum-readings > span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #DDC7F0; font-variant-numeric: tabular-nums; }
+.vacuum-readings small { color: #B8A5C9; font-size: 8px; }
+.vacuum-actions { grid-area: actions; display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; }
+.vacuum-modes { grid-area: modes; display: grid; gap: 6px; }
+.vacuum-modes > span, .vacuum-suction > div > span { color: #C5AFD8; font-size: 8px; letter-spacing: .7px; }
+.vacuum-modes > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.vacuum-suction { grid-area: suction; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px; border: 1px solid #A080BD24; border-radius: 25px; background: #100B19; }
+.vacuum-suction > div { display: grid; gap: 3px; text-align: center; }
+.vacuum-suction output { font-size: 23px; line-height: 1; font-variant-numeric: tabular-nums; font-weight: 300; }
+.vacuum-suction output small { margin-left: 2px; font-size: 11px; color: #CEB7E2; }
+.vacuum-preferences { grid-area: prefs; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.vacuum-preferences strong { font-size: 9px; font-weight: 500; color: #DCC4F3; }
+.vacuum-note { grid-area: note; color: #C0AACF; font-size: 9px; text-align: center; line-height: 1.5; }
+.vacuum-feedback { display: grid; gap: 4px; margin: 0; min-height: 30px; padding-inline: 8px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.vacuum-feedback span { font-size: 7px; letter-spacing: 1.8px; color: var(--muted); }
+.vacuum-console button:not(:disabled):active { transform: translateY(2px); }
+.vacuum-console :disabled { opacity: .4; cursor: default; }
+.vacuum-console button:focus-visible, .vacuum-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.vacuum-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.vacuum-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+/* Reclaim illustration space before shrinking controls in the embedded native shell. */
+@container vacuum-stage (max-height: 560px) {
+  .vacuum-console { padding: 12px; gap: 8px; }
+  .vacuum-artwork { height: clamp(100px, calc(100cqh - 390px), 138px); }
+}
+@container vacuum-stage (max-height: 490px) {
+  .vacuum-console { grid-template-areas: 'top top' 'visual actions' 'modes modes' 'suction suction' 'prefs prefs' 'note note'; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); padding: 8px; gap: 5px; }
+  .vacuum-visual { padding: 0 4px 4px; gap: 0; }
+  .vacuum-artwork { height: 70px; }
+  .vacuum-readings { flex-wrap: wrap; justify-content: center; gap: 2px 6px; padding: 0; }
+  .vacuum-readings strong { font-size: 10px; }
+  .vacuum-readings > span { font-size: 9px; }
+  .vacuum-readings svg { width: 12px; height: 12px; }
+  .vacuum-actions { grid-template-columns: 1fr; gap: 5px; align-content: center; }
+  .vacuum-actions button { padding-inline: 4px; font-size: 10px; gap: 4px; }
+  .vacuum-modes { gap: 4px; }
+  .vacuum-suction { padding: 0 3px; }
+  .vacuum-note { font-size: 8px; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-vacuum-controller .device-sheet-content { padding-inline: 12px; } }
+@media (hover: hover) { .vacuum-console button:not(:disabled):hover { border-color: #BA91E1AA; } }
+.vacuum-workspace[data-motion-disabled='true'] * { transition: none; animation: none; scroll-behavior: auto; }
+.vacuum-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .vacuum-workspace * { transition: none; animation: none; scroll-behavior: auto; } .vacuum-workspace button:active { transform: none; } }
