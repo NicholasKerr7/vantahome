@@ -1,6 +1,7 @@
 import type { DeviceDefinition } from './data';
 import { readDeviceSetting } from './deviceCapabilities';
 import type { DeviceState } from './simulationTypes';
+import { readFanActivity } from './fanActivity';
 
 /** Bound visual preview inputs without inventing a sensor reading or changing stored setpoints. */
 function percentage(value: unknown): number {
@@ -8,11 +9,8 @@ function percentage(value: unknown): number {
 }
 
 /** Reverse changes rotor direction; the explicit sleep preview caps the requested motor speed. */
-export function fanPreviewVelocity(device: DeviceDefinition, state: DeviceState): number {
-  if (!state.on) return 0;
-  const requested = percentage(state.level);
-  const speed = readDeviceSetting(device, state, 'fanSleepMode') === true ? Math.min(requested, 35) : requested;
-  return speed * 0.13 * (readDeviceSetting(device, state, 'fanDirection') === 'reverse' ? -1 : 1);
+export function fanPreviewVelocity(_device: DeviceDefinition, state: DeviceState): number {
+  return readFanActivity(state).velocity;
 }
 
 /** Describe visual airflow only; temperature, humidity and energy telemetry remain unchanged. */

@@ -14,6 +14,7 @@ import { deviceStatus, getCapabilities, readDeviceSetting } from '../../../../pa
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
 jest.mock('../../../components/CinematicSurface', () => require('react-native').View);
+jest.mock('../../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false }));
 const mockOpenRoutines = jest.fn();
 jest.mock('../useDeviceRoutines', () => ({ useDeviceRoutines: () => mockOpenRoutines }));
 
@@ -40,6 +41,7 @@ function renderControls(deviceId: string) {
   if (kind && isWaterDeviceKind(kind)) fireEvent.press(screen.getByLabelText('More water controls'));
   if (kind === 'vacuum') fireEvent.press(screen.getByLabelText('More vacuum controls'));
   if (kind === 'speaker') fireEvent.press(screen.getByLabelText('More speaker controls'));
+  if (kind === 'fan') fireEvent.press(screen.getByLabelText('More fan controls'));
   if (deviceId === 'entry-gate') fireEvent.press(screen.getByLabelText('More gate controls'));
   return { screen, props, runAction, setSetting, onClose };
 }
@@ -206,7 +208,7 @@ test('native controls identify saved-only fan configuration while the working di
   expect(screen.getByText('Saved only · this fixed fan has no oscillation or lamp.')).toBeTruthy();
 });
 
-test.each(['utility-water', 'utility-water-heater', 'living-vacuum', 'living-speaker'])('%s preserves every advanced capability behind More at large text sizes', (id) => {
+test.each(['utility-water', 'utility-water-heater', 'living-vacuum', 'living-speaker', 'living-fan'])('%s preserves every advanced capability behind More at large text sizes', (id) => {
   const { screen } = renderControls(id);
   measure(screen, 130);
   const expected = getInspectorPages(getDevice(id)!, 3).flatMap((page) => page.capabilities.map((item) => item.id));

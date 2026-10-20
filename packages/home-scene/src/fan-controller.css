@@ -1,0 +1,63 @@
+/* Machined violet housing frames a compositor-driven rotor; controls never depend on animation. */
+.device-control-sheet.is-fan-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.fan-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.fan-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 2px 0 5px; overflow: auto; container: fan-stage / size; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.fan-console { display: grid; grid-template-areas: 'top' 'hero' 'speed' 'presets' 'options'; width: min(380px, 100%); gap: 11px; padding: 14px; border: 1px solid #A78DB9; border-radius: 32px; color: var(--text); background: linear-gradient(140deg, #51415F, #24192F 15%, #100C19 60%, #2F203D); box-shadow: inset 2px 1px 1px #FFFFFF35, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.fan-top { grid-area: top; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.fan-brand { display: grid; gap: 5px; text-align: center; }
+.fan-brand span { font-size: 8px; letter-spacing: 2.5px; color: #BFAFD0; }
+.fan-brand strong { font-weight: 500; font-size: 12px; letter-spacing: 3px; }
+.fan-console button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 7px; border-radius: 15px; border: 1px solid #FFFFFF29; background: linear-gradient(145deg, #41324F, #231A30 75%); color: var(--text); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease, background 180ms ease; }
+.fan-console .fan-round { width: 44px; height: 44px; border-radius: 50%; }
+.fan-console button:is([aria-pressed='true'], [aria-checked='true']) { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.fan-console button:disabled { opacity: .4; cursor: default; }
+.fan-console button:not(:disabled):active { transform: translateY(2px); }
+.fan-console button:focus-visible, .fan-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.fan-hero { grid-area: hero; display: grid; justify-items: center; align-items: center; gap: 4px; padding: 0 5px 9px; border-bottom: 1px solid #B994DC17; }
+.fan-instrument { position: relative; width: 218px; height: 218px; max-width: 100%; aspect-ratio: 1; }
+.fan-instrument > svg, .fan-rotor, .fan-rotor svg { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+.fan-rotor { transform-origin: center; }
+.fan-signal-ring { stroke: #554260; transition: stroke 220ms ease; }
+.fan-instrument[data-running='true'] .fan-signal-ring { stroke: #CB9DFF; }
+.fan-readout { display: grid; gap: 4px; text-align: center; }
+.fan-readout > span { color: #BBA6CB; letter-spacing: 1.7px; font-size: 7px; }
+.fan-readout strong { font-size: 14px; font-weight: 500; color: #E6D6F2; }
+.fan-readout small { font-size: 10px; color: #C5AFD8; }
+.fan-speed { grid-area: speed; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px; border: 1px solid #A080BD40; border-radius: 30px; background: #100B19; }
+.fan-speed > div { display: grid; gap: 3px; text-align: center; }
+.fan-speed > div > span { font-size: 8px; letter-spacing: 1.4px; color: #C5AFD8; }
+.fan-speed output { font-size: 31px; line-height: 1; font-weight: 300; font-variant-numeric: tabular-nums; }
+.fan-speed output small { font-size: 12px; color: #CEB7E2; margin-left: 3px; }
+.fan-presets { grid-area: presets; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.fan-presets button { flex-direction: column; gap: 3px; min-height: 48px; }
+.fan-presets small { color: #C9B2D8; font-size: 9px; }
+.fan-options { grid-area: options; display: grid; grid-template-columns: minmax(0, 1fr) 65px; gap: 8px; }
+.fan-direction { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.fan-direction button { flex-direction: column; gap: 3px; min-height: 48px; }
+.fan-console .fan-sleep { flex-direction: column; gap: 3px; }
+.fan-feedback { display: grid; gap: 4px; margin: 0; padding-inline: 8px; min-height: 30px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.fan-feedback span { font-size: 7px; letter-spacing: 1.8px; color: var(--muted); }
+.fan-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.fan-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container fan-stage (max-height: 560px) {
+  .fan-console { gap: 9px; padding: 12px; }
+  .fan-hero { grid-template-columns: 148px minmax(0, 1fr); padding: 0 0 8px; gap: 10px; }
+  .fan-instrument { width: 148px; height: 148px; }
+  .fan-readout { text-align: left; }
+  .fan-readout small { line-height: 1.4; }
+}
+@container fan-stage (max-height: 420px) {
+  .fan-console { gap: 7px; padding: 10px; }
+  .fan-hero { grid-template-columns: 100px minmax(0, 1fr); gap: 9px; padding-bottom: 4px; }
+  .fan-instrument { width: 100px; height: 100px; }
+  .fan-readout strong { font-size: 12px; }
+  .fan-speed { padding: 3px; }
+  .fan-speed output { font-size: 25px; }
+  .fan-presets button, .fan-direction button { min-height: 44px; }
+  .fan-presets button { flex-direction: row; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-fan-controller .device-sheet-content { padding-inline: 12px; } }
+@media (hover: hover) { .fan-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.fan-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.fan-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .fan-workspace * { transition: none; scroll-behavior: auto; } .fan-workspace button:active { transform: none; } }

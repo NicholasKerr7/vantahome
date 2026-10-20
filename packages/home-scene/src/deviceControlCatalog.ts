@@ -101,6 +101,8 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     range('ac', 'acTargetHumidity', 'Target humidity', 30, 60, '%'), stat('ac', 'acFilterLife', 'Filter life', '%'),
   ],
   fan: [
+    action('fan', 'speed-up', 'Speed +', {}, { type: 'increment', field: 'speed', delta: 10 }),
+    action('fan', 'speed-down', 'Speed −', {}, { type: 'increment', field: 'speed', delta: -10 }),
     action('fan', 'breeze', 'Breeze', { isOn: true, speed: 35 }), action('fan', 'standard', 'Standard', { isOn: true, speed: 60 }), action('fan', 'turbo', 'Turbo', { isOn: true, speed: 90 }),
     toggle('fan', 'fanOscillation', 'Oscillation'), choice('fan', 'fanDirection', 'Direction', [['Forward', 'forward'], ['Reverse', 'reverse']]),
     toggle('fan', 'fanLightOn', 'Integrated light'), toggle('fan', 'fanAutoMode', 'Auto mode'), toggle('fan', 'fanSleepMode', 'Sleep speed preview'),

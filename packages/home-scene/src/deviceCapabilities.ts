@@ -8,13 +8,14 @@ import type { DeviceState, SettingValue } from './simulationTypes';
 import { configurationPageNote, describeCapabilitySupport } from './deviceCapabilitySupport';
 import { readVacuumActivity, vacuumActivityLabel } from './vacuumActivity';
 import { readSpeakerPlayback, speakerPlaybackStatus } from './speakerPlayback';
+import { readFanActivity } from './fanActivity';
 export type { SettingValue } from './simulationTypes';
 
 export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar', 'gas-meter', 'gas-leak'] as const;
 export type DeviceKind = typeof DEVICE_KINDS[number];
 export type ControlGroup = 'controls' | 'modes' | 'schedule' | 'status';
 export type DeviceActionOperation =
-  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume' | 'tempC' | 'acFanSpeed' | 'openPercent' | 'brightness' | 'waterBudgetL' | 'vacuumSuction'; delta: number }
+  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume' | 'tempC' | 'acFanSpeed' | 'openPercent' | 'brightness' | 'waterBudgetL' | 'vacuumSuction' | 'speed'; delta: number }
   | { type: 'media'; command: 'play-pause' | 'rewind' | 'forward' | 'previous' | 'next' }
   | { type: 'gas'; command: GasCommand }
   | { type: 'fire'; command: FireCommand }
@@ -107,7 +108,8 @@ export function readDeviceSetting(device: DeviceDefinition, state: DeviceState, 
   if (field === 'armed' && device.kind === 'camera') return state.on;
   if (field === 'powerW' && device.kind === 'generator') return state.on ? Math.round(state.level * 60) : 0;
   if (field === 'chargePercent' && device.kind === 'battery') return state.level;
-  if (field === 'openPercent' || (field === 'brightness' && device.kind === 'light') || (field === 'speed' && device.kind === 'fan')) return state.level;
+  if (field === 'speed' && device.kind === 'fan') return readFanActivity(state).speed;
+  if (field === 'openPercent' || (field === 'brightness' && device.kind === 'light')) return state.level;
   if (field === 'tempC' && device.kind === 'ac' && state.settings?.[field] === undefined) return 26 - Math.round(state.level * 0.08);
   if (field === 'playbackState' && !state.on && state.settings?.playbackState === 'playing') return 'paused';
   if (state.settings?.[field] !== undefined) return state.settings[field];
@@ -141,6 +143,7 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
   const action = profiles[device.kind].find((item) => item.type === 'action' && item.id === state.settings?.lastAction);
   if (action?.type !== 'action') return null;
   const operation = action.operation;
+  if (device.kind === 'fan') return readFanActivity(state).status;
   // A remembered transport command cannot override current power, mute or playback state.
   if (device.kind === 'speaker') {
     const status = deviceStatus(device, state);
@@ -213,6 +216,7 @@ export function deviceStatus(device: DeviceDefinition, state: DeviceState): stri
   if (device.kind === 'camera') return readDeviceSetting(device, state, 'armed') ? 'Armed' : 'Disarmed';
   if (isMonitor(device.kind)) return state.settings?.sampleChecked ? 'Sample checked' : 'Monitoring sample';
   if (device.kind === 'vacuum') return vacuumActivityLabel(state);
+  if (device.kind === 'fan') return readFanActivity(state).status;
   if (device.kind === 'speaker') {
     return speakerPlaybackStatus(state, Number(readDeviceSetting(device, state, 'volume')), readDeviceSetting(device, state, 'muted') === true);
   }

@@ -34,6 +34,7 @@ import { GateController } from './GateController';
 import { WaterController } from './WaterController';
 import { VacuumController } from './VacuumController';
 import { SpeakerController } from './SpeakerController';
+import { FanController } from './FanController';
 import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
 import { isEnergyDeviceKind } from '../../../packages/home-scene/src/energyController';
 import { isWaterDeviceKind } from '../../../packages/home-scene/src/waterController';
@@ -57,6 +58,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   'water-heater': { accessible: 'Back to water controller', visible: 'Back to water' },
   vacuum: { accessible: 'Back to vacuum controller', visible: 'Back to vacuum' },
   speaker: { accessible: 'Back to speaker controller', visible: 'Back to speaker' },
+  fan: { accessible: 'Back to fan controller', visible: 'Back to fan' },
 };
 type Group = typeof GROUPS[number];
 interface SheetProps {
@@ -119,7 +121,8 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
           {!snapshot.ready ? <View style={styles.content}><Text style={styles.detail}>{loadFailure ? 'Controls will stay paused until your saved settings can be restored.' : 'Preparing your saved controls…'}</Text></View>
             : showingBrowser ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={visibleDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
-              client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
+              client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale}
+              motionAllowed={motionAllowed && !snapshot.state.motionDisabled} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
           {!showingBrowser && editableDevice && snapshot.ready && <Pressable accessibilityRole="button" accessibilityLabel="Edit device"
             onPress={openEditor} style={styles.button}><Text style={styles.label}>Edit device</Text></Pressable>}
@@ -133,8 +136,8 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
 }
 
 /** Give supported devices tactile primary controls while preserving every advanced capability. */
-function DeviceInspector({ device, state, client, disabled, compact, fontScale, onBrowse, onRoutines }: {
-  device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; compact: boolean; fontScale: number; onBrowse: () => void; onRoutines: () => void;
+function DeviceInspector({ device, state, client, disabled, compact, fontScale, motionAllowed, onBrowse, onRoutines }: {
+  device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; compact: boolean; fontScale: number; motionAllowed: boolean; onBrowse: () => void; onRoutines: () => void;
 }) {
   const [advancedControls, setAdvancedControls] = useState(false);
   const [group, setGroup] = useState<Group>('controls');
@@ -185,6 +188,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'speaker' && !advancedControls) return <SpeakerController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'fan' && !advancedControls) return <FanController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
 
   return <>
     {controllerReturn && <Pressable accessibilityRole="button" accessibilityLabel={controllerReturn.accessible}

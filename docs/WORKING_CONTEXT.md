@@ -46,6 +46,56 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Fan airflow console — October 20 / Preview 86 verified; installation deferred
+
+- Added sculpted AIRFLOW consoles in embedded Home and native Devices for the
+  three authored ceiling fans and seven extractors. Power, relative ±10 speed,
+  Calm/Balanced/Boost, direction and Sleep use existing guarded saved state.
+  Speed presets preserve power and Sleep; More retains all advanced controls.
+  Oscillation, lamp, Auto and timer remain saved-only preferences.
+- A shared activity projection keeps the property rotor and controls on the
+  same bounded velocity. Sleep caps effective preview speed at 35% without
+  replacing the saved setpoint. Off and zero speed visibly stop the rotor.
+  Status/feedback now distinguish Off, Stopped at 0%, Running and Sleep preview.
+  No sensor readings, physical motor connection or automation engine were added.
+- Web compositor rotation and native-driver rotation preserve blade position
+  across speed/direction changes. Off/zero, reduced-motion settings, background,
+  host suspension/native navigation blur, More and unmount stop the animation.
+  Motion has no per-frame React state update or additional renderer/dependency.
+- **174 focused tests** pass: 122 shared/catalog, 18 web controller/lifecycle,
+  34 native controller/lifecycle/pagination. App/scene TypeScript, web/native
+  scene builds, diff checks and bounded review pass. Evidence:
+  `work/fan-{shared-tests,web-tests,native-tests,native-typecheck,scene-build}.log`.
+- Thirteen embedded profiles and five native browser profiles passed 44px
+  targets and horizontal-overflow checks. Regular sizes need no scrolling;
+  320×568 embedded retains a 162px contained fallback with no page overflow.
+  At 440×956 with 96px host safe-area allowance, the 559px console fits the
+  574px stage. Tablet landscape required reopening the existing responsive
+  sheet before measurement. Receipts: `work/fan-browser-layouts.json`,
+  `work/fan-browser-native-layouts.json`; screenshots `work/fan-home.png`,
+  `work/fan-native.png`, `work/fan-extractor-home.png`.
+- Browser flow verified power-preserving presets, direction, Sleep, both
+  More/Back paths, web focus restoration and Home/Devices agreement. Home
+  Off/100%/Reverse/Sleep On survived reload into Devices; native
+  On/70%/Forward/Sleep Off survived reload into Home. Extractor controls also
+  matched the Sleep cap. Demo settings were restored to living fan
+  On/35%/Forward/Sleep Off and bathroom fan Off/45%/Forward/Sleep Off.
+- Fixed a native SVG browser warning by using an explicit rotation transform.
+  The affected 14-test suite passed again; a fresh browser console has zero
+  errors (`work/fan-final-browser-errors.json`). The fix is verified in Hermes.
+- Preview 86 signature, staging identity, profile and exact scene verification
+  pass: **32,111,070 bytes**, SHA-256 prefix `1f9668927a3f`, 1,443,362 bytes below
+  the scene budget. Profile expires October 27. Fan and prior controller markers
+  are present; production metadata was restored and the QA fixture is excluded.
+  Receipts: `work/fan-preview86-package.json`, `work/fan-preview86-svg-package.json`;
+  build log: `work/fan-preview86-build.log`. The current app at
+  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app` is Preview 86.
+  Temporary QA tabs/viewport override, servers and `.arrival-preview.tsx` were removed.
+- Installation remains deferred by the user's prior **Install later** choice.
+  Preview 83 is still the latest verified installed build; fan/speaker/vacuum
+  physical acceptance, water persistence, hub/sync and physical iPad work remain
+  pending or deferred.
+
 ## Speaker audio console — October 20 / Preview 85 verified; installation deferred
 
 - Added sculpted AUDIO consoles in embedded Home and native Devices for speaker
@@ -84,9 +134,9 @@ defects from ideas or untested risks.
   Receipt: `work/speaker-preview85-package.json`; build logs:
   `work/speaker-preview85-build*`.
 - The user's **Install later** choice remains in force. Preview 83 is the latest
-  verified installed build. Preview 85 now occupies
-  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app`; reverify
-  package/profile/device reachability before a requested installation. Speaker
+  verified installed build. Preview 85 occupied the shared derived-data app path
+  at this milestone; later builds replace it. Reverify the current package,
+  profile and device reachability before a requested installation. Speaker
   and vacuum physical acceptance, water physical persistence, hub/sync and
   physical iPad work remain pending or deferred as previously recorded.
 
