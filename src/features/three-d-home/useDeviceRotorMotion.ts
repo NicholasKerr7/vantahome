@@ -1,21 +1,8 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
-import { NavigationContext } from '@react-navigation/native';
+import { useControllerFocused } from './useControllerFocused';
 import { useDecorativeMotion } from '../../components/useDecorativeMotion';
 import { createDeviceRotorStyle } from './deviceRotorMotionStyles';
-
-/** Observe focus when a controller lives on a retained route, with a safe standalone preview fallback. */
-function useControllerFocused(): boolean {
-  const navigation = useContext(NavigationContext);
-  const subscribe = useCallback((notify: () => void) => {
-    if (!navigation) return () => undefined;
-    const offFocus = navigation.addListener('focus', notify);
-    const offBlur = navigation.addListener('blur', notify);
-    return () => { offFocus(); offBlur(); };
-  }, [navigation]);
-  const readFocus = useCallback(() => navigation?.isFocused() ?? true, [navigation]);
-  return useSyncExternalStore(subscribe, readFocus, readFocus);
-}
 
 /** Rotate on the native driver only while visible and permitted; speed changes preserve the current phase. */
 export function useDeviceRotorMotion(velocity: number, motionAllowed: boolean) {

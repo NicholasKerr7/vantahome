@@ -24,6 +24,8 @@ import { SpeakerController } from './SpeakerControlPanel';
 import { FanController } from './FanControlPanel';
 import { LaundryController } from './LaundryControlPanel';
 import { DishwasherController } from './DishwasherControlPanel';
+import { OpeningController } from './OpeningControlPanel';
+import { isOpeningDeviceKind } from './openingController';
 import { isLaundryKind } from './laundryActivity';
 import { isWaterDeviceKind, readWaterControllerState } from './waterController';
 import { GATE_DEVICE_ID } from './gateSafetySimulation';
@@ -40,6 +42,7 @@ const CONTROLLER_CLASSES: Partial<Record<DeviceDefinition['kind'], string>> = {
   fan: 'is-fan-controller',
   washer: 'is-laundry-controller', dryer: 'is-laundry-controller',
   dishwasher: 'is-dishwasher-controller',
+  door: 'is-opening-controller', garage: 'is-opening-controller', window: 'is-opening-controller',
 };
 
 /** Unmount removed or revoked fixtures before their stale dialog can read deleted catalog data. */
@@ -133,6 +136,7 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
         : device.kind === 'fan' && controllable ? <FanController key={deviceId} device={device} current={current} />
         : isLaundryKind(device.kind) && controllable ? <LaundryController key={deviceId} device={device} current={current} />
         : device.kind === 'dishwasher' && controllable ? <DishwasherController key={deviceId} device={device} current={current} />
+        : isOpeningDeviceKind(device.kind) && controllable ? <OpeningController key={deviceId} device={device} current={current} />
         : device.id === GATE_DEVICE_ID && controllable ? <GateController key={deviceId} device={device} current={current} /> : <>
         <button type="button" className="device-sheet-primary" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.isSwitch ? `${device.name} power` : action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span></button>
         {controllable ? <PagedDeviceControls key={deviceId} device={device} current={current} /> : <p className="device-hint">View only. Your household role does not allow changing this device.</p>}

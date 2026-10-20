@@ -46,6 +46,56 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Door, garage and window consoles — October 20 / Preview 89 verified; installation deferred
+
+- Added distinct ENTRY, GARAGE and WINDOW consoles in embedded Home and native
+  Devices. Lightweight architectural artwork represents the authored side-hinged
+  entry door, roller shutter and top-hinged awning window. Blinds already had a
+  separate console. Property geometry and gate controls are unchanged.
+- Open/Close, bounded ±5% steps and the existing window Vent 25% use the guarded
+  store and canonical saved position. Embedded Home also provides a position
+  slider. More retains all existing settings and the routines destination.
+  No lock telemetry, obstruction sensing, travel timer, Stop, auto-close or
+  physical motor behavior was added. Room grants do not bypass door/garage
+  action permissions; fire/gate emergency state stays independent.
+- Malformed positions show Position unavailable, with no moving leaf or false
+  Closed claim. Main and More sliders/relative commands stay disabled; explicit
+  Open/Close/Vent can restore valid state. Relative rejection also occurs in the
+  reducer. Status follows position rather than stale power or last-command text.
+- Short accepted-position transitions respect reduced motion, visibility/host
+  suspension, native route focus/background and unmount. Unknown recovery snaps
+  to the first known pose; no idle loop or per-frame React rendering was added.
+  The native navigation-focus hook is shared with existing rotor motion.
+- **271 distinct focused tests** pass: 151 shared state/catalog, 15 generic web
+  capability/pagination, 30 web console regressions, 72 native controller/generic/
+  pagination/lifecycle and 3 host projection. Overlapping runs are deduplicated.
+  App/scene TypeScript, scene web/native builds and bounded review pass. Receipts:
+  `work/opening-{shared-tests,more-shared-tests,web-tests,native-tests,
+  more-native-tests,projection-tests,final-typecheck,scene-build}.log`.
+  A stale pagination focus test was updated to the current light Color field.
+- Thirteen embedded and five native profiles **per fixture** pass horizontal
+  overflow and 44px-target checks (39/15 checks). Regular sizes fit without
+  scrolling; embedded 320×568 retains a 127px contained fallback. Final embedded
+  CSS thresholds are 550/370. At 440×956 with 96px host safe-area allowance, the
+  web console is 542px in a 574px stage; native is 451px in a 602px stage.
+  Evidence: `work/opening-browser{,-native}-layouts.json` and
+  `work/opening-{door,garage,window}-{home,native}.png`.
+- Browser actions verified endpoints, rapid steps, Vent, More/Back focus and
+  existing command/routine pages. Native door 70%, garage 40% and window 25%
+  survived reload into Home. Home window 35% survived reload into Devices;
+  door/garage Closed also survived. Demo was left with all three Closed.
+  Final browser errors are zero (`work/opening-final-browser-errors.json`).
+- Preview 89 signature, staging identity, profile and exact scene verification
+  pass: **32,163,524 bytes**, SHA-256 prefix `fcf60bd120df`, 1,390,908 bytes below
+  the scene budget. Profile expires October 27. All previous controller markers
+  remain present; production metadata restored and QA fixture excluded. Receipt:
+  `work/opening-preview89-package.json`; build/verification logs use the same
+  prefix. Current app at `native-derived-data/Build/Products/Release-iphoneos/
+  vantahome.app` is Preview 89. Temporary QA surface/servers/fixture were removed.
+- Installation stays deferred by the prior **Install later** choice. Preview 83
+  remains latest verified installed; new console physical acceptance, earlier
+  water persistence, hub/sync and physical iPad work remain pending/deferred.
+
 ## Dishwasher console — October 20 / Preview 88 verified; installation deferred
 
 - Added a distinct DISHWASH console in embedded Home and native Devices, with a

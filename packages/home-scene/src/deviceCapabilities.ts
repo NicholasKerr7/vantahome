@@ -11,6 +11,7 @@ import { readSpeakerPlayback, speakerPlaybackStatus } from './speakerPlayback';
 import { readFanActivity } from './fanActivity';
 import { isLaundryKind, laundryActivityLabel, readLaundryActivity } from './laundryActivity';
 import { dishwasherActivityLabel, readDishwasherActivity } from './dishwasherActivity';
+import { isOpeningDeviceKind, openingPositionStatus, readOpeningPosition } from './openingPosition';
 export type { SettingValue } from './simulationTypes';
 
 export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar', 'gas-meter', 'gas-leak'] as const;
@@ -113,6 +114,7 @@ export function readDeviceSetting(device: DeviceDefinition, state: DeviceState, 
   if (field === 'powerW' && device.kind === 'generator') return state.on ? Math.round(state.level * 60) : 0;
   if (field === 'chargePercent' && device.kind === 'battery') return state.level;
   if (field === 'speed' && device.kind === 'fan') return readFanActivity(state).speed;
+  if (field === 'openPercent' && isOpeningDeviceKind(device.kind)) return readOpeningPosition(state) ?? Number.NaN;
   if (field === 'openPercent' || (field === 'brightness' && device.kind === 'light')) return state.level;
   if (field === 'tempC' && device.kind === 'ac' && state.settings?.[field] === undefined) return 26 - Math.round(state.level * 0.08);
   if (field === 'playbackState' && !state.on && state.settings?.playbackState === 'playing') return 'paused';
@@ -149,6 +151,10 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
   const operation = action.operation;
   if (isLaundryKind(device.kind)) return laundryActivityLabel(device.kind, state);
   if (device.kind === 'dishwasher') return dishwasherActivityLabel(state);
+  if (isOpeningDeviceKind(device.kind)) {
+    const position = readOpeningPosition(state);
+    return position === null ? 'Position unavailable' : position === 0 ? 'Closed in preview' : `${position}% open in preview`;
+  }
   if (device.kind === 'fan') return readFanActivity(state).status;
   // A remembered transport command cannot override current power, mute or playback state.
   if (device.kind === 'speaker') {
@@ -227,6 +233,7 @@ export function deviceStatus(device: DeviceDefinition, state: DeviceState): stri
   if (device.kind === 'fan') return readFanActivity(state).status;
   if (isLaundryKind(device.kind)) return laundryActivityLabel(device.kind, state);
   if (device.kind === 'dishwasher') return dishwasherActivityLabel(state);
+  if (isOpeningDeviceKind(device.kind)) return openingPositionStatus(state);
   if (device.kind === 'speaker') {
     return speakerPlaybackStatus(state, Number(readDeviceSetting(device, state, 'volume')), readDeviceSetting(device, state, 'muted') === true);
   }

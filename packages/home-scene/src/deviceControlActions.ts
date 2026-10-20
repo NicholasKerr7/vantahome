@@ -6,6 +6,7 @@ import { getCapabilities, isMonitor, readDeviceSetting, validateSetting, validat
 import type { DeviceState, SettingValue } from './simulationTypes';
 import { isLaundryKind, readLaundryActivity } from './laundryActivity';
 import { readDishwasherActivity } from './dishwasherActivity';
+import { isOpeningDeviceKind, readOpeningPosition } from './openingPosition';
 
 /** Keep all scene inputs finite and within the supported percentage range. */
 export function clampLevel(value: number): number {
@@ -160,6 +161,9 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
   if (!device) return current;
   const action = getCapabilities(device.kind).find((item) => item.id === actionId);
   if (action?.type !== 'action') return current;
+  // A relative target is unknowable until an explicit command restores a valid fixture position.
+  if (isOpeningDeviceKind(device.kind) && action.operation?.type === 'increment'
+    && action.operation.field === 'openPercent' && readOpeningPosition(current) === null) return current;
   let next = current;
   for (const [field, value] of Object.entries(action.patch)) {
     if (device.kind === 'gate') { next = applyDeviceSetting(id, next, field, value); continue; }

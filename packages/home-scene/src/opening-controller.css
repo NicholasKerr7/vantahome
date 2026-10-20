@@ -1,0 +1,62 @@
+/* Architectural miniature, inset glass and sculpted keys share the existing console palette. */
+.device-control-sheet.is-opening-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.opening-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; gap: 6px; }
+.opening-stage { display: grid; align-items: safe center; justify-items: center; min-width: 0; min-height: 0; padding: 2px 0 7px; container: opening-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.opening-console { display: grid; grid-template-areas: 'top' 'hero' 'adjust' 'actions' 'trim'; width: min(380px, 100%); gap: 12px; padding: 16px; border: 1px solid #A991BD; border-radius: 32px; color: var(--text); background: linear-gradient(145deg, #51445F, #241B30 17%, #100B1B 65%, #31223D); box-shadow: inset 2px 1px 1px #FFFFFF30, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.opening-top { grid-area: top; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.opening-emblem { display: grid; place-items: center; width: 44px; height: 44px; color: #D8B9EF; }
+.opening-brand { display: grid; gap: 4px; text-align: center; }
+.opening-brand span { color: #BFAFD0; font-size: 8px; letter-spacing: 2.5px; }
+.opening-brand strong { font-size: 12px; font-weight: 500; letter-spacing: 3px; }
+.opening-console button { display: flex; justify-content: center; align-items: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 7px; border: 1px solid #FFFFFF29; border-radius: 14px; background: linear-gradient(145deg, #41324F, #231A30 75%); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; color: var(--text); font-size: 12px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.opening-console .opening-round { width: 44px; height: 44px; border-radius: 50%; }
+.opening-console :is(button[aria-pressed='true'], .opening-primary) { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.opening-console button:disabled, .opening-console input:disabled { opacity: .4; cursor: default; }
+.opening-console button:not(:disabled):active { transform: translateY(2px); }
+.opening-console :is(button, input):focus-visible, .opening-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.opening-hero { grid-area: hero; display: grid; justify-items: center; gap: 1px; padding: 8px 14px 14px; border: 1px solid #A482C326; border-radius: 24px; background: radial-gradient(ellipse at 50% 45%, #7A49A226, transparent 72%), #120B1B88; }
+.opening-artwork { display: block; width: 300px; max-width: 100%; height: 244px; overflow: visible; }
+.opening-artwork[data-known='false'] { opacity: .3; }
+.opening-moving-part { transition: transform 340ms cubic-bezier(.22,.68,.28,1); }
+.opening-light { transition: opacity 340ms ease; }
+.opening-readout { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
+.opening-readout > div { display: grid; gap: 4px; }
+.opening-readout span { font-size: 9px; line-height: 1.4; color: #C6AED8; }
+.opening-readout > div > span:first-child { letter-spacing: 1px; font-size: 8px; }
+.opening-readout output { font-size: 38px; line-height: 1.05; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.opening-readout small { margin-left: 3px; font-size: 16px; letter-spacing: 0; color: #CBAEDC; }
+.opening-status { text-align: right; }
+.opening-status strong { font-size: 13px; font-weight: 500; color: #EAD9F6; }
+.opening-adjustment { grid-area: adjust; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 12px; }
+.opening-adjustment input { width: 100%; min-width: 0; height: 44px; margin: 0; accent-color: var(--accent); cursor: pointer; touch-action: pan-x; }
+.opening-actions { grid-area: actions; display: grid; grid-template-columns: repeat(2, minmax(44px, 1fr)); gap: 8px; }
+.opening-actions.has-vent { grid-template-columns: repeat(3, minmax(44px, 1fr)); }
+.opening-actions.has-vent button { gap: 5px; font-size: 11px; }
+.opening-trim { grid-area: trim; display: flex; justify-content: center; gap: 6px; padding-top: 2px; }
+.opening-trim span { width: 23px; height: 2px; border-radius: 3px; background: #B882DF36; }
+.opening-trim span:nth-child(3) { background: #C393EB88; }
+.opening-feedback { display: grid; gap: 4px; margin: 0; min-height: 30px; padding-inline: 8px; text-align: center; font-size: 10px; line-height: 1.5; color: var(--text-soft); }
+.opening-feedback span { color: var(--muted); font-size: 7px; letter-spacing: 1.8px; }
+.opening-more { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; gap: 12px; }
+.opening-return { display: flex; justify-content: center; align-items: center; min-height: 44px; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+/* Scale only the miniature first; every physical action retains a full touch target. */
+@container opening-stage (max-height: 550px) {
+  .opening-console { padding: 12px; gap: 9px; }
+  .opening-artwork { height: clamp(100px, calc(100cqh - 281px), 217px); width: auto; aspect-ratio: 320 / 260; }
+}
+@container opening-stage (max-height: 370px) {
+  .opening-console { gap: 7px; padding: 10px; }
+  .opening-hero { grid-template-columns: minmax(0, 1fr) 88px; gap: 5px; padding: 4px 8px; }
+  .opening-artwork { width: 145px; height: 118px; }
+  .opening-readout { display: grid; gap: 5px; }
+  .opening-readout output { font-size: 28px; }
+  .opening-status { text-align: left; }
+  .opening-status strong { font-size: 10px; }
+  .opening-status span { display: none; }
+  .opening-trim { display: none; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-opening-controller .device-sheet-content { padding-inline: 12px; } .opening-actions.has-vent button { font-size: 10px; gap: 4px; padding-inline: 3px; } }
+@media (hover: hover) { .opening-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.opening-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.opening-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .opening-workspace * { transition: none; scroll-behavior: auto; } .opening-workspace button:active { transform: none; } }

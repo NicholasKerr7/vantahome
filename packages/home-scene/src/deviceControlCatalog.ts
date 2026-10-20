@@ -54,6 +54,15 @@ function coverControls(kind: 'gate' | 'garage' | 'door' | 'window' | 'blinds'): 
   return [action(kind, 'command-open', 'Open', { openPercent: 100 }), action(kind, 'command-close', 'Close', { openPercent: 0 })];
 }
 
+/** Fixture position steps use current accepted state and do not add gate or lock behavior. */
+function openingControls(kind: 'garage' | 'door' | 'window'): DeviceCapability[] {
+  return [
+    ...coverControls(kind),
+    action(kind, 'position-up', 'Open 5% more', {}, { type: 'increment', field: 'openPercent', delta: 5 }),
+    action(kind, 'position-down', 'Close 5% more', {}, { type: 'increment', field: 'openPercent', delta: -5 }),
+  ];
+}
+
 /** Keep the controller swatches and validated color selector on the same palette. */
 export const LIGHT_COLOR_PRESETS = [
   { label: 'Amber', value: '#FFD166' }, { label: 'Ice', value: '#A0E9FF' },
@@ -146,13 +155,13 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     stat('vacuum', 'vacuumAreaM2', 'Sample cleaned area', 'm²'), stat('vacuum', 'vacuumRuntimeMin', 'Sample runtime', 'min'),
   ],
   gate: [...coverControls('gate'), ...gateSafetyCapabilities, toggle('gate', 'autoOpenEnabled', 'Auto-open preference')],
-  garage: coverControls('garage'), door: coverControls('door'),
+  garage: openingControls('garage'), door: openingControls('door'),
   blinds: [
     ...coverControls('blinds'),
     action('blinds', 'position-up', 'Raise 5%', {}, { type: 'increment', field: 'openPercent', delta: 5 }),
     action('blinds', 'position-down', 'Lower 5%', {}, { type: 'increment', field: 'openPercent', delta: -5 }),
   ],
-  window: [...coverControls('window'), action('window', 'vent', 'Vent', { openPercent: 25 })],
+  window: [...openingControls('window'), action('window', 'vent', 'Vent', { openPercent: 25 })],
   microwave: [
     ...([30, 60, 120] as const).map((delta) => action('microwave', `add-${delta}`, `+${delta < 60 ? `${delta}s` : `${delta / 60}m`}`, {}, { type: 'increment', field: 'timeRemainingSec', delta })),
   ],

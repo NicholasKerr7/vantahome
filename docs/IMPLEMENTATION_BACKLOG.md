@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Door, garage and window consoles | Preview 89 verified; installation remains deferred | Distinct hinged entry, roller shutter and awning window artwork in Home/Devices, guarded Open/Close, atomic ±5% and window Vent25. Canonical saved position and all More controls retained; unknown state remains neutral with explicit recovery. Short lifecycle/reduced-motion-aware transitions, no motor/lock/sensor claims or permission expansion. 271 distinct focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles per fixture fit regular sizes with ≥44px targets; tiny contained fallback retained. Bidirectional Home/Devices reload retention and zero browser errors verified. Signed staging package/exact scene verified (32,163,524 bytes); production metadata restored. Installation and physical acceptance deferred; Preview 83 remains latest verified installed. See handoff. |
 | Dishwasher wash console | Preview 88 verified; installation remains deferred | Distinct glass chamber/racks and motion-aware spray preview in Home/Devices. Guarded Start/Resume/Pause/Stop, six programs, temperature and Dry Boost; all existing extras retained under More. Durable activity preserves legacy Pause through edits; time/progress stay fixed samples. 294 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles fit regular sizes with ≥44px targets; tiny contained fallback retained. Advanced-page retention, Home/Devices agreement, bidirectional reload retention and zero browser errors verified. Signed staging package and exact scene verified (32,147,185 bytes); production metadata restored. Installation and physical acceptance remain deferred; Preview 83 is latest verified installed. See handoff. |
 | Washer and dryer laundry consoles | Preview 87 verified; installation remains deferred | Sculpted Home/Devices consoles reflect the authored dryer-above-washer arrangement while keeping controls and saved state independent. Guarded Start/Resume/Pause/Stop, program, temperature/spin and heat/dryness; More retains advanced settings. Durable activity preserves legacy pauses through edits; fixed time/progress samples remain explicit. Shared rotor respects visibility and reduced motion. 306 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles per machine checked; regular sizes fit with ≥44px targets, tiny fallback retained. Home/Devices agreement, reload retention, More/Back and zero browser errors verified. Signed staging package and exact scene verified (32,130,770 bytes); production metadata restored. Installation and physical acceptance remain deferred; Preview 83 is latest verified installed. See handoff. |
 | Fan airflow console | Preview 86 verified; installation remains deferred | Sculpted Home/Devices AIRFLOW console for three ceiling fans and seven extractors. Power-preserving speed steps/presets, direction and Sleep share the property's rotor semantics; effective Sleep cap of 35% remains distinct from saved speed. Phase-preserving compositor/native-driver motion stops when hidden, off/zero or reduced motion is enabled. More retains saved-only extras. 174 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles checked; regular sizes fit with ≥44px targets, tiny fallback retained. More/Back, Home/Devices agreement and reload retention verified; final browser errors zero after SVG compatibility fix. Signed staging package and exact scene verified (32,111,070 bytes); production metadata restored. Installation and physical fan acceptance remain deferred; Preview 83 is latest verified installed. See handoff. |
@@ -39,6 +40,19 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+**Resolved opening-position consistency:** door/garage/window consoles and status
+read canonical position instead of stale power or last-command text. Unknown
+position omits the moving leaf, disables relative changes and prevents NaN
+sliders in both main and More views. Explicit targets recover valid state;
+unknown-to-known recovery snaps instead of replaying a fabricated closed pose.
+Shared persistence, projection, revoked grants and fire/gate isolation are tested.
+
+These three fixtures have no lock state, obstruction sensor, ongoing motor timer
+or auto-close engine. Future hardware controls must derive supported mechanisms,
+locking/interlocks and observed positions from the actual devices through the
+existing authorized transport; do not copy gate safety semantics onto them.
+Preview 89 installation and physical acceptance remain deferred.
 
 **Resolved dishwasher pause consistency:** generic Idle previously hid accepted
 Pause after last-action feedback was cleared. The validated activity field now

@@ -64,18 +64,18 @@ describe('full-control focus during resizing', () => {
 
   it('keeps a focused later field mounted as the page shrinks and expands', () => {
     renderControls('living-light');
-    const temperature = container.querySelector<HTMLInputElement>('#sheet-living-light-light-colorTempK')!;
-    act(() => temperature.focus());
+    const color = container.querySelector<HTMLSelectElement>('#sheet-living-light-light-color')!;
+    act(() => color.focus());
 
     resizePanel(130);
-    expect(container.querySelectorAll('.device-control-page input')).toHaveLength(1);
-    expect(document.activeElement).toBe(temperature);
-    expect(temperature.isConnected).toBe(true);
-    expect(container.querySelector('[role="status"]')?.textContent).toContain('3 /');
+    expect(container.querySelectorAll('.device-control-page input, .device-control-page select')).toHaveLength(1);
+    expect(document.activeElement).toBe(color);
+    expect(color.isConnected).toBe(true);
+    expect(container.querySelector('[role="status"]')?.textContent).toContain('2 /');
 
     resizePanel(400);
-    expect(document.activeElement).toBe(temperature);
-    expect(container.querySelectorAll('.device-control-page input, .device-control-page select')).toHaveLength(3);
+    expect(document.activeElement).toBe(color);
+    expect(container.querySelectorAll('.device-control-page input, .device-control-page select')).toHaveLength(2);
     expect(container.querySelector('[role="status"]')?.textContent).toContain('1 /');
   });
 

@@ -37,6 +37,8 @@ import { SpeakerController } from './SpeakerController';
 import { FanController } from './FanController';
 import { LaundryController } from './LaundryController';
 import { DishwasherController } from './DishwasherController';
+import { OpeningController } from './OpeningController';
+import { isOpeningDeviceKind } from '../../../packages/home-scene/src/openingController';
 import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
 import { isEnergyDeviceKind } from '../../../packages/home-scene/src/energyController';
 import { isWaterDeviceKind } from '../../../packages/home-scene/src/waterController';
@@ -64,6 +66,9 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   washer: { accessible: 'Back to laundry controller', visible: 'Back to laundry' },
   dryer: { accessible: 'Back to laundry controller', visible: 'Back to laundry' },
   dishwasher: { accessible: 'Back to dishwasher controller', visible: 'Back to dishwasher' },
+  door: { accessible: 'Back to opening controller', visible: 'Back to entry' },
+  garage: { accessible: 'Back to opening controller', visible: 'Back to garage' },
+  window: { accessible: 'Back to opening controller', visible: 'Back to window' },
 };
 type Group = typeof GROUPS[number];
 interface SheetProps {
@@ -193,6 +198,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'speaker' && !advancedControls) return <SpeakerController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (isOpeningDeviceKind(device.kind) && !advancedControls) return <OpeningController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'dishwasher' && !advancedControls) return <DishwasherController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if ((device.kind === 'washer' || device.kind === 'dryer') && !advancedControls) return <LaundryController device={device} state={state} client={client}
