@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Door, garage and window consoles — October 20 / Preview 89 verified; installation deferred
+## Door, garage and window consoles — October 20 / Preview 89 installed and launched
 
 - Added distinct ENTRY, GARAGE and WINDOW consoles in embedded Home and native
   Devices. Lightweight architectural artwork represents the authored side-hinged
@@ -92,9 +92,14 @@ defects from ideas or untested risks.
   `work/opening-preview89-package.json`; build/verification logs use the same
   prefix. Current app at `native-derived-data/Build/Products/Release-iphoneos/
   vantahome.app` is Preview 89. Temporary QA surface/servers/fixture were removed.
-- Installation stays deferred by the prior **Install later** choice. Preview 83
-  remains latest verified installed; new console physical acceptance, earlier
-  water persistence, hub/sync and physical iPad work remain pending/deferred.
+- At the user's request, the existing package was reverified, installed and
+  launched on the connected iPhone on October 20. Apple app inventory confirms
+  **1.0.0 (89)**, superseding Preview 83 and including the deferred Preview 84–88
+  controllers. Receipts: `work/opening-preview89-{install,launch,apps}.json`;
+  reverification: `work/opening-preview89-install-verification.log`.
+  Physical acceptance for these newer consoles, earlier water persistence,
+  hub/sync and physical iPad work remain pending/deferred. Installation and launch
+  do not establish physical interaction or persistence acceptance.
 
 ## Dishwasher console — October 20 / Preview 88 verified; installation deferred
 
