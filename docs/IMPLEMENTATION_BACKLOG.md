@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Speaker audio console | Preview 85 verified; installation remains deferred | Sculpted Home/Devices AUDIO console with guarded power, playback, bounded sample tracks, relative volume, mute and saved source/sound preferences. Shared status respects power, mute and zero volume; no stream or provider connection. More retains advanced controls. 163 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles checked; regular sizes fit with ≥44px targets, tiny embedded fallback retained. Home/Devices agreement, More/Back and reload retention verified; final browser errors zero. Signed staging package and exact scene verified (32,096,522 bytes); production metadata restored. Speaker/vacuum physical acceptance remains pending; Preview 83 is latest verified installed. See handoff. |
 | Robot vacuum console | Preview 84 verified; user chose Install later | Sculpted Home/Devices console with guarded Start/Pause/Resume/Dock, bounded relative suction and saved mode/Mop/Quiet preferences. Shared activity fixes paused/docked summaries; samples and maintenance remain truthful. 149 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles checked; regular sizes fit with ≥44px targets, tiny embedded fallback retained. More/Back, Home/Devices agreement and reload retention verified; final browser errors zero. Signed staging package and exact scene verified (32,080,275 bytes); production metadata restored. Physical vacuum tests pending; Preview 83 remains latest verified installed. See handoff. |
 | Water heater and meter consoles | Preview 83 installed; iPhone interaction accepted | Sculpted Home/Devices controls retain guarded local state, bounded relative target/budget actions, profile C/F and advanced controls. Heater settings preserve power and do not imply measured heat; meter sample checks preserve readings. Budget/alerts retain existing simulated condition reports; no connected valve or new engine. 231 distinct focused tests, app/scene TypeScript and scene builds pass. Ten embedded and five native profiles per console fit with ≥44px targets; tiny embedded 320×568 keeps an internal fallback. Reload retention, Home/Devices agreement and More/Back verified; final browser errors zero. Package/signature/staging/scene checks pass (32,064,613 bytes); production metadata restored. Installed; Apple inventory confirms 1.0.0 (83). iOS initially rejected automatic launch with a developer trust/security message, but the user confirmed manual launch works; no rebuild needed. User accepted smooth interaction and comfortable fit for both consoles; physical Home/Devices agreement and reopening persistence remain pending. See handoff. |
 | Entry gate console | Preview 82 installed; planned iPhone checks accepted | Home/Devices consoles project the existing entry gate only, with a single sliding leaf following accepted position and no independent clock or idle loop. Existing guarded Open/Close/Hold/Release/Resume only; no Stop, pedestrian command, engine or hardware expansion. Safety, paused restoration, countdown, holds, reload agreement and More/Back verified. 98 web/shared + 121 native tests (219 distinct), TypeScript, scene web/native builds and review pass. Fourteen embedded and five native profiles fit with ≥44px targets; 320×568 retains a 146px internal fallback with zero page overflow. Final fresh browser errors are zero. Build/signature/staging/asset/scene checks pass (32,044,461 bytes); production metadata restored. Package reverified; installation and launch succeeded after USB reconnect, and Apple inventory confirms 1.0.0 (82), superseding Preview 81. The earlier CoreDevice 4016 connection failure is resolved. User accepted iPhone fit, animation, Open/Close, Hold/Release and More/Back, then confirmed Home/Devices agreement, hold retention after full app restart and successful Release/Close. Broader safety scenarios are not implied; energy acceptance remains pending. See handoff. |
@@ -35,6 +36,21 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+**Resolved speaker status consistency:** remembered transport feedback could
+contradict current mute, zero volume or playback state. The shared projection
+now serves both consoles and generic summaries; power remains authoritative.
+Off pauses playback and powering on does not resume it. Invalid track/playback
+samples remain unavailable; malformed volume recovers through the existing
+schema before relative steps. Tests cover bounds, rapid taps, power retention,
+read-only controls and revoked access. TV behavior is unchanged.
+
+Speaker source, sound/EQ, spatial/party/night, assistant and schedule settings
+remain saved preferences. Playback and numbered tracks are a silent simulation,
+without a provider connection, real music metadata or advancing progress. Future
+audio transport needs actual provider/hub capability and existing authorization
+boundaries. Preview 85 is built, but the user's Install later choice still applies;
+speaker and vacuum physical tests and water persistence remain separate.
 
 **Resolved vacuum activity consistency:** generic Running/Idle summaries could
 lose Paused/Docked after a preference edit. The shared power-authoritative

@@ -7,6 +7,7 @@ import type { DeviceDefinition } from './data';
 import type { DeviceState, SettingValue } from './simulationTypes';
 import { configurationPageNote, describeCapabilitySupport } from './deviceCapabilitySupport';
 import { readVacuumActivity, vacuumActivityLabel } from './vacuumActivity';
+import { readSpeakerPlayback, speakerPlaybackStatus } from './speakerPlayback';
 export type { SettingValue } from './simulationTypes';
 
 export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar', 'gas-meter', 'gas-leak'] as const;
@@ -97,6 +98,12 @@ export function readDeviceSetting(device: DeviceDefinition, state: DeviceState, 
   if (field === 'isOn') return state.on;
   // The advanced Activity sample must agree with power-authoritative quick and full controls.
   if (device.kind === 'vacuum' && field === 'status') return readVacuumActivity(state);
+  if (device.kind === 'speaker' && field === 'playbackState') return readSpeakerPlayback(state);
+  if (device.kind === 'speaker' && field === 'volume') {
+    // Relative steps and every status surface recover from malformed levels using the same schema.
+    const capability = profiles.speaker.find((item) => 'field' in item && item.field === field);
+    return (capability && validateSetting(capability, state.settings?.volume)) ?? defaults.speaker?.volume ?? 0;
+  }
   if (field === 'armed' && device.kind === 'camera') return state.on;
   if (field === 'powerW' && device.kind === 'generator') return state.on ? Math.round(state.level * 60) : 0;
   if (field === 'chargePercent' && device.kind === 'battery') return state.level;
@@ -134,6 +141,12 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
   const action = profiles[device.kind].find((item) => item.type === 'action' && item.id === state.settings?.lastAction);
   if (action?.type !== 'action') return null;
   const operation = action.operation;
+  // A remembered transport command cannot override current power, mute or playback state.
+  if (device.kind === 'speaker') {
+    const status = deviceStatus(device, state);
+    if (operation?.type === 'increment' && operation.field === 'volume') return `${status} · Volume ${readDeviceSetting(device, state, 'volume')}%`;
+    return status;
+  }
   if (operation?.type === 'navigate') {
     if (operation.direction === 'home') return 'Preview home';
     if (operation.direction === 'back') return 'Preview back';
@@ -200,6 +213,9 @@ export function deviceStatus(device: DeviceDefinition, state: DeviceState): stri
   if (device.kind === 'camera') return readDeviceSetting(device, state, 'armed') ? 'Armed' : 'Disarmed';
   if (isMonitor(device.kind)) return state.settings?.sampleChecked ? 'Sample checked' : 'Monitoring sample';
   if (device.kind === 'vacuum') return vacuumActivityLabel(state);
+  if (device.kind === 'speaker') {
+    return speakerPlaybackStatus(state, Number(readDeviceSetting(device, state, 'volume')), readDeviceSetting(device, state, 'muted') === true);
+  }
   if (['gate', 'garage', 'window', 'blinds', 'door'].includes(device.kind)) return state.level === 0 ? 'Closed' : state.level === 100 ? 'Fully open' : `${state.level}% open`;
   if (['washer', 'dryer', 'dishwasher', 'microwave', 'coffee', 'generator'].includes(device.kind)) return state.on ? 'Running' : 'Idle';
   return state.on ? 'On' : 'Off';

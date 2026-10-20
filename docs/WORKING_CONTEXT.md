@@ -46,6 +46,50 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Speaker audio console — October 20 / Preview 85 verified; installation deferred
+
+- Added sculpted AUDIO consoles in embedded Home and native Devices for speaker
+  devices. Power, Play/Pause, bounded Previous/Next, relative volume steps and
+  Mute share the existing guarded saved simulation. Source and sound selectors
+  preserve power/playback; More retains every advanced control. The static SVG
+  indicator follows playing, mute and volume. No new dependency, renderer,
+  continuous animation, media stream or provider connection was introduced.
+- Shared playback status now keeps the console, library, advanced controls and
+  action feedback aligned after power/mute/volume changes. Power Off pauses;
+  powering back on does not resume. Unknown playback/track data stays unavailable,
+  and malformed volume uses the existing catalog default. TV behavior is unchanged.
+  Preview tracks are sample numbers; there is no fabricated song or progress clock.
+- **163 focused tests** pass: 123 shared/catalog, 8 web, 32 native/pagination.
+  App/scene TypeScript, web/native scene builds, diff checks and bounded source
+  review pass. Evidence: `work/speaker-{shared-tests,web-tests,native-tests,
+  native-typecheck,scene-build}.log`.
+- Thirteen embedded profiles, including intermediate height boundaries, fit with
+  44px targets and zero page/horizontal overflow. Regular phone/tablet sizes need
+  no scrolling; 320×568 retains a 137px contained fallback. At 440×956 with 96px
+  host safe-area allowance, the 535px console fits a 574px stage. Five native
+  browser profiles also fit with 44px targets and no overflow. Receipts:
+  `work/speaker-browser-layouts.json`, `work/speaker-browser-native-layouts.json`;
+  screenshots `work/speaker-home.png` and `work/speaker-native.png`.
+- Actual App browser flow verified both More/Back paths, web focus restoration,
+  power/mute/playback consistency, bounds and Home/Devices agreement. Off/43%/
+  Muted/AirPlay/Bass survived reload. Native On/Paused/43%/unmuted/Bluetooth/
+  Vocal/track 2 then survived reload and appeared in Home. Local demo ended
+  On/Paused/28%/unmuted/Spotify/Warm/track 1. Final browser errors: zero
+  (`work/speaker-final-browser-errors.json`). Temporary QA entry and owned
+  servers were removed/stopped; no product navigation change was needed.
+- Preview 85 passed build, signature, staging identity/redirect, provisioning,
+  controller-marker and exact packaged scene checks. Scene **32,096,522 bytes**
+  (30.610 MiB), SHA prefix **c133b926b1da**, within the 32 MiB budget. Profile
+  expires October 27; production metadata restored and QA fixture excluded.
+  Receipt: `work/speaker-preview85-package.json`; build logs:
+  `work/speaker-preview85-build*`.
+- The user's **Install later** choice remains in force. Preview 83 is the latest
+  verified installed build. Preview 85 now occupies
+  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app`; reverify
+  package/profile/device reachability before a requested installation. Speaker
+  and vacuum physical acceptance, water physical persistence, hub/sync and
+  physical iPad work remain pending or deferred as previously recorded.
+
 ## Robot vacuum console — October 20 / Preview 84 verified; installation deferred
 
 - Added sculpted robot/dock consoles in embedded Home and native Devices. Start,
@@ -84,9 +128,9 @@ defects from ideas or untested risks.
   metadata restored; temporary QA entry excluded from Hermes. Receipt:
   `work/vacuum-preview84-package.json`; build logs `work/vacuum-preview84-build*`.
 - User chose **Install later**. Do not install until asked. Preview 83 remains
-  the latest verified installed build. Preview 84 package is at
-  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app`; reverify
-  package/profile/device reachability before later installation. Vacuum physical
+  the latest verified installed build. Preview 85 has since replaced the Preview
+  84 package at the shared derived-data app path; reverify the current package,
+  profile and device reachability before later installation. Vacuum physical
   interaction/persistence is pending. Water physical persistence is also deferred
   by the user; hub/sync and physical iPad deferrals are unchanged.
 

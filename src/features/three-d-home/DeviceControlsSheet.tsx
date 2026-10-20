@@ -33,6 +33,7 @@ import { EnergyController } from './EnergyController';
 import { GateController } from './GateController';
 import { WaterController } from './WaterController';
 import { VacuumController } from './VacuumController';
+import { SpeakerController } from './SpeakerController';
 import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
 import { isEnergyDeviceKind } from '../../../packages/home-scene/src/energyController';
 import { isWaterDeviceKind } from '../../../packages/home-scene/src/waterController';
@@ -55,6 +56,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   water: { accessible: 'Back to water controller', visible: 'Back to water' },
   'water-heater': { accessible: 'Back to water controller', visible: 'Back to water' },
   vacuum: { accessible: 'Back to vacuum controller', visible: 'Back to vacuum' },
+  speaker: { accessible: 'Back to speaker controller', visible: 'Back to speaker' },
 };
 type Group = typeof GROUPS[number];
 interface SheetProps {
@@ -180,6 +182,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if (isWaterDeviceKind(device.kind) && !advancedControls) return <WaterController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'vacuum' && !advancedControls) return <VacuumController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'speaker' && !advancedControls) return <SpeakerController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
 
   return <>

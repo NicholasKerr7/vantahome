@@ -159,7 +159,7 @@ describe('shared simulation controls', () => {
     for (const kind of ['tv', 'speaker'] as const) {
       const device = deviceOfKind(kind);
       let state = runDeviceActionState(device.id, initial(device), `${kind}-play-pause`);
-      expect(deviceActionFeedback(device, state)).toBe('playing · local preview');
+      expect(deviceActionFeedback(device, state)).toBe(kind === 'speaker' ? 'Playing preview' : 'playing · local preview');
       state = toggleDeviceState(device.id, state);
       expect(state).toMatchObject({ on: false, settings: { playbackState: 'paused' } });
       expect(deviceActionFeedback(device, state)).toBeNull();

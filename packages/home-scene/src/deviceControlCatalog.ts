@@ -163,7 +163,11 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     range('air', 'airAlertPm25', 'PM2.5 alert threshold', 10, 120, 'µg/m³'), range('air', 'airAlertPm10', 'PM10 alert threshold', 20, 160, 'µg/m³'),
     range('air', 'airAlertVoc', 'VOC alert threshold', 80, 800, 'ppb'), range('air', 'airAlertPollen', 'Pollen alert threshold', 1, 5),
   ],
-  speaker: mediaControls('speaker'),
+  speaker: [
+    ...mediaControls('speaker'),
+    action('speaker', 'volume-up', 'Volume up', {}, { type: 'increment', field: 'volume', delta: 5 }),
+    action('speaker', 'volume-down', 'Volume down', {}, { type: 'increment', field: 'volume', delta: -5 }),
+  ],
   smoke: [...fireCapabilities.smoke,
     choice('smoke', 'smokeSensorStatus', 'Sample sensor status', [['OK', 'ok'], ['Warning', 'warning'], ['Error', 'error']]),
     stat('smoke', 'smokeSilenced', 'Preview silenced'), stat('smoke', 'coDetected', 'Sample CO alarm'),

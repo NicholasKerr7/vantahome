@@ -39,6 +39,7 @@ function renderControls(deviceId: string) {
   if (kind && isEnergyDeviceKind(kind)) fireEvent.press(screen.getByLabelText('More energy controls'));
   if (kind && isWaterDeviceKind(kind)) fireEvent.press(screen.getByLabelText('More water controls'));
   if (kind === 'vacuum') fireEvent.press(screen.getByLabelText('More vacuum controls'));
+  if (kind === 'speaker') fireEvent.press(screen.getByLabelText('More speaker controls'));
   if (deviceId === 'entry-gate') fireEvent.press(screen.getByLabelText('More gate controls'));
   return { screen, props, runAction, setSetting, onClose };
 }
@@ -205,7 +206,7 @@ test('native controls identify saved-only fan configuration while the working di
   expect(screen.getByText('Saved only · this fixed fan has no oscillation or lamp.')).toBeTruthy();
 });
 
-test.each(['utility-water', 'utility-water-heater', 'living-vacuum'])('%s preserves every advanced capability behind More at large text sizes', (id) => {
+test.each(['utility-water', 'utility-water-heater', 'living-vacuum', 'living-speaker'])('%s preserves every advanced capability behind More at large text sizes', (id) => {
   const { screen } = renderControls(id);
   measure(screen, 130);
   const expected = getInspectorPages(getDevice(id)!, 3).flatMap((page) => page.capabilities.map((item) => item.id));
