@@ -10,6 +10,7 @@ import { readVacuumActivity, vacuumActivityLabel } from './vacuumActivity';
 import { readSpeakerPlayback, speakerPlaybackStatus } from './speakerPlayback';
 import { readFanActivity } from './fanActivity';
 import { isLaundryKind, laundryActivityLabel, readLaundryActivity } from './laundryActivity';
+import { dishwasherActivityLabel, readDishwasherActivity } from './dishwasherActivity';
 export type { SettingValue } from './simulationTypes';
 
 export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'garage', 'fan', 'door', 'vacuum', 'camera', 'window', 'stove', 'washer', 'dryer', 'dishwasher', 'microwave', 'energy', 'water', 'water-heater', 'air', 'sprinkler', 'speaker', 'smoke', 'blinds', 'generator', 'battery', 'solar', 'gas-meter', 'gas-leak'] as const;
@@ -99,6 +100,7 @@ export function readDeviceSetting(device: DeviceDefinition, state: DeviceState, 
   }
   if (field === 'isOn') return state.on;
   if (isLaundryKind(device.kind) && field === 'laundryActivity') return readLaundryActivity(device.kind, state);
+  if (device.kind === 'dishwasher' && field === 'dishwasherActivity') return readDishwasherActivity(state);
   // The advanced Activity sample must agree with power-authoritative quick and full controls.
   if (device.kind === 'vacuum' && field === 'status') return readVacuumActivity(state);
   if (device.kind === 'speaker' && field === 'playbackState') return readSpeakerPlayback(state);
@@ -146,6 +148,7 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
   if (action?.type !== 'action') return null;
   const operation = action.operation;
   if (isLaundryKind(device.kind)) return laundryActivityLabel(device.kind, state);
+  if (device.kind === 'dishwasher') return dishwasherActivityLabel(state);
   if (device.kind === 'fan') return readFanActivity(state).status;
   // A remembered transport command cannot override current power, mute or playback state.
   if (device.kind === 'speaker') {
@@ -205,7 +208,8 @@ export function quickActionLabel(device: DeviceDefinition, state: DeviceState): 
   if (device.kind === 'camera') return readDeviceSetting(device, state, 'armed') ? 'Disarm' : 'Arm';
   if (['gate', 'garage', 'blinds', 'window', 'door'].includes(device.kind)) return `${state.level > 0 ? 'Close' : 'Open'} ${device.kind === 'garage' ? 'shutter' : device.kind}`;
   if (isLaundryKind(device.kind)) return state.on ? 'Pause' : readLaundryActivity(device.kind, state) === 'paused' ? 'Resume' : 'Start';
-  if (['dishwasher', 'microwave'].includes(device.kind)) return state.on ? 'Pause' : 'Start';
+  if (device.kind === 'dishwasher') return state.on ? 'Pause' : readDishwasherActivity(state) === 'paused' ? 'Resume' : 'Start';
+  if (device.kind === 'microwave') return state.on ? 'Pause' : 'Start';
   if (device.kind === 'coffee') return state.on ? 'Stop brewing' : 'Brew now';
   if (device.kind === 'vacuum') return state.on ? 'Dock' : 'Start cleaning';
   if (device.kind === 'generator') return state.on ? 'Stop generator' : 'Start generator';
@@ -222,10 +226,11 @@ export function deviceStatus(device: DeviceDefinition, state: DeviceState): stri
   if (device.kind === 'vacuum') return vacuumActivityLabel(state);
   if (device.kind === 'fan') return readFanActivity(state).status;
   if (isLaundryKind(device.kind)) return laundryActivityLabel(device.kind, state);
+  if (device.kind === 'dishwasher') return dishwasherActivityLabel(state);
   if (device.kind === 'speaker') {
     return speakerPlaybackStatus(state, Number(readDeviceSetting(device, state, 'volume')), readDeviceSetting(device, state, 'muted') === true);
   }
   if (['gate', 'garage', 'window', 'blinds', 'door'].includes(device.kind)) return state.level === 0 ? 'Closed' : state.level === 100 ? 'Fully open' : `${state.level}% open`;
-  if (['dishwasher', 'microwave', 'coffee', 'generator'].includes(device.kind)) return state.on ? 'Running' : 'Idle';
+  if (['microwave', 'coffee', 'generator'].includes(device.kind)) return state.on ? 'Running' : 'Idle';
   return state.on ? 'On' : 'Off';
 }

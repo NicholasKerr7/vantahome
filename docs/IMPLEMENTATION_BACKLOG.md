@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Dishwasher wash console | Preview 88 verified; installation remains deferred | Distinct glass chamber/racks and motion-aware spray preview in Home/Devices. Guarded Start/Resume/Pause/Stop, six programs, temperature and Dry Boost; all existing extras retained under More. Durable activity preserves legacy Pause through edits; time/progress stay fixed samples. 294 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles fit regular sizes with ≥44px targets; tiny contained fallback retained. Advanced-page retention, Home/Devices agreement, bidirectional reload retention and zero browser errors verified. Signed staging package and exact scene verified (32,147,185 bytes); production metadata restored. Installation and physical acceptance remain deferred; Preview 83 is latest verified installed. See handoff. |
 | Washer and dryer laundry consoles | Preview 87 verified; installation remains deferred | Sculpted Home/Devices consoles reflect the authored dryer-above-washer arrangement while keeping controls and saved state independent. Guarded Start/Resume/Pause/Stop, program, temperature/spin and heat/dryness; More retains advanced settings. Durable activity preserves legacy pauses through edits; fixed time/progress samples remain explicit. Shared rotor respects visibility and reduced motion. 306 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles per machine checked; regular sizes fit with ≥44px targets, tiny fallback retained. Home/Devices agreement, reload retention, More/Back and zero browser errors verified. Signed staging package and exact scene verified (32,130,770 bytes); production metadata restored. Installation and physical acceptance remain deferred; Preview 83 is latest verified installed. See handoff. |
 | Fan airflow console | Preview 86 verified; installation remains deferred | Sculpted Home/Devices AIRFLOW console for three ceiling fans and seven extractors. Power-preserving speed steps/presets, direction and Sleep share the property's rotor semantics; effective Sleep cap of 35% remains distinct from saved speed. Phase-preserving compositor/native-driver motion stops when hidden, off/zero or reduced motion is enabled. More retains saved-only extras. 174 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles checked; regular sizes fit with ≥44px targets, tiny fallback retained. More/Back, Home/Devices agreement and reload retention verified; final browser errors zero after SVG compatibility fix. Signed staging package and exact scene verified (32,111,070 bytes); production metadata restored. Installation and physical fan acceptance remain deferred; Preview 83 is latest verified installed. See handoff. |
 | Speaker audio console | Preview 85 verified; installation remains deferred | Sculpted Home/Devices AUDIO console with guarded power, playback, bounded sample tracks, relative volume, mute and saved source/sound preferences. Shared status respects power, mute and zero volume; no stream or provider connection. More retains advanced controls. 163 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles checked; regular sizes fit with ≥44px targets, tiny embedded fallback retained. Home/Devices agreement, More/Back and reload retention verified; final browser errors zero. Signed staging package and exact scene verified (32,096,522 bytes); production metadata restored. Speaker/vacuum physical acceptance remains pending; Preview 83 is latest verified installed. See handoff. |
@@ -38,6 +39,21 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+**Resolved dishwasher pause consistency:** generic Idle previously hid accepted
+Pause after last-action feedback was cleared. The validated activity field now
+survives preferences, quick-level edits, native projection and stored restoration,
+with power authoritative. Existing Dry Boost remains mapped to `extraSpin`;
+renaming its storage key would lose saved preferences. All legacy modes remain
+reachable through More. Native root-local gradient definitions and web artwork
+aspect ratio were corrected before packaging.
+
+The wash chamber and spray arm are decorative local previews. They do not claim
+live water flow, rack occupancy, physical door position or a measured wash phase.
+Samples do not advance, and program/temperature/drying/soil/rinse/schedule controls
+remain saved preferences. Future hardware work needs appliance capability and
+remote-start/door-interlock telemetry through the existing guarded transport path.
+Preview 88 installation and physical dishwasher acceptance remain deferred.
 
 **Resolved laundry pause persistence:** older washer/dryer activity relied on
 last-action feedback, which preference edits clear. A validated activity field

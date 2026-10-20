@@ -1,0 +1,66 @@
+/* A recessed glass wash chamber sits inside the established brushed-violet console material. */
+.device-control-sheet.is-dishwasher-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.dishwasher-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; gap: 6px; }
+.dishwasher-stage { display: grid; align-items: safe center; justify-items: center; min-width: 0; min-height: 0; padding: 2px 0 5px; container: dishwasher-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.dishwasher-console { display: grid; grid-template-areas: 'top' 'hero' 'actions' 'cycles' 'preferences' 'note'; width: min(380px, 100%); gap: 9px; padding: 12px; border: 1px solid #A991BD; border-radius: 32px; color: var(--text); background: linear-gradient(145deg, #51445F, #241B30 17%, #100B1B 65%, #31223D); box-shadow: inset 2px 1px 1px #FFFFFF30, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.dishwasher-top { grid-area: top; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.dishwasher-emblem { display: grid; place-items: center; width: 44px; height: 44px; color: #D8B9EF; }
+.dishwasher-brand { display: grid; gap: 4px; text-align: center; }
+.dishwasher-brand span { color: #BFAFD0; font-size: 8px; letter-spacing: 2.5px; }
+.dishwasher-brand strong { font-size: 12px; font-weight: 500; letter-spacing: 3px; }
+.dishwasher-console button { display: flex; justify-content: center; align-items: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 7px; border: 1px solid #FFFFFF29; border-radius: 14px; background: linear-gradient(145deg, #41324F, #231A30 75%); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; color: var(--text); font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.dishwasher-console .dishwasher-round { width: 44px; height: 44px; border-radius: 50%; }
+.dishwasher-console :is(button[aria-pressed='true'], .dishwasher-primary) { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.dishwasher-console button:disabled { opacity: .4; cursor: default; }
+.dishwasher-console button:not(:disabled):active { transform: translateY(2px); }
+.dishwasher-console :is(button, select):focus-visible, .dishwasher-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.dishwasher-hero { grid-area: hero; display: grid; justify-items: center; gap: 0; padding: 0 12px 10px; border: 1px solid #A482C326; border-radius: 23px; background: radial-gradient(ellipse at 50% 45%, #7A49A226, transparent 72%), #120B1B88; }
+.dishwasher-artwork { position: relative; width: 270px; height: 219.375px; max-width: 100%; }
+.dishwasher-cabinet, .dishwasher-glass { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dishwasher-spray-plane { position: absolute; width: 42%; height: 51.69%; left: 27.5%; top: 47%; transform: rotateX(72deg); }
+.dishwasher-spray, .dishwasher-spray svg { display: block; width: 100%; height: 100%; }
+.dishwasher-signal { stroke: #706079; transition: stroke 180ms ease; }
+.dishwasher-jets { opacity: 0; transition: opacity 180ms ease; }
+.dishwasher-artwork[data-running='true'] .dishwasher-signal { stroke: #CEA6FF; }
+.dishwasher-artwork[data-running='true'] .dishwasher-jets { opacity: .55; }
+.dishwasher-readout { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dishwasher-readout > div { display: grid; gap: 4px; }
+.dishwasher-readout strong { font-size: 13px; font-weight: 500; color: #E8D7F5; }
+.dishwasher-readout span { font-size: 9px; color: #C6AED8; }
+.dishwasher-samples { text-align: right; }
+.dishwasher-samples strong { font-variant-numeric: tabular-nums; font-size: 14px; }
+.dishwasher-actions { grid-area: actions; display: grid; grid-template-columns: 1.6fr 1fr; gap: 8px; }
+.dishwasher-cycles { grid-area: cycles; display: grid; gap: 5px; min-width: 0; }
+.dishwasher-caption { color: #C5AFD8; font-size: 8px; letter-spacing: 1px; }
+.dishwasher-cycle-rail { display: flex; gap: 7px; padding: 4px 3px 6px; margin: -4px -3px -6px; overflow-x: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; scroll-snap-type: x proximity; scrollbar-width: none; }
+.dishwasher-cycle-rail::-webkit-scrollbar { display: none; }
+.dishwasher-cycle-rail button { flex: 0 0 78px; scroll-snap-align: start; }
+.dishwasher-preferences { grid-area: preferences; display: grid; grid-template-columns: 1fr 1.25fr; gap: 9px; }
+.dishwasher-preferences > :is(label, div) { display: grid; gap: 6px; min-width: 0; }
+.dishwasher-preferences select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid #9171A35C; border-radius: 13px; color: var(--text); background: #1B1225; font: inherit; font-size: 12px; cursor: pointer; }
+.dishwasher-preferences select:disabled { opacity: .4; cursor: default; }
+.dishwasher-dry strong { font-size: 9px; font-weight: 500; color: #CFB3E2; }
+.dishwasher-note { grid-area: note; margin: 0; font-size: 9px; line-height: 1.4; color: #C0AACF; text-align: center; }
+.dishwasher-feedback { display: grid; gap: 4px; margin: 0; min-height: 30px; padding-inline: 8px; text-align: center; font-size: 10px; line-height: 1.5; color: var(--text-soft); }
+.dishwasher-feedback span { color: var(--muted); font-size: 7px; letter-spacing: 1.8px; }
+.dishwasher-more { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; gap: 12px; }
+.dishwasher-return { display: flex; justify-content: center; align-items: center; min-height: 44px; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container dishwasher-stage (max-height: 550px) {
+  .dishwasher-console { gap: 8px; }
+  .dishwasher-artwork { width: auto; height: clamp(100px, calc(100cqh - 338px), 183px); aspect-ratio: 320 / 260; }
+}
+@container dishwasher-stage (max-height: 440px) {
+  .dishwasher-console { grid-template-areas: 'top top' 'hero actions' 'cycles cycles' 'preferences preferences' 'note note'; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 7px; padding: 10px; }
+  .dishwasher-artwork { width: 130px; height: 105.625px; }
+  .dishwasher-hero { padding: 0 7px 7px; }
+  .dishwasher-readout strong { font-size: 10px; }
+  .dishwasher-readout > div > span { display: none; }
+  .dishwasher-actions { grid-template-columns: 1fr; align-content: center; gap: 6px; }
+  .dishwasher-actions button { font-size: 10px; gap: 5px; padding-inline: 3px; }
+  .dishwasher-note { font-size: 8px; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-dishwasher-controller .device-sheet-content { padding-inline: 12px; } .dishwasher-dry { gap: 4px; } }
+@media (hover: hover) { .dishwasher-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.dishwasher-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.dishwasher-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .dishwasher-workspace * { transition: none; scroll-behavior: auto; } .dishwasher-workspace button:active { transform: none; } }

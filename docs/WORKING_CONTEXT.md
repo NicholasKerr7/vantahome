@@ -46,6 +46,56 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Dishwasher console — October 20 / Preview 88 verified; installation deferred
+
+- Added a distinct DISHWASH console in embedded Home and native Devices, with a
+  rectangular glass cutaway, racks/plates and restrained decorative spray-arm
+  motion. Start/Resume/Pause/Stop, six programs, temperature and Dry Boost use
+  existing guarded state. Dry Boost retains its legacy `extraSpin` storage field.
+- More retains all existing settings: soil, rinse count, Prewash, Steam,
+  Sanitize, Auto Dose, Dry Boost, Eco Wash, status and the routines destination.
+  Preferences do not start activity. Time/progress remain fixed samples; no
+  countdown, cycle-phase inference, water telemetry, door actuation or physical
+  remote-start behavior was introduced. Property geometry is unchanged.
+- Durable validated `dishwasherActivity` preserves Pause/Stop through settings,
+  native projection and storage. Legacy Pause is promoted before preference or
+  quick-level edits clear last-action feedback. Shared cycle catalog helpers
+  retain independent washer/dryer state and commands.
+- **294 focused tests** pass: 200 shared/catalog/state, 23 host projection/catalog,
+  18 web controller/rotor lifecycle, 53 native controller/lifecycle/pagination.
+  App/scene TypeScript, scene builds and bounded review pass. Existing motion
+  lifecycle handles hidden, host suspension, background/route blur, More,
+  reduced motion and unmount without per-frame React updates. Receipts:
+  `work/dishwasher-{shared-tests,projection-tests,web-tests,native-tests,
+  native-typecheck,scene-build}.log`.
+- Thirteen embedded and five native browser profiles pass ≥44px targets and
+  horizontal-overflow checks. Regular sizes need no scrolling; 320×568 embedded
+  retains a 169px internal fallback. At 440×956 with 96px host safe-area allowance,
+  the 559px web console fits a 574px stage; native is 529px. Final CSS thresholds
+  are 550/440. The middle-tier artwork retains its aspect ratio so the separate
+  spray arm stays aligned; native gradient definitions are scoped to their SVG
+  root and regression-tested. Evidence: `work/dishwasher-browser-layouts.json`,
+  `work/dishwasher-browser-native-layouts.json`, `work/dishwasher-{home,native}.png`.
+- Browser checks verified all four More/Modes pages, routines access, More/Back
+  focus restoration and Home/Devices agreement. Native Stopped/Intensive/Hot/
+  Dry Boost On survived reopening in Home. Home Paused/Quick/Cold/Dry Boost Off
+  survived reopening in Devices. Demo was restored to Stopped/Auto/Hot/Dry Boost
+  Off. A running spray transform and state-dependent lighting were observed;
+  final browser errors are zero (`work/dishwasher-final-browser-errors.json`).
+  Full advanced-page text is in `work/dishwasher-extra-controls.json`.
+- Preview 88 signature, staging identity, profile and exact scene verification
+  pass: **32,147,185 bytes**, SHA-256 prefix `1a28126c4837`, 1,407,247 bytes below
+  the scene budget. Profile expires October 27. Dishwasher and prior controller
+  code is present; production metadata restored and QA fixture excluded.
+  Receipt: `work/dishwasher-preview88-package.json`; build log:
+  `work/dishwasher-preview88-build.log`. The current app at
+  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app` is Preview 88.
+  Temporary QA tab, viewport override, servers and `.arrival-preview.tsx` were removed.
+- Installation remains deferred by the prior **Install later** choice.
+  Preview 83 remains the latest verified installed build; physical dishwasher/
+  laundry/fan/speaker/vacuum acceptance, water persistence, hub/sync and physical
+  iPad work remain pending or deferred.
+
 ## Laundry consoles — October 20 / Preview 87 verified; installation deferred
 
 - Added sculpted washer and dryer consoles in embedded Home and native Devices.
@@ -90,7 +140,8 @@ defects from ideas or untested risks.
   code is present; production metadata was restored and the QA fixture excluded.
   Receipt: `work/laundry-preview87-package.json`; build log:
   `work/laundry-preview87-build.log`. The current app at
-  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app` is Preview 87.
+  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app` held Preview 87
+  at that milestone; see the latest section for the current package.
   Temporary QA tab/viewport override, servers and `.arrival-preview.tsx` were removed.
 - Installation remains deferred by
   the user's prior **Install later** choice. Preview 83 is still the latest

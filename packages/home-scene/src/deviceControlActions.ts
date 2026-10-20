@@ -5,6 +5,7 @@ import { getDevice, isPositionDevice, type DeviceDefinition, type DeviceId } fro
 import { getCapabilities, isMonitor, readDeviceSetting, validateSetting, validateStoredSetting, type DeviceActionOperation } from './deviceCapabilities';
 import type { DeviceState, SettingValue } from './simulationTypes';
 import { isLaundryKind, readLaundryActivity } from './laundryActivity';
+import { readDishwasherActivity } from './dishwasherActivity';
 
 /** Keep all scene inputs finite and within the supported percentage range. */
 export function clampLevel(value: number): number {
@@ -33,18 +34,25 @@ function clearActionFeedback(current: DeviceState): DeviceState {
   return next;
 }
 
+/** Promote a legacy pause only when a level edit would otherwise erase its sole saved marker. */
+function retainLegacyCyclePause(device: DeviceDefinition, current: DeviceState): DeviceState {
+  if (current.settings?.lastAction !== `${device.kind}-pause`) return current;
+  if (isLaundryKind(device.kind) && current.settings.laundryActivity === undefined) {
+    return { ...current, settings: { ...current.settings, laundryActivity: readLaundryActivity(device.kind, current) } };
+  }
+  if (device.kind === 'dishwasher' && current.settings.dishwasherActivity === undefined) {
+    return { ...current, settings: { ...current.settings, dishwasherActivity: readDishwasherActivity(current) } };
+  }
+  return current;
+}
+
 /** Apply percentage changes without losing remembered power, opening, or temperature semantics. */
 export function setDeviceLevelState(id: DeviceId, current: DeviceState, level: number): DeviceState {
   const device = getDevice(id);
   if (!device) return current;
   if (device.kind === 'gate') return applyGateSetting(clearActionFeedback(current), 'openPercent', clampLevel(level));
   if (isGasDevice(device.kind)) return current.on ? current : { ...current, on: true };
-  // Older laundry saves used only the action marker; a legacy level edit must retain that pause.
-  const remembered = isLaundryKind(device.kind) && current.settings?.laundryActivity === undefined
-    && current.settings?.lastAction === `${device.kind}-pause`
-    ? { ...current, settings: { ...current.settings, laundryActivity: readLaundryActivity(device.kind, current) } }
-    : current;
-  const manual = clearActionFeedback(remembered);
+  const manual = clearActionFeedback(retainLegacyCyclePause(device, current));
   const source = device.kind === 'light' ? clearLightEffect(manual) : manual;
   const next = isPositionDevice(device) ? { ...source, ...createPositionState(level) } : { ...source, level: clampLevel(level) };
   if (device.kind === 'ac' && next.settings?.tempC !== undefined) next.settings = { ...next.settings, tempC: 26 - Math.round(next.level * 0.08) };
@@ -65,6 +73,7 @@ export function applyDeviceSetting(id: DeviceId, current: DeviceState, field: st
   if (value === undefined) return current;
   // Preserve accepted pause state from older saves before a preference clears its last-action marker.
   if (isLaundryKind(device.kind)) current = { ...current, settings: { ...current.settings, laundryActivity: readLaundryActivity(device.kind, current) } };
+  if (device.kind === 'dishwasher') current = { ...current, settings: { ...current.settings, dishwasherActivity: readDishwasherActivity(current) } };
   current = clearActionFeedback(current);
   if (device.kind === 'gas-meter' && field === 'gasValveOpen') return applyGasCommand(device.kind, current, value ? 'open-valve' : 'close-valve');
   if (field === 'openPercent') return { ...current, ...createPositionState(Number(value)) };
@@ -104,6 +113,7 @@ export function toggleDeviceState(id: DeviceId, current: DeviceState): DeviceSta
   if (isPositionDevice(device)) return { ...current, ...createPositionState(current.level > 0 ? 0 : 100) };
   const next = { ...current, on: !current.on };
   if (isLaundryKind(device.kind)) next.settings = { ...current.settings, laundryActivity: next.on ? 'running' : 'paused' };
+  if (device.kind === 'dishwasher') next.settings = { ...current.settings, dishwasherActivity: next.on ? 'running' : 'paused' };
   if (!next.on && (device.kind === 'tv' || device.kind === 'speaker') && current.settings?.playbackState === 'playing') next.settings = { ...current.settings, playbackState: 'paused' };
   if (device.kind === 'vacuum') next.settings = { ...current.settings, status: next.on ? 'cleaning' : 'docked' };
   if (device.kind === 'microwave' && next.on && Number(readDeviceSetting(device, current, 'timeRemainingSec')) === 0) next.settings = { ...current.settings, timeRemainingSec: 60 };

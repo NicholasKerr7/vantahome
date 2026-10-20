@@ -73,6 +73,7 @@ const enumFields: Partial<Record<keyof Device, readonly unknown[]>> = {
   fanDirection: ["forward", "reverse"],
   status: ["docked", "cleaning", "paused"],
   laundryActivity: ["idle", "running", "paused", "stopped"],
+  dishwasherActivity: ["idle", "running", "paused", "stopped"],
   vacuumMode: ["auto", "spot", "edge", "room"],
   stoveMode: ["simmer", "boil", "sear", "keep-warm"],
   washTemp: ["Cold", "Warm", "Hot"],

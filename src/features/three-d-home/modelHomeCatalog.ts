@@ -74,7 +74,7 @@ const HOST_SAMPLE_FIELDS = [
   'powerW', 'energyTodayKwh', 'energyPeakW', 'energyMonthKwh', 'energyCostToday', 'gridAvailable',
   'solarW', 'solarTodayKwh', 'gridTodayKwh', 'waterLpm', 'waterTodayL', 'waterPressurePsi', 'waterTempC', 'waterLeakDetected',
   'battery', 'status', 'vacuumBinFull', 'vacuumBrushDirty', 'vacuumFilterLife', 'vacuumAreaM2', 'vacuumRuntimeMin',
-  'progress', 'remainingMin', 'lintFilterOk', 'laundryActivity', 'fridgeDoorOpen', 'fridgeFilterLife', 'airQualityIndex', 'humidity',
+  'progress', 'remainingMin', 'lintFilterOk', 'laundryActivity', 'dishwasherActivity', 'fridgeDoorOpen', 'fridgeFilterLife', 'airQualityIndex', 'humidity',
   'airPm25', 'airPm10', 'airCo2', 'airVoc', 'airFormaldehyde', 'airPollen', 'airQualityConfidence',
   'airOutdoorAqi', 'airOutdoorPm25', 'airOutdoorCo2', 'airOutdoorVoc', 'airOutdoorHumidity', 'airOutdoorTempC',
   'airFilterLife', 'airFilterDaysLeft', 'acFilterLife', 'coffeeWaterLevel', 'coffeeBeanLevel', 'coffeeDescaleNeeded',
