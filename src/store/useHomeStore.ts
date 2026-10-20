@@ -159,6 +159,7 @@ export type Device = {
   stoveTimerMin?: number; // stove
   stoveLock?: boolean; // stove
   cycle?: string; // washer/dryer
+  laundryActivity?: "idle" | "running" | "paused" | "stopped"; // accepted local washer/dryer preview
   progress?: number; // washer/dryer
   washTemp?: "Cold" | "Warm" | "Hot"; // washer
   spinSpeedRpm?: number; // washer

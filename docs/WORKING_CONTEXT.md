@@ -46,6 +46,57 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Laundry consoles — October 20 / Preview 87 verified; installation deferred
+
+- Added sculpted washer and dryer consoles in embedded Home and native Devices.
+  The authored laundry geometry already places the dryer above the washer; a
+  positional stack diagram highlights the selected machine without exposing the
+  partner's state or issuing linked commands. Other washer/dryer definitions use
+  the single-machine presentation. No property geometry was changed and no
+  manufacturer stacking compatibility is asserted.
+- Start/Resume/Pause/Stop use the guarded simulation state. Durable, validated
+  activity survives preferences, host projection and reopening; legacy saves
+  that recorded Pause only in lastAction are retained before edits clear that
+  feedback. Program, temperature/spin and heat/dryness remain independent saved
+  preferences. More retains all advanced controls. Time/progress are explicitly
+  fixed samples, not a countdown or physical cycle-completion signal.
+- Lightweight drum artwork uses the shared compositor/native-driver rotor hook,
+  extracted without changing fan semantics. Slow decorative rotation is unrelated
+  to saved spin RPM; pause/off, hidden/background, host suspension, native route
+  blur, More, reduced motion and unmount stop it without per-frame React updates.
+- **306 focused tests** pass: 208 shared/catalog/state/storage, 20 host
+  projection/catalog, 26 web controller/lifecycle, 52 native controller/lifecycle/
+  pagination. App/scene TypeScript, scene web/native builds and bounded review
+  pass. Receipts: `work/laundry-{shared-tests,projection-tests,web-tests,native-tests,
+  native-typecheck,scene-typecheck,scene-build}.log`.
+- Thirteen embedded profiles per machine and five native browser profiles per
+  machine pass horizontal-overflow and 44px-target checks. Regular sizes fit
+  without scrolling; embedded 320×568 retains a 146px contained fallback. At
+  440×956 with 96px host safe-area allowance, the 564px web console fits its
+  574px stage; the native console is 525px. Existing responsive sheet behavior
+  required reopening it after changing to landscape. Evidence:
+  `work/laundry-browser-layouts.json`, `work/laundry-browser-native-layouts.json`;
+  images `work/laundry-{washer,dryer}-{home,native}.png`.
+- Browser checks verified independent state, Start/Pause/Resume/Stop, preferences,
+  More/Back, web focus restoration and bidirectional Home/Devices agreement after
+  reload. Washer Paused/Delicate/Cold/800 and dryer Running/Air Fluff/Low/Damp
+  matched Devices; native washer Stopped/Eco and dryer Paused/Med survived reload
+  into Home with other preferences retained. Final Demo state is both Stopped,
+  Normal; washer Warm/1000 rpm and dryer Med/Dry. Browser errors are zero
+  (`work/laundry-final-browser-errors.json`).
+- Preview 87 signature, staging identity, profile and exact scene verification
+  pass: **32,130,770 bytes**, SHA-256 prefix `3f6780e0577f`, 1,423,662 bytes below
+  the scene budget. Profile expires October 27. Laundry and prior controller
+  code is present; production metadata was restored and the QA fixture excluded.
+  Receipt: `work/laundry-preview87-package.json`; build log:
+  `work/laundry-preview87-build.log`. The current app at
+  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app` is Preview 87.
+  Temporary QA tab/viewport override, servers and `.arrival-preview.tsx` were removed.
+- Installation remains deferred by
+  the user's prior **Install later** choice. Preview 83 is still the latest
+  verified installed build; physical laundry/fan/speaker/vacuum acceptance,
+  water persistence, hub/sync and physical iPad work remain pending or deferred.
+
 ## Fan airflow console — October 20 / Preview 86 verified; installation deferred
 
 - Added sculpted AIRFLOW consoles in embedded Home and native Devices for the
@@ -89,7 +140,8 @@ defects from ideas or untested risks.
   are present; production metadata was restored and the QA fixture is excluded.
   Receipts: `work/fan-preview86-package.json`, `work/fan-preview86-svg-package.json`;
   build log: `work/fan-preview86-build.log`. The current app at
-  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app` is Preview 86.
+  `native-derived-data/Build/Products/Release-iphoneos/vantahome.app` held Preview 86
+  at that milestone; see the latest section for the current package.
   Temporary QA tabs/viewport override, servers and `.arrival-preview.tsx` were removed.
 - Installation remains deferred by the user's prior **Install later** choice.
   Preview 83 is still the latest verified installed build; fan/speaker/vacuum

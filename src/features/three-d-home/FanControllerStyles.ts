@@ -1,4 +1,4 @@
-import { Animated, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { theme } from '../../theme/theme';
 
 /** Brushed violet metal and recessed graphite retain the established tactile console materials. */
@@ -6,11 +6,6 @@ export const fanControllerMaterials = {
   edge: ['#C6A9E2', '#635072', '#190E24'] as const,
   body: ['#33283F', '#17121F', '#271B33'] as const,
 };
-
-/** Keep dynamic native-driver transforms in the styling module, separate from static artwork. */
-export function createFanRotorStyle(rotation: Animated.Value) {
-  return { transform: [{ rotate: rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] };
-}
 
 /** Small viewports reduce the artwork, never the 44-point controls or readable saved-speed display. */
 export const fanControllerStyles = StyleSheet.create({

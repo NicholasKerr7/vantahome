@@ -1,0 +1,77 @@
+/* A glass drum and brushed-violet cabinet frame independent washer/dryer controls. */
+.device-control-sheet.is-laundry-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.laundry-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; gap: 6px; }
+.laundry-stage { display: grid; align-items: safe center; justify-items: center; min-width: 0; min-height: 0; padding: 2px 0 5px; container: laundry-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.laundry-console { display: grid; grid-template-areas: 'top' 'hero' 'actions' 'cycles' 'preferences' 'note'; width: min(380px, 100%); gap: 9px; padding: 12px; border: 1px solid #A991BD; border-radius: 32px; color: var(--text); background: linear-gradient(145deg, #51445F, #241B30 17%, #100B1B 65%, #31223D); box-shadow: inset 2px 1px 1px #FFFFFF30, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.laundry-top { grid-area: top; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.laundry-emblem { display: grid; place-items: center; width: 44px; height: 44px; color: #D8B9EF; }
+.laundry-brand { display: grid; gap: 4px; text-align: center; }
+.laundry-brand span { color: #BFAFD0; font-size: 8px; letter-spacing: 2.5px; }
+.laundry-brand strong { font-size: 12px; font-weight: 500; letter-spacing: 3px; }
+.laundry-console button { display: flex; justify-content: center; align-items: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 7px; border: 1px solid #FFFFFF29; border-radius: 14px; background: linear-gradient(145deg, #41324F, #231A30 75%); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; color: var(--text); font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.laundry-console .laundry-round { width: 44px; height: 44px; border-radius: 50%; }
+.laundry-console :is(button[aria-pressed='true'], .laundry-primary) { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.laundry-console button:disabled { opacity: .4; cursor: default; }
+.laundry-console button:not(:disabled):active { transform: translateY(2px); }
+.laundry-console :is(button, select):focus-visible, .laundry-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.laundry-hero { grid-area: hero; display: grid; grid-template-columns: minmax(0, 1fr) 64px; align-items: center; gap: 6px 10px; padding: 0 9px 10px; border: 1px solid #A482C326; border-radius: 23px; background: radial-gradient(ellipse at 40% 45%, #7A49A226, transparent 72%), #120B1B88; }
+.laundry-hero[data-stacked='false'] { grid-template-columns: minmax(0, 1fr); }
+.laundry-machine { justify-self: center; position: relative; width: 218px; height: 218px; max-width: 100%; aspect-ratio: 1; }
+.laundry-housing, .laundry-glass { position: absolute; inset: 0; width: 100%; height: 100%; }
+.laundry-drum-window { position: absolute; top: 30.77%; left: 26.16%; width: 46.15%; height: 46.15%; overflow: hidden; border-radius: 50%; }
+.laundry-drum, .laundry-drum svg { display: block; width: 100%; height: 100%; }
+.laundry-machine-signal { stroke: #706079; transition: stroke 200ms ease; }
+.laundry-machine[data-running='true'] .laundry-machine-signal { stroke: #D5AEFF; }
+.laundry-machine[data-dryer='true'][data-running='true'] .laundry-machine-signal { stroke: #EDC5B6; }
+.laundry-stack { display: grid; gap: 5px; align-self: center; color: #BAA5CC; }
+.laundry-stack > span { font-size: 7px; letter-spacing: 1px; text-align: center; }
+.laundry-stack-unit { display: flex; align-items: center; flex-direction: column; gap: 4px; padding: 8px 4px; border: 1px solid #68507388; border-radius: 9px; background: #24192F; }
+.laundry-stack-unit[data-selected='true'] { border-color: #CFA1EF; background: linear-gradient(145deg, #63457C, #35203F); color: #F1DFFF; }
+.laundry-stack-unit i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid currentColor; box-shadow: inset 0 0 0 3px #22152F; }
+.laundry-stack-unit strong { font-size: 8px; font-weight: 500; }
+.laundry-readout { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.laundry-readout > div { display: grid; gap: 4px; }
+.laundry-readout strong { font-size: 13px; font-weight: 500; color: #E8D7F5; }
+.laundry-readout span { font-size: 9px; color: #C6AED8; }
+.laundry-samples { text-align: right; }
+.laundry-samples strong { font-variant-numeric: tabular-nums; font-size: 14px; }
+.laundry-actions { grid-area: actions; display: grid; grid-template-columns: 1.6fr 1fr; gap: 8px; }
+.laundry-cycles { grid-area: cycles; display: grid; gap: 5px; min-width: 0; }
+.laundry-caption { color: #C5AFD8; font-size: 8px; letter-spacing: 1px; }
+.laundry-cycle-rail { display: flex; gap: 7px; padding: 4px 3px 6px; margin: -4px -3px -6px; overflow-x: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; scroll-snap-type: x proximity; scrollbar-width: none; }
+.laundry-cycle-rail::-webkit-scrollbar { display: none; }
+.laundry-cycle-rail button { flex: 0 0 78px; scroll-snap-align: start; }
+.laundry-preferences { grid-area: preferences; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.laundry-preferences label { display: grid; gap: 6px; min-width: 0; }
+.laundry-preferences select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid #9171A35C; border-radius: 13px; color: var(--text); background: #1B1225; font: inherit; font-size: 12px; cursor: pointer; }
+.laundry-preferences select:disabled { opacity: .4; cursor: default; }
+.laundry-note { grid-area: note; margin: 0; font-size: 9px; line-height: 1.4; color: #C0AACF; text-align: center; }
+.laundry-feedback { display: grid; gap: 4px; margin: 0; min-height: 30px; padding-inline: 8px; text-align: center; font-size: 10px; line-height: 1.5; color: var(--text-soft); }
+.laundry-feedback span { color: var(--muted); font-size: 7px; letter-spacing: 1.8px; }
+.laundry-more { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; gap: 12px; }
+.laundry-return { display: flex; justify-content: center; align-items: center; min-height: 44px; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container laundry-stage (max-height: 560px) {
+  .laundry-console { gap: 8px; padding: 12px; }
+  .laundry-machine { width: clamp(100px, calc(100cqh - 365px), 170px); height: clamp(100px, calc(100cqh - 365px), 170px); }
+  .laundry-stack-unit { padding-block: 4px; }
+}
+@container laundry-stage (max-height: 460px) {
+  .laundry-console { grid-template-areas: 'top top' 'hero actions' 'cycles cycles' 'preferences preferences' 'note note'; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 7px; padding: 10px; }
+  .laundry-hero { grid-template-columns: minmax(0, 1fr) 42px; padding: 0 7px 7px; gap: 2px; }
+  .laundry-machine { width: 80px; height: 80px; }
+  .laundry-stack { gap: 3px; }
+  .laundry-stack > span { display: none; }
+  .laundry-stack-unit { padding: 4px; gap: 2px; }
+  .laundry-stack-unit i { width: 14px; height: 14px; border-width: 1px; }
+  .laundry-readout { gap: 3px; }
+  .laundry-readout strong { font-size: 10px; }
+  .laundry-readout > div > span { display: none; }
+  .laundry-actions { grid-template-columns: 1fr; align-content: center; gap: 6px; }
+  .laundry-actions button { font-size: 10px; gap: 5px; padding-inline: 3px; }
+  .laundry-note { font-size: 8px; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-laundry-controller .device-sheet-content { padding-inline: 12px; } }
+@media (hover: hover) { .laundry-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.laundry-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.laundry-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .laundry-workspace * { transition: none; scroll-behavior: auto; } .laundry-workspace button:active { transform: none; } }

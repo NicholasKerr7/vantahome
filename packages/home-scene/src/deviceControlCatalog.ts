@@ -38,6 +38,16 @@ function mediaControls(kind: 'tv' | 'speaker'): DeviceCapability[] {
   ];
 }
 
+/** Laundry actions record accepted activity while preserving static samples and saved programs. */
+function laundryControls(kind: 'washer' | 'dryer'): DeviceCapability[] {
+  return [
+    action(kind, 'start', 'Start', { isOn: true, laundryActivity: 'running' }),
+    action(kind, 'pause', 'Pause', { isOn: false, laundryActivity: 'paused' }),
+    action(kind, 'stop', 'Stop', { isOn: false, laundryActivity: 'stopped' }),
+    stat(kind, 'laundryActivity', 'Preview activity'),
+  ];
+}
+
 /** Cover commands share the same position reducer as their percentage slider. */
 function coverControls(kind: 'gate' | 'garage' | 'door' | 'window' | 'blinds'): DeviceCapability[] {
   return [action(kind, 'command-open', 'Open', { openPercent: 100 }), action(kind, 'command-close', 'Close', { openPercent: 0 })];
@@ -108,6 +118,8 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     toggle('fan', 'fanLightOn', 'Integrated light'), toggle('fan', 'fanAutoMode', 'Auto mode'), toggle('fan', 'fanSleepMode', 'Sleep speed preview'),
     range('fan', 'fanTimerMin', 'Timer preference', 0, 240, 'min', 'schedule'),
   ],
+  washer: laundryControls('washer'),
+  dryer: laundryControls('dryer'),
   fridge: [
     range('fridge', 'freezerTempC', 'Freezer temperature', -24, -12, '°C'),
     choice('fridge', 'fridgeMode', 'Mode', [['Eco', 'eco'], ['Normal', 'normal'], ['Boost', 'boost'], ['Vacation', 'vacation']]),
@@ -215,8 +227,18 @@ export const supplementalDefaults = Object.fromEntries([...new Set([...Object.ke
 function playbackStatus(kind: 'tv' | 'speaker'): DeviceCapability[] {
   return [choice(kind, 'playbackState', '', ['stopped', 'playing', 'paused']), range(kind, 'playbackPositionSec', '', 0, 3600), range(kind, 'trackIndex', '', 1, 99)];
 }
+
+/** Bound persisted laundry samples without making telemetry editable or generating a countdown. */
+function laundryStatus(kind: 'washer' | 'dryer'): DeviceCapability[] {
+  return [
+    choice(kind, 'laundryActivity', '', ['idle', 'running', 'paused', 'stopped']),
+    range(kind, 'progress', '', 0, 100), range(kind, 'remainingMin', '', 0, 1440),
+    ...(kind === 'dryer' ? [toggle(kind, 'lintFilterOk', '')] : []),
+  ];
+}
 export const simulatedStatusFields: Partial<Record<DeviceKind, DeviceCapability[]>> = {
   ...gasStoredFields, ...fireStoredFields, gate: gateSafetyStoredFields,
   tv: [...playbackStatus('tv'), range('tv', 'remoteFocus', '', 1, 9), range('tv', 'remoteSelection', '', 0, 9), choice('tv', 'remoteAction', '', ['none', 'up', 'down', 'left', 'right', 'select', 'home', 'back'])],
   speaker: playbackStatus('speaker'),
+  washer: laundryStatus('washer'), dryer: laundryStatus('dryer'),
 };

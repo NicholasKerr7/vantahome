@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Washer and dryer laundry consoles | Preview 87 verified; installation remains deferred | Sculpted Home/Devices consoles reflect the authored dryer-above-washer arrangement while keeping controls and saved state independent. Guarded Start/Resume/Pause/Stop, program, temperature/spin and heat/dryness; More retains advanced settings. Durable activity preserves legacy pauses through edits; fixed time/progress samples remain explicit. Shared rotor respects visibility and reduced motion. 306 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles per machine checked; regular sizes fit with ≥44px targets, tiny fallback retained. Home/Devices agreement, reload retention, More/Back and zero browser errors verified. Signed staging package and exact scene verified (32,130,770 bytes); production metadata restored. Installation and physical acceptance remain deferred; Preview 83 is latest verified installed. See handoff. |
 | Fan airflow console | Preview 86 verified; installation remains deferred | Sculpted Home/Devices AIRFLOW console for three ceiling fans and seven extractors. Power-preserving speed steps/presets, direction and Sleep share the property's rotor semantics; effective Sleep cap of 35% remains distinct from saved speed. Phase-preserving compositor/native-driver motion stops when hidden, off/zero or reduced motion is enabled. More retains saved-only extras. 174 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles checked; regular sizes fit with ≥44px targets, tiny fallback retained. More/Back, Home/Devices agreement and reload retention verified; final browser errors zero after SVG compatibility fix. Signed staging package and exact scene verified (32,111,070 bytes); production metadata restored. Installation and physical fan acceptance remain deferred; Preview 83 is latest verified installed. See handoff. |
 | Speaker audio console | Preview 85 verified; installation remains deferred | Sculpted Home/Devices AUDIO console with guarded power, playback, bounded sample tracks, relative volume, mute and saved source/sound preferences. Shared status respects power, mute and zero volume; no stream or provider connection. More retains advanced controls. 163 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles checked; regular sizes fit with ≥44px targets, tiny embedded fallback retained. Home/Devices agreement, More/Back and reload retention verified; final browser errors zero. Signed staging package and exact scene verified (32,096,522 bytes); production metadata restored. Speaker/vacuum physical acceptance remains pending; Preview 83 is latest verified installed. See handoff. |
 | Robot vacuum console | Preview 84 verified; user chose Install later | Sculpted Home/Devices console with guarded Start/Pause/Resume/Dock, bounded relative suction and saved mode/Mop/Quiet preferences. Shared activity fixes paused/docked summaries; samples and maintenance remain truthful. 149 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles checked; regular sizes fit with ≥44px targets, tiny embedded fallback retained. More/Back, Home/Devices agreement and reload retention verified; final browser errors zero. Signed staging package and exact scene verified (32,080,275 bytes); production metadata restored. Physical vacuum tests pending; Preview 83 remains latest verified installed. See handoff. |
@@ -37,6 +38,23 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+**Resolved laundry pause persistence:** older washer/dryer activity relied on
+last-action feedback, which preference edits clear. A validated activity field
+now survives shared storage and native projection; legacy Pause is promoted
+before settings or quick-level edits clear feedback. Power stays authoritative.
+Tests cover malformed samples, isolated washer/dryer mutations, read-only and
+revoked grants, lifecycle cleanup and preserved advanced controls. The stack
+indicator describes authored geometry only; it does not share partner telemetry,
+grant control or certify hardware compatibility.
+
+Laundry program, temperature/spin, heat/dryness and schedules remain saved
+preferences. Start/Pause/Stop control a local visual preview; no cycle timer,
+physical remote-start interlock, temperature telemetry or completion engine was
+added. Future hardware integration must derive supported programs, door locks
+and remote-start availability from the actual appliance/hub capabilities.
+Preview 87 installation is deferred; physical laundry acceptance and earlier
+water persistence remain separate.
 
 **Fan saved speed and effective preview:** Sleep already caps rotor speed at 35%
 without changing the setpoint. The new console shows both values and keeps Sleep
