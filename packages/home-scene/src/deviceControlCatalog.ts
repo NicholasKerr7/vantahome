@@ -147,7 +147,15 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
   energy: [
     action('energy', 'outage', 'Simulate grid outage', { gridAvailable: false }), action('energy', 'restore-grid', 'Restore sample grid', { gridAvailable: true }),
   ],
-  'water-heater': [choice('water-heater', 'waterHeaterType', 'Heater type', [['Electric tank', 'electric-tank'], ['Gas tank', 'gas-tank'], ['Heat pump', 'heat-pump'], ['Tankless', 'tankless']])],
+  water: [
+    action('water', 'budget-up', 'Usage budget +', {}, { type: 'increment', field: 'waterBudgetL', delta: 20 }),
+    action('water', 'budget-down', 'Usage budget −', {}, { type: 'increment', field: 'waterBudgetL', delta: -20 }),
+  ],
+  'water-heater': [
+    { ...action('water-heater', 'temperature-up', 'Target temperature +', {}, { type: 'increment', field: 'tempC', delta: 1 }), configurationOnly: true },
+    { ...action('water-heater', 'temperature-down', 'Target temperature −', {}, { type: 'increment', field: 'tempC', delta: -1 }), configurationOnly: true },
+    choice('water-heater', 'waterHeaterType', 'Heater type', [['Electric tank', 'electric-tank'], ['Gas tank', 'gas-tank'], ['Heat pump', 'heat-pump'], ['Tankless', 'tankless']]),
+  ],
   air: [
     range('air', 'airAlertAqi', 'AQI alert threshold', 50, 200), range('air', 'airAlertCo2', 'CO₂ alert threshold', 600, 2000, 'ppm'),
     range('air', 'airAlertPm25', 'PM2.5 alert threshold', 10, 120, 'µg/m³'), range('air', 'airAlertPm10', 'PM10 alert threshold', 20, 160, 'µg/m³'),

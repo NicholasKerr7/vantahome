@@ -18,6 +18,8 @@ import { LightingController } from './LightingControlPanel';
 import { EnergyController } from './EnergyControlPanel';
 import { isEnergyDeviceKind } from './energyController';
 import { GateController } from './GateControlPanel';
+import { WaterController } from './WaterControlPanel';
+import { isWaterDeviceKind, readWaterControllerState } from './waterController';
 import { GATE_DEVICE_ID } from './gateSafetySimulation';
 import { formatClimateTemperature, readClimateControllerState } from './climateController';
 
@@ -26,6 +28,7 @@ const CONTROLLER_CLASSES: Partial<Record<DeviceDefinition['kind'], string>> = {
   tv: 'is-tv-remote', ac: 'is-climate-controller', blinds: 'is-blinds-controller', light: 'is-lighting-controller',
   energy: 'is-energy-controller', solar: 'is-energy-controller', battery: 'is-energy-controller', generator: 'is-energy-controller',
   gate: 'is-gate-controller',
+  water: 'is-water-controller', 'water-heater': 'is-water-controller',
 };
 
 /** Unmount removed or revoked fixtures before their stale dialog can read deleted catalog data. */
@@ -49,7 +52,10 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
   const controllable = useHomeStore((state) => canControlSceneDevice(state.access, deviceId));
   const tempUnit = useHomeStore((state) => state.tempUnit);
   const editable = useHomeStore((state) => canViewSceneDevice(state.access, deviceId) && state.access.editableDeviceIds?.includes(deviceId) === true);
-  const status = device.kind === 'ac'
+  const water = device.kind === 'water-heater' ? readWaterControllerState(device, current) : null;
+  const status = water?.kind === 'water-heater'
+    ? `${water.on ? 'On' : 'Off'} · Target ${formatClimateTemperature(water.targetC, tempUnit)}°${tempUnit}`
+    : device.kind === 'ac'
     ? `${current.on ? 'On' : 'Off'} · Target ${formatClimateTemperature(readClimateControllerState(device, current).targetC, tempUnit)}°${tempUnit}`
     : deviceActionFeedback(device, current) ?? deviceStatus(device, current);
 
@@ -110,6 +116,7 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
         : device.kind === 'blinds' && controllable ? <BlindsController key={deviceId} device={device} current={current} />
         : device.kind === 'light' && controllable ? <LightingController key={deviceId} device={device} current={current} />
         : isEnergyDeviceKind(device.kind) && controllable ? <EnergyController key={deviceId} device={device} current={current} />
+        : isWaterDeviceKind(device.kind) && controllable ? <WaterController key={deviceId} device={device} current={current} />
         : device.id === GATE_DEVICE_ID && controllable ? <GateController key={deviceId} device={device} current={current} /> : <>
         <button type="button" className="device-sheet-primary" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.isSwitch ? `${device.name} power` : action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span></button>
         {controllable ? <PagedDeviceControls key={deviceId} device={device} current={current} /> : <p className="device-hint">View only. Your household role does not allow changing this device.</p>}

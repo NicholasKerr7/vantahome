@@ -46,6 +46,68 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Water consoles — October 20 / Preview 83 installed; iPhone interaction accepted
+
+- Added sculpted water-heater and water-meter consoles in embedded Home and
+  native Devices. Lightweight SVG tanks/instruments share the existing guarded
+  simulation state; no extra renderer, media asset, dependency or idle loop.
+  The existing **Water pressure system** is the meter, not a newly registered
+  device. More retains every original advanced setting.
+- Heater power, bounded ±1°C target steps, Eco/Standard/Boost/Vacation and
+  recirculation preserve accepted settings and power independently. C/F follows
+  the profile preference. Targets and modes do not invent measured tank
+  temperature, heat-up time or a thermal engine.
+- Meter flow, daily usage, pressure, water temperature and leak state remain
+  samples. Check sample acknowledges the sample without altering readings or
+  pretending to close a valve. Budget and alert preferences continue to feed
+  existing scoped local condition reports; automatic shutoff remains a saved
+  preference without a connected valve. Invalid readings remain unavailable.
+- **98 web/shared + 125 native controller + 8 activity tests (231 distinct
+  focused tests)** pass, along with app/scene TypeScript and web/native scene
+  builds. Final header changes also passed the 10 web and 28 native affected
+  tests. Coverage includes rapid relative actions, bounds, off-state retention,
+  malformed readings, current access guards, C/F and More/Back. The budget
+  regression proves 120→100 L triggers the existing report over unchanged
+  120 L usage; returning to 120 L clears it, with missing snapshots hidden.
+  Evidence: `work/water-{web-tests,native-tests,native-typecheck,scene-build}.log`
+  and `work/water-budget-{report,catalog}-tests.log`.
+- Ten embedded profiles per console passed fit checks. Regular phone/tablet
+  profiles have no internal overflow and 44px targets; 320×568 retains contained
+  fallbacks of 164px (heater) and 171px (meter). At 440×956 with 96px host safe
+  area, the heater is 459px and meter 527.2px within a 574px stage. Meter sample
+  refresh moved into the header to preserve space. Evidence:
+  `work/water-browser-layouts.json`, `work/water-{heater,meter}-home.png`.
+- Browser verified heater Off/54°C/Boost/recirculation Off after reload, and meter
+  260 L/leak alerts Off after reload with unchanged 8 L/min, 120 L, 52 psi and
+  18°C samples. Home More/Back restores focus. Final local demo defaults were
+  restored to heater On/52°C/Eco/recirculation On and meter budget 220 L with both
+  alerts On; sample acknowledgement remains checked.
+- Five native-component browser profiles per console also fit with 44px targets
+  and no internal overflow. Both native More/Back paths worked. Native heater
+  Off/53°C and meter 240 L/pressure alerts Off survived reload and appeared in
+  embedded Home, then were restored to the defaults above. Evidence:
+  `work/water-browser-native-layouts.json`, `work/water-{heater,meter}-native.png`.
+  Final browser error receipt is empty: `work/water-final-browser-errors.json`.
+  A temporary QA proxy lacked Expo's WebSocket HMR connection, causing lazy
+  module registration to reload the page. Eager loading fixed that test setup;
+  no production navigation change was needed.
+- Preview 83 build, signature, staging identity/redirects, retained controllers,
+  asset manifest and exact packaged scene checks passed: **32,064,613 bytes**
+  (30.579 MiB), below 32 MiB. Production metadata was restored. Installed
+  successfully; Apple inventory confirms **1.0.0 (83)**, now the latest verified
+  installed build. Receipts: `work/water-preview83-{package,install,apps}.json`.
+- Automatic launch was rejected with CoreDevice 10002 / developer trust-security
+  message. The embedded profile includes the iPhone and is valid October 20–27;
+  signing certificates are valid through April 2027. User was asked to open
+  Preview manually and, if prompted, trust their existing developer profile.
+  Do not assume trust is the only possible cause or rebuild solely for this
+  message. `work/water-preview83-launch.{json,log}` records the failure. The user
+  subsequently confirmed **the app opens manually**, resolving the launch
+  follow-up without a rebuild. The user then confirmed both consoles fit and
+  work smoothly after heater power/target/mode/recirculation, More/Back, meter
+  budget and alert checks. Physical Home/Devices agreement and reopening
+  persistence are the final pending checks; previous gate acceptance is unchanged.
+
 ## Entry gate console — October 18 / Preview 82 installed; planned iPhone checks accepted
 
 - Added coordinated sculpted Home/Devices gate consoles with a single sliding
@@ -2249,6 +2311,12 @@ Previous property-sharing evidence (no scene source changed for Preview 39):
 
 Use the [audited delivery order](BRANCH_IMPLEMENTATION_AUDIT.md#delivery-order)
 for implementation priorities; the physical follow-ups below are a separate list.
+
+Immediate follow-up: Preview 83 is installed and the user accepted both water
+consoles' interaction and fit. Check Home/Devices agreement and retention after
+reopening.
+Keep heater configuration and meter samples distinct from real equipment.
+Energy/earlier climate physical acceptance remain separately pending.
 
 1. Review Preview 59's changed native paths: household permission edits/removal,
    account switching during a pending request, backgrounding a moving simulated

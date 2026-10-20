@@ -31,8 +31,10 @@ import { BlindsController } from './BlindsController';
 import { LightingController } from './LightingController';
 import { EnergyController } from './EnergyController';
 import { GateController } from './GateController';
+import { WaterController } from './WaterController';
 import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
 import { isEnergyDeviceKind } from '../../../packages/home-scene/src/energyController';
+import { isWaterDeviceKind } from '../../../packages/home-scene/src/waterController';
 import { canViewSceneDevice } from '../../../packages/home-scene/src/sceneAccess';
 
 const SimulationDeviceEditor = React.lazy(() => import('../devices/SimulationDeviceEditor'));
@@ -49,6 +51,8 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   battery: { accessible: 'Back to energy controller', visible: 'Back to energy' },
   generator: { accessible: 'Back to energy controller', visible: 'Back to energy' },
   gate: { accessible: 'Back to gate controller', visible: 'Back to gate' },
+  water: { accessible: 'Back to water controller', visible: 'Back to water' },
+  'water-heater': { accessible: 'Back to water controller', visible: 'Back to water' },
 };
 type Group = typeof GROUPS[number];
 interface SheetProps {
@@ -170,6 +174,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if (isEnergyDeviceKind(device.kind) && !advancedControls) return <EnergyController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'gate' && device.id === GATE_DEVICE_ID && !advancedControls) return <GateController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (isWaterDeviceKind(device.kind) && !advancedControls) return <WaterController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
 
   return <>

@@ -1,5 +1,7 @@
 import { DEVICES } from '../../../../packages/home-scene/src/data';
+import { runDeviceActionState } from '../../../../packages/home-scene/src/deviceControlActions';
 import { createDefaultSimulationSnapshot } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
+import { waterControllerActionId } from '../../../../packages/home-scene/src/waterController';
 import { useHomeStore, type HomeState } from '../../../store/useHomeStore';
 import { CONDITION_REPORT_FRESHNESS_MS, selectCurrentReports } from '../currentReports';
 
@@ -114,4 +116,32 @@ test('lowering a model air threshold evaluates the canonical sample without inve
     expect.objectContaining({ id: 'condition:air:air-co2', simulated: true, notify: true, title: 'Simulated CO₂ above limit' }),
   ]));
   expect(selectCurrentReports(state, null, 'production', NOW)).toEqual([]);
+});
+
+test('water console budget steps update existing local reports without changing the usage sample', () => {
+  const state = home();
+  const definition = DEVICES.find(device => device.kind === 'water')!;
+  state.rooms[0].modelRoomId = definition.roomId;
+  state.devices = [{ id: 'water', name: 'Model water', kind: 'water', roomId: 'public', isOn: true,
+    simulationOnly: true, modelDeviceId: definition.id }];
+  const simulation = createDefaultSimulationSnapshot();
+  simulation.deviceStates[definition.id] = { on: true, level: 60, settings: { waterBudgetL: 120 } };
+  expect(selectCurrentReports(state, simulation, 'production', NOW)).toEqual([]);
+
+  simulation.deviceStates[definition.id] = runDeviceActionState(
+    definition.id, simulation.deviceStates[definition.id], waterControllerActionId('budgetDown'),
+  );
+  expect(selectCurrentReports(state, simulation, 'production', NOW)).toEqual([
+    expect.objectContaining({
+      id: 'condition:water:water-budget', title: 'Simulated water budget exceeded',
+      detail: '120 L reported · configured budget 100 L', simulated: true, notify: true,
+    }),
+  ]);
+  expect(simulation.deviceStates[definition.id].settings?.waterTodayL).toBeUndefined();
+  expect(selectCurrentReports(state, null, 'production', NOW)).toEqual([]);
+
+  simulation.deviceStates[definition.id] = runDeviceActionState(
+    definition.id, simulation.deviceStates[definition.id], waterControllerActionId('budgetUp'),
+  );
+  expect(selectCurrentReports(state, simulation, 'production', NOW)).toEqual([]);
 });

@@ -5,6 +5,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { getInspectorPages } from '../../../../packages/home-scene/src/deviceRoutinePages';
 import { getDevice } from '../../../../packages/home-scene/src/data';
 import { isEnergyDeviceKind } from '../../../../packages/home-scene/src/energyController';
+import { isWaterDeviceKind } from '../../../../packages/home-scene/src/waterController';
 import { DeviceControlsSheet } from '../DeviceControlsSheet';
 import { NativeCapabilityControl } from '../NativeCapabilityControl';
 import { SimulationControlClient } from '../simulationControlClient';
@@ -36,6 +37,7 @@ function renderControls(deviceId: string) {
   if (getDevice(deviceId)?.kind === 'light') fireEvent.press(screen.getByLabelText('More lighting controls'));
   const kind = getDevice(deviceId)?.kind;
   if (kind && isEnergyDeviceKind(kind)) fireEvent.press(screen.getByLabelText('More energy controls'));
+  if (kind && isWaterDeviceKind(kind)) fireEvent.press(screen.getByLabelText('More water controls'));
   if (deviceId === 'entry-gate') fireEvent.press(screen.getByLabelText('More gate controls'));
   return { screen, props, runAction, setSetting, onClose };
 }
@@ -200,4 +202,26 @@ test('native controls identify saved-only fan configuration while the working di
   expect(screen.getByLabelText(/^Direction:.*Choose option$/)).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Next controls page'));
   expect(screen.getByText('Saved only · this fixed fan has no oscillation or lamp.')).toBeTruthy();
+});
+
+test.each(['utility-water', 'utility-water-heater'])('%s preserves every advanced capability behind More at large text sizes', (id) => {
+  const { screen } = renderControls(id);
+  measure(screen, 130);
+  const expected = getInspectorPages(getDevice(id)!, 3).flatMap((page) => page.capabilities.map((item) => item.id));
+  const seen: string[] = [];
+  for (const tab of ['Controls', 'Modes', 'Routines', 'Status']) {
+    const tabButton = screen.getByLabelText(tab);
+    if (tabButton.props.accessibilityState.disabled) continue;
+    fireEvent.press(tabButton);
+    let remaining = 100;
+    do {
+      seen.push(...screen.UNSAFE_queryAllByType(NativeCapabilityControl).map((control) => control.props.capability.id));
+      if (screen.getByLabelText('Next controls page').props.accessibilityState.disabled) break;
+      fireEvent.press(screen.getByLabelText('Next controls page'));
+    } while (--remaining);
+    expect(remaining).toBeGreaterThan(0);
+  }
+  expect([...seen].sort()).toEqual([...expected].sort());
+  expect(new Set(seen).size).toBe(seen.length);
+  expect(screen.UNSAFE_queryAllByType(ScrollView)).toHaveLength(0);
 });
