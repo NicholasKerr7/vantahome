@@ -56,10 +56,10 @@ test('opens the shared house inspector and preserves close and per-device browsi
   expect(screen.navigation.goBack).toHaveBeenCalled();
 });
 
-test('keeps canonical cameras on their native camera route', () => {
+test('opens the camera console for an authorized canonical Demo camera', () => {
   const screen = renderRoute('entry-camera');
-  expect(screen.getByText('Native device controls')).toBeTruthy();
-  expect(DeviceControlsSheet).not.toHaveBeenCalled();
+  expect(screen.getByText('House inspector')).toBeTruthy();
+  expect(sheetProps().deviceId).toBe('entry-camera');
 });
 
 test('does not open a manifest device missing from the visible home catalog', () => {
@@ -141,4 +141,20 @@ test('keeps a physical mapped light on native controls', () => {
   useHomeStore.setState((state) => ({ devices: state.devices.map((device) => ({ ...device, simulationOnly: false })) }));
   expect(renderRoute('cloud-light').getByText('Native device controls')).toBeTruthy();
   expect(DeviceControlsSheet).not.toHaveBeenCalled();
+});
+
+test.each([true, false])('only simulated authenticated cameras use the shared console (simulationOnly=%s)', (simulationOnly) => {
+  useAuthenticatedModel();
+  useHomeStore.setState({
+    rooms: [{ id: 'cloud-entry', name: 'Entry', modelRoomId: 'grounds' }],
+    devices: [{ ...catalogDevice('entry-camera'), id: 'cloud-camera', roomId: 'cloud-entry', modelDeviceId: 'entry-camera', simulationOnly }],
+  });
+  const screen = renderRoute('cloud-camera');
+  if (simulationOnly) {
+    expect(screen.getByText('House inspector')).toBeTruthy();
+    expect(sheetProps().deviceId).toBe('entry-camera');
+  } else {
+    expect(screen.getByText('Native device controls')).toBeTruthy();
+    expect(DeviceControlsSheet).not.toHaveBeenCalled();
+  }
 });

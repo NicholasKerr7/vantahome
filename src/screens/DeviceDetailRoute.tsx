@@ -26,7 +26,8 @@ export default function DeviceDetailRoute(props: Props) {
   if (!device || ((MODEL_ONLY_KINDS.has(device.kind) || device.simulationOnly) && !modelId)) {
     return <DeepScreen title="Device unavailable" eyebrow="DEVICE ACCESS" onBack={() => props.navigation.goBack()}><Text style={styles.detail}>This device is not available with your current home access.</Text></DeepScreen>;
   }
-  if (modelId && (device.simulationOnly || device.kind !== 'camera')) {
+  // The binding selector already excludes physical devices; model cameras share the simulation console.
+  if (modelId) {
     return <ModeledDeviceDetail {...props} modelId={modelId} allowedDeviceIds={Object.values(modelRoutes)} />;
   }
   return <DeviceDetailScreen {...props} />;

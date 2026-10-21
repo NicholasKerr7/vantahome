@@ -46,6 +46,50 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Camera VISION console — October 20 / Preview 90 installed and launched
+
+- Added sculpted VISION controls in embedded Home and native Devices for the three
+  modeled cameras. Code/SVG architectural illustrations are explicitly sample
+  previews; no media player, private feed, image capture, microphone permission,
+  idle animation loop or new dependency was added.
+- Arm/Disarm uses canonical simulation arming, independently of native camera
+  power. Night and Alerts preserve saved preferences; Snapshot records the
+  existing local event only. More retains recording, microphone, two-way audio,
+  sensitivity, sample visitor actions, status and routines. Sample visitors do not
+  update household presence or open the gate. No hardware/recording claim is made.
+- The binding selector routes canonical Demo and authenticated simulation cameras
+  to the console; real camera detail/viewer/protected-access routes are retained.
+  Existing camera.live/camera.manage and room restrictions remain authoritative.
+  Invalid preview events show unavailable; preference validation uses the catalog.
+- **200 focused tests** pass: 112 shared/catalog/state, 22 embedded controller
+  tests, 47 native controls/pagination/routing and 19 host projection/catalog.
+  App/scene TypeScript, web/native scene builds and bounded code review pass.
+  Receipts: `work/camera-{shared,web,native,projection}-tests.log`,
+  `work/camera-{typecheck,native-typecheck,scene-build}.log`.
+- Eleven embedded and six native browser profiles pass horizontal overflow and
+  44px-target checks. Regular profiles fit without scrolling. Embedded 320×568
+  keeps a 98px contained fallback; shorter phones use monitor/status columns.
+  CSS thresholds are 570/390. Native 320×568 fits using its existing compact mode.
+  Evidence: `work/camera-browser{,-native}-layouts.json`, `camera-home.png`,
+  `camera-home-compact.png` and `camera-native.png`.
+- Home Night/Alerts/disarm/sample snapshot agree in Devices; native arming and
+  preference changes survive full reload into Home with the sample event intact.
+  More/Back and focus return pass. Final rebuilt scene has no QA CSS override;
+  browser errors are zero. Evidence: `work/camera-reload-check.json` and
+  `work/camera-final-browser-errors.json`. Demo was left Armed/Night/Alerts on.
+- Final source scene is **32,180,310 bytes**, SHA-256 prefix `df525edbb710`,
+  1,374,122 bytes below the 32 MiB budget. Source preflight receipt:
+  `work/camera-preview90-source-preflight.json`. Signed staging identity, exact
+  bundled scene, profile, retained controller markers and QA exclusion pass;
+  production metadata restored. Receipt: `work/camera-preview90-package.json`.
+  Profile expires October 27. Installed and launched on the connected iPhone;
+  Apple inventory confirms **1.0.0 (90)**, superseding Preview 89. Receipts:
+  `work/camera-preview90-{install,launch,apps}.json`. Temporary browser fixture,
+  QA browser and owned servers were removed/stopped.
+- Physical camera-console acceptance, earlier water persistence, hub/sync and
+  physical iPad testing remain pending/deferred. Real feed provisioning,
+  credentials/revocation, playback and actual recordings remain future work.
+
 ## Door, garage and window consoles — October 20 / Preview 89 installed and launched
 
 - Added distinct ENTRY, GARAGE and WINDOW consoles in embedded Home and native

@@ -38,6 +38,7 @@ import { FanController } from './FanController';
 import { LaundryController } from './LaundryController';
 import { DishwasherController } from './DishwasherController';
 import { OpeningController } from './OpeningController';
+import { CameraController } from './CameraController';
 import { isOpeningDeviceKind } from '../../../packages/home-scene/src/openingController';
 import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
 import { isEnergyDeviceKind } from '../../../packages/home-scene/src/energyController';
@@ -69,6 +70,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   door: { accessible: 'Back to opening controller', visible: 'Back to entry' },
   garage: { accessible: 'Back to opening controller', visible: 'Back to garage' },
   window: { accessible: 'Back to opening controller', visible: 'Back to window' },
+  camera: { accessible: 'Back to camera controller', visible: 'Back to camera' },
 };
 type Group = typeof GROUPS[number];
 interface SheetProps {
@@ -197,6 +199,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if (device.kind === 'vacuum' && !advancedControls) return <VacuumController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'speaker' && !advancedControls) return <SpeakerController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'camera' && !advancedControls) return <CameraController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (isOpeningDeviceKind(device.kind) && !advancedControls) return <OpeningController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;

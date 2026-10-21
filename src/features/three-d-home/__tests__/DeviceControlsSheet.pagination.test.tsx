@@ -45,6 +45,7 @@ function renderControls(deviceId: string) {
   if (kind === 'dishwasher') fireEvent.press(screen.getByLabelText('More dishwasher controls'));
   if (kind === 'door' || kind === 'garage' || kind === 'window') fireEvent.press(screen.getByLabelText(`More ${kind} controls`));
   if (kind === 'fan') fireEvent.press(screen.getByLabelText('More fan controls'));
+  if (kind === 'camera') fireEvent.press(screen.getByLabelText('More camera controls'));
   if (deviceId === 'entry-gate') fireEvent.press(screen.getByLabelText('More gate controls'));
   return { screen, props, runAction, setSetting, onClose };
 }
@@ -211,7 +212,7 @@ test('native controls identify saved-only fan configuration while the working di
   expect(screen.getByText('Saved only · this fixed fan has no oscillation or lamp.')).toBeTruthy();
 });
 
-test.each(['utility-water', 'utility-water-heater', 'living-vacuum', 'living-speaker', 'living-fan', 'laundry-washer', 'laundry-dryer', 'kitchen-dishwasher', 'entry-door', 'kitchen-window', 'utility-shutter'])('%s preserves every advanced capability behind More at large text sizes', (id) => {
+test.each(['utility-water', 'utility-water-heater', 'living-vacuum', 'living-speaker', 'living-fan', 'laundry-washer', 'laundry-dryer', 'kitchen-dishwasher', 'entry-door', 'kitchen-window', 'utility-shutter', 'entry-camera'])('%s preserves every advanced capability behind More at large text sizes', (id) => {
   const { screen } = renderControls(id);
   measure(screen, 130);
   const expected = getInspectorPages(getDevice(id)!, 3).flatMap((page) => page.capabilities.map((item) => item.id));

@@ -1,0 +1,70 @@
+/* An inset panoramic monitor and tactile keys retain the established violet console materials. */
+.device-control-sheet.is-camera-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.camera-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; gap: 6px; }
+.camera-stage { display: grid; align-items: safe center; justify-items: center; min-width: 0; min-height: 0; padding: 2px 0 7px; container: camera-stage / size; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.camera-console { display: grid; width: min(400px, 100%); gap: 14px; padding: 18px; border: 1px solid #A991BD; border-radius: 32px; color: var(--text); background: linear-gradient(145deg, #51445F, #241B30 17%, #100B1B 65%, #31223D); box-shadow: inset 2px 1px 1px #FFFFFF30, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.camera-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.camera-emblem { display: grid; place-items: center; width: 44px; height: 44px; color: #D8B9EF; }
+.camera-brand { display: grid; gap: 4px; text-align: center; }
+.camera-brand span { color: #BFAFD0; font-size: 8px; letter-spacing: 2.5px; }
+.camera-brand strong { font-size: 13px; font-weight: 500; letter-spacing: 4px; }
+.camera-console button { display: flex; justify-content: center; align-items: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 8px; border: 1px solid #FFFFFF29; border-radius: 14px; background: linear-gradient(145deg, #41324F, #231A30 75%); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; color: var(--text); font-size: 12px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease, background-color 180ms ease; }
+.camera-console .camera-round { width: 44px; height: 44px; border-radius: 50%; }
+.camera-console button[aria-pressed='true'] { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.camera-console button:disabled { opacity: .4; cursor: default; }
+.camera-console button:not(:disabled):active { transform: translateY(2px); }
+.camera-console button:focus-visible, .camera-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.camera-monitor { position: relative; overflow: hidden; isolation: isolate; height: 238px; border: 1px solid #BCA4CC66; border-radius: 20px; background: #16101F; box-shadow: 0 0 0 4px #0C0813, 0 0 0 5px #B396CE26; }
+.camera-monitor::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#0B061755, transparent 38%, #0B0617CC); }
+.camera-study { display: block; width: 100%; height: 100%; object-fit: cover; transition: filter 420ms ease; }
+.camera-study[data-night='true'] { filter: saturate(.28); }
+.camera-monitor-top { position: absolute; z-index: 1; inset: 13px 12px auto; display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 6px; letter-spacing: 1.1px; color: #E9DFF7; }
+.camera-sample { padding: 5px 6px; border: 1px solid #DFC5FF44; border-radius: 5px; background: #140C2499; }
+.camera-reticle { position: absolute; z-index: 1; inset: 43px 17px 60px; border: 1px solid #E4D4F329; border-radius: 7px; }
+.camera-reticle::before, .camera-reticle::after { content: ''; position: absolute; width: 18px; height: 18px; border-color: #E4D4F3AA; border-style: solid; }
+.camera-reticle::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; border-radius: 7px 0 0; }
+.camera-reticle::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; border-radius: 0 0 7px; }
+.camera-monitor-caption { position: absolute; z-index: 1; bottom: 15px; left: 16px; display: grid; gap: 5px; }
+.camera-monitor-caption span { font-size: 6px; letter-spacing: 1.7px; color: #CCBDD9; }
+.camera-monitor-caption strong { font-size: 18px; font-weight: 400; letter-spacing: -.4px; color: #F4E9FE; }
+.camera-arm-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.camera-status { display: flex; align-items: center; gap: 9px; color: #D9B8F7; min-width: 0; }
+.camera-status > div { display: grid; gap: 3px; }
+.camera-status strong { font-size: 13px; font-weight: 500; color: #F0E5F8; }
+.camera-status span { font-size: 9px; color: #BCACCC; }
+.camera-console .camera-arm { min-width: 86px; }
+.camera-preferences { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.camera-preferences button { min-height: 56px; padding-inline: 5px; gap: 5px; }
+.camera-preferences button > span { display: grid; gap: 3px; text-align: left; font-size: 11px; }
+.camera-preferences small { font-size: 8px; color: #D0BDDF; }
+.camera-event { display: grid; gap: 5px; padding: 10px 12px; border: 1px solid #B396CE26; border-radius: 12px; background: #0D0816AA; }
+.camera-event span { font-size: 6px; letter-spacing: 1.4px; color: #B3A0C5; }
+.camera-event strong { font-size: 11px; font-weight: 400; color: #E7D6F4; }
+.camera-trim { display: flex; justify-content: center; gap: 5px; }
+.camera-trim span { width: 20px; height: 2px; border-radius: 3px; background: #B882DF36; }
+.camera-trim span:nth-child(2) { width: 42px; background: #C393EB88; }
+.camera-feedback { display: grid; gap: 4px; margin: 0; min-height: 30px; padding-inline: 8px; text-align: center; font-size: 9px; line-height: 1.5; color: var(--text-soft); }
+.camera-feedback span { color: var(--muted); font-size: 7px; letter-spacing: 1px; }
+.camera-more { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; gap: 12px; }
+.camera-return { display: flex; justify-content: center; align-items: center; min-height: 44px; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+/* Fit the monitor to the available host space before reducing control spacing. */
+@container camera-stage (max-height: 570px) { .camera-console { padding: 14px; gap: 12px; } .camera-monitor { height: clamp(125px, calc(100cqh - 288px), 238px); } }
+@container camera-stage (max-height: 390px) {
+  .camera-console { grid-template-columns: minmax(0, 1fr) 125px; gap: 8px 12px; padding: 10px; }
+  .camera-top, .camera-preferences, .camera-event { grid-column: 1 / -1; }
+  .camera-monitor { height: 100px; border-radius: 12px; }
+  .camera-monitor-top { inset: 7px 6px auto; font-size: 5px; }
+  .camera-monitor-top > span:last-child, .camera-monitor-caption, .camera-reticle, .camera-trim { display: none; }
+  .camera-arm-row { flex-direction: column; align-items: stretch; justify-content: center; gap: 7px; }
+  .camera-status { gap: 5px; }
+  .camera-status strong { font-size: 11px; }
+  .camera-status span { font-size: 8px; }
+  .camera-status svg { width: 16px; }
+  .camera-preferences button { min-height: 44px; }
+  .camera-event { padding: 7px 9px; }
+}
+@media (max-width: 360px) { .device-control-sheet.is-camera-controller .device-sheet-content { padding-inline: 12px; } .camera-preferences button > span { font-size: 10px; } }
+@media (hover: hover) { .camera-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.camera-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.camera-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .camera-workspace *, .camera-more * { transition: none; scroll-behavior: auto; } .camera-workspace button:active { transform: none; } }
