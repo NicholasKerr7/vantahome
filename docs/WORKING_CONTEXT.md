@@ -46,6 +46,22 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Camera experience research — October 20 / implementation deferred
+
+- User requested research and a durable design, explicitly no coding yet. Read
+  [camera experience design](CAMERA_EXPERIENCE_DESIGN.md) before future camera work.
+- Existing viewing destination is **More → House → Cameras**. VISION is the
+  simulation control console; no real property camera feed is connected/verified.
+- Proposed evolution: Camera Center with Live wall / Activity, focused viewing
+  from 3D hotspots, VISION for controls, responsive layouts and bounded streaming.
+  Frigate/go2rtc on the planned NUC is the preferred direction to validate, with
+  Home Assistant integration; native playback and exact hardware remain unproven.
+- Recorded gaps: missing recording timeline, media-session authorization and
+  revocation, private thumbnail caching, resume/freshness checks and legacy
+  recognition/entry coupling. These are readiness gaps, not observed feed leaks.
+- Documentation only; Preview 90, permissions, app code and hardware scope remain
+  unchanged. Hub/sync and physical iPad deferrals continue.
+
 ## Camera VISION console — October 20 / Preview 90 installed and launched
 
 - Added sculpted VISION controls in embedded Home and native Devices for the three

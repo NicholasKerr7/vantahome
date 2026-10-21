@@ -434,7 +434,14 @@ chat, repository, screenshots or evidence. See the handoff for prepared tabs/sta
 ## Integration work after the foundations
 
 - Remote push with tested closed-app delivery, preferences and quiet hours.
-- Authenticated camera feed provisioning, expiry/revocation and real playback.
+- **Camera Center and authenticated media:** follow the researched
+  [camera experience design](CAMERA_EXPERIENCE_DESIGN.md). User requested research
+  only on October 20; implementation is deferred. Evolve the existing Cameras
+  destination into Live / Activity with VISION controls and 3D entry points.
+  Before real footage, resolve media-session provisioning/expiry/revocation,
+  thumbnail cache isolation, resume/freshness, the missing recordings timeline
+  and legacy recognition/entry coupling. Validate native playback and exact
+  Frigate/go2rtc/hub compatibility in a separately scoped camera pilot.
 - Assistant commands confirmed by actual observed device state.
 - Shared backup/restore and event retention design alongside household sync.
 
