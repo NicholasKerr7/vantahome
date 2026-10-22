@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 20, 2026. This is the current delivery queue, not a claim that
+Maintained October 22, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -421,8 +421,14 @@ chat, repository, screenshots or evidence. See the handoff for prepared tabs/sta
 ## Explicitly deferred
 
 - **Further AI scope:** live answers, reviewed comfort-scene drafting and the bounded
-  Guest checklist are accepted as recorded above. Routine generation and autonomous
-  operation remain deferred; accepting this first slice does not expand its scope.
+  Guest checklist are accepted as recorded above. The October 22 research-only
+  [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md) recommends room-aware Ask and
+  an isolated 3D scene preview as the next implementation slice, subject to a new
+  request. Later phases cover grounded explanations/preferences, routine drafts,
+  measured energy/water and home care, then optional conversational voice and
+  bounded hub policies. New data needs scoped adapters and quality evidence.
+  Routine generation and autonomous operation remain deferred; research and
+  acceptance of the existing assistant do not authorize those implementations.
 - Hub pairing, real-device bindings/observations and durable app-closed routines:
   no hub yet; NUC 15 is the intended direction. Reuse the existing SQLite worker
   foundation rather than recreating it. Respect the supervised one-light pilot.

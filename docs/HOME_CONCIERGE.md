@@ -1,5 +1,10 @@
 # Vanta home assistant
 
+Future design is recorded separately in the October 22
+[AI experience roadmap](AI_EXPERIENCE_ROADMAP.md). It is research only; the spatial
+preview, richer context, routine drafting and conversational audio described there
+are not part of the implementation below.
+
 Implemented October 16, 2026. Simulation first, staging only. Initially delivered
 without a provider connection; the user subsequently authorized activation and
 privately saved a dedicated OpenAI staging key. Secret-name presence is verified.

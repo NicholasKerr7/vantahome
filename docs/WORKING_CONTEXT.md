@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-20**. Read this before rediscovering the project.
+Last maintained: **2026-10-22**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,26 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## AI experience research — October 22 / implementation deferred
+
+- User requested deep smart-home research and an AI design plan before coding.
+  Read [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md) before expanding the
+  assistant; [Home concierge](HOME_CONCIERGE.md) still records implemented behavior.
+- Recommended first slice: room-aware Ask, a separate 3D scene preview, exact
+  before/after changes and the existing Review → Create → separate Run flow.
+  Preview must never mutate device state or grant additional access.
+- Later proposals cover grounded explanations, explicit preferences, routine
+  drafting/dry runs, measured energy/water advice, home care and natural voice.
+  Weather/history/manuals and new categories require scoped adapters; no invented
+  telemetry, autonomous physical control or always-listening phone mode.
+- Retain the current stack, deterministic controls and server authorization.
+  Model/tool changes require task-specific evaluations, bounded cost and lifecycle
+  checks. The roadmap includes role, freshness, conflict, privacy and failure cases.
+- Official platform/standards/API research and current source review only. No app
+  code, build, deployment, credential, hardware or paid AI test changed. Preview 90
+  remains the last recorded install, not a fresh device check. Camera research,
+  hub/sync, physical iPad and the restricted private pilot retain their boundaries.
 
 ## Camera experience research — October 20 / implementation deferred
 
