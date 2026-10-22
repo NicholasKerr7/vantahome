@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## AI phase 1 — October 22 / source verified; Preview 91 built; installation pending
+## AI phase 1 — October 22 / Preview 91 installed and launched; physical checks underway
 
 - The user authorized the first slice from the [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md).
   Room-aware Ask, exact before/after scene changes and an isolated 3D preview are
@@ -88,11 +88,20 @@ defects from ideas or untested risks.
   (`work/preview91-verification.json`; 32,191,201 bytes). Release assets, version,
   redirects, app/scene types and source metadata restoration pass. The final retry
   recovered from disk exhaustion by removing only regenerable VantaHome simulator
-  build and npm download caches. No user files were removed. Installation and
-  physical acceptance remain pending; **90 is the last recorded installed build**.
+  build and npm download caches. No user files were removed. At the user's
+  subsequent installation request, signature, bundle identity, build number,
+  speech/microphone usage descriptions and the exact scene hash were reverified.
+  The existing app was updated in place and launched on the iPhone 16 Pro Max;
+  Apple app inventory confirms **1.0.0 (91)**, superseding Preview 90. Receipts:
+  `work/preview91-install.json`, `preview91-launch.json` and
+  `preview91-installed-app.json`. No rebuild, uninstall or data reset was needed.
+  The first physical check has been requested: Living room scope, Pendant light
+  Off → proposed On at 30%, Current/Proposed comparison, then Exit/Done and
+  confirmation that canonical power remains Off. No result is recorded yet.
   Physical speech permissions, audio routing/interruption, recognition accuracy,
   heat/battery and complete Preview 91 preview → review → create → separate Run
-  acceptance remain pending. Android and physical iPad testing remain deferred.
+  acceptance remain pending; installation is not interaction acceptance. Android
+  and physical iPad testing remain deferred.
 - Dependency verification passes after compatible updates to Vite 7.3.7, Vitest/
   `@vitest/mocker` 4.1.12 and `ip-address` 10.7.4. Existing braces/node-forge local
   backports still pass source hashes and attack regressions; upstream audit metadata

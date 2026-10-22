@@ -3,8 +3,9 @@
 Researched October 22, 2026; implementation status updated the same day.
 The research baseline was `55da047` on `3d-home-integration`, with application
 source `410f768`. The user subsequently authorized **Phase 1**, now implemented
-and verified in source/browser tests. Preview 91 is built; installation is pending; Preview 90
-remains the last recorded installed build. Later phases remain design proposals.
+and verified in source/browser tests. Preview 91 is installed and launched;
+Apple inventory confirms build 91. Physical acceptance is underway, with no
+results recorded yet. Later phases remain design proposals.
 No paid model requests, provider/schema changes or deployments were made for this slice.
 
 ## Implemented first slice and acceptance boundary
@@ -33,7 +34,9 @@ No paid model requests, provider/schema changes or deployments were made for thi
   and canonical state, and zero storage writes or command messages. These are
   mocked-provider/browser results, not a new live-model or physical speech test.
 - Preview 91 is built and signed with exact scene verification
-  (`work/preview91-verification.json`); installation and physical acceptance remain open. Android/iPad physical testing, camera research, hub execution and
+  (`work/preview91-verification.json`); installation and launch succeeded, with
+  build 91 confirmed by Apple app inventory. Physical acceptance remains open.
+  Android/iPad physical testing, camera research, hub execution and
   household sync retain their deferrals. Dependency verification passes after Vite 7.3.7, Vitest/mocker 4.1.12 and
   ip-address 10.7.4 updates. Existing braces/node-forge local backports remain
   verified even though registry metadata still lists the patched versions.
@@ -348,7 +351,7 @@ iPad testing retain their existing deferrals.
 
 | Phase | Deliverable | Gate before calling it complete |
 | --- | --- | --- |
-| **1 — Spatial Ask and preview** | Implemented: room-aware context, one scoped scene draft, isolated 3D preview, exact change card and existing Review/Create/Run flow | Source/browser checks pass; Preview 91 installation and physical preview/save/run/persistence acceptance pending. Refinement is not included yet. |
+| **1 — Spatial Ask and preview** | Implemented: room-aware context, one scoped scene draft, isolated 3D preview, exact change card and existing Review/Create/Run flow | Source/browser checks pass; Preview 91 installed and launched, with physical preview/save/run/persistence acceptance pending. Refinement is not included yet. |
 | **2 — Grounded explanations** | Source/time labels, relevant weather facts, explicit preferences and scoped Device Health explanations | Verified read adapters; no invented history or causation; privacy/delete lifecycle; safe unavailable states |
 | **3 — Routine drafting** | Canonical editable draft and dry-run explanation using supported comfort actions | Trigger/condition/exception tests, timezone and conflict policy; foreground-only label until durable execution exists |
 | **4 — Measured home intelligence** | Energy/water summaries, maintenance evidence and opt-in insight cards | Real telemetry quality/history, authorized integration and deterministic math; no fabricated savings or unattended expansion |

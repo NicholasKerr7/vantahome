@@ -3,8 +3,9 @@
 Updated October 22, 2026. The authorized first slice from the
 [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md) is now implemented: room-aware
 Ask, exact before/after values, an isolated 3D scene preview and bounded foreground
-phone voice. Later roadmap features remain proposals. Preview 91 installation and
-physical acceptance are pending; Preview 90 is the last recorded installed build.
+phone voice. Later roadmap features remain proposals. Preview 91 is installed and
+launched on the iPhone 16 Pro Max; Apple inventory confirms build 91. Physical
+room/preview/voice acceptance is underway, with no results recorded yet.
 
 Implemented October 16, 2026. Simulation first, staging only. Initially delivered
 without a provider connection; the user subsequently authorized activation and
