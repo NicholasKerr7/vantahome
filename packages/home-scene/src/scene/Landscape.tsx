@@ -18,7 +18,7 @@ import type { CinematicTourFrame } from './cinematicTour';
 import { RoadMarkings } from './RoadMarkings';
 import { advanceGateMotion } from './gateMotion';
 
-type LandscapeProps = Pick<HouseSceneProps, 'access' | 'view' | 'roomId' | 'deviceStates' | 'selectedDevice' | 'quickDeviceId' | 'hotspotControlMode' | 'reducedMotion' | 'onSelectDevice' | 'cinematic'> & { suspended?: boolean; windSpeedKmh?: number; windDirectionDeg?: number; tourFrame?: CinematicTourFrame };
+type LandscapeProps = Pick<HouseSceneProps, 'access' | 'view' | 'roomId' | 'deviceStates' | 'selectedDevice' | 'quickDeviceId' | 'hotspotControlMode' | 'reducedMotion' | 'onSelectDevice' | 'cinematic' | 'interactionDisabled'> & { suspended?: boolean; windSpeedKmh?: number; windDirectionDeg?: number; tourFrame?: CinematicTourFrame };
 const gateLayout = siteLayout.runtime.gate;
 
 /** Clone cached GLTF objects so shadows and parenting remain local to this scene. */
@@ -34,7 +34,7 @@ function prepareLandscapeModel(source: Object3D): Object3D {
 }
 
 /** Render the traced parcel and move the Blender gate leaf along its real track. */
-export function Landscape({ access = FULL_SCENE_ACCESS, view, roomId, deviceStates, selectedDevice, quickDeviceId, hotspotControlMode = 'quick', reducedMotion, suspended = false, onSelectDevice, windSpeedKmh = 0, windDirectionDeg = 0, cinematic = false, tourFrame }: LandscapeProps) {
+export function Landscape({ access = FULL_SCENE_ACCESS, view, roomId, deviceStates, selectedDevice, quickDeviceId, hotspotControlMode = 'quick', interactionDisabled = false, reducedMotion, suspended = false, onSelectDevice, windSpeedKmh = 0, windDirectionDeg = 0, cinematic = false, tourFrame }: LandscapeProps) {
   const [{ scene: site }, { scene: leaf }] = useGLTF([
     getModelUrl('landscape'),
     getModelUrl('gate'),
@@ -69,7 +69,7 @@ export function Landscape({ access = FULL_SCENE_ACCESS, view, roomId, deviceStat
   }, [cinematic, canViewGate, gate.level]);
   // R3F must not reapply the target transform on every control update; animation owns it.
   const initialPosition = useRef(getGatePosition(gate.level));
-  const showHotspot = !cinematic && canViewGate && roomId === 'grounds' && (view === 'exterior' || view === 'immersive');
+  const showHotspot = !interactionDisabled && !cinematic && canViewGate && roomId === 'grounds' && (view === 'exterior' || view === 'immersive');
   const gateDevice = getDevice('entry-gate');
   const hotspot = gateDevice ? hotspotPresentation(gateDevice, gate) : null;
 
@@ -87,7 +87,7 @@ export function Landscape({ access = FULL_SCENE_ACCESS, view, roomId, deviceStat
   return <group name="seaview-landscape">
     <primitive object={preparedSite} />
     <RoadMarkings />
-    <group ref={carriage} name="entry-gate-carriage" position={initialPosition.current} rotation={[0, gateLayout.rotationY, 0]} onClick={canViewGate && !cinematic ? (event) => { event.stopPropagation(); onSelectDevice('entry-gate'); } : undefined}>
+    <group ref={carriage} name="entry-gate-carriage" position={initialPosition.current} rotation={[0, gateLayout.rotationY, 0]} onClick={!interactionDisabled && canViewGate && !cinematic ? (event) => { event.stopPropagation(); onSelectDevice('entry-gate'); } : undefined}>
       <primitive object={preparedLeaf} />
     </group>
     {showHotspot && hotspot && (

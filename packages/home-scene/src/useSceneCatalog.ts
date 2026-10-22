@@ -8,6 +8,7 @@ import {
 } from "./sceneCatalogProtocol";
 import { connectSceneCatalogTransport } from "./sceneCatalogTransport";
 import { useHomeStore } from "./state";
+import { useScenePreviewStore } from "./scenePreviewStore";
 
 const emptyCatalog: SceneCatalog = { scenes: [], activeSceneId: null };
 let nextSceneRequest = 0;
@@ -69,6 +70,7 @@ export function useSceneCatalog() {
 
   /** Resolve a still-visible identity instead of shipping device actions from the rendering document. */
   function runScene(id: string) {
+    if (useScenePreviewStore.getState().active) return;
     if (!embedded) {
       const preset = MODEL_SCENE_PRESETS.find(
         (candidate) => candidate.sceneId === id,

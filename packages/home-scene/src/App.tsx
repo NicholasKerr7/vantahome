@@ -2,7 +2,7 @@ import { canExploreInteriorLayout, canViewPropertyOverview, canViewSceneRoom, ca
 import { getFireIncident } from './fireSafetySimulation';
 import { SafetyPreview, useSafetyPreviewClock } from './SafetyPreview';
 import { getModelUrl, isEmbeddedScene, reportSceneStatus, type ModelName } from './embeddedHost';
-import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { Layers3, RotateCcw } from 'lucide-react';
 import { SceneViewControls } from './SceneViewControls';
@@ -17,6 +17,10 @@ import { DashboardHeader, DashboardRooms, DashboardRoomBar, DashboardScenes, Das
 import { DashboardInspector } from './DashboardInspector';
 import { DashboardLibrary, type DashboardLibraryView } from './DashboardLibrary';
 import { useHomeStore } from './state';
+import { useScenePreviewStore } from './scenePreviewStore';
+import { scenePreviewDisplayStates } from './scenePreviewClient';
+import { useScenePreview } from './useScenePreview';
+import { ScenePreviewToolbar } from './ScenePreviewToolbar';
 import { useSimulationBridge } from './useSimulationBridge';
 import { useLiveEnvironment, type LiveEnvironment } from './environment/useLiveEnvironment';
 import { usePropertyWeatherLocation } from './environment/usePropertyWeatherLocation';
@@ -82,6 +86,10 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
   const night = useHomeStore((state) => state.night);
   const lightingMode = useHomeStore((state) => state.lightingMode);
   const deviceStates = useHomeStore((state) => state.deviceStates);
+  const preview = useScenePreviewStore((state) => state.active);
+  const comparison = useScenePreviewStore((state) => state.comparison);
+  const displayStates = useMemo(() => scenePreviewDisplayStates({ deviceStates, access, roomId, floor, view }, preview, comparison),
+    [deviceStates, access, roomId, floor, view, preview, comparison]);
   const selectedDevice = useHomeStore((state) => state.selectedDevice);
   const selectHotspotDevice = useHomeStore((state) => state.selectHotspotDevice);
   const inlineInspector = useInlineInspectorVisibility(selectedDevice);
@@ -101,7 +109,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
   /** Select the dashboard device, or open quick controls when it is out of reach. */
   const openDeviceControls = useCallback((id: string) => {
     const device = getDevice(id);
-    if (!device || !canViewSceneDevice(useHomeStore.getState().access, id)) return;
+    if (useScenePreviewStore.getState().active || !device || !canViewSceneDevice(useHomeStore.getState().access, id)) return;
     setShowcase(false);
     quickTrigger.current = device.id;
     selectHotspotDevice(device.id);
@@ -158,7 +166,7 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
   }, [presentationKey, readinessId]);
   const onSceneError = useCallback(() => { setSceneFailed(true); setShowcase(false); }, [setShowcase]);
   useIdleCinematic({
-    eligible: idleAllowed && idleEnabled && normalReady && !sceneFailed && !covered && !orientationPaused && !reducedMotion && !quickDeviceId && canViewPropertyOverview(access),
+    eligible: !preview && idleAllowed && idleEnabled && normalReady && !sceneFailed && !covered && !orientationPaused && !reducedMotion && !quickDeviceId && canViewPropertyOverview(access),
     scopeKey: `${JSON.stringify(access)}:${view}:${floor}:${roomId}`,
   });
   const retryScene = useCallback(() => {
@@ -178,12 +186,13 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
     <div className="viewport-top"><div className="viewport-identity"><span className="eyebrow"><span className="viewport-live-mark" />{displayView === 'exterior' ? overviewLabel : interiorLabel}</span><h1>{displayView === 'exterior' ? 'Seaview grounds' : room.name}</h1><p>{displayView === 'exterior' ? 'The property, from arrival to home.' : layoutOnly ? 'Layout only · Controls stay in your assigned rooms.' : room.area}</p></div></div>
     <div className="scene-container">
       <SceneErrorBoundary key={attempt} onRetry={retryScene} onError={onSceneError}>
-        <HouseScene access={access} daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} cinematic={showcase} view={view} floor={floor} roomId={roomId} night={night} deviceStates={deviceStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
+        <HouseScene access={access} daylight={lightingMode === 'auto' ? environment.daylight : Number(!night)} environment={environment} suspended={orientationPaused || covered} cinematic={showcase} interactionDisabled={Boolean(preview)} view={view} floor={floor} roomId={roomId} night={night} deviceStates={displayStates} selectedDevice={quickDeviceId ?? selectedDevice} quickDeviceId={quickDeviceId} hotspotControlMode={inlineInspector ? 'inspector' : 'quick'} reducedMotion={reducedMotion} onSelectDevice={openDeviceControls} onReady={onReady} />
         {!ready ? <SceneLoading /> : null}
       </SceneErrorBoundary>
     </div>
-    {!orientationPaused && quickDeviceId ? <QuickDeviceControls deviceId={quickDeviceId} onClose={closeQuickControls} onFullControls={openFullControls} /> : null}
-    <div className="viewport-bottom">
+    {!preview && !orientationPaused && quickDeviceId ? <QuickDeviceControls deviceId={quickDeviceId} onClose={closeQuickControls} onFullControls={openFullControls} /> : null}
+    <ScenePreviewToolbar />
+    <div className="viewport-bottom" inert={Boolean(preview)}>
       <span className="scene-instruction">
         <span className="mouse-indicator" />
         {view === 'immersive' ? 'Drag to look around · fixed viewpoint' : layoutOnly ? 'Drag to rotate · pinch to zoom' : 'Drag to rotate · pinch to zoom · select a device'}
@@ -245,7 +254,7 @@ export default function App(): ReactNode {
 
   /** Remember the actual opening control so every device sheet can return focus. */
   const openFullControls = useCallback((id: DeviceId) => {
-    if (!canViewSceneDevice(useHomeStore.getState().access, id)) return;
+    if (useScenePreviewStore.getState().active || !canViewSceneDevice(useHomeStore.getState().access, id)) return;
     setShowcase(false);
     sheetTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     sheetHotspot.current = sheetTrigger.current?.closest('#quick-device-controls') ? id : null;
@@ -296,20 +305,23 @@ export default function App(): ReactNode {
   }, [access, sheetDeviceId]);
 
   const graphicsCovered = hostSuspended || library !== null || sheetDeviceId !== null || emergencyVisible;
+  const scenePreviewActive = useScenePreviewStore((state) => Boolean(state.active));
+  useScenePreview({ ready: simulationHydrated, hostSuspended,
+    unavailable: library !== null || sheetDeviceId !== null || emergencyVisible || orientationPaused || showcase });
   if (!access.roomIds.length && !canViewPropertyOverview(access) && !canExploreInteriorLayout(access)) return <div className="scene-access-empty" role="status">
     <h1>{simulationHydrated ? 'No rooms assigned' : 'Preparing your rooms'}</h1>
     <p>{simulationHydrated ? 'Ask your household administrator to share a room with you.' : 'Checking your home access before showing the property.'}</p>
   </div>;
-  return <div inert={showcase} data-rendering={graphicsCovered || orientationPaused || documentHidden ? 'paused' : 'active'} className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''} ${showcase ? 'is-touring' : ''}`}>
+  return <div inert={showcase} data-rendering={graphicsCovered || orientationPaused || documentHidden ? 'paused' : 'active'} className={`app-shell dashboard-shell ${embedded ? 'is-embedded' : ''} ${reducedMotion ? 'reduce-motion' : ''} ${documentHidden ? 'is-backgrounded' : ''} ${showcase ? 'is-touring' : ''} ${scenePreviewActive ? 'is-scene-preview' : ''}`}>
     <a className="skip-link" href="#house-preview">Skip to house controls</a>
     {!embedded && <DashboardHeader environment={environment} onSettings={openPreferences} onEnvironment={openEnvironment} />}
-    <DashboardRoomBar onRooms={() => setLibrary('rooms')} />
+    <DashboardRoomBar inert={scenePreviewActive} onRooms={() => setLibrary('rooms')} />
     <main id="home-workspace" className="workspace dashboard-workspace">
-      <DashboardRooms onBrowse={() => setLibrary('rooms')} />
-      <div className="center-column"><HomeViewport environment={environment} reducedMotion={reducedMotion} onFullControls={openFullControls} onRooms={() => setLibrary('assigned-rooms')} sheetDeviceId={sheetDeviceId} onCloseFullControls={closeFullControls} covered={graphicsCovered} idleAllowed={simulationHydrated && !documentHidden && !emergencyActive} /><DashboardScenes /></div>
-      <div id="room-controls" tabIndex={-1}><DashboardInspector onFullControls={openFullControls} onBrowseDevices={() => setLibrary('devices')} /></div>
+      <DashboardRooms inert={scenePreviewActive} onBrowse={() => setLibrary('rooms')} />
+      <div className="center-column"><HomeViewport environment={environment} reducedMotion={reducedMotion} onFullControls={openFullControls} onRooms={() => setLibrary('assigned-rooms')} sheetDeviceId={sheetDeviceId} onCloseFullControls={closeFullControls} covered={graphicsCovered} idleAllowed={simulationHydrated && !documentHidden && !emergencyActive} /><DashboardScenes inert={scenePreviewActive} /></div>
+      <div id="room-controls" tabIndex={-1} inert={scenePreviewActive}><DashboardInspector onFullControls={openFullControls} onBrowseDevices={() => setLibrary('devices')} /></div>
     </main>
-    <DashboardDock onRooms={() => setLibrary('rooms')} onDevices={() => setLibrary('devices')} />
+    <DashboardDock inert={scenePreviewActive} onRooms={() => setLibrary('rooms')} onDevices={() => setLibrary('devices')} />
     {!orientationPaused && library ? <DashboardLibrary environment={environment} onEnvironment={() => setLibrary('environment')} key={library} view={library} reducedMotion={reducedMotion} systemReducedMotion={prefersReduced} onClose={() => setLibrary(null)} onDevice={(id) => { selectDevice(id); openFullControls(id); }} /> : null}
     {!orientationPaused && sheetDeviceId ? <DeviceControlSheet deviceId={sheetDeviceId} onClose={closeFullControls} /> : null}
     {!embedded ? <SafetyPreview /> : null}

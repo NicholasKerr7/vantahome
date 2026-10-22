@@ -46,25 +46,62 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## AI experience research — October 22 / implementation deferred
+## AI phase 1 — October 22 / source verified; Preview 91 built; installation pending
 
-- User requested deep smart-home research and an AI design plan before coding.
-  Read [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md) before expanding the
-  assistant; [Home concierge](HOME_CONCIERGE.md) still records implemented behavior.
-- Recommended first slice: room-aware Ask, a separate 3D scene preview, exact
-  before/after changes and the existing Review → Create → separate Run flow.
-  Preview must never mutate device state or grant additional access.
-- Later proposals cover grounded explanations, explicit preferences, routine
-  drafting/dry runs, measured energy/water advice, home care and natural voice.
-  Weather/history/manuals and new categories require scoped adapters; no invented
-  telemetry, autonomous physical control or always-listening phone mode.
-- Retain the current stack, deterministic controls and server authorization.
-  Model/tool changes require task-specific evaluations, bounded cost and lifecycle
-  checks. The roadmap includes role, freshness, conflict, privacy and failure cases.
-- Official platform/standards/API research and current source review only. No app
-  code, build, deployment, credential, hardware or paid AI test changed. Preview 90
-  remains the last recorded install, not a fresh device check. Camera research,
-  hub/sync, physical iPad and the restricted private pilot retain their boundaries.
+- The user authorized the first slice from the [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md).
+  Room-aware Ask, exact before/after scene changes and an isolated 3D preview are
+  now implemented. [Home concierge](HOME_CONCIERGE.md) records current behavior;
+  later roadmap phases remain proposals rather than implemented features.
+- The scene reports only an authorized selected-room ID. Ask can use that room or
+  the user's permitted rooms; layout-only sharing adds no assistant access.
+  Scope changes cancel requests, answers, drafts and queued speech. Fresh context,
+  current control grants and automation permission are rechecked before preview
+  and review. Original provider model, schema and server authorization are unchanged.
+- **Preview in 3D** uses detached display state, with **Preview · no device changes**,
+  Current / Proposed comparison and Exit. It preserves the exact model/camera
+  position and blocks ordinary device controls and saved-scene Run while open.
+  No canonical state, persistence or command writes occur. Malformed/sensitive/
+  denied targets are rejected; expiry, suspension, scope/access changes and
+  incoming affected-device values clear the preview. Review → Create → separate
+  Run remains the only scene-save/execution flow; preview does not consume review.
+- Native voice adds an explicit **Enable** consent window, limited to five minutes
+  on foreground Home. “Hey VantaHome” / “Vanta” questions enter Ask, never direct
+  commands. Phone speech recognition may process audio through the phone's speech
+  service; only the wake-prefixed question enters the existing text API. Replies
+  use a synthetic system voice through `expo-speech`. There is no background wake
+  engine or OpenAI Realtime/cloud-audio integration. Manual Hear and ordinary
+  dictation remain available. Session tokens, microphone ownership and serialized
+  teardown discard stale transcripts/queued questions/speech on Stop, expiry,
+  background/lock, route/scope/access changes and unmount; listening pauses during
+  generation, spoken replies and preview.
+- **277 host/assistant/voice tests across 20 suites** pass
+  (`work/ai-phase-one-jest.log`); **1,649 scene tests across all 131 suites** pass,
+  including zero-write, transport, lifecycle, scope and existing-state regressions.
+  Scene TypeScript and diff checks pass. Browser evidence uses fixtures, not paid
+  model requests: `work/ai-panel-browser.json` covers seven panel profiles/states;
+  `work/concierge-scene-preview-browser.json` covers seven actual scene phone/tablet
+  profiles. Scene checks confirm no overflow, ≥44px actions, unchanged canonical
+  state and exact camera pose, no storage writes/patch/Run messages and no app errors.
+  Screenshots use `work/concierge-preview-*-{current,proposed}.png`. Owned test
+  browser/server closed; no scene QA fixture remains in the repository.
+- Preview **91 is built and signed**, with exact bundled-scene verification
+  (`work/preview91-verification.json`; 32,191,201 bytes). Release assets, version,
+  redirects, app/scene types and source metadata restoration pass. The final retry
+  recovered from disk exhaustion by removing only regenerable VantaHome simulator
+  build and npm download caches. No user files were removed. Installation and
+  physical acceptance remain pending; **90 is the last recorded installed build**.
+  Physical speech permissions, audio routing/interruption, recognition accuracy,
+  heat/battery and complete Preview 91 preview → review → create → separate Run
+  acceptance remain pending. Android and physical iPad testing remain deferred.
+- Dependency verification passes after compatible updates to Vite 7.3.7, Vitest/
+  `@vitest/mocker` 4.1.12 and `ip-address` 10.7.4. Existing braces/node-forge local
+  backports still pass source hashes and attack regressions; upstream audit metadata
+  continues to list those patched versions. npm 11.17.0 was used for installation
+  because npm 10 hit an optional-peer Arborist error. The new ExpoSpeech pod is
+  14.0.8; no major runtime upgrade was made. No paid AI requests,
+  provider/schema changes, deployments or credential changes were made for this
+  slice. Camera Center research, hub/sync and restricted private-pilot boundaries
+  remain unchanged.
 
 ## Camera experience research — October 20 / implementation deferred
 

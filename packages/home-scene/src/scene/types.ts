@@ -23,6 +23,8 @@ export interface HouseSceneProps {
   reducedMotion: boolean;
   /** Presentation-only exterior tour; never a navigation or device-state update. */
   cinematic?: boolean;
+  /** A proposal may render alternate values but cannot expose device actions. */
+  interactionDisabled?: boolean;
   onSelectDevice: (id: string) => void;
   onReady: () => void;
 }

@@ -1,6 +1,7 @@
 import { parseDeviceEditingRequest } from '../../../packages/home-scene/src/deviceEditingNavigation';
 import React, { useCallback, useEffect, useRef } from 'react';
-import { consumeHomeChromeCommand, parseSceneStatus, type SceneSurfaceProps } from './protocol';
+import { consumeHomeChromeCommand, consumeScenePreviewCommand, parseSceneStatus, type SceneSurfaceProps } from './protocol';
+import { parseScenePreviewReport } from '../../../packages/home-scene/src/scenePreviewProtocol';
 import { useSceneSimulationSession } from './useSceneSimulationSession';
 import { parseRoutineNavigation } from '../../../packages/home-scene/src/routineNavigation';
 import { scenePresentationMessage } from '../../../packages/home-scene/src/scenePresentation';
@@ -18,10 +19,11 @@ import { homeEditorScope } from '../home-shell/homeEditorScope';
 const ignoreSaveStatus = () => undefined;
 
 /** Run the self-contained scene in an opaque origin with no access to app storage or DOM. */
-export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, chromeCommand, previewCommand, onPreviewReport, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const documentReady = useRef(false);
   const consumedCommand = useRef(0);
+  const consumedPreview = useRef(0);
   const publishedPreferences = useRef<string | null>(null);
   const publishPreferences = useRef<(force?: boolean) => void>(() => undefined);
   /** Stable deliveries reconnect permissions without navigating or replacing this iframe. */
@@ -79,9 +81,20 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     else if (message) frame.current?.contentWindow?.postMessage(message, '*');
   }, [chromeCommand, suspended, allowChromePreferencesWhileSuspended, chromePreferences.ready, chromePreferences.save, simulation]);
   useEffect(() => {
+    const message = consumeScenePreviewCommand(previewCommand, consumedPreview, {
+      ready: documentReady.current, canNavigate: simulation.current?.canNavigate() === true, suspended,
+    });
+    if (message) frame.current?.contentWindow?.postMessage(message, '*');
+  }, [previewCommand, suspended, simulation]);
+  useEffect(() => {
     /** Accept messages only from this exact frame, never a neighboring tab or window. */
     function handleMessage(event: MessageEvent<unknown>) {
       if (event.source !== frame.current?.contentWindow) return;
+      const preview = parseScenePreviewReport(event.data);
+      if (preview) {
+        if (simulation.current?.canNavigate()) onPreviewReport?.(preview);
+        return;
+      }
       const chrome = parseHomeChromeSnapshot(event.data);
       if (chrome) {
         if (simulation.current?.canNavigate()) onChromeSnapshot?.(chrome.snapshot);
@@ -101,7 +114,7 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     }
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, publishPresentation, simulation]);
+  }, [onStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, onPreviewReport, publishPresentation, simulation]);
   return <iframe
     ref={frame}
     className="vantahome-scene-frame"

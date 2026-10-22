@@ -1,16 +1,49 @@
 # VantaHome AI experience and capability roadmap
 
-Researched October 22, 2026. **Design proposal only; no application implementation,
-deployment, hardware connection or paid model test was performed for this plan.**
-Baseline: `55da047` on `3d-home-integration`; latest application source `410f768`.
-The handoff records Preview 90; its installation was not rechecked for this research.
+Researched October 22, 2026; implementation status updated the same day.
+The research baseline was `55da047` on `3d-home-integration`, with application
+source `410f768`. The user subsequently authorized **Phase 1**, now implemented
+and verified in source/browser tests. Preview 91 is built; installation is pending; Preview 90
+remains the last recorded installed build. Later phases remain design proposals.
+No paid model requests, provider/schema changes or deployments were made for this slice.
+
+## Implemented first slice and acceptance boundary
+
+- Room-aware Ask validates the selected room against the canonical registry and
+  active grants, with an explicit permitted-rooms alternative. Layout-only sharing
+  does not add context. Scope changes retire requests, answers and review tokens.
+- Exact before/after cards preserve captured values. Preview uses separate
+  temporary rendering state, never canonical writes, storage or commands. A
+  persistent **Preview · no device changes** label, Current / Proposed and Exit
+  preserve the existing camera. Controls remain unavailable during comparison;
+  expiry, suspension, access/scope changes and incoming affected values end it.
+- Existing **Review → Create → separate Run** remains authoritative. The first
+  slice does not add conversational draft refinement, routine generation, new
+  telemetry sources or a model command tool.
+- A separately authorized native voice slice provides a five-minute, explicit
+  foreground Home consent window for “Hey VantaHome” / “Vanta”. It uses the phone's
+  speech service, which may process audio, and synthetic system TTS (`expo-speech`).
+  It is not a background/local wake-word engine or OpenAI Realtime integration.
+  Session tokens and native cleanup protect queued work; manual Hear and ordinary
+  dictation remain available. Physical permission/audio/accuracy acceptance is pending.
+- Evidence: 277 host tests/20 suites (`work/ai-phase-one-jest.log`), 1,649 scene
+  tests/131 suites, seven panel browser profiles/states (`work/ai-panel-browser.json`)
+  and seven actual scene profiles (`work/concierge-scene-preview-browser.json`).
+  The scene checks found no overflow or app errors, ≥44px actions, unchanged camera
+  and canonical state, and zero storage writes or command messages. These are
+  mocked-provider/browser results, not a new live-model or physical speech test.
+- Preview 91 is built and signed with exact scene verification
+  (`work/preview91-verification.json`); installation and physical acceptance remain open. Android/iPad physical testing, camera research, hub execution and
+  household sync retain their deferrals. Dependency verification passes after Vite 7.3.7, Vitest/mocker 4.1.12 and
+  ip-address 10.7.4 updates. Existing braces/node-forge local backports remain
+  verified even though registry metadata still lists the patched versions.
 
 ## Direction
 
 Make **Home intelligence** a way to understand and direct the actual home through
 its 3D model: **Understand → Preview → Approve → Verify**.
 
-The strongest next feature is a spatial scene director. Select a room, describe
+The first implemented slice is a spatial scene director. Select a room, describe
 the atmosphere, see the proposed changes on the property, then save a scene and
 run it deliberately. The existing room model, sculpted controllers, scoped
 assistant and scene editor make this a distinctive, achievable next step.
@@ -33,12 +66,12 @@ Verified against [Home concierge](HOME_CONCIERGE.md),
 
 | Area | Current implementation | Expansion needed |
 | --- | --- | --- |
-| Questions | Deterministic local brief and live, scoped text answers about saved simulation comfort settings | Weather, telemetry history, manuals and explanations based on those sources |
-| Scenes | AI draft → Review → existing editor → Create; Run is separate | In-model preview, bounded conversational refinement and clearer before/after comparison |
+| Questions | Deterministic local brief and live text answers scoped to a validated selected room or permitted rooms | Weather, telemetry history, manuals and explanations based on those sources |
+| Scenes | Scoped AI draft, exact before/after card, isolated in-model Current/Proposed preview, then Review → existing editor → Create; Run is separate | Bounded conversational refinement and physical Preview 91 acceptance |
 | Controls | Separate explicit typed/spoken simulation commands | Real transport and observed completion remain a separate integration |
 | Device context | Lights, AC, fans, blinds, TVs and speakers; only permitted fields | Capability-specific adapters before any further categories |
 | Memory | One short answer in memory; no persistent conversation | Explicit personal preferences and short, isolated follow-up context |
-| Voice | Existing dictation fills the composer; Send is explicit | Optional conversational audio, with native lifecycle and cost testing |
+| Voice | Dictation plus optional five-minute foreground Home listening through phone STT; synthetic system replies and manual Hear | Physical permissions/audio/accuracy, heat/battery; richer realtime audio remains future work |
 | Routines | Local definitions and foreground execution | AI drafting, dry runs, durable hub execution and household sync |
 | Authority | Verified membership, room/action grants, server checks and expiring review | Every new read, preview, memory and action must preserve these boundaries |
 
@@ -73,7 +106,7 @@ Our opportunity is the connection between language, a spatial preview, precise
 controls and an understandable result. The model should make existing features
 easier to use before VantaHome gains more features.
 
-## The proposed experience
+## Experience direction — implemented slice above; remaining elements proposed
 
 ### 1. A contextual assistant that stays out of the way
 
@@ -158,13 +191,13 @@ continuous cloud polling, automatic card reshuffling or fabricated emergencies.
 
 | Capability | Useful experience | Data and delivery boundary |
 | --- | --- | --- |
-| **Spatial Ask + scene director** | “Only change this room”; refine a draft with “warmer light, keep the fan as it is”; preview before saving | First priority. Existing comfort bindings and simulation are sufficient. Limit follow-ups to one active plan and clear them on account/home changes. |
+| **Spatial Ask + scene director** | Select a room and preview exact changes before saving; future refinement could say “warmer light, keep the fan as it is” | Scoped Ask/preview implemented; physical acceptance pending. Conversational refinement remains future work. Preserve one active plan and clear it on scope/account/home changes. |
 | **Explain my home** | Explain an actual setting, why a supported routine did or did not run, and which device needs attention | Current settings can work now. Historical explanations need recorded events and reason codes; never infer causation from correlation. |
 | **Routine designer** | Describe a trigger, conditions, exceptions and actions; inspect a dry-run timeline | Reuse Routines and Scenes. Drafting is future work; foreground execution remains explicit until hub execution is validated. |
 | **Energy and water advisor** | Summarize measured usage, compare periods and suggest when to use flexible loads | Requires reliable history, units and coverage. Solar forecasts, battery reserve and tariffs are optional inputs, not invented defaults. |
 | **Comfort coordinator** | Coordinate permitted light, shade, fan and AC settings around a user's chosen comfort goal | Start with explicit preferences; measured temperature, humidity or air quality require actual sensors and separate read adapters. |
 | **Home care** | Explain a model-specific error, find the correct maintenance instruction, remember a user-confirmed service date | Requires identified equipment, approved manuals and grounded citations. Predictive maintenance needs adequate measured history. |
-| **Natural conversation** | Short, interruptible voice sessions with visual confirmation and an equivalent text route | Later enhancement. Requires real iOS/Android audio lifecycle, permission, latency, battery and cost validation. |
+| **Natural conversation** | Short voice sessions with visual confirmation and an equivalent text route | Foreground phone-STT/system-TTS slice implemented; physical acceptance pending. Richer realtime audio remains later work with native lifecycle, latency, battery and cost validation. |
 | **Personal preferences** | “Remember that I prefer dim warm light in the evening” | Explicit opt-in, editable per-person records, visible scope and deletion; household policy changes need appropriate authority. |
 
 ### Routine design must resolve real-world ambiguity
@@ -205,8 +238,9 @@ Local leak/alarm rules and hardware protection must operate independently of AI.
 
 ### Voice and memory should feel personal without becoming intrusive
 
-Start with the current dictation path. Later, evaluate OpenAI conversational audio
-using short authenticated sessions. WebRTC documentation demonstrates server-minted
+The implemented foreground voice slice reuses phone recognition and synthetic
+system output. Later, evaluate richer OpenAI conversational audio using short
+authenticated sessions. WebRTC documentation demonstrates server-minted
 ephemeral client credentials; a standard API key stays on the server. This does
 not establish compatibility or performance in our React Native app.
 [OpenAI WebRTC guidance](https://developers.openai.com/api/docs/guides/voice-webrtc?voice-api=realtime)
@@ -307,20 +341,21 @@ review. Do not infer safety from passing a finite test suite.
 
 ## Delivery sequence and acceptance gates
 
-Each phase is proposed. Implementation needs a subsequent request. Camera work,
-hub purchase/pairing, household sync and physical iPad testing retain their existing
-deferrals.
+Phase 1 and the bounded foreground voice slice are authorized and implemented in
+source; Preview 91 packaging is verified and physical acceptance remains pending. Later phases need a
+subsequent request. Camera work, hub purchase/pairing, household sync and physical
+iPad testing retain their existing deferrals.
 
 | Phase | Deliverable | Gate before calling it complete |
 | --- | --- | --- |
-| **1 — Spatial Ask and preview** | Room-aware context, one active refined scene draft, isolated 3D preview, exact change card and existing Review/Create/Run flow | No state writes during preview; unsupported fields rejected; expiry/revocation/account-switch checks; viewport and persistence acceptance |
+| **1 — Spatial Ask and preview** | Implemented: room-aware context, one scoped scene draft, isolated 3D preview, exact change card and existing Review/Create/Run flow | Source/browser checks pass; Preview 91 installation and physical preview/save/run/persistence acceptance pending. Refinement is not included yet. |
 | **2 — Grounded explanations** | Source/time labels, relevant weather facts, explicit preferences and scoped Device Health explanations | Verified read adapters; no invented history or causation; privacy/delete lifecycle; safe unavailable states |
 | **3 — Routine drafting** | Canonical editable draft and dry-run explanation using supported comfort actions | Trigger/condition/exception tests, timezone and conflict policy; foreground-only label until durable execution exists |
 | **4 — Measured home intelligence** | Energy/water summaries, maintenance evidence and opt-in insight cards | Real telemetry quality/history, authorized integration and deterministic math; no fabricated savings or unattended expansion |
-| **5 — Natural voice and bounded automation** | Optional conversational audio; later approved policies on a validated hub | Native interruption/battery/permission tests, cost controls and observed completion; hardware authorization and durable execution separately satisfied |
+| **5 — Natural voice and bounded automation** | Bounded foreground phone-STT/system-TTS slice implemented early; richer realtime audio and approved hub policies remain proposed | Physical interruption/battery/permission/accuracy tests pending; future cloud audio, hardware authority, observed completion and durable execution remain separate gates |
 
-Natural voice can be evaluated earlier as a separate experiment if it becomes the
-priority, but should not delay the first visual scene experience. Phase 4's useful
+The bounded foreground voice slice was authorized alongside Phase 1. It does not
+complete the richer audio or hub-policy phase. Phase 4's useful
 metrics are unavailable until the necessary telemetry exists. Do not present these
 phases as a dated delivery promise before estimating actual implementation work.
 
@@ -343,7 +378,7 @@ Combine task-specific checks with human review, consistent with
   role revocation during generation, preview, review, save and Run.
 - Preserve existing request/rate limits initially. Add measured per-request token,
   latency and error metadata, per-home budget policy and a hard application spend
-  cutoff before introducing background work or voice. Prevent duplicate requests.
+  cutoff before introducing background work or cloud realtime audio. The current phone-voice slice uses the existing bounded text request limits. Prevent duplicate requests.
 - Aim for immediate local acknowledgement (provisional target under 200 ms on
   supported hardware); measure cloud p50/p95 instead of promising a fixed delay.
   Preserve cancel and current 20/25-second deadlines. Earlier two-answer timings
@@ -351,7 +386,7 @@ Combine task-specific checks with human review, consistent with
 - Test iPhone/Android portrait, tablet portrait/landscape and desktop preview;
   include large text, screen reader, keyboard and reduced motion. Physical iPad
   remains deferred; browser layout evidence cannot substitute for it.
-- Recheck heat/frame pacing with 3D plus voice. No continuous listening or idle
+- Recheck heat/frame pacing with 3D plus voice. No unbounded/background listening or idle
   model calls; stop work on backgrounding. Establish a controlled battery baseline
   before claiming efficiency improvements.
 
@@ -359,12 +394,15 @@ Track user corrections, successful reviewed scenes, dismissed suggestions and
 unconfirmed commands through privacy-conscious counters. Optimize helpful outcomes
 and reduced effort, not conversation length or number of AI interactions.
 
-## Recommended next implementation brief
+## Next acceptance step
 
-Build **Phase 1: Spatial Ask + reviewed 3D scene preview**, simulation first.
-It supplies the most visible improvement using data and controls VantaHome already
-has, while creating the validation foundation for everything that follows.
+Finish **Phase 1: Spatial Ask + reviewed 3D scene preview** physical
+acceptance before expanding its scope. Verify no-state-change preview, scoped
+before/after review, save-without-run, explicit Run and local persistence on the
+installed build. Test native opt-in voice permissions, interruptions, Stop/deadline,
+route/background cleanup and recognition accuracy separately from text/scene behavior.
 
 Keep [Home concierge](HOME_CONCIERGE.md) as the implemented-behavior record and
 [implementation backlog](IMPLEMENTATION_BACKLOG.md) as the delivery authority.
-Update both only as phases are actually authorized, implemented and verified.
+Later explanations, refinement, routine drafting and new data sources remain
+proposals until separately authorized and verified.

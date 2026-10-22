@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Spatial Ask, isolated scene preview and foreground voice | Source/browser checks pass; Preview 91 built; installation pending | Room-aware permitted context, exact before/after card and display-only Current/Proposed/Exit preserve canonical state and camera; existing Review → Create → separate Run retained. Native five-minute opt-in Home-only phone speech recognition and synthetic system replies; no background wake engine, Realtime audio or command tool. 277 host tests/20 suites and 1,649 scene tests/131 suites pass; seven panel profiles and seven actual scene profiles checked. Original server model/schema unchanged; no paid requests or deployments. Physical permissions/audio/accuracy and complete Preview 91 acceptance remain pending; last recorded installed build is 90. |
 | Camera VISION console | Preview 90 installed and launched; physical acceptance pending | Architectural sample monitor in Home/Devices, guarded Arm/Disarm, Night/Alerts preferences and simulated snapshot; all advanced camera controls retained under More. Arming remains independent of host power; sample events never open gates, change presence or capture media. Canonical Demo and authenticated simulation routing added; real camera/protected access preserved. 200 focused tests, TypeScript, scene builds and bounded review pass. Eleven embedded and six native profiles fit regular sizes with ≥44px targets; tiny embedded fallback retained. Home/Devices agreement, reload persistence, More/Back and zero browser errors verified. Signed staging package/exact scene verified (32,180,310 bytes); production metadata restored and QA excluded. Installed and launched; Apple inventory confirms 1.0.0 (90). Physical camera acceptance remains pending. See handoff. |
 | Door, garage and window consoles | Preview 89 installed and launched; physical acceptance pending | Distinct hinged entry, roller shutter and awning window artwork in Home/Devices, guarded Open/Close, atomic ±5% and window Vent25. Canonical saved position and all More controls retained; unknown state remains neutral with explicit recovery. Short lifecycle/reduced-motion-aware transitions, no motor/lock/sensor claims or permission expansion. 271 distinct focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles per fixture fit regular sizes with ≥44px targets; tiny contained fallback retained. Bidirectional Home/Devices reload retention and zero browser errors verified. Signed staging package/exact scene verified (32,163,524 bytes); production metadata restored. Package reverified and installed at the user’s request; launch succeeded and Apple inventory confirms 1.0.0 (89). Physical acceptance remains pending. See handoff. |
 | Dishwasher wash console | Included in installed Preview 89; physical acceptance pending | Distinct glass chamber/racks and motion-aware spray preview in Home/Devices. Guarded Start/Resume/Pause/Stop, six programs, temperature and Dry Boost; all existing extras retained under More. Durable activity preserves legacy Pause through edits; time/progress stay fixed samples. 294 focused tests, TypeScript, scene builds and bounded review pass. Thirteen embedded and five native profiles fit regular sizes with ≥44px targets; tiny contained fallback retained. Advanced-page retention, Home/Devices agreement, bidirectional reload retention and zero browser errors verified. Signed staging package and exact scene verified (32,147,185 bytes); production metadata restored. Included in installed Preview 89; physical acceptance remains pending. See handoff. |
@@ -41,6 +42,25 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+**AI preview and voice boundaries:** scene preview is an ephemeral derived rendering
+layer, never a saved device transaction. The renderer rejects stale baselines,
+unsupported comfort fields, denied grants and sensitive devices, and blocks both
+ordinary controls and the embedded saved-scene Run transport during comparison.
+Selected-room reporting omits labels/readings and returns null for layout-only
+rooms. Account/home/grant/room changes retire request, preview and speech context.
+The five-minute voice window requires explicit opt-in and cannot restart itself;
+phone speech services may process audio. Session identity and serialized native
+cleanup prevent late transcripts or spoken replies from reviving ended consent.
+Physical permission, audio/interruption, accuracy and energy behavior still need
+an actual-device check. Browser/unit evidence is not native microphone acceptance.
+
+**Dependency patch follow-through:** Vite 7.3.7, Vitest/mocker 4.1.12 and
+ip-address 10.7.4 resolve the newly reported findings. `security:dependencies`
+passes (`work/ai-phase-one-dependencies.log`); existing braces/node-forge local
+backports still pass hashes and attack regressions, although registry metadata
+continues to list their versions. npm 11.17.0 resolved npm 10's optional-peer
+Arborist error without a major application runtime upgrade.
 
 **Camera simulation and privacy boundaries:** canonical simulation `on` is arming;
 host camera power remains independent. Camera controls now share validated
@@ -353,6 +373,20 @@ optional renderer labs were not changed because the report concerns the main sce
 
 ## Next implementation priorities
 
+**Immediate AI phase-one acceptance:** install the built and verified Preview 91
+through the existing device-install workflow. Preview 90 is
+still the last recorded installed build. Test room selection and restricted-room
+isolation; exact before/after values; Preview → Current / Proposed → Exit with no
+saved-state changes; Review → Create without execution; and explicit Run with
+Home/Devices agreement and restart retention. Check preview expiry, account/grant
+changes and background recovery. On iPhone, separately check microphone/speech
+permission allow/deny, opt-in wake phrase recognition, manual dictation/Hear,
+synthetic reply audio, interruptions, Stop, the five-minute deadline and leaving
+Home/locking the phone. No background listening or autonomous commands are intended.
+Finish the dependency review above before claiming release readiness. Android and
+physical iPad tests remain deferred; do not repeat already accepted older scene
+flows without a relevant change.
+
 **Gate acceptance completed:** on installed Preview 82, the user confirmed fit,
 smooth animation, Open/Close, Hold/Release and More/Back, followed by Home/Devices
 agreement with Close disabled while held, hold retention after full app restart,
@@ -420,15 +454,15 @@ chat, repository, screenshots or evidence. See the handoff for prepared tabs/sta
 
 ## Explicitly deferred
 
-- **Further AI scope:** live answers, reviewed comfort-scene drafting and the bounded
-  Guest checklist are accepted as recorded above. The October 22 research-only
-  [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md) recommends room-aware Ask and
-  an isolated 3D scene preview as the next implementation slice, subject to a new
-  request. Later phases cover grounded explanations/preferences, routine drafts,
-  measured energy/water and home care, then optional conversational voice and
-  bounded hub policies. New data needs scoped adapters and quality evidence.
-  Routine generation and autonomous operation remain deferred; research and
-  acceptance of the existing assistant do not authorize those implementations.
+- **Further AI scope:** the authorized October 22 phase-one source now includes
+  room-aware Ask, exact before/after values, isolated scene preview and bounded
+  foreground phone voice. Packaging/physical acceptance are still pending as above.
+  The [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md) retains later proposals for
+  grounded explanations/preferences, routine drafts, measured energy/water and
+  home care, richer conversational audio and bounded hub policies. No multi-turn
+  refinement, new telemetry/manual/history adapter, OpenAI Realtime audio, routine
+  generation or autonomous operation is implied by the first slice. New data needs
+  explicit scope, authorization and quality evidence.
 - Hub pairing, real-device bindings/observations and durable app-closed routines:
   no hub yet; NUC 15 is the intended direction. Reuse the existing SQLite worker
   foundation rather than recreating it. Respect the supervised one-light pilot.

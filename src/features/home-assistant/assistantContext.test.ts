@@ -65,6 +65,48 @@ test('shared interior-layout visibility never expands assistant device data', ()
   expect(buildAssistantContext(shared, snapshot(shared), now).devices).toEqual(buildAssistantContext(home, snapshot(home), now).devices);
 });
 
+test('a selected registered room narrows every reading, count and request while retaining permitted choices', () => {
+  const home = virtualSceneHome();
+  const context = buildAssistantContext(home, snapshot(home), now, { roomId: 'registry-room:living' });
+  expect(context).toMatchObject({ available: true, roomId: 'registry-room:living', scopeLabel: 'Living room' });
+  expect(context.brief.roomCount).toBe(1);
+  expect(context.devices.every((device) => device.roomId === context.roomId)).toBe(true);
+  expect(context.devices.find((device) => device.id === 'registry-device:living-light')?.modelDeviceId).toBe('living-light');
+  expect(context.availableRooms.length).toBeGreaterThan(1);
+  expect(context.requestContext?.devices.map((device) => device.id)).toEqual(context.devices.map((device) => device.id));
+  expect(JSON.stringify(context.requestContext)).not.toContain('modelDeviceId');
+  expect(context.fingerprint).not.toBe(buildAssistantContext(home, snapshot(home), now).fingerprint);
+  expect(assistantContextIsCurrent(context, home, now)).toBe(true);
+});
+
+test.each(['', 'living', 'registry-room:master', 'not-a-room'])('Guest selection %s fails closed without borrowing layout access', (roomId) => {
+  const home = guestHome();
+  home.household[0].shareInteriorLayout = true;
+  const context = buildAssistantContext(home, snapshot(home), now, { roomId });
+  expect(context).toMatchObject({ available: false, roomId, scopeLabel: 'Room unavailable', devices: [], requestContext: null, canDraft: false });
+  expect(context.availableRooms).toEqual([{ id: 'registry-room:living', name: 'Living room' }]);
+});
+
+test('explicit all-permitted scope remains limited to the Guest grant and excludes snapshot-denied rooms', () => {
+  const home = guestHome();
+  const context = buildAssistantContext(home, snapshot(home), now, { roomId: null });
+  expect(context.scopeLabel).toBe('All permitted rooms');
+  expect(context.devices.every((device) => device.roomId === 'registry-room:living')).toBe(true);
+  const reading = snapshot(home);
+  reading.access = { ...reading.access!, roomIds: [], deviceIds: [], controllableDeviceIds: [] };
+  expect(buildAssistantContext(home, reading, now, { roomId: 'registry-room:living' }))
+    .toMatchObject({ available: false, availableRooms: [], devices: [] });
+});
+
+test('an admitted room without supported comfort devices stays empty instead of widening to another room', () => {
+  const home = virtualSceneHome();
+  const room = home.rooms.find((candidate) => candidate.id !== 'registry-room:living')!;
+  home.devices = home.devices.filter((device) => device.roomId !== room.id);
+  const context = buildAssistantContext(home, snapshot(home), now, { roomId: room.id });
+  expect(context).toMatchObject({ available: false, roomId: room.id, scopeLabel: room.name, devices: [], requestContext: null });
+  expect(context.reason).toContain('this room');
+});
+
 test.each(['ready', 'account', 'home', 'blocked', 'socket', 'mqtt', 'member'] as const)('fails closed on %s access mismatch', (change) => {
   const home = virtualSceneHome();
   const reading = snapshot(home);
@@ -147,6 +189,24 @@ test('draft conversion rejects stale scope, revoked controls, unsafe values and 
   invalid.scene!.actions[0].values = { tempC: 22 };
   expect(assistantSceneDraft(invalid, context, home, reading, now)).toBeNull();
   expect(assistantSceneDraft(proposal(), { ...context, devices: context.devices.filter((device) => device.id !== 'registry-device:living-light') }, home, reading, now)).toBeNull();
+});
+
+test('room-scoped drafts reject another permitted room and changed target values without rejecting unrelated edits', () => {
+  const home = virtualSceneHome();
+  const reading = snapshot(home);
+  const context = buildAssistantContext(home, reading, now, { roomId: 'registry-room:living' });
+  const other = buildAssistantContext(home, reading, now).devices.find((device) => device.roomId !== context.roomId && device.kind === 'light')!;
+  const outside = { ...proposal(), deviceIds: [other.id], scene: { ...proposal().scene!, actions: [{ deviceId: other.id, values: { brightness: 20 } }] } };
+  expect(assistantSceneDraft(outside, context, home, reading, now)).toBeNull();
+
+  const brightnessOnly = { ...proposal(), scene: { ...proposal().scene!, actions: [{ deviceId: 'registry-device:living-light', values: { brightness: 20 } }] } };
+  const unrelated = { ...reading, state: { ...reading.state, deviceStates: { ...reading.state.deviceStates,
+    'living-light': { ...reading.state.deviceStates['living-light'], on: false, settings: { colorTempK: 3100 } } } } };
+  expect(assistantSceneDraft(brightnessOnly, context, home, unrelated, now)?.actions)
+    .toEqual([{ type: 'patch', deviceId: 'registry-device:living-light', patch: { brightness: 20 } }]);
+  const changed = { ...unrelated, state: { ...unrelated.state, deviceStates: { ...unrelated.state.deviceStates,
+    'living-light': { ...unrelated.state.deviceStates['living-light'], level: 72 } } } };
+  expect(assistantSceneDraft(brightnessOnly, context, home, changed, now)).toBeNull();
 });
 
 test('does not infer a model identity from a matching device name or wrong room binding', () => {

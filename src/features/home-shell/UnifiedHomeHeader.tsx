@@ -12,6 +12,7 @@ import type { HomeChromeSnapshot } from '../../../packages/home-scene/src/homeCh
 type Props = {
   scene: HomeChromeSnapshot | null; ready: boolean;
   onEnvironment: () => void; onVoice: () => void; onAccount: () => void;
+  voiceActive?: boolean;
 };
 
 /** Match the validated conditions without inventing a sunny state for missing weather. */
@@ -26,7 +27,7 @@ function conditionIcon(scene: HomeChromeSnapshot | null): React.ComponentProps<t
 }
 
 /** One native header keeps account identity private while the scene supplies public atmosphere. */
-export default function UnifiedHomeHeader({ scene, ready, onEnvironment, onVoice, onAccount }: Props) {
+export default function UnifiedHomeHeader({ scene, ready, onEnvironment, onVoice, onAccount, voiceActive = false }: Props) {
   const { width, height, fontScale } = useWindowDimensions();
   const wide = Math.min(width, height) >= 600 && fontScale <= 1.3;
   const unit = useHomeStore(state => state.profile.tempUnit ?? 'C');
@@ -60,8 +61,8 @@ export default function UnifiedHomeHeader({ scene, ready, onEnvironment, onVoice
           <Text style={styles.temperature} numberOfLines={1}>{weather.temperature}</Text>
         </View>
       </Pressable>
-      <Pressable style={styles.voice} onPress={onVoice} accessibilityLabel="Open home assistant" accessibilityHint="Ask Vanta Concierge or use voice controls">
-        <Ionicons name="mic-outline" size={21} color={theme.colors.accentText} />
+      <Pressable style={[styles.voice, voiceActive && styles.voiceActive]} onPress={onVoice} accessibilityLabel={voiceActive ? 'Hands-free listening enabled. Open home assistant' : 'Open home assistant'} accessibilityHint="Ask about your home or manage hands-free listening">
+        <Ionicons name={voiceActive ? 'radio-outline' : 'mic-outline'} size={21} color={voiceActive ? theme.colors.text : theme.colors.accentText} />
       </Pressable>
       <DashboardAccountButton compact={!wide} onPress={onAccount} />
     </View>
@@ -95,4 +96,5 @@ const styles = StyleSheet.create({
   readingDivider: { width: 1, height: 13, backgroundColor: theme.colors.stroke },
   temperature: { color: theme.colors.text, fontSize: 12, fontVariant: ['tabular-nums'], flexShrink: 1 },
   voice: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: theme.colors.stroke, backgroundColor: theme.colors.card2, alignItems: 'center', justifyContent: 'center' },
+  voiceActive: { borderColor: theme.colors.accent, backgroundColor: theme.colors.accent2 },
 });

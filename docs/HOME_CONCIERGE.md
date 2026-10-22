@@ -1,9 +1,10 @@
 # Vanta home assistant
 
-Future design is recorded separately in the October 22
-[AI experience roadmap](AI_EXPERIENCE_ROADMAP.md). It is research only; the spatial
-preview, richer context, routine drafting and conversational audio described there
-are not part of the implementation below.
+Updated October 22, 2026. The authorized first slice from the
+[AI experience roadmap](AI_EXPERIENCE_ROADMAP.md) is now implemented: room-aware
+Ask, exact before/after values, an isolated 3D scene preview and bounded foreground
+phone voice. Later roadmap features remain proposals. Preview 91 installation and
+physical acceptance are pending; Preview 90 is the last recorded installed build.
 
 Implemented October 16, 2026. Simulation first, staging only. Initially delivered
 without a provider connection; the user subsequently authorized activation and
@@ -29,12 +30,15 @@ copy. Real simulation-bridge integration tests cover these boundaries.
 The dashboard's existing microphone opens **Home intelligence**. **Ask** shows an
 on-device brief of permitted comfort rooms, lights and climate controls. **Controls**
 retains the existing explicit typed/spoken simulation commands. No second dashboard
-button or background listener was introduced.
+button or background listener was introduced. Ask now defaults to a validated
+selected room when available; its scope picker can return to permitted rooms.
+Shared layout alone supplies neither private readings nor assistant context.
 
 Once connected, Ask supports a home brief, comfort-scene drafts and suggestions
-about simulated settings. Prompt chips fill a question; only **Send** sends it.
-Dictation fills the composer and also requires Send. Phone speech recognition uses
-the existing native speech service and its permissions, independently of OpenAI.
+about simulated settings. Prompt chips fill a question; **Send** submits typed
+questions and ordinary dictation. Phone speech recognition uses the existing
+native speech service and its permissions, independently of OpenAI. The separate
+opt-in hands-free window below may submit a wake-prefixed question to Ask.
 
 One short answer is held in memory. A scene suggestion opens the existing editor
 for review, adjustment and saving; **Run remains a separate action**. Imported
@@ -42,6 +46,43 @@ settings stay exact: a brightness-only draft does not acquire power, and a TV po
 draft does not acquire channel or volume defaults. Newly selected devices use the
 ordinary editor. This version does not generate routines or perform autonomous
 commands.
+
+### Exact changes and isolated 3D preview
+
+A proposal shows each explicit before/after value from its captured scoped context.
+Changing relevant settings makes the proposal stale rather than silently replacing
+its baseline. **Preview in 3D** checks current context, automation permission and
+per-device control grants, then sends only bounded comfort values and exact
+baselines to the renderer. Sensitive devices remain excluded.
+
+The renderer creates detached display copies. **Preview · no device changes**,
+Current / Proposed and Exit remain visible; camera/model position is preserved.
+Canonical device state, persistence, command transport and saved scenes are not
+written. Ordinary hotspots/controllers and saved-scene Run remain unavailable while
+previewing. Expiry (at most 60 seconds), access/scope changes, suspension and incoming
+affected-device values clear the preview. Exit returns to the retained assistant
+proposal; preview does not consume the one-use Review token. Review → Create saves
+without execution, and **Run scene remains separate**. Conversational draft
+refinement and new telemetry/history/manual sources are not included.
+
+### Optional foreground phone voice
+
+An explicit **Enable** starts up to five minutes of listening on foreground Home.
+Say “Hey VantaHome” or “Vanta”, then a question. Only a question following an accepted wake phrase
+enters Ask with the selected room's permitted settings; it never enters
+the direct Controls executor. Ambient transcripts are ephemeral. The phone's
+speech service may process audio; this is not an on-device-only privacy promise,
+a background wake-word engine or an OpenAI Realtime/cloud-audio connection.
+
+Replies use a synthetic system voice through `expo-speech`; **Hear answer** is
+also available manually. Ordinary tap-to-dictate and typed Send remain available.
+Listening pauses during generation and spoken output. Stop, the fixed five-minute
+deadline, leaving Home, background/lock, account/home/grant/room changes and unmount
+retire the session. Session tokens, microphone ownership, bounded retries and
+serialized native teardown prevent old transcripts, queued questions or TTS
+callbacks from restarting ended consent. Preview stops the voice session.
+Physical speech permission, audio routing/interruption, recognition accuracy and
+heat/battery acceptance remain pending; web keeps the text route.
 
 The panel is loaded on demand. It uses existing purple tokens, cinematic artwork
 and reduced-motion-aware decoration. A bounded internal scroll area retains touch
@@ -65,7 +106,7 @@ wrapper are preserved.
 - Scene drafting requires current automation management and individual control
   grants. Structured output is validated at the provider, server, client and review
   boundaries. The model has no tools or command endpoint.
-- Account/home/grant/catalog changes, backgrounding, cancellation and unmount abort
+- Account/home/grant/catalog/room-scope changes, backgrounding, cancellation and unmount abort
   requests and discard late results. Snapshot/review freshness is 60 seconds; Guest
   deadlines are also enforced. Foregrounding refreshes availability.
 - Review uses an opaque one-use in-memory token. Unmatched old tokens cannot erase
@@ -104,6 +145,41 @@ authorized live test: grounded answer, scoped scene review, explicit Save, expli
 Run, failure recovery and Guest room limits. Production remains outside this setup.
 
 ## Verification boundary
+
+### Phase-one source and browser verification — October 22
+
+- **277 tests across 20 host/assistant/voice suites** pass; receipt:
+  `work/ai-phase-one-jest.log`. Scoped projection, captured before-values, stale
+  request/review rejection, voice consent/session lifecycle and host integration
+  use controlled fixtures; this is not physical microphone or model-quality evidence.
+- **1,649 tests across all 131 scene suites** pass (`work/ai-phase-one-scene-tests-final.log`). They cover strict protocol/source
+  validation, current/proposed derivation, zero canonical writes/subscriber calls,
+  blocked controller and saved-scene Run paths, replay rejection, expiry,
+  suspension/access/affected-state clearing and selected-room privacy. Scene
+  TypeScript and diff checks pass.
+- Seven assistant panel profiles/states pass with no errors
+  (`work/ai-panel-browser.json`). Seven actual 3D App phone/tablet profiles pass
+  (`work/concierge-scene-preview-browser.json`): no overflow, controls ≥44px,
+  Current/Proposed/Exit, exact camera pose and canonical state unchanged, no storage
+  writes or device patch/Run messages, and no application errors. Evidence images
+  use `work/concierge-preview-*-{current,proposed}.png`. Test browsers/owned servers
+  were closed and no scene repository fixture remains.
+- Preview **91 is built and signed**. Exact scene bytes/hash, staging identity,
+  release assets/version/redirects and source metadata restoration pass; receipt
+  `work/preview91-verification.json`. Installation and full physical acceptance
+  remain pending. Preview **90** is
+  the last recorded installed build. Next physical checks cover room restrictions,
+  exact proposal/preview comparisons, no-write Exit, save-without-run, separate Run
+  and persistence, plus speech permission allow/deny, accuracy, synthetic audio,
+  interruptions, Stop/deadline and route/background/lock cleanup. Android and
+  physical iPad testing remain deferred.
+- The existing server model/schema, text API and authorization are unchanged.
+  No paid model requests, deployments or credentials were changed for this slice.
+  Dependency verification passes with Vite 7.3.7, Vitest/mocker 4.1.12 and
+  ip-address 10.7.4. Existing braces/node-forge backports remain locally verified;
+  registry audit metadata still reports those patched versions. Receipt:
+  `work/ai-phase-one-dependencies.log`.
+
 
 ### Guest live acceptance — October 16–17
 

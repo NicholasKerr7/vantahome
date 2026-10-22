@@ -19,15 +19,16 @@ jest.mock('../home-voice/HomeVoicePanel', () => {
 });
 jest.mock('../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
-jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
+jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockAssistant = {
-    context: { scope: 'home', fingerprint: 'scope', capturedAt: Date.now(), expiresAt: null, available: true, reason: null, devices: [], canDraft: true,
+    context: { scope: 'home', fingerprint: 'scope', roomId: null, scopeLabel: 'My permitted rooms', availableRooms: [], capturedAt: Date.now(), expiresAt: null, available: true, reason: null, devices: [], canDraft: true,
       brief: { roomCount: 3, deviceCount: 8, onCount: 4, lightsOnCount: 2, climateOnCount: 1 }, requestContext: { mode: 'simulation', capturedAt: Date.now(), devices: [] } },
     status: 'ready', response: null, error: null, canAsk: true, canReview: false,
     ask: jest.fn(async () => undefined), cancel: jest.fn(), clear: jest.fn(), retryAvailability: jest.fn(), prepareReview: jest.fn(() => null),
+    roomId: null, scopeLabel: 'My permitted rooms', availableRooms: [], proposalDevices: [], preparePreview: jest.fn(() => null),
   };
 });
 
@@ -147,4 +148,113 @@ test('typing reclaims header space while keeping dismissal, Send and full consen
   expect(screen.queryByLabelText('Direct voice controls')).toBeNull();
   fireEvent.press(screen.getByLabelText('Finish typing'));
   expect(screen.getByLabelText('Direct voice controls')).toBeTruthy();
+});
+
+/** A controllable foreground session lets UI tests exercise cancellation without a microphone. */
+function voiceFixture() {
+  return {
+    supported: true, enabled: true, phase: 'waiting' as const, error: null,
+    start: jest.fn(async () => undefined), stop: jest.fn(), pause: jest.fn(), resume: jest.fn(), speak: jest.fn(),
+    readSessionToken: jest.fn(() => 7), isSessionCurrent: jest.fn((token: number | null) => token === 7),
+  };
+}
+
+/** Delay one Ask response so tests can revoke consent before the answer arrives. */
+function delayedAnswer() {
+  let complete!: () => void;
+  const promise = new Promise<void>((resolve) => { complete = resolve; });
+  jest.mocked(mockAssistant.ask).mockReturnValue(promise);
+  return complete;
+}
+
+const spokenRequest = () => ({ id: 1, question: 'Make this room calm', roomId: null, sessionToken: 7, expiresAt: Date.now() + 15_000 });
+
+test('a wake question submits once and retains visible Stop when its text fills the composer', async () => {
+  const voice = voiceFixture();
+  mockAssistant.response = { title: 'Calm', answer: 'A softer light.', deviceIds: [], scene: null };
+  const request = spokenRequest();
+  const consumed = jest.fn();
+  const props = { onClose: jest.fn(), onReviewScene: jest.fn(), voice, voiceRequest: request, onVoiceRequestConsumed: consumed };
+  const screen = render(<HomeAssistantPanel {...props} />);
+  await act(async () => {});
+  screen.rerender(<HomeAssistantPanel {...props} />);
+  expect(mockAssistant.ask).toHaveBeenCalledTimes(1);
+  expect(voice.speak).toHaveBeenCalledWith('A softer light.');
+  expect(consumed).toHaveBeenCalledTimes(1);
+  expect(screen.getByLabelText('Stop hands-free listening')).toBeTruthy();
+  expect(mockAssistant.prepareReview).not.toHaveBeenCalled();
+});
+
+test.each(['stopped', 'expired', 'other-room'] as const)('a %s queued wake request never submits', async (reason) => {
+  const voice = voiceFixture();
+  const request = spokenRequest();
+  if (reason === 'stopped') voice.isSessionCurrent.mockReturnValue(false);
+  if (reason === 'expired') request.expiresAt = Date.now() - 1;
+  if (reason === 'other-room') Object.assign(request, { roomId: 'bedroom' });
+  render(<HomeAssistantPanel onClose={jest.fn()} onReviewScene={jest.fn()} voice={voice} voiceRequest={request} />);
+  await act(async () => {});
+  expect(mockAssistant.ask).not.toHaveBeenCalled();
+  expect(voice.speak).not.toHaveBeenCalled();
+});
+
+test.each(['cancel', 'stop', 'close'] as const)('%s prevents a late answer from starting speech', async (action) => {
+  const voice = voiceFixture();
+  const complete = delayedAnswer();
+  mockAssistant.status = 'asking';
+  const screen = render(<HomeAssistantPanel onClose={jest.fn()} onReviewScene={jest.fn()} voice={voice} voiceRequest={spokenRequest()} />);
+  fireEvent.press(screen.getByLabelText(action === 'cancel' ? 'Cancel assistant request' : action === 'stop' ? 'Stop hands-free listening' : 'Close home assistant'));
+  mockAssistant.status = 'ready';
+  mockAssistant.response = { title: 'Calm', answer: 'Do not read this late answer.', deviceIds: [], scene: null };
+  await act(async () => { complete(); });
+  expect(voice.speak).not.toHaveBeenCalled();
+});
+
+test('session expiry during Ask prevents automatic narration even if a new session starts', async () => {
+  const voice = voiceFixture();
+  const complete = delayedAnswer();
+  render(<HomeAssistantPanel onClose={jest.fn()} onReviewScene={jest.fn()} voice={voice} voiceRequest={spokenRequest()} />);
+  voice.isSessionCurrent.mockReturnValue(false);
+  mockAssistant.response = { title: 'Late', answer: 'Private old response.', deviceIds: [], scene: null };
+  await act(async () => { complete(); });
+  expect(voice.speak).not.toHaveBeenCalled();
+});
+
+test('an unavailable wake question is consumed instead of executing later after connection recovery', async () => {
+  const voice = voiceFixture();
+  const request = spokenRequest();
+  mockAssistant.canAsk = false;
+  mockAssistant.status = 'checking';
+  const props = { onClose: jest.fn(), onReviewScene: jest.fn(), voice, voiceRequest: request };
+  const screen = render(<HomeAssistantPanel {...props} />);
+  mockAssistant.canAsk = true; mockAssistant.status = 'ready';
+  screen.rerender(<HomeAssistantPanel {...props} />);
+  await act(async () => {});
+  expect(mockAssistant.ask).not.toHaveBeenCalled();
+  expect(voice.speak).toHaveBeenCalledTimes(1);
+});
+
+test('room selection cancels old work and informs the foreground voice scope', () => {
+  mockAssistant.availableRooms = [{ id: 'living', name: 'Living room' }];
+  const room = jest.fn();
+  const voice = voiceFixture();
+  const screen = render(<HomeAssistantPanel onClose={jest.fn()} onReviewScene={jest.fn()} onRoomChange={room} voice={voice} />);
+  fireEvent.press(screen.getByText('Living room'));
+  expect(room).toHaveBeenCalledWith('living');
+  expect(voice.stop).toHaveBeenCalled();
+  expect(mockAssistant.clear).toHaveBeenCalled();
+});
+
+test('Preview uses a validated proposal without consuming Review or changing the scene', () => {
+  const scene = { name: 'Evening', explanation: 'Dim one light.', actions: [{ deviceId: 'lamp', values: { brightness: 20 } }] };
+  mockAssistant.response = { title: 'Evening', answer: 'A warm atmosphere.', deviceIds: ['lamp'], scene };
+  mockAssistant.canReview = true;
+  const preview = jest.fn();
+  // preparePreview owns the complete validated snapshot; this UI must pass it through unchanged.
+  const proposal = { marker: 'validated' } as unknown as NonNullable<ReturnType<typeof mockAssistant.preparePreview>>;
+  jest.mocked(mockAssistant.preparePreview).mockReturnValue(proposal);
+  const screen = render(<HomeAssistantPanel onClose={jest.fn()} onReviewScene={jest.fn()} onPreview={preview} />);
+  fireEvent.press(screen.getByLabelText('Preview suggested scene in 3D'));
+  expect(preview).toHaveBeenCalledWith(proposal);
+  expect(mockAssistant.prepareReview).not.toHaveBeenCalled();
+  expect(mockAssistant.ask).not.toHaveBeenCalled();
 });

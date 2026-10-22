@@ -1,3 +1,4 @@
+jest.mock('../../home-voice/useForegroundAssistantVoice', () => ({ useForegroundAssistantVoice: () => ({ enabled: false, stop: jest.fn() }) }));
 import React from 'react';
 import { ArrivalContext, useArrivalCoordinator } from '../../arrival/ArrivalContext';
 import { AppState } from 'react-native';

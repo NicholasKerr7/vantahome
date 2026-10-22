@@ -1,4 +1,5 @@
 import type { SimulationSaveStatus } from './simulationPersistence';
+import { parseScenePreviewCommand, type ScenePreviewCommand, type ScenePreviewReport } from '../../../packages/home-scene/src/scenePreviewProtocol';
 import { homeChromeCommandMessage, isHomeChromePreferenceCommand, parseHomeChromeCommand, type HomeChromeCommand, type HomeChromeCommandMessage, type HomeChromeSnapshot } from '../../../packages/home-scene/src/homeChromeProtocol';
 
 export type HomeChromeCommandIntent = { id: number; command: HomeChromeCommand };
@@ -13,9 +14,21 @@ export type SceneSurfaceProps = {
   onDeviceEdit?: (modelDeviceId: string) => void;
   onChromeSnapshot?: (snapshot: HomeChromeSnapshot) => void;
   chromeCommand?: HomeChromeCommandIntent;
+  previewCommand?: ScenePreviewCommand;
+  onPreviewReport?: (report: ScenePreviewReport) => void;
   /** Enable setters only while a foreground native Preferences panel covers this retained scene. */
   allowChromePreferencesWhileSuspended?: boolean;
 };
+
+/** Display proposals are consumed once and never replayed after a document reload or denied access. */
+export function consumeScenePreviewCommand(intent: ScenePreviewCommand | undefined, consumed: { current: number },
+  eligibility: { ready: boolean; canNavigate: boolean; suspended: boolean }): ScenePreviewCommand | null {
+  const message = parseScenePreviewCommand(intent);
+  if (!message || message.id <= consumed.current) return null;
+  consumed.current = message.id;
+  if (!eligibility.ready || !eligibility.canNavigate || (eligibility.suspended && message.type !== 'clear')) return null;
+  return message;
+}
 
 /** Consume each explicit intent once; reconnecting, loading or resuming never retries stale actions. */
 export function consumeHomeChromeCommand(

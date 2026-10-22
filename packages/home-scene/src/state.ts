@@ -1,5 +1,6 @@
 import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS, canNavigateSceneRoom, canViewPropertyOverview, canExploreInteriorLayout, canViewSceneDevice, canControlSceneDevice, type SceneAccess } from './sceneAccess';
 import { isEmbeddedScene } from './embeddedHost';
+import { guardScenePreviewControl } from './scenePreviewStore';
 import { createDefaultSimulationSnapshot } from './simulationBridgeProtocol';
 import { applyModelPreset } from './modelScenePresets';
 import { create } from 'zustand';
@@ -238,22 +239,22 @@ export const useHomeStore = create<HomeStore>((set) => ({
       indoorContext: room && !room.outdoor ? { roomId, selectedDevice } : indoorContext };
   }),
   /** Explore assigned rooms or shared layouts without inferring device visibility. */
-  setRoom: (roomId) => set((state) => {
+  setRoom: guardScenePreviewControl((roomId) => set((state) => {
     if (!canNavigateSceneRoom(state.access, roomId)) return {};
     const room = getRoom(roomId);
     const selectedDevice = visibleRoomDevice(state.access, roomId);
     if (room.outdoor && canViewPropertyOverview(state.access)) return outdoorNavigation(state, room.id, selectedDevice);
     const view = canExploreInteriorLayout(state.access) && state.view === 'immersive' ? 'immersive' : room.floor;
     return indoorNavigation(room.id, selectedDevice, view);
-  }),
+  })),
   /** Full floor exploration requires layout sharing, never merely an exterior overview. */
-  setFloor: (floor) => set((state) => {
+  setFloor: guardScenePreviewControl((floor) => set((state) => {
     if (!canExploreInteriorLayout(state.access)) return {};
     const roomId = floor === 'ground' ? 'living' : 'family';
     return indoorNavigation(roomId, visibleRoomDevice(state.access, roomId), floor);
-  }),
+  })),
   /** Navigate property and layout views while preserving the authorized interior bookmark. */
-  setView: (view) => set((state) => {
+  setView: guardScenePreviewControl((view) => set((state) => {
     if (view === 'exterior') return canViewPropertyOverview(state.access)
       ? outdoorNavigation(state, 'grounds', visibleRoomDevice(state.access, 'grounds')) : {};
     if (view === 'immersive') return canExploreInteriorLayout(state.access) ? { view } : {};
@@ -265,34 +266,34 @@ export const useHomeStore = create<HomeStore>((set) => ({
     if (!canExploreInteriorLayout(state.access)) return {};
     const roomId = view === 'ground' ? 'living' : 'family';
     return indoorNavigation(roomId, visibleRoomDevice(state.access, roomId), view);
-  }),
+  })),
   /** Resolve scene picks to an authorized inspector while retaining permitted camera views. */
-  selectDevice: (id) => set((state) => deviceNavigation(state, id, false)),
+  selectDevice: guardScenePreviewControl((id) => set((state) => deviceNavigation(state, id, false))),
   /** Hotspot selection preserves a shared exterior camera without expanding the selected device grant. */
-  selectHotspotDevice: (id) => set((state) => deviceNavigation(state, id, true)),
+  selectHotspotDevice: guardScenePreviewControl((id) => set((state) => deviceNavigation(state, id, true))),
   /** Perform a kind-appropriate quick action without altering the selected camera. */
-  toggleDevice: (id) => set((state) => getDevice(id) && canControlSceneDevice(state.access, id) ? {
+  toggleDevice: guardScenePreviewControl((id) => set((state) => getDevice(id) && canControlSceneDevice(state.access, id) ? {
     deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation({ ...state.deviceStates, [id]: toggleDeviceState(id, state.deviceStates[id]) }, state.deviceStates)), activePreset: null,
-  } : {}),
+  } : {})),
   /** Preserve existing percentage-based animation inputs and cover behavior. */
-  setDeviceLevel: (id, level) => set((state) => {
+  setDeviceLevel: guardScenePreviewControl((id, level) => set((state) => {
     if (!getDevice(id) || !canControlSceneDevice(state.access, id)) return {};
     const next = setDeviceLevelState(id, state.deviceStates[id], level);
     return { deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation({ ...state.deviceStates, [id]: next }, state.deviceStates)), activePreset: null };
-  }),
+  })),
   /** Validate schema-backed controls before applying them to the simulation. */
-  setDeviceSetting: (id, field, value) => set((state) => {
+  setDeviceSetting: guardScenePreviewControl((id, field, value) => set((state) => {
     if (!getDevice(id) || !canControlSceneDevice(state.access, id)) return {};
     const next = applyDeviceSetting(id, state.deviceStates[id], field, value);
     return next === state.deviceStates[id] ? {} : { deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation({ ...state.deviceStates, [id]: next }, state.deviceStates)), activePreset: null };
-  }),
+  })),
   /** Run only explicitly cataloged action patches; arbitrary input cannot add state. */
-  runDeviceAction: (id, actionId) => set((state) => {
+  runDeviceAction: guardScenePreviewControl((id, actionId) => set((state) => {
     if (!getDevice(id) || !canControlSceneDevice(state.access, id)) return {};
     const current = state.deviceStates[id];
     const next = runDeviceActionState(id, current, actionId);
     return next === current ? {} : { deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation({ ...state.deviceStates, [id]: next }, state.deviceStates)), activePreset: null };
-  }),
+  })),
   /** Tick only foreground simulation time; idle state keeps the same reference. */
   advanceSafety: (seconds) => set((state) => {
     const deviceStates = authorizedDeviceChanges(state, advanceSafetySimulation(state.deviceStates, seconds));
@@ -310,13 +311,13 @@ export const useHomeStore = create<HomeStore>((set) => ({
   /** Reset only after every simulated source is clear; the gate stays held until released. */
   resetFire: () => set((state) => ({ deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation(resetFireIncident(state.deviceStates), state.deviceStates)) })),
   /** A manual preview also synchronizes the simulated dusk-to-dawn solar poles. */
-  setNight: (night) => set((state) => ({ night, lightingMode: night ? 'night' : 'day', deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation(synchronizeSolarLights(state.deviceStates, night), state.deviceStates)), activePreset: null })),
+  setNight: guardScenePreviewControl((night) => set((state) => ({ night, lightingMode: night ? 'night' : 'day', deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation(synchronizeSolarLights(state.deviceStates, night), state.deviceStates)), activePreset: null }))),
   /** Return to the property clock, or select an explicit day/night preview. */
-  setLightingMode: (lightingMode) => set((state) => {
+  setLightingMode: guardScenePreviewControl((lightingMode) => set((state) => {
     if (lightingMode === 'auto') return { lightingMode, deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation(synchronizeSolarLights(state.deviceStates, state.night), state.deviceStates)), activePreset: null };
     const night = lightingMode === 'night';
     return { lightingMode, night, deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation(synchronizeSolarLights(state.deviceStates, night), state.deviceStates)), activePreset: null };
-  }),
+  })),
   /** Apply clock transitions only; individual pole overrides last until the next transition. */
   syncAutomaticLighting: (night) => set((state) => {
     if (state.lightingMode !== 'auto') return state;
@@ -327,15 +328,15 @@ export const useHomeStore = create<HomeStore>((set) => ({
   /** Let users reduce motion in addition to the operating-system preference. */
   setMotionDisabled: (motionDisabled) => set({ motionDisabled }),
   /** Batch all device and environmental changes into a single Zustand update. */
-  activatePreset: (preset) => set((state) => state.access.fullHome && state.access.controllableDeviceIds.length === DEVICES.length ? applyPreset(state, preset) : {}),
+  activatePreset: guardScenePreviewControl((preset) => set((state) => state.access.fullHome && state.access.controllableDeviceIds.length === DEVICES.length ? applyPreset(state, preset) : {})),
   /** Reset the devices and camera while allowing the live clock to retain its current night. */
-  reset: (localNight = false) => set((state) => {
+  reset: guardScenePreviewControl((localNight = false) => set((state) => {
     if (!state.access.fullHome || state.access.controllableDeviceIds.length !== DEVICES.length) return {};
     const initial = createDefaultState();
     // Reset presentation preferences without dismissing an incident or its physical-style interlocks.
     for (const device of DEVICES) if (device.kind === 'smoke' || device.kind === 'gate') initial.deviceStates[device.id] = state.deviceStates[device.id];
     return { ...initial, night: localNight, deviceStates: synchronizeSafetySimulation(synchronizeSolarLights(initial.deviceStates, localNight), state.deviceStates) };
-  }),
+  })),
 }));
 
 // Persist only the small, versioned simulation snapshot; storage failures remain visible.

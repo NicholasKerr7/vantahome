@@ -10,6 +10,7 @@ import type { HomeChromeCommandIntent } from '../protocol';
 import { createDefaultDevicePlacement, replaceRuntimeDevices } from '../../../../packages/home-scene/src/devicePlacement';
 import { useHomeStore } from '../../../store/useHomeStore';
 import { createDefaultSimulationSnapshot, type SimulationSnapshotMessage } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
+import { SCENE_PREVIEW_CHANNEL, scenePreviewCommandMessage, type ScenePreviewCommand, type ScenePreviewReport } from '../../../../packages/home-scene/src/scenePreviewProtocol';
 
 type NativeMessage = { nativeEvent: { data: string; url?: string } };
 let mockNativeMessage: (event: NativeMessage) => void;
@@ -367,5 +368,135 @@ test.each(['native', 'web'] as const)('%s edit navigation requires the current d
   replaceRuntimeDevices([]);
   act(() => sendChrome(platform, message));
   expect(onDeviceEdit).toHaveBeenCalledTimes(1);
+  screen.unmount();
+});
+
+/** Count only the dedicated display protocol so state synchronization cannot satisfy these checks. */
+function deliveredPreviews(platform: 'native' | 'web'): number {
+  return platform === 'native'
+    ? mockInjectJavaScript.mock.calls.filter(([script]: [string]) => script.includes(`CustomEvent('${SCENE_PREVIEW_CHANNEL}'`)).length
+    : mockFrameWindow.postMessage.mock.calls.filter(([message]) => message.channel === SCENE_PREVIEW_CHANNEL).length;
+}
+
+/** Build a safe display request without any simulation command or saved-scene action. */
+function previewIntent(id: number): ScenePreviewCommand {
+  return scenePreviewCommandMessage(id, { title: 'Living room evening', expiresAt: Date.now() + 60_000,
+    actions: [{ deviceId: 'living-light', values: { brightness: 25 }, baseline: { brightness: 31 } }] });
+}
+
+test.each(['native', 'web'] as const)('%s delivers preview intents once and never replays after readiness, resume, reload or restored grants', async (platform) => {
+  const Component = platform === 'native' ? NativeSceneSurface : WebSceneSurface;
+  const onStatus = jest.fn();
+  let intent = previewIntent(1);
+  const screen = render(<Component onStatus={onStatus} previewCommand={intent} />, {
+    createNodeMock: (element) => element.type === 'iframe' ? { contentWindow: mockFrameWindow } : null,
+  });
+  await act(async () => { await Promise.resolve(); });
+  act(() => sendChrome(platform, { channel: 'vantahome-scene', version: 1, status: 'ready' }));
+  screen.rerender(<Component onStatus={onStatus} previewCommand={{ ...intent }} />);
+  expect(deliveredPreviews(platform)).toBe(0);
+
+  intent = previewIntent(2);
+  screen.rerender(<Component onStatus={onStatus} previewCommand={intent} />);
+  screen.rerender(<Component onStatus={onStatus} previewCommand={{ ...intent }} />);
+  expect(deliveredPreviews(platform)).toBe(1);
+
+  intent = previewIntent(3);
+  screen.rerender(<Component suspended onStatus={onStatus} previewCommand={intent} />);
+  screen.rerender(<Component onStatus={onStatus} previewCommand={{ ...intent }} />);
+  expect(deliveredPreviews(platform)).toBe(1);
+  intent = scenePreviewCommandMessage(4, null);
+  screen.rerender(<Component suspended onStatus={onStatus} previewCommand={intent} />);
+  expect(deliveredPreviews(platform)).toBe(2);
+
+  act(() => sendChrome(platform, { channel: 'vantahome-scene', version: 1, status: 'error' }));
+  intent = previewIntent(5);
+  screen.rerender(<Component onStatus={onStatus} previewCommand={intent} />);
+  act(() => sendChrome(platform, { channel: 'vantahome-scene', version: 1, status: 'ready' }));
+  screen.rerender(<Component onStatus={onStatus} previewCommand={{ ...intent }} />);
+  expect(deliveredPreviews(platform)).toBe(2);
+
+  mockCanNavigate.mockReturnValue(false);
+  intent = previewIntent(6);
+  screen.rerender(<Component onStatus={onStatus} previewCommand={intent} />);
+  mockCanNavigate.mockReturnValue(true);
+  screen.rerender(<Component onStatus={onStatus} previewCommand={{ ...intent }} />);
+  expect(deliveredPreviews(platform)).toBe(2);
+  screen.rerender(<Component onStatus={onStatus} previewCommand={previewIntent(7)} />);
+  expect(deliveredPreviews(platform)).toBe(3);
+  expect(mockSaveChromePreference).not.toHaveBeenCalled();
+  expect(mockSession.current?.handleMessage).not.toHaveBeenCalled();
+  screen.unmount();
+});
+
+test.each(['native', 'web'] as const)('%s routes valid preview reports only from its current document and live grants without sending device commands', async (platform) => {
+  const Component = platform === 'native' ? NativeSceneSurface : WebSceneSurface;
+  const onPreviewReport = jest.fn();
+  const onStatus = jest.fn();
+  const screen = render(<Component onStatus={onStatus} onPreviewReport={onPreviewReport} />, {
+    createNodeMock: (element) => element.type === 'iframe' ? { contentWindow: mockFrameWindow } : null,
+  });
+  await act(async () => { await Promise.resolve(); });
+  const status: ScenePreviewReport = { channel: SCENE_PREVIEW_CHANNEL, version: 1, type: 'status', id: 1, status: 'active' };
+  const selection: ScenePreviewReport = { channel: SCENE_PREVIEW_CHANNEL, version: 1, type: 'selection', modelRoomId: 'living' };
+  const beforeState = useHomeStore.getState();
+  act(() => { sendChrome(platform, status, false); sendChrome(platform, selection, false); });
+  act(() => sendChrome(platform, { ...status, status: 'executed' }));
+  act(() => sendChrome(platform, { ...status, deviceId: 'living-light' }));
+  act(() => sendChrome(platform, { ...selection, modelRoomId: 'not-a-room' }));
+  expect(onPreviewReport).not.toHaveBeenCalled();
+  mockSession.current!.handleMessage.mockClear();
+
+  act(() => { sendChrome(platform, status); sendChrome(platform, selection); });
+  expect(onPreviewReport.mock.calls).toEqual([[status], [selection]]);
+  expect(mockSession.current?.handleMessage).not.toHaveBeenCalled();
+  expect(mockSaveChromePreference).not.toHaveBeenCalled();
+  expect(useHomeStore.getState()).toBe(beforeState);
+
+  // A covered renderer may acknowledge that its previous display preview has ended.
+  screen.rerender(<Component suspended onStatus={onStatus} onPreviewReport={onPreviewReport} />);
+  const closed = { ...status, status: 'closed' };
+  act(() => sendChrome(platform, closed));
+  expect(onPreviewReport).toHaveBeenLastCalledWith(closed);
+  mockCanNavigate.mockReturnValue(false);
+  act(() => { sendChrome(platform, status); sendChrome(platform, selection); });
+  mockSession.current = null;
+  act(() => sendChrome(platform, status));
+  expect(onPreviewReport).toHaveBeenCalledTimes(3);
+  screen.unmount();
+});
+
+test('native preview reports reject missing, stale and lookalike document URLs but accept the current fragment', async () => {
+  const onPreviewReport = jest.fn();
+  const screen = render(<NativeSceneSurface onStatus={jest.fn()} onPreviewReport={onPreviewReport} />);
+  await act(async () => { await Promise.resolve(); });
+  const report = { channel: SCENE_PREVIEW_CHANNEL, version: 1, type: 'status', id: 1, status: 'closed' };
+  const data = JSON.stringify(report);
+  for (const url of [undefined, 'about:blank', 'file:///cache/old.html', 'file:///cache/index.html?other', 'file:///cache/index.html.other']) {
+    act(() => mockNativeMessage({ nativeEvent: { data, url } }));
+  }
+  expect(onPreviewReport).not.toHaveBeenCalled();
+  act(() => mockNativeMessage({ nativeEvent: { data, url: 'file:///cache/index.html#property' } }));
+  expect(onPreviewReport).toHaveBeenCalledTimes(1);
+  expect(onPreviewReport).toHaveBeenCalledWith(report);
+  screen.unmount();
+});
+
+test('web preview reports follow the current frame window rather than an origin string or a replaced frame', () => {
+  const onPreviewReport = jest.fn();
+  const frameNode = { contentWindow: mockFrameWindow };
+  const screen = render(<WebSceneSurface onStatus={jest.fn()} onPreviewReport={onPreviewReport} />, {
+    createNodeMock: (element) => element.type === 'iframe' ? frameNode : null,
+  });
+  const report = { channel: SCENE_PREVIEW_CHANNEL, version: 1, type: 'selection', modelRoomId: null };
+  act(() => mockWebMessage({ source: {}, origin: 'http://127.0.0.1:5187', data: report } as MessageEvent<unknown>));
+  expect(onPreviewReport).not.toHaveBeenCalled();
+  const newFrameWindow = { postMessage: jest.fn() };
+  frameNode.contentWindow = newFrameWindow;
+  act(() => sendChrome('web', report));
+  expect(onPreviewReport).not.toHaveBeenCalled();
+  act(() => mockWebMessage({ source: newFrameWindow, origin: 'null', data: report } as unknown as MessageEvent<unknown>));
+  expect(onPreviewReport).toHaveBeenCalledTimes(1);
+  expect(onPreviewReport).toHaveBeenCalledWith(report);
   screen.unmount();
 });

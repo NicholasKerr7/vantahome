@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import Voice from '@react-native-voice/voice';
-
-let microphoneOperation: Promise<unknown> = Promise.resolve();
-
-/** Serialize native startup and teardown so a closed panel cannot cancel a newly opened recording. */
-function queueMicrophone(operation: () => Promise<unknown>): Promise<unknown> {
-  const pending = microphoneOperation.then(operation);
-  microphoneOperation = pending.catch(() => undefined);
-  return pending;
-}
+import { claimVoiceSession, ownsVoiceSession, queueVoiceOperation, releaseVoiceSession } from './voiceSession';
 
 /** Keep speech recognition opt-in and cancel late callbacks on close, background, or identity changes. */
 export function useVoiceRecognition(onTranscript: (phrase: string) => void) {
@@ -17,6 +9,7 @@ export function useVoiceRecognition(onTranscript: (phrase: string) => void) {
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);
   const active = useRef(false);
+  const lease = useRef<symbol | null>(null);
   const generation = useRef(0);
   const transcript = useRef('');
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -35,11 +28,13 @@ export function useVoiceRecognition(onTranscript: (phrase: string) => void) {
   const cancel = useCallback(() => {
     generation.current += 1;
     const wasActive = active.current;
+    const owned = releaseVoiceSession(lease.current);
+    lease.current = null;
     active.current = false;
     transcript.current = '';
     clearTimers();
     if (alive.current) setListening(false);
-    if (Platform.OS !== 'web' && wasActive) void queueMicrophone(async () => {
+    if (Platform.OS !== 'web' && wasActive && owned) void queueVoiceOperation(async () => {
       // The library retains event subscriptions after cancel. Destroy them before
       // the next tap so its new callbacks cannot remain bound to an old recording.
       try { await Voice.cancel(); } finally { await Voice.destroy(); }
@@ -64,16 +59,17 @@ export function useVoiceRecognition(onTranscript: (phrase: string) => void) {
 
   /** Start only after an explicit tap and after the previous native recognizer has finished closing. */
   const start = useCallback(async () => {
-    if (active.current || Platform.OS === 'web') return;
+    if (!alive.current || active.current || Platform.OS === 'web') return;
     const token = ++generation.current;
+    lease.current = claimVoiceSession(cancel);
     active.current = true; transcript.current = ''; setError(null); setListening(true);
     try {
-      await queueMicrophone(async () => {
-        if (!alive.current || !active.current || generation.current !== token) return;
+      await queueVoiceOperation(async () => {
+        if (!alive.current || !active.current || generation.current !== token || !ownsVoiceSession(lease.current)) return;
         if (!await Voice.isAvailable()) throw new Error('Speech recognition unavailable');
-        if (!alive.current || !active.current || generation.current !== token) return;
+        if (!alive.current || !active.current || generation.current !== token || !ownsVoiceSession(lease.current)) return;
         /** Ignore callbacks from a recording that was cancelled or replaced. */
-        const current = () => alive.current && active.current && generation.current === token;
+        const current = () => alive.current && active.current && generation.current === token && ownsVoiceSession(lease.current);
         Voice.onSpeechResults = (event) => { if (current()) transcript.current = event.value?.[0] ?? ''; };
         Voice.onSpeechEnd = () => { if (current()) completeSoon(); };
         Voice.onSpeechError = () => {
@@ -85,7 +81,7 @@ export function useVoiceRecognition(onTranscript: (phrase: string) => void) {
         if (!current()) { await Voice.cancel(); return; }
         timeout.current = setTimeout(() => {
           if (!current()) return;
-          void queueMicrophone(() => Voice.stop()).then(completeSoon).catch(() => { if (current()) { cancel(); setError('Could not finish listening. Type a command or try again.'); } });
+          void queueVoiceOperation(() => Voice.stop()).then(completeSoon).catch(() => { if (current()) { cancel(); setError('Could not finish listening. Type a command or try again.'); } });
         }, 10000);
       });
     } catch {
@@ -99,7 +95,7 @@ export function useVoiceRecognition(onTranscript: (phrase: string) => void) {
   const stop = useCallback(() => {
     if (!active.current) return;
     const token = generation.current;
-    void queueMicrophone(() => Voice.stop()).then(completeSoon).catch(() => { if (alive.current && generation.current === token) { cancel(); setError('Could not finish listening. Try typing your command.'); } });
+    void queueVoiceOperation(() => Voice.stop()).then(completeSoon).catch(() => { if (alive.current && generation.current === token) { cancel(); setError('Could not finish listening. Try typing your command.'); } });
   }, [cancel, completeSoon]);
 
   useEffect(() => {
@@ -110,9 +106,6 @@ export function useVoiceRecognition(onTranscript: (phrase: string) => void) {
     return () => {
       alive.current = false;
       cancel(); subscription.remove();
-      if (Platform.OS !== 'web') {
-        void queueMicrophone(async () => { Voice.removeAllListeners(); await Voice.destroy(); }).catch(() => undefined);
-      }
     };
   }, [cancel]);
   return { listening, error, start, stop, cancel };

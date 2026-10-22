@@ -28,16 +28,16 @@ describe("useful model card readings", () => {
     },
   );
 
-  it.each(["speaker", "tv"] as const)(
+  it.each([["speaker", "Ready"], ["tv", "On"]] as const)(
     "shows the actual %s volume setting",
-    (kind) => {
+    (kind, status) => {
       expect(
         deviceCardReading(device(kind), {
           on: true,
           level: 0,
           settings: { volume: 43 },
         }),
-      ).toEqual({ value: "43%", caption: "Volume · On" });
+      ).toEqual({ value: "43%", caption: `Volume · ${status}` });
     },
   );
 
@@ -85,14 +85,17 @@ describe("useful model card readings", () => {
       }).value,
     ).toBe("—");
     expect(
+      deviceCardReading(device("air"), { on: true, level: 0 }).caption,
+    ).toContain("Simulation sample");
+  });
+
+  it("uses the speaker's safe volume preference without implying playback", () => {
+    expect(
       deviceCardReading(device("speaker"), {
         on: true,
         level: 0,
         settings: { volume: "unknown" },
-      }).value,
-    ).toBe("—");
-    expect(
-      deviceCardReading(device("air"), { on: true, level: 0 }).caption,
-    ).toContain("Simulation sample");
+      }),
+    ).toEqual({ value: "28%", caption: "Volume · Ready" });
   });
 });

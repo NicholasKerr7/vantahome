@@ -40,6 +40,7 @@ type DeviceProps = Pick<
   | 'access'
   | 'reducedMotion'
   | 'onSelectDevice'
+  | 'interactionDisabled'
 >;
 const SYMBOLS: Record<string, string> = {
   light: '✧',
@@ -324,12 +325,14 @@ export const Fixture = memo(function Fixture({
   reducedMotion,
   onSelectDevice,
   canAnimate,
+  interactionDisabled = false,
 }: {
   device: DeviceDefinition;
   state: DeviceState;
   reducedMotion: boolean;
   onSelectDevice: (id: string) => void;
   canAnimate: RefObject<boolean>;
+  interactionDisabled?: boolean;
 }) {
   const geometry = getDeviceFixtureGeometry(device);
   const parts = useMemo(
@@ -340,7 +343,7 @@ export const Fixture = memo(function Fixture({
     <group
       position={device.position}
       rotation={device.rotation}
-      onClick={(event) => {
+      onClick={interactionDisabled ? undefined : (event) => {
         event.stopPropagation();
         onSelectDevice(device.id);
       }}
@@ -374,6 +377,7 @@ export function Devices({
   selectedDevice,
   quickDeviceId,
   hotspotControlMode = 'quick',
+  interactionDisabled = false,
   access = FULL_SCENE_ACCESS,
   reducedMotion,
   onSelectDevice,
@@ -404,7 +408,7 @@ export function Devices({
         const state = readDevice(deviceStates, device.id);
         const hotspot = hotspotPresentation(device, state);
         const showHotspot =
-          device.roomId === roomId && device.id !== 'entry-gate';
+          !interactionDisabled && device.roomId === roomId && device.id !== 'entry-gate';
         return (
           <group key={device.id} position={[0, elevation, 0]}>
             <Fixture
@@ -413,6 +417,7 @@ export function Devices({
               reducedMotion={reducedMotion}
               onSelectDevice={onSelectDevice}
               canAnimate={canAnimate}
+              interactionDisabled={interactionDisabled}
             />
             {showHotspot && (
               <Hotspot

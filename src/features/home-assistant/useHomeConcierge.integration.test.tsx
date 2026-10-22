@@ -6,6 +6,7 @@ import { virtualSceneHome } from '../scenes/sceneTestFixtures';
 import { createDefaultSimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { conciergeAvailability, requestConcierge } from './conciergeService';
 import { useHomeConcierge } from './useHomeConcierge';
+import { useSimulationControls } from '../three-d-home/useSimulationControls';
 
 // Exercise the actual simulation hook, client, session and persistence together;
 // only the external cloud boundary and native storage adapter are substituted.
@@ -146,5 +147,29 @@ test('discards a late storage retry after switching households and uses only the
   expect(conciergeAvailability).toHaveBeenCalledTimes(1);
   expect(jest.mocked(conciergeAvailability).mock.calls[0][0].homeId).toBe(currentHomeId);
   expect(requestConcierge).not.toHaveBeenCalled();
+  unmount();
+});
+
+test('a scoped preview uses real hydrated controls without writing a scene or changing the saved simulation', async () => {
+  const { result, unmount } = renderHook(() => ({
+    assistant: useHomeConcierge({ roomId: 'registry-room:living' }), controls: useSimulationControls(),
+  }));
+  await settle();
+  act(() => { result.current.controls.client.setSetting('living-light', 'brightness', 37); });
+  await settle();
+  jest.mocked(requestConcierge).mockResolvedValue({ title: 'A calm room', answer: 'Review a brightness change.',
+    deviceIds: ['registry-device:living-light'], scene: { name: 'Calm room', explanation: 'A softer setting.',
+      actions: [{ deviceId: 'registry-device:living-light', values: { brightness: 25 } }] } });
+  await act(async () => { await result.current.assistant.ask('Draft only Living room brightness at 25%'); });
+  const before = JSON.stringify(result.current.controls.client.getSnapshot());
+  jest.mocked(AsyncStorage.setItem).mockClear();
+  const preview = result.current.assistant.preparePreview()!;
+  expect(preview.context.devices.every((device) => device.roomId === 'registry-room:living')).toBe(true);
+  expect(preview.snapshot.state.deviceStates['living-light'].level).toBe(37);
+  preview.snapshot.state.deviceStates['living-light'].level = 25;
+  await settle();
+  expect(JSON.stringify(result.current.controls.client.getSnapshot())).toBe(before);
+  expect(useHomeStore.getState().scenes).toEqual([]);
+  expect(AsyncStorage.setItem).not.toHaveBeenCalled();
   unmount();
 });

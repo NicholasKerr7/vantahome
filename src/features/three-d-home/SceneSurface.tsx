@@ -3,7 +3,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet } from 'react-native';
 import { theme } from '../../theme/theme';
 import { WebView } from 'react-native-webview';
-import { consumeHomeChromeCommand, isAllowedSceneNavigation, isCurrentSceneDocument, parseSceneStatus, type SceneSurfaceProps } from './protocol';
+import { consumeHomeChromeCommand, consumeScenePreviewCommand, isAllowedSceneNavigation, isCurrentSceneDocument, parseSceneStatus, type SceneSurfaceProps } from './protocol';
+import { nativeScenePreviewCommandScript, parseScenePreviewReport } from '../../../packages/home-scene/src/scenePreviewProtocol';
 import { prepareNativeScene } from './prepareNativeScene';
 import { NativeWeatherBroker, nativeWeatherResponseScript } from './nativeWeather';
 import { nativeSimulationSnapshotScript } from './simulationSession';
@@ -24,13 +25,14 @@ import { homeEditorScope } from '../home-shell/homeEditorScope';
 const ignoreSaveStatus = () => undefined;
 
 /** Load a packaged simulation without sharing cookies, tokens or real device commands. */
-export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onChromeSnapshot, chromeCommand, previewCommand, onPreviewReport, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
   const [uri, setUri] = useState<string | null>(null);
   const source = useMemo(() => uri ? { uri } : undefined, [uri]);
   const webView = useRef<WebView>(null);
   const weather = useRef<NativeWeatherBroker | null>(null);
   const documentReady = useRef(false);
   const consumedCommand = useRef(0);
+  const consumedPreview = useRef(0);
   const publishedPreferences = useRef<string | null>(null);
   const publishPreferences = useRef<(force?: boolean) => void>(() => undefined);
   /** Stable delivery callbacks let authorization reconnect without rebuilding the WebView. */
@@ -88,6 +90,12 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     else if (message) webView.current?.injectJavaScript(nativeHomeChromeCommandScript(message));
   }, [chromeCommand, suspended, allowChromePreferencesWhileSuspended, chromePreferences.ready, chromePreferences.save, simulation]);
   useEffect(() => {
+    const message = consumeScenePreviewCommand(previewCommand, consumedPreview, {
+      ready: documentReady.current, canNavigate: simulation.current?.canNavigate() === true, suspended,
+    });
+    if (message) webView.current?.injectJavaScript(nativeScenePreviewCommandScript(message));
+  }, [previewCommand, suspended, simulation]);
+  useEffect(() => {
     const broker = new NativeWeatherBroker((response) => {
       webView.current?.injectJavaScript(nativeWeatherResponseScript(response));
     }, { location: weatherConfiguration.current.location });
@@ -113,6 +121,11 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     allowUniversalAccessFromFileURLs={false}
     onShouldStartLoadWithRequest={(request) => isAllowedSceneNavigation(request.url, uri)}
     onMessage={(event) => {
+      const preview = parseScenePreviewReport(event.nativeEvent.data);
+      if (preview) {
+        if (isCurrentSceneDocument(event.nativeEvent.url, uri) && simulation.current?.canNavigate()) onPreviewReport?.(preview);
+        return;
+      }
       const chrome = parseHomeChromeSnapshot(event.nativeEvent.data);
       if (chrome) {
         if (isCurrentSceneDocument(event.nativeEvent.url, uri) && simulation.current?.canNavigate()) onChromeSnapshot?.(chrome.snapshot);

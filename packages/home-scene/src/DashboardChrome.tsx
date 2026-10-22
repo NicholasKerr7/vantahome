@@ -79,7 +79,7 @@ export function DashboardFloorSwitch() {
 }
 
 /** Page through every room instead of growing a vertically scrolling sidebar. */
-export function DashboardRooms({ onBrowse }: { onBrowse: () => void }) {
+export function DashboardRooms({ onBrowse, inert = false }: { onBrowse: () => void; inert?: boolean }) {
   const floor = useHomeStore((state) => state.floor);
   const roomId = useHomeStore((state) => state.roomId);
   const setRoom = useHomeStore((state) => state.setRoom);
@@ -88,25 +88,25 @@ export function DashboardRooms({ onBrowse }: { onBrowse: () => void }) {
   const [requested, setRequested] = useState({ roomId, floor, page: 0 });
   const selectedPage = Math.floor(Math.max(0, rooms.findIndex((room) => room.id === roomId)) / 6);
   const page = paginateItems(rooms, requested.roomId === roomId && requested.floor === floor ? requested.page : selectedPage, 6);
-  return <aside className="dashboard-room-rail" aria-label="Room navigation"><div className="dashboard-rail-title"><span className="eyebrow">YOUR SPACE</span><h2>Seaview House<span className="small-dot" /></h2></div><DashboardFloorSwitch /><div className="dashboard-section-label"><span>{canExploreInteriorLayout(access) ? 'Rooms & grounds' : 'Your rooms & property'}</span><span>{rooms.length}</span></div><HorizontalCardScroller className="dashboard-room-list" page={page.page} count={page.pages} pageSize={6} columns={1} onChange={(next) => setRequested({ roomId, floor, page: next })} label="Room navigation cards" resetKey={`${roomId}:${floor}:${rooms.map((room) => room.id).join('|')}`}>{rooms.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} data-room-id={room.id} aria-current={roomId === room.id ? 'true' : undefined} onClick={() => setRoom(room.id)}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon strokeWidth={1.5} /></CinematicArtwork><span className="dashboard-room-name">{room.name}{!canViewSceneRoom(access, room.id) && !room.outdoor ? <small className="room-layout-label">Layout only</small> : null}</span>{roomId === room.id ? <span className="dashboard-selected-dot" /> : null}</button>; })}</HorizontalCardScroller><div className="dashboard-pager" aria-label="Room pages"><button aria-label="Previous room page" disabled={page.page === 0} onClick={() => setRequested({ roomId, floor, page: page.page - 1 })}><ChevronLeft size={17} /></button><span data-room-page role="status">{page.page + 1} / {page.pages}</span><button aria-label="Next room page" disabled={page.page + 1 === page.pages} onClick={() => setRequested({ roomId, floor, page: page.page + 1 })}><ChevronRight size={17} /></button></div><button className="dashboard-browse" onClick={onBrowse}><Grid2X2 size={17} />All rooms<ChevronRight size={15} /></button></aside>;
+  return <aside inert={inert} className="dashboard-room-rail" aria-label="Room navigation"><div className="dashboard-rail-title"><span className="eyebrow">YOUR SPACE</span><h2>Seaview House<span className="small-dot" /></h2></div><DashboardFloorSwitch /><div className="dashboard-section-label"><span>{canExploreInteriorLayout(access) ? 'Rooms & grounds' : 'Your rooms & property'}</span><span>{rooms.length}</span></div><HorizontalCardScroller className="dashboard-room-list" page={page.page} count={page.pages} pageSize={6} columns={1} onChange={(next) => setRequested({ roomId, floor, page: next })} label="Room navigation cards" resetKey={`${roomId}:${floor}:${rooms.map((room) => room.id).join('|')}`}>{rooms.map((room) => { const Icon = roomIcon(room.id); return <button key={room.id} data-room-id={room.id} aria-current={roomId === room.id ? 'true' : undefined} onClick={() => setRoom(room.id)}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon strokeWidth={1.5} /></CinematicArtwork><span className="dashboard-room-name">{room.name}{!canViewSceneRoom(access, room.id) && !room.outdoor ? <small className="room-layout-label">Layout only</small> : null}</span>{roomId === room.id ? <span className="dashboard-selected-dot" /> : null}</button>; })}</HorizontalCardScroller><div className="dashboard-pager" aria-label="Room pages"><button aria-label="Previous room page" disabled={page.page === 0} onClick={() => setRequested({ roomId, floor, page: page.page - 1 })}><ChevronLeft size={17} /></button><span data-room-page role="status">{page.page + 1} / {page.pages}</span><button aria-label="Next room page" disabled={page.page + 1 === page.pages} onClick={() => setRequested({ roomId, floor, page: page.page + 1 })}><ChevronRight size={17} /></button></div><button className="dashboard-browse" onClick={onBrowse}><Grid2X2 size={17} />All rooms<ChevronRight size={15} /></button></aside>;
 }
 
 /** Portrait navigation gives the model its own full-width canvas. */
-export function DashboardRoomBar({ onRooms }: { onRooms: () => void }) {
+export function DashboardRoomBar({ onRooms, inert = false }: { onRooms: () => void; inert?: boolean }) {
   const roomId = useHomeStore((state) => state.roomId);
   const room = getRoom(roomId);
   const Icon = roomIcon(roomId);
-  return <div className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon /></CinematicArtwork><span className="dashboard-room-choice"><small>EXPLORE YOUR HOME</small><span>{room.name}</span></span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
+  return <div inert={inert} className="dashboard-room-bar"><button aria-label="Choose a room" className="dashboard-room-select" onClick={onRooms}><CinematicArtwork artwork={roomArtwork(room)} presentation="thumbnail"><Icon /></CinematicArtwork><span className="dashboard-room-choice"><small>EXPLORE YOUR HOME</small><span>{room.name}</span></span><ChevronDown size={15} /></button><DashboardFloorSwitch /></div>;
 }
 
 /** Fit saved scene shortcuts to a clean scrolling row with native touch and keyboard browsing. */
-export function DashboardScenes() {
+export function DashboardScenes({ inert = false }: { inert?: boolean } = {}) {
   const { catalog, status, runScene, retry } = useSceneCatalog();
   const { rowRef, page, pageCount, pageSize, goToPage, onFocusCapture, onBlurCapture, onKeyDown } = useSceneCardPage(catalog.scenes);
   const keyboardHintId = useId();
   const paged = pageCount > 1;
   const icons = [Sun, Sparkles, Moon, Home];
-  return <section ref={rowRef} onFocusCapture={onFocusCapture} onBlurCapture={onBlurCapture} onKeyDown={onKeyDown} tabIndex={-1} className="dashboard-scenes" aria-label="Home scenes">
+  return <section inert={inert} ref={rowRef} onFocusCapture={onFocusCapture} onBlurCapture={onBlurCapture} onKeyDown={onKeyDown} tabIndex={-1} className="dashboard-scenes" aria-label="Home scenes">
     <div className="dashboard-scenes-label"><Sparkles size={16} /><span>Scenes</span></div>
     {catalog.scenes.length > 0 && <HorizontalCardScroller className="preset-grid" page={page} count={pageCount} pageSize={pageSize} columns={pageSize} onChange={goToPage} label="Scene cards" resetKey={`${pageSize}:${catalog.scenes.map((scene) => scene.id).join('|')}`}>
       {catalog.scenes.map((scene) => {
@@ -124,9 +124,9 @@ export function DashboardScenes() {
 }
 
 /** Put room and device browsing within thumb reach without another page. */
-export function DashboardDock({ onRooms, onDevices }: { onRooms: () => void; onDevices: () => void }) {
+export function DashboardDock({ onRooms, onDevices, inert = false }: { onRooms: () => void; onDevices: () => void; inert?: boolean }) {
   const states = useHomeStore((state) => state.deviceStates);
   const access = useHomeStore((state) => state.access);
   const active = DEVICES.filter((device) => canViewSceneDevice(access, device.id) && states[device.id]?.on).length;
-  return <nav className="dashboard-dock" aria-label="Home navigation"><button onClick={onRooms}><Layers3 size={18} /><span>Rooms</span></button><div><span className="status-dot" /><span>{active} devices active</span></div><button onClick={onDevices}><Grid2X2 size={18} /><span>Devices</span></button></nav>;
+  return <nav inert={inert} className="dashboard-dock" aria-label="Home navigation"><button onClick={onRooms}><Layers3 size={18} /><span>Rooms</span></button><div><span className="status-dot" /><span>{active} devices active</span></div><button onClick={onDevices}><Grid2X2 size={18} /><span>Devices</span></button></nav>;
 }
