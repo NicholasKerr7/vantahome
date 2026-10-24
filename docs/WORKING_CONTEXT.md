@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-23**. Read this before rediscovering the project.
+Last maintained: **2026-10-24**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Camera Center — October 23 / Preview 92 built; installation and physical acceptance pending
+## Camera Center — October 24 / Preview 92 installed and launched; physical acceptance pending
 
 - The user authorized implementation from the saved camera plan, simulation first.
   **More → House → Cameras** now has Cameras / Activity, phone hero + touch strip,
@@ -88,9 +88,16 @@ defects from ideas or untested risks.
   exact 32,193,340-byte scene hash verified; production source metadata restored.
   `work/preview92-verification.json` records the package; build logs are
   `work/camera-center-preview92-{build,xcodebuild}.log`. Existing profile expires
-  October 27. Preview 91 remains the last installed build; no Camera Center
-  iPhone interaction acceptance is claimed. Physical iPad and Android checks
-  remain deferred. Real media authorization/cache/revocation,
+  October 27. On October 24, the existing package was reverified and updated
+  in place on the iPhone 16 Pro Max; launch succeeded and Apple inventory confirms
+  **1.0.0 (92)**, superseding Preview 91. No rebuild, uninstall or data reset was
+  needed. Receipts: `work/preview92-{install,launch,installed-app}.json`;
+  reverification: `work/preview92-install-verification.log`. The first physical
+  check has been requested: overview fit / camera-strip swipe, Expand → All
+  cameras, Controls, and Locate → matching hotspot → Watch. No result yet;
+  favorites/settings reopening retention is the next check. Camera Center
+  physical acceptance remains pending; physical iPad and Android checks remain
+  deferred. Real media authorization/cache/revocation,
   recorded timeline, freshness, talk, hardware integration and legacy recognition
   coupling remain future work; no connected-camera safety claim is implied.
 
