@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Camera Center — October 24 / Preview 92 installed and launched; physical acceptance pending
+## Camera Center — October 24 / Preview 92 iPhone layout/navigation accepted; persistence pending
 
 - The user authorized implementation from the saved camera plan, simulation first.
   **More → House → Cameras** now has Cameras / Activity, phone hero + touch strip,
@@ -92,12 +92,15 @@ defects from ideas or untested risks.
   in place on the iPhone 16 Pro Max; launch succeeded and Apple inventory confirms
   **1.0.0 (92)**, superseding Preview 91. No rebuild, uninstall or data reset was
   needed. Receipts: `work/preview92-{install,launch,installed-app}.json`;
-  reverification: `work/preview92-install-verification.log`. The first physical
-  check has been requested: overview fit / camera-strip swipe, Expand → All
-  cameras, Controls, and Locate → matching hotspot → Watch. No result yet;
-  favorites/settings reopening retention is the next check. Camera Center
-  physical acceptance remains pending; physical iPad and Android checks remain
-  deferred. Real media authorization/cache/revocation,
+  reverification: `work/preview92-install-verification.log`. The user confirmed
+  comfortable fit without vertical scrolling and smooth camera-strip swiping,
+  Expand → All cameras, Controls, and Locate → matching hotspot → Watch on the
+  iPhone. The user deferred the next physical check: favorite Driveway, change its Night
+  preference, wait for the local save acknowledgement, then fully close/reopen
+  under the same account and verify both values. Sample Activity, background/
+  privacy and broader role scenarios have no separate physical acceptance yet.
+  Physical iPad and Android checks remain deferred. Real media authorization/
+  cache/revocation,
   recorded timeline, freshness, talk, hardware integration and legacy recognition
   coupling remain future work; no connected-camera safety claim is implied.
 
