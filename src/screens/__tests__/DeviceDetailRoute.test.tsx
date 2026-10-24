@@ -7,6 +7,9 @@ import { SimulationControlClient } from '../../features/three-d-home/simulationC
 import { useHomeStore, type Device } from '../../store/useHomeStore';
 import DeviceDetailRoute from '../DeviceDetailRoute';
 
+let mockFocused = true;
+jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useIsFocused: () => mockFocused }));
+
 jest.mock('../../config/runtimeMode', () => ({ runtimePolicy: { mode: 'demo', allowUnauthenticatedDemo: true } }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
 jest.mock('@expo/vector-icons/Ionicons', () => require('react-native').View);
@@ -31,7 +34,7 @@ function sheetProps() {
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.clearAllMocks(); mockFocused = true;
   useHomeStore.setState({ ...seed, modelCatalogVersion: 1, accountUserId: null, authenticatedUserId: null, accountHomeId: null, activeHomeId: null,
     realtime: { ...seed.realtime, enabled: false, useMqtt: false },
     household: [{ id: 'owner', name: 'Owner', role: 'Owner', status: 'home' }], activeMemberId: 'owner', memberPermissionOverrides: [],
@@ -42,7 +45,7 @@ afterEach(() => useHomeStore.setState(seed));
 
 /** Mount the real route gate with a small navigation spy. */
 function renderRoute(deviceId: string) {
-  const navigation = { goBack: jest.fn(), setParams: jest.fn() };
+  const navigation = { goBack: jest.fn(), setParams: jest.fn(), dispatch: jest.fn() };
   return { ...render(<DeviceDetailRoute navigation={navigation as never} route={{ key: 'detail', name: 'DeviceDetail', params: { deviceId } }} />), navigation };
 }
 
@@ -157,4 +160,17 @@ test.each([true, false])('only simulated authenticated cameras use the shared co
     expect(screen.getByText('Native device controls')).toBeTruthy();
     expect(DeviceControlsSheet).not.toHaveBeenCalled();
   }
+});
+
+
+test('Watch opens the same registry camera and hides the native controls modal while away', () => {
+  const screen = renderRoute('entry-camera');
+  act(() => sheetProps().onWatchCamera?.('entry-camera'));
+  expect(screen.navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { name: 'CameraViewer', params: { deviceId: 'entry-camera' }, pop: true } }));
+  mockFocused = false;
+  screen.rerender(<DeviceDetailRoute navigation={screen.navigation as never} route={{ key: 'detail', name: 'DeviceDetail', params: { deviceId: 'entry-camera' } }} />);
+  expect(screen.queryByText('House inspector')).toBeNull();
+  mockFocused = true;
+  screen.rerender(<DeviceDetailRoute navigation={screen.navigation as never} route={{ key: 'detail', name: 'DeviceDetail', params: { deviceId: 'entry-camera' } }} />);
+  expect(screen.getByText('House inspector')).toBeTruthy();
 });

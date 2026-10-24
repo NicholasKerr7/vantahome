@@ -1,3 +1,5 @@
+import { isEmbeddedScene } from './embeddedHost';
+import { requestCameraWatch } from './requestCameraWatch';
 import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useEffect, useRef } from 'react';
 import { ArrowUpRight, Power, X } from 'lucide-react';
@@ -72,7 +74,8 @@ function QuickDeviceControlsContents({ device, current, onClose, onFullControls 
     <p id="quick-device-state" className={`quick-device-state ${presentation.active ? 'is-on' : ''}`} aria-live="polite"><span aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}<span className="quick-device-value">{range?.text ?? (isMonitor(device.kind) ? 'Demo readings' : '')}</span></p>
     {controllable ? <PrimaryDeviceRange device={device} current={current} location="quick" /> : <p className="device-hint">View only</p>}
     <div className="quick-device-actions">
-      <button ref={power} type="button" className="quick-device-toggle" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span>{action.isSwitch ? <span className="quick-device-switch" aria-hidden="true"><span /></span> : null}</button>
+      {device.kind === 'camera' && isEmbeddedScene() && <button ref={power} type="button" className="quick-device-full" aria-label="Watch camera demo preview" onClick={() => { requestCameraWatch(deviceId); onClose(false); }}><ArrowUpRight size={17} aria-hidden="true" /><span>Watch</span></button>}
+      {!(device.kind === 'camera' && isEmbeddedScene()) && <button ref={power} type="button" className="quick-device-toggle" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(deviceId)}><ActionIcon size={17} aria-hidden="true" /><span>{action.label}</span>{action.isSwitch ? <span className="quick-device-switch" aria-hidden="true"><span /></span> : null}</button>}
       <button type="button" className="quick-device-full" onClick={() => onFullControls(deviceId)}>Full controls<ArrowUpRight size={16} aria-hidden="true" /></button>
     </div>
   </section>;

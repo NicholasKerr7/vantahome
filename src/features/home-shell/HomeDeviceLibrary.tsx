@@ -1,3 +1,6 @@
+import { getCameraCenterAccess } from '../cameras/cameraCenterModel';
+import { useNavigation } from '@react-navigation/native';
+import { openCameraViewer, resolveCameraDeviceId } from '../cameras/cameraNavigation';
 import React, { useMemo, useState } from "react";
 import { Modal, StyleSheet, Text, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
@@ -18,6 +21,8 @@ export default function HomeDeviceLibrary({
 }: {
   onClose: () => void;
 }) {
+  const navigation = useNavigation();
+  const cameraIdentity = useHomeStore((state) => getCameraCenterAccess(state).identityKey);
   const allowed = useHomeStore((state) => resolveModelSceneAccess(state).roomIds.length > 0);
   const libraryIds = useHomeStore(useShallow(selectModelLibraryDeviceIds));
   const snapshot = useSimulationControls(allowed);
@@ -56,6 +61,12 @@ export default function HomeDeviceLibrary({
       allowedDeviceIds={allowedDeviceIds}
       motionAllowed={motionAllowed}
       onClose={onClose}
+      onWatchCamera={(id) => {
+        const state = useHomeStore.getState();
+        if (getCameraCenterAccess(state).identityKey !== cameraIdentity) return;
+        const registryId = resolveCameraDeviceId(state, id);
+        if (registryId && openCameraViewer(navigation.dispatch, registryId)) onClose();
+      }}
       onSelect={(id) => {
         if (selectModelLibraryDeviceIds(useHomeStore.getState()).includes(id)) setDeviceId(id);
       }}

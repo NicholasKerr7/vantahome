@@ -1,3 +1,4 @@
+import { getDevice } from './data';
 export const HOME_CHROME_CHANNEL = 'vantahome-home-chrome';
 const MAX_MESSAGE_LENGTH = 1_024;
 
@@ -18,6 +19,7 @@ export interface HomeChromeSnapshot {
 export type HomeChromeCommand =
   | { type: 'open-environment' }
   | { type: 'open-preferences' }
+  | { type: 'locate-camera'; deviceId: string }
   | { type: 'set-motion'; disabled: boolean }
   | { type: 'set-tour'; enabled: boolean };
 export type HomeChromeSnapshotMessage = { channel: typeof HOME_CHROME_CHANNEL; version: 1; type: 'snapshot'; snapshot: HomeChromeSnapshot };
@@ -64,6 +66,7 @@ export function parseHomeChromeCommand(input: unknown): HomeChromeCommandMessage
     || typeof message.id !== 'number' || !Number.isSafeInteger(message.id) || message.id <= 0) return null;
   const command = message.command;
   if (hasKeys(command, ['type']) && (command.type === 'open-environment' || command.type === 'open-preferences')) return message as HomeChromeCommandMessage;
+  if (hasKeys(command, ['type', 'deviceId']) && command.type === 'locate-camera' && typeof command.deviceId === 'string' && getDevice(command.deviceId)?.kind === 'camera') return message as HomeChromeCommandMessage;
   if (hasKeys(command, ['type', 'disabled']) && command.type === 'set-motion' && typeof command.disabled === 'boolean') return message as HomeChromeCommandMessage;
   if (hasKeys(command, ['type', 'enabled']) && command.type === 'set-tour' && typeof command.enabled === 'boolean') return message as HomeChromeCommandMessage;
   return null;

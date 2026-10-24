@@ -500,3 +500,30 @@ test('web preview reports follow the current frame window rather than an origin 
   expect(onPreviewReport).toHaveBeenCalledWith(report);
   screen.unmount();
 });
+
+test.each(['native', 'web'] as const)('%s camera Watch checks document ownership, foreground and current session', async (platform) => {
+  const Component = platform === 'native' ? NativeSceneSurface : WebSceneSurface;
+  const onCameraWatch = jest.fn();
+  const onStatus = jest.fn();
+  const request = { channel: 'vantahome-navigation', version: 1, type: 'camera-watch', deviceId: 'entry-camera' };
+  const screen = render(<Component onStatus={onStatus} onCameraWatch={onCameraWatch} />, {
+    createNodeMock: (element) => element.type === 'iframe' ? { contentWindow: mockFrameWindow } : null,
+  });
+  await act(async () => { await Promise.resolve(); });
+  /** The exact current scene document is the only allowed sender. */
+  function send(owned = true): void {
+    if (platform === 'native') mockNativeMessage({ nativeEvent: { data: JSON.stringify(request), url: owned ? 'file:///cache/index.html' : 'about:blank' } });
+    else mockWebMessage({ source: owned ? mockFrameWindow : {}, data: request } as unknown as MessageEvent<unknown>);
+  }
+  act(() => send(false));
+  expect(onCameraWatch).not.toHaveBeenCalled();
+  act(() => send());
+  expect(onCameraWatch).toHaveBeenCalledWith('entry-camera');
+  screen.rerender(<Component suspended onStatus={onStatus} onCameraWatch={onCameraWatch} />);
+  act(() => send());
+  expect(onCameraWatch).toHaveBeenCalledTimes(1);
+  screen.rerender(<Component onStatus={onStatus} onCameraWatch={onCameraWatch} />);
+  mockCanNavigate.mockReturnValue(false);
+  act(() => send());
+  expect(onCameraWatch).toHaveBeenCalledTimes(1);
+});

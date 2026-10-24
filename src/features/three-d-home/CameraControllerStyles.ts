@@ -27,6 +27,8 @@ export const cameraControllerStyles = StyleSheet.create({
   sampleDetail: { color: theme.colors.subtext, fontSize: 9 },
   artwork: { width: '100%', height: 174 },
   artworkCompact: { height: 136 },
+  // Make room for Watch on short phones without shrinking the tactile controls.
+  artworkCondensed: { height: 92 },
   monitorFooter: { paddingHorizontal: 12, paddingVertical: 9, gap: 4 },
   status: { color: theme.colors.text, fontSize: 13, fontWeight: '600' },
   event: { color: theme.colors.subtext, fontSize: 10, lineHeight: 15 },

@@ -4,14 +4,14 @@ import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from 
 import { cameraControllerStyles as styles } from './CameraControllerStyles';
 
 /** A static architectural illustration suggests a monitor without implying a real camera location or feed. */
-export function CameraControllerArtwork({ nightVision, compact }: { nightVision: boolean; compact: boolean }) {
+export function CameraControllerArtwork({ nightVision, compact, condensed = false }: { nightVision: boolean; compact: boolean; condensed?: boolean }) {
   const identity = useId().replace(/:/g, '');
   const sky = `vision-sky-${identity}`;
   const ground = `vision-ground-${identity}`;
   const glass = `vision-glass-${identity}`;
   const accent = nightVision ? '#C2C8E0' : '#D0A1F3';
   return <View testID="camera-sample-artwork" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-    style={[styles.artwork, compact && styles.artworkCompact]}>
+    style={[styles.artwork, compact && styles.artworkCompact, condensed && styles.artworkCondensed]}>
     <Svg width="100%" height="100%" viewBox="0 0 320 174" preserveAspectRatio="xMidYMid slice">
       <Defs>
         <LinearGradient id={sky} x1="0" y1="0" x2="0" y2="1">

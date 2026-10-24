@@ -33,6 +33,7 @@
 .camera-status strong { font-size: 13px; font-weight: 500; color: #F0E5F8; }
 .camera-status span { font-size: 9px; color: #BCACCC; }
 .camera-console .camera-arm { min-width: 86px; }
+.camera-watch { width: 100%; }
 .camera-preferences { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .camera-preferences button { min-height: 56px; padding-inline: 5px; gap: 5px; }
 .camera-preferences button > span { display: grid; gap: 3px; text-align: left; font-size: 11px; }
@@ -49,9 +50,10 @@
 .camera-return { display: flex; justify-content: center; align-items: center; min-height: 44px; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
 /* Fit the monitor to the available host space before reducing control spacing. */
 @container camera-stage (max-height: 570px) { .camera-console { padding: 14px; gap: 12px; } .camera-monitor { height: clamp(125px, calc(100cqh - 288px), 238px); } }
+@container camera-stage (max-height: 570px) { .camera-workspace[data-camera-watch="true"] .camera-monitor { height: clamp(90px, calc(100cqh - 342px), 238px); } }
 @container camera-stage (max-height: 390px) {
   .camera-console { grid-template-columns: minmax(0, 1fr) 125px; gap: 8px 12px; padding: 10px; }
-  .camera-top, .camera-preferences, .camera-event { grid-column: 1 / -1; }
+  .camera-top, .camera-preferences, .camera-event, .camera-watch { grid-column: 1 / -1; }
   .camera-monitor { height: 100px; border-radius: 12px; }
   .camera-monitor-top { inset: 7px 6px auto; font-size: 5px; }
   .camera-monitor-top > span:last-child, .camera-monitor-caption, .camera-reticle, .camera-trim { display: none; }

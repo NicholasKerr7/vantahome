@@ -1,3 +1,6 @@
+import { getCameraCenterAccess } from '../features/cameras/cameraCenterModel';
+import { useIsFocused } from '@react-navigation/native';
+import { openCameraViewer, resolveCameraDeviceId } from '../features/cameras/cameraNavigation';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
@@ -35,6 +38,8 @@ export default function DeviceDetailRoute(props: Props) {
 
 /** Reuse the house inspector, including browsing, without falling back to legacy capability cards. */
 function ModeledDeviceDetail({ navigation, modelId, allowedDeviceIds }: Props & { modelId: string; allowedDeviceIds: readonly string[] }) {
+  const focused = useIsFocused();
+  const cameraIdentity = useHomeStore((state) => getCameraCenterAccess(state).identityKey);
   const snapshot = useSimulationControls();
   const motionAllowed = useDecorativeMotion(true);
   const controls = useMemo(() => guardModelDeviceControls(snapshot.client), [snapshot.client]);
@@ -43,8 +48,11 @@ function ModeledDeviceDetail({ navigation, modelId, allowedDeviceIds }: Props & 
     const candidate = Object.entries(selectSimulationDeviceBindings(useHomeStore.getState())).find(([, id]) => id === deviceId);
     if (candidate) navigation.setParams({ deviceId: candidate[0] });
   }
-  return <View style={styles.root}><DeviceControlsSheet deviceId={modelId} client={controls} snapshot={snapshot} allowedDeviceIds={allowedDeviceIds}
-    motionAllowed={motionAllowed} onRetry={snapshot.reconnect} onClose={() => navigation.goBack()} onSelect={selectDevice} /></View>;
+  return <View style={styles.root}>{focused && <DeviceControlsSheet deviceId={modelId} client={controls} snapshot={snapshot} allowedDeviceIds={allowedDeviceIds}
+    onWatchCamera={(id) => { const state = useHomeStore.getState();
+        if (getCameraCenterAccess(state).identityKey !== cameraIdentity) return;
+        const registryId = resolveCameraDeviceId(state, id); if (registryId) openCameraViewer(navigation.dispatch, registryId); }}
+    motionAllowed={motionAllowed} onRetry={snapshot.reconnect} onClose={() => navigation.goBack()} onSelect={selectDevice} />}</View>;
 }
 
 const styles = StyleSheet.create({

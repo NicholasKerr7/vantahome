@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-22**. Read this before rediscovering the project.
+Last maintained: **2026-10-23**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,54 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Camera Center — October 23 / Preview 92 built; installation and physical acceptance pending
+
+- The user authorized implementation from the saved camera plan, simulation first.
+  **More → House → Cameras** now has Cameras / Activity, phone hero + touch strip,
+  tablet portrait hero + tiles, landscape companion views and a paged camera wall.
+  Focused view retains All cameras, Controls and Locate; 3D hotspots and VISION
+  provide Watch. Short screens use named 48px camera choices; normal profiles
+  need no vertical page scrolling. Large text retains contained access.
+- Existing bundled cinematic images are marked **Generated illustration / Demo
+  preview**, not actual property coverage or live footage. Sample Activity shows
+  only the canonical last saved simulation event, no invented capture time or
+  photo. No new player, network media URL, audio permission, dependency, ongoing
+  animation loop or second 3D renderer was added. VISION retains all its extras.
+- Favorites are locally persisted per account/home/member with validated IDs,
+  ordered writes, failure recovery and stale-callback guards. Controls use the
+  existing guarded canonical simulation. Default Member viewing/history remains
+  distinct from management; Guest/Tenant property sharing adds no camera grant.
+- Current account/home verification, role, device/room scope and protected access
+  guard presentation. Guest expiry ticks even while content is inactive. Changed
+  grants reset the protected session; background unmounts it without interrupting
+  the iOS biometric sheet. Mixed catalogs preserve authorized configured viewers;
+  denied/unverified targets cannot fall back to the older media path.
+- Watch/All cameras reuses existing navigation entries. Locate uses a 30-second,
+  one-use intent bound to the current camera scope and waits for the existing
+  renderer. It selects the exact authorized camera, never writes device state,
+  and rejects stale, invalid or preview-conflicting navigation.
+- **174 host tests across 15 suites + 52 scene tests across four suites** pass.
+  App and scene TypeScript, web/native scene builds and bounded review pass.
+  Browser: ten actual-app profiles (320×568 through tablet/desktop preview),
+  focus/wall, ≥48px Center targets and zero page/internal overflow. Favorite and
+  sample-event reopening retention, Controls → Snapshot → Watch → Activity,
+  Locate → exact selected hotspot → Watch pass with zero browser errors.
+  Five VISION profiles fit; a 41px 320×568 regression from the new Watch row was
+  fixed by shrinking only compact decorative artwork. Receipts are
+  `work/camera-center-{host-tests,scene-tests,typecheck,scene-build}.log`,
+  `work/camera-center-browser.{json,log}`, `work/camera-center-*.png` and
+  `work/camera-controller-layout-review.jsonl`.
+- Preview **92 is built and signed**. Signature, staging identity/redirects,
+  packaged illustrations, Camera Center/navigation markers, release assets and
+  exact 32,193,340-byte scene hash verified; production source metadata restored.
+  `work/preview92-verification.json` records the package; build logs are
+  `work/camera-center-preview92-{build,xcodebuild}.log`. Existing profile expires
+  October 27. Preview 91 remains the last installed build; no Camera Center
+  iPhone interaction acceptance is claimed. Physical iPad and Android checks
+  remain deferred. Real media authorization/cache/revocation,
+  recorded timeline, freshness, talk, hardware integration and legacy recognition
+  coupling remain future work; no connected-camera safety claim is implied.
 
 ## AI phase 1 — October 22 / Preview 91 installed and launched; physical checks underway
 
@@ -109,24 +157,16 @@ defects from ideas or untested risks.
   because npm 10 hit an optional-peer Arborist error. The new ExpoSpeech pod is
   14.0.8; no major runtime upgrade was made. No paid AI requests,
   provider/schema changes, deployments or credential changes were made for this
-  slice. Camera Center research, hub/sync and restricted private-pilot boundaries
-  remain unchanged.
+  slice. Camera Center implementation was authorized subsequently (see above);
+  hub/sync and restricted private-pilot boundaries remain unchanged.
 
-## Camera experience research — October 20 / implementation deferred
+## Camera experience research — October 20 / simulation slice now implemented
 
-- User requested research and a durable design, explicitly no coding yet. Read
-  [camera experience design](CAMERA_EXPERIENCE_DESIGN.md) before future camera work.
-- Existing viewing destination is **More → House → Cameras**. VISION is the
-  simulation control console; no real property camera feed is connected/verified.
-- Proposed evolution: Camera Center with Live wall / Activity, focused viewing
-  from 3D hotspots, VISION for controls, responsive layouts and bounded streaming.
-  Frigate/go2rtc on the planned NUC is the preferred direction to validate, with
-  Home Assistant integration; native playback and exact hardware remain unproven.
-- Recorded gaps: missing recording timeline, media-session authorization and
-  revocation, private thumbnail caching, resume/freshness checks and legacy
-  recognition/entry coupling. These are readiness gaps, not observed feed leaks.
-- Documentation only; Preview 90, permissions, app code and hardware scope remain
-  unchanged. Hub/sync and physical iPad deferrals continue.
+The original research-only request was superseded by the explicit Camera Center
+implementation request. The [camera plan](CAMERA_EXPERIENCE_DESIGN.md) retains the
+full intended experience and remaining authenticated-media/hardware gaps. The
+simulation delivery above does not authorize a real-camera pilot or imply that
+Frigate/go2rtc, the planned NUC, or native live playback has been validated.
 
 ## Camera VISION console — October 20 / Preview 90 installed and launched
 

@@ -1,3 +1,5 @@
+import { isEmbeddedScene } from './embeddedHost';
+import { requestCameraWatch } from './requestCameraWatch';
 import { canExploreInteriorLayout, canViewPropertyOverview, canViewSceneRoom, canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useState } from 'react';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Grid2X2, Home, SlidersHorizontal, type LucideIcon } from 'lucide-react';
@@ -68,10 +70,10 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
     <div className="device-focus-actions" data-inline-device-actions="">
       <div className="device-focus-face">
         <div className="device-focus-reading" data-long-reading={reading.value.length > 12} aria-live="polite"><strong>{reading.value}</strong><span>{reading.caption}</span></div>
-        <button type="button" className="dashboard-primary-action" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(device.id)}>
+        {device.kind === 'camera' && isEmbeddedScene() ? <button type="button" className="dashboard-primary-action" aria-label="Watch camera demo preview" onClick={() => requestCameraWatch(device.id)}>Watch</button> : <button type="button" className="dashboard-primary-action" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(device.id)}>
           <span>{action.label}</span>
           {action.isSwitch ? <span className="dashboard-switch-mark" aria-hidden="true"><span /></span> : null}
-        </button>
+        </button>}
       </div>
       {controllable ? <PrimaryDeviceRange device={device} current={current} location="dashboard" /> : <p className="device-hint">View only</p>}
       <button type="button" className="dashboard-full-controls device-focus-details" onClick={() => onFullControls(device.id)}><SlidersHorizontal size={14} aria-hidden="true" /><span>Full controls</span><ArrowUpRight size={14} aria-hidden="true" /></button>

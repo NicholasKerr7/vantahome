@@ -249,8 +249,10 @@ export default function App(): ReactNode {
   /** Native account preferences and the property clock reuse these existing scene destinations. */
   const openEnvironment = useCallback(() => { setShowcase(false); setLibrary('environment'); }, [setShowcase]);
   const openPreferences = useCallback(() => { setShowcase(false); setLibrary('settings'); }, [setShowcase]);
+  /** Locate reveals the existing selected camera instead of retaining an earlier controls dialog. */
+  const revealLocatedCamera = useCallback(() => { setLibrary(null); setSheetDeviceId(null); }, []);
   useHomeChrome({ environment, motionDisabled, systemReducedMotion: prefersReduced, hostSuspended, ready: simulationHydrated,
-    onOpenEnvironment: openEnvironment, onOpenPreferences: openPreferences });
+    onOpenEnvironment: openEnvironment, onOpenPreferences: openPreferences, onLocateCamera: revealLocatedCamera });
 
   /** Remember the actual opening control so every device sheet can return focus. */
   const openFullControls = useCallback((id: DeviceId) => {

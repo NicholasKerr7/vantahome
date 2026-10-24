@@ -13,7 +13,7 @@ import { switchKeyboard } from '../../components/switchKeyboard';
 
 interface Props {
   device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls;
-  disabled: boolean; compact: boolean; fontScale: number; onMore: () => void;
+  disabled: boolean; compact: boolean; fontScale: number; onMore: () => void; onWatch?: () => void;
 }
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -41,7 +41,7 @@ function CameraPreference({ label, title, icon, checked, disabled, largeText, on
 }
 
 /** One accepted local state drives a sample monitor; every mutation uses the existing guarded client. */
-export function CameraController({ device, state, client, disabled, compact, fontScale, onMore }: Props) {
+export function CameraController({ device, state, client, disabled, compact, fontScale, onMore, onWatch }: Props) {
   const camera = getCameraConsolePresentation(device, state);
   const largeText = fontScale > 1.15;
   if (!camera) return null;
@@ -64,7 +64,7 @@ export function CameraController({ device, state, client, disabled, compact, fon
           <View style={[styles.monitorHeader, largeText && styles.monitorHeaderLarge]}>
             <Text style={styles.sampleCaption}>SAMPLE PREVIEW</Text><Text style={styles.sampleDetail}>Architectural illustration</Text>
           </View>
-          <CameraControllerArtwork nightVision={camera.nightVision} compact={compact} />
+          <CameraControllerArtwork nightVision={camera.nightVision} compact={compact} condensed={compact && Boolean(onWatch)} />
           <View style={styles.monitorFooter}>
             <Text accessibilityLiveRegion="polite" style={styles.status}>{camera.status}</Text>
             <Text accessibilityLiveRegion="polite" style={styles.event}>{camera.previewEvent.label}</Text>
@@ -84,6 +84,7 @@ export function CameraController({ device, state, client, disabled, compact, fon
           <CameraPreference label="Camera Motion alerts preference" title="Alerts" icon="notifications-outline" checked={camera.motionAlerts} disabled={disabled} largeText={largeText}
             onPress={() => setPreference('motionAlerts', !camera.motionAlerts)} />
         </View>
+        {onWatch && <View style={styles.row}><CameraKey label="Watch camera demo preview" text="Watch" icon="play-outline" onPress={onWatch} style={[styles.keyWide, styles.keyHorizontal]} /></View>}
         <Text style={styles.feedback}>Simulation · No live feed connected</Text>
         {disabled && <Text style={styles.feedback}>View only · Controls unavailable</Text>}
       </LinearGradient>

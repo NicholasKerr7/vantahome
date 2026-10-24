@@ -1,17 +1,35 @@
 # VantaHome camera experience
 
-Research and design proposal · October 20, 2026 · Source baseline: `410f768`
+Research baseline · October 20, 2026 · Source baseline: `410f768`
+
+Simulation implementation update · October 23, 2026
 
 Build one **Camera Center** within the existing Cameras destination: a camera
 wall for awareness, a focused viewer for watching and talking, and an activity
 timeline for finding what happened. Keep VISION as the camera's controls console.
 The 3D house remains Home; its camera hotspots lead into this same experience.
 
-This proposal records the user's research-only request. It does not implement
-screens, connect cameras, authorize a hardware pilot or change permissions.
-Preview 90 and the existing simulation remain unchanged.
+The user subsequently authorized the simulation Camera Center. Its first slice is
+implemented: **Cameras / Activity**, a phone hero and momentum camera strip,
+portrait/landscape tablet overview, optional paged wall, focused viewer, scoped
+favorites, VISION Controls, and Locate back to the existing 3D hotspot. Watch is
+available from camera hotspots and VISION. No second property renderer is mounted.
 
-## What exists today
+The preview uses existing bundled generated illustrations, identified as visual
+references, not property-camera footage. Activity projects the last saved sample
+event per camera; no photo, video, capture timestamp or recording is fabricated.
+Camera.live, camera.history, camera.manage, current household/room grants and
+protected access stay separate. Account/session/scope changes retire the view;
+Guest expiry updates without an unrelated event, and background removes content.
+Favorites persist locally per account/home/member with ordered writes and retry.
+
+Authorized configured physical cameras keep their existing viewer, including in
+a mixed catalog. No live feed, authenticated media session, microphone/talk,
+recording timeline, export, hardware pilot or permission expansion was added.
+Those portions of the original plan below remain future work. See the
+[working context](WORKING_CONTEXT.md) for build and acceptance evidence.
+
+## Playback foundations from the research baseline
 
 | Path | Current capability |
 | --- | --- |

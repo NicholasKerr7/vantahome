@@ -212,3 +212,12 @@ test('unread or revoked camera state never shows writable defaults', async () =>
     snapshot={{ ...props.snapshot, access: { ...FULL_SCENE_ACCESS, deviceIds: [], controllableDeviceIds: [] } }} />); });
   expect(screen.queryByTestId('camera-tactile-controller')).toBeNull();
 });
+
+test('Watch remains a navigation action for a view-only camera and never mutates arming or preferences', () => {
+  const { screen, props, client } = setup();
+  const onWatch = jest.fn();
+  screen.rerender(<CameraController {...props} disabled onWatch={onWatch} />);
+  fireEvent.press(screen.getByLabelText('Watch camera demo preview'));
+  expect(onWatch).toHaveBeenCalledTimes(1);
+  for (const command of Object.values(client)) expect(command).not.toHaveBeenCalled();
+});

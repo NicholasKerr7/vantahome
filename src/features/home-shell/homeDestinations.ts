@@ -5,7 +5,7 @@ export type HomeDestination = 'scenes' | 'automations' | 'cameras' | 'notificati
 export const HOME_MENU_PAGES = [
   { title: 'House', description: 'The spaces, people, and preferences that make it yours.', items: [
     { id: 'rooms', title: 'Rooms', detail: 'Organize your spaces', icon: 'grid-outline' },
-    { id: 'cameras', title: 'Cameras', detail: 'Views & recordings', icon: 'videocam-outline' },
+    { id: 'cameras', title: 'Cameras', detail: 'Camera Center & activity', icon: 'videocam-outline' },
     { id: 'household', title: 'Household', detail: 'Profile & permissions', icon: 'people-outline' },
     { id: 'settings', title: 'Settings', detail: 'Your preferences', icon: 'options-outline' },
   ] },

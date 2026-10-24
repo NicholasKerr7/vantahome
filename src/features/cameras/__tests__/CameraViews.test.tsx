@@ -3,8 +3,8 @@ import { fireEvent, render } from "@testing-library/react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../app/AppNavigator";
 import type { Device } from "../../../store/useHomeStore";
-import CamerasScreen from "../../../screens/CamerasScreen";
-import CameraViewerScreen from "../../../screens/CameraViewerScreen";
+import CamerasScreen from "../../../screens/ConfiguredCamerasScreen";
+import CameraViewerScreen from "../../../screens/ConfiguredCameraViewerScreen";
 
 let mockAccessState = "granted";
 const mockRetry = jest.fn();

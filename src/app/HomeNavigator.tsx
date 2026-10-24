@@ -11,7 +11,7 @@ import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
 
 /** Preserve nested links from existing room, camera, profile, and notification flows. */
 export type HomeStackParamList = {
-  Home: undefined;
+  Home: { cameraLocationToken?: string } | undefined;
   Automations: { deviceId?: string } | undefined;
   Scenes: { assistantDraftToken?: string } | undefined;
   Settings: undefined;

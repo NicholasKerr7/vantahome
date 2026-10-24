@@ -78,10 +78,11 @@ interface SheetProps {
   allowedDeviceIds?: readonly string[];
   motionAllowed: boolean; onClose: () => void; onSelect: (id: string) => void;
   onRetry?: () => void;
+  onWatchCamera?: (modelDeviceId: string) => void;
 }
 
 /** Present a full native inspector or paged room browser above either renderer. */
-export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed, onClose, onSelect, allowedDeviceIds, onRetry }: SheetProps) {
+export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed, onClose, onSelect, allowedDeviceIds, onRetry, onWatchCamera }: SheetProps) {
   const openDeviceRoutines = useDeviceRoutines(onClose);
   const { width, height, fontScale } = useWindowDimensions();
   const landscape = width >= 760 && width > height;
@@ -134,7 +135,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
             : showingBrowser ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={visibleDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale}
-              motionAllowed={motionAllowed && !snapshot.state.motionDisabled} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
+              onWatchCamera={onWatchCamera} motionAllowed={motionAllowed && !snapshot.state.motionDisabled} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
           {!showingBrowser && editableDevice && snapshot.ready && <Pressable accessibilityRole="button" accessibilityLabel="Edit device"
             onPress={openEditor} style={styles.button}><Text style={styles.label}>Edit device</Text></Pressable>}
@@ -148,8 +149,8 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
 }
 
 /** Give supported devices tactile primary controls while preserving every advanced capability. */
-function DeviceInspector({ device, state, client, disabled, compact, fontScale, motionAllowed, onBrowse, onRoutines }: {
-  device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; compact: boolean; fontScale: number; motionAllowed: boolean; onBrowse: () => void; onRoutines: () => void;
+function DeviceInspector({ device, state, client, disabled, compact, fontScale, motionAllowed, onBrowse, onRoutines, onWatchCamera }: {
+  device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; compact: boolean; fontScale: number; motionAllowed: boolean; onBrowse: () => void; onRoutines: () => void; onWatchCamera?: (modelDeviceId: string) => void;
 }) {
   const [advancedControls, setAdvancedControls] = useState(false);
   const [group, setGroup] = useState<Group>('controls');
@@ -201,7 +202,7 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if (device.kind === 'speaker' && !advancedControls) return <SpeakerController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'camera' && !advancedControls) return <CameraController device={device} state={state} client={client}
-    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+    onWatch={onWatchCamera ? () => onWatchCamera(device.id) : undefined} disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (isOpeningDeviceKind(device.kind) && !advancedControls) return <OpeningController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'dishwasher' && !advancedControls) return <DishwasherController device={device} state={state} client={client}

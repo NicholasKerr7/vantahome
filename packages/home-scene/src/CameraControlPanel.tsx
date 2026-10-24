@@ -1,3 +1,5 @@
+import { isEmbeddedScene } from './embeddedHost';
+import { requestCameraWatch } from './requestCameraWatch';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, Bell, Camera, Ellipsis, Moon, ShieldCheck, ShieldOff, Video } from 'lucide-react';
 import type { DeviceDefinition } from './data';
@@ -37,7 +39,7 @@ export function CameraController({ device, current }: { device: DeviceDefinition
     <PagedDeviceControls device={device} current={current} />
   </section>;
   const Shield = camera.armed ? ShieldCheck : ShieldOff;
-  return <section className="camera-workspace" aria-label={`${device.name} camera console`} data-motion-disabled={!motionAllowed}>
+  return <section className="camera-workspace" aria-label={`${device.name} camera console`} data-motion-disabled={!motionAllowed} data-camera-watch={isEmbeddedScene()}>
     <div className="camera-stage"><div className="camera-console">
       <header className="camera-top">
         <span className="camera-emblem" aria-hidden="true"><Video size={23} /></span>
@@ -54,6 +56,7 @@ export function CameraController({ device, current }: { device: DeviceDefinition
         <div className="camera-status"><Shield size={20} aria-hidden="true" /><div><strong>{camera.status}</strong><span>Local simulation</span></div></div>
         <button type="button" className="camera-arm" aria-label="Camera armed" aria-pressed={camera.armed} disabled={!controllable} onClick={() => useHomeStore.getState().toggleDevice(device.id)}>{camera.armed ? 'Disarm' : 'Arm'}</button>
       </div>
+      {isEmbeddedScene() && <button type="button" className="camera-watch" aria-label="Watch camera demo preview" onClick={() => requestCameraWatch(device.id)}><Video size={18} aria-hidden="true" />Watch</button>}
       <div className="camera-preferences" role="group" aria-label="Saved camera preferences">
         <button type="button" aria-label="Night vision preference" aria-pressed={camera.nightVision} disabled={!controllable} onClick={() => togglePreference('nightVision')}><Moon size={18} aria-hidden="true" /><span>Night<small>{camera.nightVision ? 'On' : 'Off'}</small></span></button>
         <button type="button" aria-label="Motion alerts preference" aria-pressed={camera.motionAlerts} disabled={!controllable} onClick={() => togglePreference('motionAlerts')}><Bell size={18} aria-hidden="true" /><span>Alerts<small>{camera.motionAlerts ? 'On' : 'Off'}</small></span></button>

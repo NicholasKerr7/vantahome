@@ -1,3 +1,4 @@
+import { requestCameraWatch } from './requestCameraWatch';
 import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { Pencil, Power, X } from 'lucide-react';
@@ -123,6 +124,7 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
           <h2 id="sheet-device-control-title" ref={title} tabIndex={-1}>{device.name}</h2>
           <p className="device-sheet-state" aria-live="polite"><span className={presentation.active ? 'is-on' : ''} aria-hidden="true" />{status}</p>
         </div>
+        {device.kind === 'camera' && !controllable && isEmbeddedScene() && <button type="button" className="quick-device-full" aria-label="Watch camera demo preview" onClick={() => requestCameraWatch(deviceId)}>Watch</button>}
         {editable && isEmbeddedScene() && <button type="button" className="quick-device-close" aria-label="Edit device" title="Edit device"
           onClick={() => { requestDeviceEditing(deviceId); dismiss(); }}><Pencil size={18} aria-hidden="true" /></button>}
         <button type="button" className="quick-device-close" aria-label="Close full controls" onClick={dismiss}><X size={20} aria-hidden="true" /></button>

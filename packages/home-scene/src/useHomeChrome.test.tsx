@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHomeChrome } from './useHomeChrome';
 import { HOME_CHROME_CHANNEL, homeChromeCommandMessage, homeChromePreferencesMessage, type HomeChromeCommand } from './homeChromeProtocol';
 import { useHomeStore } from './state';
+import { FULL_SCENE_ACCESS } from './sceneAccess';
 import { useCinematicStore } from './cinematicStore';
 import { PROPERTY_LOCATION, type LiveEnvironment } from './environment/types';
 import { SCENE_PRESENTATION_CHANNEL, scenePresentationMessage } from './scenePresentation';
@@ -139,4 +140,18 @@ describe('native header scene presentation', () => {
     });
     expect(onOpenPreferences).toHaveBeenCalledTimes(1);
   });
+});
+
+it('Locate selects the camera in the existing scene without changing devices, and rejects revoked scope', () => {
+  const original = useHomeStore.getState();
+  const deviceStates = original.deviceStates;
+  useHomeStore.setState({ access: FULL_SCENE_ACCESS });
+  act(() => root.render(<ChromeProbe />));
+  act(() => send(1, { type: 'locate-camera', deviceId: 'entry-camera' }));
+  expect(useHomeStore.getState().selectedDevice).toBe('entry-camera');
+  expect(useHomeStore.getState().deviceStates).toBe(deviceStates);
+  act(() => { useHomeStore.setState({ selectedDevice: null, access: { ...original.access, deviceIds: [], controllableDeviceIds: [] } }); });
+  act(() => send(2, { type: 'locate-camera', deviceId: 'entry-camera' }));
+  expect(useHomeStore.getState().selectedDevice).toBeNull();
+  act(() => useHomeStore.setState(original));
 });

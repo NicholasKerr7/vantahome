@@ -1,3 +1,5 @@
+import { canViewSceneDevice } from './sceneAccess';
+import { useScenePreviewStore } from './scenePreviewStore';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { isEmbeddedScene } from './embeddedHost';
 import type { LiveEnvironment } from './environment/types';
@@ -14,6 +16,7 @@ interface HomeChromeOptions {
   ready: boolean;
   onOpenEnvironment: () => void;
   onOpenPreferences: () => void;
+  onLocateCamera?: () => void;
 }
 
 /** Share the existing environment and preferences with native chrome, without another source of truth. */
@@ -63,7 +66,12 @@ export function useHomeChrome(options: HomeChromeOptions): void {
       } else if (command.type === 'set-tour') return; // This preference is saved and echoed only by the host.
       else {
         useCinematicStore.getState().setShowcase(false);
-        if (command.type === 'open-environment') state.onOpenEnvironment();
+        if (command.type === 'locate-camera') {
+          const scene = useHomeStore.getState();
+          if (!useScenePreviewStore.getState().active && canViewSceneDevice(scene.access, command.deviceId)) {
+            scene.selectDevice(command.deviceId); state.onLocateCamera?.();
+          }
+        } else if (command.type === 'open-environment') state.onOpenEnvironment();
         else state.onOpenPreferences();
       }
     });

@@ -6,17 +6,19 @@ import { createDefaultDevicePlacement } from '../../../../packages/home-scene/sr
 import { useHomeStore } from '../../../store/useHomeStore';
 import ThreeDHomeScreen from '../../../screens/ThreeDHomeScreen';
 import type { SceneSurfaceProps } from '../protocol';
+import { locateCameraInHome } from '../../cameras/cameraNavigation';
 
 let mockFocused = true;
 let mockSceneProps: SceneSurfaceProps;
 const mockNavigate = jest.fn();
+const mockDispatch = jest.fn();
 // Jest does not execute Metro's dynamic-import transform; exercise the panel boundary with its explicit test component.
 jest.mock('react', () => {
   const actual = jest.requireActual<typeof import('react')>('react');
   return { ...actual, lazy: (loader: () => unknown) => loader.toString().includes('SimulationDeviceEditor')
     ? require('../../devices/SimulationDeviceEditor').default : actual.lazy(loader as Parameters<typeof actual.lazy>[0]) };
 });
-jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useNavigation: () => ({ navigate: mockNavigate, dispatch: jest.fn() }), useIsFocused: () => mockFocused }));
+jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useNavigation: () => ({ navigate: mockNavigate, dispatch: mockDispatch }), useIsFocused: () => mockFocused }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
 jest.mock('../../../components/useDecorativeMotion', () => ({ useDecorativeMotion: () => false }));
@@ -36,7 +38,7 @@ const originalAppState = AppState.currentState;
 const deviceId = '33333333-3333-4333-8333-333333333333';
 const modelDeviceId = `placed-${deviceId}`;
 beforeEach(() => {
-  jest.useFakeTimers(); mockFocused = true; AppState.currentState = 'active'; mockNavigate.mockClear();
+  jest.useFakeTimers(); mockFocused = true; AppState.currentState = 'active'; mockNavigate.mockClear(); mockDispatch.mockClear();
   useHomeStore.setState({ ...seed, accountUserId: 'person', authenticatedUserId: 'person', accountHomeId: 'home', activeHomeId: 'home', membershipReady: true,
     authTaskBlockingHome: false, activeMemberId: 'person', household: [{ id: 'person', name: 'Person', role: 'Owner', status: 'home' }],
     rooms: [{ id: 'room', name: 'Living room', modelRoomId: 'living' }],
@@ -101,4 +103,45 @@ test('ignores a stale renderer request after the current property is replaced', 
   mockFocused = true;
   screen.rerender(<ThreeDHomeScreen />);
   expect(screen.queryByTestId('editor')).toBeNull();
+});
+
+test('camera Watch opens only the current authorized model binding and performs no commands', async () => {
+  useHomeStore.setState({ rooms: [{ id: 'grounds', name: 'Grounds', modelRoomId: 'grounds' }],
+    devices: [{ id: 'camera-one', modelDeviceId: 'entry-camera', name: 'Entry', roomId: 'grounds', kind: 'camera', isOn: true, simulationOnly: true }] });
+  const screen = render(<ThreeDHomeScreen />);
+  const devices = useHomeStore.getState().devices;
+  act(() => mockSceneProps.onCameraWatch?.('entry-camera'));
+  expect(mockDispatch).not.toHaveBeenCalled();
+  act(() => mockSceneProps.onStatus('ready'));
+  const property = screen.getByTestId('scene');
+  act(() => mockSceneProps.onCameraWatch?.('entry-camera'));
+  expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { name: 'CameraViewer', params: { deviceId: 'camera-one' }, pop: true } }));
+  expect(useHomeStore.getState().devices).toBe(devices);
+  expect(screen.getByTestId('scene')).toBe(property);
+  mockFocused = false;
+  screen.rerender(<ThreeDHomeScreen />);
+  act(() => mockSceneProps.onCameraWatch?.('entry-camera'));
+  expect(mockDispatch).toHaveBeenCalledTimes(1);
+  expect(useHomeStore.getState().devices).toBe(devices);
+});
+
+
+test('Locate waits for ready chrome, reuses the retained renderer and consumes its intent once', () => {
+  useHomeStore.setState({ rooms: [{ id: 'grounds', name: 'Grounds', modelRoomId: 'grounds' }],
+    devices: [{ id: 'camera-one', modelDeviceId: 'entry-camera', name: 'Entry', roomId: 'grounds', kind: 'camera', isOn: true, simulationOnly: true }] });
+  const dispatch = jest.fn();
+  expect(locateCameraInHome(dispatch, 'camera-one')).toBe(true);
+  const token = dispatch.mock.calls[0][0].payload.params.params.cameraLocationToken as string;
+  const route = { key: 'home', name: 'Home' as const, params: { cameraLocationToken: token } };
+  const screen = render(<ThreeDHomeScreen route={route} />);
+  const property = screen.getByTestId('scene');
+  act(() => mockSceneProps.onStatus('ready'));
+  expect(mockSceneProps.chromeCommand).toBeUndefined();
+  act(() => mockSceneProps.onChromeSnapshot?.({ locationName: 'Home', localTime: '10:00 AM', tempC: 23, weatherCode: 0,
+    weatherStatus: 'live', isNight: false, motionDisabled: false, systemReducedMotion: false, idleEnabled: false, preferenceError: false }));
+  expect(mockSceneProps.chromeCommand?.command).toEqual({ type: 'locate-camera', deviceId: 'entry-camera' });
+  const id = mockSceneProps.chromeCommand?.id;
+  screen.rerender(<ThreeDHomeScreen route={route} />);
+  expect(mockSceneProps.chromeCommand?.id).toBe(id);
+  expect(screen.getByTestId('scene')).toBe(property);
 });
