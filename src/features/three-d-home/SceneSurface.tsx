@@ -1,3 +1,4 @@
+import { parseSceneEndReviewRequest } from '../../../packages/home-scene/src/sceneEndNavigation';
 import { parseCameraWatchRequest } from '../../../packages/home-scene/src/cameraNavigation';
 import { parseDeviceEditingRequest } from '../../../packages/home-scene/src/deviceEditingNavigation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -26,7 +27,7 @@ import { homeEditorScope } from '../home-shell/homeEditorScope';
 const ignoreSaveStatus = () => undefined;
 
 /** Load a packaged simulation without sharing cookies, tokens or real device commands. */
-export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onCameraWatch, onChromeSnapshot, chromeCommand, previewCommand, onPreviewReport, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onCameraWatch, onSceneEndReview, onChromeSnapshot, chromeCommand, previewCommand, onPreviewReport, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
   const [uri, setUri] = useState<string | null>(null);
   const source = useMemo(() => uri ? { uri } : undefined, [uri]);
   const webView = useRef<WebView>(null);
@@ -135,11 +136,15 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
       const status = parseSceneStatus(event.nativeEvent.data);
       const navigation = parseRoutineNavigation(event.nativeEvent.data);
       const editing = parseDeviceEditingRequest(event.nativeEvent.data);
+      const sceneEnd = parseSceneEndReviewRequest(event.nativeEvent.data);
       const camera = parseCameraWatchRequest(event.nativeEvent.data);
       if (status) {
         if (!isCurrentSceneDocument(event.nativeEvent.url, uri)) return;
         documentReady.current = status === 'ready';
         onStatus(status); publishPresentation();
+      }
+      else if (sceneEnd) {
+        if (isCurrentSceneDocument(event.nativeEvent.url, uri) && !suspendedRef.current && simulation.current?.canNavigate()) onSceneEndReview?.(sceneEnd.sceneId);
       }
       else if (camera) {
         if (isCurrentSceneDocument(event.nativeEvent.url, uri) && !suspendedRef.current && simulation.current?.canNavigate()) onCameraWatch?.(camera.deviceId);

@@ -15,11 +15,12 @@ const IDENTITY_ICONS: Record<SceneIdentity, keyof typeof Ionicons.glyphMap> = {
 
 type SceneCardProps = {
   scene: Scene; roomName: string; active: boolean; compact: boolean;
-  directory: CollectionDirectory; modelHome?: boolean; onRun: (id: string) => void; onOpen: (id: string) => void;
+  directory: CollectionDirectory; modelHome?: boolean; onRun: (id: string) => void; onOpen: (id: string) => void; onEnd?: (id: string) => void;
 };
 
 /** Give each scene an action-led composition, with a separate and equally reachable details control. */
-export function SceneMoodCard({ scene, roomName, active, compact, directory, modelHome = false, onRun, onOpen }: SceneCardProps) {
+export function SceneMoodCard({ scene, roomName, active, compact, directory, modelHome = false, onRun, onOpen, onEnd }: SceneCardProps) {
+  const showEnd = active && Boolean(onEnd);
   const identity = sceneIdentity(scene, directory);
   const outcome = sceneOutcome(scene, directory.devices, modelHome);
   const warm = identity === 'light';
@@ -42,8 +43,8 @@ export function SceneMoodCard({ scene, roomName, active, compact, directory, mod
       </View>
     </View>
     <View style={styles.sceneActions}>
-      <Pressable accessibilityLabel={`Run ${scene.name}`} accessibilityHint={`${outcome.simulationOnly ? 'Simulation. ' : ''}${outcome.summary}.${outcome.impact ? ` ${outcome.impact}. Review details before running.` : ''}`} style={styles.runButton} onPress={() => onRun(scene.id)}>
-        <Ionicons name="play" size={15} color={theme.colors.bg0} /><Text style={styles.runText}>Run scene</Text>
+      <Pressable accessibilityLabel={`${showEnd ? 'End' : 'Run'} ${scene.name}`} accessibilityHint={showEnd ? 'Review previous settings before ending this scene. No devices change yet.' : `${outcome.simulationOnly ? 'Simulation. ' : ''}${outcome.summary}.${outcome.impact ? ` ${outcome.impact}. Review details before running.` : ''}`} style={styles.runButton} onPress={() => showEnd ? onEnd?.(scene.id) : onRun(scene.id)}>
+        <Ionicons name={showEnd ? "return-down-back-outline" : "play"} size={15} color={theme.colors.bg0} /><Text style={styles.runText}>{showEnd ? "End scene" : "Run scene"}</Text>
       </Pressable>
       <Pressable accessibilityLabel={`Details for ${scene.name}`} style={styles.detailButton} onPress={() => onOpen(scene.id)}>
         {!compact && <Text style={styles.detailText}>Details</Text>}<Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.text} />
@@ -134,9 +135,9 @@ const styles = StyleSheet.create({
   sceneCount: { color: theme.colors.text, fontSize: 10, marginTop: 5 },
   sceneLabelShadow: { textShadowColor: 'rgba(20,18,26,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   sceneActions: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
-  runButton: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: theme.colors.accent, borderRadius: 16, paddingHorizontal: 8 },
+  runButton: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: theme.colors.accent, borderRadius: 16, paddingHorizontal: 8 },
   runText: { color: theme.colors.bg0, fontSize: 13, fontWeight: '700' },
-  detailButton: { minHeight: 46, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 16, backgroundColor: 'rgba(20,18,26,0.68)' },
+  detailButton: { minHeight: 48, minWidth: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 16, backgroundColor: 'rgba(20,18,26,0.68)' },
   detailText: { color: theme.colors.text, fontSize: 12, fontWeight: '500' },
   routineReadOnly: { opacity: 0.35 },
   routineCard: { flex: 1, minWidth: 0, minHeight: 0, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6, borderRadius: 24, backgroundColor: theme.colors.card2, borderWidth: 1, borderColor: theme.colors.stroke, overflow: 'hidden' },

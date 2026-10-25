@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-24**. Read this before rediscovering the project.
+Last maintained: **2026-10-25**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,46 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## End scene — October 25 / Preview 93 built; installation and physical acceptance pending
+
+- Latest scene now has **End** on the dashboard, its Scenes card, header and
+  details. It opens a review; nothing changes until **Restore previous settings**
+  or **Keep current settings** is confirmed. The saved scene remains available;
+  Details retains Run. Older runs with no receipt offer Keep only.
+- Only the most recent simulation run can be restored. Host-only before/after
+  receipts share one atomic local-storage envelope with canonical settings,
+  survive reopening under the same account/home/member, and never cross the
+  renderer bridge. A new run supersedes its predecessor. Malformed receipts
+  disable restoration without discarding valid device state; corrupt canonical
+  data still fails closed.
+- Restore is allowlisted to comfort controls and unchanged local scene lighting.
+  Later edits, including changed-then-changed-back values, remain untouched.
+  Entry/security/cameras, energy, water/gas/safety and appliance cycles are never
+  reversed by End; review explains skipped controls. Permission, session, scope,
+  scene deletion, repeated runs and stale reviews are rechecked at commit.
+  Backgrounding/navigation cancels pending confirmation before mutation.
+- Save acknowledgement precedes clearing the last-used selection. Failure keeps
+  accepted values in memory and supports refreshing/Keep to retry the write
+  without applying restoration twice. Browser QA found native default-field
+  materialization falsely disqualified freshly run devices; equivalent defaults
+  now retain eligibility, while actual edits still invalidate it.
+- **223 host tests across 21 suites + 43 renderer tests across four suites** pass;
+  app/scene TypeScript and scene build pass. Actual Demo browser review passes
+  ten phone/tablet/desktop-preview sizes and five dashboard End sizes, with 48px
+  decisions, no page overflow, restore/cancel/keep/reload and zero page errors.
+  Small screens retain contained device-detail scrolling and horizontal pages.
+- Browser harness uses an isolated Expo Demo development session; WebSocket
+  routing is closed in Playwright to avoid Metro’s opaque-origin HMR reconnect
+  error. This is browser/native-source QA, not production-web certification.
+- Evidence: `work/scene-end-*`; `work/preview93-verification.json` records signed
+  staging package/exact scene checks. Production metadata is restored. No new
+  dependency, hardware command, network API or deployment was introduced.
+- Next: install Preview 93 when requested; run a scene, adjust one affected light
+  manually, End → review/Restore, verify the manual choice is preserved and other
+  eligible settings restore. Check Keep and reopening. Preview 92 remains the
+  last installed version; Camera Center favorite/Night reopening check is still
+  deferred by the user. Hub/sync and physical iPad remain deferred.
 
 ## Camera Center — October 24 / Preview 92 iPhone layout/navigation accepted; persistence pending
 

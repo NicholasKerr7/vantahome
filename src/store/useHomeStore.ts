@@ -19,6 +19,7 @@ import { overlayDemoDevices } from '../features/three-d-home/demoDeviceMapping';
 import { sceneEditChangesBehavior } from '../features/scenes/sceneEdits';
 import { assertSceneWriteAccess, canManageScenes, removeSceneState } from '../features/scenes/sceneManagement';
 import { runSimulationScene } from '../features/scenes/simulationSceneExecution';
+import { createSceneReceiptDescriptor, sceneRestorationScope } from '../features/scenes/sceneRestorationScope';
 import { homeEditorScope } from '../features/home-shell/homeEditorScope';
 import { validCachedRoutineCollections } from './cachedRoutineValidation';
 import type { SimulationDevicePlacement } from '../../packages/home-scene/src/devicePlacement';
@@ -2244,23 +2245,48 @@ export const useHomeStore = create<HomeState>()(
         }
         const modelPreset = modelPresetForScene(initial, scene);
         if (modelPreset) {
-          const saved = await simulationPersistence.load('demo');
-          const current = get();
-          // Awaiting disk state must never carry a preset across account, role, or scene edits.
-          if (options?.signal?.aborted || current.sessionEpoch !== initial.sessionEpoch || current.activeMemberId !== initial.activeMemberId
-            || current.scenes.find((candidate) => candidate.id === sceneId) !== scene
-            || modelPresetForScene(current, scene) !== modelPreset) return;
-          // A native edit may precede the background sync session's hydration; gas safety uses the latest controls.
-          const snapshot = applyModelPreset(overlayDemoDevices(saved, current.devices), modelPreset);
-          simulationPersistence.save('demo', snapshot);
-          set({ devices: projectModelSnapshot(current.devices, snapshot), activeSceneId: sceneId, lastSceneRun: { sceneId, ts: Date.now() } });
+          const scope = sceneRestorationScope(initial);
+          const identity = homeEditorScope(initial);
+          const descriptor = createSceneReceiptDescriptor(initial, scene);
+          let applied = false;
+          await simulationPersistence.updateWithSceneReceipt(scope, descriptor, (saved) => {
+            const current = get();
+            // Disk hydration must never carry a preset across accounts, revoked grants, or scene edits.
+            if (options?.signal?.aborted || homeEditorScope(current) !== identity || current.authTaskBlockingHome
+              || current.scenes.find((candidate) => candidate.id === sceneId) !== scene
+              || modelPresetForScene(current, scene) !== modelPreset) {
+              throw new Error('Home access changed. Open the scene again before running it.');
+            }
+            applied = true;
+            // Pending native safety preferences join this exact canonical transaction, never a stale saved copy.
+            return applyModelPreset(overlayDemoDevices(saved, current.devices), modelPreset);
+          }).catch((error) => {
+            // Preserve the established cancellation behavior when a queued demo loses its owner/session.
+            if (!applied && (options?.signal?.aborted || homeEditorScope(get()) !== identity)) return;
+            throw error;
+          });
+          if (!applied || simulationPersistence.getSceneReceipt(scope)?.runId !== descriptor.runId) return;
+          const snapshot = simulationPersistence.getSnapshot(scope);
+          if (!snapshot) return;
+          set((current) => !options?.signal?.aborted && homeEditorScope(current) === identity && !current.authTaskBlockingHome
+            && current.scenes.find((candidate) => candidate.id === sceneId) === scene
+            && modelPresetForScene(current, scene) === modelPreset
+            && simulationPersistence.getSceneReceipt(scope)?.runId === descriptor.runId
+            ? { devices: projectModelSnapshot(current.devices, snapshot), activeSceneId: sceneId, lastSceneRun: { sceneId, ts: descriptor.createdAt } } : {});
           return;
         }
-        if (scene.actions.some((action) => initial.devices.find((device) => device.id === action.deviceId)?.simulationOnly)) {
-          if (await runSimulationScene(initial, scene, get, options?.signal)) {
-            set((current) => !options?.signal?.aborted && canManageScenes(current) && homeEditorScope(current) === homeEditorScope(initial)
+        if (isModelHome(initial) || scene.actions.some((action) => initial.devices.find((device) => device.id === action.deviceId)?.simulationOnly)) {
+          const runId = await runSimulationScene(initial, scene, get, options?.signal);
+          if (runId) {
+            const scope = sceneRestorationScope(initial);
+            const snapshot = simulationPersistence.getSnapshot(scope);
+            if (!snapshot) return;
+            set((current) => !options?.signal?.aborted && !current.authTaskBlockingHome && canManageScenes(current)
+              && homeEditorScope(current) === homeEditorScope(initial)
               && current.scenes.find((item) => item.id === sceneId) === scene
-              ? { activeSceneId: sceneId, lastSceneRun: { sceneId, ts: Date.now() } } : {});
+              && simulationPersistence.getSceneReceipt(scope)?.runId === runId
+              ? { ...(isModelHome(current) ? { devices: projectModelSnapshot(current.devices, snapshot) } : {}),
+                  activeSceneId: sceneId, lastSceneRun: { sceneId, ts: Date.now() } } : {});
             return;
           }
         }

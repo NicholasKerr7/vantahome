@@ -101,7 +101,7 @@ export function DashboardRoomBar({ onRooms, inert = false }: { onRooms: () => vo
 
 /** Fit saved scene shortcuts to a clean scrolling row with native touch and keyboard browsing. */
 export function DashboardScenes({ inert = false }: { inert?: boolean } = {}) {
-  const { catalog, status, runScene, retry } = useSceneCatalog();
+  const { catalog, status, runScene, retry, canReviewEnd, reviewEndScene } = useSceneCatalog();
   const { rowRef, page, pageCount, pageSize, goToPage, onFocusCapture, onBlurCapture, onKeyDown } = useSceneCardPage(catalog.scenes);
   const keyboardHintId = useId();
   const paged = pageCount > 1;
@@ -113,8 +113,10 @@ export function DashboardScenes({ inert = false }: { inert?: boolean } = {}) {
         const presetIndex = MODEL_SCENE_PRESETS.findIndex((preset) => preset.sceneId === scene.id);
         const Icon = icons[presetIndex] ?? Sparkles;
         const artwork = sceneArtwork({ name: scene.name, modelPreset: MODEL_SCENE_PRESETS[presetIndex]?.id });
-        return <button key={scene.id} data-scene-id={scene.id} className="dashboard-preset has-cinematic-artwork" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id} aria-describedby={paged ? keyboardHintId : undefined}
-          onClick={() => runScene(scene.id)}><CinematicArtwork artwork={artwork} /><Icon size={17} strokeWidth={1.5} aria-hidden="true" /><span>{scene.name}</span></button>;
+        return <div key={scene.id} className="dashboard-scene-card"><button data-scene-id={scene.id} className="dashboard-preset has-cinematic-artwork" title={`${scene.name} · ${scene.scope}`} aria-pressed={catalog.activeSceneId === scene.id} aria-describedby={paged ? keyboardHintId : undefined}
+          onClick={() => runScene(scene.id)}><CinematicArtwork artwork={artwork} /><Icon size={17} strokeWidth={1.5} aria-hidden="true" /><span>{scene.name}</span></button>
+          {canReviewEnd && catalog.activeSceneId === scene.id && <button type="button" className="dashboard-scene-end" aria-label={`End ${scene.name} scene`} title="Review how to end this scene" onClick={() => reviewEndScene(scene.id)}>End</button>}
+        </div>;
       })}
     </HorizontalCardScroller>}
     {paged && <span className="sr-only" id={keyboardHintId}>Use Left and Right arrow keys to browse scenes. Home and End move to the first and last scene.</span>}

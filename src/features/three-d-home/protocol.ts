@@ -13,6 +13,7 @@ export type SceneSurfaceProps = {
   onDeviceRoutines?: (deviceId: string) => void;
   onDeviceEdit?: (modelDeviceId: string) => void;
   onCameraWatch?: (modelDeviceId: string) => void;
+  onSceneEndReview?: (sceneId: string) => void;
   onChromeSnapshot?: (snapshot: HomeChromeSnapshot) => void;
   chromeCommand?: HomeChromeCommandIntent;
   previewCommand?: ScenePreviewCommand;

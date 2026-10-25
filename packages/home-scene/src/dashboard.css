@@ -258,3 +258,9 @@ html, body, #root { width: 100%; height: 100%; overflow: hidden; overscroll-beha
   .property-assigned-rooms button { min-height: 44px; padding: 8px 10px; }
   .property-control-note { padding-top: 6px; font-size: 10px; }
 }
+
+/* The run card and explicit End review share one scrolling item, never nested buttons. */
+.dashboard-scene-card { display: flex; width: 100%; height: 100%; min-width: 0; gap: 3px; }
+.dashboard-scene-card .dashboard-preset { flex: 1; min-width: 0; }
+.dashboard-scene-end { flex: 0 0 48px; min-width: 48px; min-height: 48px; border-radius: 12px; background: var(--surface); color: var(--text); font-size: 11px; font-weight: 600; }
+.dashboard-scene-end:hover { background: var(--surface-hover, var(--surface)); }

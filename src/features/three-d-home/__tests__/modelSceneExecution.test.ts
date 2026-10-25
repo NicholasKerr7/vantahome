@@ -315,3 +315,45 @@ test("account persistence omits local preset metadata even if a foreign cache su
   expect(saved).not.toContain("modelPreset");
   expect(saved).not.toContain("modelSceneCatalogVersion");
 });
+
+test('authored atmosphere captures exact canonical before values and edited local scenes also retain a receipt', async () => {
+  const before = await simulationPersistence.load('demo');
+  await useHomeStore.getState().runScene('model-scene:movie');
+  const presetReceipt = simulationPersistence.getSceneReceipt('demo');
+  expect(presetReceipt).toMatchObject({ sceneId: 'model-scene:movie', appearance: {
+    before: { night: before.night, lightingMode: before.lightingMode }, after: { night: true, lightingMode: 'night' },
+  } });
+  expect(presetReceipt?.devices.find((device) => device.deviceId === 'living-light')?.changes)
+    .toContainEqual({ field: 'level', before: before.deviceStates['living-light'].level, after: 18 });
+  useHomeStore.getState().updateScene('model-scene:night', { actions: [{ type: 'patch', deviceId: 'living-light', patch: { brightness: 37 } }] });
+  await useHomeStore.getState().runScene('model-scene:night');
+  const editedReceipt = simulationPersistence.getSceneReceipt('demo');
+  expect(editedReceipt?.runId).not.toBe(presetReceipt?.runId);
+  expect(editedReceipt?.sceneId).toBe('model-scene:night');
+  expect(editedReceipt?.devices.find((device) => device.deviceId === 'living-light')?.changes)
+    .toContainEqual({ field: 'level', before: 18, after: 37 });
+  expect(editedReceipt?.appearance).toBeNull();
+});
+
+test('an older completion of the same preset cannot republish metadata over its newer receipt', async () => {
+  const update = simulationPersistence.updateWithSceneReceipt.bind(simulationPersistence);
+  let release!: () => void;
+  let committed!: () => void;
+  const firstCommitted = new Promise<void>((resolve) => { committed = resolve; });
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let calls = 0;
+  const spy = jest.spyOn(simulationPersistence, 'updateWithSceneReceipt').mockImplementation(async (scope, descriptor, reducer) => {
+    await update(scope, descriptor, reducer);
+    if (++calls === 1) { committed(); await held; }
+  });
+  try {
+    const first = useHomeStore.getState().runScene('model-scene:movie');
+    await firstCommitted;
+    await useHomeStore.getState().runScene('model-scene:movie');
+    const newer = useHomeStore.getState().lastSceneRun;
+    const receipt = simulationPersistence.getSceneReceipt('demo');
+    release(); await first;
+    expect(useHomeStore.getState().lastSceneRun).toBe(newer);
+    expect(simulationPersistence.getSceneReceipt('demo')).toBe(receipt);
+  } finally { release(); spy.mockRestore(); }
+});

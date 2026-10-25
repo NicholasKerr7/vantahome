@@ -33,17 +33,18 @@ function CollectionPager({ pagination, total, noun }: { pagination: Pagination; 
 
 type SceneCollectionProps = {
   scenes: readonly Scene[]; rooms: readonly Room[]; activeSceneId: string | null;
-  onCreate: () => void; onClear: () => void; onOpen: (sceneId: string) => void; onRun: (sceneId: string) => void;
+  onCreate: () => void; onEnd: (sceneId: string) => void; onOpen: (sceneId: string) => void; onRun: (sceneId: string) => void;
   onPresets?: () => void;
 };
 
 /** Arrange actionable mood cards in measured horizontal pages that stay inside the available viewport. */
-export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear, onOpen, onRun, onPresets }: SceneCollectionProps) {
+export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onEnd, onOpen, onRun, onPresets }: SceneCollectionProps) {
   const { height, fontScale } = useWindowDimensions();
   const compact = height < 740 || fontScale > 1.15;
   const pagination = useCollectionPagination(scenes.length, compact ? 194 : 234, true);
   const directory = useCollectionDirectory();
   const modelHome = useHomeStore(isModelHome);
+  const lastUsedScene = scenes.find((scene) => scene.id === activeSceneId);
   return <View style={[styles.collection, compact && styles.collectionCompact]} testID="embedded-scenes-collection">
     <View style={styles.collectionHeader}>
       <View style={styles.headingCopy}>
@@ -55,13 +56,13 @@ export function EmbeddedScenes({ scenes, rooms, activeSceneId, onCreate, onClear
     </View>
     <View style={styles.contextRow}>
       <Text style={styles.contextText} numberOfLines={1}>Saved on this device · Review settings before running</Text>
-      {activeSceneId ? <Pressable accessibilityLabel="Clear last-used scene" style={styles.clearButton} onPress={onClear}><Text style={styles.linkText}>Clear</Text></Pressable> : null}
+      {lastUsedScene ? <Pressable accessibilityLabel="End last-used scene" style={styles.endButton} onPress={() => onEnd(lastUsedScene.id)}><Text style={styles.linkText}>End scene</Text></Pressable> : null}
     </View>
     <View style={styles.collectionBody} onLayout={pagination.measure} testID="scene-page-area">
       {scenes.length ? <ScrollableCardPages page={pagination.page} count={pagination.pageCount} onChange={pagination.changePage}
         resetKey={`${pagination.capacity}:${scenes.map((scene) => scene.id).join('|')}`} testID="scene-card-pages"
         renderPage={(page) => <View style={styles.collectionBody}>{collectionRows(scenes.slice(page * pagination.capacity, (page + 1) * pagination.capacity), pagination.columns).map((row, rowIndex) => <View key={row[0].id} testID={`scene-row-${rowIndex}`} style={[styles.cardRow, !pagination.largeText && styles.sceneRowStandard]}>
-        {row.map((scene) => <SceneMoodCard key={scene.id} scene={scene} roomName={sceneScopeLabel(scene, rooms)} active={scene.id === activeSceneId} compact={compact || pagination.tight} directory={directory} modelHome={modelHome} onRun={onRun} onOpen={onOpen} />)}
+        {row.map((scene) => <SceneMoodCard key={scene.id} scene={scene} roomName={sceneScopeLabel(scene, rooms)} active={scene.id === activeSceneId} compact={compact || pagination.tight} directory={directory} modelHome={modelHome} onRun={onRun} onOpen={onOpen} onEnd={onEnd} />)}
         {row.length < pagination.columns && <View style={styles.emptyTileSpace} />}
       </View>)}</View>} /> : <View style={styles.emptyState}><Ionicons name="sparkles-outline" size={36} color={theme.colors.accent} /><Text style={styles.emptyTitle}>Make room for a mood.</Text><Text style={styles.emptyCopy}>Create your first scene to bring several devices together in one tap.</Text></View>}
     </View>
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   createText: { color: theme.colors.text, fontSize: 12, fontWeight: '600' },
   contextRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   contextText: { flex: 1, color: theme.colors.subtext, fontSize: 11 },
-  clearButton: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
+  endButton: { minHeight: 48, minWidth: 76, justifyContent: 'center', alignItems: 'flex-end' },
   linkText: { color: theme.colors.accentText, fontSize: 12, fontWeight: '600' },
   collectionBody: { flex: 1, minHeight: 0, gap: 10 },
   cardRow: { flex: 1, minHeight: 0, flexDirection: 'row', gap: 10 },

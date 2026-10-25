@@ -145,3 +145,33 @@ test('Locate waits for ready chrome, reuses the retained renderer and consumes i
   expect(mockSceneProps.chromeCommand?.id).toBe(id);
   expect(screen.getByTestId('scene')).toBe(property);
 });
+
+test('End scene opens only review for the current scene and rejects stale or covered renderer callbacks', async () => {
+  useHomeStore.setState({ scenes: [{ id: 'evening', name: 'Evening', scope: 'room', roomId: 'room',
+    actions: [{ type: 'patch', deviceId, patch: { isOn: true, brightness: 30 } }] }], activeSceneId: 'evening' });
+  const screen = render(<ThreeDHomeScreen />);
+  act(() => mockSceneProps.onSceneEndReview?.('evening'));
+  expect(mockDispatch).not.toHaveBeenCalled();
+  act(() => mockSceneProps.onStatus('ready'));
+  const devices = useHomeStore.getState().devices;
+  act(() => mockSceneProps.onSceneEndReview?.('another'));
+  expect(mockDispatch).not.toHaveBeenCalled();
+  act(() => mockSceneProps.onSceneEndReview?.('evening'));
+  expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { name: 'Main', pop: true,
+    params: { screen: 'Scenes', params: { sceneEndId: 'evening' }, pop: true } } }));
+  expect(useHomeStore.getState().devices).toBe(devices);
+  await requestEditor();
+  act(() => mockSceneProps.onSceneEndReview?.('evening'));
+  expect(mockDispatch).toHaveBeenCalledTimes(1);
+  fireEvent.press(screen.getByLabelText('Cancel edit'));
+  const stale = mockSceneProps.onSceneEndReview;
+  act(() => mockSceneProps.onStatus('error'));
+  fireEvent.press(screen.getByLabelText('Retry 3D Home'));
+  act(() => mockSceneProps.onStatus('ready'));
+  act(() => stale?.('evening'));
+  expect(mockDispatch).toHaveBeenCalledTimes(1);
+  mockFocused = false;
+  screen.rerender(<ThreeDHomeScreen />);
+  act(() => mockSceneProps.onSceneEndReview?.('evening'));
+  expect(mockDispatch).toHaveBeenCalledTimes(1);
+});

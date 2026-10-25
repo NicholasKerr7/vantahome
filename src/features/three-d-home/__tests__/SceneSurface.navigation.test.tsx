@@ -527,3 +527,29 @@ test.each(['native', 'web'] as const)('%s camera Watch checks document ownership
   act(() => send());
   expect(onCameraWatch).toHaveBeenCalledTimes(1);
 });
+
+
+test.each(['native', 'web'] as const)('%s forwards End review only from the owned active authorized document', async (platform) => {
+  const Component = platform === 'native' ? NativeSceneSurface : WebSceneSurface;
+  const onSceneEndReview = jest.fn();
+  const onStatus = jest.fn();
+  const screen = render(<Component onStatus={onStatus} onSceneEndReview={onSceneEndReview} />, {
+    createNodeMock: (element) => element.type === 'iframe' ? { contentWindow: mockFrameWindow } : null,
+  });
+  await act(async () => { await Promise.resolve(); });
+  const request = { channel: 'vantahome-navigation', version: 1, type: 'scene-end-review', sceneId: 'evening' };
+  act(() => sendChrome(platform, request, false));
+  act(() => sendChrome(platform, { ...request, actions: [] }));
+  expect(onSceneEndReview).not.toHaveBeenCalled();
+  act(() => sendChrome(platform, request));
+  expect(onSceneEndReview).toHaveBeenCalledWith('evening');
+  screen.rerender(<Component suspended onStatus={onStatus} onSceneEndReview={onSceneEndReview} />);
+  act(() => sendChrome(platform, request));
+  screen.rerender(<Component onStatus={onStatus} onSceneEndReview={onSceneEndReview} />);
+  mockCanNavigate.mockReturnValue(false);
+  act(() => sendChrome(platform, request));
+  mockSession.current = null;
+  act(() => sendChrome(platform, request));
+  expect(onSceneEndReview).toHaveBeenCalledTimes(1);
+  screen.unmount();
+});

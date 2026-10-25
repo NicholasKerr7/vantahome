@@ -1,3 +1,4 @@
+import { openSceneEndReview } from '../features/scenes/sceneEndNavigation';
 import type { RouteProp } from '@react-navigation/native';
 import type { HomeStackParamList } from '../app/HomeNavigator';
 import { consumeCameraLocation, openCameraViewer, resolveCameraDeviceId } from '../features/cameras/cameraNavigation';
@@ -41,13 +42,13 @@ const AccountSheet = React.lazy(() => import('../features/account/AccountSheet')
 const AccountPreferences = React.lazy(() => import('../features/account/AccountPreferences'));
 const SimulationDeviceEditor = React.lazy(() => import('../features/devices/SimulationDeviceEditor'));
 
-type SessionProps = Pick<SceneSurfaceProps, 'onChromeSnapshot' | 'chromeCommand' | 'allowChromePreferencesWhileSuspended' | 'onDeviceEdit' | 'onCameraWatch' | 'previewCommand' | 'onPreviewReport'> & {
+type SessionProps = Pick<SceneSurfaceProps, 'onChromeSnapshot' | 'chromeCommand' | 'allowChromePreferencesWhileSuspended' | 'onDeviceEdit' | 'onCameraWatch' | 'onSceneEndReview' | 'previewCommand' | 'onPreviewReport'> & {
   onRetry: () => void; onDevices: () => void; covered: boolean; onSceneStatus: (status: SceneStatus | 'loading') => void;
   unifiedArrival: boolean;
 };
 
 /** Bound loading time while the surrounding home navigation always remains available. */
-function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended, unifiedArrival, onDeviceEdit, onCameraWatch, previewCommand, onPreviewReport }: SessionProps) {
+function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnapshot, chromeCommand, allowChromePreferencesWhileSuspended, unifiedArrival, onDeviceEdit, onCameraWatch, onSceneEndReview, previewCommand, onPreviewReport }: SessionProps) {
   const workspaceCovered = useScenePresentationPaused();
   const openDeviceRoutines = useDeviceRoutines();
   const [status, setStatus] = useState<SceneStatus | 'loading'>('loading');
@@ -65,7 +66,7 @@ function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnap
   }, [status, updateStatus, loadFailure]);
   return <View style={styles.scene}>
     {status !== 'error' && <SceneSurface suspended={covered || workspaceCovered} onStatus={updateStatus} onSaveStatus={setSaveStatus} onDeviceRoutines={openDeviceRoutines}
-      onChromeSnapshot={onChromeSnapshot} chromeCommand={chromeCommand} onDeviceEdit={onDeviceEdit} onCameraWatch={onCameraWatch} previewCommand={previewCommand} onPreviewReport={onPreviewReport} allowChromePreferencesWhileSuspended={allowChromePreferencesWhileSuspended && !workspaceCovered} />}
+      onChromeSnapshot={onChromeSnapshot} chromeCommand={chromeCommand} onDeviceEdit={onDeviceEdit} onCameraWatch={onCameraWatch} onSceneEndReview={onSceneEndReview} previewCommand={previewCommand} onPreviewReport={onPreviewReport} allowChromePreferencesWhileSuspended={allowChromePreferencesWhileSuspended && !workspaceCovered} />}
     {(loadFailure || (status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected'))) && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
       <Text style={styles.saveNoticeText}>{loadFailure ?? (saveStatus === 'error'
         ? 'A change couldn’t be completed or saved. Review your controls and try again.'
@@ -166,6 +167,12 @@ export default function ThreeDHomeScreen({ route }: { route?: RouteProp<HomeStac
     const deviceId = resolveCameraDeviceId(state, modelDeviceId);
     if (deviceId) openCameraViewer(navigation.dispatch, deviceId);
   }, [sessionKey, sceneReady, focused, suspended, accessCurrent, panel, editing, previewing, identity, navigation]);
+  /** End opens a native review only while this exact property and foreground access are current. */
+  const reviewSceneEnd = useCallback((sceneId: string) => {
+    if (currentSessionKey.current !== sessionKey || !sceneReady || !focused || suspended || !accessCurrent
+      || panel || editing || previewing || modelPresentationIdentity(useHomeStore.getState()) !== identity) return;
+    openSceneEndReview(navigation.dispatch, sceneId);
+  }, [sessionKey, sceneReady, focused, suspended, accessCurrent, panel, editing, previewing, identity, navigation]);
   useEffect(() => {
     // The one-use token waits for this same renderer to resume; a stale route never replays it.
     if (!sceneReady || !visibleChrome || !focused || suspended || !accessCurrent || panel || editing || previewing) return;
@@ -251,7 +258,7 @@ export default function ThreeDHomeScreen({ route }: { route?: RouteProp<HomeStac
     {needsModelSetup ? (focused && active ? <ModelSimulationSetup /> : <View style={styles.scene} />) : retained && sceneEnabled ? <SceneSession key={sessionKey} unifiedArrival={unifiedArrival} covered={(panel !== null && !previewing) || editorVisible || suspended || !accessCurrent} onRetry={() => setAttempt((value) => value + 1)} onDevices={openControls}
       onSceneStatus={updateRendererStatus} onChromeSnapshot={updateChrome} chromeCommand={command?.key === sessionKey ? command.request : undefined}
       previewCommand={previewCommand?.key === sessionKey ? previewCommand.command : undefined} onPreviewReport={receivePreviewReport}
-      onDeviceEdit={openDeviceEditor} onCameraWatch={watchCamera}
+      onDeviceEdit={openDeviceEditor} onCameraWatch={watchCamera} onSceneEndReview={reviewSceneEnd}
       allowChromePreferencesWhileSuspended={panel === 'preferences' && focused && !suspended && accessCurrent} />
         : <View style={styles.scene}>{!sceneEnabled && <View style={styles.feedback}><Text style={styles.feedbackTitle}>House view is paused</Text><Text style={styles.feedbackText}>The home menu and device controls remain available.</Text></View>}</View>}
     </HomeWorkspace>

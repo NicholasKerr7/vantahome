@@ -12,6 +12,8 @@ const shared = vi.hoisted(() => ({
   catalog: { scenes: [], activeSceneId: null } as SceneCatalog,
   status: "ready" as "ready" | "loading" | "error",
   runScene: vi.fn(),
+  canReviewEnd: true,
+  reviewEndScene: vi.fn(),
 }));
 vi.mock("./useSceneCatalog", () => ({
   useSceneCatalog: () => ({ ...shared, retry: vi.fn() }),
@@ -31,6 +33,8 @@ beforeEach(() => {
   shared.catalog = { scenes: [], activeSceneId: null };
   shared.status = 'ready';
   shared.runScene.mockClear();
+  shared.reviewEndScene.mockClear();
+  shared.canReviewEnd = true;
 });
 
 describe("saved scene shortcuts", () => {
@@ -52,6 +56,19 @@ describe("saved scene shortcuts", () => {
     expect(markup).toContain(`data-artwork="${sceneArtwork({ name: 'Quiet evening' })}"`);
     expect(markup).not.toContain("Morning");
     expect(markup).not.toContain("Movie time");
+  });
+
+  it('shows an explicit non-nested End action only beside the applied embedded scene', () => {
+    shared.catalog = { scenes: savedScenes(2), activeSceneId: 'scene-0' };
+    let document = new DOMParser().parseFromString(renderToStaticMarkup(<DashboardScenes />), 'text/html');
+    const end = document.querySelector('.dashboard-scene-end');
+    expect(end?.getAttribute('aria-label')).toBe('End Saved scene 0 scene');
+    expect(end?.parentElement?.querySelector('[data-scene-id]')?.getAttribute('data-scene-id')).toBe('scene-0');
+    expect(document.querySelector('button button')).toBeNull();
+    expect(document.querySelectorAll('.dashboard-scene-end')).toHaveLength(1);
+    shared.canReviewEnd = false;
+    document = new DOMParser().parseFromString(renderToStaticMarkup(<DashboardScenes />), 'text/html');
+    expect(document.querySelector('.dashboard-scene-end')).toBeNull();
   });
 
   it("starts with one reachable scene until the row can be measured", () => {
@@ -214,6 +231,17 @@ describe('measured scene shortcut navigation', () => {
     expect((document.activeElement as HTMLElement).dataset.sceneId).toBe('scene-6');
     pressKey('ArrowLeft');
     expect((document.activeElement as HTMLElement).dataset.sceneId).toBe('scene-5');
+  });
+
+  it('requests review without running a scene and keeps End independent of the run button', () => {
+    shared.catalog = { scenes: savedScenes(2), activeSceneId: 'scene-0' };
+    renderScenes();
+    const end = container.querySelector<HTMLButtonElement>('.dashboard-scene-end')!;
+    act(() => end.click());
+    expect(shared.reviewEndScene).toHaveBeenCalledExactlyOnceWith('scene-0');
+    expect(shared.runScene).not.toHaveBeenCalled();
+    act(() => container.querySelector<HTMLButtonElement>('[data-scene-id="scene-0"]')!.click());
+    expect(shared.runScene).toHaveBeenCalledExactlyOnceWith('scene-0');
   });
 
   it('retains the focused scene DOM node when resizing changes its page', () => {

@@ -1,3 +1,4 @@
+import { parseSceneEndReviewRequest } from '../../../packages/home-scene/src/sceneEndNavigation';
 import { parseCameraWatchRequest } from '../../../packages/home-scene/src/cameraNavigation';
 import { parseDeviceEditingRequest } from '../../../packages/home-scene/src/deviceEditingNavigation';
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -20,7 +21,7 @@ import { homeEditorScope } from '../home-shell/homeEditorScope';
 const ignoreSaveStatus = () => undefined;
 
 /** Run the self-contained scene in an opaque origin with no access to app storage or DOM. */
-export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onCameraWatch, onChromeSnapshot, chromeCommand, previewCommand, onPreviewReport, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
+export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus, onDeviceRoutines, onDeviceEdit, onCameraWatch, onSceneEndReview, onChromeSnapshot, chromeCommand, previewCommand, onPreviewReport, allowChromePreferencesWhileSuspended = false, suspended = false }: SceneSurfaceProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const documentReady = useRef(false);
   const consumedCommand = useRef(0);
@@ -104,8 +105,12 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
       const status = parseSceneStatus(event.data);
       const navigation = parseRoutineNavigation(event.data);
       const editing = parseDeviceEditingRequest(event.data);
+      const sceneEnd = parseSceneEndReviewRequest(event.data);
       const camera = parseCameraWatchRequest(event.data);
       if (status) { documentReady.current = status === 'ready'; onStatus(status); publishPresentation(); }
+      else if (sceneEnd) {
+        if (!suspendedRef.current && simulation.current?.canNavigate()) onSceneEndReview?.(sceneEnd.sceneId);
+      }
       else if (camera) {
         if (!suspendedRef.current && simulation.current?.canNavigate()) onCameraWatch?.(camera.deviceId);
       }
@@ -119,7 +124,7 @@ export default function SceneSurface({ onStatus, onSaveStatus = ignoreSaveStatus
     }
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onStatus, onDeviceRoutines, onDeviceEdit, onCameraWatch, onChromeSnapshot, onPreviewReport, publishPresentation, simulation]);
+  }, [onStatus, onDeviceRoutines, onDeviceEdit, onCameraWatch, onSceneEndReview, onChromeSnapshot, onPreviewReport, publishPresentation, simulation]);
   return <iframe
     ref={frame}
     className="vantahome-scene-frame"

@@ -9,6 +9,7 @@ import {
 import { connectSceneCatalogTransport } from "./sceneCatalogTransport";
 import { useHomeStore } from "./state";
 import { useScenePreviewStore } from "./scenePreviewStore";
+import { parseSceneEndReviewRequest } from "./sceneEndNavigation";
 
 const emptyCatalog: SceneCatalog = { scenes: [], activeSceneId: null };
 let nextSceneRequest = 0;
@@ -94,7 +95,20 @@ export function useSceneCatalog() {
     }
   }
 
+  /** Request a native review only; ending or restoring requires a separate explicit confirmation. */
+  function reviewEndScene(id: string) {
+    if (!embedded || status !== "ready" || catalog.activeSceneId !== id
+      || !catalog.scenes.some((scene) => scene.id === id) || useScenePreviewStore.getState().active) return;
+    const message = parseSceneEndReviewRequest({ channel: 'vantahome-navigation', version: 1, type: 'scene-end-review', sceneId: id });
+    if (!message) return;
+    const host = (window as Window & { ReactNativeWebView?: { postMessage: (value: string) => void } }).ReactNativeWebView;
+    if (host) host.postMessage(JSON.stringify(message));
+    else if (window.parent !== window) window.parent.postMessage(message, '*');
+  }
+
   return {
+    canReviewEnd: embedded,
+    reviewEndScene,
     catalog: embedded
       ? catalog
       : {

@@ -73,7 +73,7 @@ describe('Embedded feature collections', () => {
 
   it.each([[0.8, 2, 280], [1.5, 1, undefined], [2, 1, undefined]])('fits scene rows at font scale %s without an undersized height cap', (fontScale, capacity, maxHeight) => {
     mockFontScale = fontScale;
-    act(() => { tree = renderer.create(<EmbeddedScenes scenes={scenes} rooms={[]} activeSceneId={null} onCreate={jest.fn()} onClear={jest.fn()} onOpen={jest.fn()} onRun={jest.fn()} />); });
+    act(() => { tree = renderer.create(<EmbeddedScenes scenes={scenes} rooms={[]} activeSceneId={null} onCreate={jest.fn()} onEnd={jest.fn()} onOpen={jest.fn()} onRun={jest.fn()} />); });
     measure(tree!, 'scene-page-area', 288, 570);
     expect(visibleIds(tree!, 'scene-tile-')).toHaveLength(capacity);
     expect(StyleSheet.flatten(tree!.root.findByProps({ testID: 'scene-row-0' }).props.style).maxHeight).toBe(maxHeight);
@@ -81,7 +81,7 @@ describe('Embedded feature collections', () => {
   });
 
   it.each([[288, 245, 1], [780, 680, 4], [1100, 550, 4]])('pages every scene within %sx%s without a page scroller', (width, height, expectedCapacity) => {
-    act(() => { tree = renderer.create(<EmbeddedScenes scenes={scenes} rooms={[]} activeSceneId={null} onCreate={jest.fn()} onClear={jest.fn()} onOpen={jest.fn()} onRun={jest.fn()} />); });
+    act(() => { tree = renderer.create(<EmbeddedScenes scenes={scenes} rooms={[]} activeSceneId={null} onCreate={jest.fn()} onEnd={jest.fn()} onOpen={jest.fn()} onRun={jest.fn()} />); });
     measure(tree!, 'scene-page-area', width, height);
     expect(tree!.root.findAllByType(ScrollView)).toHaveLength(0);
     expect(visibleIds(tree!, 'scene-tile-')).toHaveLength(expectedCapacity);
@@ -97,13 +97,14 @@ describe('Embedded feature collections', () => {
   });
 
   it('preserves scene actions and clamps a later page after data shrinks or the screen rotates', () => {
-    const props = { scenes, rooms: [], activeSceneId: 'scene-0', onCreate: jest.fn(), onClear: jest.fn(), onOpen: jest.fn(), onRun: jest.fn() };
+    const props = { scenes, rooms: [], activeSceneId: 'scene-0', onCreate: jest.fn(), onEnd: jest.fn(), onOpen: jest.fn(), onRun: jest.fn() };
     act(() => { tree = renderer.create(<EmbeddedScenes {...props} />); });
-    act(() => { button(tree!, 'Run Scene 0').props.onPress(); button(tree!, 'Details for Scene 0').props.onPress(); button(tree!, 'Create scene').props.onPress(); button(tree!, 'Clear last-used scene').props.onPress(); });
-    expect(props.onRun).toHaveBeenCalledWith('scene-0');
+    act(() => { button(tree!, 'End Scene 0').props.onPress(); button(tree!, 'Details for Scene 0').props.onPress(); button(tree!, 'Create scene').props.onPress(); button(tree!, 'End last-used scene').props.onPress(); });
+    expect(props.onRun).not.toHaveBeenCalled();
     expect(props.onOpen).toHaveBeenCalledWith('scene-0');
     expect(props.onCreate).toHaveBeenCalledTimes(1);
-    expect(props.onClear).toHaveBeenCalledTimes(1);
+    expect(props.onEnd).toHaveBeenCalledTimes(2);
+    expect(props.onEnd).toHaveBeenLastCalledWith('scene-0');
     for (let index = 0; index < 12; index++) act(() => { button(tree!, 'Next scenes page').props.onPress(); });
     measure(tree!, 'scene-page-area', 780, 680);
     expect(visibleIds(tree!, 'scene-tile-')).toEqual(['scene-tile-scene-12']);
@@ -189,7 +190,7 @@ describe('Embedded feature collections', () => {
     const onRun = jest.fn();
     const onOpen = jest.fn();
     act(() => { tree = renderer.create(<EmbeddedScenes scenes={scenes} rooms={[]} activeSceneId={null}
-      onCreate={jest.fn()} onClear={jest.fn()} onOpen={onOpen} onRun={onRun} />); });
+      onCreate={jest.fn()} onEnd={jest.fn()} onOpen={onOpen} onRun={onRun} />); });
     measure(tree!, 'scene-page-area', 288, 245);
     measure(tree!, 'scene-card-pages', 288, 245);
     const list = tree!.root.findByType(FlatList);

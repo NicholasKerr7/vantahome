@@ -54,19 +54,24 @@ import { isModelHome } from '../features/three-d-home/modelHomeScope';
 import { sceneOutcome, sceneSafetyEffects } from '../features/scenes/sceneOutcome';
 import { consumeAssistantDraft } from '../features/home-assistant/assistantDraftHandoff';
 import { buildAssistantSceneAction } from '../features/home-assistant/assistantSceneAction';
+import { SceneEndReview } from '../features/scenes/SceneEndReviewDialog';
+import { useSceneEndReview } from '../features/scenes/useSceneEndReview';
 
 export type ScenesScreenProps = {
   /** The root feature wrapper provides the title, safe areas and back navigation. */
   embedded?: boolean;
   /** Opaque, one-use review token; generated content stays out of navigation history. */
   assistantDraftToken?: string;
+  /** Dashboard requests contain only a scene ID; the review revalidates the newest run. */
+  sceneEndId?: string;
+  onSceneEndHandled?: () => void;
 };
 
 type SceneEditorActions = { selectedDeviceIds: string[]; overrides: Record<string, Partial<Device>> };
 type SceneEditorSession = { scope: string; invalidated: boolean; actions?: SceneEditorActions; explicitSettings: boolean };
 
 /** Keep scene controls reusable in the original tab or the 3D home's feature wrapper. */
-export default function ScenesScreen({ embedded = false, assistantDraftToken }: ScenesScreenProps = {}) {
+export default function ScenesScreen({ embedded = false, assistantDraftToken, sceneEndId, onSceneEndHandled }: ScenesScreenProps = {}) {
   const { width, height, contentWidth, gutter, topPad, isTablet, isLandscape, scale } =
     useResponsive(920);
   const minSize = Math.min(width, contentWidth);
@@ -179,8 +184,19 @@ export default function ScenesScreen({ embedded = false, assistantDraftToken }: 
       sceneRequestPending.current = false;
     }
   };
-  const clearActiveScene = useHomeStore((s) => s.clearActiveScene);
+  const endReview = useSceneEndReview();
+  const handledSceneEnd = useRef<string | null>(null);
+
+  // Consume dashboard navigation once; retaining this screen must not reopen an old review.
+  useEffect(() => {
+    if (!sceneEndId) { handledSceneEnd.current = null; return; }
+    if (handledSceneEnd.current === sceneEndId) return;
+    handledSceneEnd.current = sceneEndId;
+    endReview.open(sceneEndId);
+    onSceneEndHandled?.();
+  }, [sceneEndId, onSceneEndHandled, endReview.open]);
   const activeSceneId = useHomeStore((s) => s.activeSceneId);
+  const lastUsedScene = scenes.find((scene) => scene.id === activeSceneId);
   const addScene = useHomeStore((s) => s.addScene);
   const updateScene = useHomeStore((s) => s.updateScene);
   const removeScene = useHomeStore((s) => s.removeScene);
@@ -710,6 +726,7 @@ export default function ScenesScreen({ embedded = false, assistantDraftToken }: 
                 actionLabels={actionLabels}
                 isActive={scene.id === activeSceneId}
                 onRun={() => { void requestScene(scene.id); }}
+                onEnd={() => endReview.open(scene.id)}
                 onOpen={() => setDetailSceneId(scene.id)}
               />
             );
@@ -729,7 +746,7 @@ export default function ScenesScreen({ embedded = false, assistantDraftToken }: 
           rooms={rooms}
           activeSceneId={activeSceneId}
           onCreate={openCreate}
-          onClear={clearActiveScene}
+          onEnd={endReview.open}
           onOpen={setDetailSceneId}
           onRun={(sceneId) => { void requestScene(sceneId); }}
           onPresets={canManage ? () => setShowPresets(true) : undefined}
@@ -767,14 +784,14 @@ export default function ScenesScreen({ embedded = false, assistantDraftToken }: 
                     textStyle={addTextStyle}
                     onPress={openCreate}
                   />
-                  {activeSceneId ? (
+                  {lastUsedScene ? (
                     <HeaderPill
-                      label="Clear last used"
-                      icon="close-circle"
+                      label="End scene"
+                      icon="return-down-back-outline"
                       iconSize={Math.round(16 * scale)}
                       style={clearPillStyle}
                       textStyle={clearTextStyle}
-                      onPress={clearActiveScene}
+                      onPress={() => endReview.open(lastUsedScene.id)}
                     />
                   ) : null}
                 </View>
@@ -980,6 +997,10 @@ export default function ScenesScreen({ embedded = false, assistantDraftToken }: 
           <Text style={modalHintStyle}>{detailOutcome?.simulationOnly ? "Simulation only · No real devices are controlled. " : ""}Saved on this device. These are desired settings, not confirmed device states.</Text>
           {detailOutcome && <ModalField label="What this scene requests" labelStyle={modalLabelStyle}><Text style={modalHintStyle}>{detailOutcome.effects.join(" · ")}</Text></ModalField>}
           {Boolean(detailOutcome?.importantEffects.length) && <ModalField label="Entry, camera & safety settings" labelStyle={modalLabelStyle}><Text style={modalHintStyle}>{detailOutcome?.importantEffects.join("\n")}</Text></ModalField>}
+          {detailScene?.id === activeSceneId && <Pressable accessibilityLabel={`End ${detailScene.name}`} onPress={() => {
+            setDetailSceneId(null);
+            endReview.open(detailScene.id);
+          }} style={styles.endSceneButton}><Ionicons name="return-down-back-outline" size={18} color={theme.colors.accentText} /><Text style={styles.endSceneText}>End scene · review previous settings</Text></Pressable>}
           {canManage && <Pressable accessibilityLabel={`Delete ${detailScene?.name ?? 'scene'}`} onPress={beginDelete} style={styles.deleteSceneButton}><Ionicons name="trash-outline" size={17} color={theme.colors.subtext} /><Text style={styles.deleteSceneText}>Delete scene</Text></Pressable>}
 
           <ModalField label="Actions" labelStyle={modalLabelStyle}>
@@ -1055,6 +1076,8 @@ export default function ScenesScreen({ embedded = false, assistantDraftToken }: 
             ]}
           />
       </ModalCard>
+      {endReview.shown && <SceneEndReview review={endReview.review} loading={endReview.loading} error={endReview.error} busy={endReview.busy}
+        onRetry={endReview.retry} onRestore={endReview.restore} onKeep={endReview.keep} onClose={endReview.close} />}
       {showPresets && <StarterSceneLibrary presets={availableStarterScenes(useHomeStore.getState())} onChoose={choosePreset} onClose={() => setShowPresets(false)} />}
       {deleteReview && <SceneDeleteConfirmation name={deleteReview.scene.name} routineCount={useHomeStore.getState().flows.filter((flow) => flow.triggers.some((trigger) => trigger.type === 'scene' && trigger.sceneId === deleteReview.scene.id) || flow.actions.some((action) => action.type === 'run-scene' && action.sceneId === deleteReview.scene.id)).length} error={sceneError} onCancel={closeDelete} onDelete={confirmDelete} />}
     </View>
@@ -1062,6 +1085,8 @@ export default function ScenesScreen({ embedded = false, assistantDraftToken }: 
 }
 
 const styles = StyleSheet.create({
+  endSceneButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 16, padding: 12, backgroundColor: theme.colors.card2 },
+  endSceneText: { flex: 1, color: theme.colors.accentText, fontSize: 12, fontWeight: '600' },
   deleteSceneButton: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, backgroundColor: theme.colors.glass },
   deleteSceneText: { color: theme.colors.subtext, fontSize: 12, fontWeight: '600' },
   root: { flex: 1, minHeight: 0 },
@@ -1928,6 +1953,7 @@ function SceneCard({
   isActive,
   onRun,
   onOpen,
+  onEnd,
 }: {
   scene: Scene;
   devices: Device[];
@@ -1935,6 +1961,7 @@ function SceneCard({
   isActive: boolean;
   onRun: () => void;
   onOpen: () => void;
+  onEnd: () => void;
 }) {
   const { isTablet, scale: scaleFactor } = useResponsive();
   const pressScale = useRef(new Animated.Value(1)).current;
@@ -1942,7 +1969,7 @@ function SceneCard({
   const cardRadius = Math.round((isTablet ? 24 : 22) * scaleFactor);
   const titleSize = Math.round((isTablet ? 16 : 14) * scaleFactor);
   const subSize = Math.round((isTablet ? 13 : 12) * scaleFactor);
-  const runHeight = Math.round((isTablet ? 46 : 44) * scaleFactor);
+  const runHeight = Math.max(48, Math.round(48 * scaleFactor));
   const runRadius = Math.round(runHeight / 2);
   const runText = Math.round((isTablet ? 13 : 12) * scaleFactor);
   const iconChipSize = Math.round((isTablet ? 40 : 36) * scaleFactor);
@@ -2030,7 +2057,7 @@ function SceneCard({
   const handleRun = (event?: { stopPropagation?: () => void }) => {
     event?.stopPropagation?.();
     void impactHaptic();
-    onRun();
+    if (isActive) onEnd(); else onRun();
   };
 
   return (
@@ -2047,16 +2074,17 @@ function SceneCard({
             </Text>
           </View>
           <Pressable
+            accessibilityLabel={`${isActive ? 'End' : 'Run'} ${scene.name}`}
             style={runPillStyle}
             onPress={handleRun}
             hitSlop={8}
           >
             <Ionicons
-              name="play"
+              name={isActive ? "return-down-back-outline" : "play"}
               size={Math.round(14 * scaleFactor)}
               color={theme.colors.text}
             />
-            <Text style={runTextStyle}>Run</Text>
+            <Text style={runTextStyle}>{isActive ? "End" : "Run"}</Text>
           </Pressable>
         </View>
 

@@ -4,20 +4,25 @@ import { getCapabilities, isMonitor, validateSetting } from '../../../packages/h
 import { diffSimulationSnapshots, mergeSimulationChanges, type DeviceState, type SimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import type { HomeState, Scene, SceneAction } from '../../store/useHomeStore';
 import { homeEditorScope } from '../home-shell/homeEditorScope';
-import { modelSimulationScope, resolveModelSceneAccess } from '../three-d-home/modelSceneAccess';
+import { resolveModelSceneAccess } from '../three-d-home/modelSceneAccess';
 import { simulationPersistence, type SimulationPersistence } from '../three-d-home/simulationPersistence';
 import { canManageScenes } from './sceneManagement';
+import { isModelHome } from '../three-d-home/modelHomeScope';
+import { overlayDemoDevices } from '../three-d-home/demoDeviceMapping';
+import { createSceneReceiptDescriptor, sceneRestorationScope } from './sceneRestorationScope';
 
 /** Resolve an entire virtual scene, rejecting mixed transports and stale or restricted bindings. */
 export function simulationSceneBindings(state: HomeState, scene: Scene): Map<string, string> | null {
+  const modeledDemo = isModelHome(state);
   const devices = scene.actions.map((action) => state.devices.find((device) => device.id === action.deviceId));
-  if (!devices.some((device) => device?.simulationOnly)) return null;
-  if (!canManageScenes(state) || !scene.actions.length) throw new Error('Your current access does not allow this scene.');
+  if (!modeledDemo && !devices.some((device) => device?.simulationOnly)) return null;
+  if (modeledDemo && !devices.every((device) => device && getDevice(device.id)?.kind === device.kind)) return null;
+  if (state.authTaskBlockingHome || !canManageScenes(state) || !scene.actions.length) throw new Error('Your current access does not allow this scene.');
   const allowed = new Set(resolveModelSceneAccess(state).controllableDeviceIds);
   const bindings = new Map<string, string>();
   for (const device of devices) {
-    const definition = device?.modelDeviceId ? getDevice(device.modelDeviceId) : undefined;
-    if (!device?.simulationOnly || !definition || definition.kind !== device.kind || !allowed.has(definition.id)) {
+    const definition = device ? getDevice(modeledDemo ? device.id : device.modelDeviceId ?? '') : undefined;
+    if (!device || (!modeledDemo && !device.simulationOnly) || !definition || definition.kind !== device.kind || !allowed.has(definition.id)) {
       throw new Error('A scene cannot mix physical devices with the 3D simulation, or use unavailable controls.');
     }
     bindings.set(device.id, definition.id);
@@ -62,22 +67,24 @@ export function reduceSimulationScene(snapshot: SimulationSnapshot, scene: Scene
 
 /** Never route virtual scene commands through hardware transports; recheck after disk hydration. */
 export async function runSimulationScene(initial: HomeState, scene: Scene, getState: () => HomeState, signal?: AbortSignal,
-  persistence: Pick<SimulationPersistence, 'update'> = simulationPersistence): Promise<boolean> {
+  persistence: Pick<SimulationPersistence, 'updateWithSceneReceipt'> = simulationPersistence): Promise<string | false> {
   const bindings = simulationSceneBindings(initial, scene);
   if (!bindings) return false;
-  const scope = modelSimulationScope(initial, false);
+  const scope = sceneRestorationScope(initial);
+  const descriptor = createSceneReceiptDescriptor(initial, scene);
   const identity = homeEditorScope(initial);
-  await persistence.update(scope, (snapshot) => {
+  await persistence.updateWithSceneReceipt(scope, descriptor, (snapshot) => {
     const current = getState();
     if (signal?.aborted || homeEditorScope(current) !== identity || current.scenes.find((item) => item.id === scene.id) !== scene) {
       throw new Error('Home access changed. Open the scene again before running it.');
     }
     const freshBindings = simulationSceneBindings(current, scene);
     if (!freshBindings || [...bindings].some(([id, target]) => freshBindings.get(id) !== target)) throw new Error('Scene devices changed. Review the scene before running it.');
-    const next = reduceSimulationScene(snapshot, scene, freshBindings);
+    const source = isModelHome(current) ? overlayDemoDevices(snapshot, current.devices) : snapshot;
+    const next = reduceSimulationScene(source, scene, freshBindings);
     const allowed = new Set(resolveModelSceneAccess(current).controllableDeviceIds);
     if (Object.keys(diffSimulationSnapshots(snapshot, next).deviceStates ?? {}).some((id) => !allowed.has(id))) throw new Error('This scene needs access to additional safety controls.');
     return next;
   });
-  return true;
+  return descriptor.runId;
 }

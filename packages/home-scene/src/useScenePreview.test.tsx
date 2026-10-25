@@ -25,8 +25,8 @@ function Probe({ ready = true, hostSuspended = false, unavailable = false }: { r
 
 /** Exercise the existing host-run transport independently of DOM inert support. */
 function CatalogProbe() {
-  const { runScene } = useSceneCatalog();
-  return <button data-run-scene onClick={() => runScene('scene-evening')}>Run saved scene</button>;
+  const { runScene, reviewEndScene } = useSceneCatalog();
+  return <><button data-run-scene onClick={() => runScene('scene-evening')}>Run saved scene</button><button data-end-scene onClick={() => reviewEndScene('scene-evening')}>End scene</button></>;
 }
 
 /** Use the native injection channel with the current before value rather than a fake command bridge. */
@@ -65,6 +65,28 @@ describe('3D preview host lifecycle and comparison controls', () => {
     act(() => [...container.querySelectorAll('button')].find((button) => button.textContent === 'Exit preview')!.click());
     act(() => run.click());
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ channel: SCENE_CATALOG_CHANNEL, type: 'run', sceneId: 'scene-evening' });
+  });
+
+  it('requires the current active catalog identity for End review and rejects it during a 3D preview', () => {
+    act(() => root.render(<><Probe /><CatalogProbe /></>));
+    const end = container.querySelector<HTMLButtonElement>('[data-end-scene]')!;
+    postMessage.mockClear();
+    act(() => end.click()); expect(postMessage).not.toHaveBeenCalled();
+    const catalog = { scenes: [{ id: 'scene-evening', name: 'Evening', scope: 'Living room', deviceCount: 1 }], activeSceneId: 'scene-evening' };
+    act(() => window.dispatchEvent(new CustomEvent(SCENE_CATALOG_CHANNEL, { detail: {
+      channel: SCENE_CATALOG_CHANNEL, version: 1, type: 'catalog', catalog,
+    } })));
+    const before = useHomeStore.getState();
+    act(() => end.click());
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toEqual({ channel: 'vantahome-navigation', version: 1, type: 'scene-end-review', sceneId: 'scene-evening' });
+    expect(useHomeStore.getState()).toBe(before);
+    act(() => send(1)); postMessage.mockClear();
+    act(() => end.click()); expect(postMessage).not.toHaveBeenCalled();
+    act(() => [...container.querySelectorAll('button')].find((button) => button.textContent === 'Exit preview')!.click());
+    act(() => window.dispatchEvent(new CustomEvent(SCENE_CATALOG_CHANNEL, { detail: {
+      channel: SCENE_CATALOG_CHANNEL, version: 1, type: 'catalog', catalog: { ...catalog, activeSceneId: null },
+    } })));
+    postMessage.mockClear(); act(() => end.click()); expect(postMessage).not.toHaveBeenCalled();
   });
 
   it('shows a persistent honest badge and accessible comparison actions without canonical updates or patches', () => {
