@@ -46,37 +46,46 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Energy equipment artwork — October 26 / Preview 94 built; installation pending
+## Energy equipment artwork — October 26 / Preview 95 redesigned and built; installation pending
 
 - Completed sequentially: solar array, solar battery, backup generator, then home
   energy. Each received control-regression and five-size browser checks before
-  proceeding to the next. Lightweight local SVG now shows framed glass modules,
-  a sculpted battery cabinet, a ventilated generator and a recessed home instrument.
+  proceeding to the next. The redesign replaces the first pass's small isometric
+  forms with larger near-front equipment inspired by the fan/laundry/vacuum
+  consoles: a three-module solar array, bright ceramic battery tower, substantial
+  generator with a deep cooling grille, and a broad circular home instrument.
+  Metallic frames, radial recessed glass and restrained reflections give each
+  piece a distinct silhouette; contact shadows replace the common plinth.
 - Both native and embedded controllers render one shared typed geometry model,
   with instance-local gradients and no raw SVG markup, images, blur filters, extra
-  WebGL context, dependencies, timers or continuous animation. The final SVGs have
-  38–52 descendant nodes. Solar uses available height for a larger centered view;
-  compact layouts retain the established controls and contained scroll fallback.
+  WebGL context, dependencies, timers or continuous animation. Unused paint servers
+  are removed per device/state; final SVGs have 46–77 descendant nodes. Embedded
+  artwork centers when its measured stage has enough height. Native artwork is
+  larger, with a horizontal reading row for normal-type non-solar consoles;
+  larger text retains stacked readings. Compact layouts retain the established
+  controls and contained scroll fallback.
 - All commands, advanced controls, permissions and persistence use the existing
   paths. Solar artwork does not pretend to follow live sunlight. Battery charge
   stays separate from power, reserve and storage preferences. Generator lighting
   follows explicit simulated power; Auto does not start it. Home grid indicators
   distinguish available, outage and unknown, without inferred backup/energy flows.
-- **45 renderer tests across three suites + 23 native controller tests** pass;
+- **46 renderer tests across three suites + 23 native controller tests** pass;
   app/scene TypeScript and scene build pass. Each embedded console passes 320×568,
   390×844, 440×956, 820×1180 and 1180×820: no page overflow, 44px targets and
   More/Back focus. The smallest battery retains 8px contained vertical overflow;
   normal profiles need none. All 20 native-source browser cases also pass, including
-  solar sample checks and generator Start/Stop. A six-pixel native Home Energy
-  overflow at 390×844 was fixed by reducing reserved artwork height to 140px.
+  solar sample checks and generator Start/Stop. Native Home Energy now fits the
+  390×844 profile with 164px artwork and its more compact horizontal reading row.
   Native 320×568 retains the existing contained-scroll fallback for longer controls.
   Independent review found no further actionable defect.
 - Native browser QA holds development WebSockets locally without closing them.
   Closing Metro's HMR socket caused the lazy device-library screen to reload;
   this was a test-harness issue. No application behavior was changed for it.
-- Preview **94** is signed and verified, staging-only, with the exact **32,200,859**
+- Preview **95** supersedes the first artwork pass in 94 and includes the earlier
+  End-scene work in 93. It is signed and verified, staging-only, with the exact **32,203,378**
   byte offline scene and all four native/embedded SVGs. Production metadata was
-  restored. Evidence: `work/energy-art-*`, `work/preview94-verification.json`.
+  restored. Evidence: `work/energy-redesign-*`, `work/preview95-verification.json`.
+  `work/energy-redesign-gallery.png` shows the four actual native SVG illustrations.
   Signing profile currently expires October 27 at 11:57:55 UTC; recheck before
   installation. Preview 92 remains the last installed version.
 - Next: install when requested.

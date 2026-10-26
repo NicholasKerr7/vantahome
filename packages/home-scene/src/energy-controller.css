@@ -69,3 +69,14 @@
   .energy-console[data-kind='solar'] .energy-reading { justify-items: center; padding: 0; }
   .energy-console[data-kind='solar'] .energy-reading p { max-width: none; }
 }
+
+/* Present equipment as the hero, like the fan and laundry consoles, when the measured stage can fit it. */
+@container energy-stage (min-height: 570px) {
+  .energy-console:not([data-kind='solar']) { padding: 12px; gap: 8px; }
+  .energy-console:not([data-kind='solar']) .energy-hero { grid-template-columns: minmax(0, 1fr); padding: 4px 12px 6px; }
+  .energy-console:not([data-kind='solar']) .energy-artwork { height: 180px; }
+  .energy-console:not([data-kind='solar']) .energy-reading { width: 100%; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; padding: 0; }
+  .energy-console:not([data-kind='solar']) .energy-reading > span { grid-column: 1; grid-row: 1; }
+  .energy-console:not([data-kind='solar']) .energy-reading > output { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .energy-console:not([data-kind='solar']) .energy-reading > p { grid-column: 1; grid-row: 2; max-width: none; }
+}

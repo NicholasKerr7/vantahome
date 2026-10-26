@@ -61,10 +61,39 @@ describe('shared energy equipment artwork', () => {
         expect(match, `Local paint reference: ${reference}`).not.toBeNull();
         expect(localIds.has(match![1]), `Paint server belongs to its own preview: ${reference}`).toBe(true);
       }
+      expect(new Set(references)).toEqual(new Set([...localIds].map((id) => `url(#${id})`)));
+      const viewBox = preview.getAttribute('viewBox')!.split(/\s+/).map(Number);
+      expect(viewBox).toHaveLength(4);
+      expect(viewBox.every(Number.isFinite)).toBe(true);
+      expect(viewBox[2]).toBeGreaterThan(0);
+      expect(viewBox[3]).toBeGreaterThan(0);
+      expect(preview.innerHTML).not.toMatch(/NaN|Infinity/);
       expect(preview.getAttribute('aria-hidden')).toBe('true');
       expect(preview.matches('[tabindex], [focusable="true"]')).toBe(false);
       expect(preview.querySelector('a, button, input, [tabindex], [focusable="true"]')).toBeNull();
       expect(preview.querySelector('image, foreignObject, filter, animate, animateTransform')).toBeNull();
+    }
+  });
+
+  it('retains native-compatible gradient coordinates and only referenced materials through device state changes', () => {
+    for (const kind of ['solar', 'battery', 'generator', 'energy'] as const) {
+      const energy = fixture(kind);
+      for (const on of [true, false]) {
+        act(() => root.render(<EnergyConsoleArtwork energy={{ ...energy, on }} />));
+        for (const gradient of container.querySelectorAll('linearGradient, radialGradient')) {
+          expect(container.querySelector(`[fill="url(#${gradient.id})"], [stroke="url(#${gradient.id})"]`)).not.toBeNull();
+          // Percent geometry has identical object-bounding-box meaning in browser and native SVG.
+          const coordinates = gradient.tagName === 'radialGradient' ? ['cx', 'cy', 'r'] : ['x1', 'y1', 'x2', 'y2'];
+          for (const coordinate of coordinates) {
+            const value = gradient.getAttribute(coordinate)!;
+            expect(value).toMatch(/^\d+(?:\.\d+)?%$/);
+            expect(Number.parseFloat(value)).toBeLessThanOrEqual(100);
+          }
+          const offsets = [...gradient.querySelectorAll('stop')].map((stop) => Number(stop.getAttribute('offset')));
+          expect(offsets.every((offset) => Number.isFinite(offset) && offset >= 0 && offset <= 1)).toBe(true);
+          expect(offsets).toEqual([...offsets].sort((a, b) => a - b));
+        }
+      }
     }
   });
 

@@ -10,28 +10,27 @@ export type EnergyArtworkShape = Surface & (
 );
 export interface EnergyArtworkGradient {
   id: string;
+  kind?: 'linear' | 'radial';
+  x1?: string; y1?: string; x2?: string; y2?: string;
+  cx?: string; cy?: string; r?: string;
   stops: readonly (readonly [number, string])[];
 }
 export interface EnergyArtworkDrawing {
+  viewBox: string;
   gradients: readonly EnergyArtworkGradient[];
   shapes: readonly EnergyArtworkShape[];
 }
 
-/** Prefix material IDs per mounted console so several previews never share paint servers. */
-export function energyArtworkMaterials(prefix: string) {
+/** Broad highlights and recessed radial glass give the equipment the same material depth as the appliance consoles. */
+export function sculptedEnergyMaterials(prefix: string) {
   const gradients: EnergyArtworkGradient[] = [
-    { id: `${prefix}-titanium`, stops: [[0, '#F0E7FF'], [.22, '#8B839E'], [.48, '#3B344B'], [.8, '#71677D'], [1, '#282033']] },
-    { id: `${prefix}-shell`, stops: [[0, '#615A73'], [.3, '#2B2639'], [1, '#100D1C']] },
-    { id: `${prefix}-glass`, stops: [[0, '#605694'], [.36, '#29264C'], [.7, '#11152D'], [1, '#393258']] },
-    { id: `${prefix}-violet`, stops: [[0, '#F0DFFF'], [.4, '#C39AFF'], [1, '#7656B4']] },
+    { id: `${prefix}-ceramic`, x2: '100%', y2: '25%', stops: [[0, '#F1EAF9'], [.22, '#C7BBD8'], [.53, '#9485AA'], [.82, '#DBCFEB'], [1, '#79658F']] },
+    { id: `${prefix}-graphite`, stops: [[0, '#766687'], [.3, '#382E46'], [.68, '#1B1526'], [1, '#4D3B60']] },
+    { id: `${prefix}-edge`, x2: '80%', stops: [[0, '#FAF1FF'], [.19, '#CAB4DC'], [.43, '#584267'], [.64, '#9B7CAC'], [.85, '#EBD1FB'], [1, '#665173']] },
+    { id: `${prefix}-well`, kind: 'radial', cx: '36%', cy: '25%', r: '80%', stops: [[0, '#806099'], [.4, '#3A244C'], [.78, '#140D20'], [1, '#090610']] },
+    { id: `${prefix}-cells`, stops: [[0, '#52628D'], [.28, '#25365C'], [.7, '#0E1730'], [1, '#344569']] },
+    { id: `${prefix}-signal`, x2: '90%', y2: '100%', stops: [[0, '#F9E9FF'], [.35, '#E4B9FF'], [.7, '#B373F3'], [1, '#7144AF']] },
   ];
-  return { gradients, metal: `url(#${prefix}-titanium)`, shell: `url(#${prefix}-shell)`, glass: `url(#${prefix}-glass)`, violet: `url(#${prefix}-violet)` };
+  return { gradients, ceramic: `url(#${prefix}-ceramic)`, graphite: `url(#${prefix}-graphite)`,
+    edge: `url(#${prefix}-edge)`, well: `url(#${prefix}-well)`, cells: `url(#${prefix}-cells)`, signal: `url(#${prefix}-signal)` };
 }
-
-/** Equipment rests on a quiet architectural plinth, without suggesting measured energy flow. */
-export const ENERGY_ARTWORK_PLINTH: readonly EnergyArtworkShape[] = [
-  { kind: 'ellipse', cx: 120, cy: 141, rx: 103, ry: 12, fill: '#090713', opacity: .7 },
-  { kind: 'path', d: 'M18 126 L144 100 L226 128 L226 132 L101 158 L18 130 Z', fill: '#151020', stroke: '#43364F', strokeWidth: .7 },
-  { kind: 'path', d: 'M18 126 L143 101 L226 128 L101 154 Z', fill: '#241D31', stroke: '#615075', strokeWidth: .6 },
-  { kind: 'path', d: 'M25 128 L101 150 L217 127', fill: 'none', stroke: '#B798DD', strokeWidth: .7, opacity: .4 },
-];

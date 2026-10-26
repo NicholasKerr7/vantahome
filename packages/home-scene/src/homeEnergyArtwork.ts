@@ -1,30 +1,49 @@
-import { ENERGY_ARTWORK_PLINTH, energyArtworkMaterials, type EnergyArtworkDrawing } from './energyArtworkGeometry';
+import { sculptedEnergyMaterials, type EnergyArtworkDrawing, type EnergyArtworkShape } from './energyArtworkGeometry';
 
-/** A distribution controller shows the selected grid sample without inventing connected-home power flows. */
+/** A large recessed home instrument distinguishes grid samples without inventing a consumption gauge or power flow. */
 export function createHomeEnergyArtwork(prefix: string, available: boolean | null): EnergyArtworkDrawing {
-  const material = energyArtworkMaterials(prefix);
-  const indicator = available === true ? '#D4B7FC' : available === false ? '#CCAB7B' : '#756B83';
-  return { gradients: material.gradients, shapes: [
-    ...ENERGY_ARTWORK_PLINTH,
-    // Static terminal traces communicate equipment connections, with no directional particles.
-    { kind: 'path', d: 'M75 127 L47 133 L36 128 M153 118 L190 129 L209 125', fill: 'none', stroke: '#655272', strokeWidth: 1 },
-    { kind: 'circle', cx: 36, cy: 128, r: 2.3, fill: '#A695BB' },
-    { kind: 'circle', cx: 209, cy: 125, r: 2.3, fill: '#A695BB' },
-    { kind: 'path', d: 'M67 34 L139 16 Q144 15 149 18 L176 35 Q180 37 180 43 L180 116 Q180 123 173 125 L105 144 Q99 145 94 142 L68 127 Q63 124 63 117 L63 42 Q63 36 67 34 Z', fill: material.metal, stroke: '#C2B1D3', strokeWidth: .8 },
-    { kind: 'path', d: 'M147 23 L174 40 L174 115 Q174 120 169 122 L147 128 Z', fill: material.shell, stroke: '#5D4D6B', strokeWidth: .7 },
-    { kind: 'path', d: 'M70 41 Q70 38 75 37 L137 21 Q142 20 142 26 L142 122 Q142 128 136 130 L79 144 L73 128 Q70 126 70 120 Z', fill: material.shell, stroke: '#B7A4CC', strokeWidth: .8 },
-    { kind: 'path', d: 'M75 42 L137 26 L137 119 Q137 124 132 126 L75 141 Z', fill: '#15121F', stroke: '#675472', strokeWidth: .5 },
-    { kind: 'path', d: 'M76 43 L135 28 L135 48 L76 64 Z', fill: '#E4D5FA', opacity: .06 },
-    // Recessed instrument ring is a state indicator, not a measured consumption gauge.
-    { kind: 'ellipse', cx: 106, cy: 84, rx: 27, ry: 32, fill: '#0A0912', stroke: '#87749B', strokeWidth: 1.5 },
-    { kind: 'ellipse', cx: 106, cy: 83, rx: 24, ry: 29, fill: material.glass, stroke: '#44334E', strokeWidth: 2 },
-    { kind: 'path', d: 'M88 102 Q78 88 84 72 Q89 57 102 55 M111 55 Q125 57 129 74 M130 84 Q129 100 118 108', fill: 'none', stroke: indicator, strokeWidth: 2.1 },
-    { kind: 'path', d: 'M93 84 L106 71 L119 80 M97 81 L97 94 L105 97 L105 88 L111 87 L111 95 L116 92 L116 79', fill: 'none', stroke: '#DACDEB', strokeWidth: 1.3 },
-    { kind: 'circle', cx: 106, cy: 105, r: 1.6, fill: indicator },
-    { kind: 'path', d: 'M88 120 L124 111 M88 124 L124 115', stroke: '#867294', strokeWidth: .8 },
-    { kind: 'path', d: 'M154 53 L167 60 M154 59 L167 66 M154 65 L167 72 M154 71 L167 78 M154 77 L167 84 M154 83 L167 90 M154 89 L167 96', stroke: '#71607E', strokeWidth: 1.5 },
-    { kind: 'path', d: 'M155 103 L166 108 L166 114 L155 109 Z', fill: '#0C0A14', stroke: '#8C769C', strokeWidth: .6 },
-    { kind: 'path', d: 'M71 42 L71 119 Q71 124 75 127 M76 36 L137 20', fill: 'none', stroke: '#F3E7FF', strokeWidth: .6, opacity: .7 },
-    { kind: 'path', d: 'M86 137 L135 124', stroke: material.violet, strokeWidth: .9, opacity: .55 },
-  ] };
+  const m = sculptedEnergyMaterials(prefix);
+  const indicator = available === true ? '#DAB4FF' : available === false ? '#D5AD78' : '#74657F';
+  const shapes: EnergyArtworkShape[] = [
+    { kind: 'ellipse', cx: 132, cy: 189, rx: 103, ry: 9, fill: '#080510', opacity: .65 },
+    // A wide graphite distribution panel carries one dominant machined instrument.
+    { kind: 'rect', x: 31, y: 22, width: 205, height: 163, rx: 25, fill: '#1E152A' },
+    { kind: 'rect', x: 25, y: 15, width: 208, height: 165, rx: 26, fill: m.edge },
+    { kind: 'rect', x: 29, y: 19, width: 200, height: 157, rx: 23, fill: m.graphite },
+    { kind: 'path', d: 'M53 23 H204 Q225 23 225 46 V147 Q224 170 203 171 H54 Q34 170 33 149 V46 Q34 25 53 23 Z', fill: 'none', stroke: '#BD9FD1', strokeWidth: .6, opacity: .4 },
+    { kind: 'circle', cx: 129, cy: 90, r: 66, fill: '#0E0916', stroke: '#776087', strokeWidth: 1 },
+    { kind: 'circle', cx: 129, cy: 88, r: 64, fill: m.edge },
+    { kind: 'circle', cx: 129, cy: 88, r: 57, fill: '#140C1F', stroke: '#39223F', strokeWidth: 2 },
+    { kind: 'circle', cx: 129, cy: 88, r: 51, fill: m.well, stroke: '#8B659D', strokeWidth: .8 },
+    { kind: 'circle', cx: 129, cy: 88, r: 54, fill: 'none', stroke: indicator, strokeWidth: 1.8 },
+    // A grounded home symbol remains readable when the grid sample is unavailable.
+    { kind: 'path', d: 'M106 83 L129 63 L152 83 L148 87 L129 71 L110 87 Z', fill: m.ceramic },
+    { kind: 'path', d: 'M113 85 V105 Q113 108 116 108 H125 V94 H134 V108 H143 Q146 108 146 105 V85 L129 71 Z', fill: m.ceramic },
+    { kind: 'path', d: 'M120 86 L129 78 L137 85', fill: 'none', stroke: '#FAF1FF', strokeWidth: .6, opacity: .6 },
+    { kind: 'circle', cx: 129, cy: 122, r: 2.4, fill: indicator },
+    // Two restrained glass reflections keep the instrument tactile without blur or a glow layer.
+    { kind: 'path', d: 'M87 76 Q95 42 130 39 Q107 61 96 90 Z', fill: '#F5DEFF', opacity: .13 },
+    { kind: 'path', d: 'M101 130 Q134 151 165 120', fill: 'none', stroke: '#DFB9F1', strokeWidth: 1.1, opacity: .3 },
+  ];
+  // Bezel etching is fixed decoration; it never represents measured usage or reserve.
+  for (let index = 0; index < 24; index += 1) {
+    const angle = index * Math.PI / 12;
+    const x1 = 129 + Math.sin(angle) * 60;
+    const y1 = 88 - Math.cos(angle) * 60;
+    const x2 = 129 + Math.sin(angle) * 62;
+    const y2 = 88 - Math.cos(angle) * 62;
+    shapes.push({ kind: 'path', d: `M${x1.toFixed(2)} ${y1.toFixed(2)} L${x2.toFixed(2)} ${y2.toFixed(2)}`, stroke: '#F0DDFB', strokeWidth: .7, opacity: .6 });
+  }
+  // Four connector wells add physical scale, without depicting other devices or transmission direction.
+  for (const x of [79, 107, 135, 163]) {
+    shapes.push({ kind: 'rect', x, y: 158, width: 16, height: 11, rx: 3, fill: '#0C0713', stroke: '#71567F', strokeWidth: .7 },
+      { kind: 'path', d: `M${x + 4} 161 V166 M${x + 8} 161 V166 M${x + 12} 161 V166`, stroke: '#A28DAE', strokeWidth: .8 });
+  }
+  shapes.push(
+    { kind: 'path', d: 'M45 40 V147 M214 40 V147', stroke: '#100A18', strokeWidth: 2, opacity: .7 },
+    { kind: 'circle', cx: 46, cy: 34, r: 2.2, fill: '#B197C1' },
+    { kind: 'circle', cx: 213, cy: 34, r: 2.2, fill: '#B197C1' },
+    { kind: 'path', d: 'M48 18 H204 Q221 19 228 36', fill: 'none', stroke: '#EFDEFB', strokeWidth: .8, opacity: .65 },
+  );
+  return { viewBox: '0 0 260 200', gradients: m.gradients, shapes };
 }

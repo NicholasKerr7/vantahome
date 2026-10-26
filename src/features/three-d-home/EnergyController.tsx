@@ -68,6 +68,7 @@ export function EnergyController({ device, state, client, disabled, compact, fon
   const largeText = fontScale > 1.15;
   if (!energy) return null;
   const headline = formatEnergyReading(energy.headline);
+  const horizontalReading = energy.kind !== 'solar' && !largeText;
 
   /** Only a validated grid simulation action is dispatched; displayed sample totals are never patched. */
   function run(action: EnergyAction): void { if (!disabled) client.runAction(device.id, energyActionId(action)); }
@@ -91,10 +92,12 @@ export function EnergyController({ device, state, client, disabled, compact, fon
         </View>
         <EnergyConsoleArtwork energy={energy} compact={compact} />
         <View accessible accessibilityLabel={`${energy.headline.label}: ${headline.value} ${headline.unit}. ${energy.status}`}
-          accessibilityLiveRegion="polite" style={styles.reading}>
-          <Text style={[styles.value, compact && styles.valueCompact]}>{headline.value}{headline.unit ? ` ${headline.unit}` : ''}</Text>
-          <Text style={styles.caption}>{energy.headline.label.toUpperCase()}</Text>
-          <Text style={styles.status}>{energy.status}</Text>
+          accessibilityLiveRegion="polite" style={[styles.reading, horizontalReading && styles.readingHorizontal]}>
+          <Text style={[styles.value, (compact || horizontalReading) && styles.valueCompact]}>{headline.value}{headline.unit ? ` ${headline.unit}` : ''}</Text>
+          <View style={horizontalReading ? styles.readingDetailHorizontal : styles.readingDetail}>
+            <Text style={[styles.caption, horizontalReading && styles.readingCaptionHorizontal]}>{energy.headline.label.toUpperCase()}</Text>
+            <Text style={[styles.status, horizontalReading && styles.readingCaptionHorizontal]}>{energy.status}</Text>
+          </View>
         </View>
         <View style={styles.metrics}>{energy.metrics.map((reading) => <EnergyMetric key={reading.label} reading={reading}
           largeText={largeText} halfWidth={energy.metrics.length > 2} />)}</View>

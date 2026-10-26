@@ -6,7 +6,8 @@ import { EnergyEquipmentSvg } from './EnergyEquipmentSvg';
 /** Render lightweight equipment with local paint servers and meaningful readings outside the artwork. */
 export function EnergyConsoleArtwork({ energy }: { energy: EnergyControllerState }) {
   const prefix = `${useId().replace(/:/g, '')}-energy`;
-  return <svg className="energy-artwork" viewBox="0 0 240 160" aria-hidden="true" focusable="false" data-kind={energy.kind}>
-    <EnergyEquipmentSvg drawing={createEnergyArtwork(prefix, energy)} />
+  const drawing = createEnergyArtwork(prefix, energy);
+  return <svg className="energy-artwork" viewBox={drawing.viewBox} aria-hidden="true" focusable="false" data-kind={energy.kind}>
+    <EnergyEquipmentSvg drawing={drawing} />
   </svg>;
 }
