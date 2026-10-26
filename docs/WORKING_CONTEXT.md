@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Energy equipment artwork — October 26 / Preview 95 redesigned and built; installation pending
+## Energy equipment artwork — October 26 / Preview 95 installed and launched; physical acceptance pending
 
 - Completed sequentially: solar array, solar battery, backup generator, then home
   energy. Each received control-regression and five-size browser checks before
@@ -86,13 +86,20 @@ defects from ideas or untested risks.
   byte offline scene and all four native/embedded SVGs. Production metadata was
   restored. Evidence: `work/energy-redesign-*`, `work/preview95-verification.json`.
   `work/energy-redesign-gallery.png` shows the four actual native SVG illustrations.
-  Signing profile currently expires October 27 at 11:57:55 UTC; recheck before
-  installation. Preview 92 remains the last installed version.
-- Next: install when requested.
-  Physical iPhone artwork/layout acceptance and previous End-scene/Camera Center
+  Signing profile expires October 27 at 11:57:55 UTC. On October 26, the package
+  signature, profile, staging identity and exact scene were reverified, then it
+  was updated in place on the iPhone 16 Pro Max. The first transfer failed with
+  CoreDevice 3002 / IXRemoteErrorDomain 6 (connection interrupted); one retry
+  succeeded. Launch succeeded and Apple inventory confirms **1.0.0 (95)**,
+  superseding Preview 92. No rebuild, uninstall or data reset was needed.
+  Receipts: `work/preview95-install-verification.log`,
+  `work/preview95-{install,install-retry,launch,installed-app}.json`.
+- Next: user check of all four full-controls artwork/readings and More → Back;
+  no preference changes are needed for the visual acceptance. Physical iPhone
+  artwork/layout acceptance and previous End-scene/Camera Center
   saving checks remain pending. Hub/sync and physical iPad remain deferred.
 
-## End scene — October 25 / Preview 93 built; installation and physical acceptance pending
+## End scene — October 25 / included in installed Preview 95; physical acceptance pending
 
 - Latest scene now has **End** on the dashboard, its Scenes card, header and
   details. It opens a review; nothing changes until **Restore previous settings**
@@ -126,10 +133,9 @@ defects from ideas or untested risks.
 - Evidence: `work/scene-end-*`; `work/preview93-verification.json` records signed
   staging package/exact scene checks. Production metadata is restored. No new
   dependency, hardware command, network API or deployment was introduced.
-- Next: install Preview 93 when requested; run a scene, adjust one affected light
+- Next: in installed Preview 95, run a scene, adjust one affected light
   manually, End → review/Restore, verify the manual choice is preserved and other
-  eligible settings restore. Check Keep and reopening. Preview 92 remains the
-  last installed version; Camera Center favorite/Night reopening check is still
+  eligible settings restore. Check Keep and reopening. Camera Center favorite/Night reopening check is still
   deferred by the user. Hub/sync and physical iPad remain deferred.
 
 ## Camera Center — October 24 / Preview 92 iPhone layout/navigation accepted; persistence pending
