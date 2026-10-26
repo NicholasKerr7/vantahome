@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-25**. Read this before rediscovering the project.
+Last maintained: **2026-10-26**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,43 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Energy equipment artwork — October 26 / Preview 94 built; installation pending
+
+- Completed sequentially: solar array, solar battery, backup generator, then home
+  energy. Each received control-regression and five-size browser checks before
+  proceeding to the next. Lightweight local SVG now shows framed glass modules,
+  a sculpted battery cabinet, a ventilated generator and a recessed home instrument.
+- Both native and embedded controllers render one shared typed geometry model,
+  with instance-local gradients and no raw SVG markup, images, blur filters, extra
+  WebGL context, dependencies, timers or continuous animation. The final SVGs have
+  38–52 descendant nodes. Solar uses available height for a larger centered view;
+  compact layouts retain the established controls and contained scroll fallback.
+- All commands, advanced controls, permissions and persistence use the existing
+  paths. Solar artwork does not pretend to follow live sunlight. Battery charge
+  stays separate from power, reserve and storage preferences. Generator lighting
+  follows explicit simulated power; Auto does not start it. Home grid indicators
+  distinguish available, outage and unknown, without inferred backup/energy flows.
+- **45 renderer tests across three suites + 23 native controller tests** pass;
+  app/scene TypeScript and scene build pass. Each embedded console passes 320×568,
+  390×844, 440×956, 820×1180 and 1180×820: no page overflow, 44px targets and
+  More/Back focus. The smallest battery retains 8px contained vertical overflow;
+  normal profiles need none. All 20 native-source browser cases also pass, including
+  solar sample checks and generator Start/Stop. A six-pixel native Home Energy
+  overflow at 390×844 was fixed by reducing reserved artwork height to 140px.
+  Native 320×568 retains the existing contained-scroll fallback for longer controls.
+  Independent review found no further actionable defect.
+- Native browser QA holds development WebSockets locally without closing them.
+  Closing Metro's HMR socket caused the lazy device-library screen to reload;
+  this was a test-harness issue. No application behavior was changed for it.
+- Preview **94** is signed and verified, staging-only, with the exact **32,200,859**
+  byte offline scene and all four native/embedded SVGs. Production metadata was
+  restored. Evidence: `work/energy-art-*`, `work/preview94-verification.json`.
+  Signing profile currently expires October 27 at 11:57:55 UTC; recheck before
+  installation. Preview 92 remains the last installed version.
+- Next: install when requested.
+  Physical iPhone artwork/layout acceptance and previous End-scene/Camera Center
+  saving checks remain pending. Hub/sync and physical iPad remain deferred.
 
 ## End scene — October 25 / Preview 93 built; installation and physical acceptance pending
 

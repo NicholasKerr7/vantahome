@@ -61,3 +61,11 @@
 .energy-workspace[data-motion-disabled='true'] * { transition: none; animation: none; scroll-behavior: auto; }
 .energy-workspace[data-motion-disabled='true'] button:active { transform: none; }
 @media (prefers-reduced-motion: reduce) { .energy-workspace * { transition: none; animation: none; scroll-behavior: auto; } .energy-workspace button:active { transform: none; } }
+
+/* Use genuine spare height for the solar showcase; compact stages retain the bounded side-by-side layout. */
+@container energy-stage (min-height: 550px) {
+  .energy-console[data-kind='solar'] .energy-hero { grid-template-columns: minmax(0, 1fr); padding: 6px 10px 14px; }
+  .energy-console[data-kind='solar'] .energy-artwork { height: 180px; }
+  .energy-console[data-kind='solar'] .energy-reading { justify-items: center; padding: 0; }
+  .energy-console[data-kind='solar'] .energy-reading p { max-width: none; }
+}

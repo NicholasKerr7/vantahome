@@ -22,6 +22,9 @@ export const energyControllerStyles = StyleSheet.create({
   brand: { color: theme.colors.accentText, fontSize: 8, letterSpacing: 1.6, textAlign: 'center' },
   title: { color: theme.colors.text, fontSize: 12, fontWeight: '600', letterSpacing: 1.8, textAlign: 'center' },
   preview: { alignSelf: 'center', width: 240, height: 156 },
+  // Four meter metrics need a little more room than the other equipment consoles.
+  previewMeter: { height: 140 },
+  previewSolar: { width: '100%', maxWidth: 290, height: 180 },
   previewCompact: { width: 190, height: 116 },
   reading: { alignItems: 'center', gap: 1 },
   value: { color: theme.colors.text, fontSize: 42, lineHeight: 48, fontWeight: '300', letterSpacing: -1.2, fontVariant: ['tabular-nums'], textAlign: 'center' },
