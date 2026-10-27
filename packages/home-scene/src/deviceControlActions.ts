@@ -180,6 +180,11 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
   if (operation?.type === 'media') next = applyMediaOperation(device, next, operation.command);
   if (operation?.type === 'navigate') next = applyNavigationOperation(device, next, operation.direction);
   if (operation?.type === 'increment') {
+    // Never coerce a malformed duration into a plausible saved setting; an explicit preset can recover it.
+    if (operation.field === 'durationMin') {
+      const duration = readDeviceSetting(device, next, 'durationMin');
+      if (typeof duration !== 'number' || validateStoredSetting(device.kind, 'durationMin', duration) !== duration) return current;
+    }
     next = applyDeviceSetting(id, next, operation.field, Number(readDeviceSetting(device, next, operation.field)) + operation.delta);
     // Volume and climate increments preserve power; only channels and timers start a preview.
     if (operation.field === 'channel') next = { ...next, on: true, settings: { ...next.settings, source: 'Live TV' } };

@@ -18,7 +18,7 @@ export const DEVICE_KINDS = ['ac', 'light', 'tv', 'coffee', 'fridge', 'gate', 'g
 export type DeviceKind = typeof DEVICE_KINDS[number];
 export type ControlGroup = 'controls' | 'modes' | 'schedule' | 'status';
 export type DeviceActionOperation =
-  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume' | 'tempC' | 'acFanSpeed' | 'openPercent' | 'brightness' | 'waterBudgetL' | 'vacuumSuction' | 'speed'; delta: number }
+  | { type: 'increment'; field: 'channel' | 'timeRemainingSec' | 'volume' | 'tempC' | 'acFanSpeed' | 'openPercent' | 'brightness' | 'waterBudgetL' | 'vacuumSuction' | 'speed' | 'durationMin'; delta: number }
   | { type: 'media'; command: 'play-pause' | 'rewind' | 'forward' | 'previous' | 'next' }
   | { type: 'gas'; command: GasCommand }
   | { type: 'fire'; command: FireCommand }
@@ -177,6 +177,7 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
   if (device.kind === 'ac' && operation?.type === 'increment') return operation.field === 'tempC' ? `Target ${readDeviceSetting(device, state, 'tempC')}°C · simulation` : `Fan ${readDeviceSetting(device, state, 'acFanSpeed')}% · simulation`;
   if (device.kind === 'water-heater' && operation?.type === 'increment') return `Target ${readDeviceSetting(device, state, 'tempC')}°C · saved preference`;
   if (device.kind === 'water' && operation?.type === 'increment') return `Usage budget ${readDeviceSetting(device, state, 'waterBudgetL')} L · saved preference`;
+  if (device.kind === 'sprinkler' && operation?.type === 'increment') return `Duration ${readDeviceSetting(device, state, 'durationMin')} min · saved preference`;
   if (device.kind === 'vacuum') return operation?.type === 'increment'
     ? `${vacuumActivityLabel(state)} · Suction ${readDeviceSetting(device, state, 'vacuumSuction')}% · saved preference`
     : vacuumActivityLabel(state);

@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 26, 2026. This is the current delivery queue, not a claim that
+Maintained October 27, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Irrigation console | Preview 96 built and verified; installation pending | Shared sculpted sprinkler SVG and accepted-power spray in Home/Devices, Start/Stop, existing zone/duration preferences, guarded five-minute steps and 5/15/30 presets; all advanced controls retained. Preferences never create a timer, automatic stop or active-zone mapping. Motion stops when reduced, covered/backgrounded or unmounted. 58 renderer + 83 native tests, app/scene types/build, 11 standalone + five native-source + five actual Home layout profiles, reload retention and bidirectional Home/Devices agreement pass. Short-phone overflow corrected through stage-based artwork sizing; tiny/large-text contained fallback retained. Signed staging package and exact 32,218,552-byte scene verified; production metadata restored. Last installed is 95; installation and irrigation physical acceptance remain pending. |
 | Energy equipment SVG artwork | Preview 95 installed and launched; physical acceptance pending | Four consoles redesigned and checked sequentially against the fan/laundry/vacuum presentation. Larger three-module solar array, ceramic battery tower, substantial generator and circular home instrument share lightweight typed SVG geometry with metallic/radial materials and device-local indicators. Centered artwork and compact readout rows use available space; small-screen contained fallback retained. No new network/dependency/animation loops or control changes. 46 renderer + 23 native tests, app/scene types/build, 20 embedded + 20 native-source browser layout cases and signed staging package pass. Reverified and updated in place October 26; an interrupted transfer resolved on one retry. Launch succeeded; Apple inventory confirms 1.0.0 (95), superseding 92. All-four artwork/fit/More acceptance requested. |
 | End scene and reviewed restoration | Included in installed Preview 95; physical acceptance pending | Dashboard and Scenes End open a guarded review. Restore eligible previous comfort settings or keep current settings; later edits and sensitive controls stay unchanged. Latest-run receipt survives reopening in the same member/home, shares canonical atomic persistence, and never crosses renderer messages. Stale/unauthorized/canceled reviews cannot mutate; disk retry does not replay restoration. Native default materialization regression fixed. 223 host + 43 renderer tests, app/scene types/builds, ten review and five dashboard browser sizes, cancel/restore/keep/reload pass. Signed staging package/exact scene verified; production metadata restored. Included in installed Preview 95; physical restoration/Keep/reopening checks remain pending. |
 | Camera Center | Preview 92 iPhone layout/navigation accepted; persistence pending | Cameras / Sample Activity, cinematic reference imagery, responsive focus/wall, scoped durable favorites, Watch, VISION Controls and Locate use existing camera identities. Current membership/room/protected access and timed Guest expiry enforced; mixed physical catalogs retain authorized configured viewers. 174 host + 52 scene tests, app/scene types/builds, ten Center and five VISION browser profiles pass. Favorite/event reload and full Controls/Activity/3D navigation verified with zero browser errors. Signed staging package, restored source metadata and exact 32,193,340-byte scene reverified. Updated in place and launched on October 24; Apple inventory confirms 1.0.0 (92). User confirms smooth camera scrolling, comfortable fit without vertical scrolling, Expand/All cameras, Controls and Locate/hotspot/Watch. User deferred the physical favorite/Night-preference reopening check for later. Simulation only; no connected media, recording or talk. See handoff. |
@@ -45,6 +46,16 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+**Irrigation duration and host sizing:** malformed duration values cannot be
+incremented into plausible saved preferences; explicit choices recover them.
+Accepted power remains independent of zone, duration and zero-minute settings.
+Actual Home iframe checks found and fixed a 12px short-phone overflow missed by
+standalone sizing; this is why controller QA includes the host's header/navigation
+space. No countdown, automatic stop, weather skip, soil/flow telemetry or physical
+zone delivery exists. Those require a separate simulator/driver design and are
+not inferred from saved preferences. Current evidence is bounded; physical iPhone
+acceptance remains pending.
 
 **Camera Center integration:** fixed duplicate navigation stacks, mixed physical /
 simulation viewer routing and legacy fallback on unverified/expired access.

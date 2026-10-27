@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-26**. Read this before rediscovering the project.
+Last maintained: **2026-10-27**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,54 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Irrigation console — October 27 / Preview 96 built and verified; installation pending
+
+- Home and Devices now share a sculpted brushed-metal sprinkler, recessed nozzle,
+  subtle spray and tactile purple controls. Lightweight typed SVG geometry reuses
+  the equipment adapters introduced for energy; no images, filters, renderer,
+  dependency, permission or network service was added. Existing energy artwork
+  retains its exact geometry through the adapter rename.
+- Start / Stop follows accepted canonical simulation power. Front yard, Back yard
+  and Garden, duration steps of five minutes, and 5/15/30-minute presets save the
+  existing settings. They do not turn water on, start a countdown, automatically
+  stop it, map active watering zones or imply weather/soil/flow readings. The
+  console explains this explicitly. All additional controls remain under More.
+- Relative duration actions resolve against current guarded state, retain power
+  and unrelated settings, and clamp to 0–60 minutes. Malformed stored durations
+  stay unavailable; relative commands cannot coerce them into valid settings.
+  Explicit presets recover them. Current account/room grants and canonical
+  persistence are unchanged; no duplicate device or separate local controller
+  state was created.
+- Native spray opacity uses the native driver; embedded spray uses one compositor
+  animation. Power-off, More/unmount, reduced motion, app background and covered
+  scene/route states stop decorative loops. A still spray remains visible when
+  watering is on but motion is reduced. There are no per-frame React updates.
+- **58 renderer tests across six suites + 83 native tests across five suites**
+  pass, including irrigation UI/reducer/motion, shared energy artwork/controller,
+  canonical client, persistence and catalog regressions. App/scene TypeScript and
+  offline scene build pass. Eleven embedded standalone profiles and five
+  native-source browser profiles pass; preferences survive reload, Start/Stop and
+  More/Back work, and controls retain 44px/pt targets.
+- Five actual Home iframe profiles also pass, including 440×860 and 390×744 with
+  header/navigation space reserved, plus tablet portrait/landscape. This check
+  caught 12px overflow at 390×744; an extra measured-stage artwork size now removes
+  it. Regular profiles have no vertical overflow. At 320×568 the established
+  contained fallback remains (143px inside the actual Home controller; 38px in
+  native-source controls), with no page overflow. Large text remains accessible
+  through that fallback. Home → Devices and Devices → Home agree on power,
+  duration and zone, with zero browser page errors.
+- Preview **96** is signed and verified as staging, with the exact **32,218,552**
+  byte offline scene and both irrigation controllers. Energy artwork and End-scene
+  markers remain packaged; production metadata was restored. Receipt:
+  `work/preview96-verification.json`; final build logs:
+  `work/irrigation-preview96-final-{build,xcodebuild}.log`. The current signing
+  profile expires October 27 at 11:57:55 UTC; recheck/renew it before installation.
+- Evidence: `work/irrigation-{web-tests,motion-tests,native-tests-fixed,guard-persistence-tests}.log`,
+  `work/irrigation-{sprinkler-browser,native-browser,host-browser}.json`, and actual
+  controller capture `work/irrigation-console-preview.png`. Preview 95 remains
+  the last installed package. Preview 96 installation and physical irrigation
+  fit/touch/More/reopening checks are pending; prior deferred checks remain open.
 
 ## Energy equipment artwork — October 26 / Preview 95 installed and launched; physical acceptance pending
 

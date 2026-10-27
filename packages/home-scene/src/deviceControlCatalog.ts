@@ -178,6 +178,10 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     action('water', 'budget-up', 'Usage budget +', {}, { type: 'increment', field: 'waterBudgetL', delta: 20 }),
     action('water', 'budget-down', 'Usage budget −', {}, { type: 'increment', field: 'waterBudgetL', delta: -20 }),
   ],
+  sprinkler: [
+    { ...action('sprinkler', 'duration-up', 'Duration +', {}, { type: 'increment', field: 'durationMin', delta: 5 }), configurationOnly: true },
+    { ...action('sprinkler', 'duration-down', 'Duration −', {}, { type: 'increment', field: 'durationMin', delta: -5 }), configurationOnly: true },
+  ],
   'water-heater': [
     { ...action('water-heater', 'temperature-up', 'Target temperature +', {}, { type: 'increment', field: 'tempC', delta: 1 }), configurationOnly: true },
     { ...action('water-heater', 'temperature-down', 'Target temperature −', {}, { type: 'increment', field: 'tempC', delta: -1 }), configurationOnly: true },

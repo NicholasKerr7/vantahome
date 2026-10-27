@@ -1,9 +1,9 @@
 import React from 'react';
 import { Circle, Defs, Ellipse, G, LinearGradient, RadialGradient, Path, Rect, Stop } from 'react-native-svg';
-import type { EnergyArtworkDrawing, EnergyArtworkGradient, EnergyArtworkShape } from '../../../packages/home-scene/src/energyArtworkGeometry';
+import type { EquipmentArtworkDrawing, EquipmentArtworkGradient, EquipmentArtworkShape } from '../../../packages/home-scene/src/equipmentArtworkGeometry';
 
 /** Native adapter for the small, typed SVG vocabulary; no image decoding or WebGL context. */
-function EquipmentShape({ shape }: { shape: EnergyArtworkShape }) {
+function EquipmentShape({ shape }: { shape: EquipmentArtworkShape }) {
   switch (shape.kind) {
     case 'path': { const { kind: _, ...props } = shape; return <Path {...props} />; }
     case 'circle': { const { kind: _, ...props } = shape; return <Circle {...props} />; }
@@ -13,7 +13,7 @@ function EquipmentShape({ shape }: { shape: EnergyArtworkShape }) {
 }
 
 /** Use gradient paint servers for depth, with no blur filters or raster surfaces. */
-function EquipmentGradient({ gradient }: { gradient: EnergyArtworkGradient }) {
+function EquipmentGradient({ gradient }: { gradient: EquipmentArtworkGradient }) {
   const stops = gradient.stops.map(([offset, color]) => <Stop key={offset} offset={offset} stopColor={color} />);
   return gradient.kind === 'radial'
     ? <RadialGradient id={gradient.id} cx={gradient.cx ?? '50%'} cy={gradient.cy ?? '50%'} r={gradient.r ?? '50%'}>{stops}</RadialGradient>
@@ -21,7 +21,7 @@ function EquipmentGradient({ gradient }: { gradient: EnergyArtworkGradient }) {
 }
 
 /** Match embedded-controller materials using instance-scoped paint servers. */
-export function EnergyEquipmentSvg({ drawing }: { drawing: EnergyArtworkDrawing }) {
+export function EquipmentArtworkSvg({ drawing }: { drawing: EquipmentArtworkDrawing }) {
   return <G>
     <Defs>{drawing.gradients.map((gradient) => <EquipmentGradient key={gradient.id} gradient={gradient} />)}</Defs>
     {drawing.shapes.map((shape, index) => <EquipmentShape key={index} shape={shape} />)}

@@ -1,7 +1,7 @@
-import type { EnergyArtworkDrawing, EnergyArtworkGradient, EnergyArtworkShape } from './energyArtworkGeometry';
+import type { EquipmentArtworkDrawing, EquipmentArtworkGradient, EquipmentArtworkShape } from './equipmentArtworkGeometry';
 
 /** Render the shared, local-only geometry with ordinary SVG attributes, never raw markup. */
-function EquipmentShape({ shape }: { shape: EnergyArtworkShape }) {
+function EquipmentShape({ shape }: { shape: EquipmentArtworkShape }) {
   switch (shape.kind) {
     case 'path': { const { kind: _, ...props } = shape; return <path {...props} />; }
     case 'circle': { const { kind: _, ...props } = shape; return <circle {...props} />; }
@@ -11,7 +11,7 @@ function EquipmentShape({ shape }: { shape: EnergyArtworkShape }) {
 }
 
 /** Use gradient paint servers for depth, with no blur filters or raster surfaces. */
-function EquipmentGradient({ gradient }: { gradient: EnergyArtworkGradient }) {
+function EquipmentGradient({ gradient }: { gradient: EquipmentArtworkGradient }) {
   const stops = gradient.stops.map(([offset, color]) => <stop key={offset} offset={offset} stopColor={color} />);
   return gradient.kind === 'radial'
     ? <radialGradient id={gradient.id} cx={gradient.cx ?? '50%'} cy={gradient.cy ?? '50%'} r={gradient.r ?? '50%'}>{stops}</radialGradient>
@@ -19,7 +19,7 @@ function EquipmentGradient({ gradient }: { gradient: EnergyArtworkGradient }) {
 }
 
 /** Shared geometry makes native and embedded consoles use exactly the same equipment artwork. */
-export function EnergyEquipmentSvg({ drawing }: { drawing: EnergyArtworkDrawing }) {
+export function EquipmentArtworkSvg({ drawing }: { drawing: EquipmentArtworkDrawing }) {
   return <g>
     <defs>{drawing.gradients.map((gradient) => <EquipmentGradient key={gradient.id} gradient={gradient} />)}</defs>
     {drawing.shapes.map((shape, index) => <EquipmentShape key={index} shape={shape} />)}

@@ -1,0 +1,43 @@
+/* Local SVG equipment gives the garden console depth without another renderer or image download. */
+.device-control-sheet.is-irrigation-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.irrigation-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.irrigation-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 2px 0 5px; overflow: auto; container: irrigation-stage / size; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.irrigation-console { display: grid; width: min(380px, 100%); gap: 8px; padding: 12px; border: 1px solid #A78DB9; border-radius: 32px; color: var(--text); background: linear-gradient(140deg, #51415F, #24192F 15%, #100C19 60%, #2F203D); box-shadow: inset 2px 1px 1px #FFFFFF35, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.irrigation-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.irrigation-mark { display: grid; place-items: center; width: 44px; height: 44px; color: #C6B2DC; }
+.irrigation-brand { display: grid; gap: 5px; text-align: center; }
+.irrigation-brand span { font-size: 8px; letter-spacing: 2.5px; color: #BFAFD0; }
+.irrigation-brand strong { font-weight: 500; font-size: 12px; letter-spacing: 3px; }
+.irrigation-console button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 7px; border-radius: 15px; border: 1px solid #FFFFFF29; background: linear-gradient(145deg, #41324F, #231A30 75%); color: var(--text); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.irrigation-console .irrigation-round { width: 44px; height: 44px; border-radius: 50%; }
+.irrigation-console button[aria-pressed='true'] { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.irrigation-console button:disabled { opacity: .4; cursor: default; }
+.irrigation-console button:not(:disabled):active { transform: translateY(2px); }
+.irrigation-console button:focus-visible, .irrigation-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.irrigation-hero { display: grid; justify-items: center; gap: 2px; }
+.irrigation-artwork { position: relative; width: 280px; max-width: 100%; height: 190px; }
+.irrigation-artwork > svg, .irrigation-spray, .irrigation-spray > svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.irrigation-spray { opacity: .75; }
+.irrigation-status { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0; min-height: 20px; color: #C7B4D7; font-size: 11px; line-height: 1.4; text-align: center; }
+.irrigation-status > span { flex: none; width: 5px; height: 5px; border-radius: 50%; background: #756383; }
+.irrigation-console[data-running='true'] .irrigation-status > span { background: #CA9AFF; }
+.irrigation-section { display: grid; gap: 6px; }
+.irrigation-caption { font-size: 8px; font-weight: 600; letter-spacing: 1.2px; color: #C5AFD8; }
+.irrigation-zones, .irrigation-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.irrigation-duration { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px; border: 1px solid #A080BD40; border-radius: 28px; background: #100B19; }
+.irrigation-duration > div { display: grid; gap: 3px; text-align: center; }
+.irrigation-duration output { font-size: 29px; line-height: 1; font-weight: 300; font-variant-numeric: tabular-nums; }
+.irrigation-duration output small { font-size: 11px; color: #CEB7E2; margin-left: 5px; }
+.irrigation-console .irrigation-primary { background: linear-gradient(135deg, #674582, #392249); border-color: #B087CA; font-weight: 600; }
+.irrigation-feedback { display: grid; gap: 4px; margin: 0; padding-inline: 8px; min-height: 30px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.irrigation-feedback span { font-size: 7px; letter-spacing: 1.8px; color: var(--muted); }
+.irrigation-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.irrigation-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container irrigation-stage (max-height: 540px) { .irrigation-console { gap: 7px; padding: 10px; } .irrigation-artwork { height: 140px; } }
+@container irrigation-stage (max-height: 480px) { .irrigation-artwork { height: 120px; } }
+@container irrigation-stage (max-height: 420px) { .irrigation-artwork { height: 100px; } .irrigation-console { gap: 6px; } }
+@media (max-width: 360px) { .device-control-sheet.is-irrigation-controller .device-sheet-content { padding-inline: 12px; } }
+@media (hover: hover) { .irrigation-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.irrigation-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.irrigation-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .irrigation-workspace * { transition: none; scroll-behavior: auto; } .irrigation-workspace button:active { transform: none; } }

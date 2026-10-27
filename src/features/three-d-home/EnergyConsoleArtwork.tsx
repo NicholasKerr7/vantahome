@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import Svg from 'react-native-svg';
 import type { EnergyControllerState } from '../../../packages/home-scene/src/energyController';
 import { createEnergyArtwork } from '../../../packages/home-scene/src/energyArtwork';
-import { EnergyEquipmentSvg } from './EnergyEquipmentSvg';
+import { EquipmentArtworkSvg } from './EquipmentArtworkSvg';
 import { energyControllerStyles as styles } from './EnergyControllerStyles';
 
 /** Native SVG equipment shares the browser geometry without creating a renderer or animation loop. */
@@ -14,7 +14,7 @@ export function EnergyConsoleArtwork({ energy, compact }: { energy: EnergyContro
     style={[styles.preview, energy.kind === 'solar' && !compact && styles.previewSolar, energy.kind === 'energy' && styles.previewMeter, compact && styles.previewCompact]}
     accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
     <Svg width="100%" height="100%" viewBox={drawing.viewBox} aria-hidden>
-      <EnergyEquipmentSvg drawing={drawing} />
+      <EquipmentArtworkSvg drawing={drawing} />
     </Svg>
   </View>;
 }
