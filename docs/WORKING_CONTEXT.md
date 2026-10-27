@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Air quality console — October 27 / Preview 97 built and verified; installation pending
+## Air quality console — October 27 / Preview 97 installed; manual launch confirmation pending
 
 - Home and Devices now show a distinct ceramic air sensor with a recessed AQI
   screen, metallic bezel and perforated enclosure. Both use one lightweight typed
@@ -93,12 +93,19 @@ defects from ideas or untested risks.
   `work/air-quality-preview97-{build,xcodebuild}.log`.
 - Evidence: `work/air-quality-{web-tests,native-tests,native-ui-final}.log`,
   `work/air-quality-{web-browser,native-browser,host-browser}.json`, and actual
-  capture `work/air-quality-console-preview.png`. Last installed remains Preview
-  95; Preview 97 includes the uninstalled irrigation work from 96. Installation
-  and physical air/irrigation fit, touch, More and reopening checks remain pending.
+  capture `work/air-quality-console-preview.png`.
+- Reverified the existing package and updated the iPhone in place on October 27;
+  no uninstall or data reset. Apple inventory confirms **1.0.0 (97)**, superseding
+  95 and including irrigation from 96. Automatic launch was denied by iOS with a
+  signing/entitlements/developer-trust security message despite successful local
+  signature/profile checks. User was asked to open Preview manually and approve
+  the existing developer profile if prompted; manual launch confirmation remains
+  pending. Receipts: `work/preview97-install-verification.log` and
+  `work/preview97-{install,launch,installed-app}.json`.
+- Physical air/irrigation fit, touch, More and reopening checks remain pending.
   Earlier deferred acceptance, hub/sync and physical iPad work remain unchanged.
 
-## Irrigation console — October 27 / Preview 96 built and verified; installation pending
+## Irrigation console — October 27 / Included in installed Preview 97; physical acceptance pending
 
 - Home and Devices now share a sculpted brushed-metal sprinkler, recessed nozzle,
   subtle spray and tactile purple controls. Lightweight typed SVG geometry reuses
@@ -138,13 +145,15 @@ defects from ideas or untested risks.
   byte offline scene and both irrigation controllers. Energy artwork and End-scene
   markers remain packaged; production metadata was restored. Receipt:
   `work/preview96-verification.json`; final build logs:
-  `work/irrigation-preview96-final-{build,xcodebuild}.log`. The current signing
-  profile expires October 27 at 11:57:55 UTC; recheck/renew it before installation.
+  `work/irrigation-preview96-final-{build,xcodebuild}.log`. The signing
+  profile for that historical package expired October 27 at 11:57:55 UTC.
+  Preview 97 supersedes it with the renewed November 3 signing profile.
 - Evidence: `work/irrigation-{web-tests,motion-tests,native-tests-fixed,guard-persistence-tests}.log`,
   `work/irrigation-{sprinkler-browser,native-browser,host-browser}.json`, and actual
-  controller capture `work/irrigation-console-preview.png`. Preview 95 remains
-  the last installed package. Preview 96 installation and physical irrigation
-  fit/touch/More/reopening checks are pending; prior deferred checks remain open.
+  controller capture `work/irrigation-console-preview.png`. Included in Preview
+  97 installed in place on October 27; Apple inventory confirms build 97. Manual
+  launch confirmation and physical irrigation fit/touch/More/reopening checks
+  remain pending; prior deferred checks remain open.
 
 ## Energy equipment artwork — October 26 / Preview 95 installed and launched; physical acceptance pending
 
