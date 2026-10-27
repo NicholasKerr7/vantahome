@@ -68,6 +68,7 @@ export const HOST_CONTROL_FIELDS = [
   "fridgeQuickCool", "fridgeQuickFreeze", "fridgeEnergySaver", "fridgeHumidity",
   "acFanSpeed", "acSwingMode", "acEcoMode", "acTurboMode", "acQuietMode", "acTargetHumidity",
   "coffeeCupCount", "coffeeTempC", "coffeeKeepWarmMin", "coffeeGrinder", "coffeeMilkFrother", "coffeeAutoBrewTime",
+  "airAlertsEnabled", "airPurifierMode", "airPurifierSpeed", "airIonizerEnabled", "airAutoVentilation",
   "waterHeaterType", "airAlertAqi", "airAlertCo2", "airAlertPm25", "airAlertPm10", "airAlertVoc", "airAlertPollen",
 ] as const satisfies readonly (keyof Device)[];
 const HOST_SAMPLE_FIELDS = [

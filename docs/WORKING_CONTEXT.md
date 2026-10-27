@@ -46,6 +46,58 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Air quality console — October 27 / Preview 97 built and verified; installation pending
+
+- Home and Devices now show a distinct ceramic air sensor with a recessed AQI
+  screen, metallic bezel and perforated enclosure. Both use one lightweight typed
+  SVG drawing, instance-local gradients and accessible text readings. No raster
+  asset, extra renderer, dependency, sensor permission or animation loop was
+  added. The console stays calm under reduced motion and backgrounding.
+- AQI, PM2.5, CO₂, VOC and humidity are explicitly fixed simulation samples.
+  Check sample acknowledges the existing monitor sample without changing values,
+  fabricating an observation time, toggling physical power or starting a purifier.
+  The tone compares six samples with existing saved limits; strict greater-than
+  matches current condition reports. Equality says At saved limit. Alerts-off
+  never hides a known exceedance; incomplete data stays unavailable and cannot
+  conceal another known exceeded limit. These are preference comparisons, not
+  official health categories or a live sensor assessment.
+- Alerts preference and AQI presets 75/100/150 use existing guarded settings and
+  canonical persistence. More retains all thresholds, detailed samples and saved
+  purifier/ventilation/ionizer settings. No new purifier execution, background
+  delivery, history, confidence or environmental effect is claimed.
+- Fixed a host projection omission: airAlertsEnabled, airPurifierMode,
+  airPurifierSpeed, airIonizerEnabled and airAutoVentilation now project into the
+  existing host device catalog. Canonical settings already persisted; the missing
+  fields could leave host consumers on old/default preferences. Projection and
+  round-trip tests cover all five without changing telemetry or access scope.
+- **69 renderer tests across five suites + 88 native tests across eight suites**
+  pass. Coverage includes invalid/zero samples, exact thresholds, independent
+  preferences, More/Back, revoked visibility/control, hydration, projection,
+  canonical client/persistence, added-device rename/move/reopen and existing
+  notification behavior. App/scene TypeScript and the offline scene build pass.
+- Eleven standalone embedded, six native-source and five actual Home iframe
+  profiles pass with 44px/pt targets, centered AQI text and no regular vertical
+  overflow. Shorter native sheets size from measured available height; the
+  embedded console uses measured-stage queries. The 390×744 host case exposed
+  26px overflow, fixed by reducing artwork before touch targets. Tiny 320×568 and
+  large type retain contained scrolling without page overflow. Both directions of
+  Home/Devices agreement and reopening are verified with zero browser page errors.
+  A separate advanced-controls check lowered CO₂ limit to 600 against the fixed
+  620 ppm sample: the sensor changed to exceeded and kept that indication after
+  alerts were turned off (`work/air-quality-limit-browser.json`).
+- Preview **97** is signed and verified as staging, with the exact **32,233,386**
+  byte offline scene and native/embedded air consoles. Irrigation, energy artwork
+  and End-scene markers remain present. Production metadata was restored.
+  `work/preview97-verification.json` records hashes and package checks; the renewed
+  signing profile expires November 3 at 15:11:57 UTC. Build logs are
+  `work/air-quality-preview97-{build,xcodebuild}.log`.
+- Evidence: `work/air-quality-{web-tests,native-tests,native-ui-final}.log`,
+  `work/air-quality-{web-browser,native-browser,host-browser}.json`, and actual
+  capture `work/air-quality-console-preview.png`. Last installed remains Preview
+  95; Preview 97 includes the uninstalled irrigation work from 96. Installation
+  and physical air/irrigation fit, touch, More and reopening checks remain pending.
+  Earlier deferred acceptance, hub/sync and physical iPad work remain unchanged.
+
 ## Irrigation console — October 27 / Preview 96 built and verified; installation pending
 
 - Home and Devices now share a sculpted brushed-metal sprinkler, recessed nozzle,

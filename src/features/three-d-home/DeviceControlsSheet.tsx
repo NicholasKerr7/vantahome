@@ -35,6 +35,7 @@ import { WaterController } from './WaterController';
 import { VacuumController } from './VacuumController';
 import { SpeakerController } from './SpeakerController';
 import { FanController } from './FanController';
+import { AirQualityController } from './AirQualityController';
 import { IrrigationController } from './IrrigationController';
 import { LaundryController } from './LaundryController';
 import { DishwasherController } from './DishwasherController';
@@ -65,6 +66,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   vacuum: { accessible: 'Back to vacuum controller', visible: 'Back to vacuum' },
   speaker: { accessible: 'Back to speaker controller', visible: 'Back to speaker' },
   fan: { accessible: 'Back to fan controller', visible: 'Back to fan' },
+  air: { accessible: 'Back to air quality controller', visible: 'Back to air quality' },
   sprinkler: { accessible: 'Back to irrigation controller', visible: 'Back to irrigation' },
   washer: { accessible: 'Back to laundry controller', visible: 'Back to laundry' },
   dryer: { accessible: 'Back to laundry controller', visible: 'Back to laundry' },
@@ -212,6 +214,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if ((device.kind === 'washer' || device.kind === 'dryer') && !advancedControls) return <LaundryController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'fan' && !advancedControls) return <FanController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'air' && !advancedControls) return <AirQualityController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'sprinkler' && !advancedControls) return <IrrigationController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
