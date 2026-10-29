@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Microwave console | Preview 100 built and verified; installation pending | Shared black-glass appliance SVG, fixed duration readout, independent mode/power preferences, quick-add, Start 1 min and Stop & clear in Home/Devices. All extras remain under More. Bounded atomic steps reject malformed time/power; no countdown, automatic finish or cooking engine. 82 renderer + 40 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles, bidirectional agreement and fresh-session disk retention pass. Measured artwork sizing resolves ordinary viewport overflow; tiny/large-text fallback retained. Signed staging package/exact 32,279,005-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Coffee console | Preview 99 built and verified; installation pending | Shared sculpted espresso machine SVG and accepted-state steam in Home/Devices; independent strength, size and atomic cup-count preferences, explicit Brew/Stop and all extras under More. No timer, consumption, live temperature or real brewing. Shared motion hook preserves irrigation and stops when reduced/backgrounded/covered. 70 renderer + 50 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles pass, including bidirectional state, reload and fresh native disk-session retention. Fixed height-constrained artwork sizing; ordinary viewports do not scroll, tiny/large-text fallback remains. Signed staging package/exact 32,265,219-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Refrigerator console | Preview 98 built and verified; installation pending | Shared pearl-metal French-door SVG, independent fridge/freezer target steppers, C/F presentation, Normal/Eco/Boost/Vacation and quick preferences in Home/Devices; all extras remain under More. Atomic steps preserve power/settings; malformed explicit targets remain unavailable. No live temperature/cooling claims or new dependency/animation loop. 50 renderer + 60 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles pass. Bidirectional state agreement, reload and fresh native disk-session retention verified. Regular viewports have no vertical overflow; small-screen/large-text fallback retained. Signed staging package and exact 32,249,927-byte scene verified; production metadata restored. Preview 97 remains installed; installation and physical checks pending. |
 | Air quality console | Preview 97 installed; manual launch confirmation pending | Shared ceramic SVG sensor and recessed AQI display in Home/Devices; fixed PM2.5/CO₂/VOC/humidity samples, sample acknowledgement, saved alerts and AQI presets, all extras under More. Six saved-limit comparisons match existing strict-greater-than reports; alerts-off and partial missing data cannot conceal a known exceedance. No live sensor/purifier/history claims. Five missing host preference projections fixed. 69 renderer + 88 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home browser profiles, bidirectional state and reload pass. Measured-height sizing fixes short-phone overflow; tiny/large-text contained fallback retained. Signed staging package/exact 32,233,386-byte scene verified, signing renewed through November 3, and production metadata restored. Reverified and updated in place October 27; Apple inventory confirms 1.0.0 (97). Automatic launch was denied by iOS with a signing/trust message; manual opening/profile approval requested. Manual launch confirmation and physical acceptance pending. |
@@ -48,7 +49,25 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Account sessions | Complete in Preview 60 source/staging | Private current-account inventory, deliberate other-session sign-out, exact token binding, truthful acknowledgement and token-expiry limits, native/web recovery. Physical interaction review remains separate. |
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
+## Remaining dedicated device consoles
+
+Current routing leaves four device kinds on the generic full-controls layout:
+**stove, smoke, gas-meter and gas-leak**. Existing controls already work; these are
+presentation upgrades, not missing hardware integrations. Complete one at a time.
+The cooktop is a useful next candidate, preserving its saved-only heat/mode/timer/
+child-lock preferences. Safety/gas consoles need especially clear separation of
+sample tests, incident simulations and physical protection claims.
+
 ## Most recent adjacent findings
+
+**Microwave duration semantics:** the existing field is named timeRemainingSec,
+but the simulator does not tick it. The console therefore labels a fixed set
+duration, and explicitly says there is no countdown or automatic stop. Quick-add
+starts/extends the preview; Start resets it to one minute; Stop clears duration
+only. New power steps preserve activity and preferences. Malformed explicit time/
+power cannot be incremented into plausible values or accidentally start a preview.
+All current projection fields were already present. Browser state agreement and
+fresh native disk-session retention pass; physical acceptance remains pending.
 
 **Coffee recipes and motion reuse:** the existing coffee power state represents
 an explicit brewing preview, while recipe and schedule fields are saved

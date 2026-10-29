@@ -46,6 +46,46 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Microwave console — October 29 / Preview 100 built and verified; installation pending
+
+- Home and Devices now share a sculpted black-glass microwave with a metal
+  chassis, recessed cavity, ceramic bowl and accepted-power light. One lightweight
+  typed SVG drawing feeds both surfaces; no raster image, dependency, renderer
+  or idle animation loop was added.
+- The main panel exposes fixed set duration, Reheat/Defrost/Grill/Popcorn
+  preferences, atomic 1–10 power steps, +30s/+1min/+2min, Start 1 min and Stop &
+  clear. More retains every original field and action. Mode/power edits preserve
+  activity. Existing quick-add commands start/extend the preview up to 15 minutes;
+  Start explicitly sets one minute; Stop clears duration while retaining mode
+  and power. No countdown, automatic finish or physical cooking is claimed.
+- Hardened relative microwave duration/power commands against malformed explicit
+  values. Unknown values stay unavailable; Start/Stop or an explicit advanced
+  selection can recover the relevant field. Existing refrigerator/coffee exact
+  numeric validation is retained. Host projection already included all three
+  microwave preferences, so no projection or permission expansion was needed.
+- **82 renderer tests across six suites + 40 native tests across three suites**
+  pass. Coverage includes off-state edits, rapid taps, exact bounds, malformed
+  values/recovery, grants/hydration, More/Back focus, complete native client/session/
+  disk retention and prior coffee/refrigerator increment behavior. App/scene
+  TypeScript and the offline scene build pass.
+- Eleven standalone, six native-source and five actual Home iframe profiles pass
+  with 44px/pt controls and zero browser page errors. Fixed native and embedded
+  height overflow by scaling decorative artwork and shortening the simulation
+  note; regular viewports do not scroll, tiny-screen/large-text fallback remains
+  contained. Bidirectional Home/Devices agreement and reload retention pass.
+  These are isolated browser Demo checks, not physical iPhone acceptance.
+- Evidence: `work/microwave-{web-tests,native-tests,types,scene-build}.log`,
+  `work/microwave-{web,native,host}-browser.json`, actual console capture
+  `work/microwave-console-preview.png`, and
+  `work/microwave-preview100-{build,xcodebuild}.log`.
+- Preview **100** built and passed signature, staging identity, current console
+  markers and exact bundled scene verification (**32,279,005 bytes**, SHA-256 in
+  `work/preview100-verification.json`). Production metadata was restored; signing
+  expires November 3 at 15:11:57 UTC. Owned QA servers stopped. Installation and
+  physical fit, mode/power, quick-add/Stop/More/reopening checks remain pending.
+  Preview 97 remains the last installed build; its manual launch confirmation
+  is still pending. Hub/sync/iPad deferrals are unchanged.
+
 ## Coffee console — October 29 / Preview 99 built and verified; installation pending
 
 - Kitchen's Espresso machine now uses a sculpted satin-metal machine with a

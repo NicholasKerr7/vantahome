@@ -180,8 +180,9 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
   if (operation?.type === 'media') next = applyMediaOperation(device, next, operation.command);
   if (operation?.type === 'navigate') next = applyNavigationOperation(device, next, operation.direction);
   if (operation?.type === 'increment') {
-    // Missing preferences use established defaults; corrupt targets/counts require an explicit selection.
-    if ((device.kind === 'fridge' && (operation.field === 'tempC' || operation.field === 'freezerTempC')) || operation.field === 'coffeeCupCount') {
+    // Missing preferences use established defaults; corrupt numeric preferences require an explicit selection.
+    if ((device.kind === 'fridge' && (operation.field === 'tempC' || operation.field === 'freezerTempC')) || operation.field === 'coffeeCupCount'
+      || (device.kind === 'microwave' && (operation.field === 'timeRemainingSec' || operation.field === 'microwavePower'))) {
       const preference = next.settings && Object.hasOwn(next.settings, operation.field)
         ? next.settings[operation.field] : readDeviceSetting(device, next, operation.field);
       if (typeof preference !== 'number' || validateStoredSetting(device.kind, operation.field, preference) !== preference) return current;

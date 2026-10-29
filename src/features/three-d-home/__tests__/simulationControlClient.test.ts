@@ -238,3 +238,24 @@ test('coffee recipe and all extras survive a fresh persistence instance independ
   reopened.runAction('kitchen-coffee', 'coffee-stop'); await settle();
   expect(reopened.getSnapshot().state.deviceStates['kitchen-coffee']).toMatchObject({ on: false, settings: { ...recipe, coffeeCupCount: 4 } }); reopened.dispose();
 });
+
+/** Native preview changes must survive the full client/session/disk boundary, not just an in-memory store. */
+test('microwave duration, power and mode survive fresh-session reopening and Stop clears duration only', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const disk = new Map<string, string>();
+  const storage = { getItem: async (key: string) => disk.get(key) ?? null, setItem: async (key: string, value: string) => { disk.set(key, value); } };
+  const persistence = new SimulationPersistence(storage);
+  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' }));
+  client.connect(); await settle(); client.runAction('kitchen-microwave', 'microwave-stop');
+  client.setSetting('kitchen-microwave', 'microwaveMode', 'Defrost'); client.setSetting('kitchen-microwave', 'microwavePower', 7);
+  client.runAction('kitchen-microwave', 'microwave-power-up'); client.runAction('kitchen-microwave', 'microwave-power-up');
+  await settle(); expect(client.getSnapshot().state.deviceStates['kitchen-microwave']).toMatchObject({ on: false, settings: { microwavePower: 9, microwaveMode: 'Defrost', timeRemainingSec: 0 } });
+  client.runAction('kitchen-microwave', 'microwave-start'); client.runAction('kitchen-microwave', 'microwave-add-30'); await settle();
+  const accepted = client.getSnapshot().state.deviceStates['kitchen-microwave']; expect(accepted).toMatchObject({ on: true, settings: { timeRemainingSec: 90 } });
+  client.dispose(); await settle();
+  const reopenedPersistence = new SimulationPersistence(storage);
+  const reopened = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: reopenedPersistence, mode: 'demo' }));
+  reopened.connect(); await settle(); expect(reopened.getSnapshot().state.deviceStates['kitchen-microwave']).toEqual(accepted);
+  reopened.runAction('kitchen-microwave', 'microwave-stop'); await settle();
+  expect(reopened.getSnapshot().state.deviceStates['kitchen-microwave']).toMatchObject({ on: false, settings: { timeRemainingSec: 0, microwavePower: 9, microwaveMode: 'Defrost' } }); reopened.dispose();
+});

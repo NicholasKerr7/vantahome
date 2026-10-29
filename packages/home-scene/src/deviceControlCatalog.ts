@@ -169,6 +169,8 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
   ],
   window: [...openingControls('window'), action('window', 'vent', 'Vent', { openPercent: 25 })],
   microwave: [
+    { ...action('microwave', 'power-up', 'Power +', {}, { type: 'increment', field: 'microwavePower', delta: 1 }), configurationOnly: true },
+    { ...action('microwave', 'power-down', 'Power −', {}, { type: 'increment', field: 'microwavePower', delta: -1 }), configurationOnly: true },
     ...([30, 60, 120] as const).map((delta) => action('microwave', `add-${delta}`, `+${delta < 60 ? `${delta}s` : `${delta / 60}m`}`, {}, { type: 'increment', field: 'timeRemainingSec', delta })),
   ],
   camera: [
