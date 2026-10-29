@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-28**. Read this before rediscovering the project.
+Last maintained: **2026-10-29**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,50 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Coffee console — October 29 / Preview 99 built and verified; installation pending
+
+- Kitchen's Espresso machine now uses a sculpted satin-metal machine with a
+  smoked hopper, bronze details and ceramic cup. Home and Devices share one
+  lightweight typed SVG drawing; a single optional steam/pour layer follows the
+  accepted brewing preview. No image asset, renderer or dependency was added.
+- Strength, cup size and bounded cup-count steps save recipes independently of
+  Brew/Stop. Custom cup sizes selected in More remain visible. Atomic relative
+  steps preserve activity, extras and other devices. Explicit invalid counts
+  remain unavailable and require an explicit selection to recover.
+- More retains brew temperature, grinder, milk frother, keep-warm/auto-brew
+  preferences and fixed reservoir/maintenance samples. Recipe settings do not
+  create schedules, consumption, temperature readings, timers or automatic stop.
+  The existing brewing preview continues until Stop; no physical brewing occurs.
+- Extracted the existing irrigation opacity pulse into shared web/native hooks.
+  Coffee and irrigation stop decorative motion when reduced, backgrounded,
+  covered/unfocused or unmounted. No per-frame React state updates were added.
+- **70 renderer tests across six suites + 50 native tests across four suites**
+  pass, including recipe/activity independence, bounds, malformed values, rapid
+  commands, revoked grants, hydration, More/Back focus, motion lifecycle and the
+  existing refrigerator/irrigation regressions. Fresh native persistence/session
+  reopening retains every recipe/extra and brewing state. App/scene types and the
+  offline scene build pass. Test fixtures were corrected to read fixed reservoir
+  samples through the catalog rather than trying to persist read-only telemetry.
+- Eleven standalone, six native-source and five actual Home iframe profiles pass.
+  All targets retain 44px/pt touch size; regular phone/tablet profiles avoid
+  vertical overflow, with contained scrolling for tiny screens/large text.
+  Fixed native bottom overflow and short-phone/tablet Home fitting by scaling
+  artwork to available space. Home/Devices agree in both directions and after
+  reopening, with zero browser page errors. Browser QA uses isolated Demo data;
+  it does not represent a physical iPhone acceptance test.
+- Evidence: `work/coffee-{web-tests,native-tests,types,scene-build}.log`,
+  `work/coffee-{web,native,host}-browser.json`, actual console capture
+  `work/coffee-console-preview.png` and build logs
+  `work/coffee-preview99-{build,xcodebuild}.log`.
+- Preview **99** built and passed signature, staging identity, coffee/current
+  console markers and exact bundled scene checks (**32,265,219 bytes**, SHA-256
+  recorded in `work/preview99-verification.json`). Production metadata was
+  restored. The signing profile expires November 3 at 15:11:57 UTC. Owned QA
+  servers stopped. Installation and physical fit/touch, recipe/Brew/Stop/More/
+  reopening acceptance remain pending. Preview 97 is still the last installed
+  build; its manual launch confirmation remains pending. Hub/sync/iPad deferrals
+  are unchanged.
 
 ## Refrigerator console — October 28 / Preview 98 built and verified; installation pending
 

@@ -1,0 +1,47 @@
+/* A single sculpted appliance remains prominent while measured stage height protects touch targets. */
+.device-control-sheet.is-coffee-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.coffee-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.coffee-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 2px 0 6px; overflow: auto; container: coffee-stage / size; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.coffee-console { display: grid; width: min(390px, 100%); gap: 10px; padding: 14px; border: 1px solid #A18EBA; border-radius: 32px; color: var(--text); background: linear-gradient(140deg, #4F455F, #241B31 16%, #100D1A 62%, #30233F); box-shadow: inset 2px 1px 1px #FFFFFF35, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.coffee-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.coffee-brand { display: grid; gap: 5px; text-align: center; }
+.coffee-brand span { font-size: 8px; letter-spacing: 2.5px; color: #BFAFD0; }
+.coffee-brand strong { font-weight: 500; font-size: 11px; letter-spacing: 2.4px; }
+.coffee-console button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 7px; border-radius: 15px; border: 1px solid #FFFFFF29; background: linear-gradient(145deg, #41364F, #231C30 75%); color: var(--text); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.coffee-console .coffee-round { width: 44px; height: 44px; border-radius: 50%; }
+.coffee-console button[aria-pressed='true'], .coffee-console button[aria-checked='true'] { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.coffee-console button:disabled { opacity: .4; cursor: default; }
+.coffee-console button:not(:disabled):active { transform: translateY(2px); }
+.coffee-console button:focus-visible, .coffee-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.coffee-hero { display: grid; justify-items: center; gap: 2px; }
+.coffee-artwork { position: relative; width: 265px; max-width: 100%; aspect-ratio: 7 / 6; }
+.coffee-artwork > svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.coffee-status { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0; min-height: 18px; color: var(--text-soft); font-size: 11px; line-height: 1.4; text-align: center; }
+.coffee-status > span { flex: none; width: 5px; height: 5px; border-radius: 50%; background: #8C839B; }
+.coffee-console[data-running='true'] .coffee-status > span { background: #C3A0F5; }
+.coffee-section { display: grid; gap: 6px; }
+.coffee-section > span { color: var(--accent-text); font-size: 8px; letter-spacing: 1px; }
+.coffee-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.coffee-choices small { color: var(--text-soft); font-size: 9px; }
+.coffee-caption { display: flex; justify-content: space-between; align-items: center; color: var(--accent-text); font-size: 8px; letter-spacing: 1px; }
+.coffee-caption strong { color: var(--text); font-size: 10px; letter-spacing: 0; }
+.coffee-cups { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 8px 5px 12px; background: #100C19; border: 1px solid #675374; border-radius: 17px; }
+.coffee-cups > span { display: grid; gap: 4px; font-size: 9px; letter-spacing: 1px; color: var(--accent-text); }
+.coffee-cups small { font-size: 9px; letter-spacing: 0; color: var(--text-soft); }
+.coffee-stepper { display: grid; grid-template-columns: 44px 42px 44px; gap: 4px; align-items: center; }
+.coffee-stepper output { font-size: 26px; font-weight: 400; font-variant-numeric: tabular-nums; text-align: center; }
+.coffee-console .coffee-primary { border-color: #B391CB; background: linear-gradient(135deg, #674682, #392A49); font-weight: 600; }
+.coffee-mark { display: grid; place-items: center; width: 44px; height: 44px; color: #DAC4BE; }
+.coffee-steam { position: absolute; inset: 0; pointer-events: none; opacity: .75; }
+.coffee-steam svg { display: block; width: 100%; height: 100%; }
+.coffee-feedback { display: grid; gap: 4px; margin: 0; padding-inline: 8px; min-height: 30px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.coffee-feedback > span { font-size: 7px; letter-spacing: 1.8px; color: var(--muted); }
+.coffee-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.coffee-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container coffee-stage (max-height: 610px) { .coffee-console { gap: 8px; padding: 10px; } .coffee-artwork { width: clamp(110px, calc((100cqh - 360px) * 1.1667), 210px); } }
+@container coffee-stage (max-height: 495px) { .coffee-console { gap: 6px; } }
+@media (max-width: 360px) { .device-control-sheet.is-coffee-controller .device-sheet-content { padding-inline: 10px; } .coffee-brand strong { font-size: 9px; letter-spacing: 1.5px; } }
+@media (hover: hover) { .coffee-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.coffee-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.coffee-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .coffee-workspace *, .coffee-more * { transition: none; scroll-behavior: auto; } .coffee-workspace button:active { transform: none; } }

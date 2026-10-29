@@ -143,6 +143,8 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     range('fridge', 'fridgeHumidity', 'Humidity target', 30, 70, '%'), stat('fridge', 'fridgeDoorOpen', 'Door open'), stat('fridge', 'fridgeFilterLife', 'Filter life', '%'),
   ],
   coffee: [
+    { ...action('coffee', 'cups-up', 'Cups +', {}, { type: 'increment', field: 'coffeeCupCount', delta: 1 }), configurationOnly: true },
+    { ...action('coffee', 'cups-down', 'Cups −', {}, { type: 'increment', field: 'coffeeCupCount', delta: -1 }), configurationOnly: true },
     range('coffee', 'coffeeCupCount', 'Cups', 1, 6), range('coffee', 'coffeeTempC', 'Brew temperature', 80, 98, '°C'),
     range('coffee', 'coffeeKeepWarmMin', 'Keep-warm preference', 0, 60, 'min', 'schedule'),
     toggle('coffee', 'coffeeGrinder', 'Grinder'), toggle('coffee', 'coffeeMilkFrother', 'Milk frother'),

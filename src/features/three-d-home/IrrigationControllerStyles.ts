@@ -1,13 +1,10 @@
-import { Animated, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { theme } from '../../theme/theme';
 
 export const irrigationControllerMaterials = {
   edge: ['#C6A9E2', '#635072', '#190E24'] as const,
   body: ['#33283F', '#17121F', '#271B33'] as const,
 };
-
-/** Keep animation values in the presentation layer, with no per-frame React state updates. */
-export function irrigationSprayStyle(opacity: Animated.Value) { return { opacity }; }
 
 /** Scale decorative equipment before touch controls; large type retains contained, accessible scrolling. */
 export const irrigationControllerStyles = StyleSheet.create({

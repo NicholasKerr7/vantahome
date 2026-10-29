@@ -216,3 +216,25 @@ test('refrigerator targets and every extra preference survive a fresh persistenc
   const reopened = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: reopenedPersistence, mode: 'demo' }));
   reopened.connect(); await settle(); expect(reopened.getSnapshot().state.deviceStates['kitchen-fridge']).toEqual(accepted); reopened.dispose();
 });
+
+/** Coffee recipe edits and explicit activity traverse the real client/session/disk path. */
+test('coffee recipe and all extras survive a fresh persistence instance independently of brewing', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const disk = new Map<string, string>();
+  const storage = { getItem: async (key: string) => disk.get(key) ?? null, setItem: async (key: string, value: string) => { disk.set(key, value); } };
+  const persistence = new SimulationPersistence(storage);
+  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' }));
+  const recipe = { coffeeStrength: 'strong', coffeeSizeOz: 12, coffeeCupCount: 2, coffeeTempC: 96, coffeeKeepWarmMin: 30, coffeeGrinder: false, coffeeMilkFrother: true, coffeeAutoBrewTime: '08:00' };
+  client.connect(); await settle(); client.runAction('kitchen-coffee', 'coffee-stop');
+  for (const [field, value] of Object.entries(recipe)) client.setSetting('kitchen-coffee', field, value);
+  client.runAction('kitchen-coffee', 'coffee-cups-up'); client.runAction('kitchen-coffee', 'coffee-cups-up');
+  await settle(); expect(client.getSnapshot().state.deviceStates['kitchen-coffee']).toMatchObject({ on: false, settings: { ...recipe, coffeeCupCount: 4 } });
+  client.runAction('kitchen-coffee', 'coffee-brew'); await settle();
+  const accepted = client.getSnapshot().state.deviceStates['kitchen-coffee']; expect(accepted.on).toBe(true);
+  client.dispose(); await settle();
+  const reopenedPersistence = new SimulationPersistence(storage);
+  const reopened = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: reopenedPersistence, mode: 'demo' }));
+  reopened.connect(); await settle(); expect(reopened.getSnapshot().state.deviceStates['kitchen-coffee']).toEqual(accepted);
+  reopened.runAction('kitchen-coffee', 'coffee-stop'); await settle();
+  expect(reopened.getSnapshot().state.deviceStates['kitchen-coffee']).toMatchObject({ on: false, settings: { ...recipe, coffeeCupCount: 4 } }); reopened.dispose();
+});

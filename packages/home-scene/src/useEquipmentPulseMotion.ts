@@ -2,7 +2,7 @@ import { useLayoutEffect, type RefObject } from 'react';
 import { subscribeScenePresentation } from './scenePresentation';
 
 /** Pulse one compositor layer only while its accepted simulation is visible and motion is allowed. */
-export function useIrrigationSprayMotion(layer: RefObject<HTMLDivElement | null>, on: boolean, reduced: boolean) {
+export function useEquipmentPulseMotion(layer: RefObject<HTMLDivElement | null>, on: boolean, reduced: boolean) {
   useLayoutEffect(() => {
     const element = layer.current;
     if (!on || reduced || !element || typeof element.animate !== 'function') return;

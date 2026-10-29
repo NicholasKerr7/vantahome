@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 28, 2026. This is the current delivery queue, not a claim that
+Maintained October 29, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Coffee console | Preview 99 built and verified; installation pending | Shared sculpted espresso machine SVG and accepted-state steam in Home/Devices; independent strength, size and atomic cup-count preferences, explicit Brew/Stop and all extras under More. No timer, consumption, live temperature or real brewing. Shared motion hook preserves irrigation and stops when reduced/backgrounded/covered. 70 renderer + 50 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles pass, including bidirectional state, reload and fresh native disk-session retention. Fixed height-constrained artwork sizing; ordinary viewports do not scroll, tiny/large-text fallback remains. Signed staging package/exact 32,265,219-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Refrigerator console | Preview 98 built and verified; installation pending | Shared pearl-metal French-door SVG, independent fridge/freezer target steppers, C/F presentation, Normal/Eco/Boost/Vacation and quick preferences in Home/Devices; all extras remain under More. Atomic steps preserve power/settings; malformed explicit targets remain unavailable. No live temperature/cooling claims or new dependency/animation loop. 50 renderer + 60 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles pass. Bidirectional state agreement, reload and fresh native disk-session retention verified. Regular viewports have no vertical overflow; small-screen/large-text fallback retained. Signed staging package and exact 32,249,927-byte scene verified; production metadata restored. Preview 97 remains installed; installation and physical checks pending. |
 | Air quality console | Preview 97 installed; manual launch confirmation pending | Shared ceramic SVG sensor and recessed AQI display in Home/Devices; fixed PM2.5/CO₂/VOC/humidity samples, sample acknowledgement, saved alerts and AQI presets, all extras under More. Six saved-limit comparisons match existing strict-greater-than reports; alerts-off and partial missing data cannot conceal a known exceedance. No live sensor/purifier/history claims. Five missing host preference projections fixed. 69 renderer + 88 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home browser profiles, bidirectional state and reload pass. Measured-height sizing fixes short-phone overflow; tiny/large-text contained fallback retained. Signed staging package/exact 32,233,386-byte scene verified, signing renewed through November 3, and production metadata restored. Reverified and updated in place October 27; Apple inventory confirms 1.0.0 (97). Automatic launch was denied by iOS with a signing/trust message; manual opening/profile approval requested. Manual launch confirmation and physical acceptance pending. |
 | Irrigation console | Included in installed Preview 97; physical acceptance pending | Shared sculpted sprinkler SVG and accepted-power spray in Home/Devices, Start/Stop, existing zone/duration preferences, guarded five-minute steps and 5/15/30 presets; all advanced controls retained. Preferences never create a timer, automatic stop or active-zone mapping. Motion stops when reduced, covered/backgrounded or unmounted. 58 renderer + 83 native tests, app/scene types/build, 11 standalone + five native-source + five actual Home layout profiles, reload retention and bidirectional Home/Devices agreement pass. Short-phone overflow corrected through stage-based artwork sizing; tiny/large-text contained fallback retained. Signed staging package and exact 32,218,552-byte scene verified; production metadata restored. Included in Preview 97 installed in place October 27 with renewed signing. Manual launch confirmation and irrigation physical acceptance remain pending. |
@@ -48,6 +49,15 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+**Coffee recipes and motion reuse:** the existing coffee power state represents
+an explicit brewing preview, while recipe and schedule fields are saved
+preferences. Cup steps must preserve activity and reject malformed counts. Fixed
+reservoir samples come from the catalog and must not be written as editable
+telemetry. The existing irrigation pulse is now reusable across both surfaces,
+with lifecycle/reduced-motion tests and no new timer. Home/Devices and fresh disk
+retention pass; actual brewing, scheduling and automatic completion remain outside
+this simulation scope. Physical recipe/Stop/More/reopening acceptance is pending.
 
 **Refrigerator targets and operation semantics:** existing refrigerator fields are
 saved configuration, including target temperatures and quick modes. The new
