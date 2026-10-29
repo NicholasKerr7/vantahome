@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 27, 2026. This is the current delivery queue, not a claim that
+Maintained October 28, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Refrigerator console | Preview 98 built and verified; installation pending | Shared pearl-metal French-door SVG, independent fridge/freezer target steppers, C/F presentation, Normal/Eco/Boost/Vacation and quick preferences in Home/Devices; all extras remain under More. Atomic steps preserve power/settings; malformed explicit targets remain unavailable. No live temperature/cooling claims or new dependency/animation loop. 50 renderer + 60 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles pass. Bidirectional state agreement, reload and fresh native disk-session retention verified. Regular viewports have no vertical overflow; small-screen/large-text fallback retained. Signed staging package and exact 32,249,927-byte scene verified; production metadata restored. Preview 97 remains installed; installation and physical checks pending. |
 | Air quality console | Preview 97 installed; manual launch confirmation pending | Shared ceramic SVG sensor and recessed AQI display in Home/Devices; fixed PM2.5/CO₂/VOC/humidity samples, sample acknowledgement, saved alerts and AQI presets, all extras under More. Six saved-limit comparisons match existing strict-greater-than reports; alerts-off and partial missing data cannot conceal a known exceedance. No live sensor/purifier/history claims. Five missing host preference projections fixed. 69 renderer + 88 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home browser profiles, bidirectional state and reload pass. Measured-height sizing fixes short-phone overflow; tiny/large-text contained fallback retained. Signed staging package/exact 32,233,386-byte scene verified, signing renewed through November 3, and production metadata restored. Reverified and updated in place October 27; Apple inventory confirms 1.0.0 (97). Automatic launch was denied by iOS with a signing/trust message; manual opening/profile approval requested. Manual launch confirmation and physical acceptance pending. |
 | Irrigation console | Included in installed Preview 97; physical acceptance pending | Shared sculpted sprinkler SVG and accepted-power spray in Home/Devices, Start/Stop, existing zone/duration preferences, guarded five-minute steps and 5/15/30 presets; all advanced controls retained. Preferences never create a timer, automatic stop or active-zone mapping. Motion stops when reduced, covered/backgrounded or unmounted. 58 renderer + 83 native tests, app/scene types/build, 11 standalone + five native-source + five actual Home layout profiles, reload retention and bidirectional Home/Devices agreement pass. Short-phone overflow corrected through stage-based artwork sizing; tiny/large-text contained fallback retained. Signed staging package and exact 32,218,552-byte scene verified; production metadata restored. Included in Preview 97 installed in place October 27 with renewed signing. Manual launch confirmation and irrigation physical acceptance remain pending. |
 | Energy equipment SVG artwork | Preview 95 installed and launched; physical acceptance pending | Four consoles redesigned and checked sequentially against the fan/laundry/vacuum presentation. Larger three-module solar array, ceramic battery tower, substantial generator and circular home instrument share lightweight typed SVG geometry with metallic/radial materials and device-local indicators. Centered artwork and compact readout rows use available space; small-screen contained fallback retained. No new network/dependency/animation loops or control changes. 46 renderer + 23 native tests, app/scene types/build, 20 embedded + 20 native-source browser layout cases and signed staging package pass. Reverified and updated in place October 26; an interrupted transfer resolved on one retry. Launch succeeded; Apple inventory confirms 1.0.0 (95), superseding 92. All-four artwork/fit/More acceptance requested. |
@@ -47,6 +48,15 @@ simulation-only staging scope. Recheck volatile external state before changing i
 | Latest reliability audit | Complete in Preview 59 / `5ff96ad` | All 11 confirmed groups addressed; evidence in [deep rescan](DEEP_RELIABILITY_RESCAN.md). This does not replace an independent release review. |
 
 ## Most recent adjacent findings
+
+**Refrigerator targets and operation semantics:** existing refrigerator fields are
+saved configuration, including target temperatures and quick modes. The new
+relative commands preserve accepted power and both compartments independently;
+malformed explicit targets disable relative adjustments rather than turning them
+into plausible readings. All existing host projection fields were already present.
+C/F conversion is presentation only; no cooling engine or live telemetry is added.
+Fresh native disk-session retention and actual Home/Devices agreement are verified;
+physical appliance behavior remains outside this simulation scope.
 
 **Air preference projection and incomplete readings:** five existing saved air
 preferences were missing from the host projection allowlist; the new round-trip

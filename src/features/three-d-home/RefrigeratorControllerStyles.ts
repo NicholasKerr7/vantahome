@@ -1,0 +1,50 @@
+import { StyleSheet } from 'react-native';
+import { theme } from '../../theme/theme';
+
+export const refrigeratorControllerMaterials = {
+  edge: ['#C6BED7', '#6A5C7C', '#20172D'] as const,
+  body: ['#302A3B', '#16121F', '#282030'] as const,
+};
+
+/** Reduce the decorative appliance first so target controls retain comfortable touch areas. */
+export const refrigeratorControllerStyles = StyleSheet.create({
+  viewport: { flex: 1, minHeight: 0 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 4 },
+  shell: { width: '100%', maxWidth: 390, padding: 2, borderRadius: 30, shadowColor: '#000000', shadowOpacity: .35, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  body: { borderRadius: 28, padding: 12, gap: 9, borderWidth: 1, borderColor: '#74647F' },
+  bodyCompact: { padding: 10, gap: 6 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  identity: { flex: 1, minWidth: 0, alignItems: 'center', gap: 3 },
+  brand: { color: theme.colors.accentText, fontSize: 8, letterSpacing: 1.6, textAlign: 'center' },
+  title: { color: theme.colors.text, fontSize: 12, fontWeight: '600', letterSpacing: 1.8, textAlign: 'center' },
+  hero: { alignItems: 'center', gap: 0 },
+  artwork: { width: 236, height: 219, alignSelf: 'center' },
+  artworkCompact: { width: 170, height: 158 },
+  status: { color: theme.colors.accentText, fontSize: 10, lineHeight: 14, textAlign: 'center' },
+  targets: { flexDirection: 'row', gap: 8 },
+  targetsLarge: { flexDirection: 'column' },
+  target: { flex: 1, minWidth: 0, borderRadius: 17, borderWidth: 1, borderColor: '#51445D', backgroundColor: '#16111E', padding: 6, gap: 4 },
+  targetLarge: { flex: 0 },
+  targetLabel: { color: theme.colors.accentText, fontSize: 8, lineHeight: 12, fontWeight: '600', letterSpacing: .7, textAlign: 'center' },
+  targetDisplay: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  targetValue: { color: theme.colors.text, fontSize: 27, lineHeight: 32, fontWeight: '300', fontVariant: ['tabular-nums'], textAlign: 'center' },
+  targetUnit: { color: theme.colors.accentText, fontSize: 12, lineHeight: 18, textAlign: 'center' },
+  targetControls: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
+  key: { minWidth: 44, minHeight: 44, borderRadius: 14, borderWidth: 1, borderBottomWidth: 3, borderColor: '#675674', backgroundColor: '#342A42', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 7 },
+  keyCircle: { width: 44, height: 44, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 22 },
+  keyStep: { flex: 1, borderRadius: 11, paddingVertical: 0 },
+  keyWide: { flex: 1 },
+  keyLarge: { flexBasis: '45%' },
+  keyActive: { backgroundColor: '#573474', borderColor: theme.colors.accent },
+  keyPressed: { backgroundColor: '#654480', borderBottomWidth: 1, opacity: .82 },
+  keyDisabled: { opacity: .38 },
+  keyLabel: { color: theme.colors.text, fontSize: 10, fontWeight: '600', textAlign: 'center' },
+  section: { gap: 5 },
+  caption: { color: theme.colors.accentText, fontSize: 8, lineHeight: 12, letterSpacing: .6, fontWeight: '600' },
+  row: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
+  rowLarge: { flexWrap: 'wrap' },
+  preference: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', gap: 6, paddingHorizontal: 9 },
+  preferenceLarge: { flexBasis: '100%' },
+  preferenceValue: { color: theme.colors.accentText, fontSize: 10, fontWeight: '600' },
+  feedback: { color: theme.colors.subtext, fontSize: 10, lineHeight: 15, textAlign: 'center' },
+});

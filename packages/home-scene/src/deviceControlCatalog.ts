@@ -132,6 +132,10 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
   dryer: cycleControls('dryer'),
   dishwasher: cycleControls('dishwasher'),
   fridge: [
+    { ...action('fridge', 'temperature-up', 'Fridge target +', {}, { type: 'increment', field: 'tempC', delta: 1 }), configurationOnly: true },
+    { ...action('fridge', 'temperature-down', 'Fridge target −', {}, { type: 'increment', field: 'tempC', delta: -1 }), configurationOnly: true },
+    { ...action('fridge', 'freezer-up', 'Freezer target +', {}, { type: 'increment', field: 'freezerTempC', delta: 1 }), configurationOnly: true },
+    { ...action('fridge', 'freezer-down', 'Freezer target −', {}, { type: 'increment', field: 'freezerTempC', delta: -1 }), configurationOnly: true },
     range('fridge', 'freezerTempC', 'Freezer temperature', -24, -12, '°C'),
     choice('fridge', 'fridgeMode', 'Mode', [['Eco', 'eco'], ['Normal', 'normal'], ['Boost', 'boost'], ['Vacation', 'vacation']]),
     toggle('fridge', 'fridgeQuickCool', 'Quick cool'), toggle('fridge', 'fridgeQuickFreeze', 'Quick freeze'), toggle('fridge', 'fridgeIceMaker', 'Ice maker'),

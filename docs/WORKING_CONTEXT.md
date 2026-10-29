@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-27**. Read this before rediscovering the project.
+Last maintained: **2026-10-28**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,50 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Refrigerator console — October 28 / Preview 98 built and verified; installation pending
+
+- Home and Devices share a sculpted pearl-metal French-door refrigerator with
+  a recessed dispenser, dimensional handles and freezer drawers. One lightweight
+  typed SVG drawing feeds both surfaces, with instance-local gradients and one
+  accepted-power indicator; no raster asset, renderer, dependency, idle loop or
+  live-temperature animation was added.
+- Fridge and freezer targets remain independent at the existing 1–8°C and
+  −24 to −12°C bounds. Relative steps resolve against the latest guarded state,
+  preserve power and unrelated settings, and announce the 1.8°F equivalent when
+  Fahrenheit is selected. Explicit malformed targets stay unavailable; relative
+  steps cannot silently coerce them. Existing advanced target fields can recover
+  them through an explicit selection.
+- Normal/Eco/Boost/Vacation, Quick cool and Quick freeze use existing saved
+  preferences. Ice maker, door alarm, energy saver, humidity and remaining extras
+  stay under More. No measured compartment temperature, cooling progress, food
+  safety classification, timer or physical appliance operation is implied.
+- **50 renderer tests across four suites + 60 native tests across four suites**
+  pass. Coverage includes independent targets, bounds, rapid commands, malformed
+  preferences, off-state edits, C/F presentation, More/Back focus, hydration and
+  revoked grants. The real native client/session/disk path preserves targets and
+  every extra preference in a fresh persistence instance. App/scene TypeScript
+  and the offline scene build pass.
+- Eleven embedded standalone, six native-source and five actual Home iframe
+  profiles pass with 44px/pt targets and no regular viewport overflow. Small
+  320×568 screens retain contained scrolling instead of shrinking controls;
+  large text retains the established fallback. Home → Devices and Devices → Home
+  agreement and reload retention pass with zero browser page errors. The initial
+  host script assumed the Kitchen remained selected after reopening; the final
+  check explicitly reopens Kitchen before checking saved refrigerator settings.
+- Evidence: `work/refrigerator-{web-tests-final,native-tests,types-final,scene-build}.log`,
+  `work/refrigerator-{web,native,host}-browser.json`, and actual controller capture
+  `work/refrigerator-console-preview.png`.
+- Preview **98** built and passed signature, staging identity and exact bundled
+  scene checks (**32,249,927 bytes**, SHA-256 recorded in
+  `work/preview98-verification.json`). Native/embedded refrigerator, air, irrigation,
+  energy and End-scene markers are present; production metadata was restored.
+  The signing profile expires November 3 at 15:11:57 UTC. Build logs:
+  `work/refrigerator-preview98-{build,xcodebuild}.log`. Owned QA servers stopped.
+- Installation and physical refrigerator fit/touch/More/reopening checks remain
+  pending. Preview 97 remains the last installed build; its manual launch
+  confirmation and earlier physical acceptance checks remain pending.
+  Hub/sync/iPad deferrals unchanged.
 
 ## Air quality console — October 27 / Preview 97 installed; manual launch confirmation pending
 

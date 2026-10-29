@@ -1,0 +1,47 @@
+/* A single sculpted appliance remains prominent while measured stage height protects touch targets. */
+.device-control-sheet.is-refrigerator-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.refrigerator-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.refrigerator-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 2px 0 6px; overflow: auto; container: refrigerator-stage / size; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.refrigerator-console { display: grid; width: min(390px, 100%); gap: 10px; padding: 14px; border: 1px solid #A18EBA; border-radius: 32px; color: var(--text); background: linear-gradient(140deg, #4F455F, #241B31 16%, #100D1A 62%, #30233F); box-shadow: inset 2px 1px 1px #FFFFFF35, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.refrigerator-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.refrigerator-brand { display: grid; gap: 5px; text-align: center; }
+.refrigerator-brand span { font-size: 8px; letter-spacing: 2.5px; color: #BFAFD0; }
+.refrigerator-brand strong { font-weight: 500; font-size: 11px; letter-spacing: 2.4px; }
+.refrigerator-console button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 7px; border-radius: 15px; border: 1px solid #FFFFFF29; background: linear-gradient(145deg, #41364F, #231C30 75%); color: var(--text); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.refrigerator-console .refrigerator-round { width: 44px; height: 44px; border-radius: 50%; }
+.refrigerator-console button[aria-pressed='true'], .refrigerator-console button[aria-checked='true'] { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.refrigerator-console button:disabled { opacity: .4; cursor: default; }
+.refrigerator-console button:not(:disabled):active { transform: translateY(2px); }
+.refrigerator-console button:focus-visible, .refrigerator-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.refrigerator-hero { display: grid; justify-items: center; gap: 2px; }
+.refrigerator-artwork { width: 250px; max-width: 100%; aspect-ratio: 14 / 13; }
+.refrigerator-artwork > svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.refrigerator-status { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0; min-height: 18px; color: var(--text-soft); font-size: 11px; line-height: 1.4; text-align: center; }
+.refrigerator-status > span { flex: none; width: 5px; height: 5px; border-radius: 50%; background: #8C839B; }
+.refrigerator-console[data-powered='true'] .refrigerator-status > span { background: #C3A0F5; }
+.refrigerator-targets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.refrigerator-target { display: grid; gap: 3px; min-width: 0; padding: 7px 4px 4px; border: 1px solid #675374; border-radius: 18px; background: #100C19; }
+.refrigerator-target > span { text-align: center; font-size: 9px; color: var(--accent-text); letter-spacing: .6px; text-transform: uppercase; }
+.refrigerator-stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; }
+.refrigerator-console .refrigerator-stepper button { box-shadow: none; border-color: transparent; background: transparent; padding: 0; border-radius: 12px; }
+.refrigerator-stepper output { display: flex; align-items: baseline; justify-content: center; font-size: 30px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+.refrigerator-stepper small { font-size: 10px; letter-spacing: 0; color: var(--text-soft); }
+.refrigerator-section { display: grid; gap: 6px; }
+.refrigerator-section > span { color: var(--accent-text); font-size: 8px; letter-spacing: 1px; }
+.refrigerator-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.refrigerator-quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.refrigerator-quick button > span { display: grid; text-align: left; gap: 2px; }
+.refrigerator-quick small { font-size: 9px; color: var(--text-soft); }
+.refrigerator-note { margin: 0; text-align: center; font-size: 9px; line-height: 1.4; color: var(--text-soft); }
+.refrigerator-note span { letter-spacing: 1px; }
+.refrigerator-feedback { display: grid; gap: 4px; margin: 0; padding-inline: 8px; min-height: 30px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.refrigerator-feedback > span { font-size: 7px; letter-spacing: 1.8px; color: var(--muted); }
+.refrigerator-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.refrigerator-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container refrigerator-stage (max-height: 570px) { .refrigerator-console { gap: 8px; padding: 10px; } .refrigerator-artwork { width: 210px; } }
+@container refrigerator-stage (max-height: 495px) { .refrigerator-artwork { width: 150px; } .refrigerator-console { gap: 6px; } }
+@media (max-width: 360px) { .device-control-sheet.is-refrigerator-controller .device-sheet-content { padding-inline: 10px; } .refrigerator-stepper output { font-size: 24px; } .refrigerator-targets { gap: 5px; } .refrigerator-brand strong { font-size: 9px; letter-spacing: 1.5px; } }
+@media (hover: hover) { .refrigerator-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.refrigerator-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.refrigerator-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .refrigerator-workspace *, .refrigerator-more * { transition: none; scroll-behavior: auto; } .refrigerator-workspace button:active { transform: none; } }

@@ -180,6 +180,12 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
   if (operation?.type === 'media') next = applyMediaOperation(device, next, operation.command);
   if (operation?.type === 'navigate') next = applyNavigationOperation(device, next, operation.direction);
   if (operation?.type === 'increment') {
+    // A missing target can use the established default; a corrupt explicit target needs an explicit replacement.
+    if (device.kind === 'fridge' && (operation.field === 'tempC' || operation.field === 'freezerTempC')) {
+      const target = next.settings && Object.hasOwn(next.settings, operation.field)
+        ? next.settings[operation.field] : readDeviceSetting(device, next, operation.field);
+      if (typeof target !== 'number' || validateStoredSetting(device.kind, operation.field, target) !== target) return current;
+    }
     // Never coerce a malformed duration into a plausible saved setting; an explicit preset can recover it.
     if (operation.field === 'durationMin') {
       const duration = readDeviceSetting(device, next, 'durationMin');

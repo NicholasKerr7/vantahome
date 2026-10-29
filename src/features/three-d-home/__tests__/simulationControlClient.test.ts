@@ -198,3 +198,21 @@ test('a queued foreground tick cannot undo a synchronous pause before its host m
   expect((await persistence.load('demo')).deviceStates['entry-gate']).toMatchObject({ level: 50, settings: { gatePhase: 'closing' } });
   clock.dispose(); controls.dispose();
 });
+
+/** Refrigerator updates traverse the real client, session and disk path before a fresh session reopens them. */
+test('refrigerator targets and every extra preference survive a fresh persistence instance without powering on', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const disk = new Map<string, string>();
+  const storage = { getItem: async (key: string) => disk.get(key) ?? null, setItem: async (key: string, value: string) => { disk.set(key, value); } };
+  const persistence = new SimulationPersistence(storage);
+  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' }));
+  client.connect(); await settle(); client.setPower(['kitchen-fridge'], false);
+  for (const [field, value] of Object.entries({ tempC: 4, freezerTempC: -18, fridgeMode: 'vacation', fridgeQuickCool: true, fridgeQuickFreeze: true, fridgeIceMaker: false, fridgeDoorAlarm: false, fridgeEnergySaver: false, fridgeHumidity: 60 })) client.setSetting('kitchen-fridge', field, value);
+  client.runAction('kitchen-fridge', 'fridge-temperature-up'); client.runAction('kitchen-fridge', 'fridge-temperature-up'); client.runAction('kitchen-fridge', 'fridge-freezer-down');
+  await settle(); const accepted = client.getSnapshot().state.deviceStates['kitchen-fridge'];
+  expect(accepted).toMatchObject({ on: false, settings: { tempC: 6, freezerTempC: -19, fridgeMode: 'vacation', fridgeIceMaker: false, fridgeQuickCool: true, fridgeQuickFreeze: true, fridgeDoorAlarm: false, fridgeEnergySaver: false, fridgeHumidity: 60 } });
+  client.dispose(); await settle();
+  const reopenedPersistence = new SimulationPersistence(storage);
+  const reopened = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: reopenedPersistence, mode: 'demo' }));
+  reopened.connect(); await settle(); expect(reopened.getSnapshot().state.deviceStates['kitchen-fridge']).toEqual(accepted); reopened.dispose();
+});

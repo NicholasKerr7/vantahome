@@ -24,6 +24,8 @@ import { VacuumController } from './VacuumControlPanel';
 import { SpeakerController } from './SpeakerControlPanel';
 import { FanController } from './FanControlPanel';
 import { AirQualityController } from './AirQualityControlPanel';
+import { RefrigeratorController } from './RefrigeratorControlPanel';
+import { readRefrigeratorControllerState } from './refrigeratorController';
 import { IrrigationController } from './IrrigationControlPanel';
 import { LaundryController } from './LaundryControlPanel';
 import { DishwasherController } from './DishwasherControlPanel';
@@ -46,6 +48,7 @@ const CONTROLLER_CLASSES: Partial<Record<DeviceDefinition['kind'], string>> = {
   fan: 'is-fan-controller',
   sprinkler: 'is-irrigation-controller',
   air: 'is-air-quality-controller',
+  fridge: 'is-refrigerator-controller',
   washer: 'is-laundry-controller', dryer: 'is-laundry-controller',
   dishwasher: 'is-dishwasher-controller',
   camera: 'is-camera-controller',
@@ -74,7 +77,9 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
   const tempUnit = useHomeStore((state) => state.tempUnit);
   const editable = useHomeStore((state) => canViewSceneDevice(state.access, deviceId) && state.access.editableDeviceIds?.includes(deviceId) === true);
   const water = device.kind === 'water-heater' ? readWaterControllerState(device, current) : null;
-  const status = water?.kind === 'water-heater'
+  const refrigerator = device.kind === 'fridge' ? readRefrigeratorControllerState(device, current) : null;
+  const status = refrigerator ? `${refrigerator.on ? 'On' : 'Off'} · Fridge target ${refrigerator.tempC === null ? 'unavailable' : `${formatClimateTemperature(refrigerator.tempC, tempUnit)}°${tempUnit}`}`
+    : water?.kind === 'water-heater'
     ? `${water.on ? 'On' : 'Off'} · Target ${formatClimateTemperature(water.targetC, tempUnit)}°${tempUnit}`
     : device.kind === 'ac'
     ? `${current.on ? 'On' : 'Off'} · Target ${formatClimateTemperature(readClimateControllerState(device, current).targetC, tempUnit)}°${tempUnit}`
@@ -142,6 +147,7 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
         : device.kind === 'vacuum' && controllable ? <VacuumController key={deviceId} device={device} current={current} />
         : device.kind === 'speaker' && controllable ? <SpeakerController key={deviceId} device={device} current={current} />
         : device.kind === 'fan' && controllable ? <FanController key={deviceId} device={device} current={current} />
+        : device.kind === 'fridge' && controllable ? <RefrigeratorController key={deviceId} device={device} current={current} />
         : device.kind === 'air' && controllable ? <AirQualityController key={deviceId} device={device} current={current} />
         : device.kind === 'sprinkler' && controllable ? <IrrigationController key={deviceId} device={device} current={current} />
         : isLaundryKind(device.kind) && controllable ? <LaundryController key={deviceId} device={device} current={current} />

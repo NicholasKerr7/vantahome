@@ -37,6 +37,7 @@ import { SpeakerController } from './SpeakerController';
 import { FanController } from './FanController';
 import { AirQualityController } from './AirQualityController';
 import { IrrigationController } from './IrrigationController';
+import { RefrigeratorController } from './RefrigeratorController';
 import { LaundryController } from './LaundryController';
 import { DishwasherController } from './DishwasherController';
 import { OpeningController } from './OpeningController';
@@ -68,6 +69,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   fan: { accessible: 'Back to fan controller', visible: 'Back to fan' },
   air: { accessible: 'Back to air quality controller', visible: 'Back to air quality' },
   sprinkler: { accessible: 'Back to irrigation controller', visible: 'Back to irrigation' },
+  fridge: { accessible: 'Back to refrigerator controller', visible: 'Back to refrigerator' },
   washer: { accessible: 'Back to laundry controller', visible: 'Back to laundry' },
   dryer: { accessible: 'Back to laundry controller', visible: 'Back to laundry' },
   dishwasher: { accessible: 'Back to dishwasher controller', visible: 'Back to dishwasher' },
@@ -219,6 +221,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'sprinkler' && !advancedControls) return <IrrigationController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'fridge' && !advancedControls) return <RefrigeratorController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
 
   return <>
     {controllerReturn && <Pressable accessibilityRole="button" accessibilityLabel={controllerReturn.accessible}
