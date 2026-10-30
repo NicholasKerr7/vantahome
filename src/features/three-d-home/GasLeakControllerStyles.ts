@@ -1,0 +1,44 @@
+import { StyleSheet } from 'react-native';
+import { theme } from '../../theme/theme';
+
+export const gasLeakControllerMaterials = {
+  edge: ['#C6BED7', '#6A5C7C', '#20172D'] as const,
+  body: ['#302A3B', '#16121F', '#282030'] as const,
+};
+/** Keep appliance depth in lightweight materials and shrink artwork before touch targets. */
+export const gasLeakControllerStyles = StyleSheet.create({
+  viewport: { flex: 1, minHeight: 0 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 4 },
+  shell: { width: '100%', maxWidth: 390, padding: 2, borderRadius: 30, shadowColor: '#000000', shadowOpacity: .35, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  body: { borderRadius: 28, padding: 12, gap: 8, borderWidth: 1, borderColor: '#74647F' },
+  bodyCompact: { padding: 10, gap: 6 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  mark: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  identity: { flex: 1, minWidth: 0, alignItems: 'center', gap: 3 },
+  brand: { color: theme.colors.accentText, fontSize: 8, letterSpacing: 1.6, textAlign: 'center' },
+  title: { color: theme.colors.text, fontSize: 12, fontWeight: '600', letterSpacing: 1.6, textAlign: 'center' },
+  artwork: { width: 240, height: 157, alignSelf: 'center' },
+  artworkCompact: { width: 150, height: 98 },
+  status: { color: theme.colors.accentText, fontSize: 10, lineHeight: 14, textAlign: 'center' },
+  key: { minWidth: 44, minHeight: 44, borderRadius: 14, borderWidth: 1, borderBottomWidth: 3, borderColor: '#675674', backgroundColor: '#342A42', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 7 },
+  keyCircle: { width: 44, height: 44, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 22 },
+  keyWide: { flex: 1 },
+  keyLarge: { flexBasis: '45%' },
+  keyActive: { backgroundColor: '#573474', borderColor: theme.colors.accent },
+  keyPressed: { backgroundColor: '#654480', borderBottomWidth: 1, opacity: .82 },
+  keyDisabled: { opacity: .38 },
+  keyLabel: { color: theme.colors.text, fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  caption: { color: theme.colors.accentText, fontSize: 8, lineHeight: 12, letterSpacing: .6, fontWeight: '600' },
+  row: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
+  rowLarge: { flexWrap: 'wrap' },
+  note: { color: theme.colors.subtext, fontSize: 10, lineHeight: 14 },
+  readout: { alignItems: 'center', gap: 4, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 17, borderWidth: 1, borderColor: '#665273', backgroundColor: '#171020' },
+  quantity: { color: theme.colors.text, fontSize: 32, lineHeight: 36, fontWeight: '300', letterSpacing: 1, fontVariant: ['tabular-nums'] },
+  primary: { flexDirection: 'row', backgroundColor: '#573474', borderColor: '#B391CB' },
+  metric: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 12, borderWidth: 1, borderColor: '#594766', backgroundColor: '#100C19', alignItems: 'center', gap: 3 },
+  metricValue: { color: theme.colors.text, fontSize: 20, fontVariant: ['tabular-nums'] },
+  unit: { color: theme.colors.subtext, fontSize: 10 },
+  readoutAlarm: { borderColor: '#C58C62', backgroundColor: '#2B1B27' },
+  alarm: { color: '#FFD2A6' },
+  feedback: { color: theme.colors.subtext, fontSize: 10, lineHeight: 15, textAlign: 'center' },
+});

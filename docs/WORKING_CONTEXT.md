@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-29**. Read this before rediscovering the project.
+Last maintained: **2026-10-30**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,51 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Gas leak detector console — October 30 / Preview 102 built and verified; installation pending
+
+- Home and Devices now share a pearl-metal detector with recessed sensing vents
+  and a steady signal ring. One typed lightweight SVG supplies both surfaces;
+  no raster, renderer, dependency, flashing alarm or idle animation was added.
+- Main controls show sample concentration, sample battery, test count/result,
+  explicit preview self-test, silence, simulate/clear scenario and saved leak-alert/
+  preview auto-shutoff preferences. More preserves all original advanced controls.
+  This remains simulation only, with no physical detection or protection claim.
+- A known leak retains its primary amber status after silence, self-test or alerts
+  being disabled. Unknown/malformed readings remain unavailable; inconsistent
+  no-leak/nonzero-concentration samples show a mismatch instead of clear. Preview
+  tests cannot be presented as passed with an unknown or zero test count.
+- The canonical linked valve behavior remains unchanged: auto-shutoff can be
+  disabled, enabling it during a leak closes the preview valve, and clearing the
+  scenario never reopens it. No new power toggle, permission or telemetry schema.
+  Existing native partial-grant checks reject collateral meter changes before
+  publishing. Controls before hydration or after revocation remain unavailable.
+- **29 renderer tests across five suites + 42 native tests across three suites**
+  pass, covering the new console and prior gas meter/interlocks, malformed data,
+  More/Back, permissions, and a fresh disk-session restoration of silenced leak,
+  test result, alert preference and closed linked valve. App/scene types pass.
+- Eleven standalone, six native-source and five actual Home browser profiles pass
+  with 44px/pt controls, no page errors and no ordinary vertical scrolling.
+  A short-stage readout rearrangement and tighter gaps resolve embedded overflow;
+  active/silenced alarm fits too. Tiny-screen and large-text fallback remains
+  contained. Home/Devices agree in both directions and after reload; clearing a
+  scenario leaves the linked meter closed. Initial native-source reload QA ran
+  during a bundle rebuild and stalled; rerunning against the stable build passed.
+- App/scene TypeScript and offline scene build pass. Evidence:
+  `work/gas-leak-{web-tests,native-tests,types,scene-build}.log`,
+  `work/gas-leak-{web,native,host}-browser.json`, and actual console capture
+  `work/gas-leak-console-preview.png`. Owned QA servers stopped.
+- Signed staging Preview **102** is built and verified, including its exact
+  **32,306,364-byte** offline scene, all current console markers, strict code
+  signature and restored production metadata. Scene SHA-256:
+  `20439fbdb888e4f62b537bb719321f79f926495ec1a9395f0927d067854cebd4`.
+  Profile expiry: **2026-11-03 15:11:57 UTC**. Evidence:
+  `work/gas-leak-preview102-build.log`, `work/gas-leak-preview102-xcodebuild.log`
+  and `work/preview102-verification.json`. Preview 102 is **not installed**.
+  Physical fit, scenario/More/preference and reopening acceptance remain pending.
+  Preview 97 remains the
+  last installed build, with manual launch confirmation pending; 98–101 are built
+  but uninstalled. Hub/sync/iPad deferrals remain unchanged.
 
 ## Gas meter console — October 29 / Preview 101 built and verified; installation pending
 

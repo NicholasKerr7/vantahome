@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 29, 2026. This is the current delivery queue, not a claim that
+Maintained October 30, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Gas leak detector console | Preview 102 built and verified; installation pending | Shared pearl-metal SVG, persistent visible leak through silence/self-test, explicit scenario commands and all extras under More. Strict unknown/mismatch display, canonical linked valve and grant behavior retained. 29 renderer + 42 native tests, app/scene types/offline build, 11 standalone + six native-source + five actual Home profiles pass. Short-stage readout layout preserves touch size and no ordinary scrolling. Bidirectional state/reload and fresh disk retention pass. Signed staging package/exact 32,306,364-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Gas meter console | Preview 101 built and verified; installation pending | Shared sculpted metal meter SVG with accepted valve lever, sample supply/usage/flow, explicit preview valve and usage/refill commands, saved alerts and all extras under More. Leak interlocks retain priority; clearing/refill never reopens. Strict unknown-value display, no power toggle or live claims. 19 renderer + 41 native tests, types/offline build, 11 standalone + six native-source + five actual Home browser profiles, bidirectional state and fresh disk retention pass. Signed staging package/exact 32,293,069-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Microwave console | Preview 100 built and verified; installation pending | Shared black-glass appliance SVG, fixed duration readout, independent mode/power preferences, quick-add, Start 1 min and Stop & clear in Home/Devices. All extras remain under More. Bounded atomic steps reject malformed time/power; no countdown, automatic finish or cooking engine. 82 renderer + 40 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles, bidirectional agreement and fresh-session disk retention pass. Measured artwork sizing resolves ordinary viewport overflow; tiny/large-text fallback retained. Signed staging package/exact 32,279,005-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Coffee console | Preview 99 built and verified; installation pending | Shared sculpted espresso machine SVG and accepted-state steam in Home/Devices; independent strength, size and atomic cup-count preferences, explicit Brew/Stop and all extras under More. No timer, consumption, live temperature or real brewing. Shared motion hook preserves irrigation and stops when reduced/backgrounded/covered. 70 renderer + 50 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles pass, including bidirectional state, reload and fresh native disk-session retention. Fixed height-constrained artwork sizing; ordinary viewports do not scroll, tiny/large-text fallback remains. Signed staging package/exact 32,265,219-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
@@ -52,15 +53,23 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 ## Remaining dedicated device consoles
 
-Current routing leaves three device kinds on the generic full-controls layout:
-**stove, smoke and gas-leak**. Existing controls already work; these are
+Current routing leaves two device kinds on the generic full-controls layout:
+**stove and smoke**. Existing controls already work; these are
 presentation upgrades, not missing hardware integrations. Complete one at a time.
-The gas leak detector is the natural companion to the completed meter, preserving
-visible incident state when silenced and never implying physical protection from
-a sample self-test. The cooktop remains a candidate with saved-only heat/mode/
-timer/child-lock preferences. Complete only one console per requested step.
+The cooktop is a candidate with saved-only heat/mode/timer/child-lock preferences.
+The smoke console should preserve its existing incident/acknowledgement semantics
+and never imply physical protection from sample tests. Complete only one console
+per requested step.
 
 ## Most recent adjacent findings
+
+**Detector status versus test result:** a passed preview test and a silenced alarm
+must not displace a known leak. The new primary status and steady signal ring retain
+that alarm even with alerts off or a missing concentration. Explicit malformed
+samples stay unknown; a nonzero sample with no leak flag shows a mismatch. All
+commands still pass through canonical linked-state and permission checks. Fresh
+native disk-session tests preserve detector state and the closed valve; physical
+hardware detection/protection is outside scope.
 
 **Gas sample and interlock presentation:** the monitor is always on, while its
 preview valve is independent. A disabled auto-shutoff preference can leave an

@@ -122,6 +122,29 @@ test('gas meter preferences and sample counters survive a fresh disk session wit
   expect(disk.size).toBeGreaterThan(0); reopened.dispose();
 });
 
+test('a silenced gas leak and preview test survive a fresh disk session without losing the linked interlock', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const disk = new Map<string, string>();
+  const storage = { getItem: async (key: string) => disk.get(key) ?? null, setItem: async (key: string, value: string) => { disk.set(key, value); } };
+  const persistence = new SimulationPersistence(storage);
+  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' }));
+  client.connect(); await settle();
+  const id = 'kitchen-gas-leak', meterId = 'utility-gas-meter';
+  client.setSetting(id, 'gasLeakAlerts', false); client.runAction(id, 'gas-leak-simulate-leak');
+  client.runAction(id, 'gas-leak-silence'); client.runAction(id, 'gas-leak-self-test'); await settle();
+  const accepted = client.getSnapshot().state.deviceStates[id];
+  expect(accepted).toMatchObject({ on: true, settings: { gasLeakDetected: true, gasAlarmSilenced: true, gasLeakAlerts: false, gasTestCount: 1, gasTestResult: 'passed' } });
+  client.dispose(); await settle();
+  const reopenedPersistence = new SimulationPersistence(storage);
+  const reopened = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: reopenedPersistence, mode: 'demo' }));
+  reopened.connect(); await settle(); expect(reopened.getSnapshot().state.deviceStates[id]).toEqual(accepted);
+  expect(reopened.getSnapshot().state.deviceStates[meterId]).toMatchObject({ settings: { gasValveOpen: false, gasLeakInterlock: true } });
+  reopened.runAction(id, 'gas-leak-clear-leak'); await settle();
+  expect(reopened.getSnapshot().state.deviceStates[id]).toMatchObject({ settings: { gasLeakDetected: false, gasAlarmSilenced: false, gasTestCount: 1, gasLeakAlerts: false } });
+  expect(reopened.getSnapshot().state.deviceStates[meterId]).toMatchObject({ settings: { gasValveOpen: false, gasLeakInterlock: false } });
+  reopened.dispose();
+});
+
 test('can reconnect after the setup/cleanup cycle used by React StrictMode', async () => {
   const client = new SimulationControlClient();
   client.connect();
