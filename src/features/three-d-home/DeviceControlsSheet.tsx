@@ -38,6 +38,7 @@ import { FanController } from './FanController';
 import { AirQualityController } from './AirQualityController';
 import { IrrigationController } from './IrrigationController';
 import { MicrowaveController } from './MicrowaveController';
+import { GasMeterController } from './GasMeterController';
 import { CoffeeController } from './CoffeeController';
 import { RefrigeratorController } from './RefrigeratorController';
 import { LaundryController } from './LaundryController';
@@ -71,6 +72,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   fan: { accessible: 'Back to fan controller', visible: 'Back to fan' },
   air: { accessible: 'Back to air quality controller', visible: 'Back to air quality' },
   sprinkler: { accessible: 'Back to irrigation controller', visible: 'Back to irrigation' },
+  'gas-meter': { accessible: 'Back to gas meter controller', visible: 'Back to gas meter' },
   microwave: { accessible: 'Back to microwave controller', visible: 'Back to microwave' },
   coffee: { accessible: 'Back to coffee controller', visible: 'Back to coffee' },
   fridge: { accessible: 'Back to refrigerator controller', visible: 'Back to refrigerator' },
@@ -225,6 +227,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'sprinkler' && !advancedControls) return <IrrigationController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'gas-meter' && !advancedControls) return <GasMeterController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'microwave' && !advancedControls) return <MicrowaveController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'coffee' && !advancedControls) return <CoffeeController device={device} state={state} client={client}

@@ -46,6 +46,52 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Gas meter console — October 29 / Preview 101 built and verified; installation pending
+
+- Home and Devices share a sculpted metal meter with copper unions, recessed
+  sample-supply gauge and a valve lever that follows accepted open/closed state.
+  One typed lightweight SVG serves both surfaces; no raster, dependency, renderer
+  or idle animation was added. Visual QA corrected open-path fills and a gradient
+  lever with zero-area bounds; the lever now uses visible bounded geometry.
+- Main controls expose sample LPG remaining, today/month usage, last sample flow,
+  explicit Open/Close preview valve, Simulate 30m usage, Refill demo supply and
+  saved usage/refill alerts. More retains every original budget, threshold,
+  status and scenario control. Monitoring is never presented as a power toggle.
+- Leak state takes priority over budget/refill notices and remains visible with
+  alerts off. Main-panel usage/open commands are unavailable during an interlock;
+  Close remains available if the preview valve is still open. Clearing a leak or
+  refilling never reopens the valve. Existing advanced scenario semantics remain
+  unchanged, including the disabled auto-shutoff preference. No physical gas
+  monitoring, valve operation, protection or background consumption is implied.
+- Strict display projection uses defaults only for absent fields, leaving malformed
+  explicit quantities/flags unknown. Derived supply/budget readings use their
+  source quantities. Unknown counters block main-panel usage; no extra telemetry
+  schema or permission expansion was needed. Existing gas mapping already covers
+  the complete preference/state set.
+- **19 renderer tests across three suites + 41 native tests across three suites**
+  pass, including sample depletion/refill, leak interlocks, malformed data,
+  permissions/hydration, More/Back focus and fresh native disk-session persistence.
+  App/scene TypeScript and the offline scene build pass. A native inspector test
+  timed out during concurrent build/browser load; its isolated rerun passes with
+  no timeout relaxation. Final verification evidence is from completed runs.
+- Eleven standalone, six native-source and five actual Home iframe profiles pass,
+  with 44px/pt controls and no page errors. Measured-stage artwork sizing fixes
+  a small embedded overflow; regular phone/tablet views do not scroll. Tiny-screen
+  and large-text fallback stays contained. Bidirectional Home/Devices state and
+  reload retention pass. These are isolated Demo browser checks, not physical
+  iPhone acceptance. Owned QA servers stopped.
+- Evidence: `work/gas-meter-{web-tests,native-tests,types,scene-build}.log`,
+  `work/gas-meter-{web,native,host}-browser.json`, and actual controller capture
+  `work/gas-meter-console-preview.png`, build logs
+  `work/gas-meter-preview101-{build,xcodebuild}.log` and
+  `work/preview101-verification.json`.
+- Preview **101** built and passed signature, staging identity, current console
+  markers and exact bundled scene checks (**32,293,069 bytes**, SHA-256 in
+  the receipt). Production metadata was restored; signing expires November 3 at
+  15:11:57 UTC. Installation and physical fit, valve/usage/refill/alerts/More and
+  reopening checks remain pending. Preview 97 remains the last installed build, with manual
+  launch confirmation pending. Hub/sync/iPad deferrals are unchanged.
+
 ## Microwave console — October 29 / Preview 100 built and verified; installation pending
 
 - Home and Devices now share a sculpted black-glass microwave with a metal

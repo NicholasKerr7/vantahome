@@ -1,0 +1,47 @@
+/* A sculpted metering station with measured-stage sizing; controls keep full touch targets. */
+.device-control-sheet.is-gas-meter-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.gas-meter-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.gas-meter-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 2px 0 6px; overflow: auto; container: gas-meter-stage / size; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.gas-meter-console { display: grid; width: min(390px, 100%); gap: 9px; padding: 13px; border: 1px solid #A18EBA; border-radius: 32px; color: var(--text); background: linear-gradient(140deg, #494457, #231C30 16%, #100D1A 62%, #30233F); box-shadow: inset 2px 1px 1px #FFFFFF35, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.gas-meter-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.gas-meter-brand { display: grid; gap: 5px; text-align: center; }
+.gas-meter-brand span { font-size: 8px; letter-spacing: 2.5px; color: #BFAFD0; }
+.gas-meter-brand strong { font-weight: 500; font-size: 12px; letter-spacing: 2.4px; }
+.gas-meter-console button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 7px; border-radius: 15px; border: 1px solid #FFFFFF29; background: linear-gradient(145deg, #41364F, #231C30 75%); color: var(--text); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.gas-meter-console .gas-meter-round { width: 44px; height: 44px; border-radius: 50%; }
+.gas-meter-console button:disabled { opacity: .4; cursor: default; }
+.gas-meter-console button:not(:disabled):active { transform: translateY(2px); }
+.gas-meter-console button:focus-visible, .gas-meter-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.gas-meter-artwork { justify-self: center; width: 285px; max-width: 100%; aspect-ratio: 32 / 21; }
+.gas-meter-artwork > svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.gas-meter-readout { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid #665273; border-radius: 17px; background: linear-gradient(130deg, #24192E, #0E0B17); }
+.gas-meter-readout output { font-size: 34px; line-height: 1.05; font-weight: 300; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.gas-meter-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.gas-meter-console .gas-meter-primary { border-color: #B391CB; background: linear-gradient(135deg, #674682, #392A49); font-weight: 600; }
+.gas-meter-mark { display: grid; place-items: center; width: 44px; height: 44px; color: #D5C0E8; }
+.gas-meter-feedback { margin: 0; padding-inline: 8px; min-height: 25px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.gas-meter-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.gas-meter-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container gas-meter-stage (max-height: 640px) { .gas-meter-console { gap: 6px; padding: 10px; } .gas-meter-artwork { width: clamp(95px, calc((100cqh - 405px) * 1.5238), 285px); } }
+@media (hover: hover) { .gas-meter-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.gas-meter-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.gas-meter-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .gas-meter-workspace *, .gas-meter-more * { transition: none; scroll-behavior: auto; } .gas-meter-workspace button:active { transform: none; } }
+
+.gas-meter-readout > div { display: grid; gap: 3px; }
+.gas-meter-readout span { color: var(--accent-text); font-size: 8px; letter-spacing: .8px; }
+.gas-meter-readout small { font-size: 10px; color: var(--text-soft); }
+.gas-meter-capacity { text-align: right; }
+.gas-meter-capacity strong { font-size: 23px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.gas-meter-status { margin: 0; color: #DAC3EC; font-size: 11px; line-height: 17px; text-align: center; }
+.gas-meter-console[data-interlocked='true'] .gas-meter-status { color: #FFD2A6; }
+.gas-meter-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.gas-meter-metrics > div { display: grid; gap: 4px; padding: 8px 4px; background: #100C19; border: 1px solid #594766; border-radius: 12px; text-align: center; }
+.gas-meter-metrics span { font-size: 8px; color: var(--text-soft); }
+.gas-meter-metrics output { font-size: 20px; font-variant-numeric: tabular-nums; }
+.gas-meter-metrics small { font-size: 9px; margin-left: 3px; color: var(--text-soft); }
+.gas-meter-alerts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.gas-meter-alerts button { justify-content: space-between; padding-inline: 10px; background: #1B1425; }
+.gas-meter-alerts strong { color: var(--accent-text); font-size: 10px; }
+.gas-meter-alerts button[aria-checked='true'] { border-color: #9D79BD; }
+@media (max-width: 360px) { .device-control-sheet.is-gas-meter-controller .device-sheet-content { padding-inline: 10px; } .gas-meter-console button { font-size: 10px; padding-inline: 4px; } }

@@ -102,6 +102,26 @@ test('keeps linked gas actions coherent across optimistic updates, acknowledgeme
   reopened.dispose();
 });
 
+test('gas meter preferences and sample counters survive a fresh disk session without reopening its valve', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const disk = new Map<string, string>();
+  const storage = { getItem: async (key: string) => disk.get(key) ?? null, setItem: async (key: string, value: string) => { disk.set(key, value); } };
+  const persistence = new SimulationPersistence(storage);
+  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' }));
+  client.connect(); await settle();
+  const id = 'utility-gas-meter';
+  client.setSetting(id, 'gasBudgetKg', 40); client.setSetting(id, 'gasRefillAlertPercent', 30);
+  client.setSetting(id, 'gasUsageAlerts', false); client.setSetting(id, 'gasRefillAlerts', false);
+  client.runAction(id, 'gas-meter-use-sample'); client.runAction(id, 'gas-meter-close-valve'); client.runAction(id, 'gas-meter-refill');
+  await settle(); const accepted = client.getSnapshot().state.deviceStates[id];
+  expect(accepted).toMatchObject({ on: true, settings: { gasBudgetKg: 40, gasRefillAlertPercent: 30, gasUsageAlerts: false, gasRefillAlerts: false, gasRemainingKg: 12.5, gasTodayKg: 1, gasMonthKg: 6.5, gasValveOpen: false } });
+  client.dispose(); await settle();
+  const reopenedPersistence = new SimulationPersistence(storage);
+  const reopened = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: reopenedPersistence, mode: 'demo' }));
+  reopened.connect(); await settle(); expect(reopened.getSnapshot().state.deviceStates[id]).toEqual(accepted);
+  expect(disk.size).toBeGreaterThan(0); reopened.dispose();
+});
+
 test('can reconnect after the setup/cleanup cycle used by React StrictMode', async () => {
   const client = new SimulationControlClient();
   client.connect();
