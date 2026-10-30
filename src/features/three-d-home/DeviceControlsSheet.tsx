@@ -40,6 +40,7 @@ import { IrrigationController } from './IrrigationController';
 import { MicrowaveController } from './MicrowaveController';
 import { GasMeterController } from './GasMeterController';
 import { GasLeakController } from './GasLeakController';
+import { CooktopController } from './CooktopController';
 import { CoffeeController } from './CoffeeController';
 import { RefrigeratorController } from './RefrigeratorController';
 import { LaundryController } from './LaundryController';
@@ -74,6 +75,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   air: { accessible: 'Back to air quality controller', visible: 'Back to air quality' },
   sprinkler: { accessible: 'Back to irrigation controller', visible: 'Back to irrigation' },
   'gas-leak': { accessible: 'Back to gas detector controller', visible: 'Back to gas detector' },
+  stove: { accessible: 'Back to cooktop controller', visible: 'Back to cooktop' },
   'gas-meter': { accessible: 'Back to gas meter controller', visible: 'Back to gas meter' },
   microwave: { accessible: 'Back to microwave controller', visible: 'Back to microwave' },
   coffee: { accessible: 'Back to coffee controller', visible: 'Back to coffee' },
@@ -230,6 +232,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
   if (device.kind === 'sprinkler' && !advancedControls) return <IrrigationController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'gas-leak' && !advancedControls) return <GasLeakController device={device} state={state} client={client}
+    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'stove' && !advancedControls) return <CooktopController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'gas-meter' && !advancedControls) return <GasMeterController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;

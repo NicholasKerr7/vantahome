@@ -302,3 +302,46 @@ test('microwave duration, power and mode survive fresh-session reopening and Sto
   reopened.runAction('kitchen-microwave', 'microwave-stop'); await settle();
   expect(reopened.getSnapshot().state.deviceStates['kitchen-microwave']).toMatchObject({ on: false, settings: { timeRemainingSec: 0, microwavePower: 9, microwaveMode: 'Defrost' } }); reopened.dispose();
 });
+
+/** Cooktop settings and independent power must survive new persistence/session instances. */
+test.each([false, true])('cooktop preferences survive disk reopening with power %s and subsequent off/on changes', async (on) => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const disk = new Map<string, string>();
+  const storage = {
+    getItem: async (key: string) => disk.get(key) ?? null,
+    setItem: async (key: string, value: string) => { disk.set(key, value); },
+  };
+  const persistence = new SimulationPersistence(storage);
+  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence, mode: 'demo' }));
+  const id = 'kitchen-stove';
+  const preferences = { burnerLevel: 3, stoveTimerMin: 15, stoveMode: 'sear', stoveLock: true };
+  client.connect();
+  await settle();
+  client.setPower([id], on);
+  for (const [field, value] of Object.entries(preferences)) client.setSetting(id, field, value);
+  client.runAction(id, 'stove-heat-up');
+  client.runAction(id, 'stove-heat-up');
+  client.runAction(id, 'stove-timer-up');
+  await settle();
+  const accepted = client.getSnapshot().state.deviceStates[id];
+  const savedPreferences = { ...preferences, burnerLevel: 5, stoveTimerMin: 20 };
+  expect(accepted).toMatchObject({ on, settings: savedPreferences });
+  client.dispose();
+  await settle();
+
+  const reopenedPersistence = new SimulationPersistence(storage);
+  const reopened = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: reopenedPersistence, mode: 'demo' }));
+  reopened.connect();
+  await settle();
+  expect(reopened.getSnapshot().state.deviceStates[id]).toEqual(accepted);
+  reopened.setPower([id], false);
+  await settle();
+  expect(reopened.getSnapshot().state.deviceStates[id]).toMatchObject({ on: false, settings: savedPreferences });
+  reopened.setPower([id], true);
+  await settle();
+  expect(reopened.getSnapshot().state.deviceStates[id]).toMatchObject({ on: true, settings: savedPreferences });
+  const persisted = await new SimulationPersistence(storage).load('demo');
+  expect(persisted.deviceStates[id]).toMatchObject({ on: true, settings: savedPreferences });
+  expect(disk.size).toBeGreaterThan(0);
+  reopened.dispose();
+});

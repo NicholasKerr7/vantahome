@@ -1,0 +1,46 @@
+/* A glass-front appliance with measured-stage sizing; controls keep full touch targets. */
+.device-control-sheet.is-cooktop-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.cooktop-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.cooktop-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 2px 0 6px; overflow: auto; container: cooktop-stage / size; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.cooktop-console { display: grid; width: min(390px, 100%); gap: 9px; padding: 13px; border: 1px solid #A18EBA; border-radius: 32px; color: var(--text); background: linear-gradient(140deg, #494457, #231C30 16%, #100D1A 62%, #30233F); box-shadow: inset 2px 1px 1px #FFFFFF35, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.cooktop-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.cooktop-brand { display: grid; gap: 5px; text-align: center; }
+.cooktop-brand span { font-size: 8px; letter-spacing: 2.5px; color: #BFAFD0; }
+.cooktop-brand strong { font-weight: 500; font-size: 12px; letter-spacing: 2.4px; }
+.cooktop-console button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 7px; border-radius: 15px; border: 1px solid #FFFFFF29; background: linear-gradient(145deg, #41364F, #231C30 75%); color: var(--text); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.cooktop-console .cooktop-round { width: 44px; height: 44px; border-radius: 50%; }
+.cooktop-console button[aria-pressed='true'] { border-color: #C091E1; background: linear-gradient(140deg, #674582, #372241); }
+.cooktop-console button:disabled { opacity: .4; cursor: default; }
+.cooktop-console button:not(:disabled):active { transform: translateY(2px); }
+.cooktop-console button:focus-visible, .cooktop-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.cooktop-artwork { justify-self: center; width: 330px; max-width: 100%; aspect-ratio: 36 / 23; }
+.cooktop-artwork > svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.cooktop-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.cooktop-feedback { margin: 0; padding-inline: 8px; min-height: 25px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.cooktop-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.cooktop-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container cooktop-stage (max-height: 640px) { .cooktop-console { gap: 6px; padding: 10px; } .cooktop-artwork { width: clamp(120px, calc((100cqh - 350px) * 1.5652), 330px); } }
+@media (max-width: 360px) { .device-control-sheet.is-cooktop-controller .device-sheet-content { padding-inline: 10px; } .cooktop-modes { gap: 4px; } .cooktop-console button { padding-inline: 4px; font-size: 10px; } }
+@media (hover: hover) { .cooktop-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.cooktop-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.cooktop-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .cooktop-workspace *, .cooktop-more * { transition: none; scroll-behavior: auto; } .cooktop-workspace button:active { transform: none; } }
+
+/* One shared heat setting; the illustration does not invent independently controlled zones. */
+.cooktop-heat { display: grid; gap: 5px; padding: 9px 14px; border: 1px solid #735581; border-radius: 20px; background: linear-gradient(140deg, #2B1E37, #100C19); text-align: center; }
+.cooktop-heat > span, .cooktop-timer > span { color: var(--accent-text); font-size: 8px; letter-spacing: 1px; }
+.cooktop-heat-stepper { display: grid; grid-template-columns: 48px minmax(0, 1fr) 48px; align-items: center; gap: 12px; }
+.cooktop-heat-stepper button { min-height: 48px; border-radius: 50%; }
+.cooktop-heat output { font-size: 42px; font-weight: 300; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cooktop-heat small { font-size: 13px; color: var(--text-soft); }
+.cooktop-status { margin: 0; color: var(--text-soft); font-size: 10px; line-height: 15px; }
+.cooktop-timer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 6px 5px 10px; background: #100C19; border: 1px solid #675374; border-radius: 17px; }
+.cooktop-timer > span { display: grid; gap: 4px; }
+.cooktop-timer small, .cooktop-lock small { font-size: 9px; letter-spacing: 0; color: var(--text-soft); }
+.cooktop-timer-stepper { display: grid; grid-template-columns: 44px 48px 44px; align-items: center; gap: 3px; }
+.cooktop-timer output { text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cooktop-console .cooktop-lock { justify-content: flex-start; gap: 10px; padding-inline: 12px; text-align: left; }
+.cooktop-lock > span { display: grid; gap: 3px; flex: 1; }
+.cooktop-lock strong { color: var(--accent-text); font-size: 11px; }
+.cooktop-lock[aria-checked='true'] { border-color: #B391CB; }
+@container cooktop-stage (max-height: 480px) { .cooktop-console { gap: 5px; } .cooktop-heat { padding-block: 6px; gap: 3px; } }

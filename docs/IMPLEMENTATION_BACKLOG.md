@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Induction cooktop console | Preview 103 built and verified; installation pending | Shared beveled-glass SVG with accepted power/heat glow, independent power, bounded shared heat/timer steps, mode/lock preferences and all extras under More. No physical heat, independent zones, countdown, auto-stop or enforced lock. 51 renderer + 21 native tests, types/offline build and 22 browser profiles pass. Bidirectional Home/Devices state, reload and fresh disk retention pass; regular views fit without scrolling. Signed staging package/exact 32,319,420-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Gas leak detector console | Preview 102 built and verified; installation pending | Shared pearl-metal SVG, persistent visible leak through silence/self-test, explicit scenario commands and all extras under More. Strict unknown/mismatch display, canonical linked valve and grant behavior retained. 29 renderer + 42 native tests, app/scene types/offline build, 11 standalone + six native-source + five actual Home profiles pass. Short-stage readout layout preserves touch size and no ordinary scrolling. Bidirectional state/reload and fresh disk retention pass. Signed staging package/exact 32,306,364-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Gas meter console | Preview 101 built and verified; installation pending | Shared sculpted metal meter SVG with accepted valve lever, sample supply/usage/flow, explicit preview valve and usage/refill commands, saved alerts and all extras under More. Leak interlocks retain priority; clearing/refill never reopens. Strict unknown-value display, no power toggle or live claims. 19 renderer + 41 native tests, types/offline build, 11 standalone + six native-source + five actual Home browser profiles, bidirectional state and fresh disk retention pass. Signed staging package/exact 32,293,069-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Microwave console | Preview 100 built and verified; installation pending | Shared black-glass appliance SVG, fixed duration readout, independent mode/power preferences, quick-add, Start 1 min and Stop & clear in Home/Devices. All extras remain under More. Bounded atomic steps reject malformed time/power; no countdown, automatic finish or cooking engine. 82 renderer + 40 native tests, app/scene types/build, 11 standalone + six native-source + five actual Home profiles, bidirectional agreement and fresh-session disk retention pass. Measured artwork sizing resolves ordinary viewport overflow; tiny/large-text fallback retained. Signed staging package/exact 32,279,005-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
@@ -53,15 +54,21 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 ## Remaining dedicated device consoles
 
-Current routing leaves two device kinds on the generic full-controls layout:
-**stove and smoke**. Existing controls already work; these are
-presentation upgrades, not missing hardware integrations. Complete one at a time.
-The cooktop is a candidate with saved-only heat/mode/timer/child-lock preferences.
+Current routing leaves **smoke** on the generic full-controls layout. Its existing
+controls already work; this is a presentation upgrade, not a missing hardware
+integration.
 The smoke console should preserve its existing incident/acknowledgement semantics
 and never imply physical protection from sample tests. Complete only one console
 per requested step.
 
 ## Most recent adjacent findings
+
+**Cooktop preferences versus operation:** the generic device level is unrelated
+to burner heat. The new console reads only the validated burner preference and
+accepted power; it shows no heat glow for off/zero/unknown. One shared setting
+cannot imply independent zones. Timer and child lock have no execution engine,
+so they remain explicitly saved-only. New relative actions preserve power and
+refuse malformed values; persistence and room grants reuse the canonical paths.
 
 **Detector status versus test result:** a passed preview test and a silenced alarm
 must not displace a known leak. The new primary status and steady signal ring retain

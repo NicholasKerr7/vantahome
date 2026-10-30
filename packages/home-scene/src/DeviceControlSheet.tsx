@@ -27,6 +27,7 @@ import { AirQualityController } from './AirQualityControlPanel';
 import { MicrowaveController } from './MicrowaveControlPanel';
 import { GasMeterController } from './GasMeterControlPanel';
 import { GasLeakController } from './GasLeakControlPanel';
+import { CooktopController } from './CooktopControlPanel';
 import { CoffeeController } from './CoffeeControlPanel';
 import { RefrigeratorController } from './RefrigeratorControlPanel';
 import { readRefrigeratorControllerState } from './refrigeratorController';
@@ -57,6 +58,7 @@ const CONTROLLER_CLASSES: Partial<Record<DeviceDefinition['kind'], string>> = {
   microwave: 'is-microwave-controller',
   'gas-meter': 'is-gas-meter-controller',
   'gas-leak': 'is-gas-leak-controller',
+  stove: 'is-cooktop-controller',
   washer: 'is-laundry-controller', dryer: 'is-laundry-controller',
   dishwasher: 'is-dishwasher-controller',
   camera: 'is-camera-controller',
@@ -156,6 +158,7 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
         : device.kind === 'speaker' && controllable ? <SpeakerController key={deviceId} device={device} current={current} />
         : device.kind === 'fan' && controllable ? <FanController key={deviceId} device={device} current={current} />
         : device.kind === 'gas-leak' && controllable ? <GasLeakController key={deviceId} device={device} current={current} />
+        : device.kind === 'stove' && controllable ? <CooktopController key={deviceId} device={device} current={current} />
         : device.kind === 'gas-meter' && controllable ? <GasMeterController key={deviceId} device={device} current={current} />
         : device.kind === 'microwave' && controllable ? <MicrowaveController key={deviceId} device={device} current={current} />
         : device.kind === 'coffee' && controllable ? <CoffeeController key={deviceId} device={device} current={current} />

@@ -46,6 +46,46 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Induction cooktop console — October 30 / Preview 103 built and verified; installation pending
+
+- Home and Devices now share lightweight beveled induction-glass SVG artwork,
+  explicit power, a single shared heat preference, Simmer/Boil/Sear/Warm choices,
+  a saved timer, a clearly labeled child-lock preference and all original extras
+  under More. No renderer, bitmap, dependency or idle animation loop was added.
+- Ring illumination requires accepted power and a known positive heat setting;
+  off, zero and unknown heat stay unlit. The unrelated legacy level is never used
+  for heat. This does not invent independent zone controls or physical heating.
+- Heat and five-minute timer steps use bounded canonical actions, preserve power
+  and unrelated preferences, and reject malformed current values. All four fields
+  were already projected across Home/Devices. Power off retains them. Timer and
+  child lock remain saved preferences: no countdown, auto-stop or enforced lock.
+- **51 renderer tests across four suites + 21 native tests across two suites**
+  pass. These cover exact validation, bounds/rapid taps, independent power,
+  storage formats, fresh disk/session retention for both power states, More/Back,
+  hydration and revoked access. Native unknown-lock labeling now explicitly says
+  unavailable for screen readers. App/scene TypeScript and offline scene build pass.
+- **22 browser profiles** pass: 11 standalone, six native-source, five actual Home.
+  All controls retain 44px/pt targets; regular phone/tablet/desktop previews have
+  no vertical overflow. Tiny-screen and large-text contained fallback remains.
+  Both surfaces agree in both directions, and all preferences/power survive
+  reload. Final runs report zero page errors. Off retains remembered heat while
+  removing the decorative glow. Owned QA servers stopped after verification.
+- Evidence under `work/`: `cooktop-web-tests.log`, `cooktop-types.log`,
+  `cooktop-scene-build.log`, `cooktop-native-tests.log`, and
+  `cooktop-{web,native,host}-browser.json`. Native client suite also passed all
+  16 tests including two new fresh-disk cooktop cases. Actual console captures:
+  `cooktop-console-preview.png`, `cooktop-native-console.png`.
+- Signed staging Preview **103** is built and verified. Strict signature,
+  staging identity, final native accessibility marker and exact **32,319,420-byte**
+  scene match pass; production metadata is restored. Scene SHA-256:
+  `9be70750727e3f779de4d667ea82d6f7225441286e809a95a198bf85b846863d`.
+  Profile expiry: **2026-11-03 15:11:57 UTC**. Evidence:
+  `work/cooktop-preview103-build.log`, `work/cooktop-preview103-xcodebuild.log`,
+  `work/preview103-verification.json`. Preview 103 is **not installed**.
+  Physical fit/More/persistence acceptance remain pending. Preview 97 remains
+  the last installed build; 98–102 are built but uninstalled. Existing physical
+  acceptance, hub, household sync and iPad deferrals are unchanged.
+
 ## Gas leak detector console — October 30 / Preview 102 built and verified; installation pending
 
 - Home and Devices now share a pearl-metal detector with recessed sensing vents

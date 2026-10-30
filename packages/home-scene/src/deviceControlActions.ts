@@ -182,7 +182,8 @@ export function runDeviceActionState(id: DeviceId, current: DeviceState, actionI
   if (operation?.type === 'increment') {
     // Missing preferences use established defaults; corrupt numeric preferences require an explicit selection.
     if ((device.kind === 'fridge' && (operation.field === 'tempC' || operation.field === 'freezerTempC')) || operation.field === 'coffeeCupCount'
-      || (device.kind === 'microwave' && (operation.field === 'timeRemainingSec' || operation.field === 'microwavePower'))) {
+      || (device.kind === 'microwave' && (operation.field === 'timeRemainingSec' || operation.field === 'microwavePower'))
+      || (device.kind === 'stove' && (operation.field === 'burnerLevel' || operation.field === 'stoveTimerMin'))) {
       const preference = next.settings && Object.hasOwn(next.settings, operation.field)
         ? next.settings[operation.field] : readDeviceSetting(device, next, operation.field);
       if (typeof preference !== 'number' || validateStoredSetting(device.kind, operation.field, preference) !== preference) return current;

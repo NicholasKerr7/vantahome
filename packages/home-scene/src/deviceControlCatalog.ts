@@ -168,6 +168,13 @@ export const supplementalCapabilities: Partial<Record<DeviceKind, DeviceCapabili
     action('blinds', 'position-down', 'Lower 5%', {}, { type: 'increment', field: 'openPercent', delta: -5 }),
   ],
   window: [...openingControls('window'), action('window', 'vent', 'Vent', { openPercent: 25 })],
+  stove: [
+    ...(['heat', 'timer'] as const).flatMap((control) => ([-1, 1] as const).map((direction) => ({
+      ...action('stove', `${control}-${direction > 0 ? 'up' : 'down'}`, `${control === 'heat' ? 'Heat' : 'Timer'} ${direction > 0 ? '+' : '−'}`, {},
+        { type: 'increment', field: control === 'heat' ? 'burnerLevel' : 'stoveTimerMin', delta: direction * (control === 'heat' ? 1 : 5) }),
+      configurationOnly: true,
+    }))),
+  ],
   microwave: [
     { ...action('microwave', 'power-up', 'Power +', {}, { type: 'increment', field: 'microwavePower', delta: 1 }), configurationOnly: true },
     { ...action('microwave', 'power-down', 'Power −', {}, { type: 'increment', field: 'microwavePower', delta: -1 }), configurationOnly: true },
