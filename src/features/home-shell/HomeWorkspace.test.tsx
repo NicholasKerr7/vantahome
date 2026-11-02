@@ -46,3 +46,17 @@ test('blocks an already-mounted routines workspace after its effective permissio
   expect(screen.queryByText('Private routines')).toBeNull();
   expect(screen.getByLabelText('Return to your home')).toBeTruthy();
 });
+
+test('opens Device Health for a Member and rechecks a held callback after device access is revoked', () => {
+  useHomeStore.setState({ household: [{ id: 'person', role: 'Member', name: 'Person', status: 'home' }] });
+  render(<HomeWorkspace section="home"><Text>Property</Text></HomeWorkspace>);
+  const selectSection = mockNavigation.mock.calls.at(-1)![0].onSelect as (section: HomeSection) => void;
+  act(() => { selectSection('more'); });
+  const selectDestination = mockMenu.mock.calls.at(-1)![0].onSelect as (destination: HomeDestination) => void;
+  act(() => { selectDestination('health'); });
+  expect(mockNavigate).toHaveBeenCalledWith('DeviceHealth');
+  mockNavigate.mockClear();
+  act(() => { useHomeStore.setState({ memberPermissionOverrides: [{ memberId: 'person', permission: 'device.view', allowed: false }] }); });
+  act(() => { selectDestination('health'); });
+  expect(mockNavigate).not.toHaveBeenCalled();
+});

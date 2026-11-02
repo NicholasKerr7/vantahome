@@ -58,6 +58,7 @@ export default function HomeWorkspace({ section, children }: PropsWithChildren<{
       case 'settings': openHomeFeature(navigation.dispatch, 'Settings'); break;
       case 'renderer': openHomeFeature(navigation.dispatch, 'Renderer'); break;
       case 'integrations': navigation.navigate('Integrations'); break;
+      case 'health': navigation.navigate('DeviceHealth'); break;
       case 'cameras': navigation.navigate('Cameras'); break;
       case 'notifications': navigation.navigate('Notifications'); break;
       case 'rooms': navigation.navigate('ManageRooms'); break;

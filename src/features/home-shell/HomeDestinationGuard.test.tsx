@@ -28,3 +28,22 @@ test('never mounts private children while membership is refreshing', () => {
   expect(mounted).not.toHaveBeenCalled();
   expect(screen.queryByText('Private content')).toBeNull();
 });
+
+test('health direct entry allows a Member but unmounts immediately after device viewing is revoked', () => {
+  useHomeStore.setState({ household: [{ id: 'person', role: 'Member', name: 'Person', status: 'home' }] });
+  const screen = render(<HomeDestinationGuard destination="health"><Text>Scoped device health</Text></HomeDestinationGuard>);
+  expect(screen.getByText('Scoped device health')).toBeTruthy();
+  act(() => { useHomeStore.setState({ memberPermissionOverrides: [{ memberId: 'person', permission: 'device.view', allowed: false }] }); });
+  expect(screen.queryByText('Scoped device health')).toBeNull();
+  expect(screen.getByLabelText('Return to your home')).toBeTruthy();
+});
+
+test('health direct entry cannot mount while membership is unverified', () => {
+  useHomeStore.setState({ membershipReady: false });
+  const mounted = jest.fn();
+  /** Guarded hooks must not run before the current household has been verified. */
+  function HealthContent() { mounted(); return <Text>Scoped device health</Text>; }
+  const screen = render(<HomeDestinationGuard destination="health"><HealthContent /></HomeDestinationGuard>);
+  expect(mounted).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Return to your home')).toBeTruthy();
+});

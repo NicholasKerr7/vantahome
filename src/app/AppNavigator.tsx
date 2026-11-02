@@ -76,6 +76,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<HomeStackParamList>;
   ThreeDHome: undefined;
   Integrations: undefined;
+  DeviceHealth: undefined;
   Room: { roomId?: string; showAll?: boolean };
   DeviceDetail: { deviceId: string };
   Notifications: undefined;
@@ -93,6 +94,12 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function IntegrationsRoute(props: NativeStackScreenProps<RootStackParamList, 'Integrations'>) {
   const Screen = require('../screens/IntegrationsScreen').default as typeof import('../screens/IntegrationsScreen').default;
   return <HomeDestinationGuard destination="integrations"><Screen {...props} /></HomeDestinationGuard>;
+}
+
+/** Load scoped health presentation on demand, including when arriving through a direct route. */
+function DeviceHealthRoute(props: NativeStackScreenProps<RootStackParamList, 'DeviceHealth'>) {
+  const Screen = require('../features/device-health/DeviceHealthScreen').default as typeof import('../features/device-health/DeviceHealthScreen').default;
+  return <HomeDestinationGuard destination="health"><Screen {...props} /></HomeDestinationGuard>;
 }
 
 /** Keep verification actions local to this account and discard results after the gate closes. */
@@ -607,6 +614,7 @@ export default function AppNavigator() {
                     />
                     <Stack.Screen name="ThreeDHome" getComponent={loadThreeDHomeScreen} />
                     <Stack.Screen name="Integrations" component={IntegrationsRoute} />
+                    <Stack.Screen name="DeviceHealth" component={DeviceHealthRoute} />
                     <Stack.Screen name="Room">{(props) => <HomeDestinationGuard destination="rooms"><RoomScreen {...props} /></HomeDestinationGuard>}</Stack.Screen>
                     <Stack.Screen
                       name="DeviceDetail"

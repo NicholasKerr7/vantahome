@@ -51,6 +51,61 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Device Health — November 2 / Preview 106 built and verified; installation deferred
+
+- More → Connections → Device Health now presents permitted devices as searchable,
+  horizontally scrollable artwork cards with All, Attention and Unreported views.
+  Details explain battery/care samples and link explicitly to ordinary controls.
+  Responsive phone/tablet layouts are bounded; small screens and large text retain
+  a contained vertical fallback. Existing momentum, reduced motion and 44px targets
+  are preserved, with no added dependency, idle animation or background polling.
+- This is a simulation-first foundation, not a connected health monitor. Only
+  explicit, hydrated model bindings may supply samples. Physical/unbound records
+  remain unreported; absent/malformed percentages remain unknown. Power never
+  establishes online/offline state, and energy-storage charge is not a sensor
+  battery warning. Authored defaults are accepted only for missing model fields;
+  explicit malformed saved fields never fall back to a reassuring default.
+- Try examples adds up to four local, capability-aware battery/care/offline/delayed
+  examples after access filtering. End examples, leaving, backgrounding or changing
+  identity/access discards them. No device command, history, reminder, notification
+  or saved simulation state is changed. Example details cannot open controls.
+- Counts, room names, cards and examples use current device/camera permissions and
+  Guest/Tenant room grants. Direct routing is guarded; the screen owns a Guest
+  expiry timer and rechecks identity/grants/focus before retained action callbacks.
+  New files are under `src/features/device-health`; no new backend is deployed.
+- **128 tests across seven suites** and app TypeScript pass. Coverage includes
+  malformed samples, binding/hydration boundaries, physical-value rejection,
+  role/grant revocation, exact Guest expiry, account/home changes, background/blur,
+  recovery, local example isolation and navigation. Independent read-only review
+  found no actionable adjacent authorization/lifecycle defect; this is not a
+  comprehensive security certification.
+- **21 browser layout cases across seven sizes** passed, followed by nine focused
+  layout/detail cases after final polish. Actual app entry/search/paging/details,
+  finger swipe, horizontal wheel, reduced/default motion, no accidental card
+  activation, leave/reopen reset and unchanged simulation storage pass with zero
+  page errors. Review fixed retained content height after viewport resize and a
+  disabled outer ScrollView that blocked nested web touch scrolling. Native touch
+  feel and physical accessibility acceptance remain untested.
+- Evidence in `work/`: `device-health-{tests,types}.log`,
+  `device-health-browser.{log,json}`, `device-health-final-browser.{log,json}`,
+  `device-health-touch-{inspect,debug}.log`, `device-health-preview.png`,
+  `device-health-detail.png` and viewport captures.
+- Signed staging Preview **106** built successfully. Strict signature, staging
+  identity/redirects, new native health markers and the exact unchanged
+  **32,332,144-byte** scene pass verification. SHA-256 remains
+  `414e7e42b55884e6a143655b203b17f237a29063a9bb3794e1948c7a5c792c71`.
+  Production metadata is restored; the owned QA server is stopped. Receipts:
+  `work/device-health-preview106-{build,xcodebuild,verification}.log` and
+  `work/preview106-verification.json`. This package includes the deferred Preview
+  105 lighting work and supersedes that uninstalled build. Installation remains
+  explicitly deferred; last verified installed build is **104**. Reverify signing
+  before installation: the current profile expires **2026-11-03 15:11:57 UTC**.
+- Next hardware step: define authenticated per-device connectivity and report
+  freshness/cadence with a real adapter. Existing `lastSeenAt`/`airLastUpdatedAt`
+  can be synthesized from local settings and are deliberately excluded. Real
+  battery/maintenance alerts, schedules and push require separately verified
+  hardware reports; hub execution, household sync and physical iPad remain deferred.
+
 ## Lighting connection preparation — November 2 / Preview 105 built; not installed
 
 - With no physical hardware required, More → Connections → Integrations → Vanta

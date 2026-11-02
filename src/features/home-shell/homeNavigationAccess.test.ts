@@ -21,13 +21,13 @@ function householdState(role: HouseholdMember['role'], patch: Partial<HomeState>
 
 test.each(['Guest', 'Tenant'] as const)('%s navigation keeps assigned spaces and personal account tools', (role) => {
   const access = selectHomeNavigationAccess(householdState(role), 'alpha');
-  expect(access).toMatchObject({ ready: true, rooms: true, devices: true, home: true, more: true, household: true, settings: true,
+  expect(access).toMatchObject({ ready: true, rooms: true, devices: true, health: true, home: true, more: true, household: true, settings: true,
     admin: false, cameras: false, scenes: false, automations: false, renderer: false, integrations: false, audit: false });
 });
 
 test('a member retains routine tools but cannot enter administrative or full-property preview routes', () => {
   expect(selectHomeNavigationAccess(householdState('Member'), 'alpha')).toMatchObject({
-    rooms: true, cameras: true, scenes: true, automations: true, integrations: false, renderer: false, audit: false,
+    rooms: true, health: true, cameras: true, scenes: true, automations: true, integrations: false, renderer: false, audit: false,
   });
 });
 
@@ -52,14 +52,26 @@ test.each([
   { activeMemberId: 'missing' }, { accountUserId: null },
 ])('cached owner roles cannot bypass an incomplete or changed membership: %j', (patch) => {
   const access = selectHomeNavigationAccess(householdState('Owner', patch), 'alpha');
-  expect(access).toMatchObject({ ready: false, admin: false, devices: false, rooms: false, cameras: false,
+  expect(access).toMatchObject({ ready: false, admin: false, devices: false, health: false, rooms: false, cameras: false,
     automations: false, renderer: false, integrations: false, audit: false, household: true, settings: true });
 });
 
 test('expired guests lose private destinations but keep their profile and invite inbox', () => {
   const state = householdState('Guest');
   state.household[0] = { ...state.household[0], accessExpiresAt: new Date(Date.now() - 1).toISOString() };
-  expect(selectHomeNavigationAccess(state, 'alpha')).toMatchObject({ ready: false, devices: false, rooms: false, household: true, settings: true });
+  expect(selectHomeNavigationAccess(state, 'alpha')).toMatchObject({ ready: false, devices: false, health: false, rooms: false, household: true, settings: true });
+});
+
+test.each(['Admin', 'Member', 'Guest', 'Tenant'] as const)('%s health navigation follows effective device viewing permission', (role) => {
+  expect(selectHomeNavigationAccess(householdState(role), 'alpha').health).toBe(true);
+  const denied = householdState(role, { memberPermissionOverrides: [{ memberId: 'person', permission: 'device.view', allowed: false }] });
+  expect(selectHomeNavigationAccess(denied, 'alpha').health).toBe(false);
+});
+
+test('verified Owner health access preserves the canonical protection against delegated lockout', () => {
+  const state = householdState('Owner', { memberPermissionOverrides: [{ memberId: 'person', permission: 'device.view', allowed: false }] });
+  expect(selectHomeNavigationAccess(state, 'alpha').health).toBe(true);
+  expect(selectHomeNavigationAccess({ ...state, membershipReady: false }, 'alpha').health).toBe(false);
 });
 
 test('renderer comparison is limited to verified administrators or the offline demo owner', () => {

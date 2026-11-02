@@ -47,12 +47,13 @@ test('groups utilities by purpose and leaves the primary destinations to the per
   for (const title of ['Scenes', 'Automations', 'Home devices', 'Devices']) expect(screen.queryByLabelText(title)).toBeNull();
   fireEvent.press(screen.getByRole('tab', { name: 'Connections' }));
   fireEvent.press(screen.getByLabelText('Integrations'));
+  fireEvent.press(screen.getByLabelText('Device Health'));
   fireEvent.press(screen.getByLabelText('Renderer preview'));
   fireEvent.press(screen.getByRole('tab', { name: 'Activity' }));
   fireEvent.press(screen.getByLabelText('Notifications'));
   fireEvent.press(screen.getByLabelText('Command activity'));
   fireEvent.press(screen.getByLabelText('History'));
-  expect(onSelect.mock.calls.map(([destination]) => destination)).toEqual(['integrations', 'renderer', 'notifications', 'activity', 'audit']);
+  expect(onSelect.mock.calls.map(([destination]) => destination)).toEqual(['integrations', 'health', 'renderer', 'notifications', 'activity', 'audit']);
 });
 
 test('removes unavailable tools and clamps the current page when a capability disappears', () => {
@@ -62,11 +63,15 @@ test('removes unavailable tools and clamps the current page when a capability di
   const screen = render(<HomeMenu onClose={onClose} onSelect={onSelect} rendererAvailable activityAvailable />);
   fireEvent.press(screen.getByRole('tab', { name: 'Connections' }));
   fireEvent.press(screen.getByLabelText('Next menu destinations'));
+  expect(screen.getByLabelText('Device Health')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Next menu destinations'));
   expect(screen.getByLabelText('Renderer preview')).toBeTruthy();
   screen.rerender(<HomeMenu onClose={onClose} onSelect={onSelect} rendererAvailable={false} activityAvailable={false} />);
   expect(screen.queryByLabelText('Renderer preview')).toBeNull();
+  expect(screen.getByLabelText('Device Health')).toBeTruthy();
+  expect(screen.getByLabelText('Next menu destinations').props.accessibilityState.disabled).toBe(true);
+  fireEvent.press(screen.getByLabelText('Previous menu destinations'));
   expect(screen.getByLabelText('Integrations')).toBeTruthy();
-  expect(screen.queryByLabelText('Next menu destinations')).toBeNull();
   fireEvent.press(screen.getByRole('tab', { name: 'Activity' }));
   expect(screen.getByLabelText('Notifications')).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Next menu destinations'));
@@ -96,4 +101,16 @@ test('removes empty categories and immediately replaces a selected category when
   expect(screen.queryByLabelText('Integrations')).toBeNull();
   expect(screen.getByLabelText('Household')).toBeTruthy();
   expect(screen.getByLabelText('Rooms')).toBeTruthy();
+});
+
+test('keeps Device Health discoverable when administrative connection tools are unavailable', () => {
+  const onSelect = jest.fn();
+  const screen = render(<HomeMenu onClose={jest.fn()} onSelect={onSelect} rendererAvailable={false} activityAvailable={false}
+    availableDestinations={{ rooms: true, health: true, integrations: false }} />);
+  fireEvent.press(screen.getByRole('tab', { name: 'Connections' }));
+  expect(screen.queryByLabelText('Integrations')).toBeNull();
+  expect(screen.queryByLabelText('Renderer preview')).toBeNull();
+  expect(screen.getByLabelText('Device Health').props.accessibilityHint).toBe('Connections & care');
+  fireEvent.press(screen.getByLabelText('Device Health'));
+  expect(onSelect).toHaveBeenCalledWith('health');
 });

@@ -582,6 +582,7 @@ describe("navigation session boundaries", () => {
     expect(screen.getByTestId("registered-route-Main")).toBeTruthy();
     expect(screen.getAllByTestId(/^registered-route-/)[0].props.testID).toBe('registered-route-Main');
     expect(screen.getByTestId("registered-route-Integrations")).toBeTruthy();
+    expect(screen.getByTestId("registered-route-DeviceHealth")).toBeTruthy();
     expect(screen.getByTestId("registered-route-DeviceDetail")).toBeTruthy();
   });
 

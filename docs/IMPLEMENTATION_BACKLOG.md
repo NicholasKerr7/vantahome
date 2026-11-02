@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Device Health | Preview 106 built and verified; installation deferred | More → Connections → Device Health, scoped searchable/swipeable artwork cards, source-aware details and local example alerts. Explicit model bindings only; physical status/freshness remain unreported. Guest/camera grants, expiry and lifecycle cleanup retained. 128 tests, app types, 21 responsive cases plus nine final layout/detail cases and touch/wheel flows pass. No physical health transport, saved-home writes, dependency or idle animation. Signed staging package/native markers/exact unchanged scene verified; production metadata restored. Includes deferred Preview 105 lighting work. Last installed remains Preview 104; hands-on acceptance pending. |
 | Lighting connection preparation | Preview 105 reverified; user deferred installation November 2 | Shared native lighting presentation plus isolated Owner/Admin sample connection under Vanta Bridge preparation. Explicit power-only/dimmer/color capabilities; normal/slow/failure/offline/stale states; acknowledgment separate from observation; no saved-home writes. Access/account/home/role changes, background/blur and close invalidate pending work. 110 tests, app types and 28 browser layout cases pass. Regular viewports fit; tiny-screen recovery, 44px targets and reduced motion retained. Physical routing/power-only pilot unchanged; no hardware connected. Signed staging package, new native markers and exact unchanged scene verified; production metadata restored. Last installed remains Preview 104; physical acceptance pending. |
 | Smoke and CO console | Preview 104 installed and launched; physical acceptance pending | Shared ceramic detector SVG and steady incident signal, explicit sample/scenario/silence/acknowledge/selected-clear commands and original extras under More. Unknown samples remain unavailable; silence/checks/acknowledgment never clear sources; clearing preserves the latch; reset retains gate hold. Cross-device scenario grants enforced. 27 renderer + 26 native tests, types/offline build and 22 browser profiles pass, with bidirectional Home/Devices agreement and reload/fresh disk retention. Regular viewports fit without scrolling; tiny/large-text fallback retained. Signed staging package/exact 32,332,144-byte scene verified; production metadata restored. Reverified and installed in place November 1; Apple inventory confirms 1.0.0 (104) and launch succeeded. Physical acceptance remains pending; no real detection or emergency response. See handoff for receipts. |
 | Induction cooktop console | Included in installed Preview 104; physical acceptance pending | Shared beveled-glass SVG with accepted power/heat glow, independent power, bounded shared heat/timer steps, mode/lock preferences and all extras under More. No physical heat, independent zones, countdown, auto-stop or enforced lock. 51 renderer + 21 native tests, types/offline build and 22 browser profiles pass. Bidirectional Home/Devices state, reload and fresh disk retention pass; regular views fit without scrolling. Signed staging package/exact 32,319,420-byte scene verified; production metadata restored. Included in Preview 104, installed in place and launched November 1. Physical acceptance remains pending. |
@@ -64,6 +65,16 @@ the outstanding iPhone interaction/persistence checks before another console fam
 keep hub execution, household sync and physical iPad testing deferred.
 
 ## Most recent adjacent findings
+
+**Health provenance and touch boundaries:** local `lastSeenAt` and air timestamps
+are synthesized by some setting changes, so the health view does not use them as
+physical observations. Unknown/malformed values stay unreported and powered-off
+never means offline. Authored samples require an explicit hydrated model binding;
+local examples are scoped and discarded on leave/background/access changes. The
+new view owns a Guest-expiry deadline rather than depending on store traffic.
+Browser review fixed height retained across resizing and outer `scrollEnabled=false`
+blocking nested web swipes. Touch/wheel flows pass; real health cadence and native
+physical acceptance remain separate follow-up work.
 
 **Smoke incident semantics and scope:** a sample check must not look like an alarm
 scenario or hardware self-test. Acknowledgment and silence preserve active sources;
@@ -612,6 +623,12 @@ chat, repository, screenshots or evidence. See the handoff for prepared tabs/sta
   the hub exists, validate exact reported capabilities and observed-state
   correlation through the supervised power-only light pilot before activating
   any physical console route or claiming real dimming/color support.
+- **Verified device health feeds:** the Device Health simulation foundation is
+  complete in source. Connect only authenticated per-device observations with
+  explicit connectivity and freshness/cadence semantics; local setting timestamps
+  must not refresh physical health. Validate manufacturer-specific battery/care
+  meaning before durable reminders or notifications. No hub or physical health
+  adapter is connected; schedule this alongside the supervised hardware pilot.
 - Remote push with tested closed-app delivery, preferences and quiet hours.
 - **Authenticated camera media:** the simulation Camera Center slice from the
   [camera plan](CAMERA_EXPERIENCE_DESIGN.md) is implemented; native interaction
@@ -624,8 +641,6 @@ chat, repository, screenshots or evidence. See the handoff for prepared tabs/sta
 
 ## Useful opportunities, not confirmed defects
 
-- **Device Health:** one view for stale telemetry, low batteries, connectivity
-  and maintenance. Never infer offline from a powered-off device or invent history.
 - **Richer Routines:** open-for-duration and conditional branches in the canonical
   editor/executor, with restart/DST policy decided before durable hub execution.
 

@@ -1,6 +1,6 @@
 /** Stable destinations keep the home menu independent of screen implementation. */
 export type HomeDestination = 'scenes' | 'automations' | 'cameras' | 'notifications'
-  | 'rooms' | 'devices' | 'household' | 'settings' | 'integrations' | 'activity' | 'audit' | 'renderer';
+  | 'rooms' | 'devices' | 'household' | 'settings' | 'integrations' | 'health' | 'activity' | 'audit' | 'renderer';
 
 export const HOME_MENU_PAGES = [
   { title: 'House', description: 'The spaces, people, and preferences that make it yours.', items: [
@@ -11,6 +11,7 @@ export const HOME_MENU_PAGES = [
   ] },
   { title: 'Connections', description: 'Bring your home and its services together.', items: [
     { id: 'integrations', title: 'Integrations', detail: 'Assistants & bridges', icon: 'link-outline' },
+    { id: 'health', title: 'Device Health', detail: 'Connections & care', icon: 'pulse-outline' },
     { id: 'renderer', title: 'Renderer preview', detail: 'Compare 3D engines', icon: 'cube-outline' },
   ] },
   { title: 'Activity', description: 'Keep up with what is happening at home.', items: [

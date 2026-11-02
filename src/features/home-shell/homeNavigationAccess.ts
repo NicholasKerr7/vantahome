@@ -31,7 +31,7 @@ export function selectHomeNavigationAccess(state: HomeState, mode: RuntimeMode =
     ready, admin, devices, rooms, cameras, automations, renderer,
     // Scene execution can combine sensitive actions; keep its editor and runner with routine management.
     scenes: devices && rooms && automations,
-    integrations: admin, audit: admin,
+    integrations: admin, audit: admin, health: devices,
     notifications: ready, activity: ready,
     home: true, more: true, household: true, settings: true,
   };
