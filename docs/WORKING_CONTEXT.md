@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-10-30**. Read this before rediscovering the project.
+Last maintained: **2026-11-01**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -45,6 +45,47 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Smoke and CO console — October 31–November 1 / Preview 104 built and verified; installation pending
+
+- Home and Devices share sculpted ceramic detector SVG artwork with a steady
+  accepted-state signal. Explicit Check sample, smoke/CO scenarios, Silence,
+  Acknowledge sensor and Clear this sensor replace generic primary controls.
+  All original settings and the deliberate incident reset remain under More.
+  No dependency, idle animation, physical detection or emergency response is added.
+- Sample checks, silence and acknowledgment never clear a known alarm. Clearing
+  this sensor preserves its incident latch; another active source prevents reset.
+  Reset never releases the gate hold or restores preview lights. Explicit invalid
+  samples remain unavailable, and an active source takes priority over sensor
+  warnings. Scenario buttons require grants for the affected lights and gate.
+- **27 renderer tests across three suites + 26 native tests across three suites**
+  pass, including fresh disk/session retention, sample/scenario separation,
+  multi-source/reset/gate behavior, More/Back, hydration and revoked access.
+  Native artwork sizing was rechecked with its five-test controller suite.
+  App/scene TypeScript and the offline scene build pass.
+- **22 browser profiles** pass: 11 standalone, six native-source, five actual Home.
+  Regular phone/tablet/desktop previews have no vertical overflow and targets
+  remain at least 44px/pt. Tiny-screen and large-text contained fallback remains.
+  Home/Devices state agrees in both directions; alarm acknowledgment, silence and
+  clear-but-latched state survive reload. Emergency controls remain reachable.
+  Final browser runs report zero page errors; owned QA servers are stopped.
+  A transient viewport-change click in the test was resolved by waiting for the
+  responsive layout to settle; no emergency/bridge behavior change was needed.
+- Evidence under `work/`: `smoke-{web,native}-tests.log`,
+  `smoke-native-sizing-tests.log`, `smoke-types.log`, `smoke-scene-build.log`,
+  `smoke-{web,native,host}-browser.json`, `smoke-console-preview.png` and
+  `smoke-native-console.png`. Physical fit, incident interaction and reopening
+  acceptance are still pending; simulation/browser evidence is not hardware proof.
+- Signed staging Preview **104** is built and verified. Strict signature,
+  staging identity, final native copy/artwork markers and exact **32,332,144-byte**
+  scene match pass; production metadata is restored. Scene SHA-256:
+  `414e7e42b55884e6a143655b203b17f237a29063a9bb3794e1948c7a5c792c71`.
+  Profile expiry: **2026-11-03 15:11:57 UTC**. Evidence:
+  `work/smoke-preview104-build.log`, `work/smoke-preview104-xcodebuild.log`,
+  `work/preview104-verification.json`. Preview 104 is **not installed**.
+  Preview 97 remains the last installed build; 98–103 are built but uninstalled.
+  Existing physical acceptance, hub execution, household sync and iPad deferrals
+  remain in the backlog.
 
 ## Induction cooktop console — October 30 / Preview 103 built and verified; installation pending
 

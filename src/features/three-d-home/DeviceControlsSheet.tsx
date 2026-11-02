@@ -41,6 +41,8 @@ import { MicrowaveController } from './MicrowaveController';
 import { GasMeterController } from './GasMeterController';
 import { GasLeakController } from './GasLeakController';
 import { CooktopController } from './CooktopController';
+import { SmokeController } from './SmokeController';
+import { canRunSmokeScenarios } from '../../../packages/home-scene/src/smokeController';
 import { CoffeeController } from './CoffeeController';
 import { RefrigeratorController } from './RefrigeratorController';
 import { LaundryController } from './LaundryController';
@@ -76,6 +78,7 @@ const CONTROLLER_RETURN_LABELS: Partial<Record<DeviceDefinition['kind'], { acces
   sprinkler: { accessible: 'Back to irrigation controller', visible: 'Back to irrigation' },
   'gas-leak': { accessible: 'Back to gas detector controller', visible: 'Back to gas detector' },
   stove: { accessible: 'Back to cooktop controller', visible: 'Back to cooktop' },
+  smoke: { accessible: 'Back to smoke detector controller', visible: 'Back to smoke detector' },
   'gas-meter': { accessible: 'Back to gas meter controller', visible: 'Back to gas meter' },
   microwave: { accessible: 'Back to microwave controller', visible: 'Back to microwave' },
   coffee: { accessible: 'Back to coffee controller', visible: 'Back to coffee' },
@@ -150,6 +153,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
           {!snapshot.ready ? <View style={styles.content}><Text style={styles.detail}>{loadFailure ? 'Controls will stay paused until your saved settings can be restored.' : 'Preparing your saved controls…'}</Text></View>
             : showingBrowser ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={visibleDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
+              smokeScenariosAllowed={device.kind === 'smoke' && canRunSmokeScenarios(snapshot.access, device.id)}
               client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale}
               onWatchCamera={onWatchCamera} motionAllowed={motionAllowed && !snapshot.state.motionDisabled} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
@@ -165,8 +169,8 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
 }
 
 /** Give supported devices tactile primary controls while preserving every advanced capability. */
-function DeviceInspector({ device, state, client, disabled, compact, fontScale, motionAllowed, onBrowse, onRoutines, onWatchCamera }: {
-  device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; compact: boolean; fontScale: number; motionAllowed: boolean; onBrowse: () => void; onRoutines: () => void; onWatchCamera?: (modelDeviceId: string) => void;
+function DeviceInspector({ device, state, client, disabled, smokeScenariosAllowed, compact, fontScale, motionAllowed, onBrowse, onRoutines, onWatchCamera }: {
+  device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; smokeScenariosAllowed: boolean; compact: boolean; fontScale: number; motionAllowed: boolean; onBrowse: () => void; onRoutines: () => void; onWatchCamera?: (modelDeviceId: string) => void;
 }) {
   const [advancedControls, setAdvancedControls] = useState(false);
   const [group, setGroup] = useState<Group>('controls');
@@ -235,6 +239,8 @@ function DeviceInspector({ device, state, client, disabled, compact, fontScale, 
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'stove' && !advancedControls) return <CooktopController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+  if (device.kind === 'smoke' && !advancedControls) return <SmokeController device={device} state={state} client={client}
+    disabled={disabled} scenariosAllowed={smokeScenariosAllowed} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'gas-meter' && !advancedControls) return <GasMeterController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'microwave' && !advancedControls) return <MicrowaveController device={device} state={state} client={client}

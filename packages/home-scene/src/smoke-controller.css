@@ -1,0 +1,49 @@
+/* A steady detector signal with measured-stage sizing; controls keep full touch targets. */
+.device-control-sheet.is-smoke-controller .device-sheet-content { grid-template-rows: auto minmax(0, 1fr); gap: 8px; padding-block: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+.smoke-workspace { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.smoke-stage { display: grid; align-items: safe center; justify-items: center; min-height: 0; min-width: 0; padding: 2px 0 6px; overflow: auto; container: smoke-stage / size; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.smoke-console { display: grid; width: min(390px, 100%); gap: 9px; padding: 13px; border: 1px solid #A18EBA; border-radius: 32px; color: var(--text); background: linear-gradient(140deg, #494457, #231C30 16%, #100D1A 62%, #30233F); box-shadow: inset 2px 1px 1px #FFFFFF35, inset -2px -2px 4px #08030F, 0 5px 0 #10091C, 0 6px 0 #75608788, 0 18px 30px #09021066; }
+.smoke-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.smoke-brand { display: grid; gap: 5px; text-align: center; }
+.smoke-brand span { font-size: 8px; letter-spacing: 2.5px; color: #BFAFD0; }
+.smoke-brand strong { font-weight: 500; font-size: 12px; letter-spacing: 2.4px; }
+.smoke-console button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 7px; border-radius: 15px; border: 1px solid #FFFFFF29; background: linear-gradient(145deg, #41364F, #231C30 75%); color: var(--text); box-shadow: inset 0 1px 1px #FFFFFF28, 0 3px 3px #07030DBB; font-size: 11px; cursor: pointer; touch-action: manipulation; user-select: none; transition: transform 140ms ease, border-color 180ms ease; }
+.smoke-console .smoke-round { width: 44px; height: 44px; border-radius: 50%; }
+.smoke-console button:disabled { opacity: .4; cursor: default; }
+.smoke-console button:not(:disabled):active { transform: translateY(2px); }
+.smoke-console button:focus-visible, .smoke-return:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.smoke-artwork { justify-self: center; width: 285px; max-width: 100%; aspect-ratio: 32 / 22; }
+.smoke-artwork > svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+.smoke-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.smoke-console .smoke-primary { border-color: #B391CB; background: linear-gradient(135deg, #674682, #392A49); font-weight: 600; }
+.smoke-mark { display: grid; place-items: center; width: 44px; height: 44px; color: #D5C0E8; }
+.smoke-feedback { margin: 0; padding-inline: 8px; min-height: 25px; text-align: center; color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+.smoke-more { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+.smoke-return { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--text); font-size: 12px; }
+@container smoke-stage (max-height: 640px) { .smoke-console { gap: 6px; padding: 10px; } .smoke-artwork { width: clamp(95px, calc((100cqh - 445px) * 1.4545), 285px); } }
+@media (hover: hover) { .smoke-console button:not(:disabled):hover { border-color: #C89DE9; } }
+.smoke-workspace[data-motion-disabled='true'] * { transition: none; scroll-behavior: auto; }
+.smoke-workspace[data-motion-disabled='true'] button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .smoke-workspace *, .smoke-more * { transition: none; scroll-behavior: auto; } .smoke-workspace button:active { transform: none; } }
+
+@media (max-width: 360px) { .device-control-sheet.is-smoke-controller .device-sheet-content { padding-inline: 10px; } .smoke-console button { font-size: 10px; padding-inline: 4px; } }
+.smoke-console[data-tone='alarm'] .smoke-readout { border-color: #C58C62; background: linear-gradient(130deg, #35222D, #1D1223); }
+.smoke-note { margin: 0; color: var(--text-soft); font-size: 9px; line-height: 14px; text-align: center; }
+
+.smoke-readout { display: grid; gap: 4px; padding: 9px 12px; border: 1px solid #665273; border-radius: 17px; background: linear-gradient(130deg, #24192E, #0E0B17); text-align: center; }
+.smoke-readout > span, .smoke-samples span { font-size: 8px; letter-spacing: .8px; color: var(--accent-text); }
+.smoke-status { margin: 0; color: var(--text); font-size: 15px; line-height: 20px; font-weight: 500; }
+.smoke-readout small { color: var(--text-soft); font-size: 9px; line-height: 14px; }
+.smoke-samples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.smoke-samples > div { display: grid; gap: 4px; padding: 7px; border: 1px solid #594766; border-radius: 12px; background: #100C19; text-align: center; }
+.smoke-samples output { font-size: 14px; line-height: 18px; }
+.smoke-meta { display: flex; justify-content: space-between; gap: 12px; padding: 2px 4px; font-size: 9px; color: var(--text-soft); }
+.smoke-meta strong { color: var(--text); font-weight: 500; text-transform: capitalize; }
+.smoke-console[data-tone='alarm'] .smoke-status { color: #FFB7A6; }
+.smoke-console[data-tone='warning'] .smoke-readout { border-color: #B78E54; }
+@container smoke-stage (max-height: 520px) { .smoke-console { gap: 5px; } .smoke-readout { padding-block: 6px; } .smoke-note { font-size: 8px; line-height: 12px; } }
+
+@container smoke-stage (max-height: 520px) {
+  .smoke-samples > div { grid-template-columns: auto 1fr; align-items: center; padding: 6px; gap: 6px; }
+  .smoke-samples output { font-size: 12px; text-align: right; }
+}

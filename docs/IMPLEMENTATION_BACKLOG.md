@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained October 30, 2026. This is the current delivery queue, not a claim that
+Maintained November 1, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Smoke and CO console | Preview 104 built and verified; installation pending | Shared ceramic detector SVG and steady incident signal, explicit sample/scenario/silence/acknowledge/selected-clear commands and original extras under More. Unknown samples remain unavailable; silence/checks/acknowledgment never clear sources; clearing preserves the latch; reset retains gate hold. Cross-device scenario grants enforced. 27 renderer + 26 native tests, types/offline build and 22 browser profiles pass, with bidirectional Home/Devices agreement and reload/fresh disk retention. Regular viewports fit without scrolling; tiny/large-text fallback retained. Signed staging package/exact 32,332,144-byte scene verified; production metadata restored. Installation and physical acceptance pending; no real detection or emergency response. |
 | Induction cooktop console | Preview 103 built and verified; installation pending | Shared beveled-glass SVG with accepted power/heat glow, independent power, bounded shared heat/timer steps, mode/lock preferences and all extras under More. No physical heat, independent zones, countdown, auto-stop or enforced lock. 51 renderer + 21 native tests, types/offline build and 22 browser profiles pass. Bidirectional Home/Devices state, reload and fresh disk retention pass; regular views fit without scrolling. Signed staging package/exact 32,319,420-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Gas leak detector console | Preview 102 built and verified; installation pending | Shared pearl-metal SVG, persistent visible leak through silence/self-test, explicit scenario commands and all extras under More. Strict unknown/mismatch display, canonical linked valve and grant behavior retained. 29 renderer + 42 native tests, app/scene types/offline build, 11 standalone + six native-source + five actual Home profiles pass. Short-stage readout layout preserves touch size and no ordinary scrolling. Bidirectional state/reload and fresh disk retention pass. Signed staging package/exact 32,306,364-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
 | Gas meter console | Preview 101 built and verified; installation pending | Shared sculpted metal meter SVG with accepted valve lever, sample supply/usage/flow, explicit preview valve and usage/refill commands, saved alerts and all extras under More. Leak interlocks retain priority; clearing/refill never reopens. Strict unknown-value display, no power toggle or live claims. 19 renderer + 41 native tests, types/offline build, 11 standalone + six native-source + five actual Home browser profiles, bidirectional state and fresh disk retention pass. Signed staging package/exact 32,293,069-byte scene verified; production metadata restored. Installation and physical acceptance pending. |
@@ -54,14 +55,23 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 ## Remaining dedicated device consoles
 
-Current routing leaves **smoke** on the generic full-controls layout. Its existing
-controls already work; this is a presentation upgrade, not a missing hardware
-integration.
-The smoke console should preserve its existing incident/acknowledgement semantics
-and never imply physical protection from sample tests. Complete only one console
-per requested step.
+All currently authored device kinds now have a dedicated primary console in Home
+and Devices, including smoke/CO. The generic inspector remains the fallback for
+unsupported or view-only cases and still provides advanced settings. This completes
+this presentation queue, not hardware integration or physical acceptance. Prioritize
+the outstanding iPhone interaction/persistence checks before another console family;
+keep hub execution, household sync and physical iPad testing deferred.
 
 ## Most recent adjacent findings
+
+**Smoke incident semantics and scope:** a sample check must not look like an alarm
+scenario or hardware self-test. Acknowledgment and silence preserve active sources;
+clearing one sensor retains the incident until a deliberate globally-clear reset.
+The emergency gate hold persists after reset. New main-panel scenarios require
+all affected device grants; native canonical transactions continue to reject
+unauthorized collateral changes. Unknown values never become reassuring clear
+readings. Browser/native tests cover emergency navigation and persisted latches;
+physical protection remains outside this simulation scope.
 
 **Cooktop preferences versus operation:** the generic device level is unrelated
 to burner heat. The new console reads only the validated burner preference and

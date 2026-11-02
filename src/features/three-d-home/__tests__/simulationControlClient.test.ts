@@ -345,3 +345,27 @@ test.each([false, true])('cooktop preferences survive disk reopening with power 
   expect(disk.size).toBeGreaterThan(0);
   reopened.dispose();
 });
+
+/** Reopening must preserve latched alarms independently of sample checks and acknowledgment. */
+test('smoke incident survives a fresh disk session and reset keeps the explicit gate hold', async () => {
+  const store = createStore<HomeState>(() => ({ ...useHomeStore.getState(), devices: [] }));
+  const disk = new Map<string, string>();
+  const storage = { getItem: async (key: string) => disk.get(key) ?? null, setItem: async (key: string, value: string) => { disk.set(key, value); } };
+  const client = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: new SimulationPersistence(storage), mode: 'demo' }));
+  const id = 'family-smoke'; client.connect(); await settle();
+  client.runAction(id, 'smoke-test-alarm'); client.runAction(id, 'smoke-simulate-co'); client.runAction(id, 'smoke-silence');
+  client.runAction(id, 'smoke-acknowledge'); client.toggle(id); await settle();
+  const accepted = client.getSnapshot().state.deviceStates[id];
+  expect(accepted).toMatchObject({ on: true, settings: { smokeDetected: true, coDetected: true, fireIncidentActive: true, smokeSilenced: true, fireIncidentAcknowledged: true, sampleChecked: true } });
+  client.dispose(); await settle();
+  const reopened = new SimulationControlClient((deliver, status) => new SimulationSession(deliver, status, { store, persistence: new SimulationPersistence(storage), mode: 'demo' }));
+  reopened.connect(); await settle(); expect(reopened.getSnapshot().state.deviceStates[id]).toEqual(accepted);
+  expect(reopened.getSnapshot().state.deviceStates['entry-gate'].settings?.gateEmergencyHold).toBe(true);
+  reopened.runAction(id, 'smoke-clear-alarm'); await settle();
+  expect(reopened.getSnapshot().state.deviceStates[id]).toMatchObject({ settings: { smokeDetected: false, coDetected: false, fireIncidentActive: true } });
+  reopened.resetFire(); await settle();
+  expect(reopened.getSnapshot().state.deviceStates[id].settings?.fireIncidentActive).toBe(false);
+  expect(reopened.getSnapshot().state.deviceStates['entry-gate'].settings?.gateEmergencyHold).toBe(true);
+  expect((await new SimulationPersistence(storage).load('demo')).deviceStates[id].settings?.fireIncidentActive).toBe(false);
+  reopened.dispose();
+});
