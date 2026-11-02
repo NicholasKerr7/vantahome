@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained November 1, 2026. This is the current delivery queue, not a claim that
+Maintained November 2, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Lighting connection preparation | Preview 105 built and verified; not installed | Shared native lighting presentation plus isolated Owner/Admin sample connection under Vanta Bridge preparation. Explicit power-only/dimmer/color capabilities; normal/slow/failure/offline/stale states; acknowledgment separate from observation; no saved-home writes. Access/account/home/role changes, background/blur and close invalidate pending work. 110 tests, app types and 28 browser layout cases pass. Regular viewports fit; tiny-screen recovery, 44px targets and reduced motion retained. Physical routing/power-only pilot unchanged; no hardware connected. Signed staging package, new native markers and exact unchanged scene verified; production metadata restored. Last installed remains Preview 104; physical acceptance pending. |
 | Smoke and CO console | Preview 104 installed and launched; physical acceptance pending | Shared ceramic detector SVG and steady incident signal, explicit sample/scenario/silence/acknowledge/selected-clear commands and original extras under More. Unknown samples remain unavailable; silence/checks/acknowledgment never clear sources; clearing preserves the latch; reset retains gate hold. Cross-device scenario grants enforced. 27 renderer + 26 native tests, types/offline build and 22 browser profiles pass, with bidirectional Home/Devices agreement and reload/fresh disk retention. Regular viewports fit without scrolling; tiny/large-text fallback retained. Signed staging package/exact 32,332,144-byte scene verified; production metadata restored. Reverified and installed in place November 1; Apple inventory confirms 1.0.0 (104) and launch succeeded. Physical acceptance remains pending; no real detection or emergency response. See handoff for receipts. |
 | Induction cooktop console | Included in installed Preview 104; physical acceptance pending | Shared beveled-glass SVG with accepted power/heat glow, independent power, bounded shared heat/timer steps, mode/lock preferences and all extras under More. No physical heat, independent zones, countdown, auto-stop or enforced lock. 51 renderer + 21 native tests, types/offline build and 22 browser profiles pass. Bidirectional Home/Devices state, reload and fresh disk retention pass; regular views fit without scrolling. Signed staging package/exact 32,319,420-byte scene verified; production metadata restored. Included in Preview 104, installed in place and launched November 1. Physical acceptance remains pending. |
 | Gas leak detector console | Included in installed Preview 104; physical acceptance pending | Shared pearl-metal SVG, persistent visible leak through silence/self-test, explicit scenario commands and all extras under More. Strict unknown/mismatch display, canonical linked valve and grant behavior retained. 29 renderer + 42 native tests, app/scene types/offline build, 11 standalone + six native-source + five actual Home profiles pass. Short-stage readout layout preserves touch size and no ordinary scrolling. Bidirectional state/reload and fresh disk retention pass. Signed staging package/exact 32,306,364-byte scene verified; production metadata restored. Included in Preview 104, installed in place and launched November 1. Physical acceptance remains pending. |
@@ -601,8 +602,16 @@ chat, repository, screenshots or evidence. See the handoff for prepared tabs/sta
   hub prerequisites are met; then migrate one family at a time. Retain a usable
   fallback until capability coverage, denied access, disconnect/reconnect,
   conflicting observations and native responsive interaction pass. This records
-  the design direction only; hub execution and broader hardware authorization
-  remain deferred.
+  the remaining hardware direction; hub execution and broader hardware authorization
+  remain deferred. **November 2 software foundation completed:** lighting has an
+  explicit capability/presentation contract, its existing simulation adapter,
+  and an isolated in-memory connection rehearsal reachable through hub preparation.
+  110 tests and 28 browser layout cases verify pending/observed/failed/offline/stale
+  states, access/lifecycle cancellation and no household/persistent writes. The
+  actual physical adapter and routing migration are not implemented. Next: once
+  the hub exists, validate exact reported capabilities and observed-state
+  correlation through the supervised power-only light pilot before activating
+  any physical console route or claiming real dimming/color support.
 - Remote push with tested closed-app delivery, preferences and quiet hours.
 - **Authenticated camera media:** the simulation Camera Center slice from the
   [camera plan](CAMERA_EXPERIENCE_DESIGN.md) is implemented; native interaction

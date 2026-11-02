@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-01**. Read this before rediscovering the project.
+Last maintained: **2026-11-02**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,47 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Lighting connection preparation — November 2 / Preview 105 built; not installed
+
+- With no physical hardware required, More → Connections → Integrations → Vanta
+  Bridge → Prepare home hub → Try a sample light opens an isolated rehearsal.
+  Owner/Admin and the unbound Demo administrator can try power-only, dimmable,
+  and full-color samples with normal, slow, failed, offline and stale conditions.
+  Closing starts a fresh sample next time; household devices/settings never change.
+- `src/features/device-consoles/LightingConsole.tsx` is now the shared native
+  lighting presentation. The existing simulation controller remains a guarded
+  adapter; the new in-memory rehearsal has no transport, persistence or household
+  writes. Physical device routing and the on/off-only bridge pilot are unchanged.
+  Controls depend on explicit capabilities; unsupported white presets are hidden.
+  Command submission/acknowledgment never changes observed power or artwork.
+- Access/scope changes dispose the sample synchronously. App/document background,
+  navigation blur and closing cancel pending reports; returning never replays them.
+  Offline readings are labeled last-known, stale readings are unavailable, and
+  unavailable/offline artwork stays dark. Review caught and fixed a 0–1 versus
+  0–100 artwork brightness mismatch, with an adapter-to-SVG regression.
+- **110 tests across six suites** and app TypeScript pass. Includes the existing
+  simulation lighting and Integrations suites, explicit capabilities/ranges,
+  delayed/failure/recovery, held callbacks after account/role/home changes,
+  background/unmount/StrictMode, navigation blur and unchanged home/storage state.
+  **28 browser layout cases across seven viewport sizes** pass, plus actual app
+  entry, pending-versus-observed artwork, failures, unavailable samples and
+  close/reopen. Regular phone/tablet/desktop previews have no vertical overflow;
+  the 320×568 fallback stays contained, all targets remain at least 44px, and
+  the reduced-motion run reports zero page errors. No dependency or idle loop added.
+- Evidence in `work/`: `lighting-preparation-{tests,types,lifecycle-tests}.log`,
+  `lighting-preparation-browser.{log,json}`, `lighting-preparation-console.png`
+  and viewport screenshots. Owned QA server is stopped.
+- Signed staging Preview **105** built successfully and passes strict signature,
+  staging/redirect identity, native rehearsal markers and exact unchanged
+  **32,332,144-byte** scene verification. Scene SHA-256 remains
+  `414e7e42b55884e6a143655b203b17f237a29063a9bb3794e1948c7a5c792c71`.
+  Production metadata is restored; profile expiry is **2026-11-03 15:11:57 UTC**.
+  Receipts: `work/lighting-preparation-preview105-{build,xcodebuild}.log`,
+  `work/lighting-preview105-verification.log`, `work/preview105-verification.json`.
+  **Not installed**; last verified installation remains Preview 104. Reverify
+  signing before installation. Physical fit/lifecycle acceptance, actual hardware
+  transport, hub execution, household sync and physical iPad tests remain pending.
 
 ## Smoke and CO console — October 31–November 1 / Preview 104 installed and launched; physical acceptance pending
 
