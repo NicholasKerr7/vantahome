@@ -91,6 +91,15 @@ defects from ideas or untested risks.
   **Not installed**; last verified installation remains Preview 104. Reverify
   signing before installation. Physical fit/lifecycle acceptance, actual hardware
   transport, hub execution, household sync and physical iPad tests remain pending.
+- November 2 installation follow-up: the existing Preview 105 package was
+  reverified successfully (strict signature, staging identity, new native markers,
+  exact scene hash and restored production metadata). Evidence:
+  `work/lighting-preview105-install-verification.log`. Apple reported the paired
+  iPhone unavailable, with no developer service/tunnel; readiness details are in
+  `work/preview105-device-{readiness,details}.{json,log}`. The user chose **Install
+  later**. No install or launch was attempted, and no rebuild is needed solely
+  for connection availability. Installation and hands-on rehearsal tests are
+  explicitly deferred; recheck signing expiry/device availability when resumed.
 
 ## Smoke and CO console — October 31–November 1 / Preview 104 installed and launched; physical acceptance pending
 
