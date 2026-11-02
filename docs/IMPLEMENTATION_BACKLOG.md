@@ -584,6 +584,25 @@ chat, repository, screenshots or evidence. See the handoff for prepared tabs/sta
 
 ## Integration work after the foundations
 
+- **Unified physical-device consoles — accepted November 1:** bring physical and
+  unbound device detail screens into the same visual design as the 3D consoles
+  when real-device integration is prepared. Current split:
+  `src/screens/DeviceDetailRoute.tsx` sends model-bound devices to shared simulation
+  controls and physical devices to `DeviceDetailScreen`; preserve that separation
+  until a physical adapter is implemented and verified. Extract reusable artwork,
+  layout and typed presentation contracts, with separate simulation and physical
+  command/observation adapters. Device kind alone must not enable a capability:
+  show controls, ranges, units and interlocks supported by the actual device/hub.
+  Keep simulation scenarios and sample telemetry out of the physical command path.
+  Distinguish pending delivery, observed success, failure, stale readings and
+  unavailable/offline state; stored preferences must not masquerade as current
+  observations. Preserve household/action grants and sensitive-action checks at
+  dispatch. Start with the existing supervised Owner-only one-light pilot after
+  hub prerequisites are met; then migrate one family at a time. Retain a usable
+  fallback until capability coverage, denied access, disconnect/reconnect,
+  conflicting observations and native responsive interaction pass. This records
+  the design direction only; hub execution and broader hardware authorization
+  remain deferred.
 - Remote push with tested closed-app delivery, preferences and quiet hours.
 - **Authenticated camera media:** the simulation Camera Center slice from the
   [camera plan](CAMERA_EXPERIENCE_DESIGN.md) is implemented; native interaction

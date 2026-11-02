@@ -32,6 +32,11 @@ defects from ideas or untested risks.
 - Simulation first. No hub purchased or connected; NUC 15 is the user's intended
   hub direction. The 20-space/92-authored-device model and up to 32 household-added
   fixtures are simulation-only.
+- Accepted November 1: bring physical-device detail screens into the same console
+  design when preparing real-device integration. Reuse artwork/layout through
+  capability-aware presentation and separate physical command/observation adapters;
+  never route physical equipment through the simulation client. The staged migration
+  and acceptance criteria are in the backlog; no hardware scope is activated yet.
 - Individual accounts and household invitations. Owner/Admin/Member have whole
   home role scope; Guest/Tenant live information and controls follow room grants.
 - Property overview is separate from permissions: current invitees see the
