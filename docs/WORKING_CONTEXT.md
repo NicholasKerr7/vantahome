@@ -46,7 +46,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Smoke and CO console — October 31–November 1 / Preview 104 built and verified; installation pending
+## Smoke and CO console — October 31–November 1 / Preview 104 installed and launched; physical acceptance pending
 
 - Home and Devices share sculpted ceramic detector SVG artwork with a steady
   accepted-state signal. Explicit Check sample, smoke/CO scenarios, Silence,
@@ -82,12 +82,23 @@ defects from ideas or untested risks.
   `414e7e42b55884e6a143655b203b17f237a29063a9bb3794e1948c7a5c792c71`.
   Profile expiry: **2026-11-03 15:11:57 UTC**. Evidence:
   `work/smoke-preview104-build.log`, `work/smoke-preview104-xcodebuild.log`,
-  `work/preview104-verification.json`. Preview 104 is **not installed**.
-  Preview 97 remains the last installed build; 98–103 are built but uninstalled.
-  Existing physical acceptance, hub execution, household sync and iPad deferrals
-  remain in the backlog.
+  `work/preview104-verification.json`.
+- On November 1, the existing package was reverified and installed in place on
+  the iPhone. Apple inventory confirms **1.0.0 (104)** for
+  `com.anonymous.vantahome.preview`; launch succeeded with process ID **29561**.
+  Reverification passed strict signature, staging identity and the exact scene
+  size/hash above; production metadata remained unchanged. Receipts:
+  `work/smoke-preview104-install-verification.log` and
+  `work/preview104-{install,launch,installed-apps,installation-receipt}.json`.
+  Preview 104 supersedes installed Preview 97 and includes the previously
+  uninstalled refrigerator (98), coffee (99), microwave (100), gas meter (101),
+  gas leak detector (102) and cooktop (103) consoles, plus smoke/CO (104).
+  Successful launch supersedes the outstanding Preview 97 manual-launch request.
+  Installation and launch do not establish physical interaction or persistence
+  acceptance. Existing physical acceptance, hub execution, household sync and
+  iPad deferrals remain in the backlog.
 
-## Induction cooktop console — October 30 / Preview 103 built and verified; installation pending
+## Induction cooktop console — October 30 / Included in installed Preview 104; physical acceptance pending
 
 - Home and Devices now share lightweight beveled induction-glass SVG artwork,
   explicit power, a single shared heat preference, Simmer/Boil/Sear/Warm choices,
@@ -122,12 +133,12 @@ defects from ideas or untested risks.
   `9be70750727e3f779de4d667ea82d6f7225441286e809a95a198bf85b846863d`.
   Profile expiry: **2026-11-03 15:11:57 UTC**. Evidence:
   `work/cooktop-preview103-build.log`, `work/cooktop-preview103-xcodebuild.log`,
-  `work/preview103-verification.json`. Preview 103 is **not installed**.
-  Physical fit/More/persistence acceptance remain pending. Preview 97 remains
-  the last installed build; 98–102 are built but uninstalled. Existing physical
-  acceptance, hub, household sync and iPad deferrals are unchanged.
+  `work/preview103-verification.json`. This console is included in Preview 104,
+  installed in place and launched on November 1. Physical fit/More/persistence
+  acceptance remain pending. Existing physical acceptance, hub, household sync
+  and iPad deferrals are unchanged.
 
-## Gas leak detector console — October 30 / Preview 102 built and verified; installation pending
+## Gas leak detector console — October 30 / Included in installed Preview 104; physical acceptance pending
 
 - Home and Devices now share a pearl-metal detector with recessed sensing vents
   and a steady signal ring. One typed lightweight SVG supplies both surfaces;
@@ -166,13 +177,12 @@ defects from ideas or untested risks.
   `20439fbdb888e4f62b537bb719321f79f926495ec1a9395f0927d067854cebd4`.
   Profile expiry: **2026-11-03 15:11:57 UTC**. Evidence:
   `work/gas-leak-preview102-build.log`, `work/gas-leak-preview102-xcodebuild.log`
-  and `work/preview102-verification.json`. Preview 102 is **not installed**.
+  and `work/preview102-verification.json`. This console is included in Preview 104,
+  installed in place and launched on November 1.
   Physical fit, scenario/More/preference and reopening acceptance remain pending.
-  Preview 97 remains the
-  last installed build, with manual launch confirmation pending; 98–101 are built
-  but uninstalled. Hub/sync/iPad deferrals remain unchanged.
+  Hub/sync/iPad deferrals remain unchanged.
 
-## Gas meter console — October 29 / Preview 101 built and verified; installation pending
+## Gas meter console — October 29 / Included in installed Preview 104; physical acceptance pending
 
 - Home and Devices share a sculpted metal meter with copper unions, recessed
   sample-supply gauge and a valve lever that follows accepted open/closed state.
@@ -214,11 +224,11 @@ defects from ideas or untested risks.
 - Preview **101** built and passed signature, staging identity, current console
   markers and exact bundled scene checks (**32,293,069 bytes**, SHA-256 in
   the receipt). Production metadata was restored; signing expires November 3 at
-  15:11:57 UTC. Installation and physical fit, valve/usage/refill/alerts/More and
-  reopening checks remain pending. Preview 97 remains the last installed build, with manual
-  launch confirmation pending. Hub/sync/iPad deferrals are unchanged.
+  15:11:57 UTC. This console is included in Preview 104, installed in place and
+  launched on November 1. Physical fit, valve/usage/refill/alerts/More and
+  reopening checks remain pending. Hub/sync/iPad deferrals are unchanged.
 
-## Microwave console — October 29 / Preview 100 built and verified; installation pending
+## Microwave console — October 29 / Included in installed Preview 104; physical acceptance pending
 
 - Home and Devices now share a sculpted black-glass microwave with a metal
   chassis, recessed cavity, ceramic bowl and accepted-power light. One lightweight
@@ -253,12 +263,12 @@ defects from ideas or untested risks.
 - Preview **100** built and passed signature, staging identity, current console
   markers and exact bundled scene verification (**32,279,005 bytes**, SHA-256 in
   `work/preview100-verification.json`). Production metadata was restored; signing
-  expires November 3 at 15:11:57 UTC. Owned QA servers stopped. Installation and
-  physical fit, mode/power, quick-add/Stop/More/reopening checks remain pending.
-  Preview 97 remains the last installed build; its manual launch confirmation
-  is still pending. Hub/sync/iPad deferrals are unchanged.
+  expires November 3 at 15:11:57 UTC. Owned QA servers stopped. This console is
+  included in Preview 104, installed in place and launched on November 1.
+  Physical fit, mode/power, quick-add/Stop/More/reopening checks remain pending.
+  Hub/sync/iPad deferrals are unchanged.
 
-## Coffee console — October 29 / Preview 99 built and verified; installation pending
+## Coffee console — October 29 / Included in installed Preview 104; physical acceptance pending
 
 - Kitchen's Espresso machine now uses a sculpted satin-metal machine with a
   smoked hopper, bronze details and ceramic cup. Home and Devices share one
@@ -297,12 +307,11 @@ defects from ideas or untested risks.
   console markers and exact bundled scene checks (**32,265,219 bytes**, SHA-256
   recorded in `work/preview99-verification.json`). Production metadata was
   restored. The signing profile expires November 3 at 15:11:57 UTC. Owned QA
-  servers stopped. Installation and physical fit/touch, recipe/Brew/Stop/More/
-  reopening acceptance remain pending. Preview 97 is still the last installed
-  build; its manual launch confirmation remains pending. Hub/sync/iPad deferrals
-  are unchanged.
+  servers stopped. This console is included in Preview 104, installed in place
+  and launched on November 1. Physical fit/touch, recipe/Brew/Stop/More/reopening
+  acceptance remain pending. Hub/sync/iPad deferrals are unchanged.
 
-## Refrigerator console — October 28 / Preview 98 built and verified; installation pending
+## Refrigerator console — October 28 / Included in installed Preview 104; physical acceptance pending
 
 - Home and Devices share a sculpted pearl-metal French-door refrigerator with
   a recessed dispenser, dimensional handles and freezer drawers. One lightweight
@@ -341,12 +350,12 @@ defects from ideas or untested risks.
   energy and End-scene markers are present; production metadata was restored.
   The signing profile expires November 3 at 15:11:57 UTC. Build logs:
   `work/refrigerator-preview98-{build,xcodebuild}.log`. Owned QA servers stopped.
-- Installation and physical refrigerator fit/touch/More/reopening checks remain
-  pending. Preview 97 remains the last installed build; its manual launch
-  confirmation and earlier physical acceptance checks remain pending.
+- This console is included in Preview 104, installed in place and launched on
+  November 1. Physical refrigerator fit/touch/More/reopening checks and earlier
+  physical acceptance remain pending.
   Hub/sync/iPad deferrals unchanged.
 
-## Air quality console — October 27 / Preview 97 installed; manual launch confirmation pending
+## Air quality console — October 27 / Included in installed Preview 104; physical acceptance pending
 
 - Home and Devices now show a distinct ceramic air sensor with a recessed AQI
   screen, metallic bezel and perforated enclosure. Both use one lightweight typed
@@ -395,17 +404,20 @@ defects from ideas or untested risks.
   `work/air-quality-{web-browser,native-browser,host-browser}.json`, and actual
   capture `work/air-quality-console-preview.png`.
 - Reverified the existing package and updated the iPhone in place on October 27;
-  no uninstall or data reset. Apple inventory confirms **1.0.0 (97)**, superseding
+  no uninstall or data reset. Apple inventory confirmed **1.0.0 (97)**, superseding
   95 and including irrigation from 96. Automatic launch was denied by iOS with a
   signing/entitlements/developer-trust security message despite successful local
   signature/profile checks. User was asked to open Preview manually and approve
-  the existing developer profile if prompted; manual launch confirmation remains
-  pending. Receipts: `work/preview97-install-verification.log` and
+  the existing developer profile if prompted; manual launch confirmation was not
+  recorded for that build. Receipts: `work/preview97-install-verification.log` and
   `work/preview97-{install,launch,installed-app}.json`.
+- Preview 104 supersedes Preview 97 and includes this console. Its successful
+  November 1 launch supersedes the earlier manual-launch request; it does not
+  establish physical interaction or persistence acceptance.
 - Physical air/irrigation fit, touch, More and reopening checks remain pending.
   Earlier deferred acceptance, hub/sync and physical iPad work remain unchanged.
 
-## Irrigation console — October 27 / Included in installed Preview 97; physical acceptance pending
+## Irrigation console — October 27 / Included in installed Preview 104; physical acceptance pending
 
 - Home and Devices now share a sculpted brushed-metal sprinkler, recessed nozzle,
   subtle spray and tactile purple controls. Lightweight typed SVG geometry reuses
@@ -451,9 +463,10 @@ defects from ideas or untested risks.
 - Evidence: `work/irrigation-{web-tests,motion-tests,native-tests-fixed,guard-persistence-tests}.log`,
   `work/irrigation-{sprinkler-browser,native-browser,host-browser}.json`, and actual
   controller capture `work/irrigation-console-preview.png`. Included in Preview
-  97 installed in place on October 27; Apple inventory confirms build 97. Manual
-  launch confirmation and physical irrigation fit/touch/More/reopening checks
-  remain pending; prior deferred checks remain open.
+  97 installed in place on October 27; Apple inventory confirmed build 97.
+  This console remains included in Preview 104, installed in place and launched
+  on November 1. Physical irrigation fit/touch/More/reopening checks remain
+  pending; prior deferred checks remain open.
 
 ## Energy equipment artwork — October 26 / Preview 95 installed and launched; physical acceptance pending
 
