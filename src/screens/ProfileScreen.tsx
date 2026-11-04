@@ -49,7 +49,7 @@ export default function ProfileScreen({ navigation, route }: Props) {
       >
         <DeepTabs items={SECTIONS} selectedId={section} onSelect={setSection} />
         {section === "identity" && <IdentityPage model={model} />}
-        {section === "household" && <HouseholdPage model={model} />}
+        {section === "household" && <HouseholdPage model={model} onOpenOwnership={() => navigation.navigate("OwnershipTransfer")} />}
         {section === "preferences" && <PreferencesPage model={model} />}
         {section === "security" && <AccountSecurityPage />}
         {section === "access" && (

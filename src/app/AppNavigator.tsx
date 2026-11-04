@@ -53,6 +53,7 @@ import { signOutAccount } from '../features/account/accountSession';
 import { isAccountScopeCurrent } from '../features/account/accountIdentity';
 import { resolveSessionProfile } from '../features/account/sessionProfile';
 import HomeDestinationGuard from '../features/home-shell/HomeDestinationGuard';
+import { selectOwnershipTransferActor } from '../features/household/ownershipTransferAccess';
 import { useWarmHomeRetention } from './useWarmHomeRetention';
 import { useAccountSecurityRoute } from '../features/account/useAccountSecurityRoute';
 import { needsPasswordRecoverySetup } from '../services/passwordRecoverySetup';
@@ -77,6 +78,7 @@ export type RootStackParamList = {
   ThreeDHome: undefined;
   Integrations: undefined;
   DeviceHealth: undefined;
+  OwnershipTransfer: undefined;
   Room: { roomId?: string; showAll?: boolean };
   DeviceDetail: { deviceId: string };
   Notifications: undefined;
@@ -89,6 +91,11 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/** Defer the private household transfer flow until an eligible member opens it. */
+function loadOwnershipTransferScreen() {
+  return require('../features/ownership-transfer/OwnershipTransferScreen').default as typeof import('../features/ownership-transfer/OwnershipTransferScreen').default;
+}
 
 /** Defer provider setup and browser-auth code until integrations are opened. */
 function IntegrationsRoute(props: NativeStackScreenProps<RootStackParamList, 'Integrations'>) {
@@ -183,6 +190,7 @@ export default function AppNavigator() {
   const accountSecurity = useAccountSecurityRoute({ userId: session?.user.id ?? null, ready: authReady,
     credentialSetup: passwordRecovery || authTaskBlockingHome });
   const membershipReady = useHomeStore((s) => s.membershipReady);
+  const ownershipAvailable = useHomeStore((state) => selectOwnershipTransferActor(state) !== null);
   const verification = useHomeStore((s) => s.membershipVerification);
   const guestExpiresAt = useHomeStore((s) => {
     const member = s.household.find((candidate) => candidate.id === s.activeMemberId);
@@ -615,6 +623,9 @@ export default function AppNavigator() {
                     <Stack.Screen name="ThreeDHome" getComponent={loadThreeDHomeScreen} />
                     <Stack.Screen name="Integrations" component={IntegrationsRoute} />
                     <Stack.Screen name="DeviceHealth" component={DeviceHealthRoute} />
+                    {authExperience === 'authenticated' && ownershipAvailable && (
+                      <Stack.Screen name="OwnershipTransfer" getComponent={loadOwnershipTransferScreen} />
+                    )}
                     <Stack.Screen name="Room">{(props) => <HomeDestinationGuard destination="rooms"><RoomScreen {...props} /></HomeDestinationGuard>}</Stack.Screen>
                     <Stack.Screen
                       name="DeviceDetail"

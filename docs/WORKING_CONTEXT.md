@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-02**. Read this before rediscovering the project.
+Last maintained: **2026-11-03**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,63 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Home ownership transfer — November 3 / Preview 107 built and verified; installation deferred
+
+- Account → Household → Members → Ownership opens a guarded workspace for the
+  verified Owner, Admin or Member. The Owner reviews the exact household and
+  recipient's verified email, then sends an offer lasting 24 hours. The recipient
+  separately reviews and accepts or declines. The Owner can cancel a pending offer.
+  On acceptance the recipient becomes Owner and the previous Owner becomes Admin.
+- Additive migration **028** is deployed only to staging dcevusczjtmdpzrxpdou.
+  Schema, private receipts and RPC grants are verified against the checked source.
+  Existing ownership/member fingerprints matched before and after deployment.
+  No offer or acceptance was performed against an existing user's household.
+- The server requires a stored current session and confirmed account. Offer and
+  acceptance additionally require password AMR within five minutes, and aal2 for
+  an enrolled verified MFA factor. The screen explains fresh sign-in recovery.
+  It uses captured account credentials, rejects stale callbacks, disables duplicate
+  submissions and clears private choices on role/roster/account/focus/background
+  changes. Explicit Refresh reconciles authoritative membership. Acceptance and
+  ambiguous acceptance replies also reconcile membership or gate home access.
+- SQL serializes decisions with membership management on the home row. Closed,
+  expired, removed/re-added and role-changed offers cannot be revived. Direct client
+  changes to the owner column are denied while existing home-name editing remains
+  available. Both role changes, canonical owner, removal of obsolete participant
+  overrides and the decision receipt commit together. Other room grants and device
+  records are preserved. The old Owner's later Auth deletion cannot cascade through
+  the transferred home's owner reference. Account deletion itself is a future flow.
+- **174 application tests across six suites**, app TypeScript, **883 pgTAP
+  assertions across 18 suites** and eight real two-connection race schedules pass.
+  Database tests used a disposable PostgreSQL 17 Auth-schema fixture. They cover
+  fresh/stale/wrong-session authentication, MFA, eligible identities, cancelled/
+  expired/replaced offers, competing acceptance/removal/demotion, retry, stale
+  invitation replay, existing permissions and ownership-dependent data.
+- **53 browser layout/state cases** pass with actual Profile navigation, screen,
+  hook, service and reconciliation against isolated synthetic responses. Includes
+  phone, tablet portrait/landscape, 320×568 fallback, 145% enlarged browser text,
+  long verified emails, finger swipes, keyboard activation, reduced motion,
+  offer/cancel/decline/accept and stale-sign-in/read-failure recovery. Ordinary
+  viewports have no vertical overflow and actions remain at least 44px. Zero
+  browser page errors or external requests.
+- Evidence in `work/` uses the `ownership-transfer-` prefix for final-tests.log,
+  types.log, postgres-summary.log, race-summary.log, browser.{log,json},
+  screenshots and staging.json. The staging source SHA-256 is
+  b2b519af4d82cc6b4c43f53b0e80b6484ab9d7646f3acd8b011e1bc6ca5eba1e.
+- Preview **107** is built and verified, including deferred 105 lighting and 106
+  Device Health work. Signing, staging identity/native feature markers, packaged
+  artwork and restored production metadata pass. The provisioning profile expires
+  November 11 at 04:54:44 UTC. The unchanged scene is **32,332,144 bytes**, SHA-256
+  `414e7e42b55884e6a143655b203b17f237a29063a9bb3794e1948c7a5c792c71`.
+  Build evidence: `ownership-transfer-preview107-build.log`,
+  `ownership-transfer-preview107-verification.log` and `preview107-verification.json`.
+  iPhone installation remains deferred, with 104 the last verified installed build.
+- Acceptance still needed with two real signed-in staging users and native iPhone
+  interaction. Existing peers learn new roles through explicit refresh,
+  foreground verification or the current 60-second membership refresh. Server
+  mutations recheck current authority. Personal local scene/routine/profile data
+  retain their existing scope; household synchronization remains deferred.
+  Next account work is safe deletion/data dependency handling and email changes.
 
 ## Device Health — November 2 / Preview 106 built and verified; installation deferred
 

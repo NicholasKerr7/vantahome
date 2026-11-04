@@ -148,6 +148,7 @@ export const householdStyles = StyleSheet.create({
     textAlign: "center",
   },
   memberActions: { gap: 10 },
+  memberPager: { flexBasis: 144, flexGrow: 1 },
   layoutOverview: {
     flexDirection: "row",
     alignItems: "flex-start",

@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained November 2, 2026. This is the current delivery queue, not a claim that
+Maintained November 3, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Home ownership transfer | Staging migration 028 deployed; Preview 107 built and verified | Exact verified recipient and home review, 24-hour offer, recipient acceptance/decline, Owner cancellation and former Owner → Admin. Current session, recent password and enrolled-MFA checks enforced by SQL. Atomic decision, membership-change invalidation and protected owner column. 174 app tests/types, 883 SQL assertions, eight concurrent races and 53 browser cases pass. Signed staging package/native markers/exact unchanged scene verified; production metadata restored. Includes deferred 105/106. Hosted two-user/native acceptance pending. Installation deferred, last installed 104. |
 | Device Health | Preview 106 built and verified; installation deferred | More → Connections → Device Health, scoped searchable/swipeable artwork cards, source-aware details and local example alerts. Explicit model bindings only; physical status/freshness remain unreported. Guest/camera grants, expiry and lifecycle cleanup retained. 128 tests, app types, 21 responsive cases plus nine final layout/detail cases and touch/wheel flows pass. No physical health transport, saved-home writes, dependency or idle animation. Signed staging package/native markers/exact unchanged scene verified; production metadata restored. Includes deferred Preview 105 lighting work. Last installed remains Preview 104; hands-on acceptance pending. |
 | Lighting connection preparation | Preview 105 reverified; user deferred installation November 2 | Shared native lighting presentation plus isolated Owner/Admin sample connection under Vanta Bridge preparation. Explicit power-only/dimmer/color capabilities; normal/slow/failure/offline/stale states; acknowledgment separate from observation; no saved-home writes. Access/account/home/role changes, background/blur and close invalidate pending work. 110 tests, app types and 28 browser layout cases pass. Regular viewports fit; tiny-screen recovery, 44px targets and reduced motion retained. Physical routing/power-only pilot unchanged; no hardware connected. Signed staging package, new native markers and exact unchanged scene verified; production metadata restored. Last installed remains Preview 104; physical acceptance pending. |
 | Smoke and CO console | Preview 104 installed and launched; physical acceptance pending | Shared ceramic detector SVG and steady incident signal, explicit sample/scenario/silence/acknowledge/selected-clear commands and original extras under More. Unknown samples remain unavailable; silence/checks/acknowledgment never clear sources; clearing preserves the latch; reset retains gate hold. Cross-device scenario grants enforced. 27 renderer + 26 native tests, types/offline build and 22 browser profiles pass, with bidirectional Home/Devices agreement and reload/fresh disk retention. Regular viewports fit without scrolling; tiny/large-text fallback retained. Signed staging package/exact 32,332,144-byte scene verified; production metadata restored. Reverified and installed in place November 1; Apple inventory confirms 1.0.0 (104) and launch succeeded. Physical acceptance remains pending; no real detection or emergency response. See handoff for receipts. |
@@ -65,6 +66,14 @@ the outstanding iPhone interaction/persistence checks before another console fam
 keep hub execution, household sync and physical iPad testing deferred.
 
 ## Most recent adjacent findings
+
+**Ownership handoff boundaries:** peer membership labels can all be “Member”, so
+the Owner-only directory now supplies verified emails and the property name for
+review. Direct owner-column updates are removed. Pending offers are invalidated
+when either membership changes, preventing remove/re-add resurrection. Acceptance
+reconciles local authority even after an uncertain reply. Staging schema checks and
+disposable concurrency tests pass. Hands-on verification with two hosted users is
+still needed, and broader session revocation remains a separate priority.
 
 **Health provenance and touch boundaries:** local `lastSeenAt` and air timestamps
 are synthesized by some setting changes, so the health view does not use them as
@@ -550,15 +559,17 @@ Do not treat the availability response as a provider health test. Never read or 
 chat, repository, screenshots or evidence. See the handoff for prepared tabs/state.
 
 1. **Account lifecycle:** safe email changes, account deletion with ownership/data
-   dependencies, ownership transfer, and optional whole-app biometric lock.
+   dependencies, and optional whole-app biometric lock. Ownership transfer is
+   implemented in staging migration 028 with browser/native-source tests.
+   Hosted two-user and physical iPhone acceptance remain pending.
    Establish recent server-verified authentication for high-impact operations;
    sensitive-action local biometrics already exist and must not be confused with
    whole-app locking or server authorization.
    Dependencies confirmed in the current source: email changes require a dedicated
    account-bound PKCE intent and hosted dual-mailbox confirmation checks; refresh
    JWT email claims and invitation lists only after confirmation. Deleting an Auth
-   owner currently cascades through `homes.owner_id` (`001_init.sql`), so ownership
-   transfer and data-dependency review must precede any account-deletion endpoint.
+   owner currently cascades through `homes.owner_id` (`001_init.sql`), so the new
+   ownership handoff and data-dependency review must precede any account-deletion endpoint.
    Whole-app locking needs one native gate for UI, runtimes and commands plus
    enrollment/storage recovery and real biometric tests; a visual overlay alone
    is insufficient. Do not reuse simulation-skipped action confirmation as a lock.

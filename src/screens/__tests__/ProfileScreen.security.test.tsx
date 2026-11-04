@@ -157,10 +157,10 @@ describe("Profile household authorization and account isolation", () => {
   });
 
   /** Mount an authenticated profile and optionally use the menu's direct section target. */
-  async function mount(actor = owner, section?: "household" | "preferences") {
+  async function mount(actor = owner, section?: "household" | "preferences", navigate = jest.fn()) {
     useHomeStore.setState((state) => ({ authenticatedUserId: actor.userId, accountUserId: actor.userId, activeMemberId: actor.id, profile: { ...state.profile, name: actor.name } }));
     await act(async () => {
-      tree = renderer.create(<ProfileScreen navigation={{ navigate: jest.fn(), goBack: jest.fn() } as never} route={{ key: "Profile", name: "Profile", params: section ? { section } : undefined }} />);
+      tree = renderer.create(<ProfileScreen navigation={{ navigate, goBack: jest.fn() } as never} route={{ key: "Profile", name: "Profile", params: section ? { section } : undefined }} />);
     });
     if (!section) await press(button("People"));
     return screenRoot();
@@ -250,6 +250,27 @@ describe("Profile household authorization and account isolation", () => {
     });
     expect(button("Comfort")).toBeDefined();
     expect(tree!.root.findAllByType(ProfileToggle)).toHaveLength(2);
+  });
+
+  it.each([owner, administrator, member])('opens Home ownership for a verified $role, independent of the selected member card', async (actor) => {
+    const navigate = jest.fn();
+    await mount(actor, 'household', navigate);
+    await press(button('Next household member'));
+    await press(button('Home ownership'));
+    expect(navigate).toHaveBeenCalledWith('OwnershipTransfer');
+  });
+
+  it('removes the ownership shortcut and rejects a retained press when membership becomes restricted', async () => {
+    const navigate = jest.fn();
+    await mount(member, 'household', navigate);
+    const oldPress = button('Home ownership').props.onPress;
+    await act(async () => {
+      useHomeStore.setState((state) => ({ household: state.household.map((person) =>
+        person.id === member.id ? { ...person, role: 'Guest' } : person) }));
+      oldPress();
+    });
+    expect(button('Home ownership')).toBeUndefined();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("shows unsupported privacy and report features as read-only explanations without save or switches", async () => {

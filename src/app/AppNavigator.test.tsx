@@ -572,6 +572,17 @@ describe("navigation session boundaries", () => {
     expect(screen.queryByTestId("registered-route-ThreeDHome")).toBeNull();
   });
 
+  test('registers Home ownership only while the signed-in person has an eligible verified membership', async () => {
+    const screen = render(<AppNavigator />);
+    await waitFor(() => expect(screen.getByTestId('registered-route-OwnershipTransfer')).toBeTruthy());
+    act(() => { useHomeStore.setState((state) => ({ household: state.household.map((person) => ({ ...person, role: 'Tenant' })) })); });
+    expect(screen.queryByTestId('registered-route-OwnershipTransfer')).toBeNull();
+    act(() => { useHomeStore.setState((state) => ({ household: state.household.map((person) => ({ ...person, role: 'Member' })) })); });
+    expect(screen.getByTestId('registered-route-OwnershipTransfer')).toBeTruthy();
+    act(() => { invalidateHomeMembership('checking'); });
+    expect(screen.queryByTestId('registered-route-OwnershipTransfer')).toBeNull();
+  });
+
   test("the 3D shell is the first private route and retains features when graphics are disabled", async () => {
     process.env.EXPO_PUBLIC_ENABLE_3D_HOME = "false";
     const screen = render(<AppNavigator />);

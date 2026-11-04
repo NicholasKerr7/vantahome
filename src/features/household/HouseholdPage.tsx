@@ -3,7 +3,7 @@ import { Text, View, useWindowDimensions } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AvatarChip from "../../components/AvatarChip";
 import { useAccountIdentity } from "../account/useAccountIdentity";
-import { resolveMemberPresentation } from "../account/accountIdentity";
+import { isAccountScopeCurrent, resolveMemberPresentation } from "../account/accountIdentity";
 import Pressable from "../../components/Pressable";
 import ModalCard from "../../components/ModalCard";
 import ModalForm, { useModalViewportStyle } from "../../components/ModalForm";
@@ -26,6 +26,9 @@ import { canManageGuestAccessExtension } from "../../services/guestAccessExtensi
 import { useHomeStore } from "../../store/useHomeStore";
 import { supabase } from "../../services/supabaseClient";
 import { SentInvitationsPage } from "./SentInvitationsPage";
+import { selectOwnershipTransferActor } from "./ownershipTransferAccess";
+
+type HouseholdPageProps = { model: ProfileWorkspaceModel; onOpenOwnership?: () => void };
 
 const HOUSEHOLD_TABS = [
   { id: "people", label: "Members" },
@@ -266,8 +269,9 @@ function InvitationInbox({ model }: { model: ProfileWorkspaceModel }) {
 }
 
 /** Use one member card at a time; reveal detailed permissions only when requested. */
-function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
+function HouseholdMembers({ model, onOpenOwnership }: HouseholdPageProps) {
   const { scope } = useAccountIdentity();
+  const transferActor = useHomeStore(selectOwnershipTransferActor);
   const { height, fontScale } = useWindowDimensions();
   // Landscape tablets need the same room for fixed actions as smaller phones.
   const compact = height < 850 || fontScale > 1.2;
@@ -378,12 +382,24 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
         </Pressable>
       </View>
       <View style={styles.fill} />
-      <DeepPager
-        label="household member"
-        page={memberIndex}
-        pageCount={model.household.length}
-        onChange={(page) => setSelectedId(model.household[page].id)}
-      />
+      <View style={styles.actions}>
+        <View style={styles.memberPager}>
+          <DeepPager
+            label="household member"
+            page={memberIndex}
+            pageCount={model.household.length}
+            onChange={(page) => setSelectedId(model.household[page].id)}
+          />
+        </View>
+        {supabase && transferActor && onOpenOwnership && (
+          <DeepAction label="Ownership" accessibilityLabel="Home ownership" onPress={() => {
+            const current = useHomeStore.getState();
+            if (isAccountScopeCurrent(scope, current) && selectOwnershipTransferActor(current)?.role === transferActor.role) {
+              onOpenOwnership();
+            }
+          }} />
+        )}
+      </View>
       {sheet === "guest-access" && <GuestAccessExtension
         key={member.id}
         member={member}
@@ -486,14 +502,14 @@ function HouseholdMembers({ model }: { model: ProfileWorkspaceModel }) {
 }
 
 /** Separate membership, invitations, and inbox navigation within the household workspace. */
-export function HouseholdPage({ model }: { model: ProfileWorkspaceModel }) {
+export function HouseholdPage({ model, onOpenOwnership }: HouseholdPageProps) {
   const [page, setPage] = useState<"people" | "invite" | "sent" | "inbox">("people");
   return (
     <View style={styles.body}>
       <DeepTabs items={HOUSEHOLD_TABS} selectedId={page} onSelect={setPage} />
       <DeepCard style={styles.fill}>
         {page === "people" ? (
-          <HouseholdMembers model={model} />
+          <HouseholdMembers model={model} onOpenOwnership={onOpenOwnership} />
         ) : page === "invite" ? (
           <InvitePerson model={model} />
         ) : page === "sent" ? (
