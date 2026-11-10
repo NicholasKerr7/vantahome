@@ -27,11 +27,13 @@ import { useHomeStore } from "../../store/useHomeStore";
 import { supabase } from "../../services/supabaseClient";
 import { SentInvitationsPage } from "./SentInvitationsPage";
 import { selectOwnershipTransferActor } from "./ownershipTransferAccess";
+import { HouseholdSyncPanel } from "../household-sync/HouseholdSyncPanel";
 
 type HouseholdPageProps = { model: ProfileWorkspaceModel; onOpenOwnership?: () => void };
 
 const HOUSEHOLD_TABS = [
   { id: "people", label: "Members" },
+  { id: "shared", label: "Shared home" },
   { id: "invite", label: "Invite" },
   { id: "sent", label: "Sent" },
   { id: "inbox", label: "Inbox" },
@@ -501,15 +503,17 @@ function HouseholdMembers({ model, onOpenOwnership }: HouseholdPageProps) {
   );
 }
 
-/** Separate membership, invitations, and inbox navigation within the household workspace. */
+/** Separate membership, shared simulation state, and invitations within the household workspace. */
 export function HouseholdPage({ model, onOpenOwnership }: HouseholdPageProps) {
-  const [page, setPage] = useState<"people" | "invite" | "sent" | "inbox">("people");
+  const [page, setPage] = useState<"people" | "shared" | "invite" | "sent" | "inbox">("people");
   return (
     <View style={styles.body}>
       <DeepTabs items={HOUSEHOLD_TABS} selectedId={page} onSelect={setPage} />
       <DeepCard style={styles.fill}>
         {page === "people" ? (
           <HouseholdMembers model={model} onOpenOwnership={onOpenOwnership} />
+        ) : page === "shared" ? (
+          <HouseholdSyncPanel />
         ) : page === "invite" ? (
           <InvitePerson model={model} />
         ) : page === "sent" ? (

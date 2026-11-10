@@ -2,6 +2,8 @@ import React from 'react';
 import { act, renderHook } from '@testing-library/react-native';
 import { useSimulationControls } from '../useSimulationControls';
 import { useHomeStore, type HomeState } from '../../../store/useHomeStore';
+const mockReconnectShared = jest.fn(async () => true);
+jest.mock('../../household-sync/useHouseholdSync', () => ({ reconnectHouseholdSimulation: () => mockReconnectShared() }));
 
 jest.mock('../simulationSession', () => ({
   SimulationSession: jest.fn().mockImplementation((deliver) => ({
@@ -38,6 +40,16 @@ test('keeps simulation subscriptions live through StrictMode effect replay', () 
   const previous = result.current.state.deviceStates['living-light'].on;
   act(() => result.current.client.toggle('living-light'));
   expect(result.current.state.deviceStates['living-light'].on).toBe(!previous);
+});
+
+test('Retry refreshes current shared state and renews the local client without replaying a device command', () => {
+  mockReconnectShared.mockClear();
+  const { result } = renderHook(() => useSimulationControls());
+  const previous = result.current.client;
+  act(() => result.current.reconnect());
+  expect(mockReconnectShared).toHaveBeenCalledTimes(1);
+  expect(result.current.client).not.toBe(previous);
+  expect(result.current.ready).toBe(true);
 });
 
 

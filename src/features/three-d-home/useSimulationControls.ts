@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { SimulationControlClient } from './simulationControlClient';
 import { useHomeStore } from '../../store/useHomeStore';
 import { modelSimulationIdentity } from './modelSceneAccess';
+import { reconnectHouseholdSimulation } from '../household-sync/useHouseholdSync';
 
 /** Connect controls only while enabled, replacing disposed clients when the owning scope returns. */
 export function useSimulationControls(enabled = true) {
@@ -14,6 +15,10 @@ export function useSimulationControls(enabled = true) {
     client.connect();
     return () => client.dispose();
   }, [client, enabled]);
-  const reconnect = useCallback(() => setRevision((value) => value + 1), []);
+  /** Renew local controls and verify shared state; a failed command is never resent by Retry. */
+  const reconnect = useCallback(() => {
+    void reconnectHouseholdSimulation();
+    setRevision((value) => value + 1);
+  }, []);
   return { ...snapshot, client, reconnect };
 }

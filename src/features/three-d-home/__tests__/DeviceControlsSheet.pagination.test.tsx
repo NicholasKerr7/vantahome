@@ -69,6 +69,36 @@ test('an unread cache shows recovery without presenting editable default control
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
 
+test.each(['connecting', 'offline', 'conflict'] as const)('a %s shared home pauses controls and distinguishes recovery from local loading', (status) => {
+  const client = new SimulationControlClient();
+  const onRetry = jest.fn();
+  const screen = render(<DeviceControlsSheet deviceId="family-tv" client={client}
+    snapshot={{ ...client.getSnapshot(), status, ready: true, access: FULL_SCENE_ACCESS }} motionAllowed={false}
+    onClose={jest.fn()} onSelect={jest.fn()} onRetry={onRetry} />);
+  expect(screen.getByText('Shared controls are paused while the latest household settings are verified.')).toBeTruthy();
+  expect(screen.queryByLabelText('More TV controls')).toBeNull();
+  expect(screen.queryByText('Simulation · Saved on this device')).toBeNull();
+  if (status === 'connecting') expect(screen.queryByLabelText('Reconnect shared controls')).toBeNull();
+  else {
+    fireEvent.press(screen.getByLabelText('Reconnect shared controls'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  }
+  expect(screen.UNSAFE_queryAllByType(ScrollView)).toHaveLength(0);
+});
+
+test('shared server confirmation stays distinct from both local saving and pending sync', () => {
+  const client = new SimulationControlClient();
+  const props = { deviceId: 'family-tv', client, snapshot: { ...client.getSnapshot(), ready: true, access: FULL_SCENE_ACCESS },
+    motionAllowed: false, onClose: jest.fn(), onSelect: jest.fn() };
+  const screen = render(<DeviceControlsSheet {...props} snapshot={{ ...props.snapshot, status: 'syncing' }} />);
+  expect(screen.getByText('Syncing simulated changes…')).toBeTruthy();
+  expect(screen.queryByText('Simulation · Synced with household')).toBeNull();
+  screen.rerender(<DeviceControlsSheet {...props} snapshot={{ ...props.snapshot, status: 'shared' }} />);
+  expect(screen.getByText('Simulation · Synced with household')).toBeTruthy();
+  expect(screen.getByLabelText('More TV controls')).toBeTruthy();
+  expect(screen.queryByText('Simulation · Saved on this device')).toBeNull();
+});
+
 test('keeps every advanced TV control reachable with one large-text control per page and no scrolling', () => {
   const { screen, runAction } = renderControls('family-tv');
   measure(screen, 130);
@@ -175,6 +205,7 @@ test.each([true, false])('acknowledged smoke controls retain their safety tone w
   const snapshot = { ...original, ready: true, access: FULL_SCENE_ACCESS,
     state: { ...original.state, deviceStates: { ...original.state.deviceStates, [device.id]: state } } };
   const screen = render(<DeviceControlsSheet deviceId={device.id} client={client} snapshot={snapshot} motionAllowed={false} onClose={jest.fn()} onSelect={jest.fn()} />);
+  fireEvent.press(screen.getByLabelText('More smoke detector controls'));
   fireEvent.press(screen.getByLabelText('Status'));
   expect(screen.getByText(`${deviceStatus(device, state)} · Simulated readings`)).toHaveStyle({ color: detected ? theme.colors.alarmText : theme.colors.warningText });
 });

@@ -1,3 +1,4 @@
+import { equalSimulationDeviceState } from './simulationStateEquality';
 import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
 import { pauseSafetySimulation } from '../../../packages/home-scene/src/safetySimulation';
 import { projectFireSimulationToDemo } from './fireDemoMapping';
@@ -10,7 +11,7 @@ import {
   type SimulationSnapshot, type SimulationSnapshotMessage,
 } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { overlayDemoDevices, projectSimulationToDemo } from './demoDeviceMapping';
-import { simulationPersistence, type SimulationPersistence, type SimulationSaveStatus } from './simulationPersistence';
+import { simulationPersistence, type SimulationPersistence, type SimulationSaveStatus, type SimulationWriteIntent } from './simulationPersistence';
 import { parseSceneCatalogRequest, SCENE_CATALOG_CHANNEL, type SceneCatalogMessage, type SceneCatalogRequest } from '../../../packages/home-scene/src/sceneCatalogProtocol';
 import { canShareModelScenes, modelSceneCatalog } from './modelSceneCatalog';
 import { modelSimulationIdentity, modelSimulationScope, resolveModelSceneAccess, scopeSimulationSnapshot } from './modelSceneAccess';
@@ -48,6 +49,7 @@ export class SimulationSession {
   private requested = false;
   private projecting = false;
   private lastRequestId = 0;
+  private saveStatus: SimulationSaveStatus = 'loading';
   private expiryTimer: ReturnType<typeof setTimeout> | undefined;
   private unsubscribeStore: () => void;
   private unsubscribePersistence: () => void;
@@ -69,7 +71,13 @@ export class SimulationSession {
     this.sharedDemo = canShareDemoDevices(home, this.mode);
     // Account identifiers stay in the host's local storage key and never cross the frame boundary.
     this.scope = modelSimulationScope(home, this.sharedDemo);
-    this.unsubscribePersistence = this.persistence.subscribe(this.scope, onSaveStatus);
+    this.unsubscribePersistence = this.persistence.subscribe(this.scope, (status) => {
+      const blocked = ['connecting', 'offline', 'conflict'];
+      const authorityChanged = blocked.includes(status) !== blocked.includes(this.saveStatus);
+      this.saveStatus = status;
+      onSaveStatus(status);
+      if (this.requested && authorityChanged) this.sendSnapshot();
+    });
     this.unsubscribeState = this.persistence.subscribeState(this.scope, (next) => {
       if (this.disposed || next === this.state) return;
       const restoring = this.state === null;
@@ -153,7 +161,7 @@ export class SimulationSession {
   }
 
   /** Process ordered patches only after hydration and an explicit handshake. */
-  handleMessage(input: unknown): boolean {
+  handleMessage(input: unknown, intent: SimulationWriteIntent = 'command'): boolean {
     const catalogRequest = parseSceneCatalogRequest(input);
     if (catalogRequest) return this.handleSceneRequest(catalogRequest);
     const message = parseSimulationRequest(input);
@@ -162,7 +170,7 @@ export class SimulationSession {
     if (message.type === 'request') this.requested = true;
     // No renderer may queue edits against defaults before receiving a restored baseline.
     if (message.type === 'patch' && !this.state) return true;
-    this.ready = this.ready.then(() => {
+    this.ready = this.ready.then(async () => {
       if (this.disposed || !this.state) return;
       if (message.type === 'request') {
         this.requested = true;
@@ -176,7 +184,15 @@ export class SimulationSession {
       // Reject an entire mixed transaction, so a permitted light cannot smuggle a gate or camera edit.
       const allowed = new Set(access.controllableDeviceIds);
       const changedIds = Object.keys(message.changes.deviceStates ?? {});
-      if (!access.roomIds.length || changedIds.some((id) => !allowed.has(id))) {
+      if (!access.roomIds.length || changedIds.some((id) => !allowed.has(id))
+        || ['connecting', 'offline', 'conflict'].includes(this.saveStatus)
+        || (intent !== 'command' && !this.canAdvance())) {
+        this.sendSnapshot(message.requestId);
+        return;
+      }
+      // Shared writes keep their reviewed baseline. A newer phone edit must not be silently rebased away.
+      if (this.persistence.isShared(this.scope) && changedIds.some((id) =>
+        !equalSimulationDeviceState(message.base.deviceStates?.[id], previous.deviceStates[id]))) {
         this.sendSnapshot(message.requestId);
         return;
       }
@@ -186,10 +202,18 @@ export class SimulationSession {
         this.sendSnapshot(message.requestId);
         return;
       }
-      this.state = next;
       // Publish first so another session cannot project a stale dashboard snapshot over
       // unrelated scene devices while the shared host store notifies its subscribers.
-      this.persistence.save(this.scope, this.state);
+      try {
+        if (this.persistence.isShared(this.scope)) await this.persistence.saveMutation(this.scope, next, intent);
+        else this.persistence.save(this.scope, next);
+      } catch {
+        // Shared rejection keeps the authoritative state and acknowledges the optimistic renderer rollback.
+        if (!this.disposed) { this.state = this.persistence.getSnapshot(this.scope) ?? previous; this.sendSnapshot(message.requestId); }
+        return;
+      }
+      if (this.disposed) return;
+      this.state = this.persistence.getSnapshot(this.scope) ?? next;
       if (this.sharedDemo) {
         const current = this.store.getState();
         const devices = projectSimulationToDemo(this.state, previous, current.devices);
@@ -247,15 +271,24 @@ export class SimulationSession {
     this.pauseAuthorizedSafety(this.store.getState());
   }
 
+  /** The shared gate clock belongs only to its current server-verified lease holder. */
+  canAdvance(): boolean { return !this.disposed && this.persistence.canAdvance(this.scope); }
+
   /** Pause only this already-hydrated, authorized simulation scope; never load or touch another home. */
   private pauseAuthorizedSafety(home: HomeState): void {
-    if (this.disposed || !this.state || modelSimulationIdentity(home) !== this.identity
+    if (this.disposed || !this.state || !this.canAdvance() || modelSimulationIdentity(home) !== this.identity
       || !resolveModelSceneAccess(home, this.mode).controllableDeviceIds.includes(GATE_DEVICE_ID)) return;
     const deviceStates = pauseSafetySimulation(this.state.deviceStates);
     if (deviceStates === this.state.deviceStates) return;
-    this.state = { ...this.state, deviceStates };
-    this.persistence.save(this.scope, this.state);
-    if (this.requested) this.sendSnapshot();
+    const next = { ...this.state, deviceStates };
+    if (!this.persistence.isShared(this.scope)) {
+      this.state = next; this.persistence.save(this.scope, next);
+      if (this.requested) this.sendSnapshot();
+      return;
+    }
+    void this.persistence.saveMutation(this.scope, next, 'pause').catch(() => {
+      // A lost background request leaves the server lease to expire safely, never replays movement later.
+    });
   }
 
   /** Stop all cross-view updates when the frame closes, while accepted disk writes finish. */
@@ -280,7 +313,9 @@ export class SimulationSession {
       const home = this.store.getState();
       if (modelSimulationIdentity(home) !== this.identity) { this.revokeAccess(); return; }
       synchronizeRuntimeDeviceCatalog(home);
-      const access = modelSimulationIdentity(home) === this.identity ? resolveModelSceneAccess(home, this.mode) : EMPTY_SCENE_ACCESS;
+      const visibleAccess = modelSimulationIdentity(home) === this.identity ? resolveModelSceneAccess(home, this.mode) : EMPTY_SCENE_ACCESS;
+      const access = ['connecting', 'offline', 'conflict'].includes(this.saveStatus)
+        ? { ...visibleAccess, controllableDeviceIds: [] } : visibleAccess;
       this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: scopeSimulationSnapshot(this.state, access), access, placements: getRuntimePlacements(),
         ...(acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId }) });
     } catch {

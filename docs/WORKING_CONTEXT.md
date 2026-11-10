@@ -1,10 +1,10 @@
 # VantaHome working context
 
-Last maintained: **2026-11-03**. Read this before rediscovering the project.
+Last maintained: **2026-11-09**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
-milestones; preserve explicit hub/sync/iPad deferrals and distinguish verified
+milestones; preserve explicit hub/definition-sync/iPad deferrals and distinguish verified
 defects from ideas or untested risks.
 
 ## Locations and branch
@@ -50,6 +50,42 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Shared household simulation — November 9 / Preview 108 built and verified; migration 029 deployed
+
+- User authorized shared simulated device states so the Owner can observe permitted
+  household changes across phones. The [implementation and acceptance notes](HOUSEHOLD_SIMULATION_SYNC.md)
+  describe source, authority, recovery and remaining work. Scene/routine/profile
+  definitions remain local; hub execution and physical iPad testing stay deferred.
+- Account → Household / Profile → People → **Shared home** adds explicit Owner
+  review of the canonical home and this phone's saved baseline. First enable only;
+  other phones adopt the server state after preserving their original local cache.
+  Nothing is enabled automatically. Existing room/camera/control grants remain.
+- Per-device atomic revisions, idempotent receipts, current stored-session checks,
+  fail-closed restart/offline behavior, stale-account rejection and one foreground
+  server-leased gate clock are implemented. Accepted peer edits invalidate local
+  scene restoration even after edit-back. Reconnect reads without command replay.
+  Normal syncing has no Home banner; recovery is visible without restarting 3D.
+- Migration **029 is deployed only to staging** dcevusczjtmdpzrxpdou. Independent
+  verification matches source, restricted RPCs/direct writes, private clock and
+  receipt tables, default opaque replica identity and realtime publication.
+  Existing home/member/device/physical-state fingerprints are unchanged and
+  zero homes were enabled. Production is untouched.
+- The initial staging database-management HTTP 500 / SQLSTATE 28P01 failure is
+  resolved: one staging-only service restart restored healthy database status and
+  successful queries without changing passwords or restoring data. User reported
+  no known prior password/restore change. Evidence: `household-sync-staging-recovery.log`,
+  `household-sync-staging-deployment.log`, `household-sync-staging-verification.log`
+  and `household-sync-staging.json` in the work directory.
+- **1,030 application tests across 93 suites**, application TypeScript, all 29
+  migrations / **984 SQL assertions across 19 suites**,
+  five real two-connection races and 96 UI state/viewport combinations pass.
+  See the feature document and `work/household-sync-*` evidence for exact counts.
+  Signed Preview 108, staging identity/feature markers, all packaged artwork and
+  the exact unchanged 32,332,144-byte scene passed verification; production metadata
+  was restored. Package receipt: `work/preview108-verification.json`. Provisioning
+  expires **2026-11-11 04:54:44 UTC**; reverify or rebuild before later installation.
+  Hosted two-user and native acceptance remain pending; last installed stays 104.
 
 ## Home ownership transfer — November 3 / Preview 107 built and verified; installation deferred
 

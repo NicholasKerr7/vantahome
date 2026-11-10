@@ -11,6 +11,7 @@ import { canShareDemoDevices } from "./simulationSession";
 import { useSimulationControls } from "./useSimulationControls";
 import { useForegroundSafetyClock } from "./useForegroundSafetyClock";
 import { FireEmergencySimulation } from "./FireEmergencySimulation";
+import { useHouseholdSyncRuntime } from "../household-sync/useHouseholdSync";
 
 /** Own one connected simulation client and clock for this exact authorized model scope. */
 function ModelHomeSafetySession() {
@@ -31,6 +32,7 @@ function PhysicalConditionObserver() {
 
 /** Own the only embedded safety clock across native controls, voice, and the 3D view. */
 export default function ModelHomeSync() {
+  useHouseholdSyncRuntime();
   const enabled = useHomeStore(
     (state) => (isModelHome(state) && canShareDemoDevices(state, runtimePolicy.mode))
       || Object.keys(selectSimulationDeviceBindings(state)).length > 0,

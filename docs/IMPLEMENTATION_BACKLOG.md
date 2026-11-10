@@ -1,6 +1,6 @@
 # VantaHome implementation backlog
 
-Maintained November 3, 2026. This is the current delivery queue, not a claim that
+Maintained November 9, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
@@ -9,6 +9,7 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 | Work | State | Acceptance boundary |
 | --- | --- | --- |
+| Shared household simulation | Staging migration 029 deployed; Preview 108 built and verified; installation deferred | Explicit Owner baseline review, per-device revisions, current account/grant enforcement, durable shared authority, single gate lease, safe reconnect and local-cache backup. 1,030 app tests/93 suites, TypeScript, 984 SQL assertions/19 suites, five real races and 96 browser cases pass. Signed staging package/exact unchanged scene verified; production metadata restored. Initial staging connection failure resolved by one service restart without password changes. Source/grants/realtime and unchanged existing data verified; no home enabled. Hosted two-user/native acceptance pending. Definitions/hub/iPad deferrals retained. See [feature notes](HOUSEHOLD_SIMULATION_SYNC.md). |
 | Home ownership transfer | Staging migration 028 deployed; Preview 107 built and verified | Exact verified recipient and home review, 24-hour offer, recipient acceptance/decline, Owner cancellation and former Owner → Admin. Current session, recent password and enrolled-MFA checks enforced by SQL. Atomic decision, membership-change invalidation and protected owner column. 174 app tests/types, 883 SQL assertions, eight concurrent races and 53 browser cases pass. Signed staging package/native markers/exact unchanged scene verified; production metadata restored. Includes deferred 105/106. Hosted two-user/native acceptance pending. Installation deferred, last installed 104. |
 | Device Health | Preview 106 built and verified; installation deferred | More → Connections → Device Health, scoped searchable/swipeable artwork cards, source-aware details and local example alerts. Explicit model bindings only; physical status/freshness remain unreported. Guest/camera grants, expiry and lifecycle cleanup retained. 128 tests, app types, 21 responsive cases plus nine final layout/detail cases and touch/wheel flows pass. No physical health transport, saved-home writes, dependency or idle animation. Signed staging package/native markers/exact unchanged scene verified; production metadata restored. Includes deferred Preview 105 lighting work. Last installed remains Preview 104; hands-on acceptance pending. |
 | Lighting connection preparation | Preview 105 reverified; user deferred installation November 2 | Shared native lighting presentation plus isolated Owner/Admin sample connection under Vanta Bridge preparation. Explicit power-only/dimmer/color capabilities; normal/slow/failure/offline/stale states; acknowledgment separate from observation; no saved-home writes. Access/account/home/role changes, background/blur and close invalidate pending work. 110 tests, app types and 28 browser layout cases pass. Regular viewports fit; tiny-screen recovery, 44px targets and reduced motion retained. Physical routing/power-only pilot unchanged; no hardware connected. Signed staging package, new native markers and exact unchanged scene verified; production metadata restored. Last installed remains Preview 104; physical acceptance pending. |
@@ -63,7 +64,8 @@ and Devices, including smoke/CO. The generic inspector remains the fallback for
 unsupported or view-only cases and still provides advanced settings. This completes
 this presentation queue, not hardware integration or physical acceptance. Prioritize
 the outstanding iPhone interaction/persistence checks before another console family;
-keep hub execution, household sync and physical iPad testing deferred.
+keep hub execution, scene/routine/profile definition sync and physical iPad testing deferred.
+Shared simulated device states are now authorized; see the latest delivery above.
 
 ## Most recent adjacent findings
 
@@ -464,7 +466,7 @@ TV geometry and its SQL footprint now agree. Preview 66 delivers
 server-backed rename/reposition/move with optimistic revisions and exact retry
 receipts. Additional fixture templates and exact furniture collision checks remain
 follow-up opportunities. Household registry
-placement persistence is delivered; shared simulation control-state sync remains
+placement persistence is delivered. Historical scope at that milestone: shared simulation control-state sync remained
 deferred. See the handoff for verified evidence, not a claim of exhaustive review.
 
 Preview 66's bounded edit review also fixed missing-catalog crashes in open guest
@@ -558,6 +560,10 @@ Record actual quality, latency and cost without treating two requests as a bench
 Do not treat the availability response as a provider health test. Never read or store the key in
 chat, repository, screenshots or evidence. See the handoff for prepared tabs/state.
 
+0. **Finish shared simulation acceptance:** migration 029 is deployed and Preview
+   108 is verified. Recheck signing, install when requested and perform the Owner/Guest two-phone
+   acceptance in [feature notes](HOUSEHOLD_SIMULATION_SYNC.md). No existing home
+   has been enabled. Hosted signed-in synchronization must still be demonstrated.
 1. **Account lifecycle:** safe email changes, account deletion with ownership/data
    dependencies, and optional whole-app biometric lock. Ownership transfer is
    implemented in staging migration 028 with browser/native-source tests.

@@ -12,6 +12,8 @@ import { useHomeStore } from '../../../store/useHomeStore';
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
 const mockDispatch = jest.fn();
+const mockReconnectShared = jest.fn(async () => true);
+jest.mock('../../household-sync/useHouseholdSync', () => ({ reconnectHouseholdSimulation: () => mockReconnectShared() }));
 let mockFocused = true;
 let mockStatus: SceneSurfaceProps['onStatus'];
 let mockSceneProps: SceneSurfaceProps;
@@ -28,7 +30,7 @@ jest.mock('../SceneSurface', () => ({ __esModule: true, default: (props: SceneSu
   return <Text testID="scene-surface">Packaged scene</Text>;
 } }));
 
-beforeEach(() => { AppState.currentState = 'active'; mockFocused = true; mockGoBack.mockClear(); mockNavigate.mockClear(); mockDispatch.mockClear(); jest.useFakeTimers(); });
+beforeEach(() => { AppState.currentState = 'active'; mockFocused = true; mockGoBack.mockClear(); mockNavigate.mockClear(); mockDispatch.mockClear(); mockReconnectShared.mockClear(); jest.useFakeTimers(); });
 afterEach(() => { AppState.currentState = originalAppState; jest.useRealTimers(); jest.restoreAllMocks(); });
 
 test('keeps the simulation boundary and main feature menu available during load', () => {
@@ -99,6 +101,36 @@ test('a failed scene request never claims its changes were applied', () => {
   expect(screen.getByText('A change couldn’t be completed or saved. Review your controls and try again.')).toBeTruthy();
   expect(screen.queryByText(/Changes work for this session/)).toBeNull();
   expect(screen.getByLabelText('Open home assistant')).toBeTruthy();
+});
+
+test.each(['offline', 'conflict'] as const)('%s shared controls retain graphics and reconnect without replaying arrival', async (saveStatus) => {
+  const screen = render(<ThreeDHomeScreen />);
+  act(() => mockStatus('ready'));
+  const surface = screen.getByTestId('scene-surface');
+  act(() => mockSceneProps.onSaveStatus?.(saveStatus));
+  expect(screen.getByText(saveStatus === 'offline'
+    ? 'Shared simulation is offline. Last synced settings are shown; controls are paused.'
+    : 'Shared settings changed on another device. Reconnect to review the latest state before trying again.')).toBeTruthy();
+  await act(async () => { fireEvent.press(screen.getByLabelText('Reconnect house controls')); });
+  expect(mockReconnectShared).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('scene-surface')).toBe(surface);
+  expect(screen.queryByText('Opening your property…')).toBeNull();
+  act(() => mockSceneProps.onSaveStatus?.('shared'));
+  expect(screen.queryByLabelText('Reconnect house controls')).toBeNull();
+  expect(screen.getByLabelText('Open home assistant')).toBeTruthy();
+});
+
+test('shared connection failure releases the arrival shield without destroying paused graphics', () => {
+  const publish = jest.fn();
+  const context = { register: () => ({ publish, release: jest.fn() }), initialArrivalComplete: false };
+  const screen = render(<ArrivalContext.Provider value={context}><ThreeDHomeScreen /></ArrivalContext.Provider>);
+  const surface = screen.getByTestId('scene-surface');
+  act(() => mockSceneProps.onSaveStatus?.('offline'));
+  expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'error' }));
+  act(() => jest.advanceTimersByTime(90_000));
+  expect(screen.getByTestId('scene-surface')).toBe(surface);
+  expect(screen.queryByText('The 3D view couldn’t load')).toBeNull();
+  expect(screen.getByLabelText('Reconnect house controls')).toBeTruthy();
 });
 test('pauses covered graphics without replacing the loaded scene and resumes on dismissal', () => {
   const screen = render(<ThreeDHomeScreen />);

@@ -10,6 +10,7 @@ import { hotspotPresentation } from '../../../packages/home-scene/src/hotspotPre
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
 import type { ControlSnapshot } from './simulationControlClient';
 import { simulationLoadFailureMessage } from './simulationPersistence';
+import { isSharedSimulationPaused, simulationControlsStatus } from './simulationStatusPresentation';
 import { NativeCapabilityControl, type EnumCapability } from './NativeCapabilityControl';
 import { ControlPagination } from './ControlPagination';
 import CinematicSurface from '../../components/CinematicSurface';
@@ -132,9 +133,9 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   const device = deviceVisible ? getDevice(deviceId) : undefined;
   const showingBrowser = browsing || !device;
   const loadFailure = simulationLoadFailureMessage(snapshot.status);
-  const status = loadFailure ?? (snapshot.status === 'disconnected' ? 'Session changed. Close and reopen controls.'
-    : snapshot.status === 'error' ? 'Could not save locally. Your changes are still in this session.'
-      : !snapshot.ready ? 'Loading saved controls…' : snapshot.status === 'saving' ? 'Saving simulation…' : 'Simulation · Saved on this device');
+  const sharedPaused = isSharedSimulationPaused(snapshot.status);
+  const sharedRecovery = snapshot.status === 'offline' || snapshot.status === 'conflict';
+  const status = simulationControlsStatus(snapshot.status, snapshot.ready);
   if (emergencyVisible) return null;
   if (editing && editAllowed) return <Suspense fallback={<View style={styles.overlay}><Text style={styles.detail}>Preparing device editor…</Text></View>}>
     <SimulationDeviceEditor key={editing.deviceId} deviceId={editing.deviceId} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />
@@ -150,17 +151,18 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
               <Text accessibilityRole="header" accessibilityLabel={showingBrowser ? 'Device library' : device.name} numberOfLines={compact ? 1 : 2} style={[styles.title, compact && styles.compactTitle]}>{showingBrowser ? 'Device library' : device.name}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close device controls" onPress={onClose} style={styles.button}><Text style={styles.label}>Done</Text></Pressable>
           </View>
-          {!snapshot.ready ? <View style={styles.content}><Text style={styles.detail}>{loadFailure ? 'Controls will stay paused until your saved settings can be restored.' : 'Preparing your saved controls…'}</Text></View>
+          {(!snapshot.ready || sharedPaused) ? <View style={styles.content}><Text style={styles.detail}>{loadFailure ? 'Controls will stay paused until your saved settings can be restored.'
+            : sharedPaused ? 'Shared controls are paused while the latest household settings are verified.' : 'Preparing your saved controls…'}</Text></View>
             : showingBrowser ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={visibleDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
               smokeScenariosAllowed={device.kind === 'smoke' && canRunSmokeScenarios(snapshot.access, device.id)}
               client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale}
               onWatchCamera={onWatchCamera} motionAllowed={motionAllowed && !snapshot.state.motionDisabled} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
           <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
-          {!showingBrowser && editableDevice && snapshot.ready && <Pressable accessibilityRole="button" accessibilityLabel="Edit device"
+          {!showingBrowser && editableDevice && snapshot.ready && !sharedPaused && <Pressable accessibilityRole="button" accessibilityLabel="Edit device"
             onPress={openEditor} style={styles.button}><Text style={styles.label}>Edit device</Text></Pressable>}
           {!showingBrowser && device?.templateDeviceId && <RemovePlacedDevice key={`remove:${device.id}`} modelDeviceId={device.id} onRemoved={onClose} />}
-          {(loadFailure || snapshot.status === 'disconnected') && onRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry loading saved controls" onPress={onRetry} style={styles.button}><Text style={styles.label}>Retry loading</Text></Pressable>}
+          {(loadFailure || snapshot.status === 'disconnected' || sharedRecovery) && onRetry && <Pressable accessibilityRole="button" accessibilityLabel={sharedRecovery ? 'Reconnect shared controls' : 'Retry loading saved controls'} onPress={onRetry} style={styles.button}><Text style={styles.label}>{sharedRecovery ? 'Reconnect' : 'Retry loading'}</Text></Pressable>}
           </View>
         </CinematicSurface>
       </SafeAreaView>

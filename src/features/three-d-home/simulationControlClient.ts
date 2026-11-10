@@ -8,7 +8,7 @@ import { EMPTY_SCENE_ACCESS, type SceneAccess } from '../../../packages/home-sce
 import { SimulationSession } from './simulationSession';
 import type { SimulationSaveStatus } from './simulationPersistence';
 
-type Session = Pick<SimulationSession, 'handleMessage' | 'dispose' | 'pauseSafety'>;
+type Session = Pick<SimulationSession, 'handleMessage' | 'dispose' | 'pauseSafety'> & Partial<Pick<SimulationSession, 'canAdvance'>>;
 type SessionFactory = (deliver: (message: SimulationSnapshotMessage) => void, status: (status: SimulationSaveStatus) => void) => Session;
 export type ControlSnapshot = { state: SimulationSnapshot; ready: boolean; status: SimulationSaveStatus; access?: SceneAccess };
 
@@ -41,7 +41,7 @@ export class SimulationControlClient {
     if (this.session) return;
     this.publish({ ...this.value, ready: false });
     this.session = this.createSession(this.receive, (status) => {
-      const unavailable = status === 'disconnected' || status === 'loading' || status === 'load-error' || status === 'corrupt';
+      const unavailable = ['disconnected', 'loading', 'load-error', 'corrupt', 'connecting', 'offline', 'conflict'].includes(status);
       this.publish({ ...this.value, status, ready: !unavailable && this.value.ready });
     });
     this.session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'request' });
@@ -69,7 +69,10 @@ export class SimulationControlClient {
   };
 
   /** Advance only active foreground seconds; idle ticks do not write storage. */
-  advanceSafety = (seconds: number): void => { this.updateSafety((states) => advanceSafetySimulation(states, seconds)); };
+  advanceSafety = (seconds: number): void => {
+    if (this.session?.canAdvance?.() === false) return;
+    this.updateSafety((states) => advanceSafetySimulation(states, seconds), 'tick');
+  };
 
   /** Interrupt motion/countdowns on background without using wall-clock catch-up. */
   pauseSafety = (): void => { if (!this.closed) this.session?.pauseSafety(); };
@@ -84,12 +87,12 @@ export class SimulationControlClient {
   resetFire = (): void => { this.updateSafety(resetFireIncident); };
 
   /** Diff cross-device operations so concurrent surfaces retain unrelated edits. */
-  private updateSafety(reduce: (states: DeviceStates) => DeviceStates): void {
+  private updateSafety(reduce: (states: DeviceStates) => DeviceStates, intent: 'command' | 'tick' = 'command'): void {
     const state = this.value.state;
     const next = reduce(state.deviceStates);
     if (next === state.deviceStates) return;
     const changes = diffSimulationSnapshots(state, { ...state, deviceStates: next });
-    this.commit(changes);
+    this.commit(changes, intent);
   }
 
   /** Finish acknowledged local edits when the panel closes, without retaining UI listeners. */
@@ -114,7 +117,7 @@ export class SimulationControlClient {
     }
     let state = this.canonical;
     for (const { base, changes } of this.pending.values()) state = rebaseSimulationChanges(state, base, changes);
-    this.publish({ ...this.value, state, access, ready: true });
+    this.publish({ ...this.value, state, access, ready: !['connecting', 'offline', 'conflict', 'disconnected', 'load-error', 'corrupt'].includes(this.value.status) });
     if (this.closed && !this.pending.size) { this.session?.dispose(); this.session = null; }
   };
 
@@ -132,7 +135,7 @@ export class SimulationControlClient {
   }
 
   /** Submit bounded local changes through the same bridge as the rendered model. */
-  private commit(changes: SimulationChanges): void {
+  private commit(changes: SimulationChanges, intent: 'command' | 'tick' = 'command'): void {
     if (this.closed || !this.value.ready || !this.session || !changes.deviceStates || !Object.keys(changes.deviceStates).length) return;
     if (Object.keys(changes.deviceStates).some((id) => !this.value.access?.controllableDeviceIds.includes(id))) return;
     const next = mergeSimulationChanges(this.value.state, changes);
@@ -143,7 +146,8 @@ export class SimulationControlClient {
     const base = simulationChangeBaseline(this.value.state, changes);
     this.pending.set(requestId, { base, changes });
     this.publish({ ...this.value, state: next });
-    if (!this.session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId, base, changes })) {
+    const message = { channel: 'vantahome-simulation', version: 1, type: 'patch', requestId, base, changes };
+    if (!(intent === 'command' ? this.session.handleMessage(message) : this.session.handleMessage(message, intent))) {
       this.pending.delete(requestId);
       let state = this.canonical;
       for (const pending of this.pending.values()) state = rebaseSimulationChanges(state, pending.base, pending.changes);

@@ -13,6 +13,8 @@ import SceneSurface from '../features/three-d-home/SceneSurface';
 import PropertyArrival from '../features/home-access/PropertyArrival';
 import type { SceneStatus, SceneSurfaceProps } from '../features/three-d-home/protocol';
 import { simulationLoadFailureMessage, type SimulationSaveStatus } from '../features/three-d-home/simulationPersistence';
+import { sharedSimulationNotice } from '../features/three-d-home/simulationStatusPresentation';
+import { reconnectHouseholdSimulation } from '../features/household-sync/useHouseholdSync';
 import HomeWorkspace from '../features/home-shell/HomeWorkspace';
 import HomePanelBoundary from '../features/home-shell/HomePanelBoundary';
 import { theme } from '../theme/theme';
@@ -54,26 +56,34 @@ function SceneSession({ onRetry, onDevices, covered, onSceneStatus, onChromeSnap
   const [status, setStatus] = useState<SceneStatus | 'loading'>('loading');
   const [saveStatus, setSaveStatus] = useState<SimulationSaveStatus>('saving');
   const loadFailure = simulationLoadFailureMessage(saveStatus);
+  const sharedNotice = sharedSimulationNotice(saveStatus);
+  const sharedRecovery = saveStatus === 'offline' || saveStatus === 'conflict';
+  const recoveryNeeded = Boolean(loadFailure || sharedRecovery);
+  /** A reconnect refreshes shared state while retaining the existing camera and renderer. */
+  function reconnectControls(): void {
+    if (sharedRecovery) void reconnectHouseholdSimulation();
+    else onRetry();
+  }
   /** Notify the native header without replacing the renderer's stable load callback. */
   const updateStatus = useCallback((next: SceneStatus) => { setStatus(next); }, []);
   // Release the unified arrival shield so cache recovery stays reachable. Keep the
   // renderer mounted: another surface may restore the same validated baseline.
-  useEffect(() => { onSceneStatus(loadFailure ? 'error' : status); }, [loadFailure, status, onSceneStatus]);
+  useEffect(() => { onSceneStatus(recoveryNeeded ? 'error' : status); }, [recoveryNeeded, status, onSceneStatus]);
   useEffect(() => {
-    if (status !== 'loading' || loadFailure) return;
+    if (status !== 'loading' || recoveryNeeded) return;
     const timeout = setTimeout(() => updateStatus('error'), 90_000);
     return () => clearTimeout(timeout);
-  }, [status, updateStatus, loadFailure]);
+  }, [status, updateStatus, recoveryNeeded]);
   return <View style={styles.scene}>
     {status !== 'error' && <SceneSurface suspended={covered || workspaceCovered} onStatus={updateStatus} onSaveStatus={setSaveStatus} onDeviceRoutines={openDeviceRoutines}
       onChromeSnapshot={onChromeSnapshot} chromeCommand={chromeCommand} onDeviceEdit={onDeviceEdit} onCameraWatch={onCameraWatch} onSceneEndReview={onSceneEndReview} previewCommand={previewCommand} onPreviewReport={onPreviewReport} allowChromePreferencesWhileSuspended={allowChromePreferencesWhileSuspended && !workspaceCovered} />}
-    {(loadFailure || (status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected'))) && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
-      <Text style={styles.saveNoticeText}>{loadFailure ?? (saveStatus === 'error'
+    {(loadFailure || sharedNotice || (status === 'ready' && (saveStatus === 'error' || saveStatus === 'disconnected'))) && <View style={styles.saveNotice} accessibilityLiveRegion="polite">
+      <Text style={styles.saveNoticeText}>{loadFailure ?? sharedNotice ?? (saveStatus === 'error'
         ? 'A change couldn’t be completed or saved. Review your controls and try again.'
         : 'Your app session changed. Reload the house to reconnect.')}</Text>
-      {(loadFailure || saveStatus === 'disconnected') && <Pressable accessibilityRole="button" onPress={onRetry} accessibilityLabel="Reconnect house controls" style={styles.retry}><Text style={styles.retryText}>{loadFailure ? 'Retry loading' : 'Reconnect'}</Text></Pressable>}
+      {(loadFailure || saveStatus === 'disconnected' || sharedRecovery) && <Pressable accessibilityRole="button" onPress={reconnectControls} accessibilityLabel="Reconnect house controls" style={styles.retry}><Text style={styles.retryText}>{loadFailure ? 'Retry loading' : 'Reconnect'}</Text></Pressable>}
     </View>}
-    {status === 'loading' && !unifiedArrival && !loadFailure && <PropertyArrival active={!covered && !workspaceCovered} />}
+    {status === 'loading' && !unifiedArrival && !recoveryNeeded && <PropertyArrival active={!covered && !workspaceCovered} />}
     {status === 'error' && <View style={styles.feedback} accessibilityRole="alert">
       <Ionicons name="cube-outline" size={32} color={theme.colors.accent} />
       <Text style={styles.feedbackTitle}>The 3D view couldn’t load</Text>
