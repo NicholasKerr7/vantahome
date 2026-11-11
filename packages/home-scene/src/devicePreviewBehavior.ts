@@ -8,9 +8,9 @@ function percentage(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
 }
 
-/** Reverse changes rotor direction; the explicit sleep preview caps the requested motor speed. */
-export function fanPreviewVelocity(_device: DeviceDefinition, state: DeviceState): number {
-  return readFanActivity(state).velocity;
+/** Extractors keep one exhaust direction; compatible fans retain Reverse and the shared quiet cap. */
+export function fanPreviewVelocity(device: DeviceDefinition, state: DeviceState): number {
+  return readFanActivity(state, device).velocity;
 }
 
 /** Describe visual airflow only; temperature, humidity and energy telemetry remain unchanged. */

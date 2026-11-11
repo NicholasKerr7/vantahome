@@ -45,7 +45,7 @@ function applyAction(current: DeviceState, id: string, action: SceneAction): Dev
     if (next.on !== isOn) next = toggleDeviceState(id, next);
   }
   for (const [field, value] of Object.entries(settings)) {
-    const capability = getCapabilities(definition.kind).find((entry) => 'field' in entry && entry.field === field);
+    const capability = getCapabilities(definition).find((entry) => 'field' in entry && entry.field === field);
     if (!capability || capability.type === 'stat' || validateSetting(capability, value) === undefined) {
       throw new Error('A saved scene setting is unavailable. Edit the scene before running it.');
     }

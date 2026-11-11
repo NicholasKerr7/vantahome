@@ -28,7 +28,7 @@ export function DeviceControlCard({ deviceId, inSheet = false }: { deviceId: Dev
   const temperatureRange = device.kind === 'ac';
   const levelValue = temperatureRange ? Number(readDeviceSetting(device, current, 'tempC')) : current.level;
   const levelText = temperatureRange ? `${levelValue}°C` : formatDeviceLevel(device, current.level);
-  const capabilities = getCapabilities(device.kind).filter((item) => !(legacyRange && 'field' in item && ['brightness', 'speed', 'openPercent', 'tempC'].includes(item.field)));
+  const capabilities = getCapabilities(device).filter((item) => !(legacyRange && 'field' in item && ['brightness', 'speed', 'openPercent', 'tempC'].includes(item.field)));
   const readings = capabilities.filter((item) => item.type === 'stat');
   const controls = capabilities.filter((item) => item.type !== 'stat');
   const actionOnly = isMonitor(device.kind) || ['door', 'camera', 'coffee', 'vacuum', 'washer', 'dryer', 'dishwasher', 'microwave', 'generator'].includes(device.kind);

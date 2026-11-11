@@ -47,6 +47,19 @@ test('rejects mixed devices, forbidden fields and invalid grants before any part
   expect(await store.load(scope)).toBe(original);
 });
 
+test('an old extractor Reverse scene is rejected atomically instead of reporting an unsupported setting ran', async () => {
+  const home = virtualSceneHome();
+  const scene: Scene = { id: 'legacy-extractor', name: 'Legacy extractor', roomId: '', scope: 'home', actions: [
+    { type: 'patch', deviceId: 'registry-device:living-light', patch: { brightness: 12 } },
+    { type: 'patch', deviceId: 'registry-device:bath-1-fan', patch: { fanDirection: 'reverse' } },
+  ] };
+  home.scenes = [scene];
+  const store = persistence(); const scope = modelSimulationScope(home, false);
+  const original = await store.load(scope);
+  await expect(runSimulationScene(home, scene, () => home, undefined, store)).rejects.toThrow('Edit the scene before running it');
+  expect(await store.load(scope)).toBe(original);
+});
+
 test.each(['identity', 'permission', 'deletion', 'blocking'] as const)('rejects %s changes while storage hydrates', async (change) => {
   let release!: (value: string | null) => void;
   const hydration = new Promise<string | null>((resolve) => { release = resolve; });

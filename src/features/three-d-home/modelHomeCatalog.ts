@@ -115,7 +115,7 @@ function modeledDevice(definition: DeviceDefinition, state: DeviceState, previou
     id: definition.id, name: definition.name, roomId: definition.roomId, kind: definition.kind,
     isOn: isMonitor(definition.kind) ? true : definition.kind === 'camera' ? previous?.isOn ?? true : state.on,
   };
-  for (const capability of getCapabilities(definition.kind)) {
+  for (const capability of getCapabilities(definition)) {
     if (!('field' in capability) || !hostFields.has(capability.field)) continue;
     const reading = readDeviceSetting(definition, state, capability.field);
     const value = capability.type === 'stat' ? reading : validateSetting(capability, reading);

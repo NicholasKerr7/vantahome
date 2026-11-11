@@ -112,7 +112,7 @@ export function overlayDemoDevices(
       && typeof device.isOn === "boolean" && previous.on !== device.isOn) {
       next = { ...next, on: device.isOn };
     }
-    for (const capability of getCapabilities(definition.kind)) {
+    for (const capability of getCapabilities(definition)) {
       if (!("field" in capability) || !isSharedControl(capability.field)) continue;
       if (positionPowerChanged && capability.field === 'openPercent') continue;
       // A restored safety-aware gate owns its position; stale dashboard cache cannot restart it.
@@ -173,7 +173,7 @@ export function projectSimulationToDemo(
       && typeof state.on === "boolean" && state.on !== previous.on && state.on !== device.isOn) {
       next = { ...next, isOn: state.on };
     }
-    for (const capability of getCapabilities(definition.kind)) {
+    for (const capability of getCapabilities(definition)) {
       if (!("field" in capability) || !isSharedControl(capability.field)) continue;
       const value = validateSetting(capability, readDeviceSetting(definition, state, capability.field));
       const oldValue = validateSetting(capability, readDeviceSetting(definition, previous, capability.field));

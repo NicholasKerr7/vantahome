@@ -8,7 +8,7 @@ import type { DeviceState, SettingValue } from './simulationTypes';
 import { configurationPageNote, describeCapabilitySupport } from './deviceCapabilitySupport';
 import { readVacuumActivity, vacuumActivityLabel } from './vacuumActivity';
 import { readSpeakerPlayback, speakerPlaybackStatus } from './speakerPlayback';
-import { readFanActivity } from './fanActivity';
+import { isExtractorFan, readFanActivity, type FanDeviceProfile } from './fanActivity';
 import { isLaundryKind, laundryActivityLabel, readLaundryActivity } from './laundryActivity';
 import { dishwasherActivityLabel, readDishwasherActivity } from './dishwasherActivity';
 import { isOpeningDeviceKind, openingPositionStatus, readOpeningPosition } from './openingPosition';
@@ -41,9 +41,19 @@ const profiles = Object.fromEntries(DEVICE_KINDS.map((kind) => {
 })) as Record<DeviceKind, DeviceCapability[]>;
 const defaults: Partial<Record<DeviceKind, Record<string, SettingValue>>> = inventory.defaults;
 export const LEGACY_DEVICE_IDS = ['living-light', 'living-fan', 'family-tv', 'laundry-washer', 'master-ac', 'master-blinds', 'entry-gate'] as const;
+const unsupportedExtractorFields = new Set(['fanDirection', 'fanOscillation', 'fanLightOn', 'fanAutoMode']);
+// Retain the generic kind schema for old saves; device-aware views and commands
+// expose only this fixed extractor's supported controls. Quiet reuses the existing cap.
+const extractorCapabilities = profiles.fan
+  .filter((capability) => !('field' in capability) || !unsupportedExtractorFields.has(capability.field))
+  .map((capability) => 'field' in capability && capability.field === 'fanSleepMode'
+    ? { ...capability, label: 'Quiet mode' } : capability);
 
-/** Resolve supported controls from the audited repository's declarative profiles. */
-export function getCapabilities(kind: DeviceKind): readonly DeviceCapability[] { return profiles[kind]; }
+/** Resolve model-specific controls while preserving kind-only schema and persistence callers. */
+export function getCapabilities(kindOrDevice: DeviceKind | FanDeviceProfile): readonly DeviceCapability[] {
+  if (typeof kindOrDevice === 'string') return profiles[kindOrDevice];
+  return isExtractorFan(kindOrDevice) ? extractorCapabilities : profiles[kindOrDevice.kind];
+}
 
 export interface DeviceControlPage {
   id: string;
@@ -64,12 +74,12 @@ function controlGroup(capability: DeviceCapability): ControlGroup {
 }
 
 /** Paginate every control once, keeping compact actions separate from touch-sized fields. */
-export function getControlPages(kindOrDevice: DeviceKind | Pick<DeviceDefinition, 'kind'>, options: { maxControlsPerPage?: 1 | 2 | 3; maxActionsPerPage?: 1 | 2 | 3 | 4 | 6 } = {}): readonly DeviceControlPage[] {
+export function getControlPages(kindOrDevice: DeviceKind | FanDeviceProfile, options: { maxControlsPerPage?: 1 | 2 | 3; maxActionsPerPage?: 1 | 2 | 3 | 4 | 6 } = {}): readonly DeviceControlPage[] {
   const kind = typeof kindOrDevice === 'string' ? kindOrDevice : kindOrDevice.kind;
   const pages: DeviceControlPage[] = [];
   const labels: Record<ControlGroup, string> = { controls: 'Controls', modes: 'Modes', schedule: 'Schedule', status: 'Status' };
   for (const group of ['controls', 'modes', 'schedule', 'status'] as const) {
-    const fields = getCapabilities(kind).filter((item) => controlGroup(item) === group);
+    const fields = getCapabilities(kindOrDevice).filter((item) => controlGroup(item) === group);
     const batches: DeviceCapability[][] = [];
     for (const capability of fields) {
       const last = batches[batches.length - 1];
@@ -113,7 +123,8 @@ export function readDeviceSetting(device: DeviceDefinition, state: DeviceState, 
   if (field === 'armed' && device.kind === 'camera') return state.on;
   if (field === 'powerW' && device.kind === 'generator') return state.on ? Math.round(state.level * 60) : 0;
   if (field === 'chargePercent' && device.kind === 'battery') return state.level;
-  if (field === 'speed' && device.kind === 'fan') return readFanActivity(state).speed;
+  if (field === 'speed' && device.kind === 'fan') return readFanActivity(state, device).speed;
+  if (field === 'fanDirection' && isExtractorFan(device)) return 'forward';
   if (field === 'openPercent' && isOpeningDeviceKind(device.kind)) return readOpeningPosition(state) ?? Number.NaN;
   if (field === 'openPercent' || (field === 'brightness' && device.kind === 'light')) return state.level;
   if (field === 'tempC' && device.kind === 'ac' && state.settings?.[field] === undefined) return 26 - Math.round(state.level * 0.08);
@@ -155,7 +166,7 @@ export function deviceActionFeedback(device: DeviceDefinition, state: DeviceStat
     const position = readOpeningPosition(state);
     return position === null ? 'Position unavailable' : position === 0 ? 'Closed in preview' : `${position}% open in preview`;
   }
-  if (device.kind === 'fan') return readFanActivity(state).status;
+  if (device.kind === 'fan') return readFanActivity(state, device).status;
   // A remembered transport command cannot override current power, mute or playback state.
   if (device.kind === 'speaker') {
     const status = deviceStatus(device, state);
@@ -237,7 +248,7 @@ export function deviceStatus(device: DeviceDefinition, state: DeviceState): stri
   if (device.kind === 'camera') return readDeviceSetting(device, state, 'armed') ? 'Armed' : 'Disarmed';
   if (isMonitor(device.kind)) return state.settings?.sampleChecked ? 'Sample checked' : 'Monitoring sample';
   if (device.kind === 'vacuum') return vacuumActivityLabel(state);
-  if (device.kind === 'fan') return readFanActivity(state).status;
+  if (device.kind === 'fan') return readFanActivity(state, device).status;
   if (isLaundryKind(device.kind)) return laundryActivityLabel(device.kind, state);
   if (device.kind === 'dishwasher') return dishwasherActivityLabel(state);
   if (isOpeningDeviceKind(device.kind)) return openingPositionStatus(state);

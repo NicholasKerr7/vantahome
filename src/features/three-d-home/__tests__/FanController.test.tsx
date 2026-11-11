@@ -22,8 +22,8 @@ jest.mock('../useDeviceRoutines', () => ({ useDeviceRoutines: () => jest.fn() })
 afterEach(() => jest.restoreAllMocks());
 
 /** Keep shared state projection real while capturing each scoped command. */
-function setup() {
-  const device = getDevice('living-fan')!;
+function setup(deviceId = 'living-fan') {
+  const device = getDevice(deviceId)!;
   const state: DeviceState = { ...createDefaultSimulationSnapshot().deviceStates[device.id], on: false, level: 60,
     settings: { speed: 60, fanDirection: 'forward', fanSleepMode: false } };
   const client = { toggle: jest.fn(), setSetting: jest.fn(), runAction: jest.fn(), setLevel: jest.fn(), setPower: jest.fn() };
@@ -32,15 +32,15 @@ function setup() {
 }
 
 /** Exercise the real inspector's hydration, motion policy, access and keyed navigation boundaries. */
-function renderInspector() {
+function renderInspector(deviceId = 'living-fan') {
   const client = { toggle: jest.fn(), setSetting: jest.fn(), runAction: jest.fn(), setLevel: jest.fn(), setPower: jest.fn() };
   const snapshot: ControlSnapshot = { state: createDefaultSimulationSnapshot(), status: 'saved', ready: true, access: FULL_SCENE_ACCESS };
-  const props = { deviceId: 'living-fan', client, snapshot, motionAllowed: false, onClose: jest.fn(), onSelect: jest.fn() };
+  const props = { deviceId, client, snapshot, motionAllowed: false, onClose: jest.fn(), onSelect: jest.fn() };
   return { screen: render(<DeviceControlsSheet {...props} />), props, client };
 }
 
-test('regular, compact and large-text controls keep 44-point targets and contained scrolling', () => {
-  const { screen, props } = setup();
+test.each(['living-fan', 'bath-1-fan'])('%s regular, compact and large-text controls keep 44-point targets and contained scrolling', (deviceId) => {
+  const { screen, props } = setup(deviceId);
   for (const [compact, fontScale] of [[false, 1], [true, 1], [true, 1.8]] as const) {
     screen.rerender(<FanController {...props} compact={compact} fontScale={fontScale} />);
     for (const control of [...screen.getAllByRole('button'), ...screen.getAllByRole('switch'), ...screen.getAllByRole('radio')]) {
@@ -55,6 +55,46 @@ test('regular, compact and large-text controls keep 44-point targets and contain
     expect(screen.queryByLabelText('Next controls page')).toBeNull();
     expect(screen.queryByLabelText(/oscillation|integrated light/i)).toBeNull();
   }
+});
+
+test('bathroom ventilation uses a fixed grille and one-way exhaust, preserving saved legacy preferences', () => {
+  const { screen, props, client } = setup('bath-1-fan');
+  const saved: DeviceState = { on: true, level: 80, settings: { speed: 80, fanDirection: 'reverse', fanSleepMode: true, fanTimerMin: 25 } };
+  const original = JSON.stringify(saved);
+  screen.rerender(<FanController {...props} state={saved} motionAllowed={false} />);
+  expect(screen.getByText('VENTILATION')).toBeTruthy();
+  expect(screen.getByText('ONE-WAY EXHAUST')).toBeTruthy();
+  expect(screen.getByText('Bathroom')).toBeTruthy();
+  expect(screen.getByText('Outdoors')).toBeTruthy();
+  expect(screen.getByTestId('fan-extractor-grille', { includeHiddenElements: true })).toBeTruthy();
+  expect(screen.queryByLabelText('Fan direction')).toBeNull();
+  expect(screen.queryByText('Reverse')).toBeNull();
+  expect(screen.getByLabelText('Saved fan speed: 80%')).toBeTruthy();
+  expect(screen.getByText('Quiet extraction preview · 35% effective')).toBeTruthy();
+  const artwork = screen.UNSAFE_getByType(FanControllerArtwork);
+  expect(artwork.props.velocity).toBeCloseTo(4.55);
+  expect(artwork.props.motionAllowed).toBe(false);
+  fireEvent.press(screen.getByRole('radio', { name: 'Boost fan speed: 100%' }));
+  expect(client.setSetting).toHaveBeenLastCalledWith('bath-1-fan', 'speed', 100);
+  fireEvent.press(screen.getByRole('switch', { name: 'Ventilation Quiet speed limit' }));
+  expect(client.setSetting).toHaveBeenLastCalledWith('bath-1-fan', 'fanSleepMode', false);
+  fireEvent.press(screen.getByRole('switch', { name: 'Ventilation power' }));
+  expect(client.toggle).toHaveBeenCalledWith('bath-1-fan');
+  expect(JSON.stringify(saved)).toBe(original);
+  screen.rerender(<FanController {...props} state={{ ...saved, on: false }} />);
+  expect(screen.UNSAFE_getByType(FanControllerArtwork).props.velocity).toBe(0);
+  expect(screen.getByText('Off · 0% effective')).toBeTruthy();
+});
+
+test('extractor advanced controls omit ceiling-only settings and return to the ventilation console', () => {
+  const { screen } = renderInspector('bath-1-fan');
+  fireEvent.press(screen.getByLabelText('More ventilation controls'));
+  expect(screen.queryByTestId('fan-extractor-grille', { includeHiddenElements: true })).toBeNull();
+  fireEvent.press(screen.getByLabelText('Modes'));
+  expect(screen.queryByText(/Direction|Oscillation|Integrated light|Auto mode/i)).toBeNull();
+  expect(screen.getByText('Quiet mode')).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Back to fan controller'));
+  expect(screen.getByTestId('fan-extractor-grille', { includeHiddenElements: true })).toBeTruthy();
 });
 
 test('power and rapid relative speed commands use the guarded client without eager visual changes', () => {

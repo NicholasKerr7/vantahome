@@ -28,7 +28,7 @@ export function buildVirtualSceneAction(device: Device, override: Partial<Device
   if (!definition || definition.kind !== device.kind) throw new Error('This device is no longer linked to the 3D home. Review the scene before saving.');
   if (isMonitor(device.kind)) throw new Error('This monitor belongs in device status, not a power scene.');
   const defaults = createDefaultSimulationSnapshot().deviceStates[definition.id];
-  const capabilities = getCapabilities(device.kind);
+  const capabilities = getCapabilities(definition);
   const normalized = normalizeSceneOverride(device, override);
   const patch: Partial<Device> = { isOn: normalized.isOn ?? device.isOn };
   for (const field of editorFields[device.kind] ?? []) {

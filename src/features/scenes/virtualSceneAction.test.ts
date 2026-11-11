@@ -40,3 +40,12 @@ test('monitors reject authored fake power states', () => {
   const monitor = virtualSceneHome().devices.find((device) => device.kind === 'smoke')!;
   expect(() => buildVirtualSceneAction(monitor, { isOn: false })).toThrow('monitor');
 });
+
+test('extractor scene drafts cannot add reversible-fan settings', () => {
+  const device = virtualSceneHome().devices.find((device) => device.modelDeviceId === 'bath-1-fan')!;
+  const action = buildVirtualSceneAction(device, { speed: 60, fanDirection: 'reverse', fanOscillation: true, fanLightOn: true, fanAutoMode: true });
+  expect(action).toMatchObject({ patch: { speed: 60 } });
+  if (action.type === 'patch') for (const field of ['fanDirection', 'fanOscillation', 'fanLightOn', 'fanAutoMode']) {
+    expect(action.patch).not.toHaveProperty(field);
+  }
+});

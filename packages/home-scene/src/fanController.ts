@@ -10,6 +10,12 @@ export const FAN_SPEED_PRESETS = [
   { label: 'Balanced', value: 60 },
   { label: 'Boost', value: 100 },
 ] as const;
+/** Exhaust presets share the same saved speed field without claiming measured airflow. */
+export const EXTRACTOR_SPEED_PRESETS = [
+  { label: 'Quiet', value: 35 },
+  { label: 'Normal', value: 60 },
+  { label: 'Boost', value: 100 },
+] as const;
 export const FAN_DIRECTION_OPTIONS = [
   { label: 'Forward', value: 'forward' },
   { label: 'Reverse', value: 'reverse' },
@@ -27,5 +33,5 @@ export function fanControllerActionId(key: FanControllerKey): typeof FAN_ACTIONS
 
 /** Project a fixed ceiling fan or extractor without inventing oscillation, a lamp or sensor data. */
 export function readFanControllerState(device: DeviceDefinition, state: DeviceState): FanControllerState | null {
-  return device.kind === 'fan' ? readFanActivity(state) : null;
+  return device.kind === 'fan' ? readFanActivity(state, device) : null;
 }

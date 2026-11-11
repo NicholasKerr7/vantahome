@@ -77,11 +77,60 @@ describe('fan airflow console', () => {
     expect(container.querySelector<HTMLButtonElement>('[aria-label="Decrease fan speed"]')?.disabled).toBe(true);
   });
 
-  it('uses extractor artwork without adding an oscillation or lamp control to its main console', () => {
-    act(() => root.render(<Harness deviceId="bath-1-fan" />));
+  it.each([1, 2, 3, 4, 5, 6, 7])('presents bathroom %s as a one-way extractor rather than a reversible ceiling fan', (bathroom) => {
+    act(() => root.render(<Harness deviceId={`bath-${bathroom}-fan`} />));
     expect(container.querySelector('.fan-instrument')?.getAttribute('data-extractor')).toBe('true');
+    expect(container.querySelector('.fan-extractor-grille')).toBeTruthy();
     expect(container.textContent).toContain('VENTILATION');
-    expect(container.textContent).not.toMatch(/Oscillation|Integrated light/);
+    expect(container.querySelector('[aria-label="One-way exhaust from bathroom to outdoors"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Ventilation quiet mode"]')).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Forward|Reverse|Oscillation|Integrated light|Sleep/);
+  });
+
+  it('keeps existing extractor settings while presenting a quiet, power-preserving exhaust preview', () => {
+    const deviceId = 'bath-1-fan';
+    const saved = { ...useHomeStore.getState().deviceStates[deviceId], on: false, level: 60, settings: { fanDirection: 'reverse', fanSleepMode: false, fanTimerMin: 15 } };
+    act(() => useHomeStore.setState((state) => ({ deviceStates: { ...state.deviceStates, [deviceId]: saved } })));
+    act(() => root.render(<Harness deviceId={deviceId} />));
+    expect(useHomeStore.getState().deviceStates[deviceId]).toEqual(saved);
+    click('Ventilation quiet mode'); click('Boost fan speed 100%');
+    expect(useHomeStore.getState().deviceStates[deviceId]).toMatchObject({ on: false, level: 100, settings: { fanDirection: 'reverse', fanSleepMode: true, fanTimerMin: 15 } });
+    expect(container.querySelector('.fan-instrument')?.getAttribute('data-running')).toBe('false');
+    click('Ventilation power');
+    expect(container.textContent).toContain('Quiet caps preview at 35% · Now 35%');
+    expect(container.querySelector('.fan-instrument')?.getAttribute('data-running')).toBe('true');
+    click('Ventilation quiet mode'); click('Normal fan speed 60%');
+    expect(container.textContent).toContain('Preview airflow 60%');
+    click('Quiet fan speed 35%');
+    expect(container.querySelector('output')?.textContent).toBe('35%');
+    expect(useHomeStore.getState().deviceStates[deviceId].settings?.fanTimerMin).toBe(15);
+  });
+
+  it('keeps inappropriate extractor controls out of every More page and restores focus on return', () => {
+    act(() => root.render(<Harness deviceId="bath-1-fan" />));
+    click('More ventilation settings');
+    const before = useHomeStore.getState().deviceStates['bath-1-fan'];
+    for (const group of ['Controls', 'Modes', 'Routines', 'Status']) {
+      click(group);
+      for (let page = 0; page < 20; page += 1) {
+        expect(container.textContent).not.toMatch(/Forward|Reverse|Oscillation|Integrated light|Auto mode/);
+        const next = container.querySelector<HTMLButtonElement>('[aria-label="Next controls page"]');
+        if (!next || next.disabled) break;
+        act(() => next.click());
+      }
+    }
+    click('Back to ventilation console');
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('More ventilation settings');
+    expect(useHomeStore.getState().deviceStates['bath-1-fan']).toEqual(before);
+  });
+
+  it('keeps extractor controls guarded and readable with motion disabled', () => {
+    act(() => root.render(<Harness deviceId="bath-1-fan" />));
+    const before = useHomeStore.getState().deviceStates['bath-1-fan'];
+    act(() => useHomeStore.setState({ access: { ...FULL_SCENE_ACCESS, controllableDeviceIds: [] }, motionDisabled: true }));
+    for (const label of ['Ventilation power', 'Increase fan speed', 'Boost fan speed 100%', 'Ventilation quiet mode']) click(label);
+    expect(useHomeStore.getState().deviceStates['bath-1-fan']).toEqual(before);
+    expect(container.querySelector('.fan-workspace')?.getAttribute('data-motion-disabled')).toBe('true');
   });
 
   it('preserves settings and focus through More and Back', () => {

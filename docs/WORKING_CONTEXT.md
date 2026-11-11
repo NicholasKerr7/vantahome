@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-09**. Read this before rediscovering the project.
+Last maintained: **2026-11-10**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,37 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Bathroom ventilation correction — November 10 / Preview 109 built and verified; installation deferred
+
+- All seven authored bathroom extractors now use a dedicated **VENTILATION** console
+  in embedded Home and native Devices, with a fixed protective grille, one-way
+  Bathroom → Outdoors display, Quiet/Normal/Boost presets and the existing speed cap
+  presented as **Quiet mode**. Existing ceiling fans retain their Reverse control.
+- Model-aware capabilities remove Direction, Oscillation, Integrated light and Auto
+  mode from extractor controls and More. Unsupported writes are rejected before
+  touching state. Console, status and property rotor share a fixed exhaust direction;
+  legacy saved Reverse values remain stored but have no effect on extractors.
+  Speed, power, quiet and timer preferences survive hydration unchanged.
+- Catalog projection and scene authoring/execution use the same filtered capabilities.
+  Old scenes containing unsupported extractor settings require editing before any
+  device changes; scene restoration retains current-state conflict checks.
+  Generic fan save/shared-home schemas remain compatible; no migration or deployment.
+- **132 distinct renderer/shared tests + 148 native/application tests**, application
+  and scene TypeScript, and web/offline scene builds pass. Browser checks cover
+  **13 actual-app Home/Devices viewport cases**, filtered More/Back, power-preserving
+  presets, Quiet cap, ceiling Reverse, bidirectional state and full reload retention.
+  No page overflow or browser errors; regular viewports need no scrolling. The existing
+  320×568 internal fallback remains (67px Home / 66px Devices); all controls are ≥44px.
+  Existing reduced-motion/visibility-aware rotor lifecycle is unchanged; no new loop,
+  dependency, physical device command, humidity sensor or timed automation is added.
+- Evidence: `work/extractor-{scene-tests,catalog-tests,native-regression,types,scene-build}.log`,
+  `work/extractor-browser.json`, `work/extractor-{home,native}-console.png`.
+  Signed Preview 109, staging identity/feature markers and exact 32,334,840-byte offline
+  scene verified; production metadata restored. Receipt: `work/preview109-verification.json`;
+  build log: `work/extractor-preview109-build.log`. Signing expires **2026-11-11 04:54:44 UTC**;
+  reverify or rebuild before later installation. Installation remains deferred; last
+  installed stays 104. Physical extractor acceptance and deferred household checks remain.
 
 ## Shared household simulation — November 9 / Preview 108 built and verified; migration 029 deployed
 

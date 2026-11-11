@@ -37,7 +37,8 @@ describe('shared fan controller', () => {
     expect(readFanControllerState(getDevice('master-ac')!, { on: true, level: 80 })).toBeNull();
     for (const device of DEVICES.filter((item) => item.kind === 'fan')) {
       expect(readFanControllerState(device, { on: true, level: 60 })).toEqual({
-        on: true, speed: 60, effectiveSpeed: 60, sleep: false, direction: 'forward', status: 'Running preview', velocity: 60 * 0.13,
+        on: true, speed: 60, effectiveSpeed: 60, sleep: false, direction: 'forward',
+        status: device.model === 'extractor' ? 'Extracting preview' : 'Running preview', velocity: 60 * 0.13,
       });
     }
     expect(new Set(DEVICES.filter((item) => item.kind === 'fan').map((item) => item.model))).toEqual(new Set(['fan', 'extractor']));

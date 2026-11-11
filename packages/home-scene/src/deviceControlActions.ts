@@ -68,7 +68,7 @@ export function applyDeviceSetting(id: DeviceId, current: DeviceState, field: st
     const next = applyGateSetting(current, field, input);
     if (next !== current || field === 'openPercent' || field === 'isOn' || field.startsWith('gate') || field.startsWith('autoClose')) return next;
   }
-  const capability = getCapabilities(device.kind).find((item) => 'field' in item && item.field === field);
+  const capability = getCapabilities(device).find((item) => 'field' in item && item.field === field);
   if (!capability) return current;
   const value = validateSetting(capability, input);
   if (value === undefined) return current;
@@ -159,7 +159,7 @@ function applyNavigationOperation(device: DeviceDefinition, current: DeviceState
 export function runDeviceActionState(id: DeviceId, current: DeviceState, actionId: string): DeviceState {
   const device = getDevice(id);
   if (!device) return current;
-  const action = getCapabilities(device.kind).find((item) => item.id === actionId);
+  const action = getCapabilities(device).find((item) => item.id === actionId);
   if (action?.type !== 'action') return current;
   // A relative target is unknowable until an explicit command restores a valid fixture position.
   if (isOpeningDeviceKind(device.kind) && action.operation?.type === 'increment'

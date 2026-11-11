@@ -93,7 +93,7 @@ function matchesSceneState(state: DeviceState, device: SceneRestorationDevice, c
     const before = expected.settings?.[field]; const current = state.settings?.[field];
     if (before === current) continue;
     if (before !== undefined && current !== undefined) return false;
-    if (!getCapabilities(device.kind).some((entry) => 'field' in entry && entry.field === field)) return false;
+    if (!getCapabilities(definition).some((entry) => 'field' in entry && entry.field === field)) return false;
     const absent = before === undefined ? expected : state;
     if (readDeviceSetting(definition, absent, field) !== (before ?? current)) return false;
   }
