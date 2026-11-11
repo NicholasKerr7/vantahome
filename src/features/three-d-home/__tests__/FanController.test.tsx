@@ -1,7 +1,8 @@
 import React from 'react';
 import { Modal, ScrollView, StyleSheet } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { getDevice } from '../../../../packages/home-scene/src/data';
+import { DEVICES, getDevice } from '../../../../packages/home-scene/src/data';
+import { CEILING_FAN_ARTWORK } from '../../../../packages/home-scene/src/ceilingFanArtwork';
 import { FAN_DIRECTION_OPTIONS, FAN_SPEED_PRESETS } from '../../../../packages/home-scene/src/fanController';
 import { createDefaultSimulationSnapshot } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
 import { FULL_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
@@ -10,6 +11,7 @@ import { AppFeedback } from '../../../services/appFeedback';
 import { useHomeStore } from '../../../store/useHomeStore';
 import { FanController } from '../FanController';
 import { FanControllerArtwork } from '../FanControllerArtwork';
+import { CeilingFanControllerArtwork } from '../CeilingFanControllerArtwork';
 import { DeviceControlsSheet } from '../DeviceControlsSheet';
 import { guardModelDeviceControls } from '../modelDeviceControls';
 import { SimulationControlClient, type ControlSnapshot } from '../simulationControlClient';
@@ -54,6 +56,30 @@ test.each(['living-fan', 'bath-1-fan'])('%s regular, compact and large-text cont
     expect(scroll.props.nestedScrollEnabled).toBe(true);
     expect(screen.queryByLabelText('Next controls page')).toBeNull();
     expect(screen.queryByLabelText(/oscillation|integrated light/i)).toBeNull();
+  }
+});
+
+test.each(DEVICES.filter((device) => device.kind === 'fan'))('$id chooses its own ceiling or extractor housing', (device) => {
+  const { screen } = setup(device.id);
+  const ceiling = device.model !== 'extractor';
+  expect(Boolean(screen.UNSAFE_queryByType(CeilingFanControllerArtwork))).toBe(ceiling);
+  expect(Boolean(screen.queryByTestId('fan-suspended-model', { includeHiddenElements: true }))).toBe(ceiling);
+  expect(Boolean(screen.queryByTestId('fan-extractor-grille', { includeHiddenElements: true }))).toBe(!ceiling);
+});
+
+test('the fixed tilted plane stays aligned with the suspended motor at regular and compact sizes', () => {
+  const { screen, props } = setup();
+  for (const compact of [false, true]) {
+    screen.rerender(<FanController {...props} compact={compact} motionAllowed={false} />);
+    const model = StyleSheet.flatten(screen.getByTestId('fan-preview-model', { includeHiddenElements: true }).props.style);
+    const plane = StyleSheet.flatten(screen.getByTestId('fan-ceiling-plane', { includeHiddenElements: true }).props.style);
+    expect(plane.width).toBe(model.width);
+    expect(plane.height).toBe(plane.width);
+    expect(plane.top + plane.height / 2).toBeCloseTo(CEILING_FAN_ARTWORK.rotorCenterY * model.height / CEILING_FAN_ARTWORK.height);
+    expect(plane.transform).toEqual([{ scaleY: CEILING_FAN_ARTWORK.projection }]);
+    const rotor = screen.getByTestId('fan-preview-rotor', { includeHiddenElements: true });
+    expect(rotor.findAll((element) => ['fan-suspended-model', 'fan-ceiling-hub'].includes(element.props.testID))).toHaveLength(0);
+    expect(screen.UNSAFE_getByType(CeilingFanControllerArtwork).props.motionAllowed).toBe(false);
   }
 });
 

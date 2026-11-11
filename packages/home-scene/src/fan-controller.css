@@ -17,6 +17,11 @@
 .fan-instrument { position: relative; width: 218px; height: 218px; max-width: 100%; aspect-ratio: 1; }
 .fan-instrument > svg, .fan-rotor, .fan-rotor svg { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
 .fan-rotor { transform-origin: center; }
+/* The blade plane is compressed before its child rotates, so the fan stays suspended in perspective. */
+.fan-instrument.fan-suspended { width: 324px; height: 216px; aspect-ratio: 3 / 2; }
+.fan-ceiling-plane { position: absolute; width: 100%; aspect-ratio: 1; top: 62.5%; left: 0; transform: translateY(-50%) scaleY(.42); }
+.fan-ceiling-rotor, .fan-ceiling-rotor svg { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: center; }
+.fan-ceiling-rotor svg { display: block; }
 .fan-signal-ring { stroke: #554260; transition: stroke 220ms ease; }
 .fan-instrument[data-running='true'] .fan-signal-ring { stroke: #CB9DFF; }
 .fan-readout { display: grid; gap: 4px; text-align: center; }
@@ -49,6 +54,14 @@
   .fan-instrument { width: 148px; height: 148px; }
   .fan-readout { text-align: left; }
   .fan-readout small { line-height: 1.4; }
+  .fan-console[data-extractor='false'] .fan-hero { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .fan-console[data-extractor='false'] .fan-instrument { width: 270px; height: 180px; }
+  .fan-console[data-extractor='false'] .fan-readout { text-align: center; gap: 3px; }
+}
+@container fan-stage (max-height: 520px) {
+  .fan-console[data-extractor='false'] .fan-hero { grid-template-columns: 180px minmax(0, 1fr); gap: 9px; }
+  .fan-console[data-extractor='false'] .fan-instrument { width: 180px; height: 120px; }
+  .fan-console[data-extractor='false'] .fan-readout { text-align: left; }
 }
 @container fan-stage (max-height: 420px) {
   .fan-console { gap: 7px; padding: 10px; }
@@ -59,6 +72,9 @@
   .fan-speed output { font-size: 25px; }
   .fan-presets button, .fan-direction button { min-height: 44px; }
   .fan-presets button { flex-direction: row; }
+  .fan-console[data-extractor='false'] .fan-hero { grid-template-columns: 150px minmax(0, 1fr); gap: 9px; }
+  .fan-console[data-extractor='false'] .fan-instrument { width: 150px; height: 100px; }
+  .fan-console[data-extractor='false'] .fan-readout { text-align: left; }
 }
 @media (max-width: 360px) { .device-control-sheet.is-fan-controller .device-sheet-content { padding-inline: 12px; } }
 @media (hover: hover) { .fan-console button:not(:disabled):hover { border-color: #C89DE9; } }

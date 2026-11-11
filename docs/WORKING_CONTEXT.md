@@ -51,6 +51,36 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Suspended ceiling-fan console — November 10 / Preview 110 built and verified; installation deferred
+
+- Three authored ceiling fans and compatible added fans now have a suspended walnut
+  three-blade/graphite-canopy illustration shared between Home and Devices. A fixed
+  downrod/motor surrounds a tilted blade plane; only its inner rotor rotates. Shared
+  typed SVG geometry uses gradients and restrained grain, without raster assets,
+  blur filters, another WebGL renderer or a new dependency. Bathroom extractor
+  artwork and its one-way exhaust behavior remain unchanged.
+- Dedicated ceiling-motion hooks accelerate over 500ms and coast for 420ms. Reverse
+  decelerates to zero, rests 80ms and accelerates oppositely while preserving blade
+  phase. Rapid commands rebase displayed momentum. Background, covered/blurred views,
+  reduced motion and unmount cancel immediately. Native timing uses the native driver;
+  the browser uses a compositor loop with JavaScript frames only during finite ramps.
+  This is decorative motion; saved speed, power, direction and Sleep controls are unchanged.
+- **62 renderer/shared tests + 41 native tests**, app/scene TypeScript and web/offline
+  scene builds pass. **13 actual-app viewport cases** cover Home and native-source
+  Devices, ≥44px targets, More/Back, power-preserving settings, direction/Sleep,
+  bidirectional agreement and reload retention. Standard viewports have zero page
+  or controller overflow; 320×568 keeps a contained fallback (67px Home / 88px Devices).
+  Live browser compositor checks verify actual acceleration/coast/reversal, fixed
+  housing/plane and reduced-motion freeze, with zero browser errors.
+- Evidence: `work/ceiling-{scene-tests,panel-final-tests,native-tests,native-final-tests,types,scene-build}.log`,
+  `work/ceiling-browser.json`, `work/ceiling-motion-browser.json`,
+  `work/ceiling-{home,native}-console.png`, `work/ceiling-console-motion.webm`.
+  Signed Preview 110, staging identity/feature markers and exact 32,341,818-byte
+  offline scene verified; production metadata restored. Receipt: `work/preview110-verification.json`;
+  build log: `work/ceiling-preview110-build.log`. Signing expires **2026-11-18 06:20:50 UTC**;
+  reverify or rebuild before later installation. Installation stays deferred; last
+  installed remains 104. Physical acceptance and prior household/hub/iPad deferrals remain.
+
 ## Bathroom ventilation correction — November 10 / Preview 109 built and verified; installation deferred
 
 - All seven authored bathroom extractors now use a dedicated **VENTILATION** console

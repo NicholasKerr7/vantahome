@@ -44,6 +44,19 @@ afterEach(() => {
 });
 
 describe('fan airflow console', () => {
+  it('keeps the ceiling housing outside the rotating tilted blade plane', () => {
+    act(() => root.render(<Harness />));
+    const artwork = container.querySelector('.fan-suspended')!;
+    const rotor = artwork.querySelector('.fan-ceiling-rotor')!;
+    expect(rotor.parentElement?.className).toBe('fan-ceiling-plane');
+    expect(artwork.querySelector('.fan-suspended-housing')?.parentElement).toBe(artwork);
+    expect(artwork.querySelector('.fan-suspended-hub')?.parentElement).toBe(artwork);
+    expect(rotor.querySelectorAll('svg > g[transform]')).toHaveLength(3);
+    const paintIds = [...artwork.querySelectorAll('defs [id]')].map((paint) => paint.id);
+    expect(new Set(paintIds).size).toBe(paintIds.length);
+    expect(artwork.querySelector('.fan-extractor-grille')).toBeNull();
+  });
+
   it('preserves power when editing speed, direction and sleep and restores the accepted preview', () => {
     act(() => root.render(<Harness />));
     click('Fan power'); click('Balanced fan speed 60%'); click('Fan direction reverse'); click('Fan sleep mode');
