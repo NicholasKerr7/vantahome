@@ -78,7 +78,8 @@ test('the fixed tilted plane stays aligned with the suspended motor at regular a
     expect(plane.top + plane.height / 2).toBeCloseTo(CEILING_FAN_ARTWORK.rotorCenterY * model.height / CEILING_FAN_ARTWORK.height);
     expect(plane.transform).toEqual([{ scaleY: CEILING_FAN_ARTWORK.projection }]);
     const rotor = screen.getByTestId('fan-preview-rotor', { includeHiddenElements: true });
-    expect(rotor.findAll((element) => ['fan-suspended-model', 'fan-ceiling-hub'].includes(element.props.testID))).toHaveLength(0);
+    expect(rotor.findAll((element: { props: { testID?: string } }) =>
+      ['fan-suspended-model', 'fan-ceiling-hub'].includes(element.props.testID ?? ''))).toHaveLength(0);
     expect(screen.UNSAFE_getByType(CeilingFanControllerArtwork).props.motionAllowed).toBe(false);
   }
 });

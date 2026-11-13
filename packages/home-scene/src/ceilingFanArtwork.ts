@@ -4,25 +4,28 @@ import type { EquipmentArtworkDrawing } from './equipmentArtworkGeometry';
 export const CEILING_FAN_ARTWORK = { width: 360, height: 240, rotorCenterY: 150, projection: 0.42 } as const;
 export const CEILING_FAN_BLADE_ANGLES = [22, 142, 262] as const;
 
-/** Fixed ceiling canopy and downrod sit behind the independently rotating blade plane. */
+/** A closed, tapered canopy conceals the downrod joint behind the independently rotating blades. */
 export function createCeilingFanHousing(prefix: string): EquipmentArtworkDrawing {
   const metal = `${prefix}-mount`;
   const rod = `${prefix}-rod`;
+  const shoulder = `${prefix}-canopy-shoulder`;
   return {
     viewBox: '0 0 360 240',
     gradients: [
-      { id: metal, x2: '100%', y2: '15%', stops: [[0, '#111018'], [0.18, '#49444E'], [0.38, '#29262D'], [0.77, '#111116'], [1, '#5C5262']] },
-      { id: rod, x2: '100%', y2: '0%', stops: [[0, '#15141B'], [0.35, '#77707D'], [0.55, '#3C3842'], [1, '#111118']] },
+      { id: metal, x2: '100%', y2: '25%', stops: [[0, '#111219'], [0.16, '#4F4E59'], [0.35, '#363640'], [0.7, '#13141C'], [0.9, '#090B12'], [1, '#35313D']] },
+      { id: shoulder, x2: '15%', y2: '100%', stops: [[0, '#79737F'], [0.22, '#4E4B58'], [0.62, '#25252F'], [1, '#14151D']] },
+      { id: rod, x2: '100%', y2: '0%', stops: [[0, '#101119'], [0.24, '#57535F'], [0.4, '#35343F'], [0.72, '#12131D'], [1, '#36303D']] },
     ],
     shapes: [
-      { kind: 'ellipse', cx: 180, cy: 30, rx: 46, ry: 11, fill: '#080611', opacity: 0.26 },
-      { kind: 'path', d: 'M147 31 Q180 19 213 31 L211 53 Q180 66 149 53 Z', fill: `url(#${metal})`, stroke: '#716876', strokeWidth: 0.8 },
-      { kind: 'ellipse', cx: 180, cy: 31, rx: 33, ry: 10, fill: '#3A3540', stroke: '#85768F', strokeWidth: 0.8 },
-      { kind: 'path', d: 'M151 29 Q178 21 205 28', fill: 'none', stroke: '#B5A8BE', strokeWidth: 1, opacity: 0.65 },
-      { kind: 'ellipse', cx: 180, cy: 53, rx: 31, ry: 9, fill: '#17131E', stroke: '#4C4455', strokeWidth: 0.8 },
-      { kind: 'rect', x: 175, y: 54, width: 10, height: 44, rx: 3, fill: `url(#${rod})` },
-      { kind: 'ellipse', cx: 180, cy: 96, rx: 12, ry: 4, fill: '#4A424F', stroke: '#76687F', strokeWidth: 0.7 },
-      { kind: 'ellipse', cx: 180, cy: 218, rx: 82, ry: 5, fill: '#080510', opacity: 0.22 },
+      { kind: 'ellipse', cx: 180, cy: 31, rx: 44, ry: 9, fill: '#080711', opacity: 0.25 },
+      { kind: 'path', d: 'M174 57 L186 57 L187 105 Q180 109 173 105 Z', fill: `url(#${rod})` },
+      { kind: 'path', d: 'M141 34 C142 26 218 26 219 34 L217 44 C212 61 199 67 180 67 C161 67 148 61 143 44 Z', fill: `url(#${metal})`, stroke: '#5B5663', strokeWidth: 0.55 },
+      { kind: 'path', d: 'M141 34 C145 21 215 21 219 34 C209 44 151 44 141 34 Z', fill: `url(#${shoulder})` },
+      { kind: 'path', d: 'M147 31 C158 25 197 24 211 30', fill: 'none', stroke: '#C0AFBA', strokeWidth: 0.8, opacity: 0.58 },
+      { kind: 'path', d: 'M147 39 C149 51 155 57 164 60', fill: 'none', stroke: '#ABA0B4', strokeWidth: 1.1, opacity: 0.28 },
+      { kind: 'path', d: 'M157 58 Q180 68 203 58', fill: 'none', stroke: '#917763', strokeWidth: 0.85, opacity: 0.55 },
+      { kind: 'path', d: 'M176 67 L176 96', fill: 'none', stroke: '#A596AE', strokeWidth: 0.7, opacity: 0.35 },
+      { kind: 'ellipse', cx: 180, cy: 218, rx: 82, ry: 5, fill: '#080510', opacity: 0.18 },
     ],
   };
 }
@@ -48,27 +51,29 @@ export function createCeilingFanBlade(prefix: string): EquipmentArtworkDrawing {
   };
 }
 
-/** The stationary motor occludes rear blade roots; its violet seam follows accepted power only. */
+/** A continuous graphite motor shell hides both stem and blade joints; its fine seam follows accepted power. */
 export function createCeilingFanHub(prefix: string, running: boolean): EquipmentArtworkDrawing {
   const motor = `${prefix}-motor`;
+  const crown = `${prefix}-crown`;
   const face = `${prefix}-face`;
   return {
     viewBox: '0 0 360 240',
     gradients: [
-      { id: motor, x2: '100%', y2: '5%', stops: [[0, '#19171E'], [0.18, '#5C535F'], [0.42, '#302B34'], [0.75, '#16131B'], [1, '#4D4355']] },
-      { id: face, kind: 'radial', cx: '35%', cy: '20%', stops: [[0, '#736775'], [0.28, '#443A4C'], [0.75, '#211A2C'], [1, '#110C1C']] },
+      { id: motor, x1: '0%', y1: '20%', x2: '100%', y2: '45%', stops: [[0, '#14151D'], [0.13, '#53515D'], [0.29, '#3C3C47'], [0.5, '#242630'], [0.78, '#0B0D15'], [1, '#3B3343']] },
+      { id: crown, x1: '15%', y1: '0%', x2: '50%', y2: '100%', stops: [[0, '#77707D'], [0.22, '#57535F'], [0.6, '#34343F'], [1, '#20212C']] },
+      { id: face, kind: 'radial', cx: '33%', cy: '10%', stops: [[0, '#514A5D'], [0.35, '#30283F'], [0.8, '#171222'], [1, '#0D0916']] },
     ],
     shapes: [
-      { kind: 'path', d: 'M150 104 Q180 91 210 104 L208 143 Q202 158 180 159 Q157 158 152 143 Z', fill: `url(#${motor})`, stroke: '#685C72', strokeWidth: 0.8 },
-      { kind: 'ellipse', cx: 180, cy: 104, rx: 30, ry: 11, fill: '#4C424F', stroke: '#9B879F', strokeWidth: 0.7 },
-      { kind: 'ellipse', cx: 180, cy: 102, rx: 17, ry: 5, fill: '#211A2B' },
-      { kind: 'path', d: 'M154 106 Q180 116 206 106 M154 128 Q180 138 206 128', fill: 'none', stroke: '#97849F', strokeWidth: 0.6, opacity: 0.48 },
-      { kind: 'path', d: 'M158 111 L158 137', fill: 'none', stroke: '#C7ACCD', strokeWidth: 1, opacity: 0.35 },
-      { kind: 'path', d: 'M188 115 V123 M192 114 V122 M196 113 V121 M200 111 V119', fill: 'none', stroke: '#110D17', strokeWidth: 2 },
-      { kind: 'ellipse', cx: 180, cy: 150, rx: 29, ry: 12, fill: '#110C1B', stroke: '#796387', strokeWidth: 0.8 },
-      { kind: 'path', d: 'M154 148 Q180 166 206 148', fill: 'none', stroke: running ? '#C691FF' : '#584363', strokeWidth: 1.8 },
-      { kind: 'ellipse', cx: 180, cy: 152, rx: 24, ry: 9, fill: `url(#${face})`, stroke: '#71547F', strokeWidth: 0.7 },
-      { kind: 'path', d: 'M173 151 L180 156 L187 151', fill: 'none', stroke: running ? '#D5B7ED' : '#8C739E', strokeWidth: 1.1 },
+      { kind: 'path', d: 'M144 109 C144 99 216 99 216 109 L215 137 C213 149 199 159 180 159 C161 159 147 149 145 137 Z', fill: `url(#${motor})`, stroke: '#5D5568', strokeWidth: 0.55 },
+      { kind: 'path', d: 'M144 109 C147 96 213 96 216 109 C207 120 153 120 144 109 Z', fill: `url(#${crown})` },
+      { kind: 'path', d: 'M173 95 Q180 93 187 95 L188 105 Q180 110 172 105 Z', fill: `url(#${motor})` },
+      { kind: 'path', d: 'M149 106 C158 101 169 101 172 101', fill: 'none', stroke: '#CEC0CE', strokeWidth: 0.9, opacity: 0.5 },
+      { kind: 'path', d: 'M149 115 L150 134 Q152 141 156 144', fill: 'none', stroke: '#ABA0B9', strokeWidth: 1.3, opacity: 0.34 },
+      { kind: 'path', d: 'M212 115 L211 136 Q209 142 205 145', fill: 'none', stroke: '#81718F', strokeWidth: 0.65, opacity: 0.24 },
+      { kind: 'path', d: 'M150 143 C164 155 196 155 210 143', fill: 'none', stroke: '#A38A71', strokeWidth: 1, opacity: 0.68 },
+      { kind: 'path', d: 'M151 147 C163 156 197 156 209 147 C207 158 195 166 180 166 C165 166 153 158 151 147 Z', fill: `url(#${face})` },
+      { kind: 'path', d: 'M154 149 Q180 164 206 149', fill: 'none', stroke: running ? '#BA85F2' : '#594366', strokeWidth: 1.1, opacity: 0.85 },
+      { kind: 'path', d: 'M175 155 L180 158 L185 155', fill: 'none', stroke: '#B7A1CA', strokeWidth: 0.9, opacity: 0.8 },
     ],
   };
 }

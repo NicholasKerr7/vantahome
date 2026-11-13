@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-10**. Read this before rediscovering the project.
+Last maintained: **2026-11-12**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,31 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Ceiling-fan mount refinement — November 12 / Preview 111 built and verified; installation deferred
+
+- Replaced the open-looking canopy and motor with closed graphite surfaces, a
+  tapered canopy, concealed stem connections, softened motor shoulders and subtle
+  bronze/violet seams. Both Home and Devices use the same lightweight typed SVG;
+  no filters, raster images, dependency or new animation work is added. Walnut
+  blade geometry is byte-equivalent to Preview 110. Motion, dimensions, extractor
+  artwork, control behavior and saved settings are unchanged.
+- **17 embedded panel + 28 native controller tests**, application/scene TypeScript
+  and web/offline scene builds pass. Corrected a missing callback type in the
+  existing native rotor-containment test found by the application type check.
+  **13 actual-app browser viewport cases** pass, including Home/Devices agreement,
+  More/Back, direction/Sleep and reload retention, with no browser errors. Regular
+  views have zero overflow; 320×568 retains the existing contained 67px Home / 88px
+  Devices fallback and all controls remain at least 44px. Phone and tablet artwork
+  screenshots were visually reviewed; this is not physical-device acceptance.
+- Evidence: `work/fan-mount-{scene-tests,native-tests,types,scene-build}.log`,
+  `work/fan-mount-browser.json`, `work/fan-mount-{home,native}-console.png`,
+  `work/fan-mount-study.png`. Signed staging Preview 111, mount markers in both
+  adapters and the exact 32,342,407-byte offline scene are verified; production
+  metadata is restored. Receipt: `work/preview111-verification.json`; build log:
+  `work/fan-mount-preview111-build.log`. Signing expires **2026-11-18 06:20:50 UTC**;
+  reverify or rebuild before later installation. Installation remains deferred and
+  last installed remains 104; household/hub/iPad deferrals are unchanged.
 
 ## Suspended ceiling-fan console — November 10 / Preview 110 built and verified; installation deferred
 
