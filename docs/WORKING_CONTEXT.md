@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-12**. Read this before rediscovering the project.
+Last maintained: **2026-11-13**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,22 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Cinematic account access — November 13 / research only
+
+- User requested research before execution for a cinematic gate and credential
+  panel covering sign-in, recovery, invitations and ownership transfer. The
+  proposed [VantaHome Arrival design](CINEMATIC_ACCESS_EXPERIENCE.md) records the
+  storyboard, responsive/motion rules, current source seams, official research,
+  media pipeline, security boundaries and staged acceptance plan.
+- Recommend a generic rendered entrance plus native fields and short state-linked
+  transitions. Do not mount the full property before auth, reveal private home
+  information, open the decorative gate before verified admission, or command a
+  real gate. Ownership handover stays authenticated and separately reviewed.
+- Next after design review: create the phone/tablet storyboard, then build the
+  shared access frame with current auth hooks and arrival coordinator. No app code,
+  media generation, account/provider changes, build or installation in this phase.
+  Preview 112 remains built/verified but uninstalled; prior deferrals are unchanged.
 
 ## Studio speaker artwork — November 12 / Preview 112 built and verified; installation deferred
 

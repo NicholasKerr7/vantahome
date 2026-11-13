@@ -1,9 +1,21 @@
 # VantaHome implementation backlog
 
-Maintained November 12, 2026. This is the current delivery queue, not a claim that
+Maintained November 13, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
+
+## Cinematic account access: research complete, implementation pending
+
+The user requested research before building a cinematic gate/credential entrance.
+See [VantaHome Arrival](CINEMATIC_ACCESS_EXPERIENCE.md) for the proposed design,
+tool pipeline, current account-flow boundaries and execution/acceptance sequence.
+Next after design review: a phone/tablet storyboard, then the native access frame
+and state-linked entrance. Keep existing auth/membership authority, neutral recovery,
+explicit invitation acceptance and authenticated ownership transfer. Avoid another
+mandatory loader, pre-auth full-property rendering or private information leakage.
+No app changes, generation, deployment or native package are part of this research.
+Existing physical acceptance and hub/iPad deferrals remain unchanged.
 
 ## Latest delivery
 
