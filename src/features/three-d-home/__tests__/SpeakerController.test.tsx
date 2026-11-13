@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, ScrollView, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Animated, AppState, Modal, ScrollView, StyleSheet, type AppStateStatus } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { getDevice } from '../../../../packages/home-scene/src/data';
 import { SPEAKER_PRESET_OPTIONS, SPEAKER_SOURCE_OPTIONS } from '../../../../packages/home-scene/src/speakerController';
@@ -9,6 +9,8 @@ import type { DeviceState } from '../../../../packages/home-scene/src/simulation
 import { AppFeedback } from '../../../services/appFeedback';
 import { useHomeStore } from '../../../store/useHomeStore';
 import { SpeakerController } from '../SpeakerController';
+import { SpeakerControllerArtwork } from '../SpeakerControllerArtwork';
+import { EquipmentArtworkSvg } from '../EquipmentArtworkSvg';
 import { DeviceControlsSheet } from '../DeviceControlsSheet';
 import { guardModelDeviceControls } from '../modelDeviceControls';
 import { SimulationControlClient, type ControlSnapshot } from '../simulationControlClient';
@@ -66,6 +68,7 @@ test.each([
   const { screen, props, client } = setup();
   screen.rerender(<SpeakerController {...props} state={{ ...props.state, on, settings: { ...props.state.settings, playbackState, muted, volume } }} />);
   expect(screen.getByTestId('speaker-preview-indicator', { includeHiddenElements: true }).props.opacity).toBe(indicator);
+  expect(screen.UNSAFE_getAllByType(EquipmentArtworkSvg)).toHaveLength(indicator === 1 ? 2 : 1);
   expect(screen.getByRole('switch', { name: 'Speaker power' }).props.accessibilityState.checked).toBe(on);
   expect(screen.getByRole('switch', { name: 'Speaker mute' }).props.accessibilityState.checked).toBe(muted);
   fireEvent.press(screen.getByLabelText(label));
@@ -198,15 +201,73 @@ test('a deferred native playback command rechecks current household access', () 
 test('More retains the full inspector and changing the device resets picker/navigation state', () => {
   const { screen, props } = renderInspector();
   expect(screen.UNSAFE_getByType(Modal).props.animationType).toBe('none');
+  expect(screen.UNSAFE_getByType(SpeakerControllerArtwork).props.motionAllowed).toBe(false);
+  screen.rerender(<DeviceControlsSheet {...props} motionAllowed />);
+  expect(screen.UNSAFE_getByType(SpeakerControllerArtwork).props.motionAllowed).toBe(true);
   fireEvent.press(screen.getByLabelText('More speaker controls'));
+  expect(screen.UNSAFE_queryByType(SpeakerControllerArtwork)).toBeNull();
   for (const tab of ['Controls', 'Modes', 'Routines', 'Status']) expect(screen.getByLabelText(tab)).toBeTruthy();
   fireEvent.press(screen.getByLabelText('Back to speaker controller'));
   expect(screen.getByTestId('speaker-tactile-controller')).toBeTruthy();
   fireEvent.press(screen.getByLabelText(/Speaker source:.*Choose source/));
+  expect(screen.UNSAFE_queryByType(SpeakerControllerArtwork)).toBeNull();
   screen.rerender(<DeviceControlsSheet {...props} deviceId="living-vacuum" />);
   expect(screen.getByTestId('vacuum-tactile-controller')).toBeTruthy();
   screen.rerender(<DeviceControlsSheet {...props} />);
   expect(screen.getByTestId('speaker-tactile-controller')).toBeTruthy();
+});
+
+test('speaker acoustic decoration stops for silence, covered views, native background and reduced motion', async () => {
+  const originalAppState = AppState.currentState;
+  let onAppChange: (state: AppStateStatus) => void = () => undefined;
+  let onMotionChange: (enabled: boolean) => void = () => undefined;
+  const removeAppListener = jest.fn();
+  const removeMotionListener = jest.fn();
+  const start = jest.fn();
+  const stop = jest.fn();
+  const reset = jest.fn();
+  AppState.currentState = 'active';
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => {
+    onAppChange = listener;
+    return { remove: removeAppListener };
+  });
+  jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation((_event, listener) => {
+    onMotionChange = listener as unknown as (enabled: boolean) => void;
+    return { remove: removeMotionListener } as unknown as ReturnType<typeof AccessibilityInfo.addEventListener>;
+  });
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+  jest.spyOn(Animated, 'timing').mockReturnValue({ start, stop, reset });
+  jest.spyOn(Animated, 'loop').mockReturnValue({ start, stop, reset });
+  const screen = render(<SpeakerControllerArtwork active compact={false} motionAllowed={false} />);
+  try {
+    await act(async () => { await Promise.resolve(); });
+    expect(start).not.toHaveBeenCalled();
+    screen.rerender(<SpeakerControllerArtwork active compact={false} motionAllowed />);
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(Animated.timing).toHaveBeenLastCalledWith(expect.any(Animated.Value), expect.objectContaining({ useNativeDriver: true, isInteraction: false }));
+    act(() => onAppChange('background'));
+    expect(stop).toHaveBeenCalledTimes(1);
+    act(() => onAppChange('active'));
+    expect(start).toHaveBeenCalledTimes(2);
+    act(() => onMotionChange(true));
+    expect(stop).toHaveBeenCalledTimes(2);
+    act(() => onMotionChange(false));
+    expect(start).toHaveBeenCalledTimes(3);
+    screen.rerender(<SpeakerControllerArtwork active={false} compact={false} motionAllowed />);
+    expect(stop).toHaveBeenCalledTimes(3);
+    expect(screen.UNSAFE_getAllByType(EquipmentArtworkSvg)).toHaveLength(1);
+    screen.rerender(<SpeakerControllerArtwork active compact={false} motionAllowed={false} />);
+    expect(start).toHaveBeenCalledTimes(3);
+    screen.rerender(<SpeakerControllerArtwork active compact={false} motionAllowed />);
+    expect(start).toHaveBeenCalledTimes(4);
+    screen.unmount();
+    expect(stop).toHaveBeenCalledTimes(4);
+    expect(removeAppListener).toHaveBeenCalledTimes(1);
+    expect(removeMotionListener).toHaveBeenCalledTimes(1);
+  } finally {
+    screen.unmount();
+    AppState.currentState = originalAppState;
+  }
 });
 
 test('unread saved state and revoked grants never expose writable default controls', async () => {

@@ -51,6 +51,36 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
+## Studio speaker artwork — November 12 / Preview 112 built and verified; installation deferred
+
+- Home and Devices now share one three-quarter studio-speaker SVG: continuous satin
+  graphite frame, curved walnut side, recessed tweeter/woofer, fine baffle texture,
+  touch-deck details and a recessed plinth. Replaced the previous two unrelated
+  illustrations without changing control layout, saved settings or device commands.
+  The shared drawing uses the established typed SVG adapter; no raster asset,
+  blur filter, new renderer, audio stream or dependency is added.
+- A single decorative acoustic/light layer uses the existing 2.4-second opacity
+  pulse. It appears only for powered-on, playing, unmuted, nonzero-volume preview.
+  Native motion now receives the inspector's existing policy and uses the native
+  driver; reduced motion, background/coverage, More/picker and unmount stop loops.
+  This is playback decoration, not an analyzed audio waveform or provider connection.
+- **39 shared/embedded + 20 native tests**, application/scene TypeScript and
+  web/offline builds pass. **13 actual-app browser profiles** verify ≥44px targets,
+  More/Back, source/sound, playback, mute, relative volume, bidirectional settings
+  and reload retention. Live compositor opacity changes and reduced-motion freeze
+  pass; silent states remove the light. All ordinary views fit with zero overflow;
+  tiny 320×568 retains 41px contained Home scrolling, with zero native/page overflow.
+  Phone/tablet screenshots reviewed and browser errors are zero.
+- Evidence: `work/speaker-upgrade-{scene-tests,native-tests,types,scene-build}.log`,
+  `work/speaker-upgrade-browser.json`, `work/speaker-upgrade-{home,native}-console.png`,
+  `work/speaker-upgrade-study.png`. Signed staging Preview 112, shared speaker
+  markers in both adapters and the exact 32,345,722-byte offline scene are verified;
+  production metadata is restored. Receipt: `work/preview112-verification.json`;
+  build log: `work/speaker-upgrade-preview112-build.log`. Signing expires
+  **2026-11-18 06:20:50 UTC**; reverify or rebuild before later installation.
+  Installation remains deferred; last installed remains 104. Physical speaker
+  acceptance, household/hub/iPad deferrals remain.
+
 ## Ceiling-fan mount refinement — November 12 / Preview 111 built and verified; installation deferred
 
 - Replaced the open-looking canopy and motor with closed graphite surfaces, a

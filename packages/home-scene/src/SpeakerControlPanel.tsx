@@ -53,7 +53,7 @@ export function SpeakerController({ device, current }: { device: DeviceDefinitio
         <button ref={moreButton} type="button" className="speaker-round" aria-label="More speaker settings" onClick={() => changePanel(true)}><Ellipsis size={22} aria-hidden="true" /></button>
       </header>
       <div className="speaker-visual">
-        <SpeakerConsoleArtwork active={active} />
+        <SpeakerConsoleArtwork active={active} reduced={motionDisabled} />
         <div className="speaker-readings"><span>LOCAL PLAYBACK</span><strong>{speaker.status}</strong><small>{speaker.trackIndex === null ? 'Preview track unavailable' : `Preview track ${String(speaker.trackIndex).padStart(2, '0')}`}</small></div>
       </div>
       <div className="speaker-transport" role="group" aria-label="Speaker playback preview">

@@ -22,6 +22,7 @@ export const speakerControllerStyles = StyleSheet.create({
   hero: { borderRadius: 22, borderWidth: 1, borderColor: '#4F3B61', backgroundColor: '#17101F', overflow: 'hidden' },
   artwork: { width: '100%', height: 166 },
   artworkCompact: { height: 118 },
+  artworkLayer: { ...StyleSheet.absoluteFillObject },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, paddingBottom: 10 },
   statusRowLarge: { flexDirection: 'column', alignItems: 'stretch' },
   status: { color: theme.colors.text, fontSize: 13, lineHeight: 18, fontWeight: '500', flexShrink: 1 },

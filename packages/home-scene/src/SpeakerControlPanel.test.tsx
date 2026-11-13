@@ -54,11 +54,14 @@ describe('speaker audio console', () => {
     act(() => root.render(<Harness />));
     click('Play speaker preview');
     expect(container.querySelector('.speaker-console')?.getAttribute('data-active')).toBe('true');
+    expect(container.querySelector('.speaker-playback-light')).toBeTruthy();
     click('Mute speaker');
     expect(container.querySelector('.speaker-console')?.getAttribute('data-active')).toBe('false');
+    expect(container.querySelector('.speaker-playback-light')).toBeNull();
     expect(container.querySelector('[aria-label="Pause speaker preview"]')).toBeTruthy();
     click('Mute speaker'); click('Pause speaker preview');
     expect(container.querySelector('.speaker-console')?.getAttribute('data-active')).toBe('false');
+    expect(container.querySelector('.speaker-playback-light')).toBeNull();
     expect(useHomeStore.getState().deviceStates[id]).toMatchObject({ on: true, settings: { playbackState: 'paused' } });
     expect(container.textContent).toContain('No audio stream');
   });
@@ -85,6 +88,7 @@ describe('speaker audio console', () => {
     expect(container.querySelector<HTMLButtonElement>('[aria-label="Decrease speaker volume"]')?.disabled).toBe(true);
     click('Play speaker preview');
     expect(container.querySelector('.speaker-console')?.getAttribute('data-active')).toBe('false');
+    expect(container.querySelector('.speaker-playback-light')).toBeNull();
   });
 
   it('changes only the sample track and preserves playback and preferences', () => {

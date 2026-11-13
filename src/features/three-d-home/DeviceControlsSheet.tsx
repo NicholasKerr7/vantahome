@@ -222,7 +222,7 @@ function DeviceInspector({ device, state, client, disabled, smokeScenariosAllowe
   if (device.kind === 'vacuum' && !advancedControls) return <VacuumController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'speaker' && !advancedControls) return <SpeakerController device={device} state={state} client={client}
-    disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
+    disabled={disabled} compact={compact} fontScale={fontScale} motionAllowed={motionAllowed} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'camera' && !advancedControls) return <CameraController device={device} state={state} client={client}
     onWatch={onWatchCamera ? () => onWatchCamera(device.id) : undefined} disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (isOpeningDeviceKind(device.kind) && !advancedControls) return <OpeningController device={device} state={state} client={client}
