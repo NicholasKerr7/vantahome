@@ -65,9 +65,10 @@ defects from ideas or untested risks.
 - Next after design review: create the phone/tablet storyboard, then build the
   shared access frame with current auth hooks and arrival coordinator. No app code,
   media generation, account/provider changes, build or installation in this phase.
-  Preview 112 remains built/verified but uninstalled; prior deferrals are unchanged.
+  Preview 112 was subsequently installed at the user's request; see below. Prior
+  deferrals remain unchanged.
 
-## Studio speaker artwork — November 12 / Preview 112 built and verified; installation deferred
+## Studio speaker artwork — November 12 / Preview 112 installed November 13
 
 - Home and Devices now share one three-quarter studio-speaker SVG: continuous satin
   graphite frame, curved walnut side, recessed tweeter/woofer, fine baffle texture,
@@ -94,8 +95,13 @@ defects from ideas or untested risks.
   production metadata is restored. Receipt: `work/preview112-verification.json`;
   build log: `work/speaker-upgrade-preview112-build.log`. Signing expires
   **2026-11-18 06:20:50 UTC**; reverify or rebuild before later installation.
-  Installation remains deferred; last installed remains 104. Physical speaker
-  acceptance, household/hub/iPad deferrals remain.
+  Reverified the existing signed package on November 13, then installed it in place
+  and launched it on the user's USB-connected iPhone. Apple app inventory confirms
+  **VantaHome Preview 1.0.0 (112)**. Installation/launch/inventory evidence:
+  `work/preview112-{install,launch,installed-app}.json`; the verification receipt
+  records installation. Last installed is now 112; no rebuild or app code change
+  was needed. Physical speaker/fan acceptance and household/hub/iPad deferrals
+  remain. The cinematic account-access design is not part of this package.
 
 ## Ceiling-fan mount refinement — November 12 / Preview 111 built and verified; installation deferred
 
