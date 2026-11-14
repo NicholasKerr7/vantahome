@@ -43,17 +43,22 @@ export function useAssistantVoiceRequests({ request, voice, assistant, roomId, p
     onConsumed?.();
     if (!voice?.isSessionCurrent(request.sessionToken) || request.roomId !== roomId
       || request.expiresAt <= Date.now() || previewing) return;
+    onPrepared(request.question);
+    const local = assistant.respondLocally(request.question, () => Boolean(voice.isSessionCurrent(request.sessionToken)));
+    if (local) {
+      if (voice.isSessionCurrent(request.sessionToken)) void voice.speak(local.answer);
+      return;
+    }
     if (!canAsk) {
       voice.speak(context.reason || error || 'The assistant is still connecting. Please try your question again shortly.');
       return;
     }
     pending.current = { id: request.id, token: request.sessionToken, fingerprint: context.fingerprint };
-    onPrepared(request.question);
-    // Consent to the wake session permits Ask only. It does not create, save or execute scenes.
+    // Advice and drafts still use cloud Ask; no proposal creates, saves or executes a scene.
     void ask(request.question).finally(() => {
       if (pending.current?.id === request.id) setCompleted(request.id);
     });
-  }, [request, voice?.isSessionCurrent, voice?.speak, roomId, previewing, canAsk, context.reason, context.fingerprint, error, ask, onConsumed, onPrepared]);
+  }, [request, voice?.isSessionCurrent, voice?.speak, roomId, previewing, canAsk, context.reason, context.fingerprint, error, ask, assistant.respondLocally, onConsumed, onPrepared]);
 
   useEffect(() => {
     const current = pending.current;

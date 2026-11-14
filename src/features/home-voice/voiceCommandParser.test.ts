@@ -32,3 +32,23 @@ test.each([
 ])('rejects unsupported or unsafe-to-guess commands: %s', (phrase) => {
   expect(parseHomeVoiceCommand(phrase)).toHaveProperty('error');
 });
+
+test.each([
+  ['Could you turn lights off in the kitchen?', ['kitchen-light', 'dining-light']],
+  ['turn lights off here', ['master-light', 'master-bedside-left', 'master-bedside-right']],
+  ['set master bedroom lights to thirty percent', ['master-light', 'master-bedside-left', 'master-bedside-right']],
+])('understands natural phrasing without guessing a different room: %s', (phrase, ids) => {
+  expect(parseHomeVoiceCommand(phrase, { selectedRoomId: 'master' })).toMatchObject({ command: { deviceIds: ids } });
+});
+
+test.each(['do not turn off kitchen lights', 'turn off kitchen lights except dining', 'turn on kitchen lights if it is dark', 'set kitchen lights to -20 percent', 'set kitchen lights to twenty two point five percent'])('rejects qualifiers and invalid numeric speech: %s', (phrase) => {
+  expect(parseHomeVoiceCommand(phrase)).toHaveProperty('error');
+});
+
+test('uses a supplied renamed catalog and never falls back to global model devices', () => {
+  const definition = DEVICES.find((device) => device.id === 'living-light')!;
+  const context = { devices: [{ ...definition, name: 'Gallery pendant' }], rooms: [{ id: 'living', name: 'Gallery' }] };
+  expect(parseHomeVoiceCommand('turn gallery pendant off', context)).toMatchObject({ command: { deviceIds: ['living-light'] } });
+  expect(parseHomeVoiceCommand('turn kitchen lights on', context)).toHaveProperty('error');
+  expect(parseHomeVoiceCommand('turn all lights off', context)).toMatchObject({ command: { deviceIds: ['living-light'] } });
+});

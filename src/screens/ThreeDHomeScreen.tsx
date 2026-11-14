@@ -36,6 +36,8 @@ import { assistantAuthorizationFingerprint } from '../features/home-assistant/as
 import { assistantPreviewCommand } from '../features/home-assistant/assistantPreviewCommand';
 import type { AssistantPreview } from '../features/home-assistant/useHomeConcierge';
 import { scenePreviewCommandMessage, type ScenePreviewCommand, type ScenePreviewReport } from '../../packages/home-scene/src/scenePreviewProtocol';
+import { useSimulationControls } from '../features/three-d-home/useSimulationControls';
+import { permittedVoiceVocabulary } from '../features/home-voice/voicePropertyContext';
 import { useForegroundAssistantVoice } from '../features/home-voice/useForegroundAssistantVoice';
 
 const HomeAssistantPanel = React.lazy(() => import('../features/home-assistant/HomeAssistantPanel'));
@@ -129,7 +131,7 @@ export default function ThreeDHomeScreen({ route }: { route?: RouteProp<HomeStac
   const sceneReady = rendererStatus?.key === sessionKey && rendererStatus.status === 'ready' && retained && sceneEnabled && accessCurrent && !needsModelSetup;
   const previewing = previewSession?.key === sessionKey;
   const assistantRoomId = selectedRoom?.key === sessionKey ? selectedRoom.roomId : null;
-  /** Wake phrases enter the scoped Ask workflow; they never call the direct-command executor. */
+  /** Final wake requests enter scoped local resolution first, with cloud advice and explicit scene review as fallbacks. */
   const receiveSpokenQuestion = useCallback((question: string, sessionToken: number) => {
     setVoiceRequest({ id: ++voiceId.current, question, sessionToken, roomId: assistantRoomId, expiresAt: Date.now() + 15_000 }); setPanel('voice');
   }, [assistantRoomId]);
@@ -137,7 +139,10 @@ export default function ThreeDHomeScreen({ route }: { route?: RouteProp<HomeStac
     scopeKey: `${assistantIdentity}:${assistantRoomId ?? 'all'}`,
     allowed: authenticated && focused && active && accessCurrent && !needsModelSetup && !previewing && !editing && (panel === null || panel === 'voice'),
     onQuestion: receiveSpokenQuestion,
+    contextualStrings: permittedVoiceVocabulary(useHomeStore.getState(), assistantRoomId),
   });
+  // Retain the shared simulation only during opt-in listening, avoiding cold hydration on the next request.
+  const voiceSimulation = useSimulationControls(authenticated && (voice.enabled || panel === 'voice') && focused && active && accessCurrent);
   const consumeSpokenQuestion = useCallback(() => setVoiceRequest(null), []);
   /** Keep hands-free requests bound to the room explicitly selected in Ask. */
   const changeAssistantRoom = useCallback((roomId: string | null) => {
@@ -280,7 +285,7 @@ export default function ThreeDHomeScreen({ route }: { route?: RouteProp<HomeStac
       <AccountPreferences scene={sceneReady ? visibleChrome : null} onSceneCommand={sendChromeCommand} onClose={() => setPanel(null)} onBack={() => setPanel('account')} />
     </Suspense></HomePanelBoundary>}
     {focused && active && accessCurrent && panel === 'devices' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeDeviceLibrary onClose={() => setPanel(null)} /></Suspense></HomePanelBoundary>}
-    {focused && active && accessCurrent && panel === 'voice' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeAssistantPanel modal onClose={() => setPanel(null)}
+    {focused && active && accessCurrent && panel === 'voice' && <HomePanelBoundary onClose={() => setPanel(null)}><Suspense fallback={<LoadingFeature />}><HomeAssistantPanel simulation={voiceSimulation} modal onClose={() => setPanel(null)}
           initialRoomId={assistantRoomId} onRoomChange={changeAssistantRoom} onPreview={openAssistantPreview} previewing={previewing} previewNotice={previewNotice}
           voice={voice} voiceRequest={voiceRequest} onVoiceRequestConsumed={consumeSpokenQuestion}
           onReviewScene={(token) => { setPanel(null); openHomeFeature(navigation.dispatch, 'Scenes', { assistantDraftToken: token }); }} /></Suspense></HomePanelBoundary>

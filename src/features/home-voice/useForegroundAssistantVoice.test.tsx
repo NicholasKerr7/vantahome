@@ -22,7 +22,7 @@ async function settle(): Promise<void> {
 
 /** Emit one final utterance using native event ordering, including the final-result grace period. */
 async function say(text: string): Promise<void> {
-  act(() => { Voice.onSpeechResults({ value: [text] }); Voice.onSpeechEnd({}); jest.advanceTimersByTime(400); });
+  act(() => { Voice.onSpeechResults({ value: [text] }); Voice.onSpeechRecognized({ isFinal: true }); Voice.onSpeechEnd({}); });
   await settle();
 }
 
@@ -261,7 +261,7 @@ test('silent second-stage capture expires without creating a request', async () 
   await say('Vanta');
   act(() => jest.advanceTimersByTime(500)); await settle();
   act(() => jest.advanceTimersByTime(10_000)); await settle();
-  act(() => jest.advanceTimersByTime(400)); await settle();
+  act(() => jest.advanceTimersByTime(2500)); await settle();
   expect(Voice.stop).toHaveBeenCalledTimes(1);
   expect(onQuestion).not.toHaveBeenCalled();
   expect(hook.result.current.phase).toBe('listening');

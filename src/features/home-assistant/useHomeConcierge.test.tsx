@@ -87,6 +87,22 @@ test('keeps the local brief available when the provider is not configured', asyn
   unmount();
 });
 
+test.each(['consent', 'membership', 'background'] as const)('a local command cannot cross a changed %s boundary', async (boundary) => {
+  const hook = renderHook(useHomeConcierge); await settle();
+  if (boundary === 'membership') act(() => { useHomeStore.setState({ membershipReady: false }); });
+  if (boundary === 'background') act(() => appStateListener?.('background'));
+  act(() => { hook.result.current.respondLocally('turn all lights on', () => boundary !== 'consent'); });
+  expect(client.setPower).not.toHaveBeenCalled(); expect(requestConcierge).not.toHaveBeenCalled();
+  hook.unmount();
+});
+
+test('local power commands respect fresh view-only grants before dispatch', async () => {
+  controls.access = { ...controls.access!, controllableDeviceIds: [] };
+  const hook = renderHook(useHomeConcierge); await settle();
+  act(() => { expect(hook.result.current.respondLocally('turn living room lights on', () => true)?.answer).toContain('current access'); });
+  expect(client.setPower).not.toHaveBeenCalled(); hook.unmount();
+});
+
 test('an explicit connection retry recovers from a service failure without sending a question', async () => {
   jest.mocked(conciergeAvailability).mockRejectedValueOnce(new ConciergeServiceError('service')).mockResolvedValueOnce(true);
   const { result, unmount } = renderHook(useHomeConcierge);

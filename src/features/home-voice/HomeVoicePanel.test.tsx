@@ -4,7 +4,8 @@ import { ScrollView } from 'react-native';
 import HomeVoicePanel from './HomeVoicePanel';
 import { executeVoiceCommand } from './executeVoiceCommand';
 
-const mockClient = {};
+const mockClient = { getSnapshot: jest.fn() };
+jest.mock('./voicePropertyContext', () => ({ voicePropertyContext: () => ({}), permittedVoiceVocabulary: () => [] }));
 const mockCancel = jest.fn();
 const mockExecuteVoiceCommand = jest.mocked(executeVoiceCommand);
 // Background decoration is covered separately from command execution.

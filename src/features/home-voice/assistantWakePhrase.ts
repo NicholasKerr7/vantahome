@@ -3,7 +3,7 @@ export type AssistantWakePhrase = { question: string };
 /** Match only a leading, complete wake phrase; incidental mentions and near-matches never submit audio. */
 export function parseAssistantWakePhrase(transcript: string): AssistantWakePhrase | null {
   const text = transcript.trim();
-  const match = /^(?:hey\s+vanta\s*home|hey\s+vanta|vanta)(?=$|[\s,.!?:;])([\s\S]*)$/iu.exec(text);
+  const match = /^(?:hey[\s,]+)?vanta(?:\s*home)?(?=$|[\s,.!?:;])([\s\S]*)$/iu.exec(text);
   if (!match) return null;
   return { question: match[1].replace(/^[\s,.!?:;]+/u, '').trim() };
 }

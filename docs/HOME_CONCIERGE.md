@@ -1,11 +1,12 @@
 # Vanta home assistant
 
-Updated October 22, 2026. The authorized first slice from the
+Updated November 14, 2026. The authorized first slice from the
 [AI experience roadmap](AI_EXPERIENCE_ROADMAP.md) is now implemented: room-aware
 Ask, exact before/after values, an isolated 3D scene preview and bounded foreground
-phone voice. Later roadmap features remain proposals. Preview 91 is installed and
-launched on the iPhone 16 Pro Max; Apple inventory confirms build 91. Physical
-room/preview/voice acceptance is underway, with no results recorded yet.
+phone voice. Preview 113 adds property vocabulary, confirmed-final speech handling
+and direct simulation comfort commands. Packaging and physical voice acceptance are
+tracked in the working context. The original Preview 91 room/preview/voice acceptance
+remains unreported; later roadmap features remain proposals.
 
 Implemented October 16, 2026. Simulation first, staging only. Initially delivered
 without a provider connection; the user subsequently authorized activation and
@@ -39,7 +40,8 @@ Once connected, Ask supports a home brief, comfort-scene drafts and suggestions
 about simulated settings. Prompt chips fill a question; **Send** submits typed
 questions and ordinary dictation. Phone speech recognition uses the existing
 native speech service and its permissions, independently of OpenAI. The separate
-opt-in hands-free window below may submit a wake-prefixed question to Ask.
+opt-in hands-free window below resolves a confirmed wake request locally when
+possible and sends advice or scene drafting to Ask.
 
 One short answer is held in memory. A scene suggestion opens the existing editor
 for review, adjustment and saving; **Run remains a separate action**. Imported
@@ -69,11 +71,16 @@ refinement and new telemetry/history/manual sources are not included.
 ### Optional foreground phone voice
 
 An explicit **Enable** starts up to five minutes of listening on foreground Home.
-Say “Hey VantaHome” or “Vanta”, then a question. Only a question following an accepted wake phrase
-enters Ask with the selected room's permitted settings; it never enters
-the direct Controls executor. Ambient transcripts are ephemeral. The phone's
-speech service may process audio; this is not an on-device-only privacy promise,
-a background wake-word engine or an OpenAI Realtime/cloud-audio connection.
+Say “Hey Vanta”, “Hey VantaHome” or “Vanta”, then a request. A confirmed final
+utterance first uses the current permitted room/device directory. Clear comfort
+commands use the existing guarded simulation executor; common brief, lights-on and
+target-temperature questions answer locally. Advice and scene drafts still use cloud
+Ask. Drafting, preview and Create never run a scene; Run stays a separate action.
+Sensitive entry/security equipment, ambiguous targets, conditions, exceptions and
+compound commands do not execute through this wake route. Ambient transcripts remain
+ephemeral. The phone speech service may process audio and bounded permitted room/device
+names; this is not an on-device-only privacy promise, a background wake-word engine
+or an OpenAI Realtime/cloud-audio connection.
 
 Replies use a synthetic system voice through `expo-speech`; **Hear answer** is
 also available manually. Ordinary tap-to-dictate and typed Send remain available.
@@ -84,6 +91,37 @@ serialized native teardown prevent old transcripts, queued questions or TTS
 callbacks from restarting ended consent. Preview stops the voice session.
 Physical speech permission, audio routing/interruption, recognition accuracy and
 heat/battery acceptance remain pending; web keeps the text route.
+
+### Faster property-aware recognition — November 14
+
+- Both native listening paths request finalization after one second of stable relevant
+  text, then wait up to 2.5 seconds for the recognizer's confirmed final result. These
+  are configured deadlines, not measured end-to-end iPhone latency. Provisional text
+  cannot execute; changed hypotheses reset the quiet deadline.
+- The maintained Voice 3.2.4 adapter forwards bounded iOS contextual strings, stops
+  accepting audio before finishing and preserves final callbacks while finishing.
+  Stale native session and permission callbacks cannot tear down or restart a newer
+  owner. Source/version/hash checks reject dependency drift before patching.
+- Registered names, canonical room aliases and spoken whole numbers support requests
+  such as “turn the lights off here” and “set master bedroom temperature to twenty-two
+  degrees”. The selected Ask room is a hard scope; “My rooms” means current permitted
+  rooms, never the Owner's unrestricted directory for an invitee.
+- A lightweight simulation connection stays warm while Home listening is enabled.
+  Local replies are labeled “On-device response · Simulation”; they do not wait for
+  OpenAI availability. Typed Send remains the cloud question route. No background
+  listening, new provider/model, microphone logging or scene execution tool was added.
+- Verification: 257 focused tests / 19 suites; 12 native-patch/build-helper tests;
+  TypeScript; six actual-panel browser sizes (including keyboard height), no page
+  overflow or browser errors. Native microphone timing, accent accuracy, interruptions
+  and energy use still need the physical device. Android vocabulary adaptation is not
+  implemented; Android final-result handling is covered in unit tests only.
+- The existing speech package is archived. A separately scoped migration to a maintained
+  recognition package is an opportunity after this iPhone acceptance, not a hidden
+  dependency upgrade in this patch.
+
+Primary implementation references: Apple's [contextual vocabulary](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/contextualstrings),
+[finish behavior](https://developer.apple.com/documentation/speech/sfspeechrecognitiontask/finish%28%29)
+and [final transcription contract](https://developer.apple.com/documentation/speech/sfspeechrecognitionresult/isfinal).
 
 The panel is loaded on demand. It uses existing purple tokens, cinematic artwork
 and reduced-motion-aware decoration. A bounded internal scroll area retains touch

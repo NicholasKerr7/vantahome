@@ -4,15 +4,17 @@ import Voice from '@react-native-voice/voice';
 import * as Speech from 'expo-speech';
 import { assistantSpokenQuestion, parseAssistantWakePhrase } from './assistantWakePhrase';
 import { claimVoiceSession, ownsVoiceSession, queueVoiceOperation, releaseVoiceSession } from './voiceSession';
+import { createSpeechEndpoint, type SpeechEndpoint } from './speechEndpoint';
+import { speechRecognitionOptions, type SpeechRecognitionOptions } from './speechRecognitionOptions';
 
 export type AssistantVoicePhase = 'off' | 'listening' | 'capturing' | 'waiting' | 'speaking';
 /** Ephemeral opt-in identity, not an authorization credential; callers must revalidate before use. */
 export type AssistantVoiceSessionToken = number;
-type Options = {
+type Options = SpeechRecognitionOptions & {
   /** Current account/home/grant identity plus any route or room scope that must invalidate speech. */
   scopeKey: string;
   allowed: boolean;
-  /** This callback enters Ask only; it must never dispatch a direct device command. */
+  /** The caller routes final speech and must revalidate permissions before answering or running a command. */
   onQuestion: (question: string, sessionToken: AssistantVoiceSessionToken) => void | Promise<void>;
 };
 const LISTENING_WINDOW_MS = 5 * 60_000;
@@ -24,7 +26,7 @@ let nextSessionToken = 0;
 
 /**
  * Opted-in foreground speech recognition, not a local/background wake-word engine.
- * Ambient transcripts stay ephemeral; only a wake-prefixed final question enters Ask.
+ * Ambient transcripts stay ephemeral; only a wake-prefixed confirmed final utterance leaves this hook.
  * Listening is suspended throughout generation and TTS, with no automatic new consent window.
  */
 export function useForegroundAssistantVoice(options: Options) {
@@ -43,6 +45,7 @@ export function useForegroundAssistantVoice(options: Options) {
   const deadline = useRef(0);
   const cycle = useRef(0);
   const nativeActive = useRef(false);
+  const endpoint = useRef<SpeechEndpoint | null>(null);
   const outputActive = useRef(false);
   const outputGeneration = useRef(0);
   const consecutiveErrors = useRef(0);
@@ -72,6 +75,8 @@ export function useForegroundAssistantVoice(options: Options) {
   const cancelRecognition = useCallback((): Promise<void> => {
     cycle.current += 1;
     clearCycleTimers();
+    endpoint.current?.dispose();
+    endpoint.current = null;
     if (!nativeActive.current) return Promise.resolve();
     nativeActive.current = false;
     return queueVoiceOperation(async () => {
@@ -151,16 +156,12 @@ export function useForegroundAssistantVoice(options: Options) {
     if (!listeningAllowed(token) || nativeActive.current || outputActive.current) return;
     const cycleToken = ++cycle.current;
     nativeActive.current = true;
-    let transcript = '';
-    let completionQueued = false;
     const cycleCurrent = () => listeningAllowed(token) && cycle.current === cycleToken && nativeActive.current;
     updatePhase(capturing ? 'capturing' : 'listening');
 
     /** Consume final text exactly once, only after microphone cleanup completes. */
-    const complete = async (failed = false): Promise<void> => {
+    const complete = async (finalText = '', failed = false): Promise<void> => {
       if (!cycleCurrent()) return;
-      const finalText = transcript;
-      transcript = '';
       try { await cancelRecognition(); }
       catch { if (current(token)) { stop(); setError('The microphone could not be released. Try again.'); } return; }
       if (!listeningAllowed(token)) return;
@@ -170,7 +171,7 @@ export function useForegroundAssistantVoice(options: Options) {
       consecutiveErrors.current = 0;
       if (!wake.question.trim()) {
         if (capturing) { retry(token, false); return; }
-        later(() => { if (listeningAllowed(token)) void beginRef.current(true); }, 500);
+        later(() => { if (listeningAllowed(token)) void beginRef.current(true); }, 150);
         updatePhase('capturing'); return;
       }
       const question = assistantSpokenQuestion(wake.question);
@@ -187,31 +188,46 @@ export function useForegroundAssistantVoice(options: Options) {
         if (!cycleCurrent()) return;
         if (!await Voice.isAvailable()) throw new Error('Speech unavailable');
         if (!cycleCurrent()) return;
-        Voice.onSpeechResults = (event) => { if (cycleCurrent()) transcript = event.value?.[0] ?? ''; };
-        Voice.onSpeechPartialResults = () => undefined;
-        Voice.onSpeechEnd = () => {
-          if (!cycleCurrent() || completionQueued) return;
-          completionQueued = true;
-          later(() => { void complete(); }, 400);
+        const recognition = createSpeechEndpoint({
+          platform: Platform.OS === 'android' ? 'android' : 'ios',
+          mayFinish: (text) => capturing ? Boolean(text) : parseAssistantWakePhrase(text) !== null,
+          stopNative: () => queueVoiceOperation(async () => { if (cycleCurrent()) await Voice.stop(); }),
+          onFinal: (text) => { if (cycleCurrent()) void complete(text); },
+          onIncomplete: (hadSpeech) => { if (cycleCurrent()) void complete('', hadSpeech); },
+        });
+        endpoint.current = recognition;
+        /** Show wake recognition promptly, but leave all execution to the confirmed final result. */
+        const acknowledgeWake = (text: string) => {
+          if (parseAssistantWakePhrase(text)) updatePhase('capturing');
         };
+        Voice.onSpeechResults = (event) => {
+          if (!cycleCurrent()) return;
+          const text = event.value?.[0] ?? '';
+          acknowledgeWake(text);
+          recognition.results(text);
+        };
+        Voice.onSpeechPartialResults = (event) => {
+          if (!cycleCurrent()) return;
+          const text = event.value?.[0] ?? '';
+          if (Platform.OS === 'android') acknowledgeWake(text);
+          recognition.partial(text);
+        };
+        Voice.onSpeechRecognized = (event) => { if (cycleCurrent()) recognition.recognized(event.isFinal); };
+        Voice.onSpeechEnd = () => { if (cycleCurrent()) recognition.end(); };
         Voice.onSpeechError = (event) => {
           // Android reports an ordinary silent/no-match utterance as an error. Never
           // retry permission/network failures as if they were successful listening.
           const silent = Platform.OS === 'android' && ['6', '7'].includes(event.error?.code ?? '');
-          if (silent) transcript = '';
-          void complete(!silent);
+          void complete('', !silent);
         };
-        await Voice.start('en-US');
+        await Voice.start('en-US', speechRecognitionOptions(latest.current));
         if (!cycleCurrent()) { await Voice.cancel(); return; }
         later(() => {
           if (!cycleCurrent()) return;
-          void queueVoiceOperation(() => Voice.stop()).then(() => {
-            if (!cycleCurrent() || completionQueued) return;
-            completionQueued = true; later(() => { void complete(); }, 400);
-          }).catch(() => { void complete(true); });
+          recognition.requestStop();
         }, capturing ? QUESTION_CYCLE_MS : WAKE_CYCLE_MS);
       });
-    } catch { if (cycleCurrent()) await complete(true); }
+    } catch { if (cycleCurrent()) await complete('', true); }
   }, [cancelRecognition, current, later, listeningAllowed, readSessionToken, retry, stop, updatePhase]);
   beginRef.current = begin;
 

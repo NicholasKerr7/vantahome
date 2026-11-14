@@ -43,6 +43,45 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+test.each([true, false])('local final commands change only their target without waiting for AI (provider=%s)', async (configured) => {
+  jest.mocked(conciergeAvailability).mockResolvedValue(configured);
+  const hook = renderHook(() => {
+    const controls = useSimulationControls();
+    return { controls, assistant: useHomeConcierge({ roomId: 'registry-room:living', controls }) };
+  });
+  await settle();
+  const before = hook.result.current.controls.client.getSnapshot().state;
+  let reply: ReturnType<typeof hook.result.current.assistant.respondLocally> = null;
+  act(() => { reply = hook.result.current.assistant.respondLocally('turn lights on here', () => true); });
+  await settle();
+  expect(reply).toMatchObject({ scene: null, answer: expect.stringContaining('Simulation updated') });
+  expect(requestConcierge).not.toHaveBeenCalled();
+  const after = hook.result.current.controls.client.getSnapshot().state;
+  expect(after.deviceStates['living-light'].on).toBe(true);
+  for (const [id, state] of Object.entries(before.deviceStates)) if (id !== 'living-light') expect(after.deviceStates[id]).toEqual(state);
+  expect(hook.result.current.assistant.responseSource).toBe('local');
+  hook.unmount();
+});
+
+test('local requests work while provider availability is still pending and do not save or run scene drafts', async () => {
+  jest.mocked(conciergeAvailability).mockImplementation(() => new Promise(() => undefined));
+  const hook = renderHook(useHomeConcierge); await settle();
+  expect(hook.result.current.status).toBe('checking');
+  act(() => { expect(hook.result.current.respondLocally('home brief', () => true)?.answer).toContain('comfort devices'); });
+  const before = useHomeStore.getState().scenes;
+  act(() => { expect(hook.result.current.respondLocally('Draft a calm evening scene', () => true)).toBeNull(); });
+  expect(useHomeStore.getState().scenes).toBe(before); expect(requestConcierge).not.toHaveBeenCalled();
+  hook.unmount();
+});
+
+test('revoked listening consent prevents local writes and narration data', async () => {
+  const hook = renderHook(useHomeConcierge); await settle();
+  const before = useHomeStore.getState();
+  act(() => { expect(hook.result.current.respondLocally('turn all lights on', () => false)?.answer).toContain('session changed'); });
+  expect(useHomeStore.getState()).toBe(before); expect(hook.result.current.response).toBeNull();
+  expect(requestConcierge).not.toHaveBeenCalled(); hook.unmount();
+});
+
 test('hydrates an Owner home through the real simulation bridge before checking cloud availability', async () => {
   const { result, unmount } = renderHook(useHomeConcierge);
   expect(result.current.context.available).toBe(false);

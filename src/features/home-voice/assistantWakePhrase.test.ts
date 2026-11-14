@@ -1,6 +1,6 @@
 import { assistantSpokenQuestion, parseAssistantWakePhrase } from './assistantWakePhrase';
 
-test.each(['Hey VantaHome, give me a brief', 'hey vanta home give me a brief', 'Hey Vanta: give me a brief', 'Vanta give me a brief'])('accepts a complete leading wake phrase: %s', (text) => {
+test.each(['Hey VantaHome, give me a brief', 'hey vanta home give me a brief', 'Hey Vanta: give me a brief', 'Hey, Vanta, give me a brief', 'Vanta give me a brief'])('accepts a complete leading wake phrase: %s', (text) => {
   expect(parseAssistantWakePhrase(text)).toEqual({ question: 'give me a brief' });
 });
 

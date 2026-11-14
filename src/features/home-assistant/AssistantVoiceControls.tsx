@@ -9,7 +9,7 @@ import { assistantStyles as styles } from './assistantStyles';
 export type AssistantVoiceController = ReturnType<typeof useForegroundAssistantVoice>;
 
 const STATUS = {
-  off: 'Speak naturally. Review every scene.', listening: 'Listening for “Vanta”…', capturing: 'Listening to your request…',
+  off: 'Quick controls. Clear answers.', listening: 'Listening for “Hey Vanta”…', capturing: 'Listening to your request…',
   waiting: 'Listening paused', speaking: 'Vanta is speaking…',
 };
 
@@ -27,7 +27,7 @@ export default function AssistantVoiceControls({ voice, available, compact = fal
         onPress={() => { if (active) { onStop?.(); voice.stop(); } else void voice.start(); }}
         style={[styles.voiceButton, !active && !available && styles.disabled]}><Text style={styles.inlineActionText}>{active ? 'Stop' : 'Enable'}</Text></Pressable>
     </View>
-    {!compact && <Text style={styles.consent}>Say “Hey VantaHome” or “Vanta”, then your request. Listens on Home for up to 5 minutes and stops when you leave or lock your phone. Your phone’s speech service may process audio. After the wake phrase, your request is sent to OpenAI with the selected room’s permitted settings. Replies use a synthetic device voice.</Text>}
+    {!compact && <Text style={styles.consent}>Say “Hey Vanta”, “Hey VantaHome” or “Vanta”, then your request. Clear comfort commands run in your simulation; common status questions answer on this device. Advice and scene drafts use OpenAI with permitted room settings. Scenes still need review and a separate Run. Listens on Home for up to 5 minutes; leaving or locking stops it. Your phone’s speech service may process audio and permitted room/device names. Replies use a synthetic device voice.</Text>}
     {voice.error && <Text accessibilityRole="alert" style={styles.detail}>{voice.error}</Text>}
   </View>;
 }

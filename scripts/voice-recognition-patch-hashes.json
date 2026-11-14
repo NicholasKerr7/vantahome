@@ -1,0 +1,7 @@
+{
+  "ios/Voice/Voice.m": "b296cb4a65a6c69a0ad70ba9e620ab3bde6a8b0d37f607b0ce611655054d1fd0",
+  "src/index.ts": "c0ade195eb88335a71c9143d8a0d352bb0482eb623c754c24fb8c80337ff536f",
+  "dist/index.js": "ea27a8d3b47ab88c72ec2b623e5639244b81961f17f73a5f47bb786d72624bde",
+  "src/VoiceModuleTypes.ts": "269221306db2eb579eedc4c501f261bfd6246f92ef1d3c870738c8cac7ca3c34",
+  "dist/VoiceModuleTypes.d.ts": "67f3a58a9e5ab87c3836d08832bd8372fc7e183e469c9fafd058a3b84c3b3820"
+}

@@ -21,7 +21,7 @@ test('accepts final results after speech ends and executes only once despite dup
   const run = jest.fn();
   const hook = renderHook(() => useVoiceRecognition(run));
   await act(async () => { await hook.result.current.start(); });
-  act(() => { Voice.onSpeechEnd({}); Voice.onSpeechResults({ value: ['turn on kitchen lights'] }); });
+  act(() => { Voice.onSpeechEnd({}); Voice.onSpeechResults({ value: ['turn on kitchen lights'] }); Voice.onSpeechRecognized({ isFinal: true }); });
   act(() => { jest.advanceTimersByTime(400); });
   expect(run).toHaveBeenCalledTimes(1);
   expect(run).toHaveBeenCalledWith('turn on kitchen lights');
@@ -69,11 +69,11 @@ test('reports unavailable recognition and keeps typed commands available', async
 });
 
 test('releases native event subscriptions between taps so a second recording receives fresh callbacks', async () => {
-  type Handlers = { results: typeof Voice.onSpeechResults; end: typeof Voice.onSpeechEnd };
+  type Handlers = { results: typeof Voice.onSpeechResults; end: typeof Voice.onSpeechEnd; recognized: typeof Voice.onSpeechRecognized };
   let nativeHandlers: Handlers | null = null;
   // Match the library: start reuses its event subscriptions until destroy removes them.
   jest.mocked(Voice.start).mockImplementation(async () => {
-    nativeHandlers ??= { results: Voice.onSpeechResults, end: Voice.onSpeechEnd };
+    nativeHandlers ??= { results: Voice.onSpeechResults, end: Voice.onSpeechEnd, recognized: Voice.onSpeechRecognized };
   });
   jest.mocked(Voice.destroy).mockImplementation(async () => { nativeHandlers = null; });
   const run = jest.fn(); const hook = renderHook(() => useVoiceRecognition(run));
@@ -82,7 +82,7 @@ test('releases native event subscriptions between taps so a second recording rec
     act(() => {
       const handlers = nativeHandlers as Handlers | null;
       if (!handlers) throw new Error('Expected native subscriptions');
-      handlers.results({ value: [phrase] }); handlers.end({}); jest.advanceTimersByTime(400);
+      handlers.results({ value: [phrase] }); handlers.recognized({ isFinal: true }); handlers.end({}); jest.advanceTimersByTime(400);
     });
     await settle();
   }
@@ -105,7 +105,7 @@ test('preserves first-use recognition while an iOS permission sheet transitions 
   await act(async () => { await hook.result.current.start(); });
   expect(hook.result.current.listening).toBe(true);
   expect(Voice.cancel).not.toHaveBeenCalled();
-  act(() => { Voice.onSpeechResults({ value: ['turn on kitchen lights'] }); Voice.onSpeechEnd({}); jest.advanceTimersByTime(400); });
+  act(() => { Voice.onSpeechResults({ value: ['turn on kitchen lights'] }); Voice.onSpeechRecognized({ isFinal: true }); Voice.onSpeechEnd({}); jest.advanceTimersByTime(400); });
   expect(run).toHaveBeenCalledWith('turn on kitchen lights');
   hook.unmount(); await settle();
 });

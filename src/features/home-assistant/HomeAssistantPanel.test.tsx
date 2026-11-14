@@ -26,7 +26,7 @@ beforeEach(() => {
   mockAssistant = {
     context: { scope: 'home', fingerprint: 'scope', roomId: null, scopeLabel: 'My permitted rooms', availableRooms: [], capturedAt: Date.now(), expiresAt: null, available: true, reason: null, devices: [], canDraft: true,
       brief: { roomCount: 3, deviceCount: 8, onCount: 4, lightsOnCount: 2, climateOnCount: 1 }, requestContext: { mode: 'simulation', capturedAt: Date.now(), devices: [] } },
-    status: 'ready', response: null, error: null, canAsk: true, canReview: false,
+    status: 'ready', responseSource: 'cloud', respondLocally: jest.fn(() => null), response: null, error: null, canAsk: true, canReview: false,
     ask: jest.fn(async () => undefined), cancel: jest.fn(), clear: jest.fn(), retryAvailability: jest.fn(), prepareReview: jest.fn(() => null),
     roomId: null, scopeLabel: 'My permitted rooms', availableRooms: [], proposalDevices: [], preparePreview: jest.fn(() => null),
   };
@@ -168,6 +168,20 @@ function delayedAnswer() {
 }
 
 const spokenRequest = () => ({ id: 1, question: 'Make this room calm', roomId: null, sessionToken: 7, expiresAt: Date.now() + 15_000 });
+
+test('a wake command takes the local path once and speaks its result even when cloud AI is unavailable', async () => {
+  const voice = voiceFixture();
+  mockAssistant.canAsk = false; mockAssistant.status = 'unavailable';
+  jest.mocked(mockAssistant.respondLocally).mockReturnValue({ title: 'Your request', answer: 'Pendant light turned on. Simulation updated.', deviceIds: [], scene: null });
+  const request = { ...spokenRequest(), question: 'turn living room lights on' };
+  const props = { onClose: jest.fn(), onReviewScene: jest.fn(), voice, voiceRequest: request };
+  const screen = render(<HomeAssistantPanel {...props} />);
+  await act(async () => { await Promise.resolve(); });
+  screen.rerender(<HomeAssistantPanel {...props} />);
+  expect(mockAssistant.respondLocally).toHaveBeenCalledTimes(1);
+  expect(mockAssistant.ask).not.toHaveBeenCalled();
+  expect(voice.speak).toHaveBeenCalledWith('Pendant light turned on. Simulation updated.');
+});
 
 test('a wake question submits once and retains visible Stop when its text fills the composer', async () => {
   const voice = voiceFixture();

@@ -17,6 +17,7 @@ import AssistantSceneChanges from './AssistantSceneChanges';
 import AssistantVoiceControls, { type AssistantVoiceController } from './AssistantVoiceControls';
 import { useHomeStore } from '../../store/useHomeStore';
 import { useAssistantVoiceRequests, type AssistantVoiceRequest } from './useAssistantVoiceRequests';
+import type { useSimulationControls } from '../three-d-home/useSimulationControls';
 
 type Props = {
   onClose: () => void; onReviewScene: (token: string) => void;
@@ -26,6 +27,7 @@ type Props = {
   onRoomChange?: (roomId: string | null) => void;
   onVoiceRequestConsumed?: () => void;
   modal?: boolean;
+  simulation?: ReturnType<typeof useSimulationControls>;
 };
 type AssistantMode = 'ask' | 'controls';
 const PROMPTS = [
@@ -35,9 +37,9 @@ const PROMPTS = [
 ] as const;
 
 /** Keep AI advice and explicit local commands distinct within the existing home assistant entry. */
-export default function HomeAssistantPanel({ onClose, onReviewScene, initialRoomId = null, onPreview, previewing = false, previewNotice, voice, voiceRequest, onVoiceRequestConsumed, onRoomChange, modal = false }: Props) {
+export default function HomeAssistantPanel({ onClose, onReviewScene, initialRoomId = null, onPreview, previewing = false, previewNotice, voice, voiceRequest, onVoiceRequestConsumed, onRoomChange, modal = false, simulation }: Props) {
   const [roomId, setRoomId] = useState<string | null>(initialRoomId);
-  const assistant = useHomeConcierge({ roomId });
+  const assistant = useHomeConcierge({ roomId, controls: simulation });
   const { context, status, response, error, canAsk, canReview } = assistant;
   const fahrenheit = useHomeStore((state) => state.profile.tempUnit === 'F');
   const [mode, setMode] = useState<AssistantMode>('ask');
@@ -53,7 +55,7 @@ export default function HomeAssistantPanel({ onClose, onReviewScene, initialRoom
   const asking = status === 'asking';
   /** Dictation prepares a question only; an explicit Send is required before cloud processing. */
   const receiveDictation = useCallback((phrase: string) => setInput(phrase.slice(0, 600)), []);
-  const speech = useVoiceRecognition(receiveDictation);
+  const speech = useVoiceRecognition(receiveDictation, { contextualStrings: [...context.availableRooms.map((room) => room.name), ...context.devices.map((device) => device.name)] });
   /** Spoken Ask captures text visibly while the microphone waits for the response. */
   const prepareSpokenQuestion = useCallback((question: string) => {
     setMode('ask'); setInput(question); setInputFocused(false); Keyboard.dismiss(); speech.cancel();
@@ -129,13 +131,13 @@ export default function HomeAssistantPanel({ onClose, onReviewScene, initialRoom
         <Ionicons name="mic-outline" size={18} color={theme.colors.text} /><Text style={[styles.tabText, mode === 'controls' && styles.selectedTabText]}>Controls</Text>
       </Pressable>
     </View>}
-    {voice && (voice.enabled || voice.phase === 'speaking' || voice.error) && <AssistantVoiceControls voice={voice} compact available={canAsk && !previewing} onStop={discardVoiceRequest} />}
+    {voice && (voice.enabled || voice.phase === 'speaking' || voice.error) && <AssistantVoiceControls voice={voice} compact available={context.available && !previewing} onStop={discardVoiceRequest} />}
     {mode === 'controls' ? <ScrollView style={styles.controls} contentContainerStyle={styles.controlsContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
       <HomeVoicePanel embedded onClose={close} />
     </ScrollView> : <>
       <ScrollView testID="assistant-content" style={styles.content} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} bounces={false} overScrollMode="never">
         {!inputFocused && <AssistantScopePicker rooms={assistant.availableRooms ?? []} roomId={roomId} label={assistant.scopeLabel ?? 'My permitted rooms'} onChange={changeRoom} />}
-        {!typing && voice && !voice.enabled && voice.phase !== 'speaking' && !voice.error && <AssistantVoiceControls voice={voice} available={canAsk && !previewing} onStop={discardVoiceRequest} />}
+        {!typing && voice && !voice.enabled && voice.phase !== 'speaking' && !voice.error && <AssistantVoiceControls voice={voice} available={context.available && !previewing} onStop={discardVoiceRequest} />}
         {previewNotice && <Text accessibilityLiveRegion="polite" style={styles.detail}>{previewNotice}</Text>}
         {!response && canAsk && !compact && !typing && <View style={styles.hero}>
           <View style={styles.heroCopy}><Text style={styles.heroTitle}>{'A little insight.\nA better atmosphere.'}</Text><Text style={styles.detail}>Understand your home, then shape how it feels.</Text></View>
@@ -152,7 +154,7 @@ export default function HomeAssistantPanel({ onClose, onReviewScene, initialRoom
         {!response && canAsk && !typing && <View style={styles.prompts}>{PROMPTS.filter((prompt) => context.canDraft || prompt.label !== 'Set a mood').map((prompt) => <Pressable key={prompt.label} accessibilityLabel={prompt.label} accessibilityHint="Fills a question for you to review and send" disabled={!context.available || asking} onPress={() => setInput(prompt.question)} style={[styles.prompt, (!context.available || asking) && styles.disabled]}>
           <Ionicons name={prompt.icon} size={18} color={theme.colors.accentText} /><Text style={styles.promptLabel}>{prompt.label}</Text>
         </Pressable>)}</View>}
-        {status === 'checking' && <View style={styles.notice} accessibilityLiveRegion="polite"><View style={styles.noticeHeader}><ActivityIndicator color={theme.colors.accent} /><Text style={styles.noticeTitle}>Connecting your assistant</Text></View><Text style={styles.detail}>Your local controls stay available.</Text></View>}
+        {status === 'checking' && !response && <View style={styles.notice} accessibilityLiveRegion="polite"><View style={styles.noticeHeader}><ActivityIndicator color={theme.colors.accent} /><Text style={styles.noticeTitle}>Connecting your assistant</Text></View><Text style={styles.detail}>Your local controls stay available.</Text></View>}
         {status === 'unavailable' && <View style={styles.notice} accessibilityLiveRegion="polite"><View style={styles.noticeHeader}><Ionicons name="cloud-offline-outline" size={20} color={theme.colors.accentText} /><Text style={styles.noticeTitle}>{context.available ? 'AI is not connected yet' : 'Home information unavailable'}</Text></View><Text style={styles.detail}>{context.available ? error || 'Your on-device brief and direct Controls are available. Cloud answers need the secure assistant connection.' : context.reason || 'Reopen the assistant after your home access and simulation are ready.'}</Text><Pressable accessibilityLabel="Check assistant connection" onPress={assistant.retryAvailability} style={styles.inlineAction}><Text style={styles.inlineActionText}>Check connection</Text></Pressable></View>}
         {!context.available && status !== 'unavailable' && <View style={styles.notice}><Text style={styles.noticeTitle}>Home information unavailable</Text><Text style={styles.detail}>{context.reason || 'Reopen the assistant after your home access and simulation are ready.'}</Text></View>}
         {asking && <View style={styles.notice} accessibilityLiveRegion="polite"><View style={styles.noticeHeader}><ActivityIndicator color={theme.colors.accent} /><Text style={styles.noticeTitle}>Considering your home</Text></View><Text style={styles.detail}>Using only your permitted simulation settings.</Text><Pressable accessibilityLabel="Cancel assistant request" onPress={cancelRequest} style={styles.inlineAction}><Text style={styles.inlineActionText}>Cancel</Text></Pressable></View>}
@@ -160,7 +162,7 @@ export default function HomeAssistantPanel({ onClose, onReviewScene, initialRoom
         {response && !asking && <View testID="assistant-response" style={styles.response}>
           <View style={styles.responseHeading}><Ionicons name="sparkles-outline" size={17} color={theme.colors.accentText} /><Text accessibilityRole="header" style={styles.responseTitle}>{response.title}</Text></View>
           <Text style={styles.answer}>{response.answer}</Text>
-          <Text style={styles.answerSource}>AI suggestion · Based on your permitted simulation snapshot</Text>
+          <Text style={styles.answerSource}>{assistant.responseSource === 'local' ? 'On-device response · Simulation' : 'AI suggestion · Based on your permitted simulation snapshot'}</Text>
           {voice?.supported && <Pressable accessibilityLabel={voice.phase === 'speaking' ? 'Stop spoken reply' : 'Hear assistant answer'} onPress={() => { if (voice.phase === 'speaking') voice.pause(); else voice.speak(response.answer); }} style={styles.inlineAction}><Text style={styles.inlineActionText}>{voice.phase === 'speaking' ? 'Stop speaking' : 'Hear answer'}</Text></Pressable>}
           {response.scene && <View style={[styles.draft, compact && styles.draftCompact]}>
             <CinematicCardArtwork artwork={sceneArtwork({ name: response.scene.name })} variant="scene-backdrop" />

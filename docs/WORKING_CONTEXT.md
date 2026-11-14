@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-13**. Read this before rediscovering the project.
+Last maintained: **2026-11-14**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,50 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Hey Vanta recognition and local commands — November 14 / Preview 113 installed
+
+- Clear confirmed wake requests resolve locally against current permitted registered
+  names and room aliases; simple power/brightness/AC/blinds commands reuse the guarded
+  simulation executor. “Here” uses the selected Ask room. General advice and drafts
+  retain cloud Ask; Review → Create → separate Run is unchanged. Sensitive entry and
+  security devices do not enter wake execution. Common status answers identify simulated
+  values, and temperature replies distinguish targets from measured temperatures.
+- Shared speech endpoint requests finalization after 1 second of stable relevant text,
+  with a 2.5-second confirmed-final grace. This removes the old fixed-cycle wait without
+  executing provisional speech. iOS native adapter preserves finalization, accepts bounded
+  permitted vocabulary and rejects stale recognition/authorization callbacks. No new
+  library, AI provider, deployment, background listener or persisted transcript.
+- Warm controls live only during Home opt-in/panel activity. Consent, account, home,
+  room, grants, background and preview boundaries retain cancellation. Clear commands
+  work independently of cloud availability; live membership verification is still needed.
+- Verification: **257 tests / 19 suites**, **12 patch/build-helper tests**, TypeScript,
+  six real-panel browser profiles (320×568 through tablet landscape, plus keyboard
+  height), zero page overflow/browser errors, reduced-motion and minimum touch targets.
+  Native Release build, signature, staging identity, compiled speech adapter and exact
+  unchanged scene pass. Production metadata restored; receipt `work/preview113-verification.json`.
+  Physical speech accuracy,
+  finalization timing, audio interruptions and energy acceptance remain pending.
+- Installed in place and launched successfully; Apple inventory confirms **1.0.0 (113)**.
+  The user confirmed Living room wake-command Off → On both work, change only that
+  room, speak their results and respond faster. This is qualitative physical acceptance,
+  not a measured latency claim. Selected-room target, interruptions and energy remain
+  pending. Receipts: `work/preview113-{install,launch,installed-app}.json`.
+- Evidence: `work/voice-upgrade-{tests,types,build-tests,browser}.log`,
+  `work/voice-upgrade-browser.json` and corresponding screenshots;
+  native build log `work/voice-upgrade-preview113-build.log`; package verification
+  `work/voice-upgrade-preview113-verification.log`. Signing profile expires November 18
+  at 06:20:50 UTC; check live before a later installation.
+- Adjacent dependency finding: installed reviewed source backports remain verified, but
+  the **live dependency audit fails its upstream-review gate** because npm now publishes
+  node-forge 1.4.3, beyond the previously reviewed 1.4.0 catalog. Evidence:
+  `work/voice-upgrade-dependencies.log`, `work/voice-upgrade-node-forge-registry.json`.
+  No guard was weakened or unreviewed dependency installed. Review/retire the existing
+  backport in a separate dependency task. Do not report the live audit as passing.
+- Next physical check: microphone → Ask → Enable; test “Hey Vanta, turn the living
+  room lights off”, select Primary suite → “Vanta, set the temperature here to twenty-two
+  degrees”, then a scene draft (no change before Run). Check Stop/background and verify
+  unsupported entry commands do not execute. Current build status must be checked live.
 
 ## Cinematic account access — November 13 / research only
 

@@ -102,9 +102,9 @@ def main():
         try:
             for name, content in replacements.items():
                 (ROOT / name).write_bytes(content)
-            for script in ["check-auth-redirects.js", "check-release-version.js", "patch-security-dependencies.js"]:
+            for script in ["check-auth-redirects.js", "check-release-version.js", "patch-security-dependencies.js", "patch-voice-recognition.js"]:
                 command = ["node", f"scripts/{script}"]
-                if script == "patch-security-dependencies.js":
+                if script in ["patch-security-dependencies.js", "patch-voice-recognition.js"]:
                     command.append("--check")
                 subprocess.run(command, cwd=ROOT, env=environment, check=True)
             with tempfile.TemporaryDirectory(prefix="vanta-preview-signing-") as temp:

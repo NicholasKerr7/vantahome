@@ -1,3 +1,4 @@
+jest.mock('../useSimulationControls', () => ({ useSimulationControls: () => ({ client: {} }) }));
 import React from 'react';
 import { AppState } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';

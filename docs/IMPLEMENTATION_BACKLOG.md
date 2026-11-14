@@ -1,9 +1,28 @@
 # VantaHome implementation backlog
 
-Maintained November 13, 2026. This is the current delivery queue, not a claim that
+Maintained November 14, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
+
+## Current voice delivery and adjacent follow-up
+
+- **Preview 113 installed; basic wake acceptance passed:** property-aware final speech,
+  local comfort commands and common status answers are implemented. 257 focused tests /
+  19 suites, 12 patch/build tests, TypeScript, six actual-panel profiles and native
+  build/package verification pass. The user confirmed Living room wake Off/On,
+  correct target and spoken reply, with faster response. Quantitative latency,
+  broader accuracy, interruptions and battery behavior remain unverified. Preserve
+  scene review and separate Run. See working context for installation receipts.
+- **P1 dependency review:** live `security:dependencies` now rejects node-forge release
+  metadata (1.4.3 published vs reviewed 1.4.0). Installed source backports still pass
+  their exact hashes. Review official releases, replace/retire the backport if compatible,
+  and rerun the full audit; do not merely update the expected catalog or bypass the gate.
+  Evidence: `work/voice-upgrade-dependencies.log` and registry JSON beside it.
+- **Opportunity after physical voice acceptance:** replace archived Voice 3.2.4 with a
+  maintained native recognition library, preserving final-only execution, consent,
+  microphone/TTS ownership and permission scopes. Evaluate Android vocabulary adaptation
+  and real-device timing as part of that work; no provider/API or hardware migration now.
 
 ## Cinematic account access: research complete, implementation pending
 
@@ -200,7 +219,9 @@ ordinary controls and the embedded saved-scene Run transport during comparison.
 Selected-room reporting omits labels/readings and returns null for layout-only
 rooms. Account/home/grant/room changes retire request, preview and speech context.
 The five-minute voice window requires explicit opt-in and cannot restart itself;
-phone speech services may process audio. Session identity and serialized native
+phone speech services may process audio and permitted vocabulary. Preview 113 routes
+confirmed clear comfort requests locally through existing guarded controls; sensitive
+devices and scene Run stay outside wake execution. Session identity and serialized native
 cleanup prevent late transcripts or spoken replies from reviving ended consent.
 Physical permission, audio/interruption, accuracy and energy behavior still need
 an actual-device check. Browser/unit evidence is not native microphone acceptance.
