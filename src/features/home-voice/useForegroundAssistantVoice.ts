@@ -7,7 +7,7 @@ import { claimVoiceSession, ownsVoiceSession, queueVoiceOperation, releaseVoiceS
 import { createSpeechEndpoint, type SpeechEndpoint } from './speechEndpoint';
 import { speechRecognitionOptions, type SpeechRecognitionOptions } from './speechRecognitionOptions';
 
-export type AssistantVoicePhase = 'off' | 'listening' | 'capturing' | 'waiting' | 'speaking';
+export type AssistantVoicePhase = 'off' | 'listening' | 'following' | 'capturing' | 'waiting' | 'speaking';
 /** Ephemeral opt-in identity, not an authorization credential; callers must revalidate before use. */
 export type AssistantVoiceSessionToken = number;
 type Options = SpeechRecognitionOptions & {
@@ -20,13 +20,15 @@ type Options = SpeechRecognitionOptions & {
 const LISTENING_WINDOW_MS = 5 * 60_000;
 const WAKE_CYCLE_MS = 20_000;
 const QUESTION_CYCLE_MS = 10_000;
+const FOLLOW_UP_WINDOW_MS = 8_000;
 const MAX_ERRORS = 3;
+type FollowUp = { accepts: (text: string) => boolean; expiresAt: number | null; outputToken: number | null };
 // Separate hook instances must never recognize a queued question from an earlier mount as their own.
 let nextSessionToken = 0;
 
 /**
  * Opted-in foreground speech recognition, not a local/background wake-word engine.
- * Ambient transcripts stay ephemeral; only a wake-prefixed confirmed final utterance leaves this hook.
+ * Ambient transcripts stay ephemeral; final speech needs a wake phrase or a bounded, caller-approved follow-up.
  * Listening is suspended throughout generation and TTS, with no automatic new consent window.
  */
 export function useForegroundAssistantVoice(options: Options) {
@@ -50,6 +52,8 @@ export function useForegroundAssistantVoice(options: Options) {
   const outputGeneration = useRef(0);
   const consecutiveErrors = useRef(0);
   const windowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const followUp = useRef<FollowUp | null>(null);
+  const followUpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cycleTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   const beginRef = useRef<(capturing?: boolean) => Promise<void>>(async () => undefined);
 
@@ -57,6 +61,13 @@ export function useForegroundAssistantVoice(options: Options) {
   const updatePhase = useCallback((next: AssistantVoicePhase) => {
     phaseRef.current = next;
     if (alive.current) setPhase(next);
+  }, []);
+
+  /** Revoke both an armed reply and its active deadline before any session boundary changes. */
+  const clearFollowUp = useCallback(() => {
+    followUp.current = null;
+    if (followUpTimer.current) clearTimeout(followUpTimer.current);
+    followUpTimer.current = null;
   }, []);
 
   /** Retire every delayed completion/retry before changing microphone owners or recognition stages. */
@@ -91,6 +102,7 @@ export function useForegroundAssistantVoice(options: Options) {
     outputGeneration.current += 1;
     enabledRef.current = false;
     deadline.current = 0;
+    clearFollowUp();
     if (windowTimer.current) clearTimeout(windowTimer.current);
     windowTimer.current = null;
     const owned = releaseVoiceSession(lease.current);
@@ -104,7 +116,7 @@ export function useForegroundAssistantVoice(options: Options) {
     void shutdown.catch(() => { if (alive.current) setError('The microphone could not be released. Close the assistant.'); });
     if (alive.current) setEnabled(false);
     updatePhase('off');
-  }, [cancelRecognition, updatePhase]);
+  }, [cancelRecognition, clearFollowUp, updatePhase]);
 
   /** Recheck authority at every asynchronous boundary; the caller supplies the existing permission fingerprint. */
   const current = useCallback((token: number) => alive.current && token === generation.current
@@ -114,6 +126,42 @@ export function useForegroundAssistantVoice(options: Options) {
   /** The five-minute budget never restarts because a phrase, retry, answer or foreground event arrived. */
   const listeningAllowed = useCallback((token: number) => current(token) && enabledRef.current
     && Date.now() < deadline.current, [current]);
+
+  /** A follow-up expires independently of native retries and never outlives the original opt-in window. */
+  const followingAllowed = useCallback(() => {
+    const candidate = followUp.current;
+    return candidate !== null && candidate.expiresAt !== null && Date.now() < candidate.expiresAt
+      && listeningAllowed(generation.current);
+  }, [listeningAllowed]);
+
+  /** Ask current permission-scoped memory about bounded text; predicate failures never admit ambient speech. */
+  const acceptsFollowUp = useCallback((text: string): boolean => {
+    const candidate = followUp.current;
+    const question = assistantSpokenQuestion(text);
+    if (!candidate || !question || !followingAllowed()) return false;
+    try { return candidate.accepts(question) === true && candidate === followUp.current && followingAllowed(); }
+    catch { return false; }
+  }, [followingAllowed]);
+
+  /** Arm only the next spoken reply; this does not open a microphone or change a recognition-cycle deadline. */
+  const allowFollowUp = useCallback((accepts: ((text: string) => boolean) | null) => {
+    clearFollowUp();
+    if (accepts && listeningAllowed(generation.current)) followUp.current = { accepts, expiresAt: null, outputToken: null };
+    if (phaseRef.current === 'following') updatePhase('listening');
+  }, [clearFollowUp, listeningAllowed, updatePhase]);
+
+  /** Begin the one-shot answer window only after spoken output and its trailing audio have finished. */
+  const openFollowUp = useCallback((outputToken: number) => {
+    const candidate = followUp.current;
+    if (!candidate || candidate.outputToken !== outputToken || candidate.expiresAt !== null
+      || !listeningAllowed(generation.current)) return;
+    candidate.expiresAt = Math.min(Date.now() + FOLLOW_UP_WINDOW_MS, deadline.current);
+    followUpTimer.current = setTimeout(() => {
+      if (followUp.current !== candidate) return;
+      clearFollowUp();
+      if (phaseRef.current === 'following') updatePhase('listening');
+    }, candidate.expiresAt - Date.now());
+  }, [clearFollowUp, listeningAllowed, updatePhase]);
 
   /** Bind queued work to this exact opt-in window; paused listening retains its original consent and deadline. */
   const readSessionToken = useCallback((): AssistantVoiceSessionToken | null => (
@@ -127,6 +175,7 @@ export function useForegroundAssistantVoice(options: Options) {
 
   /** Pause for an Ask request or a caller-owned UI transition without creating a new listening window. */
   const pause = useCallback(() => {
+    clearFollowUp();
     outputGeneration.current += 1;
     const wasSpeaking = outputActive.current;
     outputActive.current = false;
@@ -136,7 +185,7 @@ export function useForegroundAssistantVoice(options: Options) {
     }
     if (enabledRef.current) updatePhase('waiting');
     else stop();
-  }, [cancelRecognition, stop, updatePhase]);
+  }, [cancelRecognition, clearFollowUp, stop, updatePhase]);
 
   /** Recover only while consent and authority remain current; errors use bounded exponential backoff. */
   const retry = useCallback((token: number, failed: boolean) => {
@@ -146,9 +195,9 @@ export function useForegroundAssistantVoice(options: Options) {
     if (consecutiveErrors.current >= MAX_ERRORS) {
       stop(); setError('Speech recognition stopped. Check microphone and speech permissions, then try again.'); return;
     }
-    updatePhase('listening');
+    updatePhase(followingAllowed() ? 'following' : 'listening');
     later(() => { if (listeningAllowed(token)) void beginRef.current(); }, failed ? 1000 * 2 ** (consecutiveErrors.current - 1) : 500);
-  }, [later, listeningAllowed, stop, updatePhase]);
+  }, [followingAllowed, later, listeningAllowed, stop, updatePhase]);
 
   /** Start one bounded utterance; native final results are allowed to follow the speech-end callback. */
   const begin = useCallback(async (capturing = false): Promise<void> => {
@@ -157,7 +206,7 @@ export function useForegroundAssistantVoice(options: Options) {
     const cycleToken = ++cycle.current;
     nativeActive.current = true;
     const cycleCurrent = () => listeningAllowed(token) && cycle.current === cycleToken && nativeActive.current;
-    updatePhase(capturing ? 'capturing' : 'listening');
+    updatePhase(capturing ? 'capturing' : followingAllowed() ? 'following' : 'listening');
 
     /** Consume final text exactly once, only after microphone cleanup completes. */
     const complete = async (finalText = '', failed = false): Promise<void> => {
@@ -166,8 +215,11 @@ export function useForegroundAssistantVoice(options: Options) {
       catch { if (current(token)) { stop(); setError('The microphone could not be released. Try again.'); } return; }
       if (!listeningAllowed(token)) return;
       if (failed) { retry(token, true); return; }
-      const wake = capturing ? { question: parseAssistantWakePhrase(finalText)?.question ?? finalText } : parseAssistantWakePhrase(finalText);
+      const leadingWake = parseAssistantWakePhrase(finalText);
+      const wake = capturing ? { question: leadingWake?.question ?? finalText }
+        : leadingWake ?? (acceptsFollowUp(finalText) ? { question: finalText } : null);
       if (!wake) { retry(token, false); return; }
+      clearFollowUp();
       consecutiveErrors.current = 0;
       if (!wake.question.trim()) {
         if (capturing) { retry(token, false); return; }
@@ -190,7 +242,7 @@ export function useForegroundAssistantVoice(options: Options) {
         if (!cycleCurrent()) return;
         const recognition = createSpeechEndpoint({
           platform: Platform.OS === 'android' ? 'android' : 'ios',
-          mayFinish: (text) => capturing ? Boolean(text) : parseAssistantWakePhrase(text) !== null,
+          mayFinish: (text) => capturing ? Boolean(text) : parseAssistantWakePhrase(text) !== null || acceptsFollowUp(text),
           stopNative: () => queueVoiceOperation(async () => { if (cycleCurrent()) await Voice.stop(); }),
           onFinal: (text) => { if (cycleCurrent()) void complete(text); },
           onIncomplete: (hadSpeech) => { if (cycleCurrent()) void complete('', hadSpeech); },
@@ -228,7 +280,7 @@ export function useForegroundAssistantVoice(options: Options) {
         }, capturing ? QUESTION_CYCLE_MS : WAKE_CYCLE_MS);
       });
     } catch { if (cycleCurrent()) await complete('', true); }
-  }, [cancelRecognition, current, later, listeningAllowed, readSessionToken, retry, stop, updatePhase]);
+  }, [acceptsFollowUp, cancelRecognition, clearFollowUp, current, followingAllowed, later, listeningAllowed, readSessionToken, retry, stop, updatePhase]);
   beginRef.current = begin;
 
   /** An explicit tap is the only way to create a new consent window; web keeps its typed Ask fallback. */
@@ -266,31 +318,40 @@ export function useForegroundAssistantVoice(options: Options) {
     }
     const token = generation.current;
     const outputToken = ++outputGeneration.current;
+    // An allowance belongs to one spoken reply; replacing or replaying it requires a fresh allowance.
+    const candidate = followUp.current;
+    if (candidate?.outputToken === null) candidate.outputToken = outputToken;
+    else clearFollowUp();
     const outputCurrent = () => current(token) && outputToken === outputGeneration.current;
     try {
       await cancelRecognition();
-      await queueVoiceOperation(() => Speech.stop());
+      await queueVoiceOperation(async () => { if (outputCurrent()) await Speech.stop(); });
       if (!outputCurrent()) return;
       outputActive.current = true;
       updatePhase('speaking');
       let finished = false;
       /** Retire output once; late completion cannot restart recognition after scope loss. */
-      const finish = (failed = false) => {
+      const finish = (status: 'done' | 'stopped' | 'failed') => {
         if (finished || !outputCurrent()) return;
         finished = true; outputActive.current = false;
         clearCycleTimers();
-        if (failed) { stop(); setError('Spoken reply is unavailable. The answer is still on screen.'); return; }
+        if (status !== 'done') clearFollowUp();
+        if (status === 'failed') { stop(); setError('Spoken reply is unavailable. The answer is still on screen.'); return; }
         if (listeningAllowed(token)) {
           updatePhase('waiting');
           // Allow the speaker's trailing audio to decay before reopening the microphone.
-          later(() => { if (listeningAllowed(token)) void beginRef.current(); }, 800);
+          later(() => {
+            if (!outputCurrent() || !listeningAllowed(token)) return;
+            openFollowUp(outputToken);
+            void beginRef.current();
+          }, 800);
         } else stop();
       };
       Speech.speak(answer, { language: 'en-US', rate: 0.96, useApplicationAudioSession: false,
-        onDone: () => finish(), onStopped: () => finish(), onError: () => finish(true) });
+        onDone: () => finish('done'), onStopped: () => finish('stopped'), onError: () => finish('failed') });
       later(() => { if (outputCurrent() && outputActive.current) { stop(); setError('Spoken reply timed out. The answer is still on screen.'); } }, 60_000);
     } catch { if (outputCurrent()) { stop(); setError('Spoken reply is unavailable. The answer is still on screen.'); } }
-  }, [cancelRecognition, clearCycleTimers, current, later, listeningAllowed, pause, stop, updatePhase]);
+  }, [cancelRecognition, clearCycleTimers, clearFollowUp, current, later, listeningAllowed, openFollowUp, pause, stop, updatePhase]);
 
   useEffect(() => {
     if (!options.allowed || options.scopeKey !== capturedScope.current) stop();
@@ -302,6 +363,6 @@ export function useForegroundAssistantVoice(options: Options) {
     return () => { alive.current = false; stop(); subscription.remove(); };
   }, [stop]);
 
-  return { supported: Platform.OS !== 'web', enabled, phase, error, start, stop, pause, resume, speak,
+  return { supported: Platform.OS !== 'web', enabled, phase, error, start, stop, pause, resume, speak, allowFollowUp,
     readSessionToken, isSessionCurrent };
 }

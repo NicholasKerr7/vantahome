@@ -216,3 +216,53 @@ test.each(['light grant', 'assigned room'] as const)('a revoked %s invalidates a
     expect(lightIds.every((id) => saved.deviceStates[id].on === true)).toBe(true);
   } finally { voice.dispose(); }
 });
+
+test.each([
+  { delta: 10 as const, expected: [35, 100, 15] },
+  { delta: -10 as const, expected: [15, 85, 0] },
+])('relative brightness applies $delta points independently and preserves each power state', async ({ delta, expected }) => {
+  const { voice, scene, persistence } = await sharedDemo();
+  const targets = ['master-light', 'master-bedside-left', 'master-bedside-right'];
+  try {
+    scene.setSetting(targets[0], 'brightness', 25);
+    scene.setSetting(targets[1], 'brightness', 95);
+    scene.setSetting(targets[2], 'brightness', 5);
+    scene.setPower(targets.slice(1), false);
+    await settle();
+    const before = scene.getSnapshot().state.deviceStates;
+
+    expect(executeVoiceCommand(voice, { type: 'brightness-adjustment', deviceIds: targets, delta })).toEqual({ status: 'completed' });
+    await settle();
+    const saved = await persistence.load('demo');
+    for (const state of [voice.getSnapshot().state, scene.getSnapshot().state, saved]) {
+      expect(targets.map((id) => state.deviceStates[id].level)).toEqual(expected);
+      expect(targets.map((id) => state.deviceStates[id].on)).toEqual([true, false, false]);
+      for (const [id, reading] of Object.entries(before)) if (!targets.includes(id)) expect(state.deviceStates[id]).toEqual(reading);
+    }
+  } finally { voice.dispose(); scene.dispose(); }
+});
+
+test('relative brightness reports a fire-held light without claiming the requested dimming completed', async () => {
+  const { voice, scene } = await sharedDemo();
+  try {
+    scene.runAction('family-smoke', 'smoke-test-alarm');
+    await settle();
+    expect(executeVoiceCommand(voice, { type: 'brightness-adjustment', deviceIds: ['living-light'], delta: -10 })).toEqual({
+      status: 'limited', completedCount: 0, requestedCount: 1, fireHeldLightCount: 1,
+    });
+    await settle();
+    expect(scene.getSnapshot().state.deviceStates['living-light']).toMatchObject({ on: true, level: 100 });
+  } finally { voice.dispose(); scene.dispose(); }
+});
+
+test('a relative request cannot change masked rooms when its target list includes hidden lights', async () => {
+  const { voice, persistence, scope, bedroomLightIds } = await assignedBedroom('Tenant');
+  try {
+    expect(executeVoiceCommand(voice, { type: 'brightness-adjustment', deviceIds: lightIds, delta: 10 })).toEqual({ status: 'scoped' });
+    await settle();
+    const saved = await persistence.load(scope);
+    for (const id of lightIds) {
+      expect(saved.deviceStates[id]).toMatchObject({ on: true, level: bedroomLightIds.includes(id) ? 80 : 70 });
+    }
+  } finally { voice.dispose(); }
+});

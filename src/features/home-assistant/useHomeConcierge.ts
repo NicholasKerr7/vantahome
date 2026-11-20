@@ -7,9 +7,7 @@ import { MAX_CONCIERGE_CONTEXT_AGE_MS, parseConciergeResponse, type ConciergeRes
 import { assistantAuthorizationFingerprint, assistantContextIsCurrent, assistantSceneDraft, buildAssistantContext, type AssistantContext, type AssistantScopeOptions } from './assistantContext';
 import { conciergeAvailability, ConciergeServiceError, requestConcierge } from './conciergeService';
 import { clearAssistantDraft, stageAssistantDraft } from './assistantDraftHandoff';
-import { localVoiceReply, resolveLocalAssistantVoice } from './localAssistantVoice';
-import { executeVoiceCommand } from '../home-voice/executeVoiceCommand';
-import { voiceCommandFeedback } from '../home-voice/voiceCommandFeedback';
+import { useLocalVoiceConversation } from './useLocalVoiceConversation';
 
 export type ConciergeStatus = 'checking' | 'ready' | 'unavailable' | 'asking' | 'error';
 type Answer = { response: ConciergeResponse; context: AssistantContext; source?: 'local' | 'cloud' };
@@ -71,16 +69,29 @@ export function useHomeConcierge({ roomId = null, controls }: AssistantScopeOpti
   // Readings can update without invalidation; a narrowed snapshot grant must cancel pending work.
   const deviceScope = deviceScopeFingerprint(context);
 
+  /** Fresh authority checks are shared by immediate controls and conversational follow-ups. */
+  const localContextIsCurrent = useCallback((captured: AssistantContext) => mounted.current && active.current
+    && contextRef.current.fingerprint === fingerprint && captured.fingerprint === fingerprint
+    && assistantContextIsCurrent(captured, useHomeStore.getState()), [fingerprint]);
+  /** Publish local observations in the same permission-checked response surface as cloud advice. */
+  const receiveLocalReply = useCallback((response: ConciergeResponse, captured: AssistantContext) => {
+    setError(null); setAnswer({ response, context: captured, source: 'local' });
+  }, []);
+  const conversation = useLocalVoiceConversation({ client: simulation.client, context, roomId,
+    isCurrent: localContextIsCurrent, onReply: receiveLocalReply });
+  const { respond: respondLocally, reset: resetVoiceConversation, acceptsFollowUp: acceptsVoiceFollowUp, readFollowUp: readVoiceFollowUp } = conversation;
+
   /** Invalidate before aborting so even an already-resolved promise cannot repaint the panel. */
   const cancel = useCallback(() => {
+    resetVoiceConversation();
     const previous = work.current;
     work.current = null;
     previous?.abort();
     if (mounted.current) setStatus(available ? 'ready' : 'unavailable');
-  }, [available]);
+  }, [available, resetVoiceConversation]);
 
   /** Forget the last answer on demand; there is no transcript or background memory. */
-  const clear = useCallback(() => { answerRef.current = null; setAnswer(null); setError(null); }, []);
+  const clear = useCallback(() => { resetVoiceConversation(); answerRef.current = null; setAnswer(null); setError(null); }, [resetVoiceConversation]);
 
   useEffect(() => {
     mounted.current = true;
@@ -88,7 +99,7 @@ export function useHomeConcierge({ roomId = null, controls }: AssistantScopeOpti
   }, []);
 
   useEffect(() => {
-    const abort = () => { answerRef.current = null; work.current?.abort(); work.current = null; setAnswer(null); setAvailable(false); setStatus('unavailable'); };
+    const abort = () => { resetVoiceConversation(); answerRef.current = null; work.current?.abort(); work.current = null; setAnswer(null); setAvailable(false); setStatus('unavailable'); };
     const unsubscribe = useHomeStore.subscribe((state) => {
       if (assistantAuthorizationFingerprint(state, roomId) !== fingerprint) abort();
     });
@@ -100,7 +111,7 @@ export function useHomeConcierge({ roomId = null, controls }: AssistantScopeOpti
       previousState = next;
     });
     return () => { unsubscribe(); background.remove(); };
-  }, [fingerprint, roomId]);
+  }, [fingerprint, roomId, resetVoiceConversation]);
 
   useEffect(() => { clearAssistantDraft(); }, [fingerprint]);
 
@@ -142,6 +153,7 @@ export function useHomeConcierge({ roomId = null, controls }: AssistantScopeOpti
 
   /** Ask only after explicit Send, with a fresh permitted simulation snapshot and no automatic retries. */
   const ask = useCallback(async (question: string): Promise<void> => {
+    resetVoiceConversation();
     const state = useHomeStore.getState();
     const captured = buildAssistantContext(state, simulation.client.getSnapshot(), Date.now(), { roomId });
     if (!mounted.current || !active.current || contextRef.current.fingerprint !== fingerprint
@@ -168,33 +180,7 @@ export function useHomeConcierge({ roomId = null, controls }: AssistantScopeOpti
     } catch (failure) {
       if (isCurrent()) { setStatus('error'); setError(failure instanceof ConciergeServiceError ? failure.message : 'That answer could not be verified. Try again.'); }
     } finally { if (work.current === controller) work.current = null; }
-  }, [available, simulation.client, fingerprint, roomId]);
-
-  /** Resolve final, consented speech locally before cloud availability; never queue a failed control for replay. */
-  const respondLocally = useCallback((question: string, consentCurrent: () => boolean): ConciergeResponse | null => {
-    const state = useHomeStore.getState();
-    const captured = buildAssistantContext(state, simulation.client.getSnapshot(), Date.now(), { roomId });
-    const current = () => mounted.current && active.current && consentCurrent()
-      && contextRef.current.fingerprint === fingerprint && captured.fingerprint === fingerprint
-      && assistantContextIsCurrent(captured, useHomeStore.getState());
-    if (!current()) return localVoiceReply('Your home access or listening session changed. Please try again.');
-    const resolution = resolveLocalAssistantVoice(question, captured);
-    if (resolution.kind === 'cloud') return null;
-    let result = resolution.kind === 'reply' ? resolution.response : null;
-    if (resolution.kind === 'command') {
-      // Canonical execution rechecks grants and safety rules synchronously; no provider gets a command tool.
-      if (!current()) return localVoiceReply('Your access changed. Nothing changed.');
-      const outcome = executeVoiceCommand(simulation.client, resolution.command);
-      result = localVoiceReply(voiceCommandFeedback(outcome, resolution.description), resolution.deviceIds, 'Your request');
-    }
-    if (result && current()) {
-      const fresh = buildAssistantContext(useHomeStore.getState(), simulation.client.getSnapshot(), Date.now(), { roomId });
-      if (fresh.available && fresh.fingerprint === captured.fingerprint) {
-        setError(null); setAnswer({ response: result, context: fresh, source: 'local' });
-      }
-    }
-    return current() ? result : localVoiceReply('Your home access changed. Reopen the assistant.');
-  }, [simulation.client, fingerprint, roomId]);
+  }, [available, simulation.client, fingerprint, roomId, resetVoiceConversation]);
 
   /** Recheck scope, target conflicts and the original deadline without consuming a review handoff. */
   const preparePreview = useCallback((): AssistantPreview | null => {
@@ -227,7 +213,7 @@ export function useHomeConcierge({ roomId = null, controls }: AssistantScopeOpti
 
   return { context, availableRooms: context.availableRooms, roomId, scopeLabel: context.scopeLabel,
     proposalDevices: visibleAnswer?.context.devices ?? [],
-    status, response: visibleAnswer?.response ?? null, responseSource: visibleAnswer?.source ?? 'cloud', error, ask, respondLocally, cancel, clear,
+    status, response: visibleAnswer?.response ?? null, responseSource: visibleAnswer?.source ?? 'cloud', error, ask, respondLocally, resetVoiceConversation, acceptsVoiceFollowUp, readVoiceFollowUp, voiceClarification: conversation.clarification, cancel, clear,
     canAsk: active.current && available && context.available && status !== 'asking' && status !== 'checking',
     canReview: Boolean(visibleAnswer?.response.scene && context.canDraft
       && assistantSceneDraft(visibleAnswer.response, visibleAnswer.context, useHomeStore.getState(), simulation)),

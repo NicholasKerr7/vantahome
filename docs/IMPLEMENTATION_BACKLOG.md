@@ -1,28 +1,31 @@
 # VantaHome implementation backlog
 
-Maintained November 14, 2026. This is the current delivery queue, not a claim that
+Maintained November 20, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
 
 ## Current voice delivery and adjacent follow-up
 
-- **Preview 113 installed; basic wake acceptance passed:** property-aware final speech,
-  local comfort commands and common status answers are implemented. 257 focused tests /
-  19 suites, 12 patch/build tests, TypeScript, six actual-panel profiles and native
-  build/package verification pass. The user confirmed Living room wake Off/On,
-  correct target and spoken reply, with faster response. Quantitative latency,
-  broader accuracy, interruptions and battery behavior remain unverified. Preserve
-  scene review and separate Run. See working context for installation receipts.
+- **Preview 114 installed and manually opened:** conversational references and
+  guarded room/device choices are complete, with eight-second wake-free replies
+  after eligible spoken output and 60-second transient target memory. 366 tests /
+  22 suites, TypeScript, six real-panel viewport fixtures and native package checks
+  pass. New scene execution remains separate. Physical follow-up/choice acceptance,
+  latency, noise/accent accuracy, interruptions and energy remain pending. Preview
+  113 basic wake Off/On was accepted by the user. See working context for receipts.
 - **P1 dependency review:** live `security:dependencies` now rejects node-forge release
   metadata (1.4.3 published vs reviewed 1.4.0). Installed source backports still pass
   their exact hashes. Review official releases, replace/retire the backport if compatible,
   and rerun the full audit; do not merely update the expected catalog or bypass the gate.
-  Evidence: `work/voice-upgrade-dependencies.log` and registry JSON beside it.
+  Rechecked November 20; the release-review gate still fails. Evidence:
+  `work/voice-followup-dependencies.log` and earlier registry evidence.
 - **Opportunity after physical voice acceptance:** replace archived Voice 3.2.4 with a
   maintained native recognition library, preserving final-only execution, consent,
   microphone/TTS ownership and permission scopes. Evaluate Android vocabulary adaptation
   and real-device timing as part of that work; no provider/API or hardware migration now.
+  The pinned candidate exposes an iOS nonfinal-to-final mapping that must be resolved
+  before migration. See [the dated assessment](VOICE_CONVERSATION.md#recognition-maintenance-assessment).
 
 ## Cinematic account access: research complete, implementation pending
 

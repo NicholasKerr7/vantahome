@@ -15,6 +15,7 @@ import { assistantStyles as styles } from './assistantStyles';
 import AssistantScopePicker from './AssistantScopePicker';
 import AssistantSceneChanges from './AssistantSceneChanges';
 import AssistantVoiceControls, { type AssistantVoiceController } from './AssistantVoiceControls';
+import AssistantVoiceClarification from './AssistantVoiceClarification';
 import { useHomeStore } from '../../store/useHomeStore';
 import { useAssistantVoiceRequests, type AssistantVoiceRequest } from './useAssistantVoiceRequests';
 import type { useSimulationControls } from '../three-d-home/useSimulationControls';
@@ -112,6 +113,22 @@ export default function HomeAssistantPanel({ onClose, onReviewScene, initialRoom
   const changeRoom = (next: string | null) => { discardVoiceRequest(); voice?.stop(); speech.cancel(); assistant.cancel(); assistant.clear(); setInput(''); setRoomId(next); onRoomChange?.(next); };
   /** Cancellation also retires automatic narration from a request completing at the same moment. */
   const cancelRequest = () => { discardVoiceRequest(); voice?.pause(); assistant.cancel(); };
+  /** A visible choice is an explicit local answer; revalidate the pending request before any change. */
+  const chooseVoiceReply = (reply: string) => {
+    if (previewing || asking || !context.available
+      || !assistant.voiceClarification?.choices.some((choice) => choice.reply === reply)) return;
+    const token = voice?.readSessionToken() ?? null;
+    speech.cancel(); voice?.pause(); Keyboard.dismiss(); setInput(''); setInputFocused(false);
+    const result = assistant.respondLocally(reply, () => true);
+    if (result && voice?.isSessionCurrent(token)) {
+      voice.allowFollowUp(assistant.readVoiceFollowUp());
+      void voice.speak(result.answer);
+    }
+  };
+  /** Cancel the unresolved action as well as its optional wake-free listening window. */
+  const cancelVoiceChoice = () => {
+    discardVoiceRequest(); assistant.clear(); voice?.pause(); voice?.resume(); setInput('');
+  };
   /** Typing or dictating takes control of the microphone away from the hands-free queue. */
   const pauseVoiceForInput = () => { discardVoiceRequest(); voice?.pause(); };
 
@@ -159,7 +176,9 @@ export default function HomeAssistantPanel({ onClose, onReviewScene, initialRoom
         {!context.available && status !== 'unavailable' && <View style={styles.notice}><Text style={styles.noticeTitle}>Home information unavailable</Text><Text style={styles.detail}>{context.reason || 'Reopen the assistant after your home access and simulation are ready.'}</Text></View>}
         {asking && <View style={styles.notice} accessibilityLiveRegion="polite"><View style={styles.noticeHeader}><ActivityIndicator color={theme.colors.accent} /><Text style={styles.noticeTitle}>Considering your home</Text></View><Text style={styles.detail}>Using only your permitted simulation settings.</Text><Pressable accessibilityLabel="Cancel assistant request" onPress={cancelRequest} style={styles.inlineAction}><Text style={styles.inlineActionText}>Cancel</Text></Pressable></View>}
         {(status === 'error' || (error && status !== 'unavailable' && !asking)) && <View style={styles.notice} accessibilityRole="alert"><Text style={styles.noticeTitle}>Let’s try that again</Text><Text style={styles.detail}>{error || 'The answer could not be completed. Your question is still here.'}</Text>{!canAsk && <Pressable accessibilityLabel="Check assistant connection" onPress={assistant.retryAvailability} style={styles.inlineAction}><Text style={styles.inlineActionText}>Check connection</Text></Pressable>}</View>}
-        {response && !asking && <View testID="assistant-response" style={styles.response}>
+        {assistant.voiceClarification && <AssistantVoiceClarification {...assistant.voiceClarification}
+          disabled={!context.available || previewing || asking} onChoose={chooseVoiceReply} onCancel={cancelVoiceChoice} />}
+        {response && !asking && !assistant.voiceClarification && <View testID="assistant-response" style={styles.response}>
           <View style={styles.responseHeading}><Ionicons name="sparkles-outline" size={17} color={theme.colors.accentText} /><Text accessibilityRole="header" style={styles.responseTitle}>{response.title}</Text></View>
           <Text style={styles.answer}>{response.answer}</Text>
           <Text style={styles.answerSource}>{assistant.responseSource === 'local' ? 'On-device response · Simulation' : 'AI suggestion · Based on your permitted simulation snapshot'}</Text>

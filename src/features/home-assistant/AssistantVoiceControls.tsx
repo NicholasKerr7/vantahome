@@ -10,6 +10,7 @@ export type AssistantVoiceController = ReturnType<typeof useForegroundAssistantV
 
 const STATUS = {
   off: 'Quick controls. Clear answers.', listening: 'Listening for “Hey Vanta”…', capturing: 'Listening to your request…',
+  following: 'Your turn · reply without “Hey Vanta”',
   waiting: 'Listening paused', speaking: 'Vanta is speaking…',
 };
 
@@ -27,7 +28,7 @@ export default function AssistantVoiceControls({ voice, available, compact = fal
         onPress={() => { if (active) { onStop?.(); voice.stop(); } else void voice.start(); }}
         style={[styles.voiceButton, !active && !available && styles.disabled]}><Text style={styles.inlineActionText}>{active ? 'Stop' : 'Enable'}</Text></Pressable>
     </View>
-    {!compact && <Text style={styles.consent}>Say “Hey Vanta”, “Hey VantaHome” or “Vanta”, then your request. Clear comfort commands run in your simulation; common status questions answer on this device. Advice and scene drafts use OpenAI with permitted room settings. Scenes still need review and a separate Run. Listens on Home for up to 5 minutes; leaving or locking stops it. Your phone’s speech service may process audio and permitted room/device names. Replies use a synthetic device voice.</Text>}
+    {!compact && <Text style={styles.consent}>Say “Hey Vanta”, then your request. After a control or room question, you have 8 seconds to reply without the wake word. Clear commands run in your simulation. Advice and drafts use OpenAI; scenes still need review and a separate Run. Listens on Home for up to 5 minutes; leaving or locking stops it. Your phone’s speech service may process audio and permitted device names. Replies use a synthetic voice.</Text>}
     {voice.error && <Text accessibilityRole="alert" style={styles.detail}>{voice.error}</Text>}
   </View>;
 }

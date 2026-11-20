@@ -25,17 +25,28 @@ type Props = {
 export function useAssistantVoiceRequests({ request, voice, assistant, roomId, previewing, onConsumed, onPrepared }: Props) {
   const consumed = useRef(0);
   const pending = useRef<{ id: number; token: number; fingerprint: string } | null>(null);
+  const lastSession = useRef<number | null>(null);
   const [completed, setCompleted] = useState<number | null>(null);
   const { context, status, response, error, canAsk, ask } = assistant;
 
   /** Cancel queued and in-flight automatic speech without affecting explicit manual Hear actions. */
   const discard = useCallback(() => {
     pending.current = null;
+    assistant.resetVoiceConversation();
+    voice?.allowFollowUp(null);
     if (request && consumed.current < request.id) {
       consumed.current = request.id;
       onConsumed?.();
     }
-  }, [request, onConsumed]);
+  }, [request, onConsumed, assistant.resetVoiceConversation, voice?.allowFollowUp]);
+
+  useEffect(() => {
+    if (!voice?.enabled || previewing) {
+      lastSession.current = null;
+      assistant.resetVoiceConversation();
+      voice?.allowFollowUp(null);
+    }
+  }, [voice?.enabled, voice?.allowFollowUp, previewing, assistant.resetVoiceConversation]);
 
   useEffect(() => {
     if (!request || consumed.current >= request.id) return;
@@ -43,12 +54,20 @@ export function useAssistantVoiceRequests({ request, voice, assistant, roomId, p
     onConsumed?.();
     if (!voice?.isSessionCurrent(request.sessionToken) || request.roomId !== roomId
       || request.expiresAt <= Date.now() || previewing) return;
+    if (lastSession.current !== request.sessionToken) {
+      assistant.resetVoiceConversation();
+      lastSession.current = request.sessionToken;
+    }
     onPrepared(request.question);
     const local = assistant.respondLocally(request.question, () => Boolean(voice.isSessionCurrent(request.sessionToken)));
     if (local) {
-      if (voice.isSessionCurrent(request.sessionToken)) void voice.speak(local.answer);
+      if (voice.isSessionCurrent(request.sessionToken)) {
+        voice.allowFollowUp(assistant.readVoiceFollowUp());
+        void voice.speak(local.answer);
+      }
       return;
     }
+    voice.allowFollowUp(null);
     if (!canAsk) {
       voice.speak(context.reason || error || 'The assistant is still connecting. Please try your question again shortly.');
       return;
@@ -58,7 +77,7 @@ export function useAssistantVoiceRequests({ request, voice, assistant, roomId, p
     void ask(request.question).finally(() => {
       if (pending.current?.id === request.id) setCompleted(request.id);
     });
-  }, [request, voice?.isSessionCurrent, voice?.speak, roomId, previewing, canAsk, context.reason, context.fingerprint, error, ask, assistant.respondLocally, onConsumed, onPrepared]);
+  }, [request, voice?.isSessionCurrent, voice?.speak, voice?.allowFollowUp, roomId, previewing, canAsk, context.reason, context.fingerprint, error, ask, assistant.respondLocally, assistant.resetVoiceConversation, assistant.readVoiceFollowUp, onConsumed, onPrepared]);
 
   useEffect(() => {
     const current = pending.current;
@@ -72,7 +91,7 @@ export function useAssistantVoiceRequests({ request, voice, assistant, roomId, p
 
   useEffect(() => {
     // A permission change, hidden preview or unmount retires late async completion callbacks.
-    return () => { pending.current = null; };
-  }, [context.fingerprint, previewing]);
+    return () => { pending.current = null; assistant.resetVoiceConversation(); voice?.allowFollowUp(null); };
+  }, [context.fingerprint, previewing, assistant.resetVoiceConversation, voice?.allowFollowUp]);
   return discard;
 }

@@ -26,6 +26,15 @@ async function say(text: string): Promise<void> {
   await settle();
 }
 
+/** Complete a caller-approved spoken reply and enter its bounded follow-up window. */
+async function openFollowUp(voice: ReturnType<typeof useForegroundAssistantVoice>, accepts: (text: string) => boolean): Promise<void> {
+  act(() => voice.allowFollowUp(accepts));
+  await act(async () => { await voice.speak('Which room did you mean?'); });
+  const completion = jest.mocked(Speech.speak).mock.calls.at(-1)?.[1]?.onDone;
+  act(() => { completion?.(); jest.advanceTimersByTime(800); });
+  await settle();
+}
+
 /** Move all mounted speech owners through the same native lifecycle event. */
 function changeAppState(next: AppStateStatus): void {
   AppState.currentState = next;
@@ -352,4 +361,228 @@ test('session identities cannot be reused after unmount or microphone ownership 
   await act(async () => { await dictation.result.current.start(); });
   expect(active.result.current.isSessionCurrent(newSession)).toBe(false);
   active.unmount(); dictation.unmount(); await settle();
+});
+
+test('follow-up starts after completed TTS and its quiet gap, accepts only final speech, and is consumed once', async () => {
+  const onQuestion = jest.fn();
+  const accepts = jest.fn((text: string) => text === 'living room');
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion }));
+  await act(async () => { await hook.result.current.start(); });
+  const sessionToken = hook.result.current.readSessionToken();
+  const oldResults = Voice.onSpeechResults; const oldFinal = Voice.onSpeechRecognized;
+  act(() => hook.result.current.allowFollowUp(accepts));
+  await act(async () => { await hook.result.current.speak('Which room did you mean?'); });
+  act(() => {
+    oldResults({ value: ['living room'] }); oldFinal({ isFinal: true });
+    jest.advanceTimersByTime(10_000);
+  });
+  expect(onQuestion).not.toHaveBeenCalled();
+  expect(accepts).not.toHaveBeenCalled();
+  const completion = jest.mocked(Speech.speak).mock.calls[0][1]?.onDone;
+  act(() => { completion?.(); jest.advanceTimersByTime(799); }); await settle();
+  expect(hook.result.current.phase).toBe('waiting');
+  expect(Voice.start).toHaveBeenCalledTimes(1);
+  act(() => jest.advanceTimersByTime(1)); await settle();
+  expect(hook.result.current.phase).toBe('following');
+  expect(hook.result.current.readSessionToken()).toBe(sessionToken);
+  act(() => {
+    Voice.onSpeechResults({ value: ['living room'] }); Voice.onSpeechRecognized({ isFinal: false });
+    jest.advanceTimersByTime(1000);
+  }); await settle();
+  expect(Voice.stop).toHaveBeenCalledTimes(1);
+  expect(onQuestion).not.toHaveBeenCalled();
+  act(() => Voice.onSpeechRecognized({ isFinal: true })); await settle();
+  expect(onQuestion).toHaveBeenCalledTimes(1);
+  expect(onQuestion).toHaveBeenCalledWith('living room', sessionToken);
+  expect(jest.mocked(Voice.destroy).mock.invocationCallOrder.at(-1)).toBeLessThan(onQuestion.mock.invocationCallOrder[0]);
+  act(() => hook.result.current.resume()); await settle();
+  expect(hook.result.current.phase).toBe('listening');
+  await say('living room');
+  expect(onQuestion).toHaveBeenCalledTimes(1);
+  hook.unmount(); await settle();
+});
+
+test('ambient and unrelated commands cannot consume or extend the eight-second follow-up window', async () => {
+  const onQuestion = jest.fn(); const accepts = jest.fn((text: string) => text === 'living room');
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion }));
+  await act(async () => { await hook.result.current.start(); });
+  await openFollowUp(hook.result.current, accepts);
+  await say('turn all lights off');
+  expect(onQuestion).not.toHaveBeenCalled();
+  expect(hook.result.current.phase).toBe('following');
+  act(() => jest.advanceTimersByTime(500)); await settle();
+  act(() => {
+    jest.advanceTimersByTime(7499);
+    Voice.onSpeechResults({ value: ['living room'] });
+  });
+  expect(hook.result.current.phase).toBe('following');
+  act(() => jest.advanceTimersByTime(1)); await settle();
+  expect(hook.result.current.phase).toBe('listening');
+  act(() => Voice.onSpeechRecognized({ isFinal: true })); await settle();
+  expect(onQuestion).not.toHaveBeenCalled();
+  act(() => jest.advanceTimersByTime(500)); await settle();
+  await say('Vanta turn the living room lights off');
+  expect(onQuestion).toHaveBeenCalledWith('turn the living room lights off', hook.result.current.readSessionToken());
+  hook.unmount(); await settle();
+});
+
+test('Android partial speech never executes a permitted follow-up before its final result', async () => {
+  Platform.OS = 'android';
+  const onQuestion = jest.fn();
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion }));
+  await act(async () => { await hook.result.current.start(); });
+  await openFollowUp(hook.result.current, (text) => text === 'living room');
+  act(() => { Voice.onSpeechPartialResults({ value: ['living room'] }); jest.advanceTimersByTime(1000); }); await settle();
+  expect(onQuestion).not.toHaveBeenCalled();
+  act(() => { Voice.onSpeechEnd({}); Voice.onSpeechResults({ value: ['living room'] }); }); await settle();
+  expect(onQuestion).toHaveBeenCalledTimes(1);
+  hook.unmount(); await settle();
+});
+
+test('follow-up rechecks current memory after microphone teardown before forwarding final speech', async () => {
+  let permitted = true; let finishCancel!: () => void;
+  const onQuestion = jest.fn();
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion }));
+  await act(async () => { await hook.result.current.start(); });
+  await openFollowUp(hook.result.current, (text) => permitted && text === 'living room');
+  jest.mocked(Voice.cancel).mockImplementationOnce(() => new Promise((resolve) => { finishCancel = () => resolve(undefined); }));
+  await say('living room');
+  expect(onQuestion).not.toHaveBeenCalled();
+  permitted = false;
+  await act(async () => finishCancel()); await settle();
+  expect(onQuestion).not.toHaveBeenCalled();
+  hook.unmount(); await settle();
+});
+
+test.each(['throws', 'revokes', 'oversized', 'control-character'] as const)('unsafe follow-up predicate or text fails closed: %s', async (scenario) => {
+  const onQuestion = jest.fn();
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion }));
+  const accepts = jest.fn(() => {
+    if (scenario === 'throws') throw new Error('Memory is unavailable');
+    if (scenario === 'revokes') hook.result.current.allowFollowUp(null);
+    return true;
+  });
+  await act(async () => { await hook.result.current.start(); });
+  await openFollowUp(hook.result.current, accepts);
+  await say(scenario === 'oversized' ? 'x'.repeat(601) : scenario === 'control-character' ? 'living\nroom' : 'living room');
+  expect(onQuestion).not.toHaveBeenCalled();
+  if (scenario === 'oversized' || scenario === 'control-character') expect(accepts).not.toHaveBeenCalled();
+  hook.unmount(); await settle();
+});
+
+test.each(['stop', 'pause', 'background', 'scope', 'permission', 'new-session', 'clear'] as const)(
+  '%s revokes an active follow-up and its stale native callbacks', async (boundary) => {
+    const onQuestion = jest.fn();
+    const hook = renderHook((props: { scopeKey: string; allowed: boolean }) => useForegroundAssistantVoice({ ...props, onQuestion }),
+      { initialProps: { scopeKey: 'owner-home', allowed: true } });
+    await act(async () => { await hook.result.current.start(); });
+    await openFollowUp(hook.result.current, (text) => text === 'living room');
+    const oldResults = Voice.onSpeechResults; const oldFinal = Voice.onSpeechRecognized;
+    if (boundary === 'scope') hook.rerender({ scopeKey: 'guest-home', allowed: true });
+    else if (boundary === 'permission') hook.rerender({ scopeKey: 'owner-home', allowed: false });
+    else if (boundary === 'new-session') await act(async () => { await hook.result.current.start(); });
+    else act(() => {
+      if (boundary === 'stop') hook.result.current.stop();
+      if (boundary === 'pause') hook.result.current.pause();
+      if (boundary === 'background') changeAppState('background');
+      if (boundary === 'clear') hook.result.current.allowFollowUp(null);
+    });
+    await settle();
+    act(() => { oldResults({ value: ['living room'] }); oldFinal({ isFinal: true }); }); await settle();
+    expect(onQuestion).not.toHaveBeenCalled();
+    if (boundary === 'pause') { act(() => hook.result.current.resume()); await settle(); }
+    if (boundary === 'new-session' || boundary === 'pause') {
+      expect(hook.result.current.phase).toBe('listening');
+      await say('living room');
+      expect(onQuestion).not.toHaveBeenCalled();
+    }
+    hook.unmount(); await settle();
+  },
+);
+
+test('a follow-up near five-minute expiry cannot renew consent or complete a late question', async () => {
+  const onQuestion = jest.fn();
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion }));
+  await act(async () => { await hook.result.current.start(); });
+  const sessionToken = hook.result.current.readSessionToken();
+  act(() => { hook.result.current.pause(); jest.advanceTimersByTime(296_000); }); await settle();
+  await openFollowUp(hook.result.current, (text) => text === 'living room');
+  act(() => jest.advanceTimersByTime(3199));
+  expect(hook.result.current.phase).toBe('following');
+  expect(hook.result.current.isSessionCurrent(sessionToken)).toBe(true);
+  act(() => jest.advanceTimersByTime(1)); await settle();
+  expect(hook.result.current.enabled).toBe(false);
+  expect(hook.result.current.isSessionCurrent(sessionToken)).toBe(false);
+  await say('living room');
+  expect(onQuestion).not.toHaveBeenCalled();
+  expect(hook.result.current.error).toContain('five minutes');
+  hook.unmount(); await settle();
+});
+
+test.each(['replacement', 'stopped', 'replay'] as const)('%s speech cannot inherit or extend an earlier follow-up allowance', async (change) => {
+  const onQuestion = jest.fn();
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion }));
+  await act(async () => { await hook.result.current.start(); });
+  act(() => hook.result.current.allowFollowUp((text) => text === 'living room'));
+  await act(async () => { await hook.result.current.speak('Which room did you mean?'); });
+  const first = jest.mocked(Speech.speak).mock.calls[0][1];
+  if (change === 'replay') {
+    act(() => { first?.onDone?.(); jest.advanceTimersByTime(800); }); await settle();
+    expect(hook.result.current.phase).toBe('following');
+  }
+  if (change === 'stopped') act(() => first?.onStopped?.());
+  else {
+    await act(async () => { await hook.result.current.speak('Another spoken answer.'); });
+    act(() => { first?.onDone?.(); jest.mocked(Speech.speak).mock.calls.at(-1)?.[1]?.onDone?.(); });
+  }
+  act(() => jest.advanceTimersByTime(800)); await settle();
+  expect(hook.result.current.phase).toBe('listening');
+  await say('living room');
+  expect(onQuestion).not.toHaveBeenCalled();
+  hook.unmount(); await settle();
+});
+
+test('an explicit fresh allowance belongs only to its replacement spoken reply', async () => {
+  const onQuestion = jest.fn();
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion }));
+  await act(async () => { await hook.result.current.start(); });
+  act(() => hook.result.current.allowFollowUp((text) => text === 'living room'));
+  await act(async () => { await hook.result.current.speak('First clarification.'); });
+  const oldCompletion = jest.mocked(Speech.speak).mock.calls[0][1]?.onDone;
+  await openFollowUp(hook.result.current, (text) => text === 'bedroom');
+  act(() => oldCompletion?.()); await settle();
+  expect(hook.result.current.phase).toBe('following');
+  await say('living room');
+  expect(onQuestion).not.toHaveBeenCalled();
+  act(() => jest.advanceTimersByTime(500)); await settle();
+  await say('bedroom');
+  expect(onQuestion).toHaveBeenCalledWith('bedroom', hook.result.current.readSessionToken());
+  hook.unmount(); await settle();
+});
+
+test('a follow-up allowance cannot create consent from a manually played reply', async () => {
+  const hook = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion: jest.fn() }));
+  await openFollowUp(hook.result.current, () => true);
+  expect(hook.result.current.enabled).toBe(false);
+  expect(hook.result.current.phase).toBe('off');
+  expect(Voice.start).not.toHaveBeenCalled();
+  hook.unmount(); await settle();
+});
+
+test('a revoked speaker waiting on microphone teardown cannot stop the next owner’s spoken reply', async () => {
+  let finishCancel!: () => void;
+  const old = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'owner-home', allowed: true, onQuestion: jest.fn() }));
+  await act(async () => { await old.result.current.start(); });
+  jest.mocked(Voice.cancel).mockImplementationOnce(() => new Promise((resolve) => { finishCancel = () => resolve(undefined); }));
+  act(() => { old.result.current.allowFollowUp(() => true); void old.result.current.speak('Old clarification.'); });
+  await settle();
+  const active = renderHook(() => useForegroundAssistantVoice({ scopeKey: 'other-home', allowed: true, onQuestion: jest.fn() }));
+  act(() => { void active.result.current.speak('Current answer.'); }); await settle();
+  await act(async () => finishCancel()); await settle();
+  expect(Speech.stop).toHaveBeenCalledTimes(1);
+  expect(Speech.speak).toHaveBeenCalledTimes(1);
+  expect(Speech.speak).toHaveBeenCalledWith('Current answer.', expect.any(Object));
+  expect(old.result.current.enabled).toBe(false);
+  expect(active.result.current.phase).toBe('speaking');
+  old.unmount(); active.unmount(); await settle();
 });

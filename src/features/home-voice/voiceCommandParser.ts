@@ -5,6 +5,7 @@ import { hasVoicePhrase, normalizeSingleVoiceCommand, normalizeVoiceText, spoken
 export type HomeVoiceCommand =
   | { type: 'power'; deviceIds: string[]; on: boolean }
   | { type: 'brightness'; deviceIds: string[]; value: number }
+  | { type: 'brightness-adjustment'; deviceIds: string[]; delta: 10 | -10 }
   | { type: 'temperature'; deviceIds: string[]; value: number }
   | { type: 'position'; deviceIds: string[]; value: number };
 export type HomeVoiceParseResult = { command: HomeVoiceCommand; description: string } | { error: string };
@@ -107,7 +108,7 @@ function resolveDevices(target: string, context: HomeVoiceContext): { devices: D
   return { devices };
 }
 
-type ParsedIntent = { target: string; type: HomeVoiceCommand['type']; value: number | boolean };
+type ParsedIntent = { target: string; type: Exclude<HomeVoiceCommand['type'], 'brightness-adjustment'>; value: number | boolean };
 
 /** Read one imperative; setting units and any room suffix are consumed completely before target lookup. */
 function parseIntent(phrase: string): ParsedIntent | { error: string } {

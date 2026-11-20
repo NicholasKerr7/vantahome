@@ -15,10 +15,11 @@ export type VoiceCommandOutcome =
 const firePreviewLightIds = new Set<string>(FIRE_PREVIEW_LIGHT_IDS);
 
 /** Confirm the requested value after the shared reducer has enforced cross-device safety rules. */
-function matchesCommand(state: DeviceState | undefined, command: HomeVoiceCommand): boolean {
+function matchesCommand(state: DeviceState | undefined, command: HomeVoiceCommand, brightnessTarget?: number): boolean {
   if (!state) return false;
   if (command.type === 'power') return state.on === command.on;
   if (command.type === 'temperature') return state.settings?.tempC === command.value;
+  if (command.type === 'brightness-adjustment') return state.level === brightnessTarget;
   return state.level === command.value;
 }
 
@@ -36,14 +37,24 @@ export function executeVoiceCommand(client: SimulationControlClient, command: Ho
   if (!permittedIds.length) return { status: 'denied' };
   const limitedAccess = permittedIds.length !== command.deviceIds.length;
   command = { ...command, deviceIds: permittedIds };
+  // Relative changes retain each light's current level and never acquire an implicit power-on action.
+  const brightnessTargets = new Map<string, number>();
+  if (command.type === 'brightness-adjustment') {
+    for (const id of command.deviceIds) {
+      const level = snapshot.state.deviceStates[id]?.level;
+      if (typeof level !== 'number' || !Number.isFinite(level)) return { status: 'reconnecting' };
+      brightnessTargets.set(id, Math.max(0, Math.min(100, level + command.delta)));
+    }
+  }
   if (command.type === 'power') client.setPower(command.deviceIds, command.on);
   else for (const id of command.deviceIds) {
     if (command.type === 'position') client.setLevel(id, command.value);
+    else if (command.type === 'brightness-adjustment') client.setSetting(id, 'brightness', brightnessTargets.get(id)!);
     else client.setSetting(id, command.type === 'temperature' ? 'tempC' : 'brightness', command.value);
   }
   const { ready, state } = client.getSnapshot();
   if (!ready) return { status: 'reconnecting' };
-  const unmatchedIds = command.deviceIds.filter((id) => !matchesCommand(state.deviceStates[id], command));
+  const unmatchedIds = command.deviceIds.filter((id) => !matchesCommand(state.deviceStates[id], command, brightnessTargets.get(id)));
   if (!unmatchedIds.length) return { status: limitedAccess ? 'scoped' : 'completed' };
   if (unmatchedIds.every((id) => isCommandPending(id, state.deviceStates[id], command))) return { status: 'pending' };
   const fireHeldLightCount = getFireIncident(state.deviceStates).active

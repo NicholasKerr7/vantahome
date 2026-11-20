@@ -27,6 +27,7 @@ beforeEach(() => {
     context: { scope: 'home', fingerprint: 'scope', roomId: null, scopeLabel: 'My permitted rooms', availableRooms: [], capturedAt: Date.now(), expiresAt: null, available: true, reason: null, devices: [], canDraft: true,
       brief: { roomCount: 3, deviceCount: 8, onCount: 4, lightsOnCount: 2, climateOnCount: 1 }, requestContext: { mode: 'simulation', capturedAt: Date.now(), devices: [] } },
     status: 'ready', responseSource: 'cloud', respondLocally: jest.fn(() => null), response: null, error: null, canAsk: true, canReview: false,
+    resetVoiceConversation: jest.fn(), acceptsVoiceFollowUp: jest.fn(() => false), readVoiceFollowUp: jest.fn(() => null), voiceClarification: null,
     ask: jest.fn(async () => undefined), cancel: jest.fn(), clear: jest.fn(), retryAvailability: jest.fn(), prepareReview: jest.fn(() => null),
     roomId: null, scopeLabel: 'My permitted rooms', availableRooms: [], proposalDevices: [], preparePreview: jest.fn(() => null),
   };
@@ -155,7 +156,7 @@ function voiceFixture() {
   return {
     supported: true, enabled: true, phase: 'waiting' as const, error: null,
     start: jest.fn(async () => undefined), stop: jest.fn(), pause: jest.fn(), resume: jest.fn(), speak: jest.fn(),
-    readSessionToken: jest.fn(() => 7), isSessionCurrent: jest.fn((token: number | null) => token === 7),
+    readSessionToken: jest.fn(() => 7), isSessionCurrent: jest.fn((token: number | null) => token === 7), allowFollowUp: jest.fn(),
   };
 }
 
@@ -270,5 +271,51 @@ test('Preview uses a validated proposal without consuming Review or changing the
   fireEvent.press(screen.getByLabelText('Preview suggested scene in 3D'));
   expect(preview).toHaveBeenCalledWith(proposal);
   expect(mockAssistant.prepareReview).not.toHaveBeenCalled();
+  expect(mockAssistant.ask).not.toHaveBeenCalled();
+});
+
+/** Present current, opaque choice identities without exposing them in the visible composer. */
+function offerRoomChoice() {
+  mockAssistant.voiceClarification = { question: 'Which room? Nothing changed.', choices: [
+    { id: 'room:living', label: 'Living room', reply: 'room:living' },
+  ] };
+}
+
+test('a visible room choice submits only that local identity and arms valid follow-ups before speech', () => {
+  offerRoomChoice();
+  const voice = voiceFixture();
+  jest.mocked(mockAssistant.respondLocally).mockReturnValue({ title: 'Done', answer: 'Living room lights off.', deviceIds: [], scene: null });
+  jest.mocked(mockAssistant.readVoiceFollowUp).mockReturnValue(mockAssistant.acceptsVoiceFollowUp);
+  const screen = render(<HomeAssistantPanel onClose={jest.fn()} onReviewScene={jest.fn()} voice={voice} />);
+  fireEvent.press(screen.getByLabelText('Choose Living room'));
+  expect(mockAssistant.respondLocally).toHaveBeenCalledWith('room:living', expect.any(Function));
+  expect(mockAssistant.ask).not.toHaveBeenCalled();
+  expect(mockAssistant.prepareReview).not.toHaveBeenCalled();
+  expect(voice.allowFollowUp).toHaveBeenLastCalledWith(mockAssistant.acceptsVoiceFollowUp);
+  expect(voice.allowFollowUp.mock.invocationCallOrder.at(-1)).toBeLessThan(voice.speak.mock.invocationCallOrder[0]);
+  expect(screen.getByLabelText('Question for Vanta assistant').props.value).toBe('');
+});
+
+test.each(['unavailable', 'preview', 'busy'] as const)('room choice cannot execute when %s', (state) => {
+  offerRoomChoice();
+  if (state === 'unavailable') mockAssistant.context.available = false;
+  if (state === 'busy') mockAssistant.status = 'asking';
+  const screen = render(<HomeAssistantPanel onClose={jest.fn()} onReviewScene={jest.fn()} previewing={state === 'preview'} />);
+  fireEvent.press(screen.getByLabelText('Choose Living room'));
+  expect(mockAssistant.respondLocally).not.toHaveBeenCalled();
+});
+
+test('canceling a choice retires memory and resumes wake-only listening without device or cloud work', () => {
+  offerRoomChoice();
+  const voice = voiceFixture();
+  const screen = render(<HomeAssistantPanel onClose={jest.fn()} onReviewScene={jest.fn()} voice={voice} />);
+  jest.clearAllMocks();
+  fireEvent.press(screen.getByLabelText('Cancel room choice'));
+  expect(mockAssistant.resetVoiceConversation).toHaveBeenCalled();
+  expect(mockAssistant.clear).toHaveBeenCalled();
+  expect(voice.allowFollowUp).toHaveBeenCalledWith(null);
+  expect(voice.pause).toHaveBeenCalled();
+  expect(voice.resume).toHaveBeenCalled();
+  expect(mockAssistant.respondLocally).not.toHaveBeenCalled();
   expect(mockAssistant.ask).not.toHaveBeenCalled();
 });

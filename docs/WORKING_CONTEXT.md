@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-14**. Read this before rediscovering the project.
+Last maintained: **2026-11-20**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,37 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Conversational Hey Vanta — November 20 / Preview 114 installed
+
+- Added short-lived permitted device references, relative light adjustment and
+  explicit room/device clarification with touch-momentum horizontal choices. No
+  ambiguous action runs before a current choice. “Home brief”/new intents retire
+  pending commands. Existing simulation permissions and separate scene Run remain.
+- After a successful spoken control or clarification, a single-use eight-second
+  wake-free window accepts only recognized continuations. Memory lasts at most
+  60 seconds; scope/consent/background/preview changes clear it. Final-only native
+  recognition, output ownership and the original five-minute opt-in are preserved.
+- **366 tests / 22 suites**, TypeScript and six real-panel browser fixtures pass
+  (phone/tablet/keyboard height, 44 px targets, horizontal last-choice reachability,
+  Cancel, reduced motion and zero browser errors). Real reducer/save/reopen tests
+  cover persistence; fixtures do not establish physical audio quality.
+- Preview **1.0.0 (114)** native Release build, signature, staging identity, new
+  conversational markers and exact unchanged scene verified: **32,345,722 bytes**,
+  SHA-256 `bed2d2ff288300ac04ced617501d34e302a2bf6bc8df669f92b33b678172a3df`.
+  Production metadata restored; new signing profile expires **November 27,
+  2026 at 06:56:03 UTC**. Receipt: `work/preview114-verification.json`.
+- Installed in place; Apple inventory confirms **1.0.0 (114)**. Automatic launch
+  returned Apple’s security/trust error; the user opened it manually and confirmed
+  it works. Physical continuation/clarification acceptance is pending. Installation
+  receipts: `work/preview114-{install,launch,installed-app}.json`.
+  Evidence: `work/voice-followup-{all-tests,lint,browser}.log`, browser JSON/screenshots,
+  `work/voice-followup-preview114-{build,verification}.log`.
+- Live dependency audit rechecked November 20 and still rejects changed node-forge
+  upstream release metadata; installed reviewed backport checks pass. No dependency
+  gate was bypassed and no dependency changed. Evidence: `work/voice-followup-dependencies.log`.
+- [Conversation design and maintenance review](VOICE_CONVERSATION.md) records the
+  recognition migration finality incompatibility and remaining physical tests.
 
 ## Hey Vanta recognition and local commands — November 14 / Preview 113 installed
 
