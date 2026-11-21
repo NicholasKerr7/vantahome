@@ -1,6 +1,7 @@
 # Hey Vanta conversational controls
 
-Implemented November 20, 2026 for Preview 114. Simulation only; no provider,
+Implemented November 20, 2026 for Preview 114; correction reliability updated
+November 21 for Preview 115. Simulation only; no provider,
 server, hub, or physical-device control changes.
 
 ## Interaction
@@ -24,6 +25,49 @@ and the existing 800 ms speaker-decay interval. Only a currently recognized
 follow-up, choice, or cancellation can bypass the wake phrase. Unrelated requests
 still need “Hey Vanta.” Status replies and failed commands do not open this window.
 The window cannot extend the original five-minute Home-only consent.
+
+## Corrections and text reliability — Preview 115
+
+- A pending room question accepts “No, the family room,” “I meant the family room,”
+  and one unambiguous current room/device choice. Only that pending action executes.
+- Completed-target follow-ups accept “Actually, make it 40 percent” / “make them
+  forty percent.” Compact transcript forms such as `40%` and `22°C` behave like
+  spoken units. Light brightness preserves power; a percentage for remembered
+  blinds updates only their opening position. Existing kind/range checks apply.
+- Bare “No” cancels. Unrecognized correction requests received with the wake phrase
+  retire pending action memory instead of leaving a stale command waiting.
+- “No, the family room” after a completed action explains that the earlier command
+  already ran and asks for a full new command. It neither silently undoes the old
+  action nor replays it in a different room. This is deliberately conservative.
+- One anchored correction prefix is accepted; negations, conditions, repeated
+  prefixes, compound commands and unrelated wake-free requests remain rejected.
+  “Actually, turn kitchen lights off” is not a supported correction: use the wake
+  phrase followed by the full command without “Actually.”
+
+Verification: **461 tests / 23 suites** pass, including **87 realistic text cases**
+and **8 added real reducer/persistence cases**. TypeScript passes. These are tests
+of text interpretation and app behavior, not accent/noise or microphone accuracy.
+The optional benchmark is skipped in ordinary runs and was run separately (passed).
+No presentation styles, voice provider, native recognizer or scene asset changed;
+Preview 114 viewport checks remain prior evidence, not a repeated UI certification.
+
+Run the local benchmark with:
+
+```sh
+VANTA_VOICE_BENCHMARK=1 npm test -- --runInBand src/features/home-assistant/voiceReliability.benchmark.test.ts
+```
+
+November 21 Mac ARM64 / Node 22.22.3 sample: 25 warm-up iterations and 150 measured
+iterations per category. p95 milliseconds: named command **0.205**, ambiguous
+command **1.338**, room correction **0.907**, value correction **0.008**, compound
+rejection **0.713**. These measure the pure resolver only; they exclude recognition,
+network, UI, device execution and spoken output. No flaky time threshold or private
+speech logging was added. Raw evidence: `work/voice-reliability-benchmark.log`.
+
+Physical latency remains unmeasured. A future on-device capture must time confirmed
+transcript → control acknowledgment and confirmed transcript → actual TTS start;
+the current speaking UI phase precedes audible output and is not a valid proxy.
+Do not weaken the existing Sentry privacy scrubber to collect transcripts or timing.
 
 ## Boundaries
 

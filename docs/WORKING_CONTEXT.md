@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-20**. Read this before rediscovering the project.
+Last maintained: **2026-11-21**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,34 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Voice correction reliability — November 21 / Preview 115 installed
+
+- Added bounded pending-room corrections (“No, the family room” / “I meant…”),
+  same-target numeric corrections (“Actually, make it 40 percent”), compact `%`/`°C`
+  transcripts, bare-No cancellation and remembered-blind percentage positioning.
+  Invalid prefixed corrections no longer retain a stale pending action.
+- A room-only correction after completion explicitly says the prior command already
+  ran; it cannot silently undo or retarget that action. Current permissions, transient
+  memory, final speech, eight-second follow-ups and separate scene Run remain.
+- **461 tests / 23 suites**, including **87 phrase-evaluation cases** and eight added
+  reducer/persistence cases, plus TypeScript pass. The opt-in benchmark also passes
+  separately. Mac resolver-only p95 spans **0.008–1.338 ms** across five categories;
+  this is not microphone/recognition/TTS or physical-device latency.
+- Evidence: `work/voice-reliability-{all-tests,final-corpus,lint,benchmark}.log`.
+  No new UI styles, provider, dependency, native speech adapter or scene assets.
+  Detailed behavior, timing methodology and limitations: [voice design](VOICE_CONVERSATION.md).
+- Preview **1.0.0 (115)** native Release build, signature, staging identity, correction
+  markers and exact unchanged **32,345,722-byte** scene verified. Production metadata
+  restored. Signing profile expires **November 27 at 06:56:03 UTC**. Receipt:
+  `work/preview115-verification.json`; build/verification logs use
+  `work/voice-reliability-preview115-*`. Secret scan passes for tracked files/history.
+  Installed in place and launched successfully; Apple inventory confirms
+  **1.0.0 (115)**. Receipts: `work/preview115-{install,launch,installed-app}.json`.
+  Physical correction/clarification acceptance is requested and remains pending.
+- Existing node-forge upstream-review failure remains a separate backlog item; this
+  slice adds no dependency. Android noise/accent, battery, interruption and measured
+  audible-response acceptance also remain pending.
 
 ## Conversational Hey Vanta — November 20 / Preview 114 installed
 

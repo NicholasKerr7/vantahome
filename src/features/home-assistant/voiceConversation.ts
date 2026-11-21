@@ -1,9 +1,10 @@
 import { getDevice } from '../../../packages/home-scene/src/data';
 import { isComfortKind, MAX_CONCIERGE_CONTEXT_AGE_MS, MAX_CONCIERGE_DEVICES } from '../../../shared/home-concierge/contract';
-import { normalizeSingleVoiceCommand, normalizeVoiceText, spokenWholeNumber } from '../home-voice/voiceCommandLanguage';
+import { normalizeVoiceText, spokenWholeNumber } from '../home-voice/voiceCommandLanguage';
 import { parseHomeVoiceCommand, type HomeVoiceCommand } from '../home-voice/voiceCommandParser';
 import type { AssistantContext, AssistantDevice } from './assistantContext';
 import { localVoiceReply, resolveLocalAssistantVoice, type LocalAssistantResolution } from './localAssistantVoice';
+import { hasVoiceCorrectionPrefix, normalizeVoiceChoice, normalizeVoiceFollowUp } from './voiceConversationLanguage';
 
 type CommandResolution = Extract<LocalAssistantResolution, { kind: 'command' }>;
 type PendingChoice = { id: string; deviceIds: string[] };
@@ -23,7 +24,7 @@ export type VoiceConversationResult = {
 type ClarificationOption = PendingChoice & { label: string; resolution: CommandResolution };
 const MEMORY_DURATION_MS = 60_000;
 const SPOKEN_CHOICE_COUNT = 3;
-const CANCEL = /^(?:cancel|stop|never mind|nevermind|forget it|no thanks|that['’]s all)$/;
+const CANCEL = /^(?:cancel|stop|never mind|nevermind|forget it|no(?: thanks)?|that['’]s all)$/;
 
 /** Reject unavailable, expired or old observations before reading conversational references. */
 function contextIsFresh(context: AssistantContext, now: number): boolean {
@@ -126,7 +127,7 @@ export function currentVoiceClarification(memory: VoiceConversationMemory | null
 }
 
 /** Resolve room vocabulary with the same ambiguity checks as commands, without relying on the original wording. */
-function spokenRoom(question: string, options: ClarificationOption[], context: AssistantContext): string | null {
+function spokenRoom(question: string, options: PendingChoice[], context: AssistantContext): string | null {
   const definitions = context.devices.flatMap((device) => {
     const definition = getDevice(device.modelDeviceId);
     return definition ? [{ ...definition, name: device.name }] : [];
@@ -157,7 +158,7 @@ function spokenRoom(question: string, options: ClarificationOption[], context: A
 function chosenOption(question: string, options: ClarificationOption[], context: AssistantContext): ClarificationOption | null {
   const identified = options.find((option) => question.trim() === option.id);
   if (identified) return identified;
-  const text = normalizeSingleVoiceCommand(question);
+  const text = normalizeVoiceChoice(question);
   if (!text || /^(?:turn|switch|set|dim|open|close|make|run|start|stop|activate|deactivate)\b/.test(text)) return null;
   const roomId = spokenRoom(text, options, context);
   const matching = options.filter((option) => option.id === `room:${roomId}`
@@ -168,12 +169,12 @@ function chosenOption(question: string, options: ClarificationOption[], context:
 
 /** Identify only bounded pronoun grammar, leaving qualifiers and compound commands unresolved. */
 function followUpCommand(question: string, targets: AssistantDevice[]): CommandResolution | null {
-  const text = normalizeSingleVoiceCommand(question);
+  const text = normalizeVoiceFollowUp(question);
   if (!text || !targets.length) return null;
   const power = text.match(/^(?:turn|switch) (?:(it|them) (on|off)|(on|off) (it|them))$/);
-  const setting = text.match(/^set (it|them) to (.+?) (percent|%|degrees(?: celsius)?|celsius)$/);
+  const setting = text.match(/^(?:set (it|them) to|make (it|them)(?: to)?) (.+?)\s*(percent|%|degrees(?: celsius)?|celsius|°c|c)$/);
   const relative = text.match(/^make (it|them) (brighter|dimmer)$/);
-  const pronoun = power?.[1] ?? power?.[4] ?? setting?.[1] ?? relative?.[1];
+  const pronoun = power?.[1] ?? power?.[4] ?? setting?.[1] ?? setting?.[2] ?? relative?.[1];
   if (!pronoun || (pronoun === 'it' && targets.length !== 1)) return null;
   const deviceIds = targets.map((device) => device.modelDeviceId);
   let command: HomeVoiceCommand;
@@ -186,13 +187,28 @@ function followUpCommand(question: string, targets: AssistantDevice[]): CommandR
     command = { type: 'brightness-adjustment', deviceIds, delta: relative[2] === 'brighter' ? 10 : -10 };
     description = `Brightness adjusted ${relative[2] === 'brighter' ? 'up' : 'down'} by up to 10 percentage points`;
   } else if (setting) {
-    const value = spokenWholeNumber(setting[2]);
+    const value = spokenWholeNumber(setting[3].trim());
     if (value === null) return null;
-    const type = /^(?:degrees|celsius)/.test(setting[3]) ? 'temperature' : 'brightness';
+    const type = /^(?:degrees|celsius|°c|c)/.test(setting[4]) ? 'temperature'
+      : targets.every((device) => device.kind === 'blinds') ? 'position' : 'brightness';
     command = { type, deviceIds, value };
     description = `${targets.length === 1 ? targets[0].name : `${targets.length} devices`} set to ${value}${type === 'temperature' ? '°C' : '%'}`;
   } else return null;
   return { kind: 'command', command, description, deviceIds: targets.map((device) => device.id) };
+}
+
+/** A completed action cannot be moved or undone from room words alone; admit only a recognized clarification. */
+function completedRoomCorrection(question: string, targets: AssistantDevice[], context: AssistantContext): boolean {
+  if (!hasVoiceCorrectionPrefix(question)) return false;
+  const text = normalizeVoiceChoice(question);
+  if (!text) return false;
+  const kinds = new Set(targets.map((device) => device.kind));
+  const options = context.availableRooms.flatMap((room) => {
+    const deviceIds = context.devices.filter((device) => device.roomId === room.id && device.controllable && kinds.has(device.kind))
+      .map((device) => device.id);
+    return deviceIds.length ? [{ id: `room:${room.id}`, deviceIds }] : [];
+  });
+  return spokenRoom(text, options, context) !== null;
 }
 
 /** Restrict a wake-free continuation window to recognized follow-ups and explicit clarification replies. */
@@ -204,7 +220,8 @@ export function isVoiceFollowUp(question: string, memory: VoiceConversationMemor
     clarificationOptions(valid.pendingClarification.question, context), context) !== null;
   const targets = currentTargets(valid.lastDeviceIds, context);
   const resolution = targets ? followUpCommand(question, targets) : null;
-  return resolution !== null && commandIsCurrent(resolution, context);
+  return (resolution !== null && commandIsCurrent(resolution, context))
+    || (targets !== null && completedRoomCorrection(question, targets, context));
 }
 
 /** Offer a continuation window only while a complete target or clarification remains currently valid. */
@@ -229,12 +246,12 @@ export function resolveVoiceConversation(question: string, context: AssistantCon
     const selected = chosenOption(question, options, context);
     if (selected) return { resolution: selected.resolution, memory: null, followUpEligible: true };
     // A new request cancels the pending one; a vague answer never replays any part of it.
-    if (resolution.kind === 'cloud' && !/^(?:turn|switch|set|dim|open|close|make|run|start|stop|activate|deactivate|draft|create|what|which|how|where|when|why|who|are|is|give|do|can|could|would|will|tell|explain|help|list|suggest|recommend|show|find|remind|check)\b/.test(text)) {
+    if (resolution.kind === 'cloud' && !hasVoiceCorrectionPrefix(question) && !/^(?:turn|switch|set|dim|open|close|make|run|start|stop|activate|deactivate|draft|create|what|which|how|where|when|why|who|are|is|give|do|can|could|would|will|tell|explain|help|list|suggest|recommend|show|find|remind|check)\b/.test(text)) {
       const clarification = currentVoiceClarification(valid, context, now)!;
       return { resolution: { kind: 'reply', response: localVoiceReply(clarification.question) }, memory: valid, clarification, followUpEligible: true };
     }
   }
-  const pronoun = /^(?:(?:turn|switch) (?:(?:it|them)\b|(?:on|off) (?:it|them)\b)|(?:set|make) (?:it|them)\b)/.test(text);
+  const pronoun = /^(?:(?:turn|switch) (?:(?:it|them)\b|(?:on|off) (?:it|them)\b)|(?:set|make) (?:it|them)\b)/.test(normalizeVoiceFollowUp(question) ?? text);
   if (pronoun) {
     let targets = valid && !valid.pendingClarification ? currentTargets(valid.lastDeviceIds, context) : null;
     // A selected-room temperature target is unambiguous only when exactly one AC is currently available.
@@ -247,6 +264,9 @@ export function resolveVoiceConversation(question: string, context: AssistantCon
       ? { resolution, memory: null, followUpEligible: true }
       : reply('Please name the room and device again. Nothing changed.');
   }
+  if (hasVoiceCorrectionPrefix(question)) return reply(valid?.lastDeviceIds.length
+    ? 'The earlier command already ran. I have not undone it or changed another room. Please say the full room and command.'
+    : 'Please say the full room and command again. Nothing changed.');
   if (resolution.kind === 'command') return commandIsCurrent(resolution, context)
     ? { resolution, memory: null, followUpEligible: true }
     : reply('Those controls are no longer available. Nothing changed.');

@@ -1,12 +1,17 @@
 # VantaHome implementation backlog
 
-Maintained November 20, 2026. This is the current delivery queue, not a claim that
+Maintained November 21, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
 
 ## Current voice delivery and adjacent follow-up
 
+- **Preview 115 installed and launched:** bounded room/value corrections and transcript-unit
+  reliability complete. 461 tests / 23 suites (87 realistic phrases), TypeScript,
+  and a separate opt-in Mac resolver benchmark pass. Completed actions cannot be
+  silently moved or undone. Physical correction/clarification and audible latency
+  acceptance remain pending; see working context and [voice design](VOICE_CONVERSATION.md).
 - **Preview 114 installed and manually opened:** conversational references and
   guarded room/device choices are complete, with eight-second wake-free replies
   after eligible spoken output and 60-second transient target memory. 366 tests /

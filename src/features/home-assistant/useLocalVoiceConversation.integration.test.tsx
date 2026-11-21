@@ -308,3 +308,111 @@ test('only current targets or a pending choice can arm a wake-free microphone wi
   await speak(hook, 'cancel');
   expect(hook.result.current.assistant.readVoiceFollowUp()).toBeNull();
 });
+
+test.each([
+  { request: 'turn living room lights on', correction: 'Actually, make it 40 percent', targets: ['living-light'] },
+  { request: 'turn primary suite lights on', correction: 'Actually, make them forty percent', targets: bedroomLights },
+])('a numeric correction stays on its completed targets and saves: $correction', async ({ request, correction, targets }) => {
+  const hook = renderConversation();
+  await settle();
+  await speak(hook, request);
+  // A later power edit must be preserved even when remembered lights receive a numeric correction.
+  if (targets.length > 1) act(() => { hook.result.current.controls.client.setPower([targets[1]], false); });
+  await settle();
+  const before = hook.result.current.controls.client.getSnapshot().state.deviceStates;
+  expect(hook.result.current.assistant.acceptsVoiceFollowUp(correction)).toBe(true);
+  expect((await speak(hook, correction))?.answer).toContain('Simulation updated');
+  const after = hook.result.current.controls.client.getSnapshot().state.deviceStates;
+  for (const [id, reading] of Object.entries(before)) {
+    if (targets.includes(id)) expect(after[id]).toMatchObject({ level: 40, on: reading.on });
+    else expect(after[id]).toEqual(reading);
+  }
+  const saved = await new SimulationPersistence().load(modelSimulationScope(useHomeStore.getState(), false));
+  expect(saved.deviceStates).toEqual(after);
+  expect(requestConcierge).not.toHaveBeenCalled();
+  for (const [, value] of jest.mocked(AsyncStorage.setItem).mock.calls) expect(value).not.toContain(correction);
+  hook.unmount();
+
+  const reopened = renderConversation();
+  await settle();
+  expect(reopened.result.current.controls.client.getSnapshot().state.deviceStates).toEqual(after);
+  expect(reopened.result.current.assistant.acceptsVoiceFollowUp(correction)).toBe(false);
+});
+
+test.each(['No, the family room', 'I meant the family room'])(
+  'a pending room correction selects only the current Family room devices: %s', async (correction) => {
+    const hook = renderConversation();
+    await settle();
+    act(() => { hook.result.current.controls.client.setPower(['family-light', 'living-light', ...bedroomLights], true); });
+    await settle();
+    const before = hook.result.current.controls.client.getSnapshot().state.deviceStates;
+    jest.mocked(AsyncStorage.setItem).mockClear();
+    await speak(hook, 'turn lights off');
+    expect(hook.result.current.controls.client.getSnapshot().state.deviceStates).toEqual(before);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(hook.result.current.assistant.acceptsVoiceFollowUp(correction)).toBe(true);
+    expect((await speak(hook, correction))?.answer).toContain('Simulation updated');
+    const after = hook.result.current.controls.client.getSnapshot().state.deviceStates;
+    expect(after['family-light'].on).toBe(false);
+    for (const [id, reading] of Object.entries(before)) if (id !== 'family-light') expect(after[id]).toEqual(reading);
+    expect(hook.result.current.assistant.voiceClarification).toBeNull();
+    const saved = await new SimulationPersistence().load(modelSimulationScope(useHomeStore.getState(), false));
+    expect(saved.deviceStates).toEqual(after);
+    expect(requestConcierge).not.toHaveBeenCalled();
+  });
+
+test.each(['expiry', 'grant'] as const)('numeric and room corrections cannot borrow restored targets after %s', async (boundary) => {
+  const hook = renderConversation();
+  await settle();
+  await speak(hook, 'turn living room lights on');
+  const restore = await interruptScope(hook, boundary);
+  expect(hook.result.current.assistant.acceptsVoiceFollowUp('Actually, make it 40 percent')).toBe(false);
+  restore();
+  await settle();
+  const before = hook.result.current.controls.client.getSnapshot().state.deviceStates;
+  jest.mocked(AsyncStorage.setItem).mockClear();
+  await speak(hook, 'Actually, make it 40 percent');
+  await speak(hook, 'No, the family room');
+  expect(hook.result.current.controls.client.getSnapshot().state.deviceStates).toEqual(before);
+  expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  expect(requestConcierge).not.toHaveBeenCalled();
+  expect(hook.result.current.assistant.readVoiceFollowUp()).toBeNull();
+});
+
+test('a room-only correction after execution explains the completed action without undo or retargeting', async () => {
+  const hook = renderConversation();
+  await settle();
+  await speak(hook, 'turn living room lights off');
+  const before = hook.result.current.controls.client.getSnapshot().state.deviceStates;
+  jest.mocked(AsyncStorage.setItem).mockClear();
+  const reply = await speak(hook, 'No, the family room');
+  expect(reply?.answer).toContain('already ran');
+  expect(reply?.scene).toBeNull();
+  expect(hook.result.current.controls.client.getSnapshot().state.deviceStates).toEqual(before);
+  expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  expect(requestConcierge).not.toHaveBeenCalled();
+  expect(hook.result.current.assistant.voiceClarification).toBeNull();
+  expect(hook.result.current.assistant.readVoiceFollowUp()).toBeNull();
+});
+
+test('a scene drafted after a numeric correction still requires review and a separate Run', async () => {
+  const hook = renderConversation();
+  await settle();
+  await speak(hook, 'turn living room lights on');
+  await speak(hook, 'Actually, make it 40 percent');
+  expect(hook.result.current.controls.client.getSnapshot().state.deviceStates['living-light'].level).toBe(40);
+  const before = hook.result.current.controls.client.getSnapshot().state;
+  const scenes = useHomeStore.getState().scenes;
+  jest.mocked(AsyncStorage.setItem).mockClear();
+  expect(await speak(hook, 'Draft a scene that dims the living room light')).toBeNull();
+  jest.mocked(requestConcierge).mockResolvedValue({ title: 'Dim evening', answer: 'Review the suggested light setting.',
+    deviceIds: ['registry-device:living-light'], scene: { name: 'Dim evening', explanation: 'A lower light setting.',
+      actions: [{ deviceId: 'registry-device:living-light', values: { brightness: 20 } }] } });
+  await act(async () => { await hook.result.current.assistant.ask('Draft a scene that dims the living room light'); });
+  expect(hook.result.current.assistant.canReview).toBe(true);
+  expect(hook.result.current.assistant.response?.scene?.name).toBe('Dim evening');
+  expect(hook.result.current.controls.client.getSnapshot().state).toEqual(before);
+  expect(useHomeStore.getState().scenes).toBe(scenes);
+  expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  expect(hook.result.current.assistant.readVoiceFollowUp()).toBeNull();
+});
