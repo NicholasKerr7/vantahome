@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-21**. Read this before rediscovering the project.
+Last maintained: **2026-11-22**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,18 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Property electrical dossier — November 22
+
+- Completed the owner's 27-page illustrated electrical planning dossier, editable
+  text and 24-source register. All pages rendered and visually reviewed; power
+  flow, outage/recovery, sizing examples and source-link structure checked.
+- See [property electrical planning](PROPERTY_ELECTRICAL_SYSTEM_PLAN.md) for local
+  artifact/cache paths, Jamaican approval constraints and the survey/design gates.
+  Private plan extracts and coordinates remain outside tracked/shipped assets.
+- Solar-first, generator-compatible local autonomy is a proposed physical design,
+  not implemented app dispatch. No hardware sizing, installation, app behavior,
+  native build or deployment changed. Survey/engineer/JPS clarification comes next.
 
 ## Voice correction reliability — November 21 / Preview 115 installed
 

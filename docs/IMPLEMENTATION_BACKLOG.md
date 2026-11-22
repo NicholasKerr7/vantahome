@@ -1,9 +1,18 @@
 # VantaHome implementation backlog
 
-Maintained November 21, 2026. This is the current delivery queue, not a claim that
+Maintained November 22, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
+
+## Property energy planning — research complete
+
+The owner electrical dossier is complete; see [planning record](PROPERTY_ELECTRICAL_SYSTEM_PLAN.md).
+Next physical-project gate is a load/site/service survey and qualified Jamaican
+engineering, including written JPS/Ministry capacity and connection-route
+clarification. Do not select capacities from simulation samples or enable real
+energy controls. Physical energy adapters and verified telemetry remain future
+work after supported hardware is selected; existing app/hub deferrals are unchanged.
 
 ## Current voice delivery and adjacent follow-up
 
