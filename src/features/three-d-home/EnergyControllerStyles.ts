@@ -14,6 +14,8 @@ export const energyControllerStyles = StyleSheet.create({
   shell: { width: '100%', maxWidth: 370, padding: 2, borderRadius: 30, shadowColor: '#000000', shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   shellCompact: { borderRadius: 26 },
   body: { borderRadius: 28, padding: 14, gap: 9, borderWidth: 1, borderColor: '#74647F' },
+  bodyFlow: { gap: 6 },
+  headerChoices: { alignSelf: 'stretch' },
   bodyCompact: { borderRadius: 24, padding: 10, gap: 7 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   header: { justifyContent: 'space-between' },

@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoffeeConsoleArtwork } from './CoffeeConsoleArtwork';
 import { IrrigationConsoleArtwork } from './IrrigationConsoleArtwork';
 import { SpeakerConsoleArtwork } from './SpeakerConsoleArtwork';
+import { EnergyFlowArtwork } from './EnergyFlowArtwork';
+import { createEnergyRuntime, readEnergyFlow } from './energySimulation';
+import { createDefaultState } from './state';
 import { scenePresentationMessage, SCENE_PRESENTATION_CHANNEL } from './scenePresentation';
 
 /** Exercise audible speaker activity through the same lifecycle contract as other equipment. */
@@ -12,7 +15,14 @@ function SpeakerActivity({ on, reduced }: { on: boolean; reduced: boolean }) {
   return <SpeakerConsoleArtwork active={on} reduced={reduced} />;
 }
 
-describe.each([['irrigation', IrrigationConsoleArtwork, '.irrigation-spray'], ['coffee', CoffeeConsoleArtwork, '.coffee-steam'], ['speaker', SpeakerActivity, '.speaker-playback-light']] as const)('%s decorative activity', (_name, Artwork, layer) => {
+/** Exercise the real power map's shared pulse rather than a separate test-only animation. */
+function EnergyActivity({ on, reduced }: { on: boolean; reduced: boolean }) {
+  const states = createDefaultState().deviceStates;
+  const flow = on ? readEnergyFlow(createEnergyRuntime(states), states, false) : null;
+  return <EnergyFlowArtwork flow={flow} selected={null} motionDisabled={reduced} />;
+}
+
+describe.each([['irrigation', IrrigationConsoleArtwork, '.irrigation-spray'], ['coffee', CoffeeConsoleArtwork, '.coffee-steam'], ['speaker', SpeakerActivity, '.speaker-playback-light'], ['energy', EnergyActivity, '.energy-flow-current g']] as const)('%s decorative activity', (_name, Artwork, layer) => {
 /** Dispatch actual system preference events while retaining the ordinary listener contract. */
 class MotionPreference extends EventTarget { matches = false; }
 let root: Root; let container: HTMLDivElement; let media: MotionPreference; let hidden = false;

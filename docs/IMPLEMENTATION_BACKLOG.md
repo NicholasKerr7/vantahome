@@ -9,6 +9,10 @@ simulation-only staging scope. Recheck volatile external state before changing i
 
 - Opt-in local power flow now coordinates the four consoles and 3D load supply;
   settings survive deferral/recovery/reopen. See [implementation](ENERGY_SIMULATION.md).
+- Visual refinement complete: lightweight power map, directional paths, source
+  explanations, waiting-device names and bounded phone/tablet controls. Reviewed
+  permission loss, idle paths, motion suspension and large-text wrapping. No new
+  verified model/authority defect found in this presentation pass.
 - Next: package/install the new source and accept Day/Night, outage, generator
   request/release, staged grid restore, pause/resume and cross-view persistence
   on iPhone. No new native package or installation is claimed yet.

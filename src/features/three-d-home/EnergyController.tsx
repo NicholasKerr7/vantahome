@@ -20,7 +20,7 @@ import { theme } from '../../theme/theme';
 interface Props {
   device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls;
   disabled: boolean; compact: boolean; fontScale: number; onMore: () => void;
-  simulation?: SimulationSnapshot; canManageEnergy?: boolean;
+  simulation?: SimulationSnapshot; canManageEnergy?: boolean; motionAllowed?: boolean;
 }
 type EnergyAction = Parameters<typeof energyActionId>[0];
 type EnergyField = 'storageMode' | 'reservePercent' | 'generatorMode';
@@ -68,7 +68,7 @@ function EnergyChoices({ label, options, selected, disabled, largeText, onChoose
 }
 
 /** A selected-device energy console preserves the existing guarded, persisted simulation command paths. */
-export function EnergyController({ device, state, client, disabled, compact, fontScale, onMore, simulation, canManageEnergy = false }: Props) {
+export function EnergyController({ device, state, client, disabled, compact, fontScale, onMore, simulation, canManageEnergy = false, motionAllowed = true }: Props) {
   const [panel, setPanel] = useState<'console' | 'flow'>('console');
   const flow = ENERGY_SOURCE_IDS.some((id) => id === device.id) ? energyFlowForSnapshot(simulation) : null;
   const runtime = simulation?.energy;
@@ -79,6 +79,7 @@ export function EnergyController({ device, state, client, disabled, compact, fon
   const largeText = fontScale > 1.15;
   if (!energy) return null;
   const headline = formatEnergyReading(energy.headline);
+  const hasPowerFlow = energy.kind === 'energy' && device.id === 'utility-energy';
   const horizontalReading = energy.kind !== 'solar' && !largeText;
 
   /** Only a validated grid simulation action is dispatched; displayed sample totals are never patched. */
@@ -90,7 +91,7 @@ export function EnergyController({ device, state, client, disabled, compact, fon
   return <ScrollView testID="energy-controller-scroll" style={styles.viewport} contentContainerStyle={styles.scrollContent}
     bounces={false} overScrollMode="never" nestedScrollEnabled showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
     <LinearGradient testID="energy-tactile-controller" colors={energyControllerMaterials.edge} style={[styles.shell, compact && styles.shellCompact]}>
-      <LinearGradient colors={energyControllerMaterials.body} style={[styles.body, compact && styles.bodyCompact]}>
+      <LinearGradient colors={energyControllerMaterials.body} style={[styles.body, compact && styles.bodyCompact, hasPowerFlow && panel === 'flow' && styles.bodyFlow]}>
         <View style={[styles.row, styles.header]}>
           {energy.kind === 'battery'
             ? <EnergyKey label={energy.on ? 'Disable battery preview' : 'Enable battery preview'} icon="power"
@@ -98,14 +99,14 @@ export function EnergyController({ device, state, client, disabled, compact, fon
             : <View style={styles.emblem} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <Ionicons accessible={false} name="flash-outline" size={22} color={theme.colors.accentText} />
             </View>}
-          <View style={styles.identity}><Text style={styles.brand}>VANTAHOME</Text><Text style={styles.title}>{TITLES[energy.kind]}</Text></View>
+          <View style={styles.identity}><Text style={styles.brand}>VANTAHOME</Text>{hasPowerFlow ? <View accessibilityRole="radiogroup" accessibilityLabel="Energy console view" style={[styles.choices, styles.headerChoices]}>
+            <EnergyKey label="Console" text="Console" choice active={panel === 'console'} onPress={() => setPanel('console')} style={styles.keyWide} />
+            <EnergyKey label="Power flow" text="Power flow" choice active={panel === 'flow'} onPress={() => setPanel('flow')} style={styles.keyWide} />
+          </View> : <Text style={styles.title}>{TITLES[energy.kind]}</Text>}</View>
           <EnergyKey label="More energy controls" icon="ellipsis-horizontal" onPress={onMore} style={styles.keyCircle} />
         </View>
-        {energy.kind === 'energy' && device.id === 'utility-energy' && <View accessibilityRole="radiogroup" accessibilityLabel="Energy console view" style={styles.choices}>
-          <EnergyKey label="Console" text="Console" choice active={panel === 'console'} onPress={() => setPanel('console')} style={styles.keyWide} />
-          <EnergyKey label="Power flow" text="Power flow" choice active={panel === 'flow'} onPress={() => setPanel('flow')} style={styles.keyWide} />
-        </View>}
         {energy.kind === 'energy' && device.id === 'utility-energy' && panel === 'flow' ? <EnergyFlowPanel flow={flow} runtime={runtime} gridAvailable={energy.gridAvailable} sharedPaused={sharedPaused} pauseReason={pauseReason}
+          compact={compact} motionAllowed={motionAllowed && !simulation?.motionDisabled}
           canManage={!disabled && canManageEnergy && Boolean(client.setEnergyEnabled)} onEnabledChange={(enabled) => client.setEnergyEnabled?.(enabled)} /> : <>
         <EnergyConsoleArtwork energy={energy} compact={compact} />
         <View accessible accessibilityLabel={`${energy.headline.label}: ${headline.value} ${headline.unit}. ${energy.status}`}

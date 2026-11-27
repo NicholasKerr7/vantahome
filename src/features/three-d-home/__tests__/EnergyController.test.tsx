@@ -4,16 +4,20 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { getDevice } from '../../../../packages/home-scene/src/data';
 import { BATTERY_RESERVE_PRESETS, BATTERY_STORAGE_OPTIONS, GENERATOR_MODE_OPTIONS, type EnergyDeviceKind } from '../../../../packages/home-scene/src/energyController';
 import { createDefaultSimulationSnapshot } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
-import { createEnergyRuntime } from '../../../../packages/home-scene/src/energySimulation';
+import { createEnergyRuntime, readEnergyFlow } from '../../../../packages/home-scene/src/energySimulation';
 import { FULL_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
 import { AppFeedback } from '../../../services/appFeedback';
 import * as simulationDeviceEditing from '../../../services/simulationDeviceEditing';
 import { useHomeStore } from '../../../store/useHomeStore';
 import { EnergyController } from '../EnergyController';
+import { EnergyFlowPanel } from '../EnergyFlowPanel';
+import { ENERGY_FLOW_ROUTES } from '../../../../packages/home-scene/src/powerFlowGeometry';
+import { useEquipmentPulseMotion } from '../useEquipmentPulseMotion';
 import { DeviceControlsSheet } from '../DeviceControlsSheet';
 import { guardModelDeviceControls } from '../modelDeviceControls';
 import { SimulationControlClient, type ControlSnapshot } from '../simulationControlClient';
 
+jest.mock('../useEquipmentPulseMotion', () => ({ useEquipmentPulseMotion: jest.fn(() => undefined) }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: require('react-native').View }));
 jest.mock('../../../components/CinematicSurface', () => require('react-native').View);
 jest.mock('../../cinematic-artwork/CinematicCardArtwork', () => require('react-native').View);
@@ -358,4 +362,63 @@ test('native battery reads runtime charge and keeps the saved reserve controls i
   expect(props.state.level).toBe(78);
   expect(energy.batteryKwh).toBe(12);
   expect(client.setLevel).not.toHaveBeenCalled();
+});
+
+
+test('source inspection is read-only, can return to the overview, and keeps touch targets generous', () => {
+  const { screen, props, client } = setup('energy');
+  const simulation = createDefaultSimulationSnapshot();
+  simulation.energy = createEnergyRuntime(simulation.deviceStates);
+  const before = JSON.stringify(simulation);
+  screen.rerender(<EnergyController {...props} simulation={simulation} motionAllowed={false} canManageEnergy />);
+  fireEvent.press(screen.getByLabelText('Power flow'));
+  const battery = screen.getByRole('button', { name: /Storage:.*Show source details/ });
+  fireEvent.press(battery);
+  expect(battery.props.accessibilityState.selected).toBe(true);
+  expect(screen.getByText(/Storage is (charging|supplying the home|holding)/)).toBeTruthy();
+  for (const control of screen.getAllByRole('button', { name: /Show source details/ })) {
+    const style = StyleSheet.flatten(control.props.style);
+    expect(style.minWidth).toBeGreaterThanOrEqual(44);
+    expect(style.minHeight).toBeGreaterThanOrEqual(44);
+  }
+  fireEvent.press(battery);
+  expect(battery.props.accessibilityState.selected).toBe(false);
+  expect(JSON.stringify(simulation)).toBe(before);
+  for (const method of Object.values(client)) expect(method).not.toHaveBeenCalled();
+});
+
+test('power map reverses charging arrows, omits idle paths, and hides readings when flow disappears', () => {
+  const snapshot = createDefaultSimulationSnapshot();
+  const runtime = createEnergyRuntime(snapshot.deviceStates);
+  const base = readEnergyFlow(runtime, snapshot.deviceStates, false);
+  const flow = { ...base, solarKw: 5, batteryKw: -2, gridKw: 0, generatorKw: 0 };
+  const props = { flow, runtime, sharedPaused: false, canManage: false, onEnabledChange: jest.fn(), motionAllowed: false };
+  const screen = render(<EnergyFlowPanel {...props} />);
+  expect(forwardedProp(screen, 'energy-flow-arrow-battery', 'd')).toBe(ENERGY_FLOW_ROUTES.battery.arrowOut);
+  expect(forwardedProp(screen, 'energy-flow-arrow-solar', 'd')).toBe(ENERGY_FLOW_ROUTES.solar.arrowIn);
+  expect(screen.queryByTestId('energy-flow-route-grid', { includeHiddenElements: true })).toBeNull();
+  expect(screen.queryByTestId('energy-flow-route-generator', { includeHiddenElements: true })).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: /Storage:.*Show source details/ }));
+  expect(screen.getByText('Storage is charging')).toBeTruthy();
+  screen.rerender(<EnergyFlowPanel {...props} flow={{ ...flow, batteryKw: 2 }} />);
+  expect(forwardedProp(screen, 'energy-flow-arrow-battery', 'd')).toBe(ENERGY_FLOW_ROUTES.battery.arrowIn);
+  screen.rerender(<EnergyFlowPanel {...props} flow={null} sharedPaused />);
+  expect(screen.queryByText('Storage is charging')).toBeNull();
+  expect(screen.queryByText('2.00 kW')).toBeNull();
+  expect(screen.queryByTestId('energy-flow-route-solar', { includeHiddenElements: true })).toBeNull();
+  expect(screen.getByText(/unavailable in shared-home mode/)).toBeTruthy();
+  expect(props.onEnabledChange).not.toHaveBeenCalled();
+});
+
+test('native power map respects the host motion switch and persisted reduced-motion setting', () => {
+  const { screen, props } = setup();
+  const simulation = createDefaultSimulationSnapshot();
+  simulation.energy = createEnergyRuntime(simulation.deviceStates);
+  screen.rerender(<EnergyController {...props} simulation={simulation} motionAllowed={false} />);
+  fireEvent.press(screen.getByLabelText('Power flow'));
+  expect(jest.mocked(useEquipmentPulseMotion)).toHaveBeenLastCalledWith(true, false);
+  screen.rerender(<EnergyController {...props} simulation={{ ...simulation, motionDisabled: true }} motionAllowed />);
+  expect(jest.mocked(useEquipmentPulseMotion)).toHaveBeenLastCalledWith(true, false);
+  screen.rerender(<EnergyController {...props} simulation={{ ...simulation, motionDisabled: false }} motionAllowed />);
+  expect(jest.mocked(useEquipmentPulseMotion)).toHaveBeenLastCalledWith(true, true);
 });

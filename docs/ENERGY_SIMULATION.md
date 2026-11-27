@@ -27,6 +27,38 @@ view. The solar, battery and generator consoles read the same model.
 - Pause/Resume retains charge, fuel and totals. Pausing returns ordinary device
   previews to their requested state. Time while backgrounded is never replayed.
 
+## Power-flow presentation
+
+The Power flow tab now uses a shared, lightweight SVG miniature of a house and
+four equipment stations. Select Solar, Storage, JPS or Generator to inspect its
+current explanation; tap the selected source again to return to the overview.
+Selection changes no device, preference, saved energy value or scene.
+
+- Source paths illuminate only for actual simulated flow. Battery charging arrows
+  reverse toward storage. A running generator with isolated output, idle JPS and
+  absent readings have no active path. Arrows and text remain usable without motion.
+- One decorative opacity pulse runs only while allowed, visible and foregrounded.
+  Native uses the existing native-driver lifecycle hook; embedded uses the existing
+  compositor lifecycle hook. No additional energy clock, WebGL context, image asset
+  or dependency was added.
+- The overview names the first two waiting devices, adds the remaining count, and
+  distinguishes supply limits from staged recovery. Full names remain accessible.
+  Source details explain solar curtailment, storage modes and generator sequencing
+  without claiming live equipment or measured production.
+- The view selector shares the console header. The property-energy sheet uses
+  available height up to 820 points; all primary targets remain at least 44 points.
+  Normal phone/tablet profiles fit without vertical scrolling. Tiny screens and
+  larger accessibility text retain contained scrolling and wrapping instead of
+  hiding controls or readings.
+
+Presentation verification: 64 scene tests and 30 native energy-controller tests;
+TypeScript and offline build; six embedded and 24 native console/profile browser
+checks, plus source inspection at every flow profile. Browser checks also covered
+first start, named waiting loads, warm-up/isolated paths, reduced-motion switching,
+pause and persistence. Screenshots/helpers are under `work/energy-flow-*`; the final
+build log is `work/energy-polish-build.log`. These are browser/source checks, not
+physical iPhone or iPad acceptance.
+
 ## Demonstration assumptions
 
 12 kW solar, 24 kWh battery, 8 kW inverter, 5 kW battery transfer, 6 kW generator

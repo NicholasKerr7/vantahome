@@ -20,6 +20,8 @@ export const controlStyles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: theme.colors.overlayStrong, justifyContent: 'flex-end' },
   overlayLandscape: { alignItems: 'flex-end', justifyContent: 'center' },
   safeArea: { flex: 1, width: '100%', maxHeight: 740, maxWidth: 560, alignSelf: 'center' },
+  // The linked power map uses spare vertical space before its contained accessibility fallback.
+  powerFlowSafeArea: { maxHeight: 820 },
   safeAreaLandscape: { maxWidth: 440, alignSelf: 'flex-end' },
   card: { flex: 1, minHeight: 0, backgroundColor: colors.panel, borderRadius: 30, margin: 8, padding: 18, borderWidth: 1, borderColor: colors.stroke },
   compact: { padding: 12 },

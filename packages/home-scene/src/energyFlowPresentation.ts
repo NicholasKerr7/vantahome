@@ -23,14 +23,6 @@ export function formatFlowPower(value: number | undefined): string {
   return value === undefined || !Number.isFinite(value) ? '—' : `${Math.abs(value).toFixed(2)} kW`;
 }
 
-/** Describe reserve, deferred loads and unmet demand without claiming physical service status. */
-export function energyFlowSummary(flow: EnergyFlow | null, runtime?: EnergyRuntime): string {
-  if (!flow) return runtime && runtime.elapsedSeconds > 0 ? 'Simulation paused · settings retained' : 'Explore a connected energy simulation';
-  if (flow.unservedKw > 0.01) return `${formatFlowPower(flow.unservedKw)} demand unavailable · ${flow.deferredDeviceIds.length} loads waiting`;
-  if (flow.deferredDeviceIds.length) return `${flow.deferredDeviceIds.length} loads deferred · requested settings retained`;
-  return 'Requested loads supplied · simulation';
-}
-
 /** Read a human-readable generator phase rather than confusing a start request with output. */
 export function generatorPhaseLabel(runtime: EnergyRuntime): string {
   const labels: Record<EnergyRuntime['generatorPhase'], string> = {

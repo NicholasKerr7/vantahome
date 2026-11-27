@@ -1,34 +1,52 @@
-import { BatteryCharging, House, Power, Sun, UtilityPole, type LucideIcon } from 'lucide-react';
-import { ENERGY_DEMO_DESCRIPTION, ENERGY_SHARED_PAUSED_DESCRIPTION, energyFlowSummary, formatFlowPower, generatorPhaseLabel, storageFlowLabel, gridFlowLabel, type EnergyFlow } from './energyFlowPresentation';
+import { useState } from 'react';
+import { BatteryCharging, Power, Sun, UtilityPole, type LucideIcon } from 'lucide-react';
+import { ENERGY_DEMO_DESCRIPTION, ENERGY_SHARED_PAUSED_DESCRIPTION, formatFlowPower, generatorPhaseLabel, storageFlowLabel, gridFlowLabel, type EnergyFlow } from './energyFlowPresentation';
+import { describeEnergyFlow, sourceFlowDirection, type EnergySourceId } from './energyFlowInsights';
+import { EnergyFlowArtwork } from './EnergyFlowArtwork';
 import type { EnergyRuntime } from './energySimulation';
 
 interface Props {
   flow: EnergyFlow | null; runtime?: EnergyRuntime | null; sharedPaused: boolean; pauseReason?: string; canManage: boolean; gridAvailable?: boolean | null;
+  motionDisabled?: boolean;
   onEnabledChange: (enabled: boolean) => void;
 }
 
-/** Source nodes display direction in words as well as color, with no independent animation loop. */
-function Source({ label, detail, value, icon: Icon, active }: { label: string; detail: string; value?: number; icon: LucideIcon; active: boolean }) {
-  return <div className="energy-flow-source" data-active={active}>
-    <Icon size={19} aria-hidden="true" /><span>{label}<small>{detail}</small></span><strong>{formatFlowPower(value)}</strong>
-  </div>;
+/** Source inspection changes only the explanation, never equipment or simulation settings. */
+function Source({ label, detail, value, icon: Icon, active, selected, onSelect }: {
+  label: string; detail: string; value?: number; icon: LucideIcon; active: boolean; selected: boolean; onSelect: () => void;
+}) {
+  return <button type="button" className="energy-flow-source" data-active={active} aria-pressed={selected}
+    aria-label={`${label}: ${formatFlowPower(value)}, ${detail}. Inspect power source`} onClick={onSelect}>
+    <Icon size={17} aria-hidden="true" /><span>{label}<small>{detail}</small></span><strong>{formatFlowPower(value)}</strong>
+  </button>;
 }
 
-/** Explain the coordinated electrical preview in a bounded, touch-friendly console panel. */
-export function EnergyFlowPanel({ flow, runtime, sharedPaused, pauseReason = ENERGY_SHARED_PAUSED_DESCRIPTION, canManage, onEnabledChange, gridAvailable }: Props) {
+/** A bounded vector power map explains the current model without adding an independent simulation. */
+export function EnergyFlowPanel({ flow, runtime, sharedPaused, pauseReason = ENERGY_SHARED_PAUSED_DESCRIPTION, canManage, onEnabledChange, gridAvailable, motionDisabled = false }: Props) {
+  const [selected, setSelected] = useState<EnergySourceId | null>(null);
   const enabled = runtime?.enabled === true;
+  const insight = !flow && !runtime && canManage && !sharedPaused
+    ? { title: 'Ready when you are', body: 'Start the simulation to see solar, storage and backup serve the property.', tone: 'calm', waitingNames: [] }
+    : describeEnergyFlow(flow, runtime, selected);
+  const sources: { id: EnergySourceId; label: string; detail: string; value?: number; icon: LucideIcon }[] = [
+    { id: 'solar', label: 'Solar', detail: 'Production', value: flow?.solarKw, icon: Sun },
+    { id: 'grid', label: 'JPS', detail: gridFlowLabel(flow, gridAvailable), value: flow?.gridKw, icon: UtilityPole },
+    { id: 'battery', label: 'Storage', detail: storageFlowLabel(flow), value: flow?.batteryKw, icon: BatteryCharging },
+    { id: 'generator', label: 'Generator', detail: runtime && flow ? generatorPhaseLabel(runtime) : 'Backup', value: flow?.generatorKw, icon: Power },
+  ];
   return <section className="energy-flow-panel" aria-label="Property power flow simulation">
-    <div className="energy-flow-heading"><span>PROPERTY POWER FLOW</span><strong>{sharedPaused ? 'Power flow paused' : flow?.sourceLabel ?? 'Your home, connected'}</strong></div>
+    <div className="energy-flow-heading"><span>PROPERTY POWER FLOW</span><strong>{sharedPaused ? 'Power flow paused' : runtime && !enabled ? 'Simulation paused' : flow?.sourceLabel ?? 'Your home, connected'}</strong></div>
     <div className="energy-flow-network">
-      <div className="energy-flow-sources">
-        <Source label="Solar" detail="Production" value={flow?.solarKw} icon={Sun} active={Boolean(flow && flow.solarKw > 0)} />
-        <Source label="Storage" detail={storageFlowLabel(flow)} value={flow?.batteryKw} icon={BatteryCharging} active={Boolean(flow && Math.abs(flow.batteryKw) > 0.01)} />
-        <Source label="JPS" detail={gridFlowLabel(flow, gridAvailable)} value={flow?.gridKw} icon={UtilityPole} active={Boolean(flow && flow.gridKw > 0)} />
-        <Source label="Generator" detail={runtime && flow ? generatorPhaseLabel(runtime) : 'Backup'} value={flow?.generatorKw} icon={Power} active={Boolean(flow && flow.generatorKw > 0)} />
-      </div>
-      <div className="energy-flow-home" data-active={Boolean(flow && flow.homeKw > 0)}><House size={27} aria-hidden="true" /><span>HOME SUPPLY</span><strong>{formatFlowPower(flow?.homeKw)}</strong><small>{flow ? `${Math.round(flow.batteryPercent)}% stored` : 'Simulation estimates'}</small></div>
+      <EnergyFlowArtwork flow={flow} selected={selected} motionDisabled={motionDisabled || !enabled || sharedPaused} />
+      <div className="energy-flow-home"><span>HOME SUPPLY<strong>{formatFlowPower(flow?.homeKw)}</strong></span><small>{flow ? `${Math.round(flow.batteryPercent)}% stored` : 'Simulation estimates'}</small></div>
     </div>
-    <p className="energy-flow-status">{sharedPaused ? pauseReason : energyFlowSummary(flow, runtime ?? undefined)}</p>
+    <div className="energy-flow-sources" role="group" aria-label="Inspect a power source">
+      {sources.map((source) => <Source key={source.id} {...source} active={sourceFlowDirection(flow, source.id) !== 'idle'} selected={selected === source.id}
+        onSelect={() => setSelected(selected === source.id ? null : source.id)} />)}
+    </div>
+    <div className="energy-flow-status" role="note" aria-label={insight.waitingNames.length ? `${insight.title}. Waiting: ${insight.waitingNames.join(', ')}. ${insight.body}` : undefined} data-tone={sharedPaused ? 'attention' : insight.tone}>
+      <strong>{sharedPaused ? 'Local simulation paused' : insight.title}</strong><p>{sharedPaused ? pauseReason : insight.body}</p>
+    </div>
     <button type="button" className="energy-primary" disabled={!canManage || sharedPaused} onClick={() => onEnabledChange(!enabled)}>
       {enabled ? 'Pause energy simulation' : runtime && runtime.elapsedSeconds > 0 ? 'Resume energy simulation' : 'Start energy simulation'}
     </button>

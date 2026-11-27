@@ -73,22 +73,22 @@ export function EnergyController({ device, current }: { device: DeviceDefinition
   </section>;
   const headline = formatEnergyReading(energy.headline);
   const Icon = ICONS[energy.kind];
+  const hasPowerFlow = energy.kind === 'energy' && device.id === 'utility-energy';
   const preferenceNote = sharedPaused ? pauseReason : flow ? 'Connected energy simulation · No live equipment' : energy.kind === 'battery' ? 'Reserve & storage mode are saved preferences.' : energy.kind === 'generator' ? 'Start mode is saved only; it does not auto-start.' : 'Selected device samples · No live meter connected';
 
   return <section className="energy-workspace" aria-label={`${device.name} energy console`} data-motion-disabled={motionDisabled}>
-    <div className="energy-stage"><div className="energy-console" data-kind={energy.kind} data-powered={energy.on}>
+    <div className="energy-stage"><div className="energy-console" data-kind={energy.kind} data-powered={energy.on} data-flow={hasPowerFlow && panel === 'flow'}>
       <header className="energy-top">
         {energy.kind === 'battery' ? <button type="button" className="energy-key energy-battery-power" role="switch" aria-label={energy.on ? 'Disable battery preview' : 'Enable battery preview'} aria-checked={energy.on} disabled={!controllable} onClick={() => useHomeStore.getState().toggleDevice(device.id)}><Power size={21} aria-hidden="true" /></button>
           : <span className="energy-emblem"><Icon size={22} aria-hidden="true" /></span>}
-        <div className="energy-brand"><span>VANTAHOME</span><strong>{TITLES[energy.kind]}</strong></div>
+        <div className="energy-brand"><span>VANTAHOME</span>{hasPowerFlow ? <div className="energy-panel-tabs" role="group" aria-label="Energy console view">
+          <button type="button" aria-pressed={panel === 'console'} onClick={() => setPanel('console')}>Console</button>
+          <button type="button" aria-pressed={panel === 'flow'} onClick={() => setPanel('flow')}>Power flow</button>
+        </div> : <strong>{TITLES[energy.kind]}</strong>}</div>
         <button ref={moreButton} type="button" className="energy-key" aria-label="More energy settings" onClick={() => changePanel(true)}><Ellipsis size={22} aria-hidden="true" /></button>
       </header>
-      {energy.kind === 'energy' && device.id === 'utility-energy' && <div className="energy-panel-tabs" role="group" aria-label="Energy console view">
-        <button type="button" aria-pressed={panel === 'console'} onClick={() => setPanel('console')}>Console</button>
-        <button type="button" aria-pressed={panel === 'flow'} onClick={() => setPanel('flow')}>Power flow</button>
-      </div>}
       {energy.kind === 'energy' && device.id === 'utility-energy' && panel === 'flow' ? <EnergyFlowPanel flow={flow} runtime={runtime} gridAvailable={energy.gridAvailable} sharedPaused={sharedPaused} pauseReason={pauseReason} canManage={canManageEnergy}
-        onEnabledChange={(enabled) => useHomeStore.getState().setEnergyEnabled(enabled)} /> : <>
+        motionDisabled={motionDisabled} onEnabledChange={(enabled) => useHomeStore.getState().setEnergyEnabled(enabled)} /> : <>
       <div className="energy-hero">
         <EnergyConsoleArtwork energy={energy} />
         <div className="energy-reading"><span>{energy.headline.label}</span><output aria-label={energy.headline.label} aria-live="polite">{headline.value}<small>{headline.unit}</small></output><p>{energy.status}</p></div>

@@ -126,6 +126,38 @@ describe('selected-device energy consoles', () => {
 
 
 describe('coordinated property energy console', () => {
+  it('inspects source explanations without commands and reverses the storage path while charging', () => {
+    act(() => useHomeStore.setState({ night: false }));
+    act(() => root.render(<Harness id="utility-energy" />));
+    click('Power flow'); click('Start energy simulation');
+    const before = useHomeStore.getState();
+    const storage = [...container.querySelectorAll<HTMLButtonElement>('.energy-flow-source')].find((button) => button.getAttribute('aria-label')?.startsWith('Storage:'))!;
+    act(() => storage.click());
+    expect(storage.getAttribute('aria-pressed')).toBe('true');
+    expect(container.querySelector('.energy-flow-status')?.textContent).toContain('Storage is charging');
+    expect(container.querySelector('[data-source="battery"]')?.getAttribute('data-direction')).toBe('out');
+    expect(container.querySelector('[data-source="solar"]')?.getAttribute('data-direction')).toBe('in');
+    expect(container.querySelector('[data-source="generator"]')).toBeNull();
+    expect(useHomeStore.getState().energy).toBe(before.energy);
+    expect(useHomeStore.getState().deviceStates).toBe(before.deviceStates);
+    act(() => storage.click());
+    expect(storage.getAttribute('aria-pressed')).toBe('false');
+    expect(container.querySelector('.energy-flow-status')?.textContent).toContain('Requested loads are supplied');
+    click('Pause energy simulation');
+    expect(container.querySelectorAll('.energy-flow-current g')).toHaveLength(0);
+  });
+
+  it('removes selected source readings when whole-home access is lost', () => {
+    act(() => root.render(<Harness id="utility-energy" />));
+    click('Power flow'); click('Start energy simulation');
+    const solar = container.querySelector<HTMLButtonElement>('.energy-flow-source')!;
+    act(() => solar.click());
+    act(() => useHomeStore.setState({ access: { ...FULL_SCENE_ACCESS, fullHome: false } }));
+    expect(container.querySelector('.energy-flow-home')?.textContent).toContain('—');
+    expect(container.querySelectorAll('.energy-flow-current g')).toHaveLength(0);
+    expect(container.querySelector('.energy-flow-status')?.textContent).toContain('Power flow is unavailable');
+  });
+
   it('starts and pauses the shared flow without changing requested device settings', () => {
     const before = useHomeStore.getState().deviceStates;
     act(() => root.render(<Harness id="utility-energy" />));

@@ -1,45 +1,64 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ENERGY_DEMO_DESCRIPTION, ENERGY_SHARED_PAUSED_DESCRIPTION, energyFlowSummary, formatFlowPower, generatorPhaseLabel, storageFlowLabel, gridFlowLabel, type EnergyFlow } from '../../../packages/home-scene/src/energyFlowPresentation';
+import { ENERGY_DEMO_DESCRIPTION, ENERGY_SHARED_PAUSED_DESCRIPTION, formatFlowPower, generatorPhaseLabel, storageFlowLabel, gridFlowLabel, type EnergyFlow } from '../../../packages/home-scene/src/energyFlowPresentation';
+import { describeEnergyFlow, sourceFlowDirection, type EnergySourceId } from '../../../packages/home-scene/src/energyFlowInsights';
 import type { EnergyRuntime } from '../../../packages/home-scene/src/energySimulation';
+import { EnergyFlowArtwork } from './EnergyFlowArtwork';
+import { energyFlowStyles as styles } from './EnergyFlowStyles';
 import { theme } from '../../theme/theme';
 
 interface Props {
   flow: EnergyFlow | null; runtime?: EnergyRuntime | null; sharedPaused: boolean; pauseReason?: string; canManage: boolean; gridAvailable?: boolean | null;
-  onEnabledChange: (enabled: boolean) => void;
+  compact?: boolean; motionAllowed?: boolean; onEnabledChange: (enabled: boolean) => void;
 }
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-
-/** Source cards use explicit flow text so color is never the sole explanation. */
-function Source({ label, detail, value, icon, active }: { label: string; detail: string; value?: number; icon: IconName; active: boolean }) {
-  return <View style={[styles.source, active && styles.sourceActive]}>
-    <Ionicons accessible={false} name={icon} size={18} color={theme.colors.accentText} />
-    <View style={styles.sourceCopy}><Text style={styles.sourceLabel}>{label}</Text><Text style={styles.detail}>{detail}</Text></View>
-    <Text style={styles.power}>{formatFlowPower(value)}</Text>
-  </View>;
+interface SourceProps {
+  label: string; detail: string; value?: number; icon: IconName; active: boolean; selected: boolean; onPress: () => void;
 }
 
-/** A compact power-flow view uses shared simulation values without a renderer or animation clock. */
-export function EnergyFlowPanel({ flow, runtime, sharedPaused, pauseReason = ENERGY_SHARED_PAUSED_DESCRIPTION, canManage, onEnabledChange, gridAvailable }: Props) {
+/** Inspect a source without sending a device command; words supplement the illuminated connection. */
+function Source({ label, detail, value, icon, active, selected, onPress }: SourceProps) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${formatFlowPower(value)}. ${detail}. Show source details`}
+    accessibilityState={{ selected }} onPress={onPress}
+    style={({ pressed }) => [styles.source, active && styles.sourceActive, selected && styles.sourceSelected, pressed && styles.pressed]}>
+    <Ionicons accessible={false} name={icon} size={17} color={active ? theme.colors.accentText : theme.colors.subtext} />
+    <View style={styles.sourceCopy}><View style={styles.sourceTop}><Text style={styles.sourceLabel}>{label}</Text><Text style={styles.power}>{formatFlowPower(value)}</Text></View>
+      <Text style={styles.detail}>{detail}</Text></View>
+  </Pressable>;
+}
+
+/** Explain current power through one bounded diagram and read-only source inspection. */
+export function EnergyFlowPanel({ flow, runtime, sharedPaused, pauseReason = ENERGY_SHARED_PAUSED_DESCRIPTION, canManage, onEnabledChange, gridAvailable, compact = false, motionAllowed = true }: Props) {
+  const [selected, setSelected] = useState<EnergySourceId | null>(null);
   const enabled = runtime?.enabled === true;
+  const insight = !flow && !runtime && canManage && !sharedPaused
+    ? { title: 'Ready when you are', body: 'Start the simulation to see solar, storage and backup serve the property.', tone: 'calm', waitingNames: [] }
+    : describeEnergyFlow(flow, runtime, selected);
   const action = enabled ? 'Pause energy simulation' : runtime && runtime.elapsedSeconds > 0 ? 'Resume energy simulation' : 'Start energy simulation';
+  /** Tapping the highlighted source returns to the whole-property explanation. */
+  function inspect(source: EnergySourceId): void { setSelected((current) => current === source ? null : source); }
   return <View accessibilityLabel="Property power flow simulation" style={styles.panel}>
-    <View style={styles.heading}><Text style={styles.eyebrow}>PROPERTY POWER FLOW</Text><Text style={styles.title}>{sharedPaused ? 'Power flow paused' : flow?.sourceLabel ?? 'Your home, connected'}</Text></View>
-    <View style={styles.network}>
-      <View style={styles.sources}>
-        <Source label="Solar" detail="Production" value={flow?.solarKw} icon="sunny-outline" active={Boolean(flow && flow.solarKw > 0)} />
-        <Source label="Storage" detail={storageFlowLabel(flow)} value={flow?.batteryKw} icon="battery-charging-outline" active={Boolean(flow && Math.abs(flow.batteryKw) > 0.01)} />
-        <Source label="JPS" detail={gridFlowLabel(flow, gridAvailable)} value={flow?.gridKw} icon="flash-outline" active={Boolean(flow && flow.gridKw > 0)} />
-        <Source label="Generator" detail={runtime && flow ? generatorPhaseLabel(runtime) : 'Backup'} value={flow?.generatorKw} icon="power-outline" active={Boolean(flow && flow.generatorKw > 0)} />
-      </View>
-      <View style={[styles.home, flow && flow.homeKw > 0 ? styles.homeActive : undefined]}>
-        <Ionicons accessible={false} name="home-outline" size={26} color={theme.colors.accentText} />
-        <Text style={styles.homeLabel}>HOME SUPPLY</Text><Text style={styles.homePower}>{formatFlowPower(flow?.homeKw)}</Text>
+    <View style={styles.heading}><Text style={styles.eyebrow}>PROPERTY POWER FLOW</Text><Text style={styles.title}>{sharedPaused ? 'Power flow paused' : runtime && !enabled ? 'Simulation paused' : flow?.sourceLabel ?? 'Your home, connected'}</Text></View>
+    <View style={styles.stage}>
+      <EnergyFlowArtwork flow={flow} selected={selected} compact={compact} motionAllowed={enabled && motionAllowed && !sharedPaused} />
+      <View accessible accessibilityLabel={`Home supply: ${formatFlowPower(flow?.homeKw)}. ${flow ? `${Math.round(flow.batteryPercent)} percent stored` : 'Simulation estimates unavailable'}`} style={styles.home}>
+        <View style={styles.homeReading}><Text style={styles.homeLabel}>HOME SUPPLY</Text><Text style={styles.homePower}>{formatFlowPower(flow?.homeKw)}</Text></View>
         <Text style={styles.homeDetail}>{flow ? `${Math.round(flow.batteryPercent)}% stored` : 'Simulation estimates'}</Text>
       </View>
     </View>
-    <Text style={styles.status}>{sharedPaused ? pauseReason : energyFlowSummary(flow, runtime ?? undefined)}</Text>
+    <View style={styles.sourceRow}>
+      <Source label="Solar" detail="Production" value={flow?.solarKw} icon="sunny-outline" active={sourceFlowDirection(flow, 'solar') !== 'idle'} selected={selected === 'solar'} onPress={() => inspect('solar')} />
+      <Source label="JPS" detail={gridFlowLabel(flow, gridAvailable)} value={flow?.gridKw} icon="flash-outline" active={sourceFlowDirection(flow, 'grid') !== 'idle'} selected={selected === 'grid'} onPress={() => inspect('grid')} />
+    </View>
+    <View style={styles.sourceRow}>
+      <Source label="Storage" detail={storageFlowLabel(flow)} value={flow?.batteryKw} icon="battery-charging-outline" active={sourceFlowDirection(flow, 'battery') !== 'idle'} selected={selected === 'battery'} onPress={() => inspect('battery')} />
+      <Source label="Generator" detail={runtime && flow ? generatorPhaseLabel(runtime) : 'Backup'} value={flow?.generatorKw} icon="power-outline" active={sourceFlowDirection(flow, 'generator') !== 'idle'} selected={selected === 'generator'} onPress={() => inspect('generator')} />
+    </View>
+    <View style={[styles.insight, !sharedPaused && insight.tone === 'attention' && styles.insightAttention]}>
+      <Text style={styles.insightTitle}>{sharedPaused ? 'Power flow is paused' : insight.title}</Text>
+      <Text style={styles.insightBody} accessibilityLabel={insight.waitingNames.length ? `Waiting: ${insight.waitingNames.join(', ')}. ${insight.body}` : undefined}>{sharedPaused ? pauseReason : insight.body}</Text>
+    </View>
     <Pressable accessibilityRole="button" accessibilityLabel={action} accessibilityState={{ disabled: !canManage || sharedPaused }} disabled={!canManage || sharedPaused}
       onPress={() => onEnabledChange(!enabled)} style={({ pressed }) => [styles.action, (!canManage || sharedPaused) && styles.disabled, pressed && styles.pressed]}>
       <Text style={styles.actionLabel}>{action}</Text>
@@ -47,29 +66,3 @@ export function EnergyFlowPanel({ flow, runtime, sharedPaused, pauseReason = ENE
     <Text style={styles.disclosure}>{ENERGY_DEMO_DESCRIPTION}</Text>
   </View>;
 }
-
-const styles = StyleSheet.create({
-  panel: { gap: 8 },
-  heading: { gap: 4, paddingVertical: 2 },
-  eyebrow: { color: theme.colors.accentText, fontSize: 8, letterSpacing: 1.4, textAlign: 'center' },
-  title: { color: theme.colors.text, fontSize: 14, fontWeight: '500', textAlign: 'center' },
-  network: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
-  sources: { flex: 1, minWidth: 0, gap: 5 },
-  source: { flexDirection: 'row', alignItems: 'center', minHeight: 43, gap: 5, padding: 6, borderRadius: 10, borderWidth: 1, borderColor: '#52405F', backgroundColor: '#181020' },
-  sourceActive: { borderColor: '#9D73C1', backgroundColor: '#2B1C3B' },
-  sourceCopy: { flex: 1, minWidth: 0, gap: 2 },
-  sourceLabel: { color: theme.colors.text, fontSize: 10, fontWeight: '500' },
-  detail: { color: theme.colors.subtext, fontSize: 8 },
-  power: { color: theme.colors.text, fontSize: 10, fontVariant: ['tabular-nums'] },
-  home: { width: 94, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 6, borderRadius: 22, borderWidth: 1, borderColor: '#604675', backgroundColor: '#22162F' },
-  homeActive: { borderColor: '#B585DC', backgroundColor: '#352047' },
-  homeLabel: { color: theme.colors.accentText, fontSize: 7, letterSpacing: 0.7, textAlign: 'center' },
-  homePower: { color: theme.colors.text, fontSize: 17, fontWeight: '300', fontVariant: ['tabular-nums'], textAlign: 'center' },
-  homeDetail: { color: theme.colors.subtext, fontSize: 9, textAlign: 'center' },
-  status: { color: theme.colors.text, fontSize: 10, lineHeight: 14, textAlign: 'center' },
-  action: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#A27CC0', backgroundColor: '#55356D' },
-  actionLabel: { color: theme.colors.text, fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  disclosure: { color: theme.colors.subtext, fontSize: 9, lineHeight: 13, textAlign: 'center' },
-  disabled: { opacity: 0.4 },
-  pressed: { opacity: 0.8 },
-});

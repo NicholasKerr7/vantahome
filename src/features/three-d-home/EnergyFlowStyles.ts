@@ -1,0 +1,37 @@
+import { StyleSheet } from 'react-native';
+import { theme } from '../../theme/theme';
+
+/** A bounded miniature power station keeps touch targets generous and decoration inexpensive. */
+export const energyFlowStyles = StyleSheet.create({
+  panel: { gap: 6 },
+  heading: { gap: 3 },
+  eyebrow: { color: theme.colors.accentText, fontSize: 8, letterSpacing: 1.4, textAlign: 'center' },
+  title: { color: theme.colors.text, fontSize: 14, fontWeight: '500', textAlign: 'center' },
+  stage: { backgroundColor: '#140E20', borderRadius: 19, borderWidth: 1, borderColor: '#493655', overflow: 'hidden' },
+  artwork: { width: '100%', height: 132 },
+  artworkCompact: { height: 110 },
+  artworkLayer: { ...StyleSheet.absoluteFillObject },
+  home: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 13, paddingBottom: 8, gap: 8 },
+  homeReading: { flexDirection: 'row', flexWrap: 'wrap', flexShrink: 1, minWidth: 0, alignItems: 'center', gap: 8 },
+  homeLabel: { color: theme.colors.accentText, fontSize: 7, letterSpacing: 1.2 },
+  homePower: { color: theme.colors.text, fontSize: 19, lineHeight: 23, fontWeight: '300', fontVariant: ['tabular-nums'] },
+  homeDetail: { color: theme.colors.subtext, fontSize: 10 },
+  sourceRow: { flexDirection: 'row', gap: 6 },
+  source: { flex: 1, minWidth: 44, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 6, padding: 7, borderRadius: 12, borderWidth: 1, borderColor: '#493655', backgroundColor: '#191221' },
+  sourceActive: { borderColor: '#72538C', backgroundColor: '#291B38' },
+  sourceSelected: { borderColor: '#C89BEF', backgroundColor: '#3B2750' },
+  sourceCopy: { flex: 1, minWidth: 0, gap: 4 },
+  sourceTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 3, flexWrap: 'wrap' },
+  sourceLabel: { color: theme.colors.text, fontSize: 10, fontWeight: '500' },
+  detail: { color: theme.colors.subtext, fontSize: 8 },
+  power: { color: theme.colors.text, fontSize: 10, fontVariant: ['tabular-nums'] },
+  insight: { minHeight: 52, gap: 3, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 11, backgroundColor: '#23182F' },
+  insightAttention: { backgroundColor: '#302537' },
+  insightTitle: { color: theme.colors.text, fontSize: 11, fontWeight: '500' },
+  insightBody: { color: theme.colors.subtext, fontSize: 10, lineHeight: 14 },
+  action: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#A27CC0', backgroundColor: '#55356D' },
+  actionLabel: { color: theme.colors.text, fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  disclosure: { color: theme.colors.subtext, fontSize: 9, lineHeight: 13, textAlign: 'center' },
+  disabled: { opacity: 0.4 },
+  pressed: { opacity: 0.8 },
+});

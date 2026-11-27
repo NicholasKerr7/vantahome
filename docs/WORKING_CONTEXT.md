@@ -53,6 +53,16 @@ defects from ideas or untested risks.
 
 ## Coordinated energy simulation — November 27
 
+- **Visual refinement complete:** shared vector miniature power map, correctly
+  directed charging/supply arrows, read-only source inspection and named waiting
+  loads. One lifecycle-aware decorative pulse; reduced motion remains static.
+  Header/view controls share a row; ordinary phone/tablet profiles need no scroll,
+  with the existing tiny-screen/large-text fallback retained.
+- Focused refinement checks: 64 scene tests + 30 native tests, TypeScript/offline
+  build, six embedded and 24 native console/profile checks, source inspection and
+  outage/warm-up/motion cases. No energy physics, command authority or persistence
+  changed. Packaging/install remains pending; see the energy document for details.
+
 - Implemented opt-in **Home energy controller → Power flow** linking solar,
   battery, JPS, generator and load priorities. Four consoles share instantaneous
   readings; deferred loads retain requested settings and dim/stop only in the

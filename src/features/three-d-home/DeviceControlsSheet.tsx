@@ -146,7 +146,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   </Suspense>;
   return <Modal transparent visible animationType={motionAllowed ? 'fade' : 'none'} onRequestClose={onClose}>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.overlay, landscape && styles.overlayLandscape]}>
-      <SafeAreaView style={[styles.safeArea, landscape && styles.safeAreaLandscape]}>
+      <SafeAreaView style={[styles.safeArea, device?.id === 'utility-energy' && styles.powerFlowSafeArea, landscape && styles.safeAreaLandscape]}>
         <CinematicSurface style={[styles.card, compact && styles.compact]}>
           <View accessibilityViewIsModal style={[styles.cardContent, compact && styles.compactContent]}>
           <View style={styles.row}>
@@ -218,7 +218,7 @@ function DeviceInspector({ device, state, simulation, canManageEnergy, client, d
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'light' && !advancedControls) return <LightingController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
-  if (isEnergyDeviceKind(device.kind) && !advancedControls) return <EnergyController device={device} state={state} client={client} simulation={simulation} canManageEnergy={canManageEnergy}
+  if (isEnergyDeviceKind(device.kind) && !advancedControls) return <EnergyController device={device} state={state} client={client} simulation={simulation} canManageEnergy={canManageEnergy} motionAllowed={motionAllowed}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'gate' && device.id === GATE_DEVICE_ID && !advancedControls) return <GateController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
