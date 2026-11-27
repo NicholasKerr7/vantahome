@@ -1,10 +1,11 @@
+import { canManageEnergyFlow } from '../../../packages/home-scene/src/energyAccess';
 import { AppFeedback as Alert } from "../../services/appFeedback";
 import { useHomeStore } from '../../store/useHomeStore';
 import { resolveModelSceneAccess, selectModelLibraryDeviceIds } from './modelSceneAccess';
 import type { SimulationControlClient } from './simulationControlClient';
 
 /** The inspector needs device actions only, never ownership of the simulation connection. */
-export type SimulationDeviceControls = Pick<SimulationControlClient, 'toggle' | 'setLevel' | 'setPower' | 'setSetting' | 'runAction'>;
+export type SimulationDeviceControls = Pick<SimulationControlClient, 'toggle' | 'setLevel' | 'setPower' | 'setSetting' | 'runAction'> & Partial<Pick<SimulationControlClient, 'setEnergyEnabled'>>;
 
 /** Recheck current room scope and action grants at the instant of an isolated simulation write. */
 export function canControlModelDevice(id: string): boolean {
@@ -23,6 +24,9 @@ export function guardModelDeviceControls(client: SimulationControlClient): Simul
     action();
   }
   return {
+    setEnergyEnabled: (enabled) => {
+      if (canManageEnergyFlow(resolveModelSceneAccess(useHomeStore.getState()))) client.setEnergyEnabled(enabled);
+    },
     toggle: (id) => run([id], () => client.toggle(id)),
     setLevel: (id, level) => run([id], () => client.setLevel(id, level)),
     setSetting: (id, field, value) => run([id], () => client.setSetting(id, field, value)),

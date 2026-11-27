@@ -1,3 +1,5 @@
+import { modelSimulationScope } from '../modelSceneAccess';
+import { createEnergyRuntime } from '../../../../packages/home-scene/src/energySimulation';
 import { advanceSafetySimulation } from '../../../../packages/home-scene/src/safetySimulation';
 import { createStore } from 'zustand/vanilla';
 import { useHomeStore, type HomeState } from '../../../store/useHomeStore';
@@ -260,4 +262,94 @@ test('scope changes disconnect every subscribed surface before a different accou
   expect(voiceDeliver).toHaveBeenCalledTimes(count + 1);
   expect(voiceDeliver.mock.lastCall?.[0].access.roomIds).toEqual([]);
   voice.dispose();
+});
+
+test('energy start normalizes forged counters, shares one canonical runtime, and pause retains requested controls', async () => {
+  const { session, deliver, persistence, store } = setup();
+  session.handleMessage(request);
+  await settle();
+  const before = deliver.mock.lastCall![0].state;
+  const seed = createEnergyRuntime(before.deviceStates);
+  session.handleMessage({ ...request, type: 'patch', requestId: 1, base: { energy: null, lightingMode: before.lightingMode },
+    changes: { lightingMode: 'day', energy: { ...seed, elapsedSeconds: 100, solarKwh: 100, enabled: true } } });
+  await settle();
+  expect(persistence.getSnapshot('demo')?.energy).toEqual({ ...seed, enabled: true });
+  const secondDeliver = jest.fn();
+  const second = new SimulationSession(secondDeliver, jest.fn(), { store, persistence, mode: 'demo' });
+  second.handleMessage(request);
+  await settle();
+  session.advanceEnergy(5);
+  await settle();
+  const advanced = persistence.getSnapshot('demo')!;
+  expect(advanced.energy?.elapsedSeconds).toBe(5);
+  expect(secondDeliver.mock.lastCall![0].state.energy).toEqual(advanced.energy);
+  expect(deliver.mock.lastCall![0].state.energy).toEqual(advanced.energy);
+  expect(advanced.deviceStates).toEqual(before.deviceStates);
+  session.handleMessage({ ...request, type: 'patch', requestId: 2, base: { energy: seed },
+    changes: { energy: { ...seed, enabled: false } } });
+  await settle();
+  session.advanceEnergy(5);
+  await settle();
+  expect(persistence.getSnapshot('demo')?.energy).toEqual({ ...advanced.energy, enabled: false });
+  session.dispose(); second.dispose();
+});
+
+test('room-only access cannot start or forge an energy model', async () => {
+  const { session, persistence, store, deliver } = setup({
+    household: [{ id: 'guest', name: 'Guest', role: 'Guest', status: 'home', avatarColor: '#000000' }], activeMemberId: 'guest',
+    rooms: [{ id: 'utility', name: 'Energy pavilion' }], roomMembers: [{ memberId: 'guest', roomIds: ['utility'] }],
+    devices: (['energy', 'solar', 'battery', 'generator'] as const).map((kind) => ({ id: `utility-${kind}`, kind, name: kind, roomId: 'utility', isOn: true })),
+  });
+  session.handleMessage(request);
+  await settle();
+  const seed = createEnergyRuntime(createDefaultSimulationSnapshot().deviceStates);
+  session.handleMessage({ ...request, type: 'patch', requestId: 1, base: { energy: null }, changes: { energy: seed } });
+  await settle();
+  expect(deliver.mock.lastCall![0].access).toMatchObject({ fullHome: false, roomIds: ['utility'] });
+  expect(deliver.mock.lastCall![0].access.deviceIds).toHaveLength(4);
+  expect(persistence.getSnapshot(modelSimulationScope(store.getState(), false))!.energy).toBeUndefined();
+  session.dispose();
+});
+
+test('attaching shared authority freezes energy and blocks start, without sending an energy transaction', async () => {
+  const { session, deliver, persistence } = setup();
+  session.handleMessage(request);
+  await settle();
+  const baseline = persistence.getSnapshot('demo')!;
+  const energy = createEnergyRuntime(baseline.deviceStates);
+  persistence.save('demo', { ...baseline, energy });
+  const adapter = { transact: jest.fn(), canAdvance: () => true };
+  const detach = persistence.attachRemote('demo', adapter);
+  persistence.setRemoteStatus('demo', 'shared');
+  session.advanceEnergy(5);
+  session.handleMessage({ ...request, type: 'patch', requestId: 1, base: { energy }, changes: { energy: { ...energy, enabled: false } } });
+  await settle();
+  expect(persistence.getSnapshot('demo')?.energy).toEqual(energy);
+  expect(adapter.transact).not.toHaveBeenCalled();
+  expect(deliver.mock.lastCall![0].state.energyMode).toBe('shared-paused');
+  expect(deliver.mock.lastCall![0].state.powerPausedDeviceIds).toEqual([]);
+  detach(); session.dispose();
+});
+
+
+test('the host updates property night across tabs without replaying background energy', async () => {
+  const { session, persistence, deliver } = setup();
+  const now = jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-27T06:00:00Z'));
+  try {
+    session.handleMessage(request); await settle();
+    const initial = persistence.getSnapshot('demo')!;
+    persistence.save('demo', { ...initial, energy: createEnergyRuntime(initial.deviceStates) });
+    session.advanceEnergy(5); await settle();
+    expect(deliver.mock.lastCall![0].state.night).toBe(true);
+    expect(deliver.mock.lastCall![0].state.energy.solarKwh).toBe(0);
+    now.mockReturnValue(Date.parse('2026-11-27T17:00:00Z'));
+    session.advanceEnergy(5); await settle();
+    const next = deliver.mock.lastCall![0].state;
+    expect(next.night).toBe(false);
+    expect(next.energy.elapsedSeconds).toBe(10);
+    expect(next.energy.solarKwh).toBeGreaterThan(0);
+    session.setEnergyLocation(null); session.advanceEnergy(5); await settle();
+    expect(deliver.mock.lastCall![0].state.energyMode).toBe('location-paused');
+    expect(persistence.getSnapshot('demo')!.energy?.elapsedSeconds).toBe(10);
+  } finally { now.mockRestore(); session.dispose(); }
 });

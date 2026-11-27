@@ -1,3 +1,4 @@
+import { createEnergyRuntime } from './energySimulation';
 import { describe, expect, it } from 'vitest';
 import { DEVICES } from './data';
 import { getCapabilities } from './deviceCapabilities';
@@ -106,4 +107,24 @@ it('retains position on/level invariants when rebasing a slider over newer posit
   const latest = mergeSimulationChanges(original, { deviceStates: { 'master-blinds': { on: false, level: 0 } } });
   expect(rebaseSimulationChanges(latest, simulationChangeBaseline(original, changes), changes).deviceStates['master-blinds'])
     .toEqual({ on: true, level: 70 });
+});
+
+
+it('remembers a brief outage before the next clock tick, and does not restore JPS immediately', () => {
+  const before = createDefaultSimulationSnapshot();
+  before.energy = createEnergyRuntime(before.deviceStates);
+  const grid = before.deviceStates['utility-energy'];
+  const out = mergeSimulationChanges(before, { deviceStates: { 'utility-energy': { ...grid, settings: { gridAvailable: false } } } });
+  expect(out.energy?.gridRecoverySeconds).toBe(0);
+  const restored = mergeSimulationChanges(out, { deviceStates: { 'utility-energy': { ...grid, settings: { gridAvailable: true } } } });
+  expect(restored.energy?.gridRecoverySeconds).toBe(0);
+  expect(before.energy?.gridRecoverySeconds).toBeGreaterThan(0);
+});
+
+it('rejects forged read-only power grants and malformed energy while accepting legacy saves', () => {
+  const state = createDefaultSimulationSnapshot();
+  expect(parseSimulationRequest(patch({ energyMode: 'local' }))).toBeNull();
+  expect(parseSimulationRequest(patch({ powerPausedDeviceIds: ['living-light'] }))).toBeNull();
+  expect(parseSimulationSnapshotMessage({ ...envelope, type: 'snapshot', state: { ...state, energy: { enabled: true } } })).toBeNull();
+  expect(parseSimulationSnapshotMessage({ ...envelope, type: 'snapshot', state })?.state).toEqual(state);
 });

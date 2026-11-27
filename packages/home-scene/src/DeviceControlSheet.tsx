@@ -1,3 +1,4 @@
+import { useCoordinatedEnergyStatus, useDeviceSupplyPaused } from './useDeviceSupplyPaused';
 import { requestCameraWatch } from './requestCameraWatch';
 import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
@@ -78,6 +79,8 @@ export function DeviceControlSheet({ deviceId, onClose }: DeviceControlSheetProp
 /** Keep complete device controls in one screen without moving the home or its camera. */
 function DeviceControlSheetContents({ device, current, onClose }: { device: DeviceDefinition; current: DeviceState; onClose: () => void }) {
   const deviceId = device.id;
+  const supplyPaused = useDeviceSupplyPaused(deviceId);
+  const energyStatus = useCoordinatedEnergyStatus(device, current);
   const dialog = useRef<HTMLDialogElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
@@ -90,12 +93,12 @@ function DeviceControlSheetContents({ device, current, onClose }: { device: Devi
   const editable = useHomeStore((state) => canViewSceneDevice(state.access, deviceId) && state.access.editableDeviceIds?.includes(deviceId) === true);
   const water = device.kind === 'water-heater' ? readWaterControllerState(device, current) : null;
   const refrigerator = device.kind === 'fridge' ? readRefrigeratorControllerState(device, current) : null;
-  const status = refrigerator ? `${refrigerator.on ? 'On' : 'Off'} · Fridge target ${refrigerator.tempC === null ? 'unavailable' : `${formatClimateTemperature(refrigerator.tempC, tempUnit)}°${tempUnit}`}`
+  const status = supplyPaused ? 'On · waiting for power. Your settings are retained.' : energyStatus ?? (refrigerator ? `${refrigerator.on ? 'On' : 'Off'} · Fridge target ${refrigerator.tempC === null ? 'unavailable' : `${formatClimateTemperature(refrigerator.tempC, tempUnit)}°${tempUnit}`}`
     : water?.kind === 'water-heater'
     ? `${water.on ? 'On' : 'Off'} · Target ${formatClimateTemperature(water.targetC, tempUnit)}°${tempUnit}`
     : device.kind === 'ac'
     ? `${current.on ? 'On' : 'Off'} · Target ${formatClimateTemperature(readClimateControllerState(device, current).targetC, tempUnit)}°${tempUnit}`
-    : deviceActionFeedback(device, current) ?? deviceStatus(device, current);
+    : deviceActionFeedback(device, current) ?? deviceStatus(device, current));
 
   // Release native modality during the commit, before the parent restores focus.
   useLayoutEffect(() => {

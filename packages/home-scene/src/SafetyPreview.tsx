@@ -10,12 +10,19 @@ export function useSafetyPreviewClock(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
     let interval: ReturnType<typeof setInterval> | undefined;
+    let energySeconds = 0;
     /** Pause actual simulated motion on hide, with no elapsed-time catch-up on return. */
     const visibilityChanged = () => {
       if (interval) clearInterval(interval);
       interval = undefined;
+      energySeconds = 0;
       if (document.hidden) useHomeStore.getState().pauseSafety();
-      else interval = setInterval(() => useHomeStore.getState().advanceSafety(1), 1000);
+      else interval = setInterval(() => {
+        if (document.hidden) return;
+        useHomeStore.getState().advanceSafety(1);
+        energySeconds += 1;
+        if (energySeconds >= 5) { useHomeStore.getState().advanceEnergy(energySeconds); energySeconds = 0; }
+      }, 1000);
     };
     visibilityChanged();
     document.addEventListener('visibilitychange', visibilityChanged);

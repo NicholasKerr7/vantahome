@@ -1,3 +1,5 @@
+import { canViewEnergyFlow } from '../../../packages/home-scene/src/energyAccess';
+import { readEnergyFlow } from '../../../packages/home-scene/src/energySimulation';
 import { DEVICES, ROOMS, getDevice, type DeviceDefinition } from '../../../packages/home-scene/src/data';
 import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS, type SceneAccess } from '../../../packages/home-scene/src/sceneAccess';
 import type { SimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
@@ -85,7 +87,10 @@ export function resolveModelSceneAccess(state: HomeState, mode: RuntimeMode = ru
 /** Replace hidden simulation readings with inert placeholders before crossing the rendering boundary. */
 export function scopeSimulationSnapshot(snapshot: SimulationSnapshot, access: SceneAccess, catalog: readonly DeviceDefinition[] = DEVICES): SimulationSnapshot {
   const allowed = new Set(access.deviceIds);
-  return { ...snapshot, deviceStates: Object.fromEntries(catalog.map((device) => [device.id,
+  const paused = snapshot.energy?.enabled && (!snapshot.energyMode || snapshot.energyMode === 'local')
+    ? readEnergyFlow(snapshot.energy, snapshot.deviceStates, snapshot.night).deferredDeviceIds.filter((id) => allowed.has(id)) : [];
+  return { ...snapshot, ...(snapshot.energy ? { energy: canViewEnergyFlow(access) ? snapshot.energy : null, powerPausedDeviceIds: paused } : {}),
+    deviceStates: Object.fromEntries(catalog.map((device) => [device.id,
     allowed.has(device.id) ? snapshot.deviceStates[device.id]
       : { on: device.kind === 'gas-meter' || device.kind === 'gas-leak', level: 0 },
   ])) };

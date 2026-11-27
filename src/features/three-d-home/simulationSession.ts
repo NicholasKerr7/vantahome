@@ -1,3 +1,8 @@
+import { deriveSolarClock } from '../../../packages/home-scene/src/environment/solarClock';
+import { PROPERTY_LOCATION, type WeatherLocation } from '../../../packages/home-scene/src/environment/types';
+import { synchronizeSolarLights } from '../../../packages/home-scene/src/lightingAutomation';
+import { synchronizeEnergyInputs, advanceEnergySimulation, createEnergyRuntime } from '../../../packages/home-scene/src/energySimulation';
+import { canManageEnergyFlow } from '../../../packages/home-scene/src/energyAccess';
 import { equalSimulationDeviceState } from './simulationStateEquality';
 import { GATE_DEVICE_ID } from '../../../packages/home-scene/src/gateSafetySimulation';
 import { pauseSafetySimulation } from '../../../packages/home-scene/src/safetySimulation';
@@ -44,6 +49,7 @@ export class SimulationSession {
   private catalogRequested = false;
   private lastSceneRequestId = 0;
   private state: SimulationSnapshot | null = null;
+  private energyLocation: WeatherLocation | null = null;
   private ready: Promise<void>;
   private disposed = false;
   private requested = false;
@@ -70,6 +76,7 @@ export class SimulationSession {
     this.identity = modelSimulationIdentity(home);
     this.sharedDemo = canShareDemoDevices(home, this.mode);
     // Account identifiers stay in the host's local storage key and never cross the frame boundary.
+    this.energyLocation = this.sharedDemo ? PROPERTY_LOCATION : null;
     this.scope = modelSimulationScope(home, this.sharedDemo);
     this.unsubscribePersistence = this.persistence.subscribe(this.scope, (status) => {
       const blocked = ['connecting', 'offline', 'conflict'];
@@ -183,6 +190,11 @@ export class SimulationSession {
       const access = resolveModelSceneAccess(this.store.getState(), this.mode);
       // Reject an entire mixed transaction, so a permitted light cannot smuggle a gate or camera edit.
       const allowed = new Set(access.controllableDeviceIds);
+      if (Object.hasOwn(message.changes, 'energy')
+        && (!message.changes.energy || !canManageEnergyFlow(access) || !this.persistence.allowsLocalEnergy(this.scope))) {
+        this.sendSnapshot(message.requestId);
+        return;
+      }
       const changedIds = Object.keys(message.changes.deviceStates ?? {});
       if (!access.roomIds.length || changedIds.some((id) => !allowed.has(id))
         || ['connecting', 'offline', 'conflict'].includes(this.saveStatus)
@@ -196,7 +208,12 @@ export class SimulationSession {
         this.sendSnapshot(message.requestId);
         return;
       }
-      const next = rebaseSimulationChanges(previous, message.base, message.changes);
+      let next = rebaseSimulationChanges(previous, message.base, message.changes);
+      // Frames may request start/pause only; they cannot invent battery charge, fuel or totals.
+      if (message.changes.energy) next = { ...next, energy: {
+        ...(previous.energy ?? createEnergyRuntime(previous.deviceStates)), enabled: message.changes.energy.enabled,
+      } };
+      if (next.energy) next.energy = synchronizeEnergyInputs(next.energy, next.deviceStates, next.night);
       // Safety simulations may span several devices. Do not let their derived effects widen a partial grant.
       if (Object.keys(diffSimulationSnapshots(previous, next).deviceStates ?? {}).some((id) => !allowed.has(id))) {
         this.sendSnapshot(message.requestId);
@@ -271,6 +288,33 @@ export class SimulationSession {
     this.pauseAuthorizedSafety(this.store.getState());
   }
 
+  /** Receive verified property configuration from the host, never from a scene message. */
+  setEnergyLocation(location: WeatherLocation | null): void {
+    if (JSON.stringify(this.energyLocation) === JSON.stringify(location)) return;
+    this.energyLocation = location;
+    if (this.requested) this.sendSnapshot();
+  }
+
+  /** Advance the local energy owner in the same queue as controls, without a shared gate lease. */
+  advanceEnergy(seconds: number): void {
+    this.ready = this.ready.then(() => {
+      if (this.disposed || !this.state?.energy?.enabled || !this.persistence.allowsLocalEnergy(this.scope)
+        || modelSimulationIdentity(this.store.getState()) !== this.identity
+        || !canManageEnergyFlow(resolveModelSceneAccess(this.store.getState(), this.mode))) return;
+      if (this.state.lightingMode === 'auto' && !this.energyLocation) return;
+      const night = this.state.lightingMode === 'auto'
+        ? deriveSolarClock(Date.now(), this.energyLocation!, null).isNight : this.state.night;
+      const access = resolveModelSceneAccess(this.store.getState(), this.mode);
+      const lighting = night === this.state.night ? this.state.deviceStates : synchronizeSolarLights(this.state.deviceStates, night);
+      const deviceStates = lighting === this.state.deviceStates ? lighting : Object.fromEntries(Object.entries(lighting).map(([id, value]) =>
+        [id, access.controllableDeviceIds.includes(id) ? value : this.state!.deviceStates[id]]));
+      const energy = advanceEnergySimulation(this.state.energy, deviceStates, night, seconds);
+      if (energy === this.state.energy && night === this.state.night) return;
+      // The canonical subscription updates this session as well as every other open surface.
+      this.persistence.save(this.scope, { ...this.state, deviceStates, night, energy });
+    }).catch(() => { if (!this.disposed) this.onSaveStatus('error'); });
+  }
+
   /** The shared gate clock belongs only to its current server-verified lease holder. */
   canAdvance(): boolean { return !this.disposed && this.persistence.canAdvance(this.scope); }
 
@@ -316,7 +360,7 @@ export class SimulationSession {
       const visibleAccess = modelSimulationIdentity(home) === this.identity ? resolveModelSceneAccess(home, this.mode) : EMPTY_SCENE_ACCESS;
       const access = ['connecting', 'offline', 'conflict'].includes(this.saveStatus)
         ? { ...visibleAccess, controllableDeviceIds: [] } : visibleAccess;
-      this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: scopeSimulationSnapshot(this.state, access), access, placements: getRuntimePlacements(),
+      this.deliver({ channel: 'vantahome-simulation', version: 1, type: 'snapshot', state: scopeSimulationSnapshot({ ...this.state, energyMode: !this.persistence.allowsLocalEnergy(this.scope) ? 'shared-paused' : this.state.lightingMode === 'auto' && !this.energyLocation ? 'location-paused' : 'local' }, access), access, placements: getRuntimePlacements(),
         ...(acknowledgedRequestId === undefined ? {} : { acknowledgedRequestId }) });
     } catch {
       // A terminated WebView must not throw through a dashboard store update.

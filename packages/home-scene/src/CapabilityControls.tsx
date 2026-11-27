@@ -11,7 +11,7 @@ function controlId(device: DeviceDefinition, capability: DeviceCapability, prefi
 }
 
 /** Render schema-backed controls with native labels, bounds and keyboard behavior. */
-export function CapabilityControls({ device, current, capabilities, prefix, configurationExplained = false }: { device: DeviceDefinition; current: DeviceState; capabilities: readonly DeviceCapability[]; prefix: string; configurationExplained?: boolean }) {
+export function CapabilityControls({ device, current, capabilities, prefix, configurationExplained = false, statState }: { device: DeviceDefinition; current: DeviceState; capabilities: readonly DeviceCapability[]; prefix: string; configurationExplained?: boolean; statState?: DeviceState }) {
   const setSetting = useHomeStore((state) => state.setDeviceSetting);
   const runAction = useHomeStore((state) => state.runDeviceAction);
   const unknownPosition = isOpeningDeviceKind(device.kind) && readOpeningPosition(current) === null;
@@ -24,7 +24,7 @@ export function CapabilityControls({ device, current, capabilities, prefix, conf
       return <button key={capability.id} data-capability-id={capability.id} type="button" className="capability-action"
         disabled={unavailable} onClick={() => runAction(device.id, capability.id)}>{capability.label}</button>;
     }
-    const value = readDeviceSetting(device, current, capability.field);
+    const value = readDeviceSetting(device, capability.type === 'stat' ? statState ?? current : current, capability.field);
     if (capability.type === 'stat') return <div key={capability.id} data-capability-id={capability.id} className="capability-reading"><span>{capability.label}</span><output>{formatCapabilityValue(capability, value)}</output></div>;
     if (capability.type === 'toggle') return <div key={capability.id} data-capability-id={capability.id} className="capability-toggle"><label htmlFor={id}>{label}</label><button id={id} type="button" role="switch" aria-checked={Boolean(value)} className="power-switch" onClick={() => setSetting(device.id, capability.field, !value)}><span /></button></div>;
     if (capability.type === 'enum') return <div key={capability.id} data-capability-id={capability.id} className="capability-select"><label htmlFor={id}>{label}</label><select id={id} value={String(value)} onChange={(event) => {

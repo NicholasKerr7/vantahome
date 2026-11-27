@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 
 interface SafetyClockClient {
   advanceSafety: (seconds: number) => void;
+  advanceEnergy?: (seconds: number) => void;
   /** Commit the captured simulation pause synchronously before another lifecycle listener tears it down. */
   pauseSafety: () => void;
 }
@@ -14,12 +15,14 @@ export function useForegroundSafetyClock(client: SafetyClockClient, enabled: boo
     const page = typeof document === 'undefined' ? undefined : document;
     let appActive = AppState.currentState === 'active';
     let foreground: boolean | undefined;
+    let energySeconds = 0;
     let timer: ReturnType<typeof setInterval> | undefined;
 
     /** Stop the previous interval before changing visibility or releasing this owner. */
     function stopTimer() {
       if (timer !== undefined) clearInterval(timer);
       timer = undefined;
+      energySeconds = 0;
     }
 
     /** Coalesce native and browser visibility events into one safe pause per transition. */
@@ -35,7 +38,11 @@ export function useForegroundSafetyClock(client: SafetyClockClient, enabled: boo
       timer = setInterval(() => {
         // Visibility may change before its event reaches this queued interval callback.
         if (!appActive || page?.hidden) syncVisibility();
-        else client.advanceSafety(1);
+        else {
+          client.advanceSafety(1);
+          energySeconds += 1;
+          if (energySeconds >= 5) { client.advanceEnergy?.(energySeconds); energySeconds = 0; }
+        }
       }, 1000);
     }
 

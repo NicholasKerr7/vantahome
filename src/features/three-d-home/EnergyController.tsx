@@ -1,5 +1,9 @@
-import React from 'react';
+import { ENERGY_SOURCE_IDS } from '../../../packages/home-scene/src/energyAccess';
+import React, { useState } from 'react';
 import { EnergyConsoleArtwork } from './EnergyConsoleArtwork';
+import { EnergyFlowPanel } from './EnergyFlowPanel';
+import { ENERGY_LOCATION_PAUSED_DESCRIPTION, ENERGY_SHARED_PAUSED_DESCRIPTION, coordinatedEnergyController, energyFlowForSnapshot } from '../../../packages/home-scene/src/energyFlowPresentation';
+import type { SimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +20,7 @@ import { theme } from '../../theme/theme';
 interface Props {
   device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls;
   disabled: boolean; compact: boolean; fontScale: number; onMore: () => void;
+  simulation?: SimulationSnapshot; canManageEnergy?: boolean;
 }
 type EnergyAction = Parameters<typeof energyActionId>[0];
 type EnergyField = 'storageMode' | 'reservePercent' | 'generatorMode';
@@ -63,8 +68,14 @@ function EnergyChoices({ label, options, selected, disabled, largeText, onChoose
 }
 
 /** A selected-device energy console preserves the existing guarded, persisted simulation command paths. */
-export function EnergyController({ device, state, client, disabled, compact, fontScale, onMore }: Props) {
-  const energy = readEnergyControllerState(device, state);
+export function EnergyController({ device, state, client, disabled, compact, fontScale, onMore, simulation, canManageEnergy = false }: Props) {
+  const [panel, setPanel] = useState<'console' | 'flow'>('console');
+  const flow = ENERGY_SOURCE_IDS.some((id) => id === device.id) ? energyFlowForSnapshot(simulation) : null;
+  const runtime = simulation?.energy;
+  const sharedPaused = Boolean(simulation?.energyMode && simulation.energyMode !== 'local');
+  const pauseReason = simulation?.energyMode === 'location-paused' ? ENERGY_LOCATION_PAUSED_DESCRIPTION : ENERGY_SHARED_PAUSED_DESCRIPTION;
+  const base = readEnergyControllerState(device, state);
+  const energy = base ? coordinatedEnergyController(base, flow, runtime ?? undefined, sharedPaused) : null;
   const largeText = fontScale > 1.15;
   if (!energy) return null;
   const headline = formatEnergyReading(energy.headline);
@@ -90,6 +101,12 @@ export function EnergyController({ device, state, client, disabled, compact, fon
           <View style={styles.identity}><Text style={styles.brand}>VANTAHOME</Text><Text style={styles.title}>{TITLES[energy.kind]}</Text></View>
           <EnergyKey label="More energy controls" icon="ellipsis-horizontal" onPress={onMore} style={styles.keyCircle} />
         </View>
+        {energy.kind === 'energy' && device.id === 'utility-energy' && <View accessibilityRole="radiogroup" accessibilityLabel="Energy console view" style={styles.choices}>
+          <EnergyKey label="Console" text="Console" choice active={panel === 'console'} onPress={() => setPanel('console')} style={styles.keyWide} />
+          <EnergyKey label="Power flow" text="Power flow" choice active={panel === 'flow'} onPress={() => setPanel('flow')} style={styles.keyWide} />
+        </View>}
+        {energy.kind === 'energy' && device.id === 'utility-energy' && panel === 'flow' ? <EnergyFlowPanel flow={flow} runtime={runtime} gridAvailable={energy.gridAvailable} sharedPaused={sharedPaused} pauseReason={pauseReason}
+          canManage={!disabled && canManageEnergy && Boolean(client.setEnergyEnabled)} onEnabledChange={(enabled) => client.setEnergyEnabled?.(enabled)} /> : <>
         <EnergyConsoleArtwork energy={energy} compact={compact} />
         <View accessible accessibilityLabel={`${energy.headline.label}: ${headline.value} ${headline.unit}. ${energy.status}`}
           accessibilityLiveRegion="polite" style={[styles.reading, horizontalReading && styles.readingHorizontal]}>
@@ -101,9 +118,10 @@ export function EnergyController({ device, state, client, disabled, compact, fon
         </View>
         <View style={styles.metrics}>{energy.metrics.map((reading) => <EnergyMetric key={reading.label} reading={reading}
           largeText={largeText} halfWidth={energy.metrics.length > 2} />)}</View>
-        {energy.primaryActionLabel && <EnergyKey label={energy.primaryActionLabel} text={energy.primaryActionLabel} disabled={disabled}
+        </>}
+        {energy.primaryActionLabel && (energy.kind !== 'energy' || (!flow && panel === 'console')) && <EnergyKey label={energy.primaryActionLabel} text={energy.primaryActionLabel} disabled={disabled}
           active={energy.kind === 'generator' && energy.on} onPress={() => { if (!disabled) client.toggle(device.id); }} />}
-        {energy.kind === 'energy' && <View style={[styles.choices, largeText && styles.choicesLarge]}>
+        {energy.kind === 'energy' && device.id === 'utility-energy' && <View style={[styles.choices, largeText && styles.choicesLarge]}>
           <EnergyKey label="Simulate grid outage" text="Grid outage" disabled={disabled || energy.gridAvailable === false}
             onPress={() => run('outage')} style={[styles.keyWide, largeText && styles.choiceLarge]} />
           <EnergyKey label="Restore sample grid" text="Restore grid" disabled={disabled || energy.gridAvailable === true}
@@ -114,14 +132,14 @@ export function EnergyController({ device, state, client, disabled, compact, fon
             disabled={disabled} largeText={largeText} onChoose={(value) => choose('reservePercent', value)} />
           <EnergyChoices label="Storage preference" options={BATTERY_STORAGE_OPTIONS} selected={energy.storageMode}
             disabled={disabled} largeText={largeText} onChoose={(value) => choose('storageMode', value)} />
-          <Text style={styles.feedback}>Reserve and mode: saved preferences only · No simulated charging.</Text>
+          <Text style={styles.feedback}>{flow ? 'Reserve and storage mode shape this property simulation.' : 'Reserve and mode: saved preferences only · No simulated charging.'}</Text>
         </>}
         {energy.kind === 'generator' && <>
           <EnergyChoices label="Start mode preference" options={GENERATOR_MODE_OPTIONS} selected={energy.mode}
             disabled={disabled} largeText={largeText} onChoose={(value) => choose('generatorMode', value)} />
-          <Text style={styles.feedback}>Start mode: saved preference only · No automatic start.</Text>
+          <Text style={styles.feedback}>{flow ? 'Auto follows simulated backup demand · No real generator starts.' : 'Start mode: saved preference only · No automatic start.'}</Text>
         </>}
-        <Text style={styles.feedback}>{disabled ? 'View only · Controls unavailable' : 'Local sample · Simulation'}</Text>
+        {!(energy.kind === 'energy' && device.id === 'utility-energy' && panel === 'flow') && <Text style={styles.feedback}>{sharedPaused ? pauseReason : disabled ? 'View only · Controls unavailable' : flow ? 'Connected energy simulation · No live equipment' : 'Local sample · Simulation'}</Text>}
       </LinearGradient>
     </LinearGradient>
   </ScrollView>;

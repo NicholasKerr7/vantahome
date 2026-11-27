@@ -1,3 +1,4 @@
+import { synchronizeEnergyInputs, parseEnergyRuntime, type EnergyRuntime } from './energySimulation';
 import { GATE_DEVICE_ID } from './gateSafetySimulation';
 import { restoreSafetySimulation, synchronizeSafetySimulation } from './safetySimulation';
 import { AUTHORED_DEVICES, DEVICES, getDevice, isPositionDevice, type DeviceDefinition } from './data';
@@ -16,9 +17,15 @@ export interface SimulationSnapshot {
   lightingMode: 'auto' | 'day' | 'night';
   night: boolean;
   motionDisabled: boolean;
+  /** Optional saved local power model; old caches retain their independent samples. */
+  energy?: EnergyRuntime | null;
+  /** Host-owned capability: shared homes must not start a competing energy clock. */
+  energyMode?: 'local' | 'shared-paused' | 'location-paused';
+  /** Host-scoped display-only supply interruptions, never requested device settings. */
+  powerPausedDeviceIds?: string[];
 }
 /** Each included device replaces only that device; omitted devices and preferences are retained. */
-export type SimulationChanges = Partial<SimulationSnapshot>;
+export type SimulationChanges = Partial<Omit<SimulationSnapshot, 'energyMode' | 'powerPausedDeviceIds'>>;
 interface SimulationEnvelope { channel: typeof SIMULATION_CHANNEL; version: 1 }
 export type SimulationRequest = SimulationEnvelope & (
   | { type: 'request' }
@@ -81,9 +88,25 @@ function readDeviceState(id: string, value: unknown, devices: readonly DeviceDef
 }
 
 /** Validate a complete snapshot or a sparse transaction using the exact same catalog boundary. */
-function readChanges(value: unknown, complete: boolean, devices: readonly DeviceDefinition[] = DEVICES): SimulationChanges | null {
-  if (!isRecord(value) || !hasKeys(value, complete ? ['deviceStates', 'lightingMode', 'night', 'motionDisabled'] : [], ['deviceStates', 'lightingMode', 'night', 'motionDisabled'])) return null;
-  const changes: SimulationChanges = {};
+function readChanges(value: unknown, complete: boolean, devices: readonly DeviceDefinition[] = DEVICES): Partial<SimulationSnapshot> | null {
+  const optional = ['deviceStates', 'lightingMode', 'night', 'motionDisabled', 'energy', ...(complete ? ['energyMode', 'powerPausedDeviceIds'] : [])];
+  if (!isRecord(value) || !hasKeys(value, complete ? ['deviceStates', 'lightingMode', 'night', 'motionDisabled'] : [], optional)) return null;
+  const changes: Partial<SimulationSnapshot> = {};
+  if (Object.hasOwn(value, 'energy')) {
+    const energy = value.energy === null ? null : parseEnergyRuntime(value.energy);
+    if (value.energy !== null && !energy) return null;
+    changes.energy = energy;
+  }
+  if (complete && Object.hasOwn(value, 'energyMode')) {
+    if (value.energyMode !== 'local' && value.energyMode !== 'shared-paused' && value.energyMode !== 'location-paused') return null;
+    changes.energyMode = value.energyMode;
+  }
+  if (complete && Object.hasOwn(value, 'powerPausedDeviceIds')) {
+    const ids = value.powerPausedDeviceIds;
+    if (!Array.isArray(ids) || ids.length > devices.length || new Set(ids).size !== ids.length
+      || !ids.every((id) => typeof id === 'string' && devices.some((device) => device.id === id))) return null;
+    changes.powerPausedDeviceIds = ids;
+  }
   if (Object.hasOwn(value, 'deviceStates')) {
     if (!isRecord(value.deviceStates) || (complete && Object.keys(value.deviceStates).length !== devices.length)) return null;
     changes.deviceStates = {};
@@ -177,12 +200,15 @@ export function reconcileSimulationSnapshot(snapshot: SimulationSnapshot): Simul
 /** Merge a validated transaction while retaining every device and preference it did not mention. */
 export function mergeSimulationChanges(state: SimulationSnapshot, changes: SimulationChanges): SimulationSnapshot {
   const deviceStates = changes.deviceStates ? { ...state.deviceStates, ...changes.deviceStates } : state.deviceStates;
-  return { ...state, ...changes, deviceStates: synchronizeSafetySimulation(deviceStates, state.deviceStates) };
+  const next = { ...state, ...changes, deviceStates: synchronizeSafetySimulation(deviceStates, state.deviceStates) };
+  if (next.energy) next.energy = synchronizeEnergyInputs(next.energy, next.deviceStates, next.night);
+  return next;
 }
 
 /** Extract only changed simulation fields; camera, selection and notices never leave the scene. */
 export function diffSimulationSnapshots(previous: SimulationSnapshot, next: SimulationSnapshot): SimulationChanges {
   const changes: SimulationChanges = {};
+  if (JSON.stringify(previous.energy) !== JSON.stringify(next.energy)) changes.energy = next.energy ?? null;
   if (previous.deviceStates !== next.deviceStates) {
     const devices: DeviceStates = {};
     for (const device of DEVICES) {
@@ -201,6 +227,7 @@ export function diffSimulationSnapshots(previous: SimulationSnapshot, next: Simu
 /** Capture only the sender values needed to distinguish intentional edits from stale fields. */
 export function simulationChangeBaseline(state: SimulationSnapshot, changes: SimulationChanges): SimulationChanges {
   const base: SimulationChanges = {};
+  if (Object.hasOwn(changes, 'energy')) base.energy = state.energy ?? null;
   if (changes.deviceStates) base.deviceStates = Object.fromEntries(Object.keys(changes.deviceStates).map((id) => [id, state.deviceStates[id]]));
   for (const field of ['lightingMode', 'night', 'motionDisabled'] as const) {
     if (Object.hasOwn(changes, field)) Object.assign(base, { [field]: state[field] });
@@ -211,6 +238,8 @@ export function simulationChangeBaseline(state: SimulationSnapshot, changes: Sim
 /** Reapply only fields changed by this sender, preserving independent newer host or renderer edits. */
 export function rebaseSimulationChanges(current: SimulationSnapshot, base: SimulationChanges, changes: SimulationChanges): SimulationSnapshot {
   const rebased: SimulationChanges = { ...changes };
+  // Console edits may change intent only; elapsed energy always comes from the current owner.
+  if (changes.energy && current.energy) rebased.energy = { ...current.energy, enabled: changes.energy.enabled };
   if (changes.deviceStates) {
     rebased.deviceStates = {};
     for (const [id, submitted] of Object.entries(changes.deviceStates)) {

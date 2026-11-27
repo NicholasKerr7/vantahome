@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-22**. Read this before rediscovering the project.
+Last maintained: **2026-11-27**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -50,6 +50,27 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Coordinated energy simulation — November 27
+
+- Implemented opt-in **Home energy controller → Power flow** linking solar,
+  battery, JPS, generator and load priorities. Four consoles share instantaneous
+  readings; deferred loads retain requested settings and dim/stop only in the
+  display projection. Start/warm/run/cool, finite fuel/storage, reserve,
+  curtailment and delayed/staged JPS restoration are explicit simulation states.
+- Canonical optional runtime persists across Home/Devices/reopen. One foreground
+  clock, no background catch-up; automatic property night works without Home
+  mounted. Missing verified location pauses automatic energy. Full-home/source
+  grants guard activation; scoped viewers receive no whole-property totals.
+- Shared homes pause local energy; server energy authority remains future work.
+  Existing gate lease and physical adapters are untouched. Demo capacities and
+  samples are not installation ratings or a verified 99% solar result.
+- 988 app integration tests and 1,925 scene tests passed in the broad run;
+  subsequent focused checks add coverage for self-use defaults and short outages.
+  TypeScript, offline scene build, six embedded flow profiles and 24 native
+  console/profile browser checks pass. Source/cache evidence: `work/energy-*`.
+  Native package/install and physical acceptance are pending; last installed
+  remains Preview 115. See [energy simulation](ENERGY_SIMULATION.md).
 
 ## Property electrical dossier — November 22
 

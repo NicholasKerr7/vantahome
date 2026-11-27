@@ -1,3 +1,4 @@
+import { useCoordinatedEnergyStatus, useDeviceSupplyPaused } from './useDeviceSupplyPaused';
 import { isEmbeddedScene } from './embeddedHost';
 import { requestCameraWatch } from './requestCameraWatch';
 import { canExploreInteriorLayout, canViewPropertyOverview, canViewSceneRoom, canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
@@ -49,19 +50,21 @@ function PropertyOverviewCompanion() {
 
 /** Give the selected device the same kind-aware action used by hotspot controls. */
 function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefinition; onFullControls: (id: DeviceId) => void }) {
+  const supplyPaused = useDeviceSupplyPaused(device.id);
   const storedState = useHomeStore((state) => state.deviceStates[device.id]);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
+  const energyStatus = useCoordinatedEnergyStatus(device, current);
   const Icon: LucideIcon = DEVICE_ICONS[device.kind];
   const action = primaryDeviceAction(device, current);
   const controllable = useHomeStore((state) => canControlSceneDevice(state.access, device.id));
-  const reading = deviceCardReading(device, current);
+  const reading = supplyPaused ? { value: 'Waiting', caption: 'On · power deferred' } : deviceCardReading(device, current);
   const presentation = hotspotPresentation(device, current);
 
-  return <section className="dashboard-selected-device device-focus-card has-cinematic-artwork" data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-labelledby="device-control-title">
+  return <section className="dashboard-selected-device device-focus-card has-cinematic-artwork" data-device-active={presentation.active && !supplyPaused} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-labelledby="device-control-title">
     <CinematicArtwork artwork={deviceArtwork(device)} />
     <div className="dashboard-selected-heading">
-      <span className={`dashboard-device-icon ${presentation.active ? 'is-on' : ''}`}><Icon size={19} strokeWidth={1.5} aria-hidden="true" /></span>
+      <span className={`dashboard-device-icon ${presentation.active && !supplyPaused ? 'is-on' : ''}`}><Icon size={19} strokeWidth={1.5} aria-hidden="true" /></span>
       <div className="dashboard-selected-copy">
         <span className="device-focus-eyebrow">SELECTED DEVICE</span>
         <h3 id="device-control-title" tabIndex={-1} title={device.name}>{device.name}</h3>
@@ -69,7 +72,7 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
     </div>
     <div className="device-focus-actions" data-inline-device-actions="">
       <div className="device-focus-face">
-        <div className="device-focus-reading" data-long-reading={reading.value.length > 12} aria-live="polite"><strong>{reading.value}</strong><span>{reading.caption}</span></div>
+        <div className="device-focus-reading" data-long-reading={reading.value.length > 12} aria-live="polite"><strong>{reading.value}</strong><span>{energyStatus ?? reading.caption}</span></div>
         {device.kind === 'camera' && isEmbeddedScene() ? <button type="button" className="dashboard-primary-action" aria-label="Watch camera demo preview" onClick={() => requestCameraWatch(device.id)}>Watch</button> : <button type="button" className="dashboard-primary-action" disabled={!controllable} role={action.isSwitch ? 'switch' : undefined} aria-checked={action.isSwitch ? current.on : undefined} aria-label={action.accessibleLabel} onClick={() => toggleDevice(device.id)}>
           <span>{action.label}</span>
           {action.isSwitch ? <span className="dashboard-switch-mark" aria-hidden="true"><span /></span> : null}
@@ -83,15 +86,17 @@ function SelectedDeviceSummary({ device, onFullControls }: { device: DeviceDefin
 
 /** A compact tile exposes identity and state; selection opens the separate action card. */
 function DashboardDeviceCard({ device, selected }: { device: DeviceDefinition; selected: boolean }) {
+  const supplyPaused = useDeviceSupplyPaused(device.id);
   const storedState = useHomeStore((state) => state.deviceStates[device.id]);
   const selectDevice = useHomeStore((state) => state.selectDevice);
   const current = storedState ?? { on: device.defaultOn, level: device.defaultLevel };
+  const energyStatus = useCoordinatedEnergyStatus(device, current);
   const Icon = DEVICE_ICONS[device.kind];
   const presentation = hotspotPresentation(device, current);
-  return <button type="button" className={`dashboard-device-row dashboard-device-card has-cinematic-artwork ${selected ? 'is-selected' : ''}`} data-inspector-device={device.id} data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
+  return <button type="button" className={`dashboard-device-row dashboard-device-card has-cinematic-artwork ${selected ? 'is-selected' : ''}`} data-inspector-device={device.id} data-device-active={presentation.active && !supplyPaused} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} aria-pressed={selected} onClick={() => selectDevice(device.id)}>
     <CinematicArtwork artwork={deviceArtwork(device)} />
-    <span className="device-card-top"><Icon size={18} strokeWidth={1.5} aria-hidden="true" /><span className={`dashboard-device-indicator ${presentation.active ? 'is-on' : ''}`} aria-hidden="true" /></span>
-    <span className="dashboard-device-copy"><span title={device.name}>{device.name}</span><small>{deviceStatus(device, current)}</small></span>
+    <span className="device-card-top"><Icon size={18} strokeWidth={1.5} aria-hidden="true" /><span className={`dashboard-device-indicator ${presentation.active && !supplyPaused ? 'is-on' : ''}`} aria-hidden="true" /></span>
+    <span className="dashboard-device-copy"><span title={device.name}>{device.name}</span><small>{supplyPaused ? 'On · waiting for power' : energyStatus ?? deviceStatus(device, current)}</small></span>
   </button>;
 }
 

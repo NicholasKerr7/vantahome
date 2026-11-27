@@ -28,7 +28,7 @@ function useShortControlPages(): boolean {
 }
 
 /** Present the shared control pages with visible navigation and accessible category tabs. */
-export function PagedDeviceControls({ device, current }: { device: DeviceDefinition; current: DeviceState }) {
+export function PagedDeviceControls({ device, current, statState }: { device: DeviceDefinition; current: DeviceState; statState?: DeviceState }) {
   const short = useShortControlPages();
   const panel = useRef<HTMLDivElement>(null);
   const capacity = useControlPageCapacity(panel, short);
@@ -88,13 +88,13 @@ export function PagedDeviceControls({ device, current }: { device: DeviceDefinit
     <div ref={panel} id={panelId} className={`device-control-page ${page?.compact ? 'is-compact' : ''}`} role="tabpanel" aria-labelledby={`sheet-tab-${device.id}-${selectedGroup}`} tabIndex={-1} onFocusCapture={anchorFocusedCapability}>
       {page?.note ? <p className="device-control-context" role="note">{page.note}</p>
         : selectedGroup === 'schedule' && page?.id !== 'shared-routines' ? <p className="device-control-context">Device timer preferences · Simulation only</p> : null}
-      {selectedGroup === 'status' ? <p className="device-control-context">Simulation readings</p> : null}
+      {selectedGroup === 'status' ? <p className="device-control-context">{statState && statState !== current ? 'Linked instantaneous readings · daily totals remain samples' : 'Simulation readings'}</p> : null}
       {page?.id === 'shared-routines' ? <div className="device-routine-entry">
         <h3>One place for every routine</h3>
         <p>Manage schedules and automatic actions together. Device linking is required.</p>
         <button type="button" className="device-routine-open" disabled={!isEmbeddedScene()} onClick={() => requestDeviceRoutines(device.id)}>View device routines</button>
         <small>{isEmbeddedScene() ? 'Preview runs while the app is open. No hub connected.' : 'Open the VantaHome app to manage routines.'}</small>
-      </div> : page ? <CapabilityControls device={device} current={current} capabilities={page.capabilities} prefix="sheet-" configurationExplained={Boolean(page.note)} /> : <p className="device-control-empty">No additional settings for this device.</p>}
+      </div> : page ? <CapabilityControls device={device} current={current} statState={statState} capabilities={page.capabilities} prefix="sheet-" configurationExplained={Boolean(page.note)} /> : <p className="device-control-empty">No additional settings for this device.</p>}
     </div>
     <footer className="device-control-pagination">
       <button type="button" aria-label="Previous controls page" aria-controls={panelId} disabled={currentIndex === 0} onClick={() => changePage(currentIndex - 1)}><ChevronLeft size={16} aria-hidden="true" /><span>Previous</span></button>

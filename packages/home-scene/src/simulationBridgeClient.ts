@@ -1,3 +1,4 @@
+import { canManageEnergyFlow } from './energyAccess';
 import { EMPTY_SCENE_ACCESS, canControlSceneDevice, type SceneAccess } from './sceneAccess';
 import { replaceRuntimeDevices } from './devicePlacement';
 import {
@@ -53,6 +54,10 @@ export function createSimulationBridgeClient({ store, send, onHydrated, onSyncEr
 
   /** Drop queued edits when a host revokes control; stale optimistic values must not override its snapshot. */
   function restrictChanges(changes: SimulationChanges): SimulationChanges {
+    if (Object.hasOwn(changes, 'energy') && !canManageEnergyFlow(access)) {
+      const { energy: _energy, ...allowedChanges } = changes;
+      changes = allowedChanges;
+    }
     if (!changes.deviceStates) return changes;
     const { deviceStates, ...preferences } = changes;
     const allowed = Object.fromEntries(Object.entries(deviceStates).filter(([id]) => canControlSceneDevice(access, id)));

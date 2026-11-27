@@ -1,3 +1,6 @@
+import { energyAdvancedDisplayState } from '../../../packages/home-scene/src/energyFlowPresentation';
+import { canManageEnergyFlow } from '../../../packages/home-scene/src/energyAccess';
+import type { SimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { getFireIncident } from '../../../packages/home-scene/src/fireSafetySimulation';
 import React, { Suspense, useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
@@ -136,6 +139,7 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
   const sharedPaused = isSharedSimulationPaused(snapshot.status);
   const sharedRecovery = snapshot.status === 'offline' || snapshot.status === 'conflict';
   const status = simulationControlsStatus(snapshot.status, snapshot.ready);
+  const supplyPaused = Boolean(device && snapshot.state.powerPausedDeviceIds?.includes(device.id));
   if (emergencyVisible) return null;
   if (editing && editAllowed) return <Suspense fallback={<View style={styles.overlay}><Text style={styles.detail}>Preparing device editor…</Text></View>}>
     <SimulationDeviceEditor key={editing.deviceId} deviceId={editing.deviceId} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />
@@ -155,10 +159,11 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
             : sharedPaused ? 'Shared controls are paused while the latest household settings are verified.' : 'Preparing your saved controls…'}</Text></View>
             : showingBrowser ? <DeviceBrowser snapshot={snapshot} client={client} allowedDeviceIds={visibleDeviceIds} onSelect={(id) => { onSelect(id); setBrowsing(false); }} />
             : <DeviceInspector key={device.id} device={device} state={snapshot.state.deviceStates[device.id]}
+              simulation={snapshot.state} canManageEnergy={canManageEnergyFlow(snapshot.access)}
               smokeScenariosAllowed={device.kind === 'smoke' && canRunSmokeScenarios(snapshot.access, device.id)}
               client={client} disabled={!snapshot.ready || (snapshot.access !== undefined && !snapshot.access.controllableDeviceIds.includes(device.id))} compact={compact} fontScale={fontScale}
               onWatchCamera={onWatchCamera} motionAllowed={motionAllowed && !snapshot.state.motionDisabled} onBrowse={() => setBrowsing(true)} onRoutines={() => openDeviceRoutines(device.id)} />}
-          <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text>
+          <Text accessibilityLiveRegion="polite" style={styles.status}>{supplyPaused ? `On · waiting for power. ${status}` : status}</Text>
           {!showingBrowser && editableDevice && snapshot.ready && !sharedPaused && <Pressable accessibilityRole="button" accessibilityLabel="Edit device"
             onPress={openEditor} style={styles.button}><Text style={styles.label}>Edit device</Text></Pressable>}
           {!showingBrowser && device?.templateDeviceId && <RemovePlacedDevice key={`remove:${device.id}`} modelDeviceId={device.id} onRemoved={onClose} />}
@@ -171,8 +176,8 @@ export function DeviceControlsSheet({ deviceId, client, snapshot, motionAllowed,
 }
 
 /** Give supported devices tactile primary controls while preserving every advanced capability. */
-function DeviceInspector({ device, state, client, disabled, smokeScenariosAllowed, compact, fontScale, motionAllowed, onBrowse, onRoutines, onWatchCamera }: {
-  device: DeviceDefinition; state: DeviceState; client: SimulationDeviceControls; disabled: boolean; smokeScenariosAllowed: boolean; compact: boolean; fontScale: number; motionAllowed: boolean; onBrowse: () => void; onRoutines: () => void; onWatchCamera?: (modelDeviceId: string) => void;
+function DeviceInspector({ device, state, simulation, canManageEnergy, client, disabled, smokeScenariosAllowed, compact, fontScale, motionAllowed, onBrowse, onRoutines, onWatchCamera }: {
+  device: DeviceDefinition; state: DeviceState; simulation: SimulationSnapshot; canManageEnergy: boolean; client: SimulationDeviceControls; disabled: boolean; smokeScenariosAllowed: boolean; compact: boolean; fontScale: number; motionAllowed: boolean; onBrowse: () => void; onRoutines: () => void; onWatchCamera?: (modelDeviceId: string) => void;
 }) {
   const [advancedControls, setAdvancedControls] = useState(false);
   const [group, setGroup] = useState<Group>('controls');
@@ -213,7 +218,7 @@ function DeviceInspector({ device, state, client, disabled, smokeScenariosAllowe
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'light' && !advancedControls) return <LightingController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
-  if (isEnergyDeviceKind(device.kind) && !advancedControls) return <EnergyController device={device} state={state} client={client}
+  if (isEnergyDeviceKind(device.kind) && !advancedControls) return <EnergyController device={device} state={state} client={client} simulation={simulation} canManageEnergy={canManageEnergy}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
   if (device.kind === 'gate' && device.id === GATE_DEVICE_ID && !advancedControls) return <GateController device={device} state={state} client={client}
     disabled={disabled} compact={compact} fontScale={fontScale} onMore={() => setAdvancedControls(true)} />;
@@ -284,7 +289,8 @@ function DeviceInspector({ device, state, client, disabled, smokeScenariosAllowe
         </Pressable>;
       })}</View>
       <Text accessibilityLiveRegion="polite" style={[styles.detail, tone === 'alarm' && styles.alarm, (tone === 'warning' || tone === 'closed') && styles.warning]}>{current?.note ?? (group === 'schedule' ? current?.id === 'shared-routines' ? 'Preview routines require a linked device.' : 'Device timer preferences · Simulation only'
-        : group === 'status' ? `${deviceStatus(device, state)} · Simulated readings`
+        : group === 'status' ? (isEnergyDeviceKind(device.kind) && simulation.energy?.enabled
+          ? 'Linked instantaneous readings · Daily totals remain sample data' : `${deviceStatus(device, state)} · Simulated readings`)
           : deviceActionFeedback(device, state) ?? deviceStatus(device, state))}</Text>
       <View testID="device-control-page" style={[styles.content, current?.compact && !capacity.singleColumn && styles.grid]} onLayout={measureSpace}>
         {current?.id === 'shared-routines' && <>
@@ -294,7 +300,7 @@ function DeviceInspector({ device, state, client, disabled, smokeScenariosAllowe
           <Text style={styles.detail}>Runs with app open · Hub not connected.</Text>
         </>}
         {current?.capabilities.map((capability) => <NativeCapabilityControl key={capability.id} capability={capability} device={device}
-          state={state} client={client} disabled={disabled} compact={compact} singleColumn={capacity.singleColumn} onOptions={(next) => { setPageAnchor(next.id); setOption(next); setOptionAnchor(0); }} />)}
+          state={capability.type === 'stat' ? energyAdvancedDisplayState(device, state, simulation) : state} client={client} disabled={disabled} compact={compact} singleColumn={capacity.singleColumn} onOptions={(next) => { setPageAnchor(next.id); setOption(next); setOptionAnchor(0); }} />)}
         {!current && <Text style={styles.detail}>Use the quick action above for this device.</Text>}
       </View>
       <ControlPagination page={selectedPage} count={pages.length} onChange={changePage} />

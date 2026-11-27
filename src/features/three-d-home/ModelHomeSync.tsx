@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useHomeWeatherSettings } from "../weather-settings/useHomeWeatherSettings";
 import { useConditionNotifications } from "../activity/useConditionNotifications";
 import { runtimePolicy } from "../../config/runtimeMode";
 import { useHomeStore } from "../../store/useHomeStore";
@@ -16,6 +17,8 @@ import { useHouseholdSyncRuntime } from "../household-sync/useHouseholdSync";
 /** Own one connected simulation client and clock for this exact authorized model scope. */
 function ModelHomeSafetySession() {
   const { client, ready, state } = useSimulationControls(true);
+  const weather = useHomeWeatherSettings();
+  useEffect(() => { client.setEnergyLocation(weather.location); }, [client, weather.location, ready]);
   useForegroundSafetyClock(client, ready);
   useConditionNotifications(ready ? state : null, ready);
   if (!ready) return null;

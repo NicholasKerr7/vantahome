@@ -161,6 +161,12 @@ export class SimulationPersistence {
     return record.loaded && (!record.requiresRemote || Boolean(record.remote && ['shared', 'syncing'].includes(record.remoteStatus ?? '') && record.remote.canAdvance()));
   }
 
+  /** Local energy must never compete with a shared household's server-owned state. */
+  allowsLocalEnergy(scope: string): boolean {
+    const record = this.record(scope);
+    return record.loaded && !record.requiresRemote && !record.hasSharedHistory;
+  }
+
   /** Ingest an authoritative observation without dispatching commands or forgetting unseen intermediate edits. */
   applyRemote(scope: string, snapshot: SimulationSnapshot, changedDeviceIds: string[]): void {
     const record = this.record(scope);

@@ -7,6 +7,7 @@ import { DeviceControlSheet } from './DeviceControlSheet';
 import { EnergyController } from './EnergyControlPanel';
 import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS } from './sceneAccess';
 import { createDefaultState, useHomeStore } from './state';
+import { createEnergyRuntime } from './energySimulation';
 
 let container: HTMLDivElement;
 let root: Root;
@@ -30,7 +31,7 @@ beforeEach(() => {
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value() {} });
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value() {} });
-  useHomeStore.setState({ ...createDefaultState(), access: FULL_SCENE_ACCESS });
+  useHomeStore.setState({ ...createDefaultState(), energy: null, energyMode: 'local', powerPausedDeviceIds: [], access: FULL_SCENE_ACCESS });
   container = document.createElement('div'); document.body.append(container); root = createRoot(container);
 });
 
@@ -38,7 +39,7 @@ afterEach(() => {
   act(() => root.unmount()); container.remove();
   delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).showModal;
   delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).close;
-  useHomeStore.setState({ ...createDefaultState(), access: FULL_SCENE_ACCESS });
+  useHomeStore.setState({ ...createDefaultState(), energy: null, energyMode: 'local', powerPausedDeviceIds: [], access: FULL_SCENE_ACCESS });
   vi.unstubAllGlobals();
 });
 
@@ -120,5 +121,51 @@ describe('selected-device energy consoles', () => {
     click('Start simulation');
     expect(useHomeStore.getState().deviceStates['utility-generator']).toEqual(before);
     expect(container.querySelector('.energy-workspace')?.getAttribute('data-motion-disabled')).toBe('true');
+  });
+});
+
+
+describe('coordinated property energy console', () => {
+  it('starts and pauses the shared flow without changing requested device settings', () => {
+    const before = useHomeStore.getState().deviceStates;
+    act(() => root.render(<Harness id="utility-energy" />));
+    click('Power flow');
+    expect(container.textContent).toContain('Illustrative 12 kW solar');
+    click('Start energy simulation');
+    expect(useHomeStore.getState().energy?.enabled).toBe(true);
+    expect(container.querySelector('.energy-flow-home')?.textContent).toContain('kW');
+    expect(useHomeStore.getState().deviceStates).toBe(before);
+    act(() => useHomeStore.getState().advanceEnergy(5));
+    const runtime = useHomeStore.getState().energy!;
+    click('Pause energy simulation');
+    expect(useHomeStore.getState().energy).toEqual({ ...runtime, enabled: false });
+    expect(useHomeStore.getState().deviceStates).toBe(before);
+    expect(container.textContent).toContain('Simulation paused');
+    click('Resume energy simulation');
+    expect(useHomeStore.getState().energy).toEqual(runtime);
+  });
+
+  it('keeps partial grants and shared-home mode from starting local power flow', () => {
+    act(() => useHomeStore.setState({ access: { ...FULL_SCENE_ACCESS, fullHome: false } }));
+    act(() => root.render(<Harness id="utility-energy" />));
+    click('Power flow'); click('Start energy simulation');
+    expect(useHomeStore.getState().energy).toBeNull();
+    act(() => useHomeStore.setState({ access: FULL_SCENE_ACCESS, energyMode: 'shared-paused' }));
+    click('Start energy simulation');
+    expect(useHomeStore.getState().energy).toBeNull();
+    expect(container.textContent).toContain('Power flow is unavailable in shared-home mode');
+    expect(container.querySelector('.energy-flow-home')?.textContent).not.toContain('0.00 kW');
+  });
+
+  it('shows the actual runtime charge in the battery console and advanced status while preserving intent', () => {
+    const state = useHomeStore.getState();
+    act(() => useHomeStore.setState({ energy: { ...createEnergyRuntime(state.deviceStates), batteryKwh: 12 } }));
+    const before = useHomeStore.getState().deviceStates['utility-battery'];
+    act(() => root.render(<Harness id="utility-battery" />));
+    expect(container.querySelector('output')?.textContent).toBe('50%');
+    click('More energy settings'); click('Status');
+    expect(container.textContent).toContain('Linked instantaneous readings');
+    expect(container.textContent).toContain('50%');
+    expect(useHomeStore.getState().deviceStates['utility-battery']).toEqual(before);
   });
 });

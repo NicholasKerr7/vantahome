@@ -4,6 +4,7 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { getDevice } from '../../../../packages/home-scene/src/data';
 import { BATTERY_RESERVE_PRESETS, BATTERY_STORAGE_OPTIONS, GENERATOR_MODE_OPTIONS, type EnergyDeviceKind } from '../../../../packages/home-scene/src/energyController';
 import { createDefaultSimulationSnapshot } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
+import { createEnergyRuntime } from '../../../../packages/home-scene/src/energySimulation';
 import { FULL_SCENE_ACCESS } from '../../../../packages/home-scene/src/sceneAccess';
 import { AppFeedback } from '../../../services/appFeedback';
 import * as simulationDeviceEditing from '../../../services/simulationDeviceEditing';
@@ -174,7 +175,7 @@ test.each(['energy', 'solar', 'battery', 'generator'] as const)('%s revoked cont
   const { screen, props, client } = setup(kind);
   screen.rerender(<EnergyController {...props} disabled />);
   for (const control of [...screen.getAllByRole('button'), ...screen.queryAllByRole('radio')]) {
-    if (control.props.accessibilityLabel === 'More energy controls') continue;
+    if (['More energy controls', 'Console', 'Power flow'].includes(control.props.accessibilityLabel)) continue;
     expect(control.props.accessibilityState.disabled).toBe(true);
     fireEvent.press(control);
   }
@@ -313,4 +314,48 @@ test('a revoked selection uses the library heading and removes its edit footer e
     expect(screen.getByRole('header', { name: 'Device library' })).toBeTruthy();
     expect(screen.queryByLabelText('Edit device')).toBeNull();
   } finally { screen.unmount(); useHomeStore.setState(original, true); }
+});
+
+
+test('native power flow starts and pauses through the guarded host action without changing any device', () => {
+  const { screen, props, client } = setup('energy');
+  const setEnergyEnabled = jest.fn();
+  const simulation = createDefaultSimulationSnapshot();
+  screen.rerender(<EnergyController {...props} client={{ ...client, setEnergyEnabled }} simulation={simulation} canManageEnergy />);
+  fireEvent.press(screen.getByLabelText('Power flow'));
+  expect(screen.getByText(/Illustrative 12 kW solar/)).toBeTruthy();
+  fireEvent.press(screen.getByLabelText('Start energy simulation'));
+  expect(setEnergyEnabled).toHaveBeenLastCalledWith(true);
+  const energy = { ...createEnergyRuntime(simulation.deviceStates), elapsedSeconds: 5 };
+  screen.rerender(<EnergyController {...props} client={{ ...client, setEnergyEnabled }} simulation={{ ...simulation, energy }} canManageEnergy />);
+  fireEvent.press(screen.getByLabelText('Pause energy simulation'));
+  expect(setEnergyEnabled).toHaveBeenLastCalledWith(false);
+  expect(client.toggle).not.toHaveBeenCalled();
+  expect(client.setSetting).not.toHaveBeenCalled();
+  expect(client.runAction).not.toHaveBeenCalled();
+});
+
+test.each([false, true])('native power flow cannot start with restricted authority or shared mode (%s)', (shared) => {
+  const { screen, props, client } = setup('energy');
+  const setEnergyEnabled = jest.fn();
+  screen.rerender(<EnergyController {...props} client={{ ...client, setEnergyEnabled }}
+    simulation={{ ...createDefaultSimulationSnapshot(), energyMode: shared ? 'shared-paused' : 'local' }} canManageEnergy={shared} />);
+  fireEvent.press(screen.getByLabelText('Power flow'));
+  const start = screen.getByLabelText('Start energy simulation');
+  expect(start.props.accessibilityState.disabled).toBe(true);
+  fireEvent.press(start);
+  expect(setEnergyEnabled).not.toHaveBeenCalled();
+});
+
+test('native battery reads runtime charge and keeps the saved reserve controls independent', () => {
+  const { screen, props, client } = setup('battery');
+  const simulation = createDefaultSimulationSnapshot();
+  const energy = { ...createEnergyRuntime(simulation.deviceStates), batteryKwh: 12 };
+  screen.rerender(<EnergyController {...props} simulation={{ ...simulation, energy }} />);
+  expect(screen.getByText('50 %')).toBeTruthy();
+  fireEvent.press(screen.getByRole('radio', { name: 'Reserve preference: 40%' }));
+  expect(client.setSetting).toHaveBeenLastCalledWith('utility-battery', 'reservePercent', 40);
+  expect(props.state.level).toBe(78);
+  expect(energy.batteryKwh).toBe(12);
+  expect(client.setLevel).not.toHaveBeenCalled();
 });

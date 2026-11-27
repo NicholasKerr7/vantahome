@@ -1,3 +1,5 @@
+import { synchronizeEnergyInputs, advanceEnergySimulation, createEnergyRuntime, parseEnergyRuntime, type EnergyRuntime } from './energySimulation';
+import { canManageEnergyFlow } from './energyAccess';
 import { EMPTY_SCENE_ACCESS, FULL_SCENE_ACCESS, canNavigateSceneRoom, canViewPropertyOverview, canExploreInteriorLayout, canViewSceneDevice, canControlSceneDevice, type SceneAccess } from './sceneAccess';
 import { isEmbeddedScene } from './embeddedHost';
 import { guardScenePreviewControl } from './scenePreviewStore';
@@ -23,6 +25,9 @@ interface IndoorContext {
 
 export interface HomeSnapshot {
   deviceStates: DeviceStates;
+  energy?: EnergyRuntime | null;
+  energyMode?: 'local' | 'shared-paused' | 'location-paused';
+  powerPausedDeviceIds?: string[];
   floor: FloorId;
   roomId: RoomId;
   view: ViewId;
@@ -55,6 +60,8 @@ interface HomeStore extends HomeSnapshot {
   activatePreset: (preset: PresetId) => void;
   reset: (localNight?: boolean) => void;
   advanceSafety: (seconds: number) => void;
+  advanceEnergy: (seconds: number) => void;
+  setEnergyEnabled: (enabled: boolean) => void;
   pauseSafety: () => void;
   acknowledgeFire: () => void;
   clearFireSources: () => void;
@@ -140,6 +147,7 @@ export function parseStoredState(raw: string | null): HomeSnapshot {
     const floor = room.outdoor ? getRoom(indoorContext.roomId).floor : room.floor;
     const view: ViewId = saved.view === 'exterior' || saved.view === 'immersive' ? saved.view : room.outdoor ? 'exterior' : room.floor;
     return {
+      ...(saved.energy ? { energy: parseEnergyRuntime(saved.energy) } : {}),
       deviceStates: restoreSafetySimulation(deviceStates), roomId: room.id, floor, view, selectedDevice: validSelection, indoorContext,
       night: typeof saved.night === 'boolean' ? saved.night : fallback.night,
       lightingMode: saved.lightingMode === 'day' || saved.lightingMode === 'night' ? saved.lightingMode : 'auto',
@@ -163,8 +171,8 @@ function readInitialState(): HomeSnapshot {
 
 /** Select only serializable preferences, excluding store actions and notices. */
 function snapshot(state: HomeSnapshot): HomeSnapshot {
-  const { deviceStates, floor, roomId, view, selectedDevice, indoorContext, night, lightingMode, motionDisabled, activePreset } = state;
-  return { deviceStates, floor, roomId, view, selectedDevice, indoorContext, night, lightingMode, motionDisabled, activePreset };
+  const { deviceStates, energy, floor, roomId, view, selectedDevice, indoorContext, night, lightingMode, motionDisabled, activePreset } = state;
+  return { deviceStates, ...(energy ? { energy } : {}), floor, roomId, view, selectedDevice, indoorContext, night, lightingMode, motionDisabled, activePreset };
 }
 
 /** Keep an interior selection and its return bookmark in one coherent update. */
@@ -234,7 +242,7 @@ export const useHomeStore = create<HomeStore>((set) => ({
     let view = state.view;
     if (newlyScopedOverview || (room?.outdoor && overview)) view = state.view === 'immersive' && layout && !newlyScopedOverview ? 'immersive' : 'exterior';
     else if (room && (!keepRoom || (view === 'exterior' && !overview) || (view === 'immersive' && !layout))) view = room.floor;
-    return { ...snapshot, access, activePreset: null, roomId, selectedDevice, view,
+    return { ...snapshot, energy: snapshot.energy ?? null, energyMode: snapshot.energyMode ?? 'local', powerPausedDeviceIds: snapshot.powerPausedDeviceIds ?? [], access, activePreset: null, roomId, selectedDevice, view,
       floor: room?.outdoor ? getRoom(bookmarkRoom).floor : room?.floor ?? state.floor,
       indoorContext: room && !room.outdoor ? { roomId, selectedDevice } : indoorContext };
   }),
@@ -292,9 +300,21 @@ export const useHomeStore = create<HomeStore>((set) => ({
     if (!getDevice(id) || !canControlSceneDevice(state.access, id)) return {};
     const current = state.deviceStates[id];
     const next = runDeviceActionState(id, current, actionId);
-    return next === current ? {} : { deviceStates: authorizedDeviceChanges(state, synchronizeSafetySimulation({ ...state.deviceStates, [id]: next }, state.deviceStates)), activePreset: null };
+    if (next === current) return {};
+    const deviceStates = authorizedDeviceChanges(state, synchronizeSafetySimulation({ ...state.deviceStates, [id]: next }, state.deviceStates));
+    return { deviceStates, ...(state.energy ? { energy: synchronizeEnergyInputs(state.energy, deviceStates, state.night) } : {}), activePreset: null };
   })),
-  /** Tick only foreground simulation time; idle state keeps the same reference. */
+  /** Start or pause the coordinated model while retaining its accumulated energy. */
+  setEnergyEnabled: guardScenePreviewControl((enabled) => set((state) => {
+    if (!canManageEnergyFlow(state.access) || state.energyMode === 'shared-paused') return state;
+    return { energy: { ...(state.energy ?? createEnergyRuntime(state.deviceStates)), enabled } };
+  })),
+  /** Only standalone scenes own this clock; embedded rendering follows the host. */
+  advanceEnergy: (seconds) => set((state) => {
+    if (isEmbeddedScene() || !state.energy?.enabled || state.energyMode === 'shared-paused' || !canManageEnergyFlow(state.access)) return state;
+    const energy = advanceEnergySimulation(state.energy, state.deviceStates, state.night, seconds);
+    return energy === state.energy ? state : { energy };
+  }),
   advanceSafety: (seconds) => set((state) => {
     const deviceStates = authorizedDeviceChanges(state, advanceSafetySimulation(state.deviceStates, seconds));
     return deviceStates === state.deviceStates ? state : { deviceStates };

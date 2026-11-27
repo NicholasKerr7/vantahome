@@ -1,3 +1,4 @@
+import { useCoordinatedEnergyStatus, useDeviceSupplyPaused } from './useDeviceSupplyPaused';
 import { isEmbeddedScene } from './embeddedHost';
 import { requestCameraWatch } from './requestCameraWatch';
 import { canViewSceneDevice, canControlSceneDevice } from './sceneAccess';
@@ -29,6 +30,8 @@ export function QuickDeviceControls({ deviceId, onClose, onFullControls }: Quick
 /** Keep immediate device actions beside the house without moving the camera. */
 function QuickDeviceControlsContents({ device, current, onClose, onFullControls }: Omit<QuickDeviceControlsProps, 'deviceId'> & { device: DeviceDefinition; current: DeviceState }) {
   const deviceId = device.id;
+  const supplyPaused = useDeviceSupplyPaused(deviceId);
+  const energyStatus = useCoordinatedEnergyStatus(device, current);
   const panel = useRef<HTMLElement>(null);
   const power = useRef<HTMLButtonElement>(null);
   const toggleDevice = useHomeStore((state) => state.toggleDevice);
@@ -65,13 +68,13 @@ function QuickDeviceControlsContents({ device, current, onClose, onFullControls 
     };
   }, [deviceId, onClose]);
 
-  return <section ref={panel} id="quick-device-controls" className={`quick-device-controls ${range ? 'has-primary-range' : ''}`} data-device-active={presentation.active} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
+  return <section ref={panel} id="quick-device-controls" className={`quick-device-controls ${range ? 'has-primary-range' : ''}`} data-device-active={presentation.active && !supplyPaused} data-device-monitoring={presentation.monitoring} data-device-tone={presentation.tone} role="dialog" aria-labelledby="quick-device-title" aria-describedby="quick-device-state">
     <div className="quick-device-heading">
       <span className="quick-device-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.5} /></span>
       <div className="quick-device-identity"><p className="quick-device-room">{getRoom(device.roomId).name}</p><h2 id="quick-device-title">{device.name}</h2></div>
       <button type="button" className="quick-device-close" aria-label="Close quick controls" onClick={() => onClose()}><X size={18} aria-hidden="true" /></button>
     </div>
-    <p id="quick-device-state" className={`quick-device-state ${presentation.active ? 'is-on' : ''}`} aria-live="polite"><span aria-hidden="true" />{deviceActionFeedback(device, current) ?? deviceStatus(device, current)}<span className="quick-device-value">{range?.text ?? (isMonitor(device.kind) ? 'Demo readings' : '')}</span></p>
+    <p id="quick-device-state" className={`quick-device-state ${presentation.active ? 'is-on' : ''}`} aria-live="polite"><span aria-hidden="true" />{supplyPaused ? 'On · waiting for power' : energyStatus ?? deviceActionFeedback(device, current) ?? deviceStatus(device, current)}<span className="quick-device-value">{range?.text ?? (isMonitor(device.kind) ? 'Demo readings' : '')}</span></p>
     {controllable ? <PrimaryDeviceRange device={device} current={current} location="quick" /> : <p className="device-hint">View only</p>}
     <div className="quick-device-actions">
       {device.kind === 'camera' && isEmbeddedScene() && <button ref={power} type="button" className="quick-device-full" aria-label="Watch camera demo preview" onClick={() => { requestCameraWatch(deviceId); onClose(false); }}><ArrowUpRight size={17} aria-hidden="true" /><span>Watch</span></button>}

@@ -1,3 +1,4 @@
+import { createEnergyRuntime } from '../../../../packages/home-scene/src/energySimulation';
 import { createStore } from 'zustand/vanilla';
 import { useHomeStore, type HomeState, type HouseholdMember } from '../../../store/useHomeStore';
 import { resolveModelSceneAccess, modelPresentationIdentity, modelSimulationIdentity, modelSimulationScope, scopeSimulationSnapshot } from '../modelSceneAccess';
@@ -182,4 +183,23 @@ test('a restricted member cannot pause a gate outside their current control gran
   await settle();
   expect(await persistence.load(scope)).toEqual(moving);
   session.dispose();
+});
+
+test('room-only energy observations disclose only that room’s interrupted IDs, never whole-property totals', () => {
+  const snapshot = createDefaultSimulationSnapshot();
+  snapshot.deviceStates['utility-energy'] = { ...snapshot.deviceStates['utility-energy'], settings: { gridAvailable: false } };
+  snapshot.deviceStates['utility-battery'] = { ...snapshot.deviceStates['utility-battery'], on: false };
+  snapshot.deviceStates['master-light'] = { on: true, level: 80 };
+  snapshot.deviceStates['family-tv'] = { on: true, level: 50 };
+  snapshot.night = true;
+  snapshot.energy = createEnergyRuntime(snapshot.deviceStates);
+  const access = resolveModelSceneAccess(account(), 'production');
+  const scoped = scopeSimulationSnapshot(snapshot, access);
+  expect(scoped.energy).toBeNull();
+  expect(scoped.powerPausedDeviceIds).toEqual(['master-light']);
+  expect(scoped.deviceStates['master-light']).toEqual({ on: true, level: 80 });
+  expect(scoped.deviceStates['family-tv']).toEqual({ on: false, level: 0 });
+  const revoked = scopeSimulationSnapshot(snapshot, EMPTY_SCENE_ACCESS);
+  expect(revoked.energy).toBeNull();
+  expect(revoked.powerPausedDeviceIds).toEqual([]);
 });

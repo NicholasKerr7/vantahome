@@ -1,9 +1,23 @@
 # VantaHome implementation backlog
 
-Maintained November 22, 2026. This is the current delivery queue, not a claim that
+Maintained November 27, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
+
+## Coordinated energy simulation — implementation complete, physical acceptance pending
+
+- Opt-in local power flow now coordinates the four consoles and 3D load supply;
+  settings survive deferral/recovery/reopen. See [implementation](ENERGY_SIMULATION.md).
+- Next: package/install the new source and accept Day/Night, outage, generator
+  request/release, staged grid restore, pause/resume and cross-view persistence
+  on iPhone. No new native package or installation is claimed yet.
+- **P1 before shared energy:** implement server-owned energy revision/step authority.
+  Local flow deliberately pauses in shared-home mode; never reuse the gate tick
+  lease or submit competing client energy clocks as commands.
+- Future measurement fidelity: supported telemetry, real duty/startup/phase limits,
+  losses and PV/weather modeling. Current capacities are illustrative, with no
+  physical command, engineer approval or annual solar target claim.
 
 ## Property energy planning — research complete
 

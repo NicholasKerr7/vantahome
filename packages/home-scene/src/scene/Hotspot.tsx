@@ -1,3 +1,4 @@
+import { useDeviceSupplyPaused } from '../useDeviceSupplyPaused';
 import { useRef } from 'react';
 import { Html } from '@react-three/drei';
 import { Vector3 } from 'three';
@@ -37,7 +38,8 @@ export function Hotspot({
   const layout = useHotspotLayout();
   const button = useRef<HTMLButtonElement>(null);
   const quickControls = controlMode === 'quick';
-  const status = stateLabel ?? (on ? 'On' : 'Off');
+  const supplyPaused = useDeviceSupplyPaused(id);
+  const status = supplyPaused ? 'On · waiting for power' : stateLabel ?? (on ? 'On' : 'Off');
   return (
     <>
       <HotspotLeader id={id} position={position} />

@@ -93,3 +93,18 @@ test('pauses an already hidden ready client and maintains one clock under Strict
   act(() => { page.hidden = false; page.dispatchEvent(new Event('visibilitychange')); jest.advanceTimersByTime(3000); });
   expect(client.advanceSafety.mock.calls).toEqual([[1], [1], [1]]);
 });
+
+test('batches energy to five observed foreground seconds and discards time spent away', () => {
+  const client = { advanceSafety: jest.fn(), pauseSafety: jest.fn(), advanceEnergy: jest.fn() };
+  const screen = renderHook(() => useForegroundSafetyClock(client, true));
+  act(() => jest.advanceTimersByTime(4000));
+  expect(client.advanceEnergy).not.toHaveBeenCalled();
+  act(() => changeAppState('background'));
+  act(() => jest.advanceTimersByTime(60_000));
+  act(() => changeAppState('active'));
+  act(() => jest.advanceTimersByTime(5000));
+  expect(client.advanceEnergy.mock.calls).toEqual([[5]]);
+  screen.unmount();
+  act(() => jest.advanceTimersByTime(60_000));
+  expect(client.advanceEnergy).toHaveBeenCalledTimes(1);
+});

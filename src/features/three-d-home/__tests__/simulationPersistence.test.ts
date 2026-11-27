@@ -1,3 +1,4 @@
+import { createEnergyRuntime, advanceEnergySimulation } from '../../../../packages/home-scene/src/energySimulation';
 import { createDefaultSimulationSnapshot } from '../../../../packages/home-scene/src/simulationBridgeProtocol';
 import { SimulationPersistence } from '../simulationPersistence';
 import { applySceneRestoration, type SceneRestorationDescriptor } from '../../scenes/sceneRestorationModel';
@@ -345,4 +346,19 @@ test('synchronous listener edits publish only the latest matching state and rece
   expect(snapshots.mock.calls.every(([state]) => state.deviceStates['living-light'].level === 39)).toBe(true);
   expect(receipts.mock.lastCall![0].devices[0].eligible).toBe(false);
   await persistence.awaitSaved('demo');
+});
+
+test('energy runtime survives a cold reopen without advancing or changing requested device settings', async () => {
+  const values = new Map<string, string>();
+  const storage = { getItem: jest.fn(async (key: string) => values.get(key) ?? null),
+    setItem: jest.fn(async (key: string, value: string) => { values.set(key, value); }) };
+  const persistence = new SimulationPersistence(storage);
+  const baseline = await persistence.load('energy-home');
+  const energy = advanceEnergySimulation(createEnergyRuntime(baseline.deviceStates), baseline.deviceStates, true, 5);
+  persistence.save('energy-home', { ...baseline, night: true, energy });
+  await settle();
+  const reopened = await new SimulationPersistence(storage).load('energy-home');
+  expect(reopened.energy).toEqual(energy);
+  expect(reopened.deviceStates).toEqual(baseline.deviceStates);
+  expect(reopened.night).toBe(true);
 });

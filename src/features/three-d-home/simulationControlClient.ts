@@ -1,3 +1,6 @@
+import type { WeatherLocation } from '../../../packages/home-scene/src/environment/types';
+import { createEnergyRuntime } from '../../../packages/home-scene/src/energySimulation';
+import { canManageEnergyFlow } from '../../../packages/home-scene/src/energyAccess';
 import { getDevice } from '../../../packages/home-scene/src/data';
 import { applyDeviceSetting, runDeviceActionState, setDeviceLevelState, toggleDeviceState } from '../../../packages/home-scene/src/deviceControlActions';
 import { createDefaultSimulationSnapshot, diffSimulationSnapshots, mergeSimulationChanges, rebaseSimulationChanges, simulationChangeBaseline, type SimulationChanges, type SimulationSnapshot, type SimulationSnapshotMessage } from '../../../packages/home-scene/src/simulationBridgeProtocol';
@@ -8,7 +11,7 @@ import { EMPTY_SCENE_ACCESS, type SceneAccess } from '../../../packages/home-sce
 import { SimulationSession } from './simulationSession';
 import type { SimulationSaveStatus } from './simulationPersistence';
 
-type Session = Pick<SimulationSession, 'handleMessage' | 'dispose' | 'pauseSafety'> & Partial<Pick<SimulationSession, 'canAdvance'>>;
+type Session = Pick<SimulationSession, 'handleMessage' | 'dispose' | 'pauseSafety'> & Partial<Pick<SimulationSession, 'canAdvance' | 'advanceEnergy' | 'setEnergyLocation'>>;
 type SessionFactory = (deliver: (message: SimulationSnapshotMessage) => void, status: (status: SimulationSaveStatus) => void) => Session;
 export type ControlSnapshot = { state: SimulationSnapshot; ready: boolean; status: SimulationSaveStatus; access?: SceneAccess };
 
@@ -66,6 +69,22 @@ export class SimulationControlClient {
   /** Commit the three bedroom fixtures in one patch so their quick switch cannot race itself. */
   setPower = (ids: readonly string[], on: boolean): void => {
     this.update(ids, (state, id) => state.on === on ? state : toggleDeviceState(id, state));
+  };
+
+  /** Preserve accumulated energy when pausing or resuming the local demonstration. */
+  setEnergyEnabled = (enabled: boolean): void => {
+    if (!canManageEnergyFlow(this.value.access) || this.value.state.energyMode === 'shared-paused') return;
+    this.commit({ energy: { ...(this.value.state.energy ?? createEnergyRuntime(this.value.state.deviceStates)), enabled } });
+  };
+
+  /** Supply only host-verified property coordinates to the foreground energy owner. */
+  setEnergyLocation = (location: WeatherLocation | null): void => {
+    if (!this.closed) this.session?.setEnergyLocation?.(location);
+  };
+
+  /** The application owner alone drives foreground energy; panels never own timers. */
+  advanceEnergy = (seconds: number): void => {
+    if (!this.closed && this.value.ready) this.session?.advanceEnergy?.(seconds);
   };
 
   /** Advance only active foreground seconds; idle ticks do not write storage. */
@@ -136,8 +155,9 @@ export class SimulationControlClient {
 
   /** Submit bounded local changes through the same bridge as the rendered model. */
   private commit(changes: SimulationChanges, intent: 'command' | 'tick' = 'command'): void {
-    if (this.closed || !this.value.ready || !this.session || !changes.deviceStates || !Object.keys(changes.deviceStates).length) return;
-    if (Object.keys(changes.deviceStates).some((id) => !this.value.access?.controllableDeviceIds.includes(id))) return;
+    if (this.closed || !this.value.ready || !this.session || (!changes.energy && !Object.keys(changes.deviceStates ?? {}).length)) return;
+    if (changes.energy && (!canManageEnergyFlow(this.value.access) || this.value.state.energyMode === 'shared-paused')) return;
+    if (Object.keys(changes.deviceStates ?? {}).some((id) => !this.value.access?.controllableDeviceIds.includes(id))) return;
     const next = mergeSimulationChanges(this.value.state, changes);
     // Cross-device safety effects must stay inside the grant before any optimistic state appears.
     if (Object.keys(diffSimulationSnapshots(this.value.state, next).deviceStates ?? {})

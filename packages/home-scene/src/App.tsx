@@ -19,6 +19,8 @@ import { DashboardLibrary, type DashboardLibraryView } from './DashboardLibrary'
 import { useHomeStore } from './state';
 import { useScenePreviewStore } from './scenePreviewStore';
 import { scenePreviewDisplayStates } from './scenePreviewClient';
+import { projectEnergyDeviceStates, readEnergyFlow } from './energySimulation';
+import { canViewEnergyFlow } from './energyAccess';
 import { useScenePreview } from './useScenePreview';
 import { ScenePreviewToolbar } from './ScenePreviewToolbar';
 import { useSimulationBridge } from './useSimulationBridge';
@@ -86,10 +88,22 @@ function HomeViewport({ environment, reducedMotion, onFullControls, onRooms, she
   const night = useHomeStore((state) => state.night);
   const lightingMode = useHomeStore((state) => state.lightingMode);
   const deviceStates = useHomeStore((state) => state.deviceStates);
+  const energy = useHomeStore((state) => state.energy);
+  const energyMode = useHomeStore((state) => state.energyMode);
+  const powerPausedDeviceIds = useHomeStore((state) => state.powerPausedDeviceIds);
   const preview = useScenePreviewStore((state) => state.active);
   const comparison = useScenePreviewStore((state) => state.comparison);
-  const displayStates = useMemo(() => scenePreviewDisplayStates({ deviceStates, access, roomId, floor, view }, preview, comparison),
-    [deviceStates, access, roomId, floor, view, preview, comparison]);
+  const displayStates = useMemo(() => {
+    const proposed = scenePreviewDisplayStates({ deviceStates, access, roomId, floor, view }, preview, comparison);
+    // Supply projection is visual only; proposed scenes never advance storage or save a device change.
+    if (energyMode && energyMode !== 'local') return proposed;
+    if (energy?.enabled && canViewEnergyFlow(access)) return projectEnergyDeviceStates(proposed, readEnergyFlow(energy, proposed, night), energy);
+    if (!powerPausedDeviceIds?.length) return proposed;
+    // Scoped viewers receive only their own paused IDs, never hidden household totals or equipment.
+    const visible = { ...proposed };
+    for (const id of powerPausedDeviceIds) if (visible[id]?.on && canViewSceneDevice(access, id)) visible[id] = { ...visible[id], on: false };
+    return visible;
+  }, [deviceStates, access, roomId, floor, view, preview, comparison, energy, energyMode, night, powerPausedDeviceIds]);
   const selectedDevice = useHomeStore((state) => state.selectedDevice);
   const selectHotspotDevice = useHomeStore((state) => state.selectHotspotDevice);
   const inlineInspector = useInlineInspectorVisibility(selectedDevice);
