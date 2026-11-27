@@ -113,7 +113,12 @@ cover six phone/tablet sizes for the flow plus all four native console layouts,
 44-point targets, More/Back and no ordinary page overflow. The smallest viewport
 retains the existing contained accessibility scroll fallback.
 
-Next: package/install and accept on iPhone; iPad physical acceptance remains
+Preview **1.0.0 (116)** was packaged, signature/staging/scene-hash verified,
+installed in place over USB and launched November 27. Apple inventory confirms
+build 116. The new profile expires December 4, 2026 at 20:26:45 UTC. Receipts and
+package checks: `work/preview116-{verification,install,launch,installed-app}.json`.
+
+Next: accept the energy interactions on iPhone; iPad physical acceptance remains
 explicitly deferred. Shared energy needs a separate server-owned model/revision
 and step policy, not the gate lease. Actual telemetry/adapters await selected
 hardware, qualified electrical design and the existing Jamaican approval gates.

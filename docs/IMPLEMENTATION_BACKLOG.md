@@ -13,9 +13,10 @@ simulation-only staging scope. Recheck volatile external state before changing i
   explanations, waiting-device names and bounded phone/tablet controls. Reviewed
   permission loss, idle paths, motion suspension and large-text wrapping. No new
   verified model/authority defect found in this presentation pass.
-- Next: package/install the new source and accept Day/Night, outage, generator
-  request/release, staged grid restore, pause/resume and cross-view persistence
-  on iPhone. No new native package or installation is claimed yet.
+- Preview **116 installed and launched over USB November 27**; signing, staging,
+  exact scene package and Apple app inventory verified. Next: accept Day/Night,
+  outage, generator request/release, staged grid restore, pause/resume and
+  cross-view persistence on iPhone. Physical feature acceptance remains pending.
 - **P1 before shared energy:** implement server-owned energy revision/step authority.
   Local flow deliberately pauses in shared-home mode; never reuse the gate tick
   lease or submit competing client energy clocks as commands.

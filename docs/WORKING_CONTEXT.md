@@ -61,7 +61,7 @@ defects from ideas or untested risks.
 - Focused refinement checks: 64 scene tests + 30 native tests, TypeScript/offline
   build, six embedded and 24 native console/profile checks, source inspection and
   outage/warm-up/motion cases. No energy physics, command authority or persistence
-  changed. Packaging/install remains pending; see the energy document for details.
+  changed. Preview 116 is now installed; physical acceptance remains pending.
 
 - Implemented opt-in **Home energy controller → Power flow** linking solar,
   battery, JPS, generator and load priorities. Four consoles share instantaneous
@@ -79,8 +79,13 @@ defects from ideas or untested risks.
   subsequent focused checks add coverage for self-use defaults and short outages.
   TypeScript, offline scene build, six embedded flow profiles and 24 native
   console/profile browser checks pass. Source/cache evidence: `work/energy-*`.
-  Native package/install and physical acceptance are pending; last installed
-  remains Preview 115. See [energy simulation](ENERGY_SIMULATION.md).
+  Preview **1.0.0 (116)** Release package, signing, staging, source markers and exact
+  **32,379,326-byte** offline scene (`bcbc31fb6cf4…`) verified. Production metadata
+  restored. Installed in place over USB and launched November 27; Apple inventory
+  confirms 116, superseding Preview 115. New signing profile expires
+  **December 4, 2026 at 20:26:45 UTC**. Receipts: `work/preview116-*.json`;
+  logs: `work/energy-preview116-*`.
+  Physical energy acceptance remains pending. See [energy simulation](ENERGY_SIMULATION.md).
 
 ## Property electrical dossier — November 22
 
