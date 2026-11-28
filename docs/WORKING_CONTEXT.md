@@ -51,7 +51,7 @@ defects from ideas or untested risks.
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
 
-## Interactive room doors — November 28 / Preview 117 ready
+## Interactive room doors — November 28 / Preview 117 installed
 
 - Added the 27 measured architectural doors to the existing entry controls:
   hinged room/bathroom doors, paired terrace doors and folding closets. Room
@@ -79,8 +79,10 @@ defects from ideas or untested risks.
 - Preview **1.0.0 (117)** Release built and signed; staging configuration, both
   control surfaces and exact **32,404,526-byte** scene verified (`77d695b2f506…`).
   Production metadata restored. Signing expires **December 4, 2026 at 20:26:45 UTC**.
-  **Not installed yet; Preview 116 is the last confirmed installation.** iPhone
-  acceptance is pending. Receipts: `work/preview117-verification.json`,
+  Installed in place over **USB and launched November 28**. Apple app inventory
+  confirms **1.0.0 (117)**, superseding 116. Package/signature/staging/scene checks
+  were repeated immediately before installation. Physical door acceptance is
+  requested and pending. Receipts: `work/preview117-{verification,install,launch,installed-app}.json`,
   `work/room-door-staging.json`; evidence/logs: `work/room-door-*`.
 - See [room-door implementation](ROOM_DOOR_CONTROLS.md) for source geometry,
   catalog/migration maintenance, limitations and the short iPhone acceptance flow.

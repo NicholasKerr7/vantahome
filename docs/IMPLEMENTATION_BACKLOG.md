@@ -5,15 +5,16 @@ every undiscovered defect has been found. Start with [working context](WORKING_C
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
 
-## Interactive room doors — complete, iPhone installation/acceptance pending
+## Interactive room doors — Preview 117 installed, physical acceptance pending
 
 - All 27 authored room, bathroom, closet and terrace doors now have independent
   controls and measured 3D hinges/folding leaves. Northeast doorway obstruction
   repaired; floor-plan doors match wall cutaway height. Staging catalog 030 is
   deployed and reverified; existing settings/grants/physical data are preserved.
-- Preview **117 built and verified, not installed**; last confirmed installation
-  remains 116. Next: install when requested, open a room door and folding closet,
-  set a partial position, compare Home/Devices, then reopen and verify retention.
+- Preview **117 installed in place over USB and launched November 28**; package
+  checks and Apple inventory confirm 1.0.0 (117). Next: accept a room door and
+  folding closet, set a partial position, compare Home/Devices, then reopen and
+  verify retention. The first physical interaction check is requested and pending.
   Check a room-assigned account separately: authorized interior door available,
   exterior entries still governed by entry-security permission. See
   [implementation and acceptance](ROOM_DOOR_CONTROLS.md).

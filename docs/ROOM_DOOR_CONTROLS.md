@@ -94,11 +94,13 @@ preservation, retry behavior and 151-device maximum. Production is unchanged.
 
 Preview 117 is packaged, signed and verified with the exact 32,404,526-byte scene
 (`77d695b2f5065d6a3fed60fca1e6cb681ee4e9aec3a18bf4bb132d206ed449a3`).
-It has not been installed; Preview 116 is the last confirmed phone installation.
+Package/signature/staging/scene checks were repeated before installation. Installed
+in place over USB and launched November 28; Apple inventory confirms 1.0.0 (117),
+superseding 116. Receipts: `work/preview117-{install,launch,installed-app}.json`.
 The offline scene remains below the existing 32 MiB budget. No new dependency,
 provider connection or real-device command is introduced.
 
-After installing 117, open a suite door, a folding closet and an exterior pair.
+On Preview 117, open a suite door, a folding closet and an exterior pair.
 Try Open, Close and a partial position, compare the same device through Devices,
 then fully reopen after the save acknowledgement. With a room-assigned account,
 verify that its interior door is controllable and exterior entries still follow
