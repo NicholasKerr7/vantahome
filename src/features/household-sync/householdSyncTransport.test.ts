@@ -1,5 +1,8 @@
 import { createHouseholdSyncTransport, HouseholdSyncError, parseSharedHomeSnapshot, type SharedHomeScope } from './householdSyncTransport';
 import { supabase } from '../../services/supabaseClient';
+import { DEVICES } from '../../../packages/home-scene/src/data';
+import { createDefaultDevicePlacement, MAX_RUNTIME_DEVICES, replaceRuntimeDevices } from '../../../packages/home-scene/src/devicePlacement';
+import { createDefaultSimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 
 jest.mock('../../services/supabaseClient', () => ({ supabase: {
   auth: { getSession: jest.fn() }, rpc: jest.fn(), channel: jest.fn(), removeChannel: jest.fn(),
@@ -45,6 +48,21 @@ beforeEach(() => {
 test('accepts a bounded authorized snapshot without adding private global activity metadata', () => {
   expect(parseSharedHomeSnapshot(snapshot(), scope)).toEqual(snapshot());
   expect(parseSharedHomeSnapshot({ ...snapshot(), enabled: false, devices: [] }, scope).devices).toEqual([]);
+});
+
+test('the expanded authored catalog retains all 32 placed fixtures within the server batch bound', () => {
+  const placements = Array.from({ length: MAX_RUNTIME_DEVICES }, (_, index) => ({
+    id: `placed-00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    name: `Added light ${index + 1}`, placement: createDefaultDevicePlacement('master-light', 'living')!,
+  }));
+  expect(replaceRuntimeDevices(placements)).toBe(true);
+  try {
+    const states = createDefaultSimulationSnapshot().deviceStates;
+    const bindings = DEVICES.map((device) => ({ deviceId: device.id, modelDeviceId: device.id }));
+    const value = { ...snapshot(), devices: bindings.map((binding) => ({ ...binding, revision: 1, state: states[binding.modelDeviceId] })) };
+    expect(parseSharedHomeSnapshot(value, { ...scope, bindings }).devices).toHaveLength(151);
+    expect(() => parseSharedHomeSnapshot({ ...value, devices: [...value.devices, value.devices[0]] }, { ...scope, bindings })).toThrow(HouseholdSyncError);
+  } finally { replaceRuntimeDevices([]); }
 });
 
 test.each([

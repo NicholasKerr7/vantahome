@@ -1,9 +1,28 @@
 # VantaHome implementation backlog
 
-Maintained November 27, 2026. This is the current delivery queue, not a claim that
+Maintained November 28, 2026. This is the current delivery queue, not a claim that
 every undiscovered defect has been found. Start with [working context](WORKING_CONTEXT.md)
 for current build/deployment evidence. Preserve the purple 3D-first design and
 simulation-only staging scope. Recheck volatile external state before changing it.
+
+## Interactive room doors — complete, iPhone installation/acceptance pending
+
+- All 27 authored room, bathroom, closet and terrace doors now have independent
+  controls and measured 3D hinges/folding leaves. Northeast doorway obstruction
+  repaired; floor-plan doors match wall cutaway height. Staging catalog 030 is
+  deployed and reverified; existing settings/grants/physical data are preserved.
+- Preview **117 built and verified, not installed**; last confirmed installation
+  remains 116. Next: install when requested, open a room door and folding closet,
+  set a partial position, compare Home/Devices, then reopen and verify retention.
+  Check a room-assigned account separately: authorized interior door available,
+  exterior entries still governed by entry-security permission. See
+  [implementation and acceptance](ROOM_DOOR_CONTROLS.md).
+- Web/native layouts, scope, persistence, SQL upgrade and bounded renderer motion
+  checks pass. Physical hinges/motors and optional Filament lab door parity are
+  outside this slice; Three.js remains the shipped main renderer.
+- Older Preview clients should update before using the expanded catalog. Future
+  catalog upgrades must preserve the one-time receipt and deleted-room/device
+  behavior rather than rebuilding a household from defaults.
 
 ## Coordinated energy simulation — implementation complete, physical acceptance pending
 

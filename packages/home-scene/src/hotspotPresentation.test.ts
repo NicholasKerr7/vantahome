@@ -17,8 +17,8 @@ function deviceOfKind(kind: DeviceKind): DeviceDefinition {
 }
 
 describe('hotspot state across the complete house catalog', () => {
-  it('audits all 92 devices and every supported kind', () => {
-    expect(DEVICES).toHaveLength(92);
+  it('audits all 119 devices and every supported kind', () => {
+    expect(DEVICES).toHaveLength(119);
     expect(new Set(DEVICES.map((device) => device.kind))).toEqual(new Set(DEVICE_KINDS));
   });
 

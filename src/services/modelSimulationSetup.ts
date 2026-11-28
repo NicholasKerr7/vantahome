@@ -7,7 +7,7 @@ import { supabase } from './supabaseClient';
 type SetupResult = {
   homeId: string;
   status: 'created' | 'existing';
-  catalogVersion: 1;
+  catalogVersion: 2;
   roomCount: number;
   deviceCount: number;
 };
@@ -37,7 +37,7 @@ function isSetupResult(value: unknown, homeId: string): value is SetupResult {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const result = value as Record<string, unknown>;
   return result.homeId === homeId && ['created', 'existing'].includes(String(result.status))
-    && result.catalogVersion === 1 && result.roomCount === ROOMS.length && result.deviceCount === DEVICES.length;
+    && result.catalogVersion === 2 && result.roomCount === ROOMS.length && result.deviceCount === DEVICES.length;
 }
 
 /** Create only this owner's empty model registry; the RPC serializes retries and creates no observations or commands. */

@@ -1,5 +1,6 @@
 import type { Device, HouseholdMember } from "../store/useHomeStore";
 import type { DeviceCommand } from "../services/deviceClient";
+import { isInteriorRoomDoor } from "../../packages/home-scene/src/roomDoors";
 
 export const ACTION_PERMISSIONS = [
   "device.view",
@@ -72,6 +73,7 @@ export function roleHasPermission(
   return ROLE_PERMISSIONS[role].has(permission);
 }
 
+/** Keep exterior and physical entries sensitive; only catalogued interior simulation doors use ordinary controls. */
 export function permissionForCommand(
   command: DeviceCommand,
   device: Device,
@@ -80,6 +82,10 @@ export function permissionForCommand(
   if (device.kind === "ac") return "climate.control";
 
   if (device.kind === "door") {
+    // Model bindings are server-owned and room-validated before a simulation grant is created.
+    // Names, placed copies and an unrecognized model ID never downgrade an entry permission.
+    if (device.simulationOnly === true && typeof device.modelDeviceId === "string"
+      && isInteriorRoomDoor(device.modelDeviceId)) return "device.control";
     if (command.op === "toggle") return "lock.unlock";
     if (
       command.op === "set-properties" &&

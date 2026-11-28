@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import source from '../device-geometry.json';
+import { ROOM_DOORS } from '../roomDoors';
 import { DEVICES, getDevice } from '../data';
 import { BLINDS_GEOMETRY, getBlindsPose } from '../blinds';
 import { FIXTURE_LIBRARY, validateFixtureLibrary, type FixturePart } from './deviceGeometry';
@@ -18,10 +19,10 @@ function projectedHeight(part: FixturePart, angle: number): number {
 }
 
 describe('portable device geometry contract', () => {
-  it('contains one assembly for each of the 92 real manifest IDs, without orphan hardware', () => {
-    expect(DEVICES).toHaveLength(92);
-    expect(new Set(DEVICES.map((device) => device.id)).size).toBe(92);
-    expect(Object.keys(FIXTURE_LIBRARY.devices).sort()).toEqual(DEVICES.map((device) => device.id).sort());
+  it('contains one assembly for each authored manifest ID, without orphan hardware', () => {
+    expect(DEVICES).toHaveLength(119);
+    expect(new Set(DEVICES.map((device) => device.id)).size).toBe(119);
+    expect([...Object.keys(FIXTURE_LIBRARY.devices), ...ROOM_DOORS.map((door) => door.id)].sort()).toEqual(DEVICES.map((device) => device.id).sort());
     expect(Object.keys(FIXTURE_LIBRARY.materials).length).toBeLessThanOrEqual(25);
   });
 

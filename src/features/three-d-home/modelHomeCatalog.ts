@@ -2,6 +2,7 @@ import { DEVICES, ROOMS, getDevice, isPositionDevice, type DeviceDefinition } fr
 import { getCapabilities, isMonitor, readDeviceSetting, validateSetting } from '../../../packages/home-scene/src/deviceCapabilities';
 import type { DeviceState, SimulationSnapshot } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 import { projectGasDevice } from '../gas/gasDemoDevices';
+import { getRoomDoor } from '../../../packages/home-scene/src/roomDoors';
 import type { AutomationFlow, AutomationRule, Device, DeviceKind, FlowAction, FlowCondition, FlowTrigger, HomeState, Room, RoomMembership, Scene } from '../../store/useHomeStore';
 
 export const MODEL_CATALOG_VERSION = 1;
@@ -113,6 +114,7 @@ function modeledDevice(definition: DeviceDefinition, state: DeviceState, previou
   let device: Device = {
     ...(previous ? withoutCameraUrls(previous) : {}),
     id: definition.id, name: definition.name, roomId: definition.roomId, kind: definition.kind,
+    ...(getRoomDoor(definition.id) ? { modelDeviceId: definition.id, simulationOnly: true } : {}),
     isOn: isMonitor(definition.kind) ? true : definition.kind === 'camera' ? previous?.isOn ?? true : state.on,
   };
   for (const capability of getCapabilities(definition)) {
@@ -168,7 +170,7 @@ function mapRoutineFlow(flow: AutomationFlow, deviceId: (id: string) => string |
 }
 
 /**
- * Upgrade only an offline local demonstration to the manifest's 20 rooms and 92 devices.
+ * Upgrade only an offline local demonstration to the manifest's 20 rooms and 119 devices.
  * The caller hydrates scene preferences first; that snapshot is authoritative for modeled controls.
  * Unmatched legacy records remain in an inert archive; genuinely custom records stay active.
  */

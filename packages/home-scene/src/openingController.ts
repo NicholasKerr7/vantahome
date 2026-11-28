@@ -1,6 +1,7 @@
 import type { DeviceDefinition } from './data';
 import { isOpeningDeviceKind, openingPositionStatus, readOpeningPosition, type OpeningDeviceKind } from './openingPosition';
 import type { DeviceState } from './simulationTypes';
+import { getRoomDoor } from './roomDoors';
 
 export { isOpeningDeviceKind } from './openingPosition';
 export type { OpeningDeviceKind } from './openingPosition';
@@ -15,6 +16,15 @@ const OPENING_VARIANTS: Record<OpeningDeviceKind, OpeningControllerVariant> = {
 const OPENING_ACTIONS = {
   open: 'command-open', close: 'command-close', increase: 'position-up', decrease: 'position-down',
 } as const;
+
+/** Name the actual mechanism without presenting an interior door as a security entry. */
+export function openingControllerLabels(kind: OpeningDeviceKind, deviceId: string): { title: string; mechanism: string } {
+  if (kind === 'garage') return { title: 'GARAGE', mechanism: 'Roller shutter' };
+  if (kind === 'window') return { title: 'WINDOW', mechanism: 'Awning window' };
+  const door = getRoomDoor(deviceId);
+  return { title: door?.security === 'interior' ? 'ROOM' : 'ENTRY',
+    mechanism: door?.layout === 'bifold' ? 'Folding closet doors' : door?.layout === 'double' ? 'Paired hinged doors' : 'Side-hinged door' };
+}
 
 /** One selected fixture's accepted position, without inferred locks, travel or safety readings. */
 export interface OpeningControllerState {

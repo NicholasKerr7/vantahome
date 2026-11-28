@@ -3695,6 +3695,924 @@
         0.65,
         -10.8
       ]
+    },
+    {
+      "id": "bath-2-door",
+      "kind": "door",
+      "name": "Northeast bathroom door",
+      "roomId": "bath-2",
+      "description": "Northeast bathroom door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        8.69,
+        0.02,
+        -13.4535
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.733,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        8.464,
+        1.18,
+        -13.4535
+      ]
+    },
+    {
+      "id": "bedroom-2-door",
+      "kind": "door",
+      "name": "Northeast suite door",
+      "roomId": "bedroom-2",
+      "description": "Northeast suite door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        10.02,
+        0.02,
+        -11.568
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.733,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        10.02,
+        1.18,
+        -13.006
+      ]
+    },
+    {
+      "id": "bedroom-2-closet-door",
+      "kind": "door",
+      "name": "Northeast suite closet",
+      "roomId": "bedroom-2",
+      "description": "Northeast suite closet. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        11.46,
+        0.02,
+        -11.568
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        1.749,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        11.46,
+        1.18,
+        -13.006
+      ]
+    },
+    {
+      "id": "bedroom-4-closet-door",
+      "kind": "door",
+      "name": "Southeast suite closet",
+      "roomId": "bedroom-4",
+      "description": "Southeast suite closet. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        12.9,
+        0.02,
+        -6.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        1.749,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        12.9,
+        1.18,
+        -6.074
+      ]
+    },
+    {
+      "id": "laundry-exterior-door",
+      "kind": "door",
+      "name": "Laundry outside door",
+      "roomId": "laundry",
+      "description": "Laundry outside door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        14.23,
+        0.02,
+        -16.14
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.834,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        14.23,
+        1.18,
+        -15.914
+      ]
+    },
+    {
+      "id": "bedroom-1-door",
+      "kind": "door",
+      "name": "Northwest suite door",
+      "roomId": "bedroom-1",
+      "description": "Northwest suite door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        3.32,
+        0.02,
+        -11.568
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.733,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        3.32,
+        1.18,
+        -11.794
+      ]
+    },
+    {
+      "id": "bedroom-1-closet-door",
+      "kind": "door",
+      "name": "Northwest suite closet",
+      "roomId": "bedroom-1",
+      "description": "Northwest suite closet. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        3.956,
+        0.02,
+        -13.36
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.733,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        3.73,
+        1.18,
+        -13.36
+      ]
+    },
+    {
+      "id": "bath-1-door",
+      "kind": "door",
+      "name": "Northwest bathroom door",
+      "roomId": "bath-1",
+      "description": "Northwest bathroom door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        3.956,
+        0.02,
+        -15.61
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.682,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        4.182,
+        1.18,
+        -15.61
+      ]
+    },
+    {
+      "id": "kitchen-terrace-door",
+      "kind": "door",
+      "name": "Dining terrace doors",
+      "roomId": "kitchen",
+      "description": "Dining terrace doors. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        14.553,
+        0.02,
+        -8.596
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        1.749,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        14.553,
+        1.18,
+        -8.596
+      ]
+    },
+    {
+      "id": "kitchen-store-door",
+      "kind": "door",
+      "name": "Dining storage door",
+      "roomId": "kitchen",
+      "description": "Dining storage door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        10.92,
+        0.02,
+        -6.996
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.733,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        10.92,
+        1.18,
+        -7.25
+      ]
+    },
+    {
+      "id": "bath-4-door",
+      "kind": "door",
+      "name": "Southeast bathroom door",
+      "roomId": "bath-4",
+      "description": "Southeast bathroom door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        12.236,
+        0.02,
+        -2.123
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.682,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        12.236,
+        1.18,
+        -1.897
+      ]
+    },
+    {
+      "id": "bedroom-4-door",
+      "kind": "door",
+      "name": "Southeast suite door",
+      "roomId": "bedroom-4",
+      "description": "Southeast suite door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        10.276,
+        0.02,
+        -3.423
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.733,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        10.502,
+        1.18,
+        -3.423
+      ]
+    },
+    {
+      "id": "bath-3-door",
+      "kind": "door",
+      "name": "Southwest bathroom door",
+      "roomId": "bath-3",
+      "description": "Southwest bathroom door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        7.535,
+        0.02,
+        -1.3
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.682,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        7.761,
+        1.18,
+        -1.3
+      ]
+    },
+    {
+      "id": "bedroom-3-closet-door",
+      "kind": "door",
+      "name": "Southwest suite closet",
+      "roomId": "bedroom-3",
+      "description": "Southwest suite closet. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        7.535,
+        0.02,
+        -2.37
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.733,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        7.309,
+        1.18,
+        -2.37
+      ]
+    },
+    {
+      "id": "bedroom-3-door",
+      "kind": "door",
+      "name": "Southwest suite door",
+      "roomId": "bedroom-3",
+      "description": "Southwest suite door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        7.535,
+        0.02,
+        -3.73
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.733,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        7.309,
+        1.18,
+        -3.73
+      ]
+    },
+    {
+      "id": "hall-storage-door",
+      "kind": "door",
+      "name": "Hall storage door",
+      "roomId": "living",
+      "description": "Hall storage door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        9.635,
+        0.02,
+        -3.15
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.72,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        9.635,
+        1.18,
+        -7.222
+      ]
+    },
+    {
+      "id": "master-dressing-door",
+      "kind": "door",
+      "name": "Dressing room door",
+      "roomId": "master",
+      "description": "Dressing room door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        7.359,
+        0.02,
+        -13.681
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.771,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        7.607,
+        1.18,
+        -13.681
+      ]
+    },
+    {
+      "id": "master-door",
+      "kind": "door",
+      "name": "Primary suite door",
+      "roomId": "master",
+      "description": "Primary suite door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        8.09,
+        0.02,
+        -11.647
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.771,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        8.09,
+        1.18,
+        -11.895
+      ]
+    },
+    {
+      "id": "master-terrace-door",
+      "kind": "door",
+      "name": "Primary terrace doors",
+      "roomId": "master",
+      "description": "Primary terrace doors. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        12.574,
+        0.02,
+        -13.974
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        1.749,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        12.326,
+        1.18,
+        -13.974
+      ]
+    },
+    {
+      "id": "family-terrace-door",
+      "kind": "door",
+      "name": "Family terrace doors",
+      "roomId": "family",
+      "description": "Family terrace doors. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        12.574,
+        0.02,
+        -9.356
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        1.749,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        12.326,
+        1.18,
+        -9.356
+      ]
+    },
+    {
+      "id": "family-balcony-door",
+      "kind": "door",
+      "name": "Family balcony doors",
+      "roomId": "family",
+      "description": "Family balcony doors. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        4.886,
+        0.02,
+        -9.344
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        1.749,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        5.134,
+        1.18,
+        -9.344
+      ]
+    },
+    {
+      "id": "bedroom-5-door",
+      "kind": "door",
+      "name": "Upper guest suite door",
+      "roomId": "bedroom-5",
+      "description": "Upper guest suite door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        7.603,
+        0.02,
+        -3.765
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.771,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        7.356,
+        1.18,
+        -3.765
+      ]
+    },
+    {
+      "id": "bedroom-5-closet-door",
+      "kind": "door",
+      "name": "Upper guest suite closet",
+      "roomId": "bedroom-5",
+      "description": "Upper guest suite closet. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        7.603,
+        0.02,
+        -2.34
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.631,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        7.356,
+        1.18,
+        -2.34
+      ]
+    },
+    {
+      "id": "bath-6-door",
+      "kind": "door",
+      "name": "Guest bathroom door",
+      "roomId": "bath-6",
+      "description": "Guest bathroom door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        7.603,
+        0.02,
+        -1.414
+      ],
+      "rotation": [
+        0,
+        1.5707963267948966,
+        0
+      ],
+      "dimensions": [
+        0.771,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        7.85,
+        1.18,
+        -1.414
+      ]
+    },
+    {
+      "id": "upper-storage-door",
+      "kind": "door",
+      "name": "Upper storage door",
+      "roomId": "family",
+      "description": "Upper storage door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        9.979,
+        0.02,
+        -3.277
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.682,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        9.979,
+        1.18,
+        -7.314
+      ]
+    },
+    {
+      "id": "bath-7-door",
+      "kind": "door",
+      "name": "Shared upper bath door",
+      "roomId": "bath-7",
+      "description": "Shared upper bath door. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        12.634,
+        0.02,
+        -2.217
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        0.682,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        12.634,
+        1.18,
+        -1.97
+      ]
+    },
+    {
+      "id": "gym-terrace-door",
+      "kind": "door",
+      "name": "Exercise terrace doors",
+      "roomId": "gym",
+      "description": "Exercise terrace doors. Simulated opening; no physical motor or lock is connected.",
+      "levelLabel": "Opening",
+      "lowLabel": "Closed",
+      "highLabel": "Open",
+      "position": [
+        13.451,
+        0.02,
+        -7.066
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        1.444,
+        1.992,
+        0.05
+      ],
+      "mount": "wall",
+      "model": "architectural-room-door",
+      "defaultOn": false,
+      "defaultLevel": 0,
+      "hotspot": [
+        13.451,
+        1.18,
+        -6.819
+      ]
     }
   ],
   "designNotes": [

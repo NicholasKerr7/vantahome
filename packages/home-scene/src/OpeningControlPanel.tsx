@@ -5,16 +5,10 @@ import type { DeviceState } from './simulationTypes';
 import { useHomeStore } from './state';
 import { canControlSceneDevice } from './sceneAccess';
 import { PagedDeviceControls } from './PagedDeviceControls';
-import { openingControllerActionId, readOpeningControllerState } from './openingController';
+import { openingControllerActionId, openingControllerLabels, readOpeningControllerState } from './openingController';
 import { OpeningConsoleArtwork } from './OpeningConsoleArtwork';
 import { useOpeningPresentationMotion } from './useOpeningPresentationMotion';
 import './opening-controller.css';
-
-const PRESENTATION = {
-  door: { brand: 'ENTRY', label: 'door', mechanism: 'Side-hinged door' },
-  garage: { brand: 'GARAGE', label: 'garage', mechanism: 'Roller shutter' },
-  window: { brand: 'WINDOW', label: 'window', mechanism: 'Awning window' },
-} as const;
 
 /** Present accepted opening positions while all mutations remain inside the guarded shared store. */
 export function OpeningController({ device, current }: { device: DeviceDefinition; current: DeviceState }) {
@@ -39,7 +33,7 @@ export function OpeningController({ device, current }: { device: DeviceDefinitio
   function setPosition(value: number) { useHomeStore.getState().setDeviceLevel(device.id, value); }
 
   if (!opening) return null;
-  const presentation = PRESENTATION[opening.kind];
+  const presentation = { ...openingControllerLabels(opening.kind, device.id), label: opening.kind };
   if (more) return <section className="opening-more" aria-label={`Additional ${presentation.label} settings`}>
     <button ref={backButton} type="button" className="opening-return" onClick={() => changePanel(false)}><ArrowLeft size={18} aria-hidden="true" />Back to {presentation.label} console</button>
     <PagedDeviceControls device={device} current={current} />
@@ -49,7 +43,7 @@ export function OpeningController({ device, current }: { device: DeviceDefinitio
     <div className="opening-stage"><div className="opening-console">
       <header className="opening-top">
         <span className="opening-emblem" aria-hidden="true"><DoorOpen size={23} /></span>
-        <div className="opening-brand"><span>VANTAHOME</span><strong>{presentation.brand}</strong></div>
+        <div className="opening-brand"><span>VANTAHOME</span><strong>{presentation.title}</strong></div>
         <button ref={moreButton} type="button" className="opening-round" aria-label={`More ${presentation.label} settings`} onClick={() => changePanel(true)}><Ellipsis size={22} aria-hidden="true" /></button>
       </header>
       <div className="opening-hero">

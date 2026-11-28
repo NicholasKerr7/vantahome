@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { DeviceDefinition } from '../../../packages/home-scene/src/data';
 import type { DeviceState } from '../../../packages/home-scene/src/simulationTypes';
 import {
-  OPENING_POSITION_BOUNDS, openingControllerActionId, readOpeningControllerState,
+  OPENING_POSITION_BOUNDS, openingControllerActionId, openingControllerLabels, readOpeningControllerState,
   type OpeningControllerKey, type OpeningDeviceKind,
 } from '../../../packages/home-scene/src/openingController';
 import type { SimulationDeviceControls } from './modelDeviceControls';
@@ -18,10 +18,8 @@ interface Props {
   disabled: boolean; compact: boolean; fontScale: number; motionAllowed: boolean; onMore: () => void;
 }
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-const PRESENTATION: Record<OpeningDeviceKind, { title: string; mechanism: string; icon: IconName }> = {
-  door: { title: 'ENTRY', mechanism: 'Side-hinged door', icon: 'enter-outline' },
-  garage: { title: 'GARAGE', mechanism: 'Roller shutter', icon: 'albums-outline' },
-  window: { title: 'WINDOW', mechanism: 'Awning window', icon: 'grid-outline' },
+const ICONS: Record<OpeningDeviceKind, IconName> = {
+  door: 'enter-outline', garage: 'albums-outline', window: 'grid-outline',
 };
 
 /** Explicit command keys expose disabled state and retain at least 44-point touch targets. */
@@ -40,7 +38,7 @@ export function OpeningController({ device, state, client, disabled, compact, fo
   const opening = readOpeningControllerState(device, state);
   if (!opening) return null;
   const { kind, openPercent } = opening;
-  const presentation = PRESENTATION[kind];
+  const presentation = { ...openingControllerLabels(kind, device.id), icon: ICONS[kind] };
   const largeText = fontScale > 1.15;
 
   /** Relative and explicit targets are resolved by the current guarded reducer, not a captured percentage. */

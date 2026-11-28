@@ -7,6 +7,23 @@ import {
 import { useHomeStore } from "../../store/useHomeStore";
 
 describe("device command security", () => {
+  test("authored interior simulation doors never reach a physical transport or retry queue", async () => {
+    const devices = useHomeStore.getState().devices;
+    const transport = jest.fn();
+    const clear = deviceClient.setCommandTransport(transport);
+    useHomeStore.setState({ devices: [...devices, { id: 'virtual-bedroom-door', kind: 'door', name: 'Bedroom door',
+      roomId: 'r1', isOn: false, simulationOnly: true, modelDeviceId: 'bedroom-1-door' }] });
+    try {
+      await expect(deviceClient.sendCommand({ op: 'set-properties', deviceId: 'virtual-bedroom-door', changes: { openPercent: 100 } }))
+        .rejects.toMatchObject({ reason: 'simulation_only_device' });
+      expect(transport).not.toHaveBeenCalled();
+      expect(deviceClient.getRetryStatus().pending).toBe(0);
+    } finally {
+      clear();
+      useHomeStore.setState({ devices });
+    }
+  });
+
   test("virtual cloud devices cannot reach a transport or retry queue", async () => {
     const devices = useHomeStore.getState().devices;
     const transport = jest.fn();

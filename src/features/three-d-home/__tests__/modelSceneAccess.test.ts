@@ -22,8 +22,82 @@ function account(role: HouseholdMember['role'] = 'Guest'): HomeState {
   };
 }
 
+/** Bind doors through distinct cloud IDs so permission tests also exercise trusted room mapping. */
+function doorAccount(role: HouseholdMember['role'] = 'Tenant'): HomeState {
+  return { ...account(role),
+    rooms: [
+      { id: 'room-a', name: 'Bedroom', modelRoomId: 'bedroom-1' },
+      { id: 'room-b', name: 'Living', modelRoomId: 'living' },
+      { id: 'room-c', name: 'Laundry', modelRoomId: 'laundry' },
+    ],
+    devices: [
+      { id: 'room-door', kind: 'door', name: 'Bedroom door', roomId: 'room-a', modelDeviceId: 'bedroom-1-door', simulationOnly: true, isOn: false },
+      { id: 'front-door', kind: 'door', name: 'Front door', roomId: 'room-b', modelDeviceId: 'entry-door', simulationOnly: true, isOn: false },
+      { id: 'rear-door', kind: 'door', name: 'Rear door', roomId: 'room-c', modelDeviceId: 'laundry-exterior-door', simulationOnly: true, isOn: false },
+    ],
+  };
+}
+
 /** Drain hydration and transport microtasks without real clocks or account services. */
 async function settle(): Promise<void> { for (let i = 0; i < 24; i++) await Promise.resolve(); }
+
+test('Member can operate authored interior doors without gaining exterior entry control', () => {
+  const access = resolveModelSceneAccess(doorAccount('Member'), 'production');
+  expect(access.deviceIds).toEqual(expect.arrayContaining(['bedroom-1-door', 'entry-door', 'laundry-exterior-door']));
+  expect(access.controllableDeviceIds).toEqual(['bedroom-1-door']);
+});
+
+test('Tenant and explicitly granted Guest interior controls remain confined to the assigned room', () => {
+  for (const role of ['Tenant', 'Guest'] as const) {
+    const state = doorAccount(role);
+    expect(resolveModelSceneAccess(state, 'production').deviceIds).toEqual(['bedroom-1-door']);
+    expect(resolveModelSceneAccess(state, 'production').controllableDeviceIds).toEqual(role === 'Tenant' ? ['bedroom-1-door'] : []);
+    state.memberPermissionOverrides = [{ memberId: 'person', permission: 'device.control', allowed: true }];
+    expect(resolveModelSceneAccess(state, 'production').controllableDeviceIds).toEqual(['bedroom-1-door']);
+    state.roomMembers = [];
+    expect(resolveModelSceneAccess(state, 'production').controllableDeviceIds).toEqual([]);
+  }
+});
+
+test.each(['wrong-room', 'wrong-kind', 'unknown-id', 'physical', 'denied'] as const)('interior-door controls reject %s bindings or authority', (condition) => {
+  const state = doorAccount();
+  if (condition === 'wrong-room') state.rooms[0].modelRoomId = 'family';
+  if (condition === 'wrong-kind') state.devices[0].kind = 'window';
+  if (condition === 'unknown-id') state.devices[0].modelDeviceId = 'bedroom-1-door-copy';
+  if (condition === 'physical') state.devices[0].simulationOnly = false;
+  if (condition === 'denied') state.memberPermissionOverrides = [{ memberId: 'person', permission: 'device.control', allowed: false }];
+  expect(resolveModelSceneAccess(state, 'production').controllableDeviceIds).toEqual([]);
+});
+
+test('the simulation bridge accepts an assigned interior-door opening and rejects exterior and revoked requests', async () => {
+  const state = doorAccount('Member');
+  const store = createStore<HomeState>(() => state);
+  const storage = { getItem: async () => null, setItem: jest.fn(async () => undefined) };
+  const deliver = jest.fn();
+  const session = new SimulationSession(deliver, jest.fn(), { store, mode: 'production', persistence: new SimulationPersistence(storage) });
+  session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'request' });
+  await settle();
+  const initial = deliver.mock.lastCall![0].state.deviceStates;
+  session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: 1,
+    base: { deviceStates: { 'bedroom-1-door': initial['bedroom-1-door'] } },
+    changes: { deviceStates: { 'bedroom-1-door': { ...initial['bedroom-1-door'], on: true, level: 100 } } } });
+  await settle();
+  expect(deliver.mock.lastCall![0].state.deviceStates['bedroom-1-door']).toMatchObject({ on: true, level: 100 });
+  const saved = storage.setItem.mock.calls.length;
+  session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: 2,
+    base: { deviceStates: { 'entry-door': initial['entry-door'] } },
+    changes: { deviceStates: { 'entry-door': { ...initial['entry-door'], on: true, level: 100 } } } });
+  await settle();
+  expect(storage.setItem).toHaveBeenCalledTimes(saved);
+  store.setState({ memberPermissionOverrides: [{ memberId: 'person', permission: 'device.control', allowed: false }] });
+  session.handleMessage({ channel: 'vantahome-simulation', version: 1, type: 'patch', requestId: 3,
+    base: { deviceStates: { 'bedroom-1-door': { ...initial['bedroom-1-door'], on: true, level: 100 } } },
+    changes: { deviceStates: { 'bedroom-1-door': { ...initial['bedroom-1-door'], on: false, level: 0 } } } });
+  await settle();
+  expect(deliver.mock.lastCall![0].state.deviceStates['bedroom-1-door']).toMatchObject({ on: true, level: 100 });
+  expect(storage.setItem).toHaveBeenCalledTimes(saved);
+  session.dispose();
+});
 
 test('guests can explore the property while only assigned room states and permitted controls are granted', () => {
   expect(resolveModelSceneAccess(account(), 'production')).toEqual({ fullHome: false, propertyOverview: true, interiorLayout: false,

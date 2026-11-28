@@ -12,6 +12,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { cleanModelTriangles } from './clean-model-triangles.mjs';
+import { repairNortheastDoorway } from './repair-room-doorway.mjs';
 
 export const GAS_ASSET_DEVICES = {
   ground: ['kitchen-gas-leak'],
@@ -187,6 +188,7 @@ async function main() {
     // Clean the verified baseline before appending fixtures, so their preservation
     // hashes describe the repaired house and subsequent device rebuilds stay safe.
     const baseline = originalAsset(readGlb(original));
+    repairNortheastDoorway(baseline);
     const cleaned = cleanModelTriangles(writeGlb(baseline), `${name}.glb baseline`);
     const output = writeGlb(appendGasFixtures(readGlb(cleaned.buffer), addition, ids));
     if (!original.equals(output)) await writeFile(filename, output);

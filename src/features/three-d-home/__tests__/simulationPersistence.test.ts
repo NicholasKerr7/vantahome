@@ -6,7 +6,7 @@ import { applySceneRestoration, type SceneRestorationDescriptor } from '../../sc
 /** Drain persistence microtasks without relying on wall-clock delays. */
 async function settle(): Promise<void> { for (let index = 0; index < 12; index += 1) await Promise.resolve(); }
 
-test('adds gas devices on upgrade without resetting the previous 90-device simulation', async () => {
+test('adds newly authored devices without resetting previous simulation settings', async () => {
   const legacy = createDefaultSimulationSnapshot();
   delete legacy.deviceStates['utility-gas-meter'];
   delete legacy.deviceStates['kitchen-gas-leak'];
@@ -24,7 +24,7 @@ test('adds gas devices on upgrade without resetting the previous 90-device simul
   expect(restored.lightingMode).toBe('night');
   expect(restored.deviceStates['utility-gas-meter'].on).toBe(true);
   expect(restored.deviceStates['kitchen-gas-leak'].on).toBe(true);
-  expect(Object.keys(restored.deviceStates)).toHaveLength(92);
+  expect(Object.keys(restored.deviceStates)).toHaveLength(119);
   expect(status).toHaveBeenLastCalledWith('saved');
 });
 

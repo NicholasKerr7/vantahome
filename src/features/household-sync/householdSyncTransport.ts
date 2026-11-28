@@ -1,4 +1,6 @@
 import { supabase } from '../../services/supabaseClient';
+import { AUTHORED_DEVICES } from '../../../packages/home-scene/src/data';
+import { MAX_RUNTIME_DEVICES } from '../../../packages/home-scene/src/devicePlacement';
 import { parseSimulationRequest, type DeviceState } from '../../../packages/home-scene/src/simulationBridgeProtocol';
 
 export type SharedDeviceBinding = { deviceId: string; modelDeviceId: string };
@@ -38,7 +40,7 @@ export function parseSharedHomeSnapshot(input: unknown, scope: SharedHomeScope, 
     || typeof value.homeName !== 'string' || !value.homeName.trim() || value.homeName.length > 500
     || typeof value.enabled !== 'boolean' || typeof value.serverTimeMs !== 'number'
     || !Number.isSafeInteger(value.serverTimeMs) || value.serverTimeMs <= 0
-    || !Array.isArray(value.devices) || value.devices.length > 124
+    || !Array.isArray(value.devices) || value.devices.length > AUTHORED_DEVICES.length + MAX_RUNTIME_DEVICES
     || (requestId && (value.requestId !== requestId || !['applied', 'existing'].includes(String(value.status))))) {
     throw new HouseholdSyncError('invalid_response', INVALID);
   }

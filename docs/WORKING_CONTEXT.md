@@ -1,6 +1,6 @@
 # VantaHome working context
 
-Last maintained: **2026-11-27**. Read this before rediscovering the project.
+Last maintained: **2026-11-28**. Read this before rediscovering the project.
 
 Track remaining work and deeper implementation opportunities in the maintained
 [implementation backlog](IMPLEMENTATION_BACKLOG.md). Update it at meaningful
@@ -30,7 +30,7 @@ defects from ideas or untested risks.
 - Device hotspots: quick controls on mobile, full controls available; tablet
   avoids duplicating the adjacent inspector's quick toggle.
 - Simulation first. No hub purchased or connected; NUC 15 is the user's intended
-  hub direction. The 20-space/92-authored-device model and up to 32 household-added
+  hub direction. The 20-space/119-authored-device model and up to 32 household-added
   fixtures are simulation-only.
 - Accepted November 1: bring physical-device detail screens into the same console
   design when preparing real-device integration. Reuse artwork/layout through
@@ -50,6 +50,40 @@ defects from ideas or untested risks.
   365 days. Preserve rooms/actions, reset optional interior consent, and cancel
   superseded pending invitations. The Guest cannot extend their own access.
 - Production remains unchanged; iPad physical testing is deferred.
+
+## Interactive room doors — November 28 / Preview 117 ready
+
+- Added the 27 measured architectural doors to the existing entry controls:
+  hinged room/bathroom doors, paired terrace doors and folding closets. Room
+  assignment, independent position/settings, Home/Devices controls and reload
+  persistence use the existing guarded simulation. Open passages remain open.
+- Four instanced material batches at most, continuous opening/reversal, static
+  reduced motion and floor-plan-height cutaways. Replaced only the original
+  teak leaf batches. Corrected the Northeast suite hallway return that crossed
+  its doorway; asset byte sizes, property placement and furnishings are unchanged.
+- Interior simulation doors require ordinary room/device control. Six new exterior
+  doors retain entry-security permission; existing front door/gate/physical rules
+  remain. Shared architecture never exposes another room's live door position.
+- Migration **030 deployed and reverified on staging only**. One prepared home
+  upgraded to catalog version 2 / 119 authored devices. All prior devices, member
+  grants, shared states and physical records preserved; no observations/commands
+  created. Existing shared-home count is zero; local SQL fixtures exercise its
+  additive upgrade and 151-device limit (119 authored + 32 placed).
+- Checks: 2,028 scene tests in the broad run; final focused scene 74 and native
+  152 tests; all 30 migrations / 1,015 SQL assertions; 12 asset checks; types and
+  offline build. Actual browser: all 27 controls, six embedded layouts, 15 native
+  console/layout cases, saved position, More/Back, 44px targets, no page overflow
+  or browser errors. Live mesh samples confirm smooth reversal and stable meshes
+  across ordinary access snapshots. Source sweep audit found no leaf intersections
+  with the sampled architecture/furnishings; this is not physical hinge clearance.
+- Preview **1.0.0 (117)** Release built and signed; staging configuration, both
+  control surfaces and exact **32,404,526-byte** scene verified (`77d695b2f506…`).
+  Production metadata restored. Signing expires **December 4, 2026 at 20:26:45 UTC**.
+  **Not installed yet; Preview 116 is the last confirmed installation.** iPhone
+  acceptance is pending. Receipts: `work/preview117-verification.json`,
+  `work/room-door-staging.json`; evidence/logs: `work/room-door-*`.
+- See [room-door implementation](ROOM_DOOR_CONTROLS.md) for source geometry,
+  catalog/migration maintenance, limitations and the short iPhone acceptance flow.
 
 ## Coordinated energy simulation — November 27
 

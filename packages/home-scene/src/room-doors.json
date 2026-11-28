@@ -1,0 +1,839 @@
+[
+  {
+    "id": "bath-2-door",
+    "name": "Northeast bathroom door",
+    "roomId": "bath-2",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      8.69,
+      0.02,
+      -13.4535
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.733,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "Bath2 corrected architecture_east parked teak door",
+    "sourceBounds": [
+      [
+        8.665,
+        0.02,
+        -13.82
+      ],
+      [
+        8.715,
+        2.012,
+        -13.087
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-2-door",
+    "name": "Northeast suite door",
+    "roomId": "bedroom-2",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      10.02,
+      0.02,
+      -11.568
+    ],
+    "yaw": 0,
+    "width": 0.733,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "NE bed south restored_D07 retained entry parked leaf",
+    "sourceBounds": [
+      [
+        9.6535,
+        0.02,
+        -11.593
+      ],
+      [
+        10.3865,
+        2.012,
+        -11.543
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-2-closet-door",
+    "name": "Northeast suite closet",
+    "roomId": "bedroom-2",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "bifold",
+    "position": [
+      11.46,
+      0.02,
+      -11.568
+    ],
+    "yaw": 0,
+    "width": 1.749,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "NE bed south restored_D08 bifold parked leaf",
+    "sourceBounds": [
+      [
+        10.5855,
+        0.02,
+        -11.593
+      ],
+      [
+        12.3345,
+        2.012,
+        -11.543
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-4-closet-door",
+    "name": "Southeast suite closet",
+    "roomId": "bedroom-4",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "bifold",
+    "position": [
+      12.9,
+      0.02,
+      -6.3
+    ],
+    "yaw": 0,
+    "width": 1.749,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "Dining storage restored_D12 bifold parked leaf",
+    "sourceBounds": [
+      [
+        12.0255,
+        0.02,
+        -6.325
+      ],
+      [
+        13.7745,
+        2.012,
+        -6.275
+      ]
+    ]
+  },
+  {
+    "id": "laundry-exterior-door",
+    "name": "Laundry outside door",
+    "roomId": "laundry",
+    "floor": "ground",
+    "security": "exterior",
+    "layout": "hinged",
+    "position": [
+      14.23,
+      0.02,
+      -16.14
+    ],
+    "yaw": 0,
+    "width": 0.834,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "North wall teak door",
+    "sourceBounds": [
+      [
+        13.813,
+        0.02,
+        -16.165
+      ],
+      [
+        14.647,
+        2.012,
+        -16.115
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-1-door",
+    "name": "Northwest suite door",
+    "roomId": "bedroom-1",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      3.32,
+      0.02,
+      -11.568
+    ],
+    "yaw": 0,
+    "width": 0.733,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "NW south teak door",
+    "sourceBounds": [
+      [
+        2.9535,
+        0.02,
+        -11.593
+      ],
+      [
+        3.6865,
+        2.012,
+        -11.543
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-1-closet-door",
+    "name": "Northwest suite closet",
+    "roomId": "bedroom-1",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      3.956,
+      0.02,
+      -13.36
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.733,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "NW ensuite division teak door",
+    "sourceBounds": [
+      [
+        3.931,
+        0.02,
+        -13.7265
+      ],
+      [
+        3.981,
+        2.012,
+        -12.9935
+      ]
+    ]
+  },
+  {
+    "id": "bath-1-door",
+    "name": "Northwest bathroom door",
+    "roomId": "bath-1",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      3.956,
+      0.02,
+      -15.61
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.682,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "NW ensuite division teak door.001",
+    "sourceBounds": [
+      [
+        3.931,
+        0.02,
+        -15.951
+      ],
+      [
+        3.981,
+        2.012,
+        -15.269
+      ]
+    ]
+  },
+  {
+    "id": "kitchen-terrace-door",
+    "name": "Dining terrace doors",
+    "roomId": "kitchen",
+    "floor": "ground",
+    "security": "exterior",
+    "layout": "double",
+    "position": [
+      14.553,
+      0.02,
+      -8.596
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 1.749,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "Dining east teak door",
+    "sourceBounds": [
+      [
+        14.528,
+        0.02,
+        -9.4705
+      ],
+      [
+        14.578,
+        2.012,
+        -7.7215
+      ]
+    ]
+  },
+  {
+    "id": "kitchen-store-door",
+    "name": "Dining storage door",
+    "roomId": "kitchen",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      10.92,
+      0.02,
+      -6.996
+    ],
+    "yaw": 0,
+    "width": 0.733,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "Dining south teak door",
+    "sourceBounds": [
+      [
+        10.5535,
+        0.02,
+        -7.021
+      ],
+      [
+        11.2865,
+        2.012,
+        -6.971
+      ]
+    ]
+  },
+  {
+    "id": "bath-4-door",
+    "name": "Southeast bathroom door",
+    "roomId": "bath-4",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      12.236,
+      0.02,
+      -2.123
+    ],
+    "yaw": 0,
+    "width": 0.682,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "South bed south teak door",
+    "sourceBounds": [
+      [
+        11.895,
+        0.02,
+        -2.148
+      ],
+      [
+        12.577,
+        2.012,
+        -2.098
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-4-door",
+    "name": "Southeast suite door",
+    "roomId": "bedroom-4",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      10.276,
+      0.02,
+      -3.423
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.733,
+    "height": 1.992,
+    "hinge": 1,
+    "swing": -1,
+    "sourceName": "South bed west teak door",
+    "sourceBounds": [
+      [
+        10.251,
+        0.02,
+        -3.7895
+      ],
+      [
+        10.301,
+        2.012,
+        -3.0565
+      ]
+    ]
+  },
+  {
+    "id": "bath-3-door",
+    "name": "Southwest bathroom door",
+    "roomId": "bath-3",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      7.535,
+      0.02,
+      -1.3
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.682,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "SW east teak door",
+    "sourceBounds": [
+      [
+        7.51,
+        0.02,
+        -1.641
+      ],
+      [
+        7.56,
+        2.012,
+        -0.959
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-3-closet-door",
+    "name": "Southwest suite closet",
+    "roomId": "bedroom-3",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      7.535,
+      0.02,
+      -2.37
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.733,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "SW east teak door.001",
+    "sourceBounds": [
+      [
+        7.51,
+        0.02,
+        -2.7365
+      ],
+      [
+        7.56,
+        2.012,
+        -2.0035
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-3-door",
+    "name": "Southwest suite door",
+    "roomId": "bedroom-3",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      7.535,
+      0.02,
+      -3.73
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.733,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "SW east teak door.002",
+    "sourceBounds": [
+      [
+        7.51,
+        0.02,
+        -4.0965
+      ],
+      [
+        7.56,
+        2.012,
+        -3.3635
+      ]
+    ]
+  },
+  {
+    "id": "hall-storage-door",
+    "name": "Hall storage door",
+    "roomId": "living",
+    "floor": "ground",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      9.635,
+      0.02,
+      -3.15
+    ],
+    "yaw": 0,
+    "width": 0.72,
+    "height": 1.992,
+    "hinge": 1,
+    "swing": 1,
+    "sourceName": "South closets top teak door",
+    "sourceBounds": [
+      [
+        9.275,
+        0.02,
+        -3.175
+      ],
+      [
+        9.995,
+        2.012,
+        -3.125
+      ]
+    ]
+  },
+  {
+    "id": "master-dressing-door",
+    "name": "Dressing room door",
+    "roomId": "master",
+    "floor": "upper",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      7.359,
+      0.02,
+      -13.681
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.771,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "master_west teak door",
+    "sourceBounds": [
+      [
+        7.334,
+        2.9664,
+        -14.0665
+      ],
+      [
+        7.384,
+        4.9584,
+        -13.2955
+      ]
+    ]
+  },
+  {
+    "id": "master-door",
+    "name": "Primary suite door",
+    "roomId": "master",
+    "floor": "upper",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      8.09,
+      0.02,
+      -11.647
+    ],
+    "yaw": 0,
+    "width": 0.771,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "master_suite_and_family_divider teak door",
+    "sourceBounds": [
+      [
+        7.7045,
+        2.9664,
+        -11.672
+      ],
+      [
+        8.4755,
+        4.9584,
+        -11.622
+      ]
+    ]
+  },
+  {
+    "id": "master-terrace-door",
+    "name": "Primary terrace doors",
+    "roomId": "master",
+    "floor": "upper",
+    "security": "exterior",
+    "layout": "double",
+    "position": [
+      12.574,
+      0.02,
+      -13.974
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 1.749,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "east_main_rooms teak door",
+    "sourceBounds": [
+      [
+        12.549,
+        2.9664,
+        -14.8485
+      ],
+      [
+        12.599,
+        4.9584,
+        -13.0995
+      ]
+    ]
+  },
+  {
+    "id": "family-terrace-door",
+    "name": "Family terrace doors",
+    "roomId": "family",
+    "floor": "upper",
+    "security": "exterior",
+    "layout": "double",
+    "position": [
+      12.574,
+      0.02,
+      -9.356
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 1.749,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "east_main_rooms teak door.001",
+    "sourceBounds": [
+      [
+        12.549,
+        2.9664,
+        -10.2305
+      ],
+      [
+        12.599,
+        4.9584,
+        -8.4815
+      ]
+    ]
+  },
+  {
+    "id": "family-balcony-door",
+    "name": "Family balcony doors",
+    "roomId": "family",
+    "floor": "upper",
+    "security": "exterior",
+    "layout": "double",
+    "position": [
+      4.886,
+      0.02,
+      -9.344
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 1.749,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "family_west teak door",
+    "sourceBounds": [
+      [
+        4.861,
+        2.9664,
+        -10.2185
+      ],
+      [
+        4.911,
+        4.9584,
+        -8.4695
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-5-door",
+    "name": "Upper guest suite door",
+    "roomId": "bedroom-5",
+    "floor": "upper",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      7.603,
+      0.02,
+      -3.765
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.771,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "southwest_bedroom_east teak door",
+    "sourceBounds": [
+      [
+        7.578,
+        2.9664,
+        -4.1505
+      ],
+      [
+        7.628,
+        4.9584,
+        -3.3795
+      ]
+    ]
+  },
+  {
+    "id": "bedroom-5-closet-door",
+    "name": "Upper guest suite closet",
+    "roomId": "bedroom-5",
+    "floor": "upper",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      7.603,
+      0.02,
+      -2.34
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.631,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "southwest_bedroom_east teak door.001",
+    "sourceBounds": [
+      [
+        7.578,
+        2.9664,
+        -2.6555
+      ],
+      [
+        7.628,
+        4.9584,
+        -2.0245
+      ]
+    ]
+  },
+  {
+    "id": "bath-6-door",
+    "name": "Guest bathroom door",
+    "roomId": "bath-6",
+    "floor": "upper",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      7.603,
+      0.02,
+      -1.414
+    ],
+    "yaw": 1.5707963267948966,
+    "width": 0.771,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "southwest_bedroom_east teak door.002",
+    "sourceBounds": [
+      [
+        7.578,
+        2.9664,
+        -1.7995
+      ],
+      [
+        7.628,
+        4.9584,
+        -1.0285
+      ]
+    ]
+  },
+  {
+    "id": "upper-storage-door",
+    "name": "Upper storage door",
+    "roomId": "family",
+    "floor": "upper",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      9.979,
+      0.02,
+      -3.277
+    ],
+    "yaw": 0,
+    "width": 0.682,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "southwest_closet_north teak door",
+    "sourceBounds": [
+      [
+        9.638,
+        2.9664,
+        -3.302
+      ],
+      [
+        10.32,
+        4.9584,
+        -3.252
+      ]
+    ]
+  },
+  {
+    "id": "bath-7-door",
+    "name": "Shared upper bath door",
+    "roomId": "bath-7",
+    "floor": "upper",
+    "security": "interior",
+    "layout": "hinged",
+    "position": [
+      12.634,
+      0.02,
+      -2.217
+    ],
+    "yaw": 0,
+    "width": 0.682,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": -1,
+    "sourceName": "southeast_bathroom_north teak door",
+    "sourceBounds": [
+      [
+        12.293,
+        2.9664,
+        -2.242
+      ],
+      [
+        12.975,
+        4.9584,
+        -2.192
+      ]
+    ]
+  },
+  {
+    "id": "gym-terrace-door",
+    "name": "Exercise terrace doors",
+    "roomId": "gym",
+    "floor": "upper",
+    "security": "exterior",
+    "layout": "double",
+    "position": [
+      13.451,
+      0.02,
+      -7.066
+    ],
+    "yaw": 0,
+    "width": 1.444,
+    "height": 1.992,
+    "hinge": -1,
+    "swing": 1,
+    "sourceName": "exercise_north_to_deck teak door",
+    "sourceBounds": [
+      [
+        12.729,
+        2.9664,
+        -7.091
+      ],
+      [
+        14.173,
+        4.9584,
+        -7.041
+      ]
+    ]
+  }
+]

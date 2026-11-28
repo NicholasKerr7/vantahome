@@ -19,7 +19,7 @@ import { canPrepareModelSimulation, prepareModelSimulation } from './modelSimula
 
 const initial = useHomeStore.getInitialState();
 const owner = { id: 'owner', role: 'Owner' as const, name: 'Owner', status: 'home' as const };
-const receipt = { homeId: 'home', status: 'created', catalogVersion: 1, roomCount: 20, deviceCount: 92 };
+const receipt = { homeId: 'home', status: 'created', catalogVersion: 2, roomCount: 20, deviceCount: 119 };
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -127,5 +127,7 @@ test('the server catalog contains the exact reviewed authored identities, names,
   const rooms = migration.match(/\$model_rooms\$([\s\S]*?)\$model_rooms\$/)?.[1];
   const devices = migration.match(/\$model_devices\$([\s\S]*?)\$model_devices\$/)?.[1];
   expect(JSON.parse(rooms!)).toEqual(ROOMS.map(({ id, name }) => ({ id, name })));
-  expect(JSON.parse(devices!)).toEqual(DEVICES.map(({ id, name, roomId, kind }) => ({ id, name, roomId, kind })));
+  const addition = readFileSync(resolve(__dirname, '../../supabase/migrations/030_model_room_doors.sql'), 'utf8');
+  const doors = JSON.parse(addition.match(/\$room_doors\$([\s\S]*?)\$room_doors\$/)![1]) as { id: string; name: string; roomId: string }[];
+  expect([...JSON.parse(devices!), ...doors.map(({ id, name, roomId }) => ({ id, name, roomId, kind: 'door' }))]).toEqual(DEVICES.map(({ id, name, roomId, kind }) => ({ id, name, roomId, kind })));
 });

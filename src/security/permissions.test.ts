@@ -1,5 +1,6 @@
 import type { Device, HouseholdMember } from "../store/useHomeStore";
-import { authorizeDeviceCommand, canAdministerMember, roleHasPermission } from "./permissions";
+import { authorizeDeviceCommand, canAdministerMember, permissionForCommand, roleHasPermission } from "./permissions";
+import type { DeviceCommand } from "../services/deviceClient";
 
 const garage: Device = {
   id: "garage-1",
@@ -15,7 +16,52 @@ const context = (role: HouseholdMember["role"], roomIds = ["r1"]) => ({
   accessibleRoomIds: new Set(roomIds),
 });
 
+const interiorDoor: Device = {
+  id: "virtual-room-door", name: "Bedroom door", kind: "door", roomId: "r1", isOn: false,
+  simulationOnly: true, modelDeviceId: "bedroom-1-door",
+};
+const openingCommands: DeviceCommand[] = [
+  { op: "toggle", deviceId: interiorDoor.id, on: true },
+  { op: "set-properties", deviceId: interiorDoor.id, changes: { openPercent: 100 } },
+  { op: "set-properties", deviceId: interiorDoor.id, changes: { isOn: true } },
+  { op: "set-properties", deviceId: interiorDoor.id, changes: { autoOpenEnabled: true } },
+];
+
 describe("action-level permissions", () => {
+  test.each(["Owner", "Admin", "Member", "Tenant"] as const)("%s can operate an assigned, authored interior simulation door", (role) => {
+    for (const command of openingCommands) {
+      expect(authorizeDeviceCommand(context(role), command, interiorDoor)).toEqual({ allowed: true, permission: "device.control" });
+    }
+  });
+
+  test("interior door access still requires room access and ordinary control permission", () => {
+    const command = openingCommands[0];
+    expect(authorizeDeviceCommand(context("Tenant", ["other-room"]), command, interiorDoor))
+      .toEqual({ allowed: false, reason: "room_access_denied" });
+    expect(authorizeDeviceCommand(context("Guest"), command, interiorDoor))
+      .toEqual({ allowed: false, reason: "action_permission_denied", permission: "device.control" });
+    expect(authorizeDeviceCommand({ ...context("Guest"), permissionOverrides: [{ permission: "device.control", allowed: true }] }, command, interiorDoor))
+      .toEqual({ allowed: true, permission: "device.control" });
+    expect(authorizeDeviceCommand({ ...context("Member"), permissionOverrides: [{ permission: "device.control", allowed: false }] }, command, interiorDoor))
+      .toEqual({ allowed: false, reason: "action_permission_denied", permission: "device.control" });
+  });
+
+  test.each([
+    { simulationOnly: false }, { simulationOnly: undefined }, { modelDeviceId: undefined },
+    { modelDeviceId: "entry-door" }, { modelDeviceId: "laundry-exterior-door" },
+    { modelDeviceId: "placed-bedroom-1-door" }, { modelDeviceId: "unregistered-door" },
+  ])("names or untrusted interior bindings cannot downgrade an entry permission %#", (change) => {
+    const device = { ...interiorDoor, ...change };
+    for (const command of openingCommands) {
+      expect(permissionForCommand(command, device)).toBe("lock.unlock");
+      expect(authorizeDeviceCommand(context("Tenant"), command, device).allowed).toBe(false);
+    }
+  });
+
+  test.each(["gate", "garage"] as const)("an interior model ID cannot downgrade a %s", (kind) => {
+    for (const command of openingCommands) expect(permissionForCommand(command, { ...interiorDoor, kind })).toBe("garage.open");
+  });
+
   test("delegated member management cannot change self or peer administrator authority", () => {
     const admin = { id: "admin-a", role: "Admin" } as const;
     expect(canAdministerMember(admin, admin)).toBe(false);

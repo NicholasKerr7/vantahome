@@ -52,8 +52,9 @@ describe('canonical model home catalog', () => {
     expect(result.modelCatalogVersion).toBe(MODEL_CATALOG_VERSION);
     expect(result.rooms).toEqual(ROOMS.map(({ id, name }) => ({ id, name })));
     expect(result.rooms).toHaveLength(20);
-    expect(result.devices).toHaveLength(92);
-    expect(new Set(result.devices.map(({ id }) => id)).size).toBe(92);
+    expect(result.devices).toHaveLength(119);
+    expect(result.devices.find(({ id }) => id === 'bedroom-1-door')).toMatchObject({ modelDeviceId: 'bedroom-1-door', simulationOnly: true });
+    expect(new Set(result.devices.map(({ id }) => id)).size).toBe(119);
     expect(result.devices.map(({ id, name, roomId, kind }) => ({ id, name, roomId, kind })))
       .toEqual(DEVICES.map(({ id, name, roomId, kind }) => ({ id, name, roomId, kind })));
     expect(result.devices.filter(({ kind }) => kind === 'camera').map(({ id, name, roomId }) => ({ id, name, roomId }))).toEqual([
@@ -93,7 +94,7 @@ describe('canonical model home catalog', () => {
     }
     expect(result.modelCatalogArchive?.devices.map(({ id }) => id)).toEqual(['d1', 'd37', 'd38']);
     expect(result.devices.find(({ id }) => id === 'drive-camera')?.observedAt).toBeUndefined();
-    expect(result.devices).toHaveLength(92);
+    expect(result.devices).toHaveLength(119);
   });
 
   test('rejects alias kind collisions and never binds custom devices by display name', () => {
@@ -203,7 +204,7 @@ describe('canonical model home catalog', () => {
     const rooms = new Set(result.rooms.map(({ id }) => id));
     const devices = new Set(result.devices.map(({ id }) => id));
     const scenes = new Set(result.scenes.map(({ id }) => id));
-    expect(result.devices).toHaveLength(92);
+    expect(result.devices).toHaveLength(119);
     expect(result.rooms).toHaveLength(20);
     for (const item of result.devices) expect(rooms.has(item.roomId)).toBe(true);
     for (const item of result.scenes) for (const action of item.actions) expect(devices.has(action.deviceId)).toBe(true);

@@ -11,6 +11,8 @@ import { CameraRig } from './CameraRig';
 import { CinematicStage } from './CinematicStage';
 import { PropertyCompass, PropertyCompassProjection, type CompassMarkers } from './PropertyCompass';
 import { Devices } from './Devices';
+import { RoomDoors } from './RoomDoors';
+import { hideBakedRoomDoors } from './roomDoorPresentation';
 import { HotspotLayout } from './HotspotLayout';
 import { Landscape } from './Landscape';
 import { MaterialEnvironment } from './MaterialEnvironment';
@@ -51,6 +53,7 @@ function HouseModel({ view, roomId, access = FULL_SCENE_ACCESS, deviceStates, re
     // Replace the original presentation lawn only in the complete house view.
     const oldSite = copy.getObjectByName(siteLayout.runtime.replaceExistingGroup);
     if (model === 'exterior' && oldSite) oldSite.visible = false;
+    hideBakedRoomDoors(copy);
     copy.traverse((node) => {
       if (node instanceof Mesh) {
         node.castShadow = true;
@@ -138,6 +141,7 @@ export default function HouseScene({ suspended = false, ...props }: HouseScenePr
       <PropertyCompassProjection markers={compassMarkers} enabled={showCompass} />
       <Suspense key={`model:${presentationScope}`} fallback={null}>
         <HouseModel access={access} roomId={props.roomId} view={view} cinematic={cinematic} deviceStates={visibleStates} reducedMotion={props.reducedMotion} onReady={props.onReady} />
+        <RoomDoors {...visibleProps} />
         <HotspotLayout access={props.access} roomId={props.roomId} view={view}>
         {!cinematic && <Devices {...visibleProps} />}
         {!roomOnly && (view === 'exterior' || view === 'immersive') && <Landscape {...visibleProps} suspended={suspended} tourFrame={tourFrame} windSpeedKmh={weather?.windSpeedKmh ?? 0} windDirectionDeg={weather?.windDirectionDeg ?? 0} />}
